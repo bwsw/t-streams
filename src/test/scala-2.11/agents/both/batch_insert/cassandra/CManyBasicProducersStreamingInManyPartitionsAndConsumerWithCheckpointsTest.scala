@@ -94,10 +94,18 @@ with Matchers with BeforeAndAfterAll with TestUtils{
         def run() = {
           var i = 0
           while(i < totalTxn*producersAmount) {
+            consumer.checkpoint()
+            consumer.stop()
+            val newStreamForConsumer = new BasicStream[Array[Byte]](
+              name = "stream_name",
+              partitions = totalPartitions,
+              metadataStorage = streamInst.metadataStorage,
+              dataStorage = storageFactory.getInstance(cassandraStorageOptions),
+              ttl = 60 * 10,
+              description = "some_description")
 
-            //every 10 txns consumer start reinitializing
-            if (i % 10 == 0) {
-              consumer = new BasicConsumer("test_consumer", streamInst, consumerOptions)
+            if (i % 30 == 0) {
+              consumer = new BasicConsumer("test_consumer", newStreamForConsumer, consumerOptions)
               Thread.sleep(1000)
             }
 
@@ -105,7 +113,6 @@ with Matchers with BeforeAndAfterAll with TestUtils{
 
             if (txn.isDefined){
               checkVal &= txn.get.getAll().sorted == dataToSend
-              consumer.checkpoint()
               i+=1
             }
 
@@ -126,6 +133,9 @@ with Matchers with BeforeAndAfterAll with TestUtils{
 
     checkVal &= !consumerThread.isAlive
     producersThreads.foreach(x=> checkVal &= !x.isAlive)
+
+    producers.foreach(x=>x.stop())
+    consumer.stop()
 
     checkVal shouldEqual true
   }
@@ -175,9 +185,7 @@ with Matchers with BeforeAndAfterAll with TestUtils{
   }
 
   override def afterAll(): Unit = {
-    val zkService = new ZkService("/unit", List(new InetSocketAddress("localhost",2181)), 7000)
-    zkService.deleteRecursive("")
-    zkService.close()
+    removeZkMetadata()
     session.execute(s"DROP KEYSPACE $randomKeyspace")
     session.close()
     cluster.close()

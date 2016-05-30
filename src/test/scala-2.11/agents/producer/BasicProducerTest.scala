@@ -11,11 +11,10 @@ import com.bwsw.tstreams.metadata.MetadataStorageFactory
 import com.bwsw.tstreams.services.BasicStreamService
 import com.datastax.driver.core.Cluster
 import org.scalatest.{BeforeAndAfterAll, Matchers, FlatSpec}
-import testutils.{RoundRobinPolicyCreator, LocalGeneratorCreator, CassandraHelper, RandomStringCreator}
+import testutils._
 
 
-class BasicProducerTest extends FlatSpec with Matchers with BeforeAndAfterAll{
-  def randomString: String = RandomStringCreator.randomAlphaString(10)
+class BasicProducerTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils{
   val randomKeyspace = randomString
   val temporaryCluster = Cluster.builder().addContactPoint("localhost").build()
   val temporarySession = temporaryCluster.connect()
@@ -68,26 +67,28 @@ class BasicProducerTest extends FlatSpec with Matchers with BeforeAndAfterAll{
   "BasicProducer.newTransaction(ProducerPolicies.errorIfOpen)" should "throw exception if previous transaction was not closed" in {
     val txn1: BasicProducerTransaction[String, Array[Byte]] = producer.newTransaction(ProducerPolicies.checkpointIfOpen, 2)
     intercept[IllegalStateException] {
-       val txn2 = producer.newTransaction(ProducerPolicies.errorIfOpen, 2)
+       producer.newTransaction(ProducerPolicies.errorIfOpen, 2)
     }
+    txn1.checkpoint()
   }
 
   "BasicProducer.newTransaction(checkpointIfOpen)" should "not throw exception if previous transaction was not closed" in {
-    val txn1: BasicProducerTransaction[String, Array[Byte]] = producer.newTransaction(ProducerPolicies.checkpointIfOpen, 2)
+    producer.newTransaction(ProducerPolicies.checkpointIfOpen, 2)
     val txn2 = producer.newTransaction(ProducerPolicies.checkpointIfOpen, 2)
+    txn2.checkpoint()
   }
 
   "BasicProducer.getTransaction()" should "return transaction reference if it was created or None" in {
     val txn = producer.newTransaction(ProducerPolicies.checkpointIfOpen, 1)
     val txnRef = producer.getTransaction(1)
+    txn.checkpoint()
     val checkVal = txnRef.get == txn
     checkVal shouldEqual true
   }
 
   override def afterAll(): Unit = {
-    val zkService = new ZkService("/unit", List(new InetSocketAddress("localhost",2181)), 7000)
-    zkService.deleteRecursive("")
-    zkService.close()
+    producer.stop()
+    removeZkMetadata()
     temporarySession.execute(s"DROP KEYSPACE $randomKeyspace")
     temporarySession.close()
     temporaryCluster.close()

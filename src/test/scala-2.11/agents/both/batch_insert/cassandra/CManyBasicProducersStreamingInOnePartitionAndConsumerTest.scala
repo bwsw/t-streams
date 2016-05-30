@@ -105,6 +105,9 @@ class CManyBasicProducersStreamingInOnePartitionAndConsumerTest extends FlatSpec
     checkVal &= !consumerThread.isAlive
     producersThreads.foreach(x=> checkVal &= !x.isAlive)
 
+    producers.foreach(_.stop())
+    consumer.stop()
+
     checkVal shouldEqual true
   }
 
@@ -153,9 +156,7 @@ class CManyBasicProducersStreamingInOnePartitionAndConsumerTest extends FlatSpec
   }
 
   override def afterAll(): Unit = {
-    val zkService = new ZkService("/unit", List(new InetSocketAddress("localhost",2181)), 7000)
-    zkService.deleteRecursive("")
-    zkService.close()
+    removeZkMetadata()
     session.execute(s"DROP KEYSPACE $randomKeyspace")
     session.close()
     cluster.close()

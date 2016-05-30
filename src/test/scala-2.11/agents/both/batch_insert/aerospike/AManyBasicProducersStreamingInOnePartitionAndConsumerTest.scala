@@ -114,6 +114,9 @@ class AManyBasicProducersStreamingInOnePartitionAndConsumerTest extends FlatSpec
     producersThreads.foreach(x=> checkVal &= !x.isAlive)
     checkVal &= isSorted(uuids)
 
+    producers.foreach(_.stop())
+    consumer.stop()
+
     checkVal shouldEqual true
   }
 
@@ -146,7 +149,6 @@ class AManyBasicProducersStreamingInOnePartitionAndConsumerTest extends FlatSpec
   }
 
   def getStream: BasicStream[Array[Byte]] = {
-    //storage instances
     val metadataStorageInst = metadataStorageFactory.getInstance(
       cassandraHosts = List(new InetSocketAddress("localhost", 9042)),
       keyspace = randomKeyspace)
@@ -162,9 +164,7 @@ class AManyBasicProducersStreamingInOnePartitionAndConsumerTest extends FlatSpec
   }
 
   override def afterAll(): Unit = {
-    val zkService = new ZkService("/unit", List(new InetSocketAddress("localhost",2181)), 7000)
-    zkService.deleteRecursive("")
-    zkService.close()
+    removeZkMetadata()
     session.execute(s"DROP KEYSPACE $randomKeyspace")
     session.close()
     cluster.close()

@@ -4,7 +4,6 @@ import java.io.File
 import java.net.InetSocketAddress
 import java.util.UUID
 import java.util.concurrent.locks.ReentrantLock
-import java.util.logging.LogManager
 import com.aerospike.client.Host
 import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
 import com.bwsw.tstreams.agents.consumer.subscriber.{BasicSubscriberCallback, BasicSubscribingConsumer}
@@ -14,7 +13,6 @@ import com.bwsw.tstreams.agents.producer.{ProducerCoordinationSettings, BasicPro
 import com.bwsw.tstreams.converter.{ArrayByteToStringConverter, StringToArrayByteConverter}
 import com.bwsw.tstreams.data.aerospike.{AerospikeStorageFactory, AerospikeStorageOptions}
 import com.bwsw.tstreams.coordination.transactions.transport.impl.TcpTransport
-import com.bwsw.tstreams.common.zkservice.ZkService
 import com.bwsw.tstreams.metadata.MetadataStorageFactory
 import com.bwsw.tstreams.streams.BasicStream
 import com.datastax.driver.core.Cluster
@@ -25,12 +23,6 @@ import scala.collection.mutable.ListBuffer
 
 class AManyBasicProducersStreamingInManyPartitionsAndSubscriberTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils{
   var port = 8000
-
-  LogManager.getLogManager.reset()
-  System.setProperty(org.slf4j.impl.SimpleLogger.DEFAULT_LOG_LEVEL_KEY, "WARN")
-  System.setProperty("org.slf4j.simpleLogger.logFile","testlog.log")
-  System.setProperty("org.slf4j.simpleLogger.showDateTime","false")
-  System.setProperty("org.slf4j.simpleLogger.log.com.bwsw","DEBUG")
 
   //creating keyspace, metadata
   val path = randomString
@@ -126,7 +118,9 @@ class AManyBasicProducersStreamingInManyPartitionsAndSubscriberTest extends Flat
     producersThreads.foreach(x=>x.start())
     producersThreads.foreach(x=>x.join(timeoutForWaiting*1000L))
     Thread.sleep(20*1000)
-    println(s"cnt=$cnt")
+
+    producers.foreach(_.stop())
+    subscriber.stop()
 
     assert(map.values.map(x=>x.size).sum == totalTxn*producersAmount)
     map foreach { case(_,list) =>
@@ -179,9 +173,7 @@ class AManyBasicProducersStreamingInManyPartitionsAndSubscriberTest extends Flat
   }
 
   override def afterAll(): Unit = {
-    val zkService = new ZkService("/unit", List(new InetSocketAddress("localhost",2181)), 7000)
-    zkService.deleteRecursive("")
-    zkService.close()
+    removeZkMetadata()
     session.execute(s"DROP KEYSPACE $randomKeyspace")
     session.close()
     cluster.close()

@@ -122,8 +122,18 @@ class CBasicProducerAndConsumerCheckpointTest extends FlatSpec with Matchers wit
       checkVal &= data == dataToSend
     }
 
+    val newStreamForConsumer = new BasicStream[Array[Byte]](
+      name = "test_stream",
+      partitions = 3,
+      metadataStorage = metadataStorageInstForConsumer,
+      dataStorage = storageFactory.getInstance(cassandraStorageOptions),
+      ttl = 60 * 10,
+      description = "some_description")
+
+    consumer.stop()
+
     //reinitialization (should begin read from the latest checkpoint)
-    consumer = new BasicConsumer("test_consumer", streamForConsumer, consumerOptions)
+    consumer = new BasicConsumer("test_consumer", newStreamForConsumer, consumerOptions)
 
     (0 until secondPart) foreach { _ =>
       val txn: BasicConsumerTransaction[Array[Byte], String] = consumer.getTransaction.get
@@ -140,9 +150,9 @@ class CBasicProducerAndConsumerCheckpointTest extends FlatSpec with Matchers wit
   }
 
   override def afterAll(): Unit = {
-    val zkService = new ZkService("/unit", List(new InetSocketAddress("localhost",2181)), 7000)
-    zkService.deleteRecursive("")
-    zkService.close()
+    consumer.stop()
+    producer.stop()
+    removeZkMetadata()
     session.execute(s"DROP KEYSPACE $randomKeyspace")
     session.close()
     cluster.close()

@@ -1,10 +1,10 @@
-package com.bwsw.tstreams.coordination.subscribe
+package com.bwsw.tstreams.coordination.pubsub
 
 import java.net.InetSocketAddress
 
 import com.bwsw.tstreams.common.zkservice.ZkService
-import com.bwsw.tstreams.coordination.subscribe.messages.ProducerTopicMessage
-import com.bwsw.tstreams.coordination.subscribe.listener.ProducerTopicMessageListener
+import com.bwsw.tstreams.coordination.pubsub.messages.ProducerTopicMessage
+import com.bwsw.tstreams.coordination.pubsub.listener.ProducerTopicMessageListener
 import org.apache.zookeeper.CreateMode
 
 import scala.collection.mutable.ListBuffer

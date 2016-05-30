@@ -16,11 +16,10 @@ import com.bwsw.tstreams.metadata.MetadataStorageFactory
 import com.bwsw.tstreams.streams.BasicStream
 import com.datastax.driver.core.Cluster
 import org.scalatest.{BeforeAndAfterAll, Matchers, FlatSpec}
-import testutils.{LocalGeneratorCreator, RoundRobinPolicyCreator, CassandraHelper, RandomStringCreator}
+import testutils._
 
 
-class GroupCommitTest extends FlatSpec with Matchers with BeforeAndAfterAll{
-  def randomString: String = RandomStringCreator.randomAlphaString(10)
+class GroupCommitTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils{
   val randomKeyspace = randomString
   val cluster = Cluster.builder().addContactPoint("localhost").build()
   val session = cluster.connect()
@@ -39,7 +38,6 @@ class GroupCommitTest extends FlatSpec with Matchers with BeforeAndAfterAll{
     new Host("localhost",3002),
     new Host("localhost",3003))
   val aerospikeOptions = new AerospikeStorageOptions("test", hosts)
-  val aerospikeInst = storageFactory.getInstance(aerospikeOptions)
   
   val metadataStorage = metadataStorageFactory.getInstance(
     cassandraHosts = List(new InetSocketAddress("localhost", 9042)),
@@ -50,7 +48,7 @@ class GroupCommitTest extends FlatSpec with Matchers with BeforeAndAfterAll{
     name = "test_stream",
     partitions = 3,
     metadataStorage = metadataStorage,
-    dataStorage = aerospikeInst,
+    dataStorage = storageFactory.getInstance(aerospikeOptions),
     ttl = 60 * 10,
     description = "some_description")
 
@@ -58,7 +56,7 @@ class GroupCommitTest extends FlatSpec with Matchers with BeforeAndAfterAll{
     name = "test_stream",
     partitions = 3,
     metadataStorage = metadataStorage,
-    dataStorage = aerospikeInst,
+    dataStorage = storageFactory.getInstance(aerospikeOptions),
     ttl = 60 * 10,
     description = "some_description")
 
@@ -112,15 +110,22 @@ class GroupCommitTest extends FlatSpec with Matchers with BeforeAndAfterAll{
 
     group.commit()
 
-    consumer = new BasicConsumer("test_consumer", streamForConsumer, consumerOptions)
+    val newStreamForConsumer = new BasicStream[Array[Byte]](
+      name = "test_stream",
+      partitions = 3,
+      metadataStorage = metadataStorage,
+      dataStorage = storageFactory.getInstance(aerospikeOptions),
+      ttl = 60 * 10,
+      description = "some_description")
+    consumer = new BasicConsumer("test_consumer", newStreamForConsumer, consumerOptions)
     //assert that the second transaction was closed and consumer offsets was moved
     consumer.getTransaction.get.getAll().head == "info2"
   }
 
   override def afterAll(): Unit = {
-    val zkService = new ZkService("/unit", List(new InetSocketAddress("localhost",2181)), 7000)
-    zkService.deleteRecursive("")
-    zkService.close()
+    producer.stop()
+    consumer.stop()
+    removeZkMetadata()
     session.execute(s"DROP KEYSPACE $randomKeyspace")
     session.close()
     cluster.close()

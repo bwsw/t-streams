@@ -1,8 +1,8 @@
-package com.bwsw.tstreams.coordination.subscribe.messages
+package com.bwsw.tstreams.coordination.pubsub.messages
 
 import java.util.UUID
 
-import com.bwsw.tstreams.coordination.subscribe.messages.ProducerTransactionStatus.ProducerTransactionStatus
+import com.bwsw.tstreams.coordination.pubsub.messages.ProducerTransactionStatus.ProducerTransactionStatus
 
 /**
  * Messages which is published by producer on every transaction update

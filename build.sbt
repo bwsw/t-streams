@@ -16,7 +16,7 @@ libraryDependencies ++= Seq(
   "org.apache.commons" % "commons-collections4" % "4.1",
   "com.fasterxml.jackson.module" % "jackson-module-scala_2.11" % "2.6.3",
   "net.openhft" % "chronicle-queue" % "4.2.6",
-  "org.slf4j" % "slf4j-simple" % "1.7.5" //remove
+  "org.slf4j" % "slf4j-simple" % "1.7.5" //TODO
 )
 
 libraryDependencies += ("com.datastax.cassandra" % "cassandra-driver-core" % "3.0.0")
@@ -25,6 +25,7 @@ libraryDependencies += ("com.datastax.cassandra" % "cassandra-driver-core" % "3.
   .exclude("io.netty", "netty-transport")
   .exclude("io.netty", "netty-buffer")
   .exclude("io.netty", "netty-handler")
+
 
 
 //COORDINATION

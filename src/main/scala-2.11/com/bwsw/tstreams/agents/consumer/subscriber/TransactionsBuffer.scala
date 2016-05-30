@@ -1,9 +1,9 @@
 package com.bwsw.tstreams.agents.consumer.subscriber
 
 import java.util.UUID
-import com.bwsw.tstreams.coordination.subscribe.messages.ProducerTransactionStatus
+import com.bwsw.tstreams.coordination.pubsub.messages.ProducerTransactionStatus
 import ProducerTransactionStatus._
-import com.bwsw.tstreams.coordination.subscribe.messages.ProducerTransactionStatus
+import com.bwsw.tstreams.coordination.pubsub.messages.ProducerTransactionStatus
 
 /**
  * Buffer for maintain consumed transactions in memory

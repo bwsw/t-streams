@@ -122,6 +122,9 @@ with Matchers with BeforeAndAfterAll with TestUtils{
     checkVal &= !consumerThread.isAlive
     producersThreads.foreach(x=> checkVal &= !x.isAlive)
 
+    producers.foreach(_.stop())
+    consumer.stop()
+
     checkVal shouldEqual true
   }
 
@@ -154,7 +157,6 @@ with Matchers with BeforeAndAfterAll with TestUtils{
   }
 
   def getStream(partitions : Int): BasicStream[Array[Byte]] = {
-    //storage instances
     val metadataStorageInst = metadataStorageFactory.getInstance(
       cassandraHosts = List(new InetSocketAddress("localhost", 9042)),
       keyspace = randomKeyspace)
@@ -170,9 +172,7 @@ with Matchers with BeforeAndAfterAll with TestUtils{
   }
 
   override def afterAll(): Unit = {
-    val zkService = new ZkService("/unit", List(new InetSocketAddress("localhost",2181)), 7000)
-    zkService.deleteRecursive("")
-    zkService.close()
+    removeZkMetadata()
     session.execute(s"DROP KEYSPACE $randomKeyspace")
     session.close()
     cluster.close()

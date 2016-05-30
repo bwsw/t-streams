@@ -1,7 +1,7 @@
 package com.bwsw.tstreams.coordination.transactions.messages
 
 import java.util.UUID
-import com.bwsw.tstreams.coordination.subscribe.messages.ProducerTopicMessage
+import com.bwsw.tstreams.coordination.pubsub.messages.ProducerTopicMessage
 import com.fasterxml.jackson.annotation.JsonSubTypes.Type
 import com.fasterxml.jackson.annotation.{JsonSubTypes, JsonTypeInfo}
 
@@ -51,8 +51,7 @@ case class PublishResponse(senderID : String, receiverID : String, msg : Produce
   override val partition: Int = msg.partition
 }
 
+
+case class EmptyRequest(senderID : String, receiverID : String, partition : Int) extends IMessage
 case class EmptyResponse(senderID : String, receiverID : String, partition : Int) extends IMessage
 
-
-//just for testing
-case class EmptyRequest(senderID : String, receiverID : String, partition : Int) extends IMessage

@@ -7,7 +7,7 @@ import java.util.concurrent.locks.ReentrantLock
 import java.util.concurrent.{CountDownLatch, ExecutorService, Executors}
 
 import com.bwsw.tstreams.agents.producer.BasicProducer
-import com.bwsw.tstreams.coordination.subscribe.messages.{ProducerTransactionStatus, ProducerTopicMessage}
+import com.bwsw.tstreams.coordination.pubsub.messages.{ProducerTransactionStatus, ProducerTopicMessage}
 import com.bwsw.tstreams.coordination.transactions.messages._
 import com.bwsw.tstreams.coordination.transactions.transport.traits.ITransport
 import com.bwsw.tstreams.common.zkservice.ZkService
@@ -503,7 +503,8 @@ class PeerToPeerAgent(agentAddress : String,
             response.msgID = request.msgID
             transport.response(response)
 
-          case EmptyRequest(_,_,_) =>
+          case EmptyRequest(snd,rcv,p) =>
+            transport.response(EmptyResponse(rcv,snd,p))
         }
       }
     }

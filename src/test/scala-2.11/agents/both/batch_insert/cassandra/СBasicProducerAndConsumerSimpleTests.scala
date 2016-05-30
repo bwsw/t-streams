@@ -229,9 +229,9 @@ class СBasicProducerAndConsumerSimpleTests extends FlatSpec with Matchers with 
   }
 
   override def afterAll(): Unit = {
-    val zkService = new ZkService("/unit", List(new InetSocketAddress("localhost",2181)), 7000)
-    zkService.deleteRecursive("")
-    zkService.close()
+    producer.stop()
+    consumer.stop()
+    removeZkMetadata()
     session.execute(s"DROP KEYSPACE $randomKeyspace")
     session.close()
     cluster.close()

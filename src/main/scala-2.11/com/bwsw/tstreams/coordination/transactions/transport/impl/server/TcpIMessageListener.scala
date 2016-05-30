@@ -12,7 +12,6 @@ import io.netty.handler.codec.{DelimiterBasedFrameDecoder, Delimiters}
 import io.netty.handler.logging.{LogLevel, LoggingHandler}
 
 /**
- * IMessage listener
  * @param port Listener port
  */
 class TcpIMessageListener(port : Int){

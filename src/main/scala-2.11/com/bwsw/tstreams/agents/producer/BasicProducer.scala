@@ -3,8 +3,8 @@ package com.bwsw.tstreams.agents.producer
 import java.util.UUID
 import com.bwsw.tstreams.agents.group.{CommitInfo, Agent}
 import com.bwsw.tstreams.agents.producer.ProducerPolicies.ProducerPolicy
-import com.bwsw.tstreams.coordination.subscribe.ProducerCoordinator
-import com.bwsw.tstreams.coordination.subscribe.messages.{ProducerTransactionStatus, ProducerTopicMessage}
+import com.bwsw.tstreams.coordination.pubsub.ProducerCoordinator
+import com.bwsw.tstreams.coordination.pubsub.messages.{ProducerTransactionStatus, ProducerTopicMessage}
 import com.bwsw.tstreams.coordination.transactions.PeerToPeerAgent
 import com.bwsw.tstreams.coordination.transactions.transport.traits.Interaction
 import com.bwsw.tstreams.metadata.MetadataStorage
@@ -65,7 +65,6 @@ class BasicProducer[USERTYPE,DATATYPE](val name : String,
     val transaction = {
       val txnUUID = agent.getNewTxn(partition)
       logger.debug(s"[NEW_TRANSACTION PARTITION_$partition] uuid=${txnUUID.timestamp()}\n")
-      val txn = new BasicProducerTransaction[USERTYPE, DATATYPE](partition, txnUUID, this)
       if (mapPartitions.contains(partition)) {
         val prevTxn = mapPartitions(partition)
         if (!prevTxn.isClosed) {
@@ -81,6 +80,7 @@ class BasicProducer[USERTYPE,DATATYPE](val name : String,
           }
         }
       }
+      val txn = new BasicProducerTransaction[USERTYPE, DATATYPE](partition, txnUUID, this)
       mapPartitions(partition) = txn
       txn
     }

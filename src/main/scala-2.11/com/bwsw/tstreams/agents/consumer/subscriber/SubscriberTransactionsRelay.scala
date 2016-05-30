@@ -4,8 +4,8 @@ import java.util.UUID
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.locks.ReentrantLock
-import com.bwsw.tstreams.coordination.subscribe.ConsumerCoordinator
-import com.bwsw.tstreams.coordination.subscribe.messages.{ProducerTopicMessage, ProducerTransactionStatus}
+import com.bwsw.tstreams.coordination.pubsub.ConsumerCoordinator
+import com.bwsw.tstreams.coordination.pubsub.messages.{ProducerTopicMessage, ProducerTransactionStatus}
 import ProducerTransactionStatus._
 import com.bwsw.tstreams.txnqueue.PersistentTransactionQueue
 import org.slf4j.LoggerFactory
@@ -187,7 +187,6 @@ class SubscriberTransactionsRelay[DATATYPE,USERTYPE](subscriber : BasicSubscribi
           lock.unlock()
           Thread.sleep(callback.frequency * 1000L)
         }
-
       }
     })
     updateThread.start()
@@ -196,9 +195,13 @@ class SubscriberTransactionsRelay[DATATYPE,USERTYPE](subscriber : BasicSubscribi
 
   def stop() = {
     isRunning.set(false)
-    updateThread.join()
-    transactionsConsumerBeforeLast.join()
-    queueConsumer.join()
+    if (updateThread != null)
+      updateThread.join()
+    if (transactionsConsumerBeforeLast != null)
+      transactionsConsumerBeforeLast.join()
+    //TODO fix
+//    if (queueConsumer != null)
+//      queueConsumer.join()
   }
 
 

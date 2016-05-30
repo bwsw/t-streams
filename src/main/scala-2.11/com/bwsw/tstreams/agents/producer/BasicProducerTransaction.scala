@@ -2,7 +2,7 @@ package com.bwsw.tstreams.agents.producer
 
 import java.util.UUID
 import java.util.concurrent.{CountDownLatch, LinkedBlockingQueue, TimeUnit}
-import com.bwsw.tstreams.coordination.subscribe.messages.{ProducerTransactionStatus, ProducerTopicMessage}
+import com.bwsw.tstreams.coordination.pubsub.messages.{ProducerTransactionStatus, ProducerTopicMessage}
 import org.slf4j.LoggerFactory
 import scala.collection.mutable.ListBuffer
 import scala.util.control.Breaks._

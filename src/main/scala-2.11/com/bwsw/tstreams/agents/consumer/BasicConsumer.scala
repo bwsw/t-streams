@@ -2,7 +2,7 @@ package com.bwsw.tstreams.agents.consumer
 
 import java.util.UUID
 import com.bwsw.tstreams.agents.group.{ConsumerCommitInfo, CommitInfo, Agent}
-import com.bwsw.tstreams.coordination.subscribe.ConsumerCoordinator
+import com.bwsw.tstreams.coordination.pubsub.ConsumerCoordinator
 import com.bwsw.tstreams.entities.TransactionSettings
 import com.bwsw.tstreams.metadata.MetadataStorage
 import com.bwsw.tstreams.streams.BasicStream

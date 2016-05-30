@@ -1,8 +1,8 @@
-package com.bwsw.tstreams.coordination.subscribe.publisher
+package com.bwsw.tstreams.coordination.pubsub.publisher
 
 import java.net.InetSocketAddress
 
-import com.bwsw.tstreams.coordination.subscribe.messages.ProducerTopicMessage
+import com.bwsw.tstreams.coordination.pubsub.messages.ProducerTopicMessage
 import io.netty.bootstrap.Bootstrap
 import io.netty.channel.ChannelInitializer
 import io.netty.channel.nio.NioEventLoopGroup

@@ -1,6 +1,9 @@
 package testutils
 
+import java.net.InetSocketAddress
 import java.util.UUID
+
+import com.bwsw.tstreams.common.zkservice.ZkService
 
 import scala.collection.mutable.ListBuffer
 
@@ -9,6 +12,8 @@ import scala.collection.mutable.ListBuffer
  * Trait for defining batch size for testing purposes
  */
 trait TestUtils {
+  private val zkService = new ZkService("", List(new InetSocketAddress("localhost",2181)), 7000)
+
   /**
    * Current testing batch value
    */
@@ -29,4 +34,6 @@ trait TestUtils {
     }
     checkVal
   }
+
+  def removeZkMetadata() = zkService.deleteRecursive("/unit")
 }
