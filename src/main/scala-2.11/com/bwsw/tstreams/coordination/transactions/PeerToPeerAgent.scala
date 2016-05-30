@@ -487,7 +487,6 @@ class PeerToPeerAgent(agentAddress : String,
             response.msgID = request.msgID
             transport.response(response)
 
-          //TODO new feature; test harder
           case PublishRequest(snd, rcv, msg) =>
             lockLocalMasters.lock()
             assert(rcv == agentAddress)

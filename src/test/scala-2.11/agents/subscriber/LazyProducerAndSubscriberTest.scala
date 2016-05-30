@@ -15,7 +15,6 @@ import com.bwsw.tstreams.agents.producer.{ProducerCoordinationSettings, BasicPro
 import com.bwsw.tstreams.converter.{ArrayByteToStringConverter, StringToArrayByteConverter}
 import com.bwsw.tstreams.data.aerospike.{AerospikeStorageFactory, AerospikeStorageOptions}
 import com.bwsw.tstreams.coordination.transactions.transport.impl.TcpTransport
-import com.bwsw.tstreams.common.zkservice.ZkService
 import com.bwsw.tstreams.metadata.MetadataStorageFactory
 import com.bwsw.tstreams.streams.BasicStream
 import com.datastax.driver.core.Cluster
@@ -26,12 +25,6 @@ import scala.collection.mutable.ListBuffer
 //TODO check this test harder
 class LazyProducerAndSubscriberTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils{
   var port = 8000
-
-  LogManager.getLogManager.reset()
-  System.setProperty(org.slf4j.impl.SimpleLogger.DEFAULT_LOG_LEVEL_KEY, "WARN")
-  System.setProperty("org.slf4j.simpleLogger.logFile","testlog.log")
-  System.setProperty("org.slf4j.simpleLogger.showDateTime","false")
-  System.setProperty("org.slf4j.simpleLogger.log.com.bwsw","DEBUG")
 
   //creating keyspace, metadata
   val path = randomString
@@ -126,7 +119,9 @@ class LazyProducerAndSubscriberTest extends FlatSpec with Matchers with BeforeAn
     subscriber.start()
     producersThreads.foreach(x=>x.join(timeoutForWaiting*1000L))
     Thread.sleep(30*1000)
-    println(s"cnt=$cnt")
+
+    producers.foreach(_.stop())
+    subscriber.stop()
     assert(map.values.map(x=>x.size).sum == totalTxn*producersAmount)
     map foreach {case(_,list) =>
       list.map(x=>(x,x.timestamp())).sortBy(_._2).map(x=>x._1) shouldEqual list
@@ -178,9 +173,7 @@ class LazyProducerAndSubscriberTest extends FlatSpec with Matchers with BeforeAn
   }
 
   override def afterAll(): Unit = {
-    val zkService = new ZkService("/unit", List(new InetSocketAddress("localhost",2181)), 7000)
-    zkService.deleteRecursive("")
-    zkService.close()
+    removeZkMetadata()
     session.execute(s"DROP KEYSPACE $randomKeyspace")
     session.close()
     cluster.close()

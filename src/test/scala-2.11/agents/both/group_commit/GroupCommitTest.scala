@@ -103,13 +103,14 @@ class GroupCommitTest extends FlatSpec with Matchers with BeforeAndAfterAll with
     txn.checkpoint()
 
     //move consumer offsets
-    val consumedTxn = consumer.getTransaction.get
+    consumer.getTransaction.get
 
     //open transaction without close
     producer.newTransaction(ProducerPolicies.errorIfOpen).send("info2")
 
     group.commit()
 
+    consumer.stop()
     val newStreamForConsumer = new BasicStream[Array[Byte]](
       name = "test_stream",
       partitions = 3,
