@@ -406,7 +406,7 @@ class PeerToPeerAgent(agentAddress : String,
           assert(executors.contains(request.partition))
           executors(request.partition).execute(task)
         }
-        //graceful shutdown all executors after finishing handling messages
+        //graceful shutdown all executors after finishing message handling
         executors.foreach(x=>x._2.shutdown())
       }
     })

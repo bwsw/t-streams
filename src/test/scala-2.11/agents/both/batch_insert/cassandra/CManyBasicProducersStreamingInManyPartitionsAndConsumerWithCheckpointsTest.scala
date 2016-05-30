@@ -8,7 +8,6 @@ import com.bwsw.tstreams.agents.producer.{ProducerCoordinationSettings, BasicPro
 import com.bwsw.tstreams.converter.{ArrayByteToStringConverter, StringToArrayByteConverter}
 import com.bwsw.tstreams.data.cassandra.{CassandraStorageOptions, CassandraStorageFactory}
 import com.bwsw.tstreams.coordination.transactions.transport.impl.TcpTransport
-import com.bwsw.tstreams.common.zkservice.ZkService
 import com.bwsw.tstreams.metadata.MetadataStorageFactory
 import com.bwsw.tstreams.streams.BasicStream
 import com.datastax.driver.core.Cluster
@@ -94,17 +93,18 @@ with Matchers with BeforeAndAfterAll with TestUtils{
         def run() = {
           var i = 0
           while(i < totalTxn*producersAmount) {
-            consumer.checkpoint()
-            consumer.stop()
-            val newStreamForConsumer = new BasicStream[Array[Byte]](
-              name = "stream_name",
-              partitions = totalPartitions,
-              metadataStorage = streamInst.metadataStorage,
-              dataStorage = storageFactory.getInstance(cassandraStorageOptions),
-              ttl = 60 * 10,
-              description = "some_description")
 
             if (i % 30 == 0) {
+              consumer.checkpoint()
+              consumer.stop()
+              val newStreamForConsumer = new BasicStream[Array[Byte]](
+                name = "stream_name",
+                partitions = totalPartitions,
+                metadataStorage = streamInst.metadataStorage,
+                dataStorage = storageFactory.getInstance(cassandraStorageOptions),
+                ttl = 60 * 10,
+                description = "some_description")
+
               consumer = new BasicConsumer("test_consumer", newStreamForConsumer, consumerOptions)
               Thread.sleep(1000)
             }

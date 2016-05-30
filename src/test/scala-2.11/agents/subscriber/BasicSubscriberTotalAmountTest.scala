@@ -18,12 +18,11 @@ import com.bwsw.tstreams.metadata.MetadataStorageFactory
 import com.bwsw.tstreams.streams.BasicStream
 import com.datastax.driver.core.Cluster
 import org.scalatest.{BeforeAndAfterAll, Matchers, FlatSpec}
-import testutils.{LocalGeneratorCreator, RoundRobinPolicyCreator, CassandraHelper, RandomStringCreator}
+import testutils._
 
 
-class BasicSubscriberTotalAmountTest extends FlatSpec with Matchers with BeforeAndAfterAll{
+class BasicSubscriberTotalAmountTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils{
   //creating keyspace, metadata
-  def randomString: String = RandomStringCreator.randomAlphaString(10)
   val randomKeyspace = randomString
   val cluster = Cluster.builder().addContactPoint("localhost").build()
   val session = cluster.connect()
@@ -139,15 +138,13 @@ class BasicSubscriberTotalAmountTest extends FlatSpec with Matchers with BeforeA
     }
     Thread.sleep(10000)
 
-//    subscribeConsumer.stop()
+    subscribeConsumer.stop()
 
     acc shouldEqual totalMsg
   }
 
   override def afterAll(): Unit = {
-    val zkService = new ZkService("/unit", List(new InetSocketAddress("localhost",2181)), 7000)
-    zkService.deleteRecursive("")
-    zkService.close()
+    removeZkMetadata()
     session.execute(s"DROP KEYSPACE $randomKeyspace")
     session.close()
     cluster.close()

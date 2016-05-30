@@ -200,8 +200,8 @@ class SubscriberTransactionsRelay[DATATYPE,USERTYPE](subscriber : BasicSubscribi
     if (transactionsConsumerBeforeLast != null)
       transactionsConsumerBeforeLast.join()
     //TODO fix
-//    if (queueConsumer != null)
-//      queueConsumer.join()
+    if (queueConsumer != null)
+      queueConsumer.stop()
   }
 
 
