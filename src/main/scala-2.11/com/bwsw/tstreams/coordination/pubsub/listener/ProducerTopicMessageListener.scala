@@ -23,6 +23,7 @@ class ProducerTopicMessageListener(port : Int) {
   private var listenerThread : Thread = null
 
   def stop() = {
+    channelHandler.stopCallback()
     workerGroup.shutdownGracefully().await()
     bossGroup.shutdownGracefully().await()
   }
@@ -37,10 +38,6 @@ class ProducerTopicMessageListener(port : Int) {
 
   def startCallback() = {
     channelHandler.startCallBack()
-  }
-
-  def stopCallback() = {
-    channelHandler.stopCallback()
   }
 
   def start() = {

@@ -138,12 +138,12 @@ class BasicSubscriberTotalAmountTest extends FlatSpec with Matchers with BeforeA
     }
     Thread.sleep(10000)
 
-    subscribeConsumer.stop()
-
     acc shouldEqual totalMsg
   }
 
   override def afterAll(): Unit = {
+    subscribeConsumer.stop()
+    producer.stop()
     removeZkMetadata()
     session.execute(s"DROP KEYSPACE $randomKeyspace")
     session.close()

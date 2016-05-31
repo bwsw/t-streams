@@ -95,10 +95,9 @@ class BasicSubscribingConsumer[DATATYPE, USERTYPE](name : String,
   override def stop() = {
     if (!isStarted)
       throw new IllegalStateException("subscriber is not started")
+    isStarted = false
     relays.foreach(_.stop())
     relays.clear()
-    isStarted = false
-    coordinator.stopCallback()
     coordinator.stop()
   }
 }
