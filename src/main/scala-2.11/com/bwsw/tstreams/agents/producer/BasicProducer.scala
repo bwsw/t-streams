@@ -168,7 +168,12 @@ class BasicProducer[USERTYPE,DATATYPE](val name : String,
     usedPartitions = producerOptions.writePolicy.getUsedPartition(),
     isLowPriorityToBeMaster = producerOptions.producerCoordinationSettings.isLowPriorityToBeMaster,
     transport = producerOptions.producerCoordinationSettings.transport,
-    transportTimeout = producerOptions.producerCoordinationSettings.transportTimeout)
+    transportTimeout = producerOptions.producerCoordinationSettings.transportTimeout,
+    poolSize = if (producerOptions.producerCoordinationSettings.threadPoolAmount == -1)
+                  producerOptions.writePolicy.getUsedPartition().size
+               else
+                  producerOptions.producerCoordinationSettings.threadPoolAmount)
+
 
   def stop() = {
     agent.stop()

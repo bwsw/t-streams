@@ -40,7 +40,6 @@ class BasicSubscribingConsumer[DATATYPE, USERTYPE](name : String,
 
     coordinator.startListen()
 
-    //TODO [THINK HERE] mb move it above [split callback on partitions] MAP[partition, queue[txn]]
     coordinator.startCallback()
 
     (0 until stream.getPartitions) foreach { partition =>

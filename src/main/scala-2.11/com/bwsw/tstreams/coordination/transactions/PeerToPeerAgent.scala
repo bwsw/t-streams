@@ -35,7 +35,8 @@ class PeerToPeerAgent(agentAddress : String,
                       usedPartitions : List[Int],
                       isLowPriorityToBeMaster : Boolean,
                       transport: ITransport,
-                      transportTimeout : Int) {
+                      transportTimeout : Int,
+                      poolSize : Int) {
 
   private val logger = LoggerFactory.getLogger(this.getClass)
   private val zkRetriesAmount = 60
@@ -395,16 +396,23 @@ class PeerToPeerAgent(agentAddress : String,
     messageHandler = new Thread(new Runnable {
       override def run(): Unit = {
         latch.countDown()
-        val executors = scala.collection.mutable.Map[Int/*used partition*/, ExecutorService]()
-        usedPartitions foreach { p =>
-          executors(p) = Executors.newSingleThreadExecutor()
+        val executors = scala.collection.mutable.Map[Int, ExecutorService]()
+        (0 until poolSize) foreach { x =>
+          executors(x) = Executors.newSingleThreadExecutor()
         }
+        val partitionsToExecutors = usedPartitions
+          .zipWithIndex
+          .map{case(partition,execNum)=>(partition,execNum % poolSize)}
+          .toMap
+
         while (isRunning.get()) {
           val request: IMessage = transport.waitRequest()
           logger.debug(s"[HANDLER] Start handle msg:{$request} on agent:{$agentAddress}")
           val task : Runnable = createTask(request)
-          assert(executors.contains(request.partition))
-          executors(request.partition).execute(task)
+
+          assert(partitionsToExecutors.contains(request.partition))
+          val execNum = partitionsToExecutors(request.partition)
+          executors(execNum).execute(task)
         }
         //graceful shutdown all executors after finishing message handling
         executors.foreach(x=>x._2.shutdown())
@@ -417,7 +425,7 @@ class PeerToPeerAgent(agentAddress : String,
   /**
    * Create task to handle incoming message
    * @param request Requested message
-   * @return Task
+   * @return Response
    */
   private def createTask(request : IMessage): Runnable = {
     new Runnable {

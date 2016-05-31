@@ -23,7 +23,7 @@ class SubscriberChannelHandler extends SimpleChannelInboundHandler[ProducerTopic
   private val lockCount = new ReentrantLock(true)
   private val queue = new LinkedBlockingQueue[ProducerTopicMessage]()
   private var callbackThread : Thread = null
-  private val isCallback = new AtomicBoolean(true)
+  private val isCallback = new AtomicBoolean(false)
   private val lock = new ReentrantLock(true)
 
   def addCallback(callback : (ProducerTopicMessage)=>Unit) = {
@@ -34,6 +34,7 @@ class SubscriberChannelHandler extends SimpleChannelInboundHandler[ProducerTopic
 
   def startCallBack() = {
     val sync = new CountDownLatch(1)
+    isCallback.set(true)
     callbackThread = new Thread(new Runnable {
       override def run(): Unit = {
         sync.countDown()
@@ -50,9 +51,11 @@ class SubscriberChannelHandler extends SimpleChannelInboundHandler[ProducerTopic
   }
 
   def stopCallback() = {
-    isCallback.set(false)
-    queue.put(ProducerTopicMessage(UUID.randomUUID(),0,ProducerTransactionStatus.cancelled,-1))
-    callbackThread.join()
+    if (isCallback.get()) {
+      isCallback.set(false)
+      queue.put(ProducerTopicMessage(UUID.randomUUID(), 0, ProducerTransactionStatus.cancelled, -1))
+      callbackThread.join()
+    }
   }
 
   def getCount(): Int = {

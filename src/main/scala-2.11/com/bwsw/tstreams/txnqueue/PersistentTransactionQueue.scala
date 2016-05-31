@@ -7,7 +7,7 @@ import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue
 import org.slf4j.LoggerFactory
 
 /**
- * Queue for basic consumer with subscribe to maintain incoming and already existing messages
+ * Queue for basic consumer with subscribe to maintain incoming and already existing transactions
  * @param basePath base path for queues
  * @param separator element which used to indicate when start to read from second queue(if null second queue will be always used)
  */

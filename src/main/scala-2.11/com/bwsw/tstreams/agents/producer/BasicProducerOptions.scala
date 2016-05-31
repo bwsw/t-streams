@@ -69,4 +69,5 @@ class ProducerCoordinationSettings(val agentAddress : String,
                                    val zkTimeout : Int,
                                    val isLowPriorityToBeMaster : Boolean,
                                    val transport: ITransport,
-                                   val transportTimeout : Int)
+                                   val transportTimeout : Int,
+                                   val threadPoolAmount: Int = -1)
