@@ -39,6 +39,7 @@ class ConsumerCoordinator(agentAddress : String,
 
   def stop() = {
     listener.stop()
+    zkService.close()
   }
 
   def startListen() = {

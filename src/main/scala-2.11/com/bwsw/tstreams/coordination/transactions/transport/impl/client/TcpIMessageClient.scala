@@ -94,4 +94,18 @@ class TcpIMessageClient {
 
     answer
   }
+
+  /**
+   * Close client
+   */
+  def close() = {
+    addressToConnection.foreach{ x=>
+      try {
+        x._2.close()
+      } catch {
+        case e: IOException =>
+      }
+    }
+    addressToConnection.clear()
+  }
 }

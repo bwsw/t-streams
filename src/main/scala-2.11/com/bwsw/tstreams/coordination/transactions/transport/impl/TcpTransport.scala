@@ -93,6 +93,7 @@ class TcpTransport extends ITransport{
    * Stop transport listen incoming messages
    */
   override def unbindLocalAddress(): Unit = {
+    sender.close()
     listener.stop()
   }
 

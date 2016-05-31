@@ -57,6 +57,7 @@ class ProducerCoordinator(prefix : String,
   }
 
   def stop() = {
+    broadcaster.close()
     zkService.close()
   }
 }

@@ -47,7 +47,7 @@ class Broadcaster {
   }
 
   def close() = {
-    group.shutdownGracefully()
+    group.shutdownGracefully().await()
   }
 
   def updateSubscribers(newSubscribers : List[String]) = {
