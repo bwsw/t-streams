@@ -21,8 +21,8 @@ import scala.util.control.Breaks._
  * @param coordinator Coordinator instance for maintaining new transactions updates
  * @param callback Callback on consumed transactions
  * @param queue Queue for maintain consumed transactions
- * @tparam DATATYPE
- * @tparam USERTYPE
+ * @tparam DATATYPE Storage data type
+ * @tparam USERTYPE User data type
  */
 class SubscriberTransactionsRelay[DATATYPE,USERTYPE](subscriber : BasicSubscribingConsumer[DATATYPE,USERTYPE],
                                                      offset: UUID,
@@ -47,7 +47,6 @@ class SubscriberTransactionsRelay[DATATYPE,USERTYPE](subscriber : BasicSubscribi
       lock.unlock()
     }
   }
-
   private var queueConsumer : Thread = null
   private var transactionsConsumerBeforeLast : Thread = null
   private var updateThread : Thread = null
@@ -155,7 +154,7 @@ class SubscriberTransactionsRelay[DATATYPE,USERTYPE](subscriber : BasicSubscribi
         while (isRunning.get()) {
           lock.lock()
 
-          logBuffer() //TODO remove after hard debug
+          logTransactionBuffer() //TODO remove after hard debug
 
           val it = transactionBuffer.getIterator()
           breakable {
@@ -206,7 +205,7 @@ class SubscriberTransactionsRelay[DATATYPE,USERTYPE](subscriber : BasicSubscribi
 
 
   //TODO remove after hard debug
-  def logBuffer() = {
+  def logTransactionBuffer() = {
     val lb = ListBuffer[(Long, ProducerTransactionStatus)]()
     val it = transactionBuffer.getIterator()
     while (it.hasNext){
