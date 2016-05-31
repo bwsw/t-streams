@@ -54,7 +54,7 @@ class SubscriberTransactionsRelay[DATATYPE,USERTYPE](subscriber : BasicSubscribi
   /**
    * Start consume transaction queue async
    */
-  def startConsumeAndCallbackQueueAsync() = {
+  def startConsumeAndCallbackPersistentQueue() = {
     val latch = new CountDownLatch(1)
     queueConsumer = new Thread(new Runnable {
       override def run(): Unit = {
@@ -132,7 +132,7 @@ class SubscriberTransactionsRelay[DATATYPE,USERTYPE](subscriber : BasicSubscribi
    * Update producers subscribers info
    * @return Listener ID
    */
-  def notifyProducers() : Unit = {
+  def notifyProducersAndStartListen() : Unit = {
     coordinator.addCallback(updateCallback)
     coordinator.registerSubscriber(subscriber.stream.getName, partition)
     coordinator.notifyProducers(subscriber.stream.getName, partition)

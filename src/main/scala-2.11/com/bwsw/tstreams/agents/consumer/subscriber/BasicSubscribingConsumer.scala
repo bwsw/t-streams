@@ -66,13 +66,14 @@ class BasicSubscribingConsumer[DATATYPE, USERTYPE](name : String,
       relays += transactionsRelay
 
       //start tread to consume queue and doing callback's on it
-      transactionsRelay.startConsumeAndCallbackQueueAsync()
+      transactionsRelay.startConsumeAndCallbackPersistentQueue()
 
-      //start tread to consume all transactions before lasttxn including it
+      //start tread to consume all transactions before last txn including it
       if (lastTransactionOpt.isDefined)
         transactionsRelay.consumeTransactionsLessOrEqualThanAsync(lastTransactionOpt.get.getTxnUUID)
 
-      transactionsRelay.notifyProducers()
+      transactionsRelay.notifyProducersAndStartListen()
+      coordinator.synchronize(stream.getName, partition)
 
       //consume all messages greater than last
       if (lastTransactionOpt.isDefined)
@@ -85,7 +86,6 @@ class BasicSubscribingConsumer[DATATYPE, USERTYPE](name : String,
       transactionsRelay.startUpdate()
     }
 
-    coordinator.synchronize(stream.getName, (0 until stream.getPartitions).toList)
   }
 
   /**

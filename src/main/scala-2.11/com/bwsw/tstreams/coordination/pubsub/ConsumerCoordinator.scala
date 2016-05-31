@@ -58,12 +58,11 @@ class ConsumerCoordinator(agentAddress : String,
     zkService.notify(s"/subscribers/event/$streamName/$partition")
   }
 
-  def synchronize(streamName : String, partitions : List[Int]) = {
+  def synchronize(streamName : String, partition : Int) = {
     val buf = ListBuffer[String]()
-    partitions foreach { p =>
-      buf.append(zkService.getAllSubPath(s"/producers/agents/$streamName/$p").getOrElse(List()):_*)
-    }
-    val totalAmount = buf.distinct.size
+    buf.append(zkService.getAllSubPath(s"/producers/agents/$streamName/$partition").getOrElse(List()):_*)
+    val totalAmount = buf.size
+    assert(buf.distinct.size == buf.size)
     var timer = 0
     while (listener.getConnectionsAmount < totalAmount && timer < SYNCHRONIZE_LIMIT){
       timer += 1
