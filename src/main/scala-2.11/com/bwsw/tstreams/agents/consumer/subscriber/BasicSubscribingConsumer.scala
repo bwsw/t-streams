@@ -43,10 +43,8 @@ class BasicSubscribingConsumer[DATATYPE, USERTYPE](name : String,
     coordinator.startCallback()
 
     (0 until stream.getPartitions) foreach { partition =>
-      //getting last txn for concrete partition
       val lastTransactionOpt = getLastTransaction(partition)
 
-      //creating queue for concrete partition
       val queue =
         if (lastTransactionOpt.isDefined) {
           val txnUuid = lastTransactionOpt.get.getTxnUUID
@@ -65,17 +63,16 @@ class BasicSubscribingConsumer[DATATYPE, USERTYPE](name : String,
 
       relays += transactionsRelay
 
-      //start tread to consume queue and doing callback's on it
       transactionsRelay.startConsumeAndCallbackPersistentQueue()
 
-      //start tread to consume all transactions before last txn including it
+      //consume all transactions less or equal than last transaction
       if (lastTransactionOpt.isDefined)
         transactionsRelay.consumeTransactionsLessOrEqualThanAsync(lastTransactionOpt.get.getTxnUUID)
 
       transactionsRelay.notifyProducersAndStartListen()
       coordinator.synchronize(stream.getName, partition)
 
-      //consume all messages greater than last
+      //consume all transactions greater than last
       if (lastTransactionOpt.isDefined)
         transactionsRelay.consumeTransactionsMoreThan(lastTransactionOpt.get.getTxnUUID)
       else {
@@ -85,7 +82,6 @@ class BasicSubscribingConsumer[DATATYPE, USERTYPE](name : String,
 
       transactionsRelay.startUpdate()
     }
-
   }
 
   /**
