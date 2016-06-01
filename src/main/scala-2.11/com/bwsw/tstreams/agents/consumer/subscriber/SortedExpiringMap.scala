@@ -5,7 +5,14 @@ import java.util.Comparator
 import org.apache.commons.collections4.map.PassiveExpiringMap
 import org.apache.commons.collections4.map.PassiveExpiringMap.ExpirationPolicy
 
-
+/**
+ * Map with expiring records based on [[expirationPolicy]]]
+ * in order which is determined by [[comparator]]]
+ * @param comparator Comparator to organize order
+ * @param expirationPolicy Policy of record expiration
+ * @tparam K type
+ * @tparam V type
+ */
 class SortedExpiringMap[K,V] (comparator : Comparator[K], expirationPolicy: ExpirationPolicy[K,V]) {
 
   private val treeMap = new util.TreeMap[K, V](comparator)

@@ -2,65 +2,100 @@ package com.bwsw.tstreams.agents.consumer.subscriber
 
 import java.util.UUID
 import java.util.concurrent.{Executors, ExecutorService}
-import com.bwsw.tstreams.agents.consumer.{BasicConsumer, BasicConsumerOptions}
-import com.bwsw.tstreams.coordination.pubsub.ConsumerCoordinator
+import com.bwsw.tstreams.agents.consumer.{SubscriberCoordinationOptions, BasicConsumer, BasicConsumerOptions}
+import com.bwsw.tstreams.coordination.pubsub.SubscriberCoordinator
 import com.bwsw.tstreams.streams.BasicStream
 import com.bwsw.tstreams.txnqueue.PersistentTransactionQueue
 
 /**
- * Basic consumer with subscribe
+ * Basic consumer with subscribe option
  * @param name Name of subscriber
  * @param stream Stream from which to consume transactions
  * @param options Basic consumer options
- * @param persistentQueuePath Local Path to queue which maintain transactions that already exist and new incoming transactions
+ * @param persistentQueuePath Local path for queue which maintain transactions that already exist
+ *                            and new incoming transactions
  * @tparam DATATYPE Storage data type
  * @tparam USERTYPE User data type
  */
 class BasicSubscribingConsumer[DATATYPE, USERTYPE](name : String,
                                                    stream : BasicStream[DATATYPE],
                                                    options : BasicConsumerOptions[DATATYPE,USERTYPE],
+                                                   subscriberCoordinationOptions : SubscriberCoordinationOptions,
                                                    callBack : BasicSubscriberCallback[DATATYPE, USERTYPE],
                                                    persistentQueuePath : String)
   extends BasicConsumer[DATATYPE, USERTYPE](name, stream, options){
+  /**
+   * Indicate started or not this subscriber
+   */
   private var isStarted = false
+
+  /**
+   * Coordinator for providing updates to this subscriber from producers
+   * and establishing stream locks
+   */
+  private var coordinator = new SubscriberCoordinator(
+    subscriberCoordinationOptions.agentAddress,
+    subscriberCoordinationOptions.zkRootPath,
+    subscriberCoordinationOptions.zkHosts,
+    subscriberCoordinationOptions.zkSessionTimeout)
+
+  /**
+   * Subscriber used partitions
+   */
   private val usedPartitions = options.readPolicy.getUsedPartition()
-  private val poolSize = if (options.consumerCoordinatorSettings.threadPoolAmount == -1)
+
+  /**
+   * Thread pool size (default is equal to [[usedPartitions.size]]])
+   */
+  private val poolSize = if (subscriberCoordinationOptions.threadPoolAmount == -1)
     usedPartitions.size
   else
-    options.consumerCoordinatorSettings.threadPoolAmount
+    subscriberCoordinationOptions.threadPoolAmount
+
+  /**
+   * Mapping partitions to executors index
+   */
   private val partitionsToExecutors = usedPartitions
     .zipWithIndex
     .map{case(partition,execNum) => (partition,execNum % poolSize)}
     .toMap
+
+  /**
+   * Executors
+   */
   private val executors : scala.collection.mutable.Map[Int, ExecutorService] =
     scala.collection.mutable.Map[Int, ExecutorService]()
+
+  /**
+   * Manager for providing updates on transactions
+   */
   private val updateManager = new UpdateManager
 
   /**
    * Start subscriber to consume new transactions
    */
   def start() = {
-    if (isStarted)
-      throw new IllegalStateException("subscriber already started")
+    if (isStarted) throw new IllegalStateException("subscriber already started")
+    val streamLock = coordinator.getStreamLock(stream.getName)
+    streamLock.lock()
+
     isStarted = true
     if (coordinator.isStoped){
-      coordinator = new ConsumerCoordinator(
-        options.consumerCoordinatorSettings.agentAddress,
-        options.consumerCoordinatorSettings.prefix,
-        options.consumerCoordinatorSettings.zkHosts,
-        options.consumerCoordinatorSettings.zkSessionTimeout)
+      coordinator = new SubscriberCoordinator(
+        subscriberCoordinationOptions.agentAddress,
+        subscriberCoordinationOptions.zkRootPath,
+        subscriberCoordinationOptions.zkHosts,
+        subscriberCoordinationOptions.zkSessionTimeout)
     }
     (0 until poolSize) foreach { x =>
       executors(x) = Executors.newSingleThreadExecutor()
     }
-
     coordinator.startListen()
     coordinator.startCallback()
     updateManager.startUpdate(callBack.pollingFrequency)
 
     (0 until stream.getPartitions) foreach { partition =>
       val lastTransactionOpt = getLastTransaction(partition)
-
       val queue =
         if (lastTransactionOpt.isDefined) {
           val txnUuid = lastTransactionOpt.get.getTxnUUID
@@ -77,7 +112,6 @@ class BasicSubscribingConsumer[DATATYPE, USERTYPE](name : String,
 
       val executorIndex = partitionsToExecutors(partition)
       val executor = executors(executorIndex)
-
       val transactionsRelay = new SubscriberTransactionsRelay(
         subscriber = this,
         offset = currentOffsets(partition),
@@ -104,14 +138,15 @@ class BasicSubscribingConsumer[DATATYPE, USERTYPE](name : String,
 
       updateManager.addExecutorWithRunnable(executor,transactionsRelay.getUpdateRunnable())
     }
+
+    streamLock.unlock()
   }
 
   /**
    * Stop subscriber
    */
-  override def stop() = {
-    if (!isStarted)
-      throw new IllegalStateException("subscriber is not started")
+  def stop() = {
+    if (!isStarted) throw new IllegalStateException("subscriber is not started")
     isStarted = false
     updateManager.stopUpdate()
     if (executors != null) {

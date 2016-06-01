@@ -5,19 +5,32 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.locks.ReentrantLock
 import scala.collection.mutable.ListBuffer
 
-
+/**
+ * Manager for maintain async updates on [[TransactionsBuffer]]]
+ */
 class UpdateManager {
   private val lock = new ReentrantLock(true)
   private val executorWithRunnable = ListBuffer[(Executor, Runnable)]()
   private var updateThread : Thread = null
   private val isUpdating = new AtomicBoolean(false)
 
+  /**
+   * Add executor with runnable to list
+   * @param e Executor ref
+   * @param r Runnable ref
+   */
   def addExecutorWithRunnable(e : Executor, r : Runnable) = {
     lock.lock()
     executorWithRunnable += ((e, r))
     lock.unlock()
   }
 
+  /**
+   * Start executing all runnables with their executor
+   * with concrete updateInterval
+   *
+   * @param updateInterval Delay between runnables execution
+   */
   def startUpdate(updateInterval : Int) = {
     isUpdating.set(true)
     updateThread = new Thread(new Runnable {
@@ -33,6 +46,9 @@ class UpdateManager {
     updateThread.start()
   }
 
+  /**
+   * Stop updates
+   */
   def stopUpdate() = {
     if (updateThread != null) {
       isUpdating.set(false)

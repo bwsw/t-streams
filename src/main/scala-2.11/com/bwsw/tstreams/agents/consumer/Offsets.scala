@@ -27,7 +27,6 @@ object Offsets {
    */
   case class DateTime(startTime : Date) extends IOffset
 
-
   /**
    * Offset for data retrieving from custom UUID
    * @param startUUID Start offset in uuid

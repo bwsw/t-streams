@@ -2,7 +2,7 @@ package agents.both.batch_insert.cassandra
 
 import java.net.InetSocketAddress
 import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
-import com.bwsw.tstreams.agents.consumer.{ConsumerCoordinationOptions, BasicConsumer, BasicConsumerOptions}
+import com.bwsw.tstreams.agents.consumer.{SubscriberCoordinationOptions, BasicConsumer, BasicConsumerOptions}
 import com.bwsw.tstreams.agents.producer.InsertionType.BatchInsert
 import com.bwsw.tstreams.agents.producer.{ProducerCoordinationOptions, BasicProducer, BasicProducerOptions, ProducerPolicies}
 import com.bwsw.tstreams.converter.{ArrayByteToStringConverter, StringToArrayByteConverter}
@@ -69,7 +69,6 @@ class CManyBasicProducersStreamingInOnePartitionAndConsumerTest extends FlatSpec
       RoundRobinPolicyCreator.getRoundRobinPolicy(
         usedPartitions = List(0),
         stream = streamInst),
-      new ConsumerCoordinationOptions("localhost:8588", "/unit", List(new InetSocketAddress("localhost",2181)), 7000),
       Oldest,
       LocalGeneratorCreator.getGen(),
       useLastOffset = false)
@@ -106,7 +105,6 @@ class CManyBasicProducersStreamingInOnePartitionAndConsumerTest extends FlatSpec
     producersThreads.foreach(x=> checkVal &= !x.isAlive)
 
     producers.foreach(_.stop())
-    consumer.stop()
 
     checkVal shouldEqual true
   }

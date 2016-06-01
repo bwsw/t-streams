@@ -9,7 +9,7 @@ import java.util.UUID
 trait CommitInfo
 
 /**
- * BasicProducer commit information
+ * BasicProducer commit information (not used now)
  * @param streamName Stream name
  * @param partition Partition number
  * @param transaction Transaction to commit

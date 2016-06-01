@@ -3,7 +3,7 @@ package agents.both.batch_insert.aerospike
 import java.net.InetSocketAddress
 import com.aerospike.client.Host
 import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
-import com.bwsw.tstreams.agents.consumer.{ConsumerCoordinationOptions, BasicConsumer, BasicConsumerOptions, BasicConsumerTransaction}
+import com.bwsw.tstreams.agents.consumer.{SubscriberCoordinationOptions, BasicConsumer, BasicConsumerOptions, BasicConsumerTransaction}
 import com.bwsw.tstreams.agents.producer.InsertionType.BatchInsert
 import com.bwsw.tstreams.agents.producer.{ProducerCoordinationOptions, ProducerPolicies, BasicProducer, BasicProducerOptions}
 import com.bwsw.tstreams.converter.{ArrayByteToStringConverter, StringToArrayByteConverter}
@@ -93,7 +93,6 @@ class ABasicProducerAndConsumerCheckpointTest extends FlatSpec with Matchers wit
     consumerKeepAliveInterval = 5,
     arrayByteToStringConverter,
     RoundRobinPolicyCreator.getRoundRobinPolicy(streamForConsumer, List(0,1,2)),
-    new ConsumerCoordinationOptions("localhost:8588", "/unit", List(new InetSocketAddress("localhost",2181)), 7000),
     Oldest,
     LocalGeneratorCreator.getGen(),
     useLastOffset = true)
@@ -134,7 +133,6 @@ class ABasicProducerAndConsumerCheckpointTest extends FlatSpec with Matchers wit
       ttl = 60 * 10,
       description = "some_description")
 
-    consumer.stop()
     //reinitialization (should begin read from the latest checkpoint)
     consumer = new BasicConsumer("test_consumer", newStreamForConsumer, consumerOptions)
 
@@ -154,7 +152,6 @@ class ABasicProducerAndConsumerCheckpointTest extends FlatSpec with Matchers wit
 
   override def afterAll(): Unit = {
     producer.stop()
-    consumer.stop()
     removeZkMetadata("/unit")
     session.execute(s"DROP KEYSPACE $randomKeyspace")
     session.close()

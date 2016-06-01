@@ -6,14 +6,13 @@ import com.bwsw.tstreams.common.serializer.JsonSerializer
 import com.bwsw.tstreams.coordination.transactions.messages.IMessage
 
 /**
- * Client for sending IMessage messages
+ * Client for sending [[IMessage]]]
  */
 class TcpIMessageClient {
   private val addressToConnection = scala.collection.mutable.Map[String, Socket]()
   private val serializer = new JsonSerializer
 
   /**
-   * Method for send IMessage and wait response from rcv agent
    * @param msg Message to send
    * @param timeout Timeout for waiting response(null will be returned in case of timeout)
    * @return Response message

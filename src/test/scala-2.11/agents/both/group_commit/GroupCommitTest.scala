@@ -3,7 +3,7 @@ package agents.both.group_commit
 import java.net.InetSocketAddress
 
 import com.aerospike.client.Host
-import com.bwsw.tstreams.agents.consumer.{ConsumerCoordinationOptions, BasicConsumer, BasicConsumerOptions}
+import com.bwsw.tstreams.agents.consumer.{SubscriberCoordinationOptions, BasicConsumer, BasicConsumerOptions}
 import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
 import com.bwsw.tstreams.agents.group.CheckpointGroup
 import com.bwsw.tstreams.agents.producer.{ProducerCoordinationOptions, ProducerPolicies, BasicProducer, BasicProducerOptions}
@@ -85,7 +85,6 @@ class GroupCommitTest extends FlatSpec with Matchers with BeforeAndAfterAll with
     consumerKeepAliveInterval = 5,
     arrayByteToStringConverter,
     RoundRobinPolicyCreator.getRoundRobinPolicy(streamForConsumer, List(0,1,2)),
-    new ConsumerCoordinationOptions("localhost:8588", "/unit", List(new InetSocketAddress("localhost",2181)), 7000),
     Oldest,
     LocalGeneratorCreator.getGen(),
     useLastOffset = true)
@@ -110,7 +109,6 @@ class GroupCommitTest extends FlatSpec with Matchers with BeforeAndAfterAll with
 
     group.commit()
 
-    consumer.stop()
     val newStreamForConsumer = new BasicStream[Array[Byte]](
       name = "test_stream",
       partitions = 3,
@@ -125,7 +123,6 @@ class GroupCommitTest extends FlatSpec with Matchers with BeforeAndAfterAll with
 
   override def afterAll(): Unit = {
     producer.stop()
-    consumer.stop()
     removeZkMetadata("/unit")
     session.execute(s"DROP KEYSPACE $randomKeyspace")
     session.close()

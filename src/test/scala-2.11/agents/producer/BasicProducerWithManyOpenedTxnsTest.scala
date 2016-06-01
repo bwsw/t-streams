@@ -3,7 +3,7 @@ package agents.producer
 import java.net.InetSocketAddress
 
 import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
-import com.bwsw.tstreams.agents.consumer.{ConsumerCoordinationOptions, BasicConsumerOptions, BasicConsumer}
+import com.bwsw.tstreams.agents.consumer.{SubscriberCoordinationOptions, BasicConsumerOptions, BasicConsumer}
 import com.bwsw.tstreams.agents.producer.InsertionType.SingleElementInsert
 import com.bwsw.tstreams.agents.producer._
 import com.bwsw.tstreams.converter.{ArrayByteToStringConverter, StringToArrayByteConverter}
@@ -79,7 +79,6 @@ class BasicProducerWithManyOpenedTxnsTest extends FlatSpec with Matchers with Be
     consumerKeepAliveInterval = 5,
     arrayByteToStringConverter,
     RoundRobinPolicyCreator.getRoundRobinPolicy(streamForConsumer, List(0,1,2)),
-    new ConsumerCoordinationOptions("localhost:8588", "/unit", List(new InetSocketAddress("localhost",2181)), 7000),
     Oldest,
     LocalGeneratorCreator.getGen(),
     useLastOffset = true)
@@ -108,7 +107,6 @@ class BasicProducerWithManyOpenedTxnsTest extends FlatSpec with Matchers with Be
 
   override def afterAll(): Unit = {
     producer.stop()
-    consumer.stop()
     removeZkMetadata("/unit")
     temporarySession.execute(s"DROP KEYSPACE $randomKeyspace")
     temporarySession.close()

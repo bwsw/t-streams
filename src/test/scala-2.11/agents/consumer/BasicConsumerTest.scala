@@ -3,7 +3,7 @@ package agents.consumer
 import java.net.InetSocketAddress
 import java.util.UUID
 import com.aerospike.client.Host
-import com.bwsw.tstreams.agents.consumer.{ConsumerCoordinationOptions, BasicConsumerTransaction, BasicConsumer, BasicConsumerOptions}
+import com.bwsw.tstreams.agents.consumer.{SubscriberCoordinationOptions, BasicConsumerTransaction, BasicConsumer, BasicConsumerOptions}
 import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
 import com.bwsw.tstreams.agents.producer.{ProducerCoordinationOptions, ProducerPolicies, BasicProducer, BasicProducerOptions}
 import com.bwsw.tstreams.agents.producer.InsertionType.SingleElementInsert
@@ -90,7 +90,6 @@ class BasicConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll wi
     consumerKeepAliveInterval = 5,
     arrayByteToStringConverter,
     RoundRobinPolicyCreator.getRoundRobinPolicy(streamForConsumer, List(0,1,2)),
-    new ConsumerCoordinationOptions("localhost:8588", "/unit", List(new InetSocketAddress("localhost",2181)), 7000),
     Oldest,
     LocalGeneratorCreator.getGen(),
     useLastOffset = true)
@@ -146,7 +145,6 @@ class BasicConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll wi
 
   override def afterAll(): Unit = {
     producer.stop()
-    consumer.stop()
     removeZkMetadata("/unit")
     session.execute(s"DROP KEYSPACE $randomKeyspace")
     session.close()

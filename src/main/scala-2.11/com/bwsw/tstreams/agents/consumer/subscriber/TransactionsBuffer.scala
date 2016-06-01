@@ -12,6 +12,12 @@ class TransactionsBuffer {
   private val map : SortedExpiringMap[UUID, (ProducerTransactionStatus, Long)] =
     new SortedExpiringMap(new UUIDComparator, new SubscriberExpirationPolicy)
 
+  /**
+   * Update transaction buffer
+   * @param txnUuid Transaction uuid
+   * @param status Transaction status
+   * @param ttl Transaction ttl(time of expiration)
+   */
   def update(txnUuid : UUID, status: ProducerTransactionStatus, ttl : Int) : Unit = {
     //if update comes after close
     if (!map.exist(txnUuid) && status == ProducerTransactionStatus.updated)
@@ -37,5 +43,9 @@ class TransactionsBuffer {
     }
   }
 
+  /**
+   * Iterator on transaction buffer entry set
+   * @return Iterator
+   */
   def getIterator() = map.entrySetIterator()
 }

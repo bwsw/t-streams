@@ -7,7 +7,6 @@ import scala.collection.mutable
 
 
 /**
- * BasicConsumerTransaction class
  * @param consumer Consumer which this transaction was created by
  * @param partition Partition for this transaction to consume
  * @param transaction Transaction time and total packets in it

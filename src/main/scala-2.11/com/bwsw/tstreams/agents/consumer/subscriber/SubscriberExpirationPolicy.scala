@@ -7,7 +7,8 @@ import com.bwsw.tstreams.coordination.pubsub.messages.ProducerTransactionStatus
 import org.apache.commons.collections4.map.PassiveExpiringMap
 
 /**
- * Policy for subscriber where expiration strategy based on records ttl
+ * Policy for [[SortedExpiringMap]]]
+ * where expiration strategy based on records ttl
  */
 class SubscriberExpirationPolicy extends PassiveExpiringMap.ExpirationPolicy[UUID, (ProducerTransactionStatus, Long)]{
   override def expirationTime(key: UUID, value: (ProducerTransactionStatus, Long)): Long = {

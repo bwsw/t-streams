@@ -10,7 +10,6 @@ import org.apache.zookeeper.{Watcher, CreateMode}
 import collection.JavaConverters._
 
 /**
- * Zk interaction util
  * @param prefix Prefix path for all created entities
  * @param zkHosts Zk hosts to connect
  * @param zkSessionTimeout Zk session timeout to connect
@@ -21,7 +20,6 @@ class ZkService(prefix : String, zkHosts : List[InetSocketAddress], zkSessionTim
   private val twitterZkClient: ZooKeeperClient = new ZooKeeperClient(sessionTimeout, hosts)
   private val zkClient = twitterZkClient.get(Amount.of(7L, com.twitter.common.quantity.Time.SECONDS))
   private val serializer = new JsonSerializer
-
   private val map = scala.collection.mutable.Map[String, DistributedLockImpl]()
 
   def getLock(path : String) : DistributedLockImpl = {

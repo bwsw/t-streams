@@ -2,7 +2,7 @@ package agents.both.batch_insert.cassandra
 
 import java.net.InetSocketAddress
 import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
-import com.bwsw.tstreams.agents.consumer.{ConsumerCoordinationOptions, BasicConsumer, BasicConsumerOptions, BasicConsumerTransaction}
+import com.bwsw.tstreams.agents.consumer.{SubscriberCoordinationOptions, BasicConsumer, BasicConsumerOptions, BasicConsumerTransaction}
 import com.bwsw.tstreams.agents.producer.InsertionType.BatchInsert
 import com.bwsw.tstreams.agents.producer.{ProducerCoordinationOptions, BasicProducer, BasicProducerOptions, ProducerPolicies}
 import com.bwsw.tstreams.converter.{ArrayByteToStringConverter, StringToArrayByteConverter}
@@ -89,7 +89,6 @@ class CBasicProducerAndConsumerCheckpointTest extends FlatSpec with Matchers wit
     consumerKeepAliveInterval = 5,
     arrayByteToStringConverter,
     RoundRobinPolicyCreator.getRoundRobinPolicy(streamForConsumer, List(0,1,2)),
-    new ConsumerCoordinationOptions("localhost:8588", "/unit", List(new InetSocketAddress("localhost",2181)), 7000),
     Oldest,
     LocalGeneratorCreator.getGen(),
     useLastOffset = true)
@@ -130,8 +129,6 @@ class CBasicProducerAndConsumerCheckpointTest extends FlatSpec with Matchers wit
       ttl = 60 * 10,
       description = "some_description")
 
-    consumer.stop()
-
     //reinitialization (should begin read from the latest checkpoint)
     consumer = new BasicConsumer("test_consumer", newStreamForConsumer, consumerOptions)
 
@@ -150,7 +147,6 @@ class CBasicProducerAndConsumerCheckpointTest extends FlatSpec with Matchers wit
   }
 
   override def afterAll(): Unit = {
-    consumer.stop()
     producer.stop()
     removeZkMetadata("/unit")
     session.execute(s"DROP KEYSPACE $randomKeyspace")

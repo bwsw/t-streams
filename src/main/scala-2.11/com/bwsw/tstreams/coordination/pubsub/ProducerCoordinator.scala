@@ -26,23 +26,35 @@ class ProducerCoordinator(prefix : String,
   private val broadcaster = new Broadcaster
   private val lock = new ReentrantLock(true)
 
-  usedPartitions foreach { p =>
-    val watcher = new Watcher {
-      override def process(event: WatchedEvent): Unit = {
-        updateSubscribers(p)
-        zkService.setWatcher(s"/subscribers/event/$streamName/$p", this)
+  /**
+   * Initialize coordinator
+   */
+  def init() : Unit = {
+    usedPartitions foreach { p =>
+      val watcher = new Watcher {
+        override def process(event: WatchedEvent): Unit = {
+          updateSubscribers(p)
+          zkService.setWatcher(s"/subscribers/event/$streamName/$p", this)
+        }
       }
+      zkService.setWatcher(s"/subscribers/event/$streamName/$p", watcher)
+      updateSubscribers(p)
     }
-    zkService.setWatcher(s"/subscribers/event/$streamName/$p", watcher)
-    updateSubscribers(p)
   }
 
+  /**
+   * Publish [[ProducerTopicMessage]]] to all accepted subscribers
+   * @param msg [[ProducerTopicMessage]]]
+   */
   def publish(msg : ProducerTopicMessage) = {
     lock.lock()
     broadcaster.broadcast(msg)
     lock.unlock()
   }
 
+  /**
+   * Update subscribers on specific partition
+   */
   private def updateSubscribers(partition : Int) = {
     lock.lock()
     val subscribersPathOpt = zkService.getAllSubNodesData[String](s"/subscribers/agents/$streamName/$partition")
@@ -51,11 +63,19 @@ class ProducerCoordinator(prefix : String,
     lock.unlock()
   }
 
+  /**
+   * Get global distributed lock on stream
+   * @param streamName Stream name
+   * @return [[com.twitter.common.zookeeper.DistributedLockImpl]]]
+   */
   def getStreamLock(streamName : String)  = {
     val lock = zkService.getLock(s"/global/stream/$streamName")
     lock
   }
 
+  /**
+   * Stop this coordinator
+   */
   def stop() = {
     broadcaster.close()
     zkService.close()

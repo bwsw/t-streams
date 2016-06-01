@@ -24,9 +24,11 @@ class BasicProducer[USERTYPE,DATATYPE](val name : String,
                                        val producerOptions: BasicProducerOptions[USERTYPE,DATATYPE]) extends Agent with Interaction{
 
   stream.dataStorage.bind()
-
   private val logger = LoggerFactory.getLogger(this.getClass)
+
   logger.info(s"Start new Basic producer with name : $name, streamName : ${stream.getName}, streamPartitions : ${stream.getPartitions}\n")
+
+  private val partitionToTransaction = scala.collection.mutable.Map[Int, BasicProducerTransaction[USERTYPE,DATATYPE]]()
 
   val coordinator = new ProducerCoordinator(
     producerOptions.producerCoordinationSettings.zkRootPath,
@@ -36,14 +38,10 @@ class BasicProducer[USERTYPE,DATATYPE](val name : String,
     producerOptions.producerCoordinationSettings.zkTimeout)
 
   private val streamLock = coordinator.getStreamLock(stream.getName)
-
+  //used for managing new agents on stream
   streamLock.lock()
+  coordinator.init()
   streamLock.unlock()
-
-  /**
-   * Map for memorize opened transaction on partitions
-   */
-  private val mapPartitions = scala.collection.mutable.Map[Int, BasicProducerTransaction[USERTYPE,DATATYPE]]()
 
   /**
    * @param policy Policy for previous transaction on concrete partition
@@ -65,8 +63,8 @@ class BasicProducer[USERTYPE,DATATYPE](val name : String,
     val transaction = {
       val txnUUID = agent.getNewTxn(partition)
       logger.debug(s"[NEW_TRANSACTION PARTITION_$partition] uuid=${txnUUID.timestamp()}\n")
-      if (mapPartitions.contains(partition)) {
-        val prevTxn = mapPartitions(partition)
+      if (partitionToTransaction.contains(partition)) {
+        val prevTxn = partitionToTransaction(partition)
         if (!prevTxn.isClosed) {
           policy match {
             case ProducerPolicies.checkpointIfOpen =>
@@ -81,7 +79,7 @@ class BasicProducer[USERTYPE,DATATYPE](val name : String,
         }
       }
       val txn = new BasicProducerTransaction[USERTYPE, DATATYPE](partition, txnUUID, this)
-      mapPartitions(partition) = txn
+      partitionToTransaction(partition) = txn
       txn
     }
 
@@ -96,8 +94,8 @@ class BasicProducer[USERTYPE,DATATYPE](val name : String,
   def getTransaction(partition : Int) : Option[BasicProducerTransaction[USERTYPE,DATATYPE]] = {
     if (!(partition >= 0 && partition < stream.getPartitions))
       throw new IllegalArgumentException("invalid partition")
-    if (mapPartitions.contains(partition)) {
-      val txn = mapPartitions(partition)
+    if (partitionToTransaction.contains(partition)) {
+      val txn = partitionToTransaction(partition)
       if (txn.isClosed)
         return None
       Some(txn)
@@ -110,7 +108,7 @@ class BasicProducer[USERTYPE,DATATYPE](val name : String,
    * Close all opened transactions
    */
   def checkpoint() : Unit = {
-    mapPartitions.map{case(partition,txn)=>txn}.foreach{ x=>
+    partitionToTransaction.map{case(partition,txn)=>txn}.foreach{ x=>
       if (!x.isClosed)
         x.checkpoint()
     }
@@ -119,7 +117,7 @@ class BasicProducer[USERTYPE,DATATYPE](val name : String,
   /**
    * Info to commit
    */
-  //TODO implement getting commit info from transactions
+  //TODO not atomic now
   override def getCommitInfo(): List[CommitInfo] = {
     checkpoint()
     List()
@@ -158,6 +156,7 @@ class BasicProducer[USERTYPE,DATATYPE](val name : String,
 
   /**
    * P2P Agent for producers interaction
+   * (getNewTxn uuid; publish openTxn event; publish closeTxn event)
    */
   override val agent: PeerToPeerAgent = new PeerToPeerAgent(
     agentAddress = producerOptions.producerCoordinationSettings.agentAddress,
@@ -175,6 +174,9 @@ class BasicProducer[USERTYPE,DATATYPE](val name : String,
                   producerOptions.producerCoordinationSettings.threadPoolAmount)
 
 
+  /**
+   * Stop this agent
+   */
   def stop() = {
     agent.stop()
     coordinator.stop()

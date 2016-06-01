@@ -9,7 +9,6 @@ import com.bwsw.tstreams.generator.IUUIDGenerator
 import scala.language.existentials
 
 /**
- * Class for Basic Producer Options
  * @param transactionTTL Single transaction live time
  * @param transactionKeepAliveInterval Update transaction interval which is used to keep alive transaction in time when it is opened
  * @param producerKeepAliveInterval Update producer interval for updating producer info
@@ -63,6 +62,19 @@ class BasicProducerOptions[USERTYPE,DATATYPE](val transactionTTL : Int,
 }
 
 
+/**
+ * @param agentAddress Address of producer in network
+ * @param zkHosts Zk hosts to connect
+ * @param zkRootPath Zk root path for all metadata
+ * @param zkTimeout Zk session timeout
+ * @param isLowPriorityToBeMaster Flag which indicate priority to became master on stream/partition
+ *                                of this agent
+ * @param transport Transport providing interaction between agents
+ * @param transportTimeout Transport timeout in seconds
+ * @param threadPoolAmount Thread pool amount which is used by
+ *                         [[com.bwsw.tstreams.coordination.transactions.PeerToPeerAgent]]]
+ *                         by default (threads_amount == used_producer_partitions)
+ */
 class ProducerCoordinationOptions(val agentAddress : String,
                                    val zkHosts : List[InetSocketAddress],
                                    val zkRootPath : String,

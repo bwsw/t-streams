@@ -5,6 +5,10 @@ import com.bwsw.tstreams.coordination.pubsub.messages.ProducerTopicMessage
 import com.fasterxml.jackson.annotation.JsonSubTypes.Type
 import com.fasterxml.jackson.annotation.{JsonSubTypes, JsonTypeInfo}
 
+/**
+ * Messages which used for providing
+ * interaction between [[com.bwsw.tstreams.coordination.transactions.PeerToPeerAgent]]]
+ */
 
 @JsonTypeInfo(
   use = JsonTypeInfo.Id.NAME,

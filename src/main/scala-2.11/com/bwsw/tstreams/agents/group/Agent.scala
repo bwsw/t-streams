@@ -12,7 +12,7 @@ trait Agent {
   def getCommitInfo() : List[CommitInfo]
 
   /**
-   * @return Metadata storage link for concrete agent
+   * Metadata storage link for concrete agent
    */
   def getMetadataRef() : MetadataStorage
 

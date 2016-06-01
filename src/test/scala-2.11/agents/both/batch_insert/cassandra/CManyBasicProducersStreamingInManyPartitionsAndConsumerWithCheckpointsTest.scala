@@ -2,7 +2,7 @@ package agents.both.batch_insert.cassandra
 
 import java.net.InetSocketAddress
 import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
-import com.bwsw.tstreams.agents.consumer.{ConsumerCoordinationOptions, BasicConsumer, BasicConsumerOptions}
+import com.bwsw.tstreams.agents.consumer.{SubscriberCoordinationOptions, BasicConsumer, BasicConsumerOptions}
 import com.bwsw.tstreams.agents.producer.InsertionType.BatchInsert
 import com.bwsw.tstreams.agents.producer.{ProducerCoordinationOptions, BasicProducer, BasicProducerOptions, ProducerPolicies}
 import com.bwsw.tstreams.converter.{ArrayByteToStringConverter, StringToArrayByteConverter}
@@ -78,7 +78,6 @@ with Matchers with BeforeAndAfterAll with TestUtils{
       RoundRobinPolicyCreator.getRoundRobinPolicy(
         usedPartitions = (0 until totalPartitions).toList,
         stream = streamInst),
-      new ConsumerCoordinationOptions("localhost:8588", "/unit", List(new InetSocketAddress("localhost",2181)), 7000),
       Oldest,
       LocalGeneratorCreator.getGen(),
       useLastOffset = true)
@@ -96,7 +95,6 @@ with Matchers with BeforeAndAfterAll with TestUtils{
 
             if (i % 30 == 0) {
               consumer.checkpoint()
-              consumer.stop()
               val newStreamForConsumer = new BasicStream[Array[Byte]](
                 name = "stream_name",
                 partitions = totalPartitions,
@@ -135,7 +133,6 @@ with Matchers with BeforeAndAfterAll with TestUtils{
     producersThreads.foreach(x=> checkVal &= !x.isAlive)
 
     producers.foreach(x=>x.stop())
-    consumer.stop()
 
     checkVal shouldEqual true
   }

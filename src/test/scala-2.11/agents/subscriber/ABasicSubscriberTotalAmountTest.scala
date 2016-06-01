@@ -6,7 +6,7 @@ import java.util.concurrent.locks.ReentrantLock
 import java.util.UUID
 import com.aerospike.client.Host
 import com.bwsw.tstreams.agents.consumer.subscriber.{BasicSubscriberCallback, BasicSubscribingConsumer}
-import com.bwsw.tstreams.agents.consumer.{ConsumerCoordinationOptions, BasicConsumerOptions}
+import com.bwsw.tstreams.agents.consumer.{SubscriberCoordinationOptions, BasicConsumerOptions}
 import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
 import com.bwsw.tstreams.agents.producer.{ProducerCoordinationOptions, ProducerPolicies, BasicProducer, BasicProducerOptions}
 import com.bwsw.tstreams.agents.producer.InsertionType.BatchInsert
@@ -98,7 +98,6 @@ class ABasicSubscriberTotalAmountTest extends FlatSpec with Matchers with Before
     consumerKeepAliveInterval = 5,
     arrayByteToStringConverter,
     RoundRobinPolicyCreator.getRoundRobinPolicy(streamForConsumer, List(0,1,2)),
-    new ConsumerCoordinationOptions("localhost:8588", "/unit", List(new InetSocketAddress("localhost",2181)), 7000, 1),
     Oldest,
     LocalGeneratorCreator.getGen(),
     useLastOffset = true)
@@ -120,6 +119,7 @@ class ABasicSubscriberTotalAmountTest extends FlatSpec with Matchers with Before
     "test_consumer",
     streamForConsumer,
     consumerOptions,
+    new SubscriberCoordinationOptions("localhost:8588", "/unit", List(new InetSocketAddress("localhost",2181)), 7000),
     callback,
     path)
 

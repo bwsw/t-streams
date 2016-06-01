@@ -1,7 +1,6 @@
 package com.bwsw.tstreams.coordination.pubsub.publisher
 
 import java.net.InetSocketAddress
-
 import com.bwsw.tstreams.coordination.pubsub.messages.ProducerTopicMessage
 import io.netty.bootstrap.Bootstrap
 import io.netty.channel.ChannelInitializer
@@ -11,7 +10,8 @@ import io.netty.channel.socket.nio.NioSocketChannel
 import io.netty.handler.codec.string.{StringDecoder, StringEncoder}
 
 /**
- * Broadcaster for producer to broadcast messages to all consumers
+ * Broadcaster for [[com.bwsw.tstreams.agents.producer.BasicProducer]]]
+ * to broadcast messages for all [[com.bwsw.tstreams.agents.consumer.subscriber.BasicSubscribingConsumer]]]
  */
 class Broadcaster {
   private val group = new NioEventLoopGroup()
@@ -31,6 +31,10 @@ class Broadcaster {
       }
     })
 
+  /**
+   * Connect to some subscriber
+   * @param address Subscriber address in network
+   */
   def connect(address : String) = {
     val splits = address.split(":")
     assert(splits.size == 2)
@@ -42,15 +46,26 @@ class Broadcaster {
     }
   }
 
-  def broadcast(msg : ProducerTopicMessage) = {
+  /**
+   * Send msg to all connected subscribers
+   * @param msg Msg to send
+   */
+  def broadcast(msg : ProducerTopicMessage) : Unit = {
     channelHandler.broadcast(msg)
   }
 
-  def close() = {
+  /**
+   * Close broadcaster
+   */
+  def close() : Unit = {
     group.shutdownGracefully().await()
   }
 
-  def updateSubscribers(newSubscribers : List[String]) = {
+  /**
+   * Update subscribers with new addresses
+   * @param newSubscribers New subscribers list of addresses
+   */
+  def updateSubscribers(newSubscribers : List[String]) : Unit = {
     channelHandler.updateSubscribers(newSubscribers)
   }
 }

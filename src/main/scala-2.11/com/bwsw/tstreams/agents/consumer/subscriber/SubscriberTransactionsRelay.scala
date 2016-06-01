@@ -3,7 +3,7 @@ package com.bwsw.tstreams.agents.consumer.subscriber
 import java.util.UUID
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.locks.ReentrantLock
-import com.bwsw.tstreams.coordination.pubsub.ConsumerCoordinator
+import com.bwsw.tstreams.coordination.pubsub.SubscriberCoordinator
 import com.bwsw.tstreams.coordination.pubsub.messages.{ProducerTopicMessage, ProducerTransactionStatus}
 import ProducerTransactionStatus._
 import com.bwsw.tstreams.txnqueue.PersistentTransactionQueue
@@ -13,8 +13,9 @@ import scala.util.control.Breaks._
 
 
 /**
- * Class for consuming transactions on concrete partition from concrete offset
- * @param subscriber Subscriber instance which instantiate this relay
+ * Relay for help to consume transactions
+ * on concrete partition from concrete offset
+ * @param subscriber Subscriber instance
  * @param offset Offset from which to start
  * @param partition Partition from which to consume
  * @param coordinator Coordinator instance for maintaining new transactions updates
@@ -26,28 +27,17 @@ import scala.util.control.Breaks._
 class SubscriberTransactionsRelay[DATATYPE,USERTYPE](subscriber : BasicSubscribingConsumer[DATATYPE,USERTYPE],
                                                      offset: UUID,
                                                      partition : Int,
-                                                     coordinator: ConsumerCoordinator,
+                                                     coordinator: SubscriberCoordinator,
                                                      callback: BasicSubscriberCallback[DATATYPE, USERTYPE],
                                                      queue : PersistentTransactionQueue,
                                                      lastTransaction : UUID,
                                                      executor : ExecutorService) {
-
+  private val POOLING_INTERVAL_MS = 100
   private val logger = LoggerFactory.getLogger(this.getClass)
   private val transactionBuffer  = new TransactionsBuffer
   private val lock = new ReentrantLock(true)
   private var lastConsumedTransaction : UUID = lastTransaction
   private val streamName = subscriber.stream.getName
-
-  /**
-   * Runnable for consume single txn from persistent queue and callback on it
-   */
-  private val queueConsumer = new Runnable {
-    override def run(): Unit = {
-      val txn = queue.get()
-      logger.debug(s"[QUEUE_CONSUMER PARTITION_$partition] consumed msg with uuid:{${txn.timestamp()}}")
-      callback.onEvent(subscriber, partition, txn)
-    }
-  }
 
   /**
    * Transaction buffer updater
@@ -65,11 +55,22 @@ class SubscriberTransactionsRelay[DATATYPE,USERTYPE](subscriber : BasicSubscribi
   }
 
   /**
-   * Consume all transactions in interval (offset ; transactionUUID]
-   * @param transactionUUID Right border to consume
+   * Runnable for consume single txn from persistent queue and callback on it
+   */
+  private val queueConsumer = new Runnable {
+    override def run(): Unit = {
+      val txn = queue.get()
+      logger.debug(s"[QUEUE_CONSUMER PARTITION_$partition] consumed msg with uuid:{${txn.timestamp()}}")
+      callback.onEvent(subscriber, partition, txn)
+    }
+  }
+
+  /**
+   * Consume all transactions in interval ([[offset]]] ; transactionUUID ]
+   * @param transactionUUID Right interval border
    */
   def consumeTransactionsLessOrEqualThan(transactionUUID : UUID) = {
-    //TODO remove after debug
+    //TODO remove after complex testing
     var lastTxn : UUID = subscriber.options.txnGenerator.getTimeUUID(0)
     val runnable = new Runnable {
       override def run(): Unit = {
@@ -105,7 +106,7 @@ class SubscriberTransactionsRelay[DATATYPE,USERTYPE](subscriber : BasicSubscribi
                 }
                 else
                   break()
-                Thread.sleep(100)
+                Thread.sleep(POOLING_INTERVAL_MS)
               }
             }
           } else {
@@ -129,10 +130,10 @@ class SubscriberTransactionsRelay[DATATYPE,USERTYPE](subscriber : BasicSubscribi
 
   /**
    * Consume all transaction in interval (transactionUUID ; inf)
-   * @param transactionUUID Left border to consume
+   * @param transactionUUID Left interval border
    */
   def consumeTransactionsMoreThan(transactionUUID : UUID) = {
-    //TODO remove after debug
+    //TODO remove after complex testing
     var lastTxn : UUID = lastTransaction
     val transactionsGreaterThanLast =
       subscriber.stream.metadataStorage.commitEntity.getTransactions(
@@ -164,18 +165,19 @@ class SubscriberTransactionsRelay[DATATYPE,USERTYPE](subscriber : BasicSubscribi
     coordinator.addCallback(updateCallback)
     coordinator.registerSubscriber(subscriber.stream.getName, partition)
     coordinator.notifyProducers(subscriber.stream.getName, partition)
+    //wait all producers to connect on this subscriber partition
     coordinator.synchronize(subscriber.stream.getName, partition)
   }
 
   /**
-   * Runnable for updating expiring map
+   * @return Runnable for updating expiring map for this relay
    */
   def getUpdateRunnable() : Runnable = {
-    var totalAmount = 1 //TODO for logging
+    var totalAmount = 1 //TODO for logging; remove after complex testing
     val runnable = new Runnable {
       override def run(): Unit = {
         lock.lock()
-        logTransactionBuffer() //TODO remove after hard debug
+        logTransactionBuffer() //TODO remove after complex testing
         val it = transactionBuffer.getIterator()
         breakable {
           while (it.hasNext) {
@@ -214,7 +216,10 @@ class SubscriberTransactionsRelay[DATATYPE,USERTYPE](subscriber : BasicSubscribi
     runnable
   }
 
-  //TODO remove after hard debug
+  /**
+   * TODO remove after complex testing
+   * Used for verbose logging
+   */
   def logTransactionBuffer() = {
     val lb = ListBuffer[(Long, ProducerTransactionStatus)]()
     val it = transactionBuffer.getIterator()

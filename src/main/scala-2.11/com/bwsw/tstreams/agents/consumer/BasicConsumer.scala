@@ -2,7 +2,6 @@ package com.bwsw.tstreams.agents.consumer
 
 import java.util.UUID
 import com.bwsw.tstreams.agents.group.{ConsumerCommitInfo, CommitInfo, Agent}
-import com.bwsw.tstreams.coordination.pubsub.ConsumerCoordinator
 import com.bwsw.tstreams.entities.TransactionSettings
 import com.bwsw.tstreams.metadata.MetadataStorage
 import com.bwsw.tstreams.streams.BasicStream
@@ -21,6 +20,8 @@ import scala.collection.mutable.ListBuffer
 class BasicConsumer[DATATYPE, USERTYPE](val name : String,
                                         val stream : BasicStream[DATATYPE],
                                         val options : BasicConsumerOptions[DATATYPE, USERTYPE]) extends Agent{
+
+  stream.dataStorage.bind()
 
   private val logger = LoggerFactory.getLogger(this.getClass)
 
@@ -42,24 +43,14 @@ class BasicConsumer[DATATYPE, USERTYPE](val name : String,
   /**
    * Indicate set offsets or not
    */
-  private var isSet = false
+  private var isSetOffsets = false
 
-  protected var coordinator = new ConsumerCoordinator(
-    options.consumerCoordinatorSettings.agentAddress,
-    options.consumerCoordinatorSettings.prefix,
-    options.consumerCoordinatorSettings.zkHosts,
-    options.consumerCoordinatorSettings.zkSessionTimeout)
-  private val streamLock = coordinator.getStreamLock(stream.getName)
-
-  stream.dataStorage.bind()
-
-  streamLock.lock()
 
   logger.info(s"Start new Basic consumer with name : $name, streamName : ${stream.getName}, streamPartitions : ${stream.getPartitions}\n")
 
     //set consumer offsets
   if(!stream.metadataStorage.consumerEntity.exist(name) || !options.useLastOffset){
-    isSet = true
+    isSetOffsets = true
 
     options.offset match {
       case Offsets.Oldest =>
@@ -92,7 +83,7 @@ class BasicConsumer[DATATYPE, USERTYPE](val name : String,
 
   }
 
-  if (!isSet) {
+  if (!isSetOffsets) {
     for (i <- 0 until stream.getPartitions) {
       val offset = stream.metadataStorage.consumerEntity.getOffset(name, stream.getName, i)
       offsetsForCheckpoint(i) = offset
@@ -107,8 +98,6 @@ class BasicConsumer[DATATYPE, USERTYPE](val name : String,
       i,
       currentOffsets(i),
       options.transactionsPreload)
-
-  streamLock.unlock()
 
   /**
    * Helper function for getTransaction() method
@@ -234,7 +223,7 @@ class BasicConsumer[DATATYPE, USERTYPE](val name : String,
     }
 
   /**
-   * Update transaction (if transaction is not closed it will have total packets value -1 so we need to wait while it will close)
+   * Update transaction (if transaction is not closed it will have total packets value -1)
    * @param txn Transaction to update
    * @return Updated transaction
    */
@@ -252,7 +241,8 @@ class BasicConsumer[DATATYPE, USERTYPE](val name : String,
     }
 
   /**
-   * Save current offsets in metadata to read later from them (in case of system stop/failure)
+   * Save current offsets in metadata
+   * to read later from them (in case of system stop/failure)
    */
     def checkpoint() : Unit = {
       logger.info(s"Start saving checkpoints for " +
@@ -278,8 +268,4 @@ class BasicConsumer[DATATYPE, USERTYPE](val name : String,
    * @return Metadata storage link for concrete agent
    */
   override def getMetadataRef(): MetadataStorage = stream.metadataStorage
-
-  def stop() = {
-    coordinator.stop()
-  }
 }

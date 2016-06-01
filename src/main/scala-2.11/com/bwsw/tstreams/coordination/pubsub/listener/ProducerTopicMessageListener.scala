@@ -12,7 +12,7 @@ import io.netty.handler.codec.{Delimiters, DelimiterBasedFrameDecoder}
 import io.netty.handler.logging.{LogLevel, LoggingHandler}
 
 /**
- * [[ProducerTopicMessage]] listener
+ * Listener of [[ProducerTopicMessage]]
  * @param port Listener port
  */
 class ProducerTopicMessageListener(port : Int) {
@@ -22,25 +22,42 @@ class ProducerTopicMessageListener(port : Int) {
   private val channelHandler : SubscriberChannelHandler = new SubscriberChannelHandler
   private var listenerThread : Thread = null
 
-  def stop() = {
+  /**
+   * Stop to listen [[ProducerTopicMessage]]]
+   */
+  def stop() : Unit = {
     channelHandler.stopCallback()
     workerGroup.shutdownGracefully().await()
     bossGroup.shutdownGracefully().await()
   }
 
-  def addCallbackToChannelHandler(callback : (ProducerTopicMessage) => Unit) = {
+  /**
+   * Add new event to [[channelHandler]]]
+   * @param callback Event callback
+   */
+  def addCallbackToChannelHandler(callback : (ProducerTopicMessage) => Unit) : Unit = {
     channelHandler.addCallback(callback)
   }
-  
-  def getConnectionsAmount() = {
+
+  /**
+   * Retrieve count of accepted
+   * connection managed by [[channelHandler]]]
+   */
+  def getConnectionsAmount() : Int = {
     channelHandler.getCount()
   }
 
-  def startCallback() = {
+  /**
+   * Start invoking callbacks on new [[ProducerTopicMessage]]]
+   */
+  def startCallback() : Unit = {
     channelHandler.startCallBack()
   }
 
-  def start() = {
+  /**
+   * Start this listener
+   */
+  def start() : Unit = {
     assert(listenerThread == null || !listenerThread.isAlive)
     val syncPoint = new CountDownLatch(1)
     listenerThread = new Thread(new Runnable {

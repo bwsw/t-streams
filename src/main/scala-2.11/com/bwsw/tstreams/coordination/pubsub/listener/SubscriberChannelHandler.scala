@@ -15,6 +15,9 @@ import org.slf4j.LoggerFactory
 
 import scala.collection.mutable.ListBuffer
 
+/**
+ * Incoming connections manager for [[ProducerTopicMessageListener]]]
+ */
 @Sharable
 class SubscriberChannelHandler extends SimpleChannelInboundHandler[ProducerTopicMessage] {
   private val logger = LoggerFactory.getLogger(this.getClass)
@@ -26,12 +29,19 @@ class SubscriberChannelHandler extends SimpleChannelInboundHandler[ProducerTopic
   private val isCallback = new AtomicBoolean(false)
   private val lock = new ReentrantLock(true)
 
-  def addCallback(callback : (ProducerTopicMessage)=>Unit) = {
+  /**
+   * Add new callback which is used to handle incoming events([[ProducerTopicMessage]]])
+   * @param callback Event callback
+   */
+  def addCallback(callback : (ProducerTopicMessage)=>Unit) : Unit = {
     lock.lock()
     callbacks += callback
     lock.unlock()
   }
 
+  /**
+   * Start callback on incoming events [[ProducerTopicMessage]]]
+   */
   def startCallBack() = {
     val sync = new CountDownLatch(1)
     isCallback.set(true)
@@ -50,7 +60,10 @@ class SubscriberChannelHandler extends SimpleChannelInboundHandler[ProducerTopic
     sync.await()
   }
 
-  def stopCallback() = {
+  /**
+   * Stop thread which is consuming incoming events [[ProducerTopicMessage]]]
+   */
+  def stopCallback() : Unit = {
     if (isCallback.get()) {
       isCallback.set(false)
       queue.put(ProducerTopicMessage(UUID.randomUUID(), 0, ProducerTransactionStatus.cancelled, -1))
@@ -58,6 +71,10 @@ class SubscriberChannelHandler extends SimpleChannelInboundHandler[ProducerTopic
     }
   }
 
+  /**
+   * Get accepted connections amount
+   * @return Amount of connections
+   */
   def getCount(): Int = {
     lockCount.lock()
     val cnt = count
@@ -65,25 +82,41 @@ class SubscriberChannelHandler extends SimpleChannelInboundHandler[ProducerTopic
     cnt
   }
 
+  /**
+   * Triggered when new connection become
+   * @param ctx Netty ctx
+   */
   override def channelActive(ctx: ChannelHandlerContext) : Unit = {
     lockCount.lock()
     count += 1
     lockCount.unlock()
   }
 
+  /**
+   * Triggered when new message [[ProducerTopicMessage]]] received
+   * @param ctx Netty ctx
+   * @param msg [[ProducerTopicMessage]]]
+   */
   override def channelRead0(ctx: ChannelHandlerContext, msg: ProducerTopicMessage): Unit = {
     logger.debug(s"[READ PARTITION_${msg.partition}] ts=${msg.txnUuid.timestamp()} ttl=${msg.ttl} status=${msg.status}")
     queue.put(msg)
     ReferenceCountUtil.release(msg)
   }
 
+  /**
+   * Triggered on exceptions
+   * @param ctx Netty ctx
+   * @param cause Exception cause
+   */
   override def exceptionCaught(ctx: ChannelHandlerContext, cause: Throwable) = {
     cause.printStackTrace()
     ctx.close()
   }
 }
 
-
+/**
+ * Decoder to convert [[java.lang.String]] to [[ProducerTopicMessage]]]
+ */
 class ProducerTopicMessageDecoder extends MessageToMessageDecoder[String]{
   val serializer = new JsonSerializer
 

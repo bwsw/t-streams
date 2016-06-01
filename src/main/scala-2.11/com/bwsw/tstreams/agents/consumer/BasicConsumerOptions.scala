@@ -8,8 +8,7 @@ import com.bwsw.tstreams.policy.AbstractPolicy
 import com.bwsw.tstreams.generator.IUUIDGenerator
 
 /**
- * Basic consumer options
- * @param converter User defined or predefined converter which convert storage type in to usertype
+ * @param converter User defined or predefined converter which convert storage type into usertype
  * @param offset Offset from which start to read
  * @param useLastOffset Use or not last offset for specific consumer
  *                      if last offset not exist, offset will be used
@@ -26,7 +25,6 @@ class BasicConsumerOptions[DATATYPE,USERTYPE](val transactionsPreload : Int,
                                               val consumerKeepAliveInterval : Int,
                                               val converter : IConverter[DATATYPE,USERTYPE],
                                               val readPolicy : AbstractPolicy,
-                                              val consumerCoordinatorSettings: ConsumerCoordinationOptions,
                                               val offset : IOffset,
                                               val txnGenerator: IUUIDGenerator,
                                               val useLastOffset : Boolean = true) {
@@ -40,8 +38,19 @@ class BasicConsumerOptions[DATATYPE,USERTYPE](val transactionsPreload : Int,
     throw new IllegalArgumentException("incorrect consumerKeepAliveInterval value, should be greater or equal one")
 }
 
-class ConsumerCoordinationOptions (val agentAddress : String,
-                                   val prefix : String,
+/**
+ *
+ * @param agentAddress Subscriber address in network
+ * @param zkRootPath Zk root prefix
+ * @param zkHosts Zk hosts to connect
+ * @param zkSessionTimeout Zk session timeout
+ * @param threadPoolAmount Thread pool amount which is used by
+ *                         [[com.bwsw.tstreams.agents.consumer.subscriber.BasicSubscribingConsumer]]]
+ *                         by default (threads_amount == used_consumer_partitions)
+ */
+//TODO validate params
+class SubscriberCoordinationOptions (val agentAddress : String,
+                                   val zkRootPath : String,
                                    val zkHosts : List[InetSocketAddress],
                                    val zkSessionTimeout : Int,
                                    val threadPoolAmount: Int = -1)
