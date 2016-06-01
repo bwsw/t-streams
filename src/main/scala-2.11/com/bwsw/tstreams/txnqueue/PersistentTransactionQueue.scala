@@ -14,7 +14,7 @@ import org.slf4j.LoggerFactory
 class PersistentTransactionQueue (private val basePath : String,
                                   private val separator : UUID) {
 
-    private var fromQ1 = !(separator == null)
+    private var fromQ1 = separator != null
 
 
     private val q1: SingleChronicleQueue = ChronicleQueueBuilder.single(basePath + "/q1").build()
