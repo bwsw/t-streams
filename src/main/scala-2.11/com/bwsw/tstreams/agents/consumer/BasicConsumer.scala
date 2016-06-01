@@ -102,7 +102,7 @@ class BasicConsumer[DATATYPE, USERTYPE](val name : String,
 
   //fill transaction buffer using current offsets
   for (i <- 0 until stream.getPartitions)
-    transactionBuffer(i) = stream.metadataStorage.commitEntity.getTransactionsMoreThan(
+    transactionBuffer(i) = stream.metadataStorage.commitEntity.getTransactions(
       stream.getName,
       i,
       currentOffsets(i),
@@ -121,7 +121,7 @@ class BasicConsumer[DATATYPE, USERTYPE](val name : String,
     val curPartition = options.readPolicy.getNextPartition
 
     if (transactionBuffer(curPartition).isEmpty) {
-      transactionBuffer(curPartition) = stream.metadataStorage.commitEntity.getTransactionsMoreThan(
+      transactionBuffer(curPartition) = stream.metadataStorage.commitEntity.getTransactions(
         stream.getName,
         curPartition,
         currentOffsets(curPartition),
@@ -175,21 +175,21 @@ class BasicConsumer[DATATYPE, USERTYPE](val name : String,
    * @return Last txn
    */
     def getLastTransaction(partition : Int): Option[BasicConsumerTransaction[DATATYPE, USERTYPE]] = {
-      var now = options.txnGenerator.getTimeUUID()
-      var done = false
-      while(!done){
+      var curUuid = options.txnGenerator.getTimeUUID()
+      var isFinished = false
+      while(!isFinished){
         val queue = stream.metadataStorage.commitEntity.getLastTransactionHelper(
           stream.getName,
           partition,
-          now)
+          curUuid)
         if (queue.isEmpty)
-          done = true
+          isFinished = true
         else {
           while (queue.nonEmpty) {
             val txn = queue.dequeue()
             if (txn.totalItems != -1)
               return Some(new BasicConsumerTransaction[DATATYPE, USERTYPE](this, partition, txn))
-            now = txn.txnUuid
+            curUuid = txn.txnUuid
           }
         }
       }
@@ -226,7 +226,7 @@ class BasicConsumer[DATATYPE, USERTYPE](val name : String,
     def setLocalOffset(partition : Int, uuid : UUID) : Unit = {
       offsetsForCheckpoint(partition) = uuid
       currentOffsets(partition) = uuid
-      transactionBuffer(partition) = stream.metadataStorage.commitEntity.getTransactionsMoreThan(
+      transactionBuffer(partition) = stream.metadataStorage.commitEntity.getTransactions(
         stream.getName,
         partition,
         uuid,

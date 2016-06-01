@@ -71,6 +71,21 @@ class CommitEntity(commitLog : String, session: Session) {
   }
 
   /**
+   * Retrieving some set of transactions more than last transaction
+   * @param streamName Name of the stream
+   * @param partition Number of the partition
+   * @param lastTransaction Transaction from which start to retrieve
+   * @return Iterator of selected transactions
+   */
+  def getTransactionsIterator(streamName : String, partition : Int, lastTransaction : UUID) : util.Iterator[Row] = {
+    val values : List[AnyRef] = List(streamName, new Integer(partition), lastTransaction)
+    val statementWithBindings = selectTransactionsMoreThanStatementWithoutLimit.bind(values: _*)
+    val selected = session.execute(statementWithBindings)
+    val it: util.Iterator[Row] = selected.iterator()
+    it
+  }
+
+  /**
    * Retrieving some set of transactions more than last transaction (if cnt is default will be no limit to retrieve)
    * @param streamName Name of the stream
    * @param partition Number of the partition
@@ -78,7 +93,7 @@ class CommitEntity(commitLog : String, session: Session) {
    * @param cnt Amount of retrieved queue (can be less than cnt in case of insufficiency of transactions)
    * @return Queue of selected transactions
    */
-  def getTransactionsMoreThan(streamName : String, partition : Int, lastTransaction : UUID, cnt : Int = -1) : scala.collection.mutable.Queue[TransactionSettings] = {
+  def getTransactions(streamName : String, partition : Int, lastTransaction : UUID, cnt : Int = -1) : scala.collection.mutable.Queue[TransactionSettings] = {
     val statementWithBindings =
       if (cnt == -1) {
         val values : List[AnyRef] = List(streamName, new Integer(partition), lastTransaction)
@@ -99,7 +114,6 @@ class CommitEntity(commitLog : String, session: Session) {
     }
     q
   }
-
 
   /**
    * Retrieving some set of transactions(used only by getLastTransaction)
@@ -130,21 +144,14 @@ class CommitEntity(commitLog : String, session: Session) {
    * @param partition Number of the partition
    * @param leftBorder Left border of transactions to consume
    * @param rightBorder Right border of transactions to consume
-   * @return Queue of selected transactions
+   * @return Iterator of selected transactions
    */
-  def getTransactionsMoreThanAndLessOrEqualThan(streamName : String, partition : Int, leftBorder : UUID, rightBorder : UUID) : scala.collection.mutable.Queue[TransactionSettings] = {
+  def getTransactionsIterator(streamName : String, partition : Int, leftBorder : UUID, rightBorder : UUID) : util.Iterator[Row] = {
     val values : List[AnyRef] = List(streamName, new Integer(partition), leftBorder, rightBorder)
     val statementWithBindings = selectTransactionsMoreThanAndLessOrEqualThanStatement.bind(values:_*)
-
     val selected = session.execute(statementWithBindings)
-
-    val q = scala.collection.mutable.Queue[TransactionSettings]()
     val it = selected.iterator()
-    while(it.hasNext){
-      val value = it.next()
-      q.enqueue(TransactionSettings(value.getUUID("transaction"), value.getInt("cnt"), value.getInt("ttl(cnt)")))
-    }
-    q
+    it
   }
 
 

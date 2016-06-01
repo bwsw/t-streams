@@ -40,8 +40,9 @@ class BasicConsumerOptions[DATATYPE,USERTYPE](val transactionsPreload : Int,
     throw new IllegalArgumentException("incorrect consumerKeepAliveInterval value, should be greater or equal one")
 }
 
-
+//TODO asserts
 class ConsumerCoordinationSettings(val agentAddress : String,
                                    val prefix : String,
                                    val zkHosts : List[InetSocketAddress],
-                                   val zkSessionTimeout : Int)
+                                   val zkSessionTimeout : Int,
+                                   val threadPoolAmount: Int = -1)

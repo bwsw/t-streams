@@ -13,7 +13,7 @@ trait BasicSubscriberCallback[DATATYPE, USERTYPE] {
   def onEvent(subscriber : BasicSubscribingConsumer[DATATYPE, USERTYPE], partition : Int, transactionUuid : java.util.UUID) : Unit
 
   /**
-   * Frequency of handling incoming transactions in seconds
+   * Frequency of handling incoming transactions in milliseconds
    */
   val frequency : Int
 }

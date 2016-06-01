@@ -1,10 +1,10 @@
 package com.bwsw.tstreams.agents.consumer.subscriber
 
+import java.util.concurrent.{Executors, ExecutorService}
+
 import com.bwsw.tstreams.agents.consumer.{BasicConsumer, BasicConsumerOptions}
 import com.bwsw.tstreams.streams.BasicStream
 import com.bwsw.tstreams.txnqueue.PersistentTransactionQueue
-
-import scala.collection.mutable.ListBuffer
 
 /**
  * Basic consumer with subscribe option
@@ -21,26 +21,37 @@ class BasicSubscribingConsumer[DATATYPE, USERTYPE](name : String,
                                                    callBack : BasicSubscriberCallback[DATATYPE, USERTYPE],
                                                    persistentQueuePath : String)
   extends BasicConsumer[DATATYPE, USERTYPE](name, stream, options){
-
-  /**
-   * Current subscriber state
-   */
+  private var cntRun = 0
   private var isStarted = false
-
-
-  private var relays = ListBuffer[SubscriberTransactionsRelay[_,_]]()
+  private val usedPartitions = options.readPolicy.getUsedPartition()
+  private val poolSize = if (options.consumerCoordinatorSettings.threadPoolAmount == -1)
+    usedPartitions.size
+  else
+    options.consumerCoordinatorSettings.threadPoolAmount
+  private val partitionsToExecutors = usedPartitions
+    .zipWithIndex
+    .map{case(partition,execNum) => (partition,execNum % poolSize)}
+    .toMap
+  private var executors : scala.collection.mutable.Map[Int, ExecutorService] = null
+  private val updateManager = new UpdateManager
 
   /**
-   * Start to consume messages
+   * Start subscriber consuming new transactions
    */
   def start() = {
     if (isStarted)
       throw new IllegalStateException("subscriber already started")
     isStarted = true
+    cntRun += 1
+
+    executors = scala.collection.mutable.Map[Int, ExecutorService]()
+    (0 until poolSize) foreach { x =>
+      executors(x) = Executors.newSingleThreadExecutor()
+    }
 
     coordinator.startListen()
-
     coordinator.startCallback()
+    updateManager.startUpdate(callBack.frequency)
 
     (0 until stream.getPartitions) foreach { partition =>
       val lastTransactionOpt = getLastTransaction(partition)
@@ -48,31 +59,37 @@ class BasicSubscribingConsumer[DATATYPE, USERTYPE](name : String,
       val queue =
         if (lastTransactionOpt.isDefined) {
           val txnUuid = lastTransactionOpt.get.getTxnUUID
-          new PersistentTransactionQueue(persistentQueuePath + s"/$partition", txnUuid)
+          new PersistentTransactionQueue(persistentQueuePath + s"/$cntRun/$partition", txnUuid)
         }
         else {
-          new PersistentTransactionQueue(persistentQueuePath + s"/$partition", null)
+          new PersistentTransactionQueue(persistentQueuePath + s"/$cntRun/$partition", null)
         }
 
-      val transactionsRelay = new SubscriberTransactionsRelay(subscriber = this,
+      val lastTxnUuid = if (lastTransactionOpt.isDefined)
+        lastTransactionOpt.get.getTxnUUID
+      else
+        options.txnGenerator.getTimeUUID(0)
+
+      val executorIndex = partitionsToExecutors(partition)
+      val executor = executors(executorIndex)
+
+      val transactionsRelay = new SubscriberTransactionsRelay(
+        subscriber = this,
         offset = currentOffsets(partition),
         partition = partition,
         coordinator = coordinator,
         callback = callBack,
-        queue = queue)
-
-      relays += transactionsRelay
-
-      transactionsRelay.startConsumeAndCallbackPersistentQueue()
+        queue = queue,
+        lastTransaction = lastTxnUuid,
+        executor = executor)
 
       //consume all transactions less or equal than last transaction
       if (lastTransactionOpt.isDefined)
-        transactionsRelay.consumeTransactionsLessOrEqualThanAsync(lastTransactionOpt.get.getTxnUUID)
+        transactionsRelay.consumeTransactionsLessOrEqualThan(lastTransactionOpt.get.getTxnUUID)
 
       transactionsRelay.notifyProducersAndStartListen()
-      coordinator.synchronize(stream.getName, partition)
 
-      //consume all transactions greater than last
+      //consume all transactions strictly greater than last
       if (lastTransactionOpt.isDefined)
         transactionsRelay.consumeTransactionsMoreThan(lastTransactionOpt.get.getTxnUUID)
       else {
@@ -80,19 +97,20 @@ class BasicSubscribingConsumer[DATATYPE, USERTYPE](name : String,
         transactionsRelay.consumeTransactionsMoreThan(oldestUuid)
       }
 
-      transactionsRelay.startUpdate()
+      updateManager.addExecutorWithRunnable(executor,transactionsRelay.getUpdateRunnable())
     }
   }
 
   /**
-   * Stop consumer handle incoming messages
+   *
    */
   override def stop() = {
     if (!isStarted)
       throw new IllegalStateException("subscriber is not started")
+    if (executors != null)
+      executors.foreach(x=>x._2.shutdown())
+    updateManager.stopUpdate()
     isStarted = false
-    relays.foreach(_.stop())
-    relays.clear()
     coordinator.stop()
   }
 }

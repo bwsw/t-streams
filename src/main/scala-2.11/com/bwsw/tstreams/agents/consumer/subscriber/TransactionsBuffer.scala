@@ -6,22 +6,26 @@ import ProducerTransactionStatus._
 import com.bwsw.tstreams.coordination.pubsub.messages.ProducerTransactionStatus
 
 /**
- * Buffer for maintain consumed transactions in memory
+ * Buffer for maintaining consumed transactions in memory
  */
 class TransactionsBuffer() {
   private val map : SortedExpiringMap[UUID, (ProducerTransactionStatus, Long)] =
     new SortedExpiringMap(new UUIDComparator, new SubscriberExpirationPolicy)
 
   def update(txnUuid : UUID, status: ProducerTransactionStatus, ttl : Int) : Unit = {
-    if (!map.exist(txnUuid) && status == ProducerTransactionStatus.updated){
+    if (!map.exist(txnUuid) && status == ProducerTransactionStatus.updated){ //if update incomes after close
       return
     }
     if (map.exist(txnUuid)){
       if (map.get(txnUuid)._1 == ProducerTransactionStatus.closed) {
+        assert(status != ProducerTransactionStatus.closed)
         return
       }
     }
     status match {
+      case ProducerTransactionStatus.updated =>
+        map.put(txnUuid, (status, ttl))
+
       case ProducerTransactionStatus.opened =>
         map.put(txnUuid, (status, ttl))
 

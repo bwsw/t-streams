@@ -23,7 +23,7 @@ import testutils._
 import scala.collection.mutable.ListBuffer
 
 //TODO check this test harder
-class LazyProducerAndSubscriberTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils{
+class LazyProducersAndSubscriberTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils{
   var port = 8000
 
   //creating keyspace, metadata
