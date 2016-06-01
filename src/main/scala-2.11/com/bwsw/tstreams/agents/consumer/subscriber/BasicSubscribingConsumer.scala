@@ -3,6 +3,7 @@ package com.bwsw.tstreams.agents.consumer.subscriber
 import java.util.UUID
 import java.util.concurrent.{Executors, ExecutorService}
 import com.bwsw.tstreams.agents.consumer.{BasicConsumer, BasicConsumerOptions}
+import com.bwsw.tstreams.coordination.pubsub.ConsumerCoordinator
 import com.bwsw.tstreams.streams.BasicStream
 import com.bwsw.tstreams.txnqueue.PersistentTransactionQueue
 
@@ -31,7 +32,8 @@ class BasicSubscribingConsumer[DATATYPE, USERTYPE](name : String,
     .zipWithIndex
     .map{case(partition,execNum) => (partition,execNum % poolSize)}
     .toMap
-  private var executors : scala.collection.mutable.Map[Int, ExecutorService] = null
+  private val executors : scala.collection.mutable.Map[Int, ExecutorService] =
+    scala.collection.mutable.Map[Int, ExecutorService]()
   private val updateManager = new UpdateManager
 
   /**
@@ -41,8 +43,13 @@ class BasicSubscribingConsumer[DATATYPE, USERTYPE](name : String,
     if (isStarted)
       throw new IllegalStateException("subscriber already started")
     isStarted = true
-
-    executors = scala.collection.mutable.Map[Int, ExecutorService]()
+    if (coordinator.isStoped){
+      coordinator = new ConsumerCoordinator(
+        options.consumerCoordinatorSettings.agentAddress,
+        options.consumerCoordinatorSettings.prefix,
+        options.consumerCoordinatorSettings.zkHosts,
+        options.consumerCoordinatorSettings.zkSessionTimeout)
+    }
     (0 until poolSize) foreach { x =>
       executors(x) = Executors.newSingleThreadExecutor()
     }
@@ -105,10 +112,12 @@ class BasicSubscribingConsumer[DATATYPE, USERTYPE](name : String,
   override def stop() = {
     if (!isStarted)
       throw new IllegalStateException("subscriber is not started")
-    if (executors != null)
-      executors.foreach(x=>x._2.shutdown())
-    updateManager.stopUpdate()
     isStarted = false
+    if (executors != null) {
+      executors.foreach(x => x._2.shutdown())
+      executors.clear()
+    }
     coordinator.stop()
+    updateManager.stopUpdate()
   }
 }

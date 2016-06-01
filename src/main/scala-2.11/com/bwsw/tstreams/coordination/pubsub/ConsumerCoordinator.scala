@@ -24,6 +24,7 @@ class ConsumerCoordinator(agentAddress : String,
   private val zkService = new ZkService(zkRootPrefix, zkHosts, zkSessionTimeout)
   private val (_,port) = getHostPort(agentAddress)
   private val listener: ProducerTopicMessageListener = new ProducerTopicMessageListener(port)
+  private var stoped = false
 
   private def getHostPort(address : String): (String, Int) = {
     val splits = address.split(":")
@@ -40,7 +41,10 @@ class ConsumerCoordinator(agentAddress : String,
   def stop() = {
     listener.stop()
     zkService.close()
+    stoped = true
   }
+
+  def isStoped = stoped
 
   def startListen() = {
     listener.start()

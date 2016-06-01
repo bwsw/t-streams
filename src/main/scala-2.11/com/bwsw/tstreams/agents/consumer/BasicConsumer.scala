@@ -44,7 +44,7 @@ class BasicConsumer[DATATYPE, USERTYPE](val name : String,
    */
   private var isSet = false
 
-  protected val coordinator = new ConsumerCoordinator(
+  protected var coordinator = new ConsumerCoordinator(
     options.consumerCoordinatorSettings.agentAddress,
     options.consumerCoordinatorSettings.prefix,
     options.consumerCoordinatorSettings.zkHosts,
