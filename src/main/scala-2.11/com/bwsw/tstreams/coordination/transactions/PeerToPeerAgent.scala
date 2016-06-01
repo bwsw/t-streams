@@ -16,7 +16,7 @@ import org.slf4j.LoggerFactory
 
 
 /**
- * Agent for providing peer to peer interaction between producers
+ * Agent for providing peer to peer interaction between [[BasicProducer]]]
  * @param agentAddress Concrete agent address
  * @param zkHosts ZkHosts to connect
  * @param zkRootPath Common prefix for all zk created entities

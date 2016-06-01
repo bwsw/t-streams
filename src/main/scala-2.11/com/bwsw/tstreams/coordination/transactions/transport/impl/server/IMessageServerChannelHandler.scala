@@ -10,6 +10,9 @@ import io.netty.util.ReferenceCountUtil
 
 import scala.collection.mutable.ListBuffer
 
+/**
+ * Handler for managing new connections for [[TcpIMessageListener]]]
+ */
 @ChannelHandler.Sharable
 class IMessageServerChannelHandler extends SimpleChannelInboundHandler[IMessage] {
   private val lock = new ReentrantLock(true)
@@ -18,12 +21,21 @@ class IMessageServerChannelHandler extends SimpleChannelInboundHandler[IMessage]
   private val idToAddress = scala.collection.mutable.Map[ChannelId, String]()
   private val callbacks = ListBuffer[(IMessage) => Unit]()
 
+  /**
+   * Add new event callback on [[IMessage]]]
+   * @param callback Event callback
+   */
   def addCallback(callback : (IMessage) => Unit) = {
     lock.lock()
     callbacks += callback
     lock.unlock()
   }
 
+  /**
+   * Triggered on new [[IMessage]]]
+   * @param ctx Netty ctx
+   * @param msg Received msg
+   */
   override def channelRead0(ctx: ChannelHandlerContext, msg: IMessage): Unit = {
     lock.lock()
     val address = msg.senderID
@@ -39,7 +51,10 @@ class IMessageServerChannelHandler extends SimpleChannelInboundHandler[IMessage]
     lock.unlock()
   }
 
-  //triggered on disconnect
+  /**
+   * Triggered on disconnect
+   * @param ctx Netty ctx
+   */
   override def channelInactive(ctx: ChannelHandlerContext) : Unit = {
     lock.lock()
     val id = ctx.channel().id()
@@ -52,11 +67,19 @@ class IMessageServerChannelHandler extends SimpleChannelInboundHandler[IMessage]
     lock.unlock()
   }
 
+  /**
+   * Triggered on exceptions
+   * @param ctx Netty ctx
+   * @param cause Cause of exception
+   */
   override def exceptionCaught(ctx: ChannelHandlerContext, cause: Throwable) = {
     cause.printStackTrace()
     ctx.close()
   }
 
+  /**
+   * Response with [[IMessage]]] (it has receiver address)
+   */
   def response(msg : IMessage) : Unit = {
     lock.lock()
     val responseAddress = msg.receiverID
@@ -69,7 +92,9 @@ class IMessageServerChannelHandler extends SimpleChannelInboundHandler[IMessage]
   }
 }
 
-
+/**
+ * Decoder [[java.lang.String]]] to [[IMessage]]]
+ */
 class IMessageDecoder extends MessageToMessageDecoder[String]{
   val serializer = new JsonSerializer
 
@@ -85,7 +110,9 @@ class IMessageDecoder extends MessageToMessageDecoder[String]{
   }
 }
 
-
+/**
+ * Encoder [[IMessage]]] to [[java.lang.String]]]
+ */
 class IMessageEncoder extends MessageToMessageEncoder[IMessage]{
   val serializer = new JsonSerializer
 

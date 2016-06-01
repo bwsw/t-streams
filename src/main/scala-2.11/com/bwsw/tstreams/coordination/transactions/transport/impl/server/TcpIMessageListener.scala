@@ -15,31 +15,40 @@ import io.netty.handler.logging.{LogLevel, LoggingHandler}
  * @param port Listener port
  */
 class TcpIMessageListener(port : Int){
-  /**
-   * Socket accept worker
-   */
+  //socket accept worker
   private val bossGroup = new NioEventLoopGroup(1)
-  /**
-   * Channel workers
-   */
+  //channel workers
   private val workerGroup = new NioEventLoopGroup()
   private val MAX_FRAME_LENGTH = 8192
   private val channelHandler : IMessageServerChannelHandler = new IMessageServerChannelHandler
   private var listenerThread : Thread = null
 
-  def stop() = {
+  /**
+   * Stop this listener
+   */
+  def stop() : Unit = {
     workerGroup.shutdownGracefully().await()
     bossGroup.shutdownGracefully().await()
   }
 
-  def addCallback(callback : (IMessage) => Unit) = {
+  /**
+   * Add callback on incoming [[IMessage]]] events
+   * @param callback Event callback
+   */
+  def addCallback(callback : (IMessage) => Unit) : Unit = {
     channelHandler.addCallback(callback)
   }
 
-  def response(msg : IMessage) = {
+  /**
+   * Response with [[IMessage]]]
+   */
+  def response(msg : IMessage) : Unit = {
     channelHandler.response(msg)
   }
 
+  /**
+   * Start this listener
+   */
   def start() = {
     assert(listenerThread == null || !listenerThread.isAlive)
     val syncPoint = new CountDownLatch(1)

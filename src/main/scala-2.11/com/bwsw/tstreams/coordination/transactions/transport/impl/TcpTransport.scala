@@ -6,6 +6,9 @@ import com.bwsw.tstreams.coordination.transactions.transport.impl.client.TcpIMes
 import com.bwsw.tstreams.coordination.transactions.transport.impl.server.TcpIMessageListener
 import com.bwsw.tstreams.coordination.transactions.transport.traits.ITransport
 
+/**
+ * [[ITransport]] implementation
+ */
 class TcpTransport extends ITransport{
   private var listener : TcpIMessageListener = null
   private val sender : TcpIMessageClient = new TcpIMessageClient
