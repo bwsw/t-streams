@@ -173,11 +173,10 @@ class SubscriberTransactionsRelay[DATATYPE,USERTYPE](subscriber : BasicSubscribi
    * @return Runnable for updating expiring map for this relay
    */
   def getUpdateRunnable() : Runnable = {
-    var totalAmount = 1 //TODO for logging; remove after complex testing
+    var totalAmount = 1 //TODO remove after complex testing
     val runnable = new Runnable {
       override def run(): Unit = {
         lock.lock()
-        logTransactionBuffer() //TODO remove after complex testing
         val it = transactionBuffer.getIterator()
         breakable {
           while (it.hasNext) {
@@ -214,19 +213,5 @@ class SubscriberTransactionsRelay[DATATYPE,USERTYPE](subscriber : BasicSubscribi
       }
     }
     runnable
-  }
-
-  /**
-   * TODO remove after complex testing
-   * Used for verbose logging
-   */
-  def logTransactionBuffer() = {
-    val lb = ListBuffer[(Long, ProducerTransactionStatus)]()
-    val it = transactionBuffer.getIterator()
-    while (it.hasNext){
-      val entry = it.next()
-      lb += ((entry.getKey.timestamp(), entry.getValue._1))
-    }
-    logger.debug(s"[QUEUE_UPDATER PARTITION_$partition] ${lb.toList}\n")
   }
 }
