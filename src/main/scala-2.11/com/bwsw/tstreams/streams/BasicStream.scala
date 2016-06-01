@@ -5,7 +5,6 @@ import com.bwsw.tstreams.metadata.MetadataStorage
 
 
 /**
- * Stream instance
  * @param name Name of the stream
  * @param partitions Number of stream partitions
  * @param metadataStorage Stream metadata storage which it used

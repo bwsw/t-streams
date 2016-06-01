@@ -3,7 +3,7 @@ package com.bwsw.tstreams.policy
 import com.bwsw.tstreams.streams.BasicStream
 
 /**
- * Round robin policy for agents
+ * Round robin policy impl of [[AbstractPolicy]]]
  * @param usedPartitions Partitions from which agent will interact
  */
 

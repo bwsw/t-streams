@@ -3,7 +3,7 @@ package com.bwsw.tstreams.data
 import java.util.UUID
 
 /**
-  * Interface for data storage
+  * Interface of data storage
   * @tparam T Storage data type
   */
 trait IStorage[T] {

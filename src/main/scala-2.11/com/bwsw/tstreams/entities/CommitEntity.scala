@@ -19,40 +19,21 @@ case class TransactionSettings(txnUuid : UUID, totalItems : Int, ttl : Int)
  * @param session Session to use for this entity
  */
 class CommitEntity(commitLog : String, session: Session) {
-
-  /**
-   * Session prepared statement using for inserting info in metadata in commit log
-   */
   private val commitStatement = session
     .prepare(s"insert into $commitLog (stream,partition,transaction,cnt) values(?,?,?,?) USING TTL ?")
 
-  /**
-   * Session prepared statement using for transactions selection from metadata from commit log
-   */
   private val selectTransactionsMoreThanStatement = session
     .prepare(s"select transaction,cnt,TTL(cnt) from $commitLog where stream=? AND partition=? AND transaction>? LIMIT ?")
 
-  /**
-   * Session prepared statement using for transactions selection from metadata from commit log
-   */
   private val selectTransactionsMoreThanStatementWithoutLimit = session
     .prepare(s"select transaction,cnt,TTL(cnt) from $commitLog where stream=? AND partition=? AND transaction>?")
 
-  /**
-   * Session prepared statement using for transactions selection from metadata from commit log
-   */
   private val selectTransactionsMoreThanAndLessOrEqualThanStatement = session
     .prepare(s"select transaction,cnt,TTL(cnt) from $commitLog where stream=? AND partition=? AND transaction>? AND transaction <= ?")
 
-  /**
-   * Session prepared statement using for selecting last transaction
-   */
   private val selectTransactionsLessThanStatement = session
     .prepare(s"select transaction,cnt,TTL(cnt) from $commitLog where stream=? AND partition=? AND transaction<? LIMIT ?")
 
-  /**
-   * Session prepared statement using for transaction total amount selection from metadata from commit log
-   */
   private val selectTransactionAmountStatement = session
     .prepare(s"select cnt,TTL(cnt) from $commitLog where stream=? AND partition=? AND transaction=? LIMIT 1")
   

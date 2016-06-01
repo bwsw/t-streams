@@ -4,7 +4,12 @@ package com.bwsw.tstreams.entities
 import com.bwsw.tstreams.agents.group.{ProducerCommitInfo, ConsumerCommitInfo, CommitInfo}
 import com.datastax.driver.core.{BatchStatement, Session}
 
-
+/**
+ * Entity for providing group agents commits
+ * @param consumerEntityName Consumer metadata table name
+ * @param producerEntityName Producer metadata table name
+ * @param session C* session
+ */
 class GroupCommitEntity(consumerEntityName: String, producerEntityName: String, session: Session) {
   /**
    * Statement for saving consumer single offset
@@ -18,6 +23,11 @@ class GroupCommitEntity(consumerEntityName: String, producerEntityName: String, 
   private val producerCommitStatement = session
     .prepare(s"insert into $producerEntityName (stream,partition,transaction,cnt) values(?,?,?,?) USING TTL ?")
 
+  /**
+   * Group agents commit
+   * @param info Info to commit
+   *             (used only for consumers now; producers is not atomic)
+   */
   def groupCommit(info : List[CommitInfo]): Unit ={
     val batchStatement = new BatchStatement()
 
