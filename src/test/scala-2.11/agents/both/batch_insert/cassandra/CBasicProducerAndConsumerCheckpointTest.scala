@@ -78,7 +78,7 @@ class CBasicProducerAndConsumerCheckpointTest extends FlatSpec with Matchers wit
     transactionKeepAliveInterval = 2,
     producerKeepAliveInterval = 1,
     RoundRobinPolicyCreator.getRoundRobinPolicy(streamForProducer, List(0,1,2)),
-    BatchInsert(batchSizeVal),
+    BatchInsert(batchSizeTestVal),
     LocalGeneratorCreator.getGen(),
     agentSettings,
     stringToArrayByteConverter)
@@ -152,7 +152,7 @@ class CBasicProducerAndConsumerCheckpointTest extends FlatSpec with Matchers wit
   override def afterAll(): Unit = {
     consumer.stop()
     producer.stop()
-    removeZkMetadata()
+    removeZkMetadata("/unit")
     session.execute(s"DROP KEYSPACE $randomKeyspace")
     session.close()
     cluster.close()

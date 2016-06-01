@@ -21,7 +21,7 @@ import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import testutils._
 import scala.collection.mutable.ListBuffer
 
-class LazyProducersAndSubscriberTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils{
+class ALazyProducersAndSubscriberTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils{
   var port = 8000
 
   //creating keyspace, metadata
@@ -89,7 +89,7 @@ class LazyProducersAndSubscriberTest extends FlatSpec with Matchers with BeforeA
       RoundRobinPolicyCreator.getRoundRobinPolicy(
         usedPartitions = (0 until totalPartitions).toList,
         stream = streamInst),
-      new ConsumerCoordinationOptions("localhost:8588", "/unit", List(new InetSocketAddress("localhost",2181)), 7000),
+      new ConsumerCoordinationOptions("localhost:8588", "/unit", List(new InetSocketAddress("localhost",2181)), 7000, 1),
       Oldest,
       LocalGeneratorCreator.getGen(),
       useLastOffset = false)
@@ -146,7 +146,7 @@ class LazyProducersAndSubscriberTest extends FlatSpec with Matchers with BeforeA
       transactionKeepAliveInterval = 2,
       producerKeepAliveInterval = 1,
       writePolicy = RoundRobinPolicyCreator.getRoundRobinPolicy(stream, usedPartitions),
-      BatchInsert(batchSizeVal),
+      BatchInsert(batchSizeTestVal),
       LocalGeneratorCreator.getGen(),
       agentSettings,
       converter = stringToArrayByteConverter)
@@ -172,7 +172,7 @@ class LazyProducersAndSubscriberTest extends FlatSpec with Matchers with BeforeA
   }
 
   override def afterAll(): Unit = {
-    removeZkMetadata()
+    removeZkMetadata("/unit")
     session.execute(s"DROP KEYSPACE $randomKeyspace")
     session.close()
     cluster.close()
@@ -180,13 +180,5 @@ class LazyProducersAndSubscriberTest extends FlatSpec with Matchers with BeforeA
     storageFactory.closeFactory()
     val file = new File(path)
     remove(file)
-  }
-
-  def remove(f : File) : Unit = {
-    if (f.isDirectory) {
-      for (c <- f.listFiles())
-        remove(c)
-    }
-    f.delete()
   }
 }

@@ -21,7 +21,7 @@ import org.scalatest.{BeforeAndAfterAll, Matchers, FlatSpec}
 import testutils._
 
 
-class BasicSubscriberTotalAmountTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils{
+class ABasicSubscriberTotalAmountTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils{
   //creating keyspace, metadata
   val randomKeyspace = randomString
   val cluster = Cluster.builder().addContactPoint("localhost").build()
@@ -98,7 +98,7 @@ class BasicSubscriberTotalAmountTest extends FlatSpec with Matchers with BeforeA
     consumerKeepAliveInterval = 5,
     arrayByteToStringConverter,
     RoundRobinPolicyCreator.getRoundRobinPolicy(streamForConsumer, List(0,1,2)),
-    new ConsumerCoordinationOptions("localhost:8588", "/unit", List(new InetSocketAddress("localhost",2181)), 7000),
+    new ConsumerCoordinationOptions("localhost:8588", "/unit", List(new InetSocketAddress("localhost",2181)), 7000, 1),
     Oldest,
     LocalGeneratorCreator.getGen(),
     useLastOffset = true)
@@ -113,7 +113,7 @@ class BasicSubscriberTotalAmountTest extends FlatSpec with Matchers with BeforeA
       acc += 1
       lock.unlock()
     }
-    override val pollingFrequency: Int = 1
+    override val pollingFrequency: Int = 100
   }
   val path = randomString
   val subscribeConsumer = new BasicSubscribingConsumer[Array[Byte],String](
@@ -144,7 +144,7 @@ class BasicSubscriberTotalAmountTest extends FlatSpec with Matchers with BeforeA
   override def afterAll(): Unit = {
     subscribeConsumer.stop()
     producer.stop()
-    removeZkMetadata()
+    removeZkMetadata("/unit")
     session.execute(s"DROP KEYSPACE $randomKeyspace")
     session.close()
     cluster.close()
@@ -152,13 +152,5 @@ class BasicSubscriberTotalAmountTest extends FlatSpec with Matchers with BeforeA
     storageFactory.closeFactory()
     val file = new File(path)
     remove(file)
-  }
-
-  def remove(f : File) : Unit = {
-    if (f.isDirectory) {
-      for (c <- f.listFiles())
-      remove(c)
-    }
-    f.delete()
   }
 }

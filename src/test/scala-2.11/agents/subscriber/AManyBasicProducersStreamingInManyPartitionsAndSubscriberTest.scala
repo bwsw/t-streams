@@ -88,7 +88,7 @@ class AManyBasicProducersStreamingInManyPartitionsAndSubscriberTest extends Flat
       RoundRobinPolicyCreator.getRoundRobinPolicy(
         usedPartitions = (0 until totalPartitions).toList,
         stream = streamInst),
-      new ConsumerCoordinationOptions("localhost:8588", "/unit", List(new InetSocketAddress("localhost",2181)), 7000),
+      new ConsumerCoordinationOptions("localhost:8588", "/unit", List(new InetSocketAddress("localhost",2181)), 7000, 1),
       Oldest,
       LocalGeneratorCreator.getGen(),
       useLastOffset = false)
@@ -107,7 +107,7 @@ class AManyBasicProducersStreamingInManyPartitionsAndSubscriberTest extends Flat
         cnt += 1
         lock.unlock()
       }
-      override val pollingFrequency: Int = 1
+      override val pollingFrequency: Int = 100
     }
     val subscriber = new BasicSubscribingConsumer("test_consumer",
       streamInst,
@@ -147,7 +147,7 @@ class AManyBasicProducersStreamingInManyPartitionsAndSubscriberTest extends Flat
       transactionKeepAliveInterval = 2,
       producerKeepAliveInterval = 1,
       writePolicy = RoundRobinPolicyCreator.getRoundRobinPolicy(stream, usedPartitions),
-      BatchInsert(batchSizeVal),
+      BatchInsert(batchSizeTestVal),
       LocalGeneratorCreator.getGen(),
       agentSettings,
       converter = stringToArrayByteConverter)
@@ -173,7 +173,7 @@ class AManyBasicProducersStreamingInManyPartitionsAndSubscriberTest extends Flat
   }
 
   override def afterAll(): Unit = {
-    removeZkMetadata()
+    removeZkMetadata("/unit")
     session.execute(s"DROP KEYSPACE $randomKeyspace")
     session.close()
     cluster.close()
@@ -181,13 +181,5 @@ class AManyBasicProducersStreamingInManyPartitionsAndSubscriberTest extends Flat
     storageFactory.closeFactory()
     val file = new File(path)
     remove(file)
-  }
-
-  def remove(f : File) : Unit = {
-    if (f.isDirectory) {
-      for (c <- f.listFiles())
-        remove(c)
-    }
-    f.delete()
   }
 }

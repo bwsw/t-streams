@@ -88,7 +88,7 @@ class BasicProducerTest extends FlatSpec with Matchers with BeforeAndAfterAll wi
 
   override def afterAll(): Unit = {
     producer.stop()
-    removeZkMetadata()
+    removeZkMetadata("/unit")
     temporarySession.execute(s"DROP KEYSPACE $randomKeyspace")
     temporarySession.close()
     temporaryCluster.close()

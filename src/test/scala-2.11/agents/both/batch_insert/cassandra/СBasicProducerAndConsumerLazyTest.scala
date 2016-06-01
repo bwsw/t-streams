@@ -100,7 +100,7 @@ class СBasicProducerAndConsumerLazyTest extends FlatSpec with Matchers with Bef
     transactionKeepAliveInterval = 2,
     producerKeepAliveInterval = 1,
     RoundRobinPolicyCreator.getRoundRobinPolicy(streamForProducer1, List(0,1,2)),
-    BatchInsert(batchSizeVal),
+    BatchInsert(batchSizeTestVal),
     LocalGeneratorCreator.getGen(),
     agentSettings1,
     stringToArrayByteConverter)
@@ -110,7 +110,7 @@ class СBasicProducerAndConsumerLazyTest extends FlatSpec with Matchers with Bef
     transactionKeepAliveInterval = 2,
     producerKeepAliveInterval = 1,
     RoundRobinPolicyCreator.getRoundRobinPolicy(streamForProducer2, List(0,1,2)),
-    BatchInsert(batchSizeVal),
+    BatchInsert(batchSizeTestVal),
     LocalGeneratorCreator.getGen(),
     agentSettings2,
     stringToArrayByteConverter)
@@ -207,7 +207,7 @@ class СBasicProducerAndConsumerLazyTest extends FlatSpec with Matchers with Bef
     producer1.stop()
     producer2.stop()
     consumer.stop()
-    removeZkMetadata()
+    removeZkMetadata("/unit")
     session.execute(s"DROP KEYSPACE $randomKeyspace")
     session.close()
     cluster.close()

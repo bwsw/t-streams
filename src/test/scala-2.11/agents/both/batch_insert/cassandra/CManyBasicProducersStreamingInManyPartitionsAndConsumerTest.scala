@@ -142,7 +142,7 @@ class CManyBasicProducersStreamingInManyPartitionsAndConsumerTest extends FlatSp
       transactionKeepAliveInterval = 2,
       producerKeepAliveInterval = 1,
       writePolicy = RoundRobinPolicyCreator.getRoundRobinPolicy(stream, usedPartitions),
-      BatchInsert(batchSizeVal),
+      BatchInsert(batchSizeTestVal),
       LocalGeneratorCreator.getGen(),
       agentSettings,
       converter = stringToArrayByteConverter)
@@ -167,7 +167,7 @@ class CManyBasicProducersStreamingInManyPartitionsAndConsumerTest extends FlatSp
   }
 
   override def afterAll(): Unit = {
-    removeZkMetadata()
+    removeZkMetadata("/unit")
     session.execute(s"DROP KEYSPACE $randomKeyspace")
     session.close()
     cluster.close()

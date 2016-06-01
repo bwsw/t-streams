@@ -126,7 +126,7 @@ class GroupCommitTest extends FlatSpec with Matchers with BeforeAndAfterAll with
   override def afterAll(): Unit = {
     producer.stop()
     consumer.stop()
-    removeZkMetadata()
+    removeZkMetadata("/unit")
     session.execute(s"DROP KEYSPACE $randomKeyspace")
     session.close()
     cluster.close()

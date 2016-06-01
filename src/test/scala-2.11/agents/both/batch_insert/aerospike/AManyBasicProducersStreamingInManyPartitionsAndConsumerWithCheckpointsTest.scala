@@ -167,7 +167,7 @@ with Matchers with BeforeAndAfterAll with TestUtils{
       transactionKeepAliveInterval = 2,
       producerKeepAliveInterval = 1,
       writePolicy = RoundRobinPolicyCreator.getRoundRobinPolicy(stream, usedPartitions),
-      BatchInsert(batchSizeVal),
+      BatchInsert(batchSizeTestVal),
       LocalGeneratorCreator.getGen(),
       agentSettings,
       converter = stringToArrayByteConverter)
@@ -192,7 +192,7 @@ with Matchers with BeforeAndAfterAll with TestUtils{
   }
 
   override def afterAll(): Unit = {
-    removeZkMetadata()
+    removeZkMetadata("/unit")
     session.execute(s"DROP KEYSPACE $randomKeyspace")
     session.close()
     cluster.close()

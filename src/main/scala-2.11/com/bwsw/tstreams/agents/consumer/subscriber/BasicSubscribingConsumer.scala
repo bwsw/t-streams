@@ -113,11 +113,11 @@ class BasicSubscribingConsumer[DATATYPE, USERTYPE](name : String,
     if (!isStarted)
       throw new IllegalStateException("subscriber is not started")
     isStarted = false
+    updateManager.stopUpdate()
     if (executors != null) {
       executors.foreach(x => x._2.shutdown())
       executors.clear()
     }
     coordinator.stop()
-    updateManager.stopUpdate()
   }
 }

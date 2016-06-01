@@ -147,7 +147,7 @@ class BasicConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll wi
   override def afterAll(): Unit = {
     producer.stop()
     consumer.stop()
-    removeZkMetadata()
+    removeZkMetadata("/unit")
     session.execute(s"DROP KEYSPACE $randomKeyspace")
     session.close()
     cluster.close()

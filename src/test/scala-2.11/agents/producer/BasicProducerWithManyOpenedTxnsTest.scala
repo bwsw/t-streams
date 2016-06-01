@@ -109,7 +109,7 @@ class BasicProducerWithManyOpenedTxnsTest extends FlatSpec with Matchers with Be
   override def afterAll(): Unit = {
     producer.stop()
     consumer.stop()
-    removeZkMetadata()
+    removeZkMetadata("/unit")
     temporarySession.execute(s"DROP KEYSPACE $randomKeyspace")
     temporarySession.close()
     temporaryCluster.close()

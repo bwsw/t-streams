@@ -84,7 +84,7 @@ class ABasicProducerAndConsumerSimpleTests extends FlatSpec with Matchers with B
     transactionKeepAliveInterval = 2,
     producerKeepAliveInterval = 1,
     RoundRobinPolicyCreator.getRoundRobinPolicy(streamForProducer, List(0,1,2)),
-    BatchInsert(batchSizeVal),
+    BatchInsert(batchSizeTestVal),
     LocalGeneratorCreator.getGen(),
     agentSettings,
     stringToArrayByteConverter)
@@ -235,7 +235,7 @@ class ABasicProducerAndConsumerSimpleTests extends FlatSpec with Matchers with B
   override def afterAll(): Unit = {
     producer.stop()
     consumer.stop()
-    removeZkMetadata()
+    removeZkMetadata("/unit")
     session.execute(s"DROP KEYSPACE $randomKeyspace")
     session.close()
     cluster.close()
