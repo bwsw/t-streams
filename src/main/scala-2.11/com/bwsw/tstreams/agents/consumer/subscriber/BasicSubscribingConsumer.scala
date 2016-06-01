@@ -76,10 +76,8 @@ class BasicSubscribingConsumer[DATATYPE, USERTYPE](name : String,
    */
   def start() = {
     if (isStarted) throw new IllegalStateException("subscriber already started")
-    val streamLock = coordinator.getStreamLock(stream.getName)
-    streamLock.lock()
-
     isStarted = true
+
     if (coordinator.isStoped){
       coordinator = new SubscriberCoordinator(
         subscriberCoordinationOptions.agentAddress,
@@ -87,6 +85,10 @@ class BasicSubscribingConsumer[DATATYPE, USERTYPE](name : String,
         subscriberCoordinationOptions.zkHosts,
         subscriberCoordinationOptions.zkSessionTimeout)
     }
+
+    val streamLock = coordinator.getStreamLock(stream.getName)
+    streamLock.lock()
+
     (0 until poolSize) foreach { x =>
       executors(x) = Executors.newSingleThreadExecutor()
     }
