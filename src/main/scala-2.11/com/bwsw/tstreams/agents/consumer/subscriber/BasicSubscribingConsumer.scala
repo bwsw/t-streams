@@ -9,7 +9,7 @@ import com.bwsw.tstreams.txnqueue.PersistentTransactionQueue
 
 /**
  * Basic consumer with subscribe
- * @param name Name of consumer
+ * @param name Name of subscriber
  * @param stream Stream from which to consume transactions
  * @param options Basic consumer options
  * @param persistentQueuePath Local Path to queue which maintain transactions that already exist and new incoming transactions
@@ -37,7 +37,7 @@ class BasicSubscribingConsumer[DATATYPE, USERTYPE](name : String,
   private val updateManager = new UpdateManager
 
   /**
-   * Start subscriber consuming new transactions
+   * Start subscriber to consume new transactions
    */
   def start() = {
     if (isStarted)

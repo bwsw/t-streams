@@ -15,8 +15,6 @@ class PersistentTransactionQueue (private val basePath : String,
                                   private val separator : UUID) {
 
     private var fromQ1 = separator != null
-
-
     private val q1: SingleChronicleQueue = ChronicleQueueBuilder.single(basePath + "/q1").build()
     private val q2: SingleChronicleQueue = ChronicleQueueBuilder.single(basePath + "/q2").build()
 
