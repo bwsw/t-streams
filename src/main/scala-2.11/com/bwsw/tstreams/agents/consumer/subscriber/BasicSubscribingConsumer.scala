@@ -1,13 +1,13 @@
 package com.bwsw.tstreams.agents.consumer.subscriber
 
+import java.util.UUID
 import java.util.concurrent.{Executors, ExecutorService}
-
 import com.bwsw.tstreams.agents.consumer.{BasicConsumer, BasicConsumerOptions}
 import com.bwsw.tstreams.streams.BasicStream
 import com.bwsw.tstreams.txnqueue.PersistentTransactionQueue
 
 /**
- * Basic consumer with subscribe option
+ * Basic consumer with subscribe
  * @param name Name of consumer
  * @param stream Stream from which to consume transactions
  * @param options Basic consumer options
@@ -21,7 +21,6 @@ class BasicSubscribingConsumer[DATATYPE, USERTYPE](name : String,
                                                    callBack : BasicSubscriberCallback[DATATYPE, USERTYPE],
                                                    persistentQueuePath : String)
   extends BasicConsumer[DATATYPE, USERTYPE](name, stream, options){
-  private var cntRun = 0
   private var isStarted = false
   private val usedPartitions = options.readPolicy.getUsedPartition()
   private val poolSize = if (options.consumerCoordinatorSettings.threadPoolAmount == -1)
@@ -42,7 +41,6 @@ class BasicSubscribingConsumer[DATATYPE, USERTYPE](name : String,
     if (isStarted)
       throw new IllegalStateException("subscriber already started")
     isStarted = true
-    cntRun += 1
 
     executors = scala.collection.mutable.Map[Int, ExecutorService]()
     (0 until poolSize) foreach { x =>
@@ -51,7 +49,7 @@ class BasicSubscribingConsumer[DATATYPE, USERTYPE](name : String,
 
     coordinator.startListen()
     coordinator.startCallback()
-    updateManager.startUpdate(callBack.frequency)
+    updateManager.startUpdate(callBack.pollingFrequency)
 
     (0 until stream.getPartitions) foreach { partition =>
       val lastTransactionOpt = getLastTransaction(partition)
@@ -59,10 +57,10 @@ class BasicSubscribingConsumer[DATATYPE, USERTYPE](name : String,
       val queue =
         if (lastTransactionOpt.isDefined) {
           val txnUuid = lastTransactionOpt.get.getTxnUUID
-          new PersistentTransactionQueue(persistentQueuePath + s"/$cntRun/$partition", txnUuid)
+          new PersistentTransactionQueue(persistentQueuePath + s"/${UUID.randomUUID()}/$partition", txnUuid)
         }
         else {
-          new PersistentTransactionQueue(persistentQueuePath + s"/$cntRun/$partition", null)
+          new PersistentTransactionQueue(persistentQueuePath + s"/${UUID.randomUUID()}/$partition", null)
         }
 
       val lastTxnUuid = if (lastTransactionOpt.isDefined)
@@ -102,7 +100,7 @@ class BasicSubscribingConsumer[DATATYPE, USERTYPE](name : String,
   }
 
   /**
-   *
+   * Stop subscriber
    */
   override def stop() = {
     if (!isStarted)

@@ -6,7 +6,7 @@ package com.bwsw.tstreams.agents.consumer.subscriber
  */
 trait BasicSubscriberCallback[DATATYPE, USERTYPE] {
   /**
-   * Callback which is called on every closed partition/transaction
+   * Callback which is called on every closed transaction
    * @param partition partition of the incoming transaction
    * @param transactionUuid time uuid of the incoming transaction
    */
@@ -15,5 +15,5 @@ trait BasicSubscriberCallback[DATATYPE, USERTYPE] {
   /**
    * Frequency of handling incoming transactions in milliseconds
    */
-  val frequency : Int
+  val pollingFrequency : Int
 }

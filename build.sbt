@@ -7,6 +7,7 @@ scalaVersion := "2.11.8"
 scalacOptions += "-feature"
 scalacOptions += "-deprecation"
 
+
 //COMMON
 libraryDependencies ++= Seq(
   "org.slf4j" % "slf4j-api" % "1.7.21",
@@ -16,6 +17,9 @@ libraryDependencies ++= Seq(
   "org.apache.commons" % "commons-collections4" % "4.1",
   "com.fasterxml.jackson.module" % "jackson-module-scala_2.11" % "2.6.3",
   "net.openhft" % "chronicle-queue" % "4.2.6",
+  "org.scala-lang" % "scala-reflect" % "2.11.8",
+  "org.scala-lang.modules" % "scala-xml_2.11" % "1.0.4",
+  "log4j" % "log4j" % "1.2.17",
   "org.slf4j" % "slf4j-simple" % "1.7.5" //TODO
 )
 
@@ -26,11 +30,13 @@ libraryDependencies += ("com.datastax.cassandra" % "cassandra-driver-core" % "3.
   .exclude("io.netty", "netty-buffer")
   .exclude("io.netty", "netty-handler")
 
-
-
 //COORDINATION
 resolvers += "twitter resolver" at "http://maven.twttr.com"
-libraryDependencies += "com.twitter.common.zookeeper" % "lock" % "0.0.40"
+libraryDependencies += ("com.twitter.common.zookeeper" % "lock" % "0.0.38")
+  .exclude("org.slf4f", "slf4j-api")
+  .exclude("log4j","log4j")
+  .exclude("io.netty", "netty")
+  .exclude("org.slf4j","slf4j-log4j12")
 
 
 //ASSEMBLY STRATEGY
@@ -42,7 +48,6 @@ assemblyMergeStrategy in assembly := {
   case PathList("com", "datastax", "cassandra", xs @ _*) => MergeStrategy.first
   case PathList("org", "slf4j", xs @ _*) => MergeStrategy.first
   case PathList("org", "scalatest", xs @ _*) => MergeStrategy.first
-  case PathList("org", "redisson", xs @ _*) => MergeStrategy.first
   case PathList("com", "aerospike", xs @ _*) => MergeStrategy.first
   case PathList("org", "apache", "commons", xs @ _*) => MergeStrategy.first
   case PathList("com", "fasterxml","jackson","module", xs @ _*) => MergeStrategy.first

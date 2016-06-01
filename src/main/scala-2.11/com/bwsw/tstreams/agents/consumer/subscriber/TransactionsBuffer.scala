@@ -8,17 +8,17 @@ import com.bwsw.tstreams.coordination.pubsub.messages.ProducerTransactionStatus
 /**
  * Buffer for maintaining consumed transactions in memory
  */
-class TransactionsBuffer() {
+class TransactionsBuffer {
   private val map : SortedExpiringMap[UUID, (ProducerTransactionStatus, Long)] =
     new SortedExpiringMap(new UUIDComparator, new SubscriberExpirationPolicy)
 
   def update(txnUuid : UUID, status: ProducerTransactionStatus, ttl : Int) : Unit = {
-    if (!map.exist(txnUuid) && status == ProducerTransactionStatus.updated){ //if update incomes after close
+    //if update comes after close
+    if (!map.exist(txnUuid) && status == ProducerTransactionStatus.updated)
       return
-    }
+
     if (map.exist(txnUuid)){
       if (map.get(txnUuid)._1 == ProducerTransactionStatus.closed) {
-        assert(status != ProducerTransactionStatus.closed)
         return
       }
     }

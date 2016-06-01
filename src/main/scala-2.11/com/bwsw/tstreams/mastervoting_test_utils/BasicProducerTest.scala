@@ -13,10 +13,17 @@ import com.bwsw.tstreams.coordination.transactions.transport.impl.TcpTransport
 import com.bwsw.tstreams.metadata.MetadataStorageFactory
 import com.bwsw.tstreams.policy.RoundRobinPolicy
 import com.bwsw.tstreams.streams.BasicStream
+import org.slf4j.LoggerFactory
 
 
 object BasicProducerTest{
   def main(args: Array[String]) {
+    LogManager.getLogManager.reset()
+    System.setProperty(org.slf4j.impl.SimpleLogger.DEFAULT_LOG_LEVEL_KEY, "WARN")
+    System.setProperty("org.slf4j.simpleLogger.logFile","testlog.log")
+    System.setProperty("org.slf4j.simpleLogger.showDateTime","false")
+    System.setProperty("org.slf4j.simpleLogger.log.com.bwsw","DEBUG")
+
     if (args.length != 9){
       println(s"args size:{${args.length}}")
       args.foreach(println)
@@ -43,13 +50,6 @@ object BasicProducerTest{
     }
     val redisHost = args(5)
     val delay = args(6).toInt
-
-
-    LogManager.getLogManager.reset()
-    System.setProperty(org.slf4j.impl.SimpleLogger.DEFAULT_LOG_LEVEL_KEY, "WARN")
-    System.setProperty("org.slf4j.simpleLogger.logFile","testlog.log")
-    System.setProperty("org.slf4j.simpleLogger.showDateTime","false")
-    System.setProperty("org.slf4j.simpleLogger.log.com.bwsw","DEBUG")
 
     val agentSettings = new ProducerCoordinationSettings(
       agentAddress = agentAddress,

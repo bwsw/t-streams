@@ -96,7 +96,9 @@ class SubscriberTransactionsRelay[DATATYPE,USERTYPE](subscriber : BasicSubscribi
                   if (amount != -1){
                     queue.put(uuid)
                     executor.execute(queueConsumer)
-                    assert(uuid.timestamp() > lastTxn.timestamp())
+                    assert(uuid.timestamp() > lastTxn.timestamp(),
+                      logger.debug(s"[RELAY WRONG ASSERT] ${uuid.timestamp()} " +
+                        s"with lastTxn={${lastTxn.timestamp()}}\n"))
                     lastTxn = uuid
                     break()
                   }
@@ -109,12 +111,16 @@ class SubscriberTransactionsRelay[DATATYPE,USERTYPE](subscriber : BasicSubscribi
           } else {
             queue.put(uuid)
             executor.execute(queueConsumer)
-            assert(uuid.timestamp() > lastTxn.timestamp())
+            assert(uuid.timestamp() > lastTxn.timestamp(),
+              logger.debug(s"[RELAY WRONG ASSERT] ${uuid.timestamp()} " +
+                s"with lastTxn={${lastTxn.timestamp()}}\n"))
             lastTxn = uuid
           }
         }
 
-        assert(lastTxn.timestamp() == transactionUUID.timestamp())
+        assert(lastTxn.timestamp() == transactionUUID.timestamp(),
+          logger.debug(s"[RELAY WRONG ASSERT] ${transactionUUID.timestamp()} " +
+            s"with lastTxn={${lastTxn.timestamp()}}\n"))
       }
     }
 
@@ -142,7 +148,9 @@ class SubscriberTransactionsRelay[DATATYPE,USERTYPE](subscriber : BasicSubscribi
       } else {
         transactionBuffer.update(txn.txnUuid, ProducerTransactionStatus.closed, -1)
       }
-      assert(txn.txnUuid.timestamp() > lastTxn.timestamp())
+      assert(txn.txnUuid.timestamp() > lastTxn.timestamp(),
+        logger.debug(s"[RELAY WRONG ASSERT] ${txn.txnUuid.timestamp()} " +
+          s"with lastTxn={${lastTxn.timestamp()}}\n"))
       lastTxn = txn.txnUuid
     }
     lock.unlock()

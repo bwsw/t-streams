@@ -5,7 +5,6 @@ import java.io.File
 import java.net.InetSocketAddress
 import java.util.UUID
 import java.util.concurrent.locks.ReentrantLock
-import java.util.logging.LogManager
 import com.aerospike.client.Host
 import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
 import com.bwsw.tstreams.agents.consumer.subscriber.{BasicSubscriberCallback, BasicSubscribingConsumer}
@@ -22,7 +21,6 @@ import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import testutils._
 import scala.collection.mutable.ListBuffer
 
-//TODO check this test harder
 class LazyProducersAndSubscriberTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils{
   var port = 8000
 
@@ -54,6 +52,7 @@ class LazyProducersAndSubscriberTest extends FlatSpec with Matchers with BeforeA
     " (each producer send each txn in only one partition without intersection " +
     " for ex. producer1 in partition1, producer2 in partition2, producer3 in partition3 etc...)," +
     " subscriber - retrieve them all(with callback) in sorted order" in {
+
     val timeoutForWaiting = 60
     val totalPartitions = 4
     val totalTxn = 10
@@ -110,12 +109,12 @@ class LazyProducersAndSubscriberTest extends FlatSpec with Matchers with BeforeA
         map(partition) += transactionUuid
         lock.unlock()
       }
-      override val frequency: Int = 1
+      override val pollingFrequency: Int = 100
     }
     val subscriber = new BasicSubscribingConsumer("test_consumer", streamInst, consumerOptions, callback, path)
 
     producersThreads.foreach(x=>x.start())
-    Thread.sleep(2000)
+    Thread.sleep(10000)
     subscriber.start()
     producersThreads.foreach(x=>x.join(timeoutForWaiting*1000L))
     Thread.sleep(30*1000)

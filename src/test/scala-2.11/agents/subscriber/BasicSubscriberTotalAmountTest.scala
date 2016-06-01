@@ -113,7 +113,7 @@ class BasicSubscriberTotalAmountTest extends FlatSpec with Matchers with BeforeA
       acc += 1
       lock.unlock()
     }
-    override val frequency: Int = 1
+    override val pollingFrequency: Int = 1
   }
   val path = randomString
   val subscribeConsumer = new BasicSubscribingConsumer[Array[Byte],String](
