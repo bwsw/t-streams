@@ -26,7 +26,7 @@ class BasicConsumerOptions[DATATYPE,USERTYPE](val transactionsPreload : Int,
                                               val consumerKeepAliveInterval : Int,
                                               val converter : IConverter[DATATYPE,USERTYPE],
                                               val readPolicy : AbstractPolicy,
-                                              val consumerCoordinatorSettings: ConsumerCoordinationSettings,
+                                              val consumerCoordinatorSettings: ConsumerCoordinationOptions,
                                               val offset : IOffset,
                                               val txnGenerator: IUUIDGenerator,
                                               val useLastOffset : Boolean = true) {
@@ -40,8 +40,7 @@ class BasicConsumerOptions[DATATYPE,USERTYPE](val transactionsPreload : Int,
     throw new IllegalArgumentException("incorrect consumerKeepAliveInterval value, should be greater or equal one")
 }
 
-//TODO asserts
-class ConsumerCoordinationSettings(val agentAddress : String,
+class ConsumerCoordinationOptions (val agentAddress : String,
                                    val prefix : String,
                                    val zkHosts : List[InetSocketAddress],
                                    val zkSessionTimeout : Int,

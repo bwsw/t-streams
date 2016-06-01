@@ -3,9 +3,9 @@ package agents.both.batch_insert.aerospike
 import java.net.InetSocketAddress
 import com.aerospike.client.Host
 import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
-import com.bwsw.tstreams.agents.consumer.{ConsumerCoordinationSettings, BasicConsumer, BasicConsumerOptions}
+import com.bwsw.tstreams.agents.consumer.{ConsumerCoordinationOptions, BasicConsumer, BasicConsumerOptions}
 import com.bwsw.tstreams.agents.producer.InsertionType.BatchInsert
-import com.bwsw.tstreams.agents.producer.{ProducerCoordinationSettings, ProducerPolicies, BasicProducer, BasicProducerOptions}
+import com.bwsw.tstreams.agents.producer.{ProducerCoordinationOptions, ProducerPolicies, BasicProducer, BasicProducerOptions}
 import com.bwsw.tstreams.converter.{ArrayByteToStringConverter, StringToArrayByteConverter}
 import com.bwsw.tstreams.data.aerospike.{AerospikeStorageFactory, AerospikeStorageOptions}
 import com.bwsw.tstreams.coordination.transactions.transport.impl.TcpTransport
@@ -80,7 +80,7 @@ class ABasicProducerAndConsumerLazyTest extends FlatSpec with Matchers with Befo
     ttl = 60 * 10,
     description = "some_description")
 
-  val agentSettings1 = new ProducerCoordinationSettings(
+  val agentSettings1 = new ProducerCoordinationOptions(
     agentAddress = "localhost:8888",
     zkHosts = List(new InetSocketAddress("localhost", 2181)),
     zkRootPath = "/unit",
@@ -89,7 +89,7 @@ class ABasicProducerAndConsumerLazyTest extends FlatSpec with Matchers with Befo
     transport = new TcpTransport,
     transportTimeout = 5)
 
-  val agentSettings2 = new ProducerCoordinationSettings(
+  val agentSettings2 = new ProducerCoordinationOptions(
     agentAddress = "localhost:8889",
     zkHosts = List(new InetSocketAddress("localhost", 2181)),
     zkRootPath = "/unit",
@@ -125,7 +125,7 @@ class ABasicProducerAndConsumerLazyTest extends FlatSpec with Matchers with Befo
     consumerKeepAliveInterval = 5,
     arrayByteToStringConverter,
     RoundRobinPolicyCreator.getRoundRobinPolicy(streamForConsumer, List(0,1,2)),
-    new ConsumerCoordinationSettings("localhost:8588", "/unit", List(new InetSocketAddress("localhost",2181)), 7000),
+    new ConsumerCoordinationOptions("localhost:8588", "/unit", List(new InetSocketAddress("localhost",2181)), 7000),
     Oldest,
     LocalGeneratorCreator.getGen(),
     useLastOffset = false)

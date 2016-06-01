@@ -26,7 +26,7 @@ class BasicProducerOptions[USERTYPE,DATATYPE](val transactionTTL : Int,
                                               val writePolicy : AbstractPolicy,
                                               val insertType: InsertType,
                                               val txnGenerator: IUUIDGenerator,
-                                              val producerCoordinationSettings : ProducerCoordinationSettings,
+                                              val producerCoordinationSettings : ProducerCoordinationOptions,
                                               val converter : IConverter[USERTYPE,DATATYPE]) {
 
   /**
@@ -63,7 +63,7 @@ class BasicProducerOptions[USERTYPE,DATATYPE](val transactionTTL : Int,
 }
 
 
-class ProducerCoordinationSettings(val agentAddress : String,
+class ProducerCoordinationOptions(val agentAddress : String,
                                    val zkHosts : List[InetSocketAddress],
                                    val zkRootPath : String,
                                    val zkTimeout : Int,

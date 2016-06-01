@@ -1,11 +1,11 @@
-package com.bwsw.tstreams.mastervoting_test_utils
+package mastervoting_test_utils
 
 import java.net.InetSocketAddress
 import java.util.logging.LogManager
 
 import com.aerospike.client.Host
 import com.bwsw.tstreams.agents.producer.InsertionType.BatchInsert
-import com.bwsw.tstreams.agents.producer.{ProducerPolicies, BasicProducer, BasicProducerOptions, ProducerCoordinationSettings}
+import com.bwsw.tstreams.agents.producer.{ProducerPolicies, BasicProducer, BasicProducerOptions, ProducerCoordinationOptions}
 import com.bwsw.tstreams.converter.StringToArrayByteConverter
 import com.bwsw.tstreams.data.aerospike.{AerospikeStorageFactory, AerospikeStorageOptions}
 import com.bwsw.tstreams.generator.LocalTimeUUIDGenerator
@@ -51,7 +51,7 @@ object BasicProducerTest{
     val redisHost = args(5)
     val delay = args(6).toInt
 
-    val agentSettings = new ProducerCoordinationSettings(
+    val agentSettings = new ProducerCoordinationOptions(
       agentAddress = agentAddress,
       zkHosts = zkHosts.toList,
       zkRootPath = "/unit",

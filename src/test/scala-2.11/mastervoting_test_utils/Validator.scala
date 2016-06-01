@@ -1,4 +1,4 @@
-package com.bwsw.tstreams.mastervoting_test_utils
+package mastervoting_test_utils
 
 import java.util.UUID
 

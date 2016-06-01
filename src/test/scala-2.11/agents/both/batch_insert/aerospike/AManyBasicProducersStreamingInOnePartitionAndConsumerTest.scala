@@ -4,9 +4,9 @@ import java.net.InetSocketAddress
 import java.util.UUID
 import com.aerospike.client.Host
 import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
-import com.bwsw.tstreams.agents.consumer.{ConsumerCoordinationSettings, BasicConsumer, BasicConsumerOptions}
+import com.bwsw.tstreams.agents.consumer.{ConsumerCoordinationOptions, BasicConsumer, BasicConsumerOptions}
 import com.bwsw.tstreams.agents.producer.InsertionType.BatchInsert
-import com.bwsw.tstreams.agents.producer.{ProducerCoordinationSettings, ProducerPolicies, BasicProducer, BasicProducerOptions}
+import com.bwsw.tstreams.agents.producer.{ProducerCoordinationOptions, ProducerPolicies, BasicProducer, BasicProducerOptions}
 import com.bwsw.tstreams.converter.{ArrayByteToStringConverter, StringToArrayByteConverter}
 import com.bwsw.tstreams.data.aerospike.{AerospikeStorageFactory, AerospikeStorageOptions}
 import com.bwsw.tstreams.coordination.transactions.transport.impl.TcpTransport
@@ -77,7 +77,7 @@ class AManyBasicProducersStreamingInOnePartitionAndConsumerTest extends FlatSpec
       RoundRobinPolicyCreator.getRoundRobinPolicy(
         usedPartitions = List(0),
         stream = streamInst),
-      new ConsumerCoordinationSettings("localhost:8588", "/unit", List(new InetSocketAddress("localhost",2181)), 7000),
+      new ConsumerCoordinationOptions("localhost:8588", "/unit", List(new InetSocketAddress("localhost",2181)), 7000),
       Oldest,
       LocalGeneratorCreator.getGen(),
       useLastOffset = false)
@@ -123,7 +123,7 @@ class AManyBasicProducersStreamingInOnePartitionAndConsumerTest extends FlatSpec
   def getProducer: BasicProducer[String,Array[Byte]] = {
     val stream = getStream
 
-    val agentSettings = new ProducerCoordinationSettings(
+    val agentSettings = new ProducerCoordinationOptions(
       agentAddress = s"localhost:$port",
       zkHosts = List(new InetSocketAddress("localhost", 2181)),
       zkRootPath = "/unit",
