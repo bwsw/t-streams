@@ -47,6 +47,10 @@ class ProducerTopicMessageListener(port : Int) {
     channelHandler.getCount()
   }
 
+  def resetConnectionsAmount() : Unit = {
+    channelHandler.resetCount()
+  }
+
   /**
    * Start invoking callbacks on new [[ProducerTopicMessage]]]
    */

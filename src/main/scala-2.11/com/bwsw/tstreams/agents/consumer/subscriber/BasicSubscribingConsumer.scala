@@ -92,11 +92,12 @@ class BasicSubscribingConsumer[DATATYPE, USERTYPE](name : String,
     (0 until poolSize) foreach { x =>
       executors(x) = Executors.newSingleThreadExecutor()
     }
+    coordinator.initSynchronization(stream.getName, usedPartitions)
     coordinator.startListen()
     coordinator.startCallback()
     updateManager.startUpdate(callBack.pollingFrequency)
 
-    (0 until stream.getPartitions) foreach { partition =>
+    usedPartitions foreach { partition =>
       val lastTransactionOpt = getLastTransaction(partition)
       val queue =
         if (lastTransactionOpt.isDefined) {
@@ -114,6 +115,7 @@ class BasicSubscribingConsumer[DATATYPE, USERTYPE](name : String,
 
       val executorIndex = partitionsToExecutors(partition)
       val executor = executors(executorIndex)
+
       val transactionsRelay = new SubscriberTransactionsRelay(
         subscriber = this,
         offset = currentOffsets(partition),

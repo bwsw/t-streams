@@ -83,7 +83,16 @@ class SubscriberChannelHandler extends SimpleChannelInboundHandler[ProducerTopic
   }
 
   /**
-   * Triggered when new connection become
+   * Reset connection amount
+   */
+  def resetCount() : Unit = {
+    lockCount.lock()
+    count = 0
+    lockCount.unlock()
+  }
+
+  /**
+   * Triggered when new connection accept
    * @param ctx Netty ctx
    */
   override def channelActive(ctx: ChannelHandlerContext) : Unit = {

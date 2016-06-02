@@ -6,6 +6,7 @@ import com.bwsw.tstreams.common.zkservice.ZkService
 import com.bwsw.tstreams.coordination.pubsub.messages.ProducerTopicMessage
 import com.bwsw.tstreams.coordination.pubsub.listener.ProducerTopicMessageListener
 import org.apache.zookeeper.CreateMode
+import org.slf4j.LoggerFactory
 
 import scala.collection.mutable.ListBuffer
 
@@ -19,11 +20,14 @@ class SubscriberCoordinator(agentAddress : String,
                           zkRootPrefix : String,
                           zkHosts : List[InetSocketAddress],
                           zkSessionTimeout : Int) {
+
+  private val logger = LoggerFactory.getLogger(this.getClass)
   private val SYNCHRONIZE_LIMIT = 60
   private val zkService = new ZkService(zkRootPrefix, zkHosts, zkSessionTimeout)
   private val (_,port) = getHostPort(agentAddress)
   private val listener: ProducerTopicMessageListener = new ProducerTopicMessageListener(port)
   private var stoped = false
+  private val partitionToUniqAgentsAmount = scala.collection.mutable.Map[Int, Int]()
 
   /**
    * Extract host/port from string
@@ -91,21 +95,39 @@ class SubscriberCoordinator(agentAddress : String,
   }
 
   /**
+   * Calculate amount of unique agents on every partition
+   * (if agent was on previous partitions it will not be counted)
+   */
+  def initSynchronization(streamName : String, partitions : List[Int]) : Unit = {
+    partitionToUniqAgentsAmount.clear()
+    var alreadyExist = Set[String]()
+    partitions foreach { p=>
+      val agents = zkService.getAllSubPath(s"/producers/agents/$streamName/$p").getOrElse(List())
+      assert(agents.distinct.size == agents.size)
+      val filtered = agents.filter(x=> !alreadyExist.contains(x))
+      filtered foreach (x=> alreadyExist += x)
+      partitionToUniqAgentsAmount(p) = filtered.size
+    }
+  }
+
+  /**
    * Synchronize subscriber with all [[com.bwsw.tstreams.agents.producer.BasicProducer]]]
    * just wait when all producers will connect to subscriber
    * because of stream lock it is continuous number
    * on stream/partition
    */
   def synchronize(streamName : String, partition : Int) = {
-    val buf = ListBuffer[String]()
-    buf.append(zkService.getAllSubPath(s"/producers/agents/$streamName/$partition").getOrElse(List()):_*)
-    val totalAmount = buf.size
-    assert(buf.distinct.size == buf.size)
     var timer = 0
-    while (listener.getConnectionsAmount < totalAmount && timer < SYNCHRONIZE_LIMIT){
+    listener.resetConnectionsAmount()
+    val amount = partitionToUniqAgentsAmount(partition)
+    while (listener.getConnectionsAmount < amount && timer < SYNCHRONIZE_LIMIT){
       timer += 1
       Thread.sleep(1000)
     }
+
+    logger.debug(s"[SUBSCRIBER COORDINATOR] stream={$streamName} partition={$partition}" +
+      s" listener.connectionAmount={${listener.getConnectionsAmount()}} totalConnAmount={$amount}" +
+      s" timerVal={$timer}")
   }
 
   /**
