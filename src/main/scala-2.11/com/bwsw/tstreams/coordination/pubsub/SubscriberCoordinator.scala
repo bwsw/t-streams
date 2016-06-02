@@ -91,6 +91,7 @@ class SubscriberCoordinator(agentAddress : String,
    * on stream/partition
    */
   def notifyProducers(streamName : String, partition : Int) : Unit = {
+    listener.resetConnectionsAmount()
     zkService.notify(s"/subscribers/event/$streamName/$partition")
   }
 
@@ -118,14 +119,18 @@ class SubscriberCoordinator(agentAddress : String,
    */
   def synchronize(streamName : String, partition : Int) = {
     var timer = 0
-    listener.resetConnectionsAmount()
     val amount = partitionToUniqAgentsAmount(partition)
+
+    logger.debug(s"[SUBSCRIBER COORDINATOR BEFORE SYNC] stream={$streamName} partition={$partition}" +
+      s" listener.connectionAmount={${listener.getConnectionsAmount()}} totalConnAmount={$amount}" +
+      s" timerVal={$timer}")
+
     while (listener.getConnectionsAmount < amount && timer < SYNCHRONIZE_LIMIT){
       timer += 1
       Thread.sleep(1000)
     }
 
-    logger.debug(s"[SUBSCRIBER COORDINATOR] stream={$streamName} partition={$partition}" +
+    logger.debug(s"[SUBSCRIBER COORDINATOR AFTER SYNC] stream={$streamName} partition={$partition}" +
       s" listener.connectionAmount={${listener.getConnectionsAmount()}} totalConnAmount={$amount}" +
       s" timerVal={$timer}")
   }
