@@ -20,7 +20,7 @@ libraryDependencies ++= Seq(
   "org.scala-lang" % "scala-reflect" % "2.11.8",
   "org.scala-lang.modules" % "scala-xml_2.11" % "1.0.4",
   "log4j" % "log4j" % "1.2.17",
-  "org.slf4j" % "slf4j-simple" % "1.7.5" //TODO
+  "org.apache.zookeeper" % "zookeeper" % "3.4.6"
 )
 
 libraryDependencies += ("com.datastax.cassandra" % "cassandra-driver-core" % "3.0.0")
@@ -37,6 +37,7 @@ libraryDependencies += ("com.twitter.common.zookeeper" % "lock" % "0.0.38")
   .exclude("log4j","log4j")
   .exclude("io.netty", "netty")
   .exclude("org.slf4j","slf4j-log4j12")
+  .exclude("org.apache.zookeeper", "zookeeper")
 
 
 //ASSEMBLY STRATEGY
