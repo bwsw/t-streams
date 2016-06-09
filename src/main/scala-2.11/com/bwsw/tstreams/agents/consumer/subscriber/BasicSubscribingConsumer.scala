@@ -9,7 +9,8 @@ import com.bwsw.tstreams.txnqueue.PersistentTransactionQueue
 
 /**
  * Basic consumer with subscribe option
- * @param name Name of subscriber
+  *
+  * @param name Name of subscriber
  * @param stream Stream from which to consume transactions
  * @param options Basic consumer options
  * @param persistentQueuePath Local path for queue which maintain transactions that already exist
@@ -108,10 +109,14 @@ class BasicSubscribingConsumer[DATATYPE, USERTYPE](name : String,
           new PersistentTransactionQueue(persistentQueuePath + s"/${UUID.randomUUID()}/$partition", null)
         }
 
-      val lastTxnUuid = if (lastTransactionOpt.isDefined)
-        lastTransactionOpt.get.getTxnUUID
+      val lastTxnUuid = if (lastTransactionOpt.isDefined) {
+        if (lastTransactionOpt.get.getTxnUUID.timestamp() > currentOffsets(partition).timestamp())
+          lastTransactionOpt.get.getTxnUUID
+        else
+          currentOffsets(partition)
+      }
       else
-        options.txnGenerator.getTimeUUID(0)
+        currentOffsets(partition)
 
       val executorIndex = partitionsToExecutors(partition)
       val executor = executors(executorIndex)
@@ -127,17 +132,22 @@ class BasicSubscribingConsumer[DATATYPE, USERTYPE](name : String,
         executor = executor)
 
       //consume all transactions less or equal than last transaction
-      if (lastTransactionOpt.isDefined)
-        transactionsRelay.consumeTransactionsLessOrEqualThan(lastTransactionOpt.get.getTxnUUID)
+      if (lastTransactionOpt.isDefined &&
+        currentOffsets(partition).timestamp() < lastTransactionOpt.get.getTxnUUID.timestamp()) {
+          transactionsRelay.consumeTransactionsLessOrEqualThan(lastTransactionOpt.get.getTxnUUID)
+      }
 
       transactionsRelay.notifyProducersAndStartListen()
 
       //consume all transactions strictly greater than last
-      if (lastTransactionOpt.isDefined)
-        transactionsRelay.consumeTransactionsMoreThan(lastTransactionOpt.get.getTxnUUID)
+      if (lastTransactionOpt.isDefined) {
+        if (currentOffsets(partition).timestamp() < lastTransactionOpt.get.getTxnUUID.timestamp())
+          transactionsRelay.consumeTransactionsMoreThan(lastTransactionOpt.get.getTxnUUID)
+        else
+          transactionsRelay.consumeTransactionsMoreThan(currentOffsets(partition))
+      }
       else {
-        val oldestUuid = options.txnGenerator.getTimeUUID(0)
-        transactionsRelay.consumeTransactionsMoreThan(oldestUuid)
+        transactionsRelay.consumeTransactionsMoreThan(currentOffsets(partition))
       }
 
       updateManager.addExecutorWithRunnable(executor,transactionsRelay.getUpdateRunnable())
@@ -145,6 +155,8 @@ class BasicSubscribingConsumer[DATATYPE, USERTYPE](name : String,
 
     streamLock.unlock()
   }
+
+
 
   /**
    * Stop subscriber

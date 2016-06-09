@@ -53,6 +53,7 @@ class UpdateManager {
     if (updateThread != null) {
       isUpdating.set(false)
       updateThread.join()
+      executorWithRunnable.clear()
     }
   }
 }

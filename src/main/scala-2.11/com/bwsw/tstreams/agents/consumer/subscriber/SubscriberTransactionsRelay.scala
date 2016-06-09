@@ -71,7 +71,7 @@ class SubscriberTransactionsRelay[DATATYPE,USERTYPE](subscriber : BasicSubscribi
    */
   def consumeTransactionsLessOrEqualThan(transactionUUID : UUID) = {
     //TODO remove after complex testing
-    var lastTxn : UUID = subscriber.options.txnGenerator.getTimeUUID(0)
+    var lastTxn : UUID = offset
     val runnable = new Runnable {
       override def run(): Unit = {
         val transactionsIterator = subscriber.stream.metadataStorage.commitEntity.getTransactionsIterator(
