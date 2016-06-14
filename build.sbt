@@ -20,10 +20,12 @@ libraryDependencies ++= Seq(
   "org.scala-lang" % "scala-reflect" % "2.11.8",
   "org.scala-lang.modules" % "scala-xml_2.11" % "1.0.4",
   "log4j" % "log4j" % "1.2.17",
-  "org.apache.zookeeper" % "zookeeper" % "3.4.6"
+  "org.apache.zookeeper" % "zookeeper" % "3.4.6",
+  "com.google.guava" % "guava" % "18.0"
 )
 
 libraryDependencies += ("com.datastax.cassandra" % "cassandra-driver-core" % "3.0.0")
+  .exclude("com.google.guava","guava")
   .exclude("io.netty", "netty-common")
   .exclude("io.netty", "netty-codec")
   .exclude("io.netty", "netty-transport")
@@ -33,6 +35,7 @@ libraryDependencies += ("com.datastax.cassandra" % "cassandra-driver-core" % "3.
 //COORDINATION
 resolvers += "twitter resolver" at "http://maven.twttr.com"
 libraryDependencies += ("com.twitter.common.zookeeper" % "lock" % "0.0.38")
+  .exclude("com.google.guava","guava")
   .exclude("org.slf4f", "slf4j-api")
   .exclude("log4j","log4j")
   .exclude("io.netty", "netty")

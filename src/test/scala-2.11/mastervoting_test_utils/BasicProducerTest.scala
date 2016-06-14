@@ -19,7 +19,7 @@ import org.slf4j.LoggerFactory
 object BasicProducerTest{
   def main(args: Array[String]) {
     LogManager.getLogManager.reset()
-    System.setProperty(org.slf4j.impl.SimpleLogger.DEFAULT_LOG_LEVEL_KEY, "WARN")
+//    System.setProperty(org.slf4j.impl.SimpleLogger.DEFAULT_LOG_LEVEL_KEY, "WARN")
     System.setProperty("org.slf4j.simpleLogger.logFile","testlog.log")
     System.setProperty("org.slf4j.simpleLogger.showDateTime","false")
     System.setProperty("org.slf4j.simpleLogger.log.com.bwsw","DEBUG")
