@@ -67,7 +67,8 @@ class SubscriberTransactionsRelay[DATATYPE,USERTYPE](subscriber : BasicSubscribi
 
   /**
    * Consume all transactions in interval ([[offset]]] ; transactionUUID ]
-   * @param transactionUUID Right interval border
+    *
+    * @param transactionUUID Right interval border
    */
   def consumeTransactionsLessOrEqualThan(transactionUUID : UUID) = {
     //TODO remove after complex testing
@@ -130,7 +131,8 @@ class SubscriberTransactionsRelay[DATATYPE,USERTYPE](subscriber : BasicSubscribi
 
   /**
    * Consume all transaction in interval (transactionUUID ; inf)
-   * @param transactionUUID Left interval border
+    *
+    * @param transactionUUID Left interval border
    */
   def consumeTransactionsMoreThan(transactionUUID : UUID) = {
     //TODO remove after complex testing
@@ -147,7 +149,7 @@ class SubscriberTransactionsRelay[DATATYPE,USERTYPE](subscriber : BasicSubscribi
       if (txn.totalItems == -1) {
         transactionBuffer.update(txn.txnUuid, ProducerTransactionStatus.opened, txn.ttl)
       } else {
-        transactionBuffer.update(txn.txnUuid, ProducerTransactionStatus.closed, -1)
+        transactionBuffer.update(txn.txnUuid, ProducerTransactionStatus.finalCheckpoint, -1)
       }
       assert(txn.txnUuid.timestamp() > lastTxn.timestamp(),
         logger.debug(s"[RELAY WRONG ASSERT] ${txn.txnUuid.timestamp()} " +
@@ -159,7 +161,8 @@ class SubscriberTransactionsRelay[DATATYPE,USERTYPE](subscriber : BasicSubscribi
 
   /**
    * Notify producers about new subscriber
-   * @return Listener ID
+    *
+    * @return Listener ID
    */
   def notifyProducersAndStartListen() : Unit = {
     coordinator.addCallback(updateCallback)
@@ -193,7 +196,7 @@ class SubscriberTransactionsRelay[DATATYPE,USERTYPE](subscriber : BasicSubscribi
               case ProducerTransactionStatus.cancelled =>
                 throw new IllegalStateException
 
-              case ProducerTransactionStatus.closed =>
+              case ProducerTransactionStatus.finalCheckpoint =>
                 logger.debug(s"[QUEUE_UPDATER PARTITION_$partition] ${key.timestamp()}" +
                   s" last_consumed=${lastConsumedTransaction.timestamp()} curr_amount=$totalAmount\n")
                 totalAmount += 1

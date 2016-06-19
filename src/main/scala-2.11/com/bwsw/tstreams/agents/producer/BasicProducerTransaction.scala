@@ -166,6 +166,17 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](partition : Int,
 
     //close transaction using stream ttl
     if (part > 0) {
+
+      val preCheckpoint = ProducerTopicMessage(
+        txnUuid = transactionUuid,
+        ttl = -1,
+        status = ProducerTransactionStatus.preCheckpoint,
+        partition = partition)
+      basicProducer.agent.publish(preCheckpoint)
+
+      logger.debug(s"[PRE CHECKPOINT PARTITION_$partition] " +
+        s"ts=${transactionUuid.timestamp()}")
+
       basicProducer.stream.metadataStorage.commitEntity.commit(
         streamName = basicProducer.stream.getName,
         partition = partition,
@@ -173,15 +184,18 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](partition : Int,
         totalCnt = part,
         ttl = basicProducer.stream.getTTL)
 
-      val msg = ProducerTopicMessage(
+      logger.debug(s"[COMMIT PARTITION_$partition] " +
+        s"ts=${transactionUuid.timestamp()}")
+
+      val finalCheckpoint = ProducerTopicMessage(
         txnUuid = transactionUuid,
         ttl = -1,
-        status = ProducerTransactionStatus.closed,
+        status = ProducerTransactionStatus.finalCheckpoint,
         partition = partition)
+      basicProducer.agent.publish(finalCheckpoint)
 
-      //publish that current txn is closed
-      basicProducer.agent.publish(msg)
-      logger.debug(s"[CHECKPOINT PARTITION_${msg.partition}] ts=${msg.txnUuid.timestamp()} status=${msg.status}")
+      logger.debug(s"[FINAL CHECKPOINT PARTITION_$partition] " +
+        s"ts=${transactionUuid.timestamp()}")
     }
 
     closed = true

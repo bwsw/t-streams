@@ -24,7 +24,7 @@ class TransactionsBuffer {
       return
 
     if (map.exist(txnUuid)){
-      if (map.get(txnUuid)._1 == ProducerTransactionStatus.closed) {
+      if (map.get(txnUuid)._1 == ProducerTransactionStatus.finalCheckpoint) {
         return
       }
     }
@@ -35,7 +35,7 @@ class TransactionsBuffer {
       case ProducerTransactionStatus.opened =>
         map.put(txnUuid, (status, ttl))
 
-      case ProducerTransactionStatus.closed =>
+      case ProducerTransactionStatus.finalCheckpoint =>
         map.put(txnUuid, (status, -1)) //just ignore ttl because transaction is closed
 
       case ProducerTransactionStatus.cancelled =>

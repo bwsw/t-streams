@@ -12,9 +12,14 @@ object ProducerTransactionStatus extends Enumeration {
   val opened = Value
 
   /**
-   * If transaction is closed
+    * If transaction in pre checkpointed
+    */
+  val preCheckpoint = Value
+
+  /**
+   * If transaction is finally checkpointed
    */
-  val closed = Value
+  val finalCheckpoint = Value
 
   /**
    * If transaction is cancelled
