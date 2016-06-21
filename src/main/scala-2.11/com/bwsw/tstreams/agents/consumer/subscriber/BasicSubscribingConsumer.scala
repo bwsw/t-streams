@@ -73,6 +73,11 @@ class BasicSubscribingConsumer[DATATYPE, USERTYPE](name : String,
   private val updateManager = new UpdateManager
 
   /**
+    * Resolver for resolving pre/final commit's
+    */
+  private val checkpointEventsResolver = new CheckpointEventsResolver(this)
+
+  /**
    * Start subscriber to consume new transactions
    */
   def start() = {
@@ -87,9 +92,10 @@ class BasicSubscribingConsumer[DATATYPE, USERTYPE](name : String,
         subscriberCoordinationOptions.zkSessionTimeout)
     }
 
+    checkpointEventsResolver.startUpdate()
+
     val streamLock = coordinator.getStreamLock(stream.getName)
     streamLock.lock()
-
     (0 until poolSize) foreach { x =>
       executors(x) = Executors.newSingleThreadExecutor()
     }
@@ -129,7 +135,8 @@ class BasicSubscribingConsumer[DATATYPE, USERTYPE](name : String,
         callback = callBack,
         queue = queue,
         lastTransaction = lastTxnUuid,
-        executor = executor)
+        executor = executor,
+        checkpointEventsResolver = checkpointEventsResolver)
 
       //consume all transactions less or equal than last transaction
       if (lastTransactionOpt.isDefined &&
@@ -156,8 +163,6 @@ class BasicSubscribingConsumer[DATATYPE, USERTYPE](name : String,
     streamLock.unlock()
   }
 
-
-
   /**
    * Stop subscriber
    */
@@ -170,5 +175,6 @@ class BasicSubscribingConsumer[DATATYPE, USERTYPE](name : String,
       executors.clear()
     }
     coordinator.stop()
+    checkpointEventsResolver.stop()
   }
 }

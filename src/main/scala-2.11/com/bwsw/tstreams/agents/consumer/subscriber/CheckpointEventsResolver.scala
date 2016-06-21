@@ -11,8 +11,10 @@ import org.slf4j.LoggerFactory
 import scala.collection._
 
 class CheckpointEventsResolver(subscriber : BasicSubscribingConsumer[_,_]) {
-  private val logger = LoggerFactory.getLogger(this.getClass)
+  private val UPDATE_INTERVAL = 5000
   private val MAX_RETRIES = 2
+
+  private val logger = LoggerFactory.getLogger(this.getClass)
   private val partitionToBuffer = mutable.Map[Int, TransactionsBuffer]()
   private val partitionToTxns = mutable.Map[Int, mutable.Set[UUID]]()
   private val retries = mutable.Map[Int, mutable.Map[UUID, Int]]()
@@ -96,7 +98,7 @@ class CheckpointEventsResolver(subscriber : BasicSubscribingConsumer[_,_]) {
     }
   }
 
-  def start(updateInterval : Int) = {
+  def startUpdate() = {
     isRunning.set(true)
     clear()
     updateThread = new Thread(new Runnable {
@@ -105,7 +107,7 @@ class CheckpointEventsResolver(subscriber : BasicSubscribingConsumer[_,_]) {
           lock.lock()
           refresh()
           lock.unlock()
-          Thread.sleep(updateInterval)
+          Thread.sleep(UPDATE_INTERVAL)
         }
       }
     })
