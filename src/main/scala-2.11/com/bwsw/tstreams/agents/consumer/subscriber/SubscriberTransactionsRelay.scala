@@ -31,13 +31,15 @@ class SubscriberTransactionsRelay[DATATYPE,USERTYPE](subscriber : BasicSubscribi
                                                      callback: BasicSubscriberCallback[DATATYPE, USERTYPE],
                                                      queue : PersistentTransactionQueue,
                                                      lastTransaction : UUID,
-                                                     executor : ExecutorService) {
+                                                     executor : ExecutorService,
+                                                     checkpointEventsResolver: CheckpointEventsResolver) {
   private val POOLING_INTERVAL_MS = 100
   private val logger = LoggerFactory.getLogger(this.getClass)
   private val transactionBuffer  = new TransactionsBuffer
   private val lock = new ReentrantLock(true)
   private var lastConsumedTransaction : UUID = lastTransaction
   private val streamName = subscriber.stream.getName
+  checkpointEventsResolver.bindBuffer(partition, transactionBuffer)
 
   /**
    * Transaction buffer updater
@@ -48,6 +50,10 @@ class SubscriberTransactionsRelay[DATATYPE,USERTYPE](subscriber : BasicSubscribi
       logger.debug(s"[UPDATE_CALLBACK PARTITION_$partition] consumed msg with uuid:{${msg.txnUuid.timestamp()}}," +
         s" status:{${msg.status}}\n")
       if (msg.txnUuid.timestamp() > lastConsumedTransaction.timestamp()) {
+        if (msg.status == ProducerTransactionStatus.preCheckpoint ||
+            msg.status == ProducerTransactionStatus.finalCheckpoint){
+          checkpointEventsResolver.update(partition, msg.txnUuid, msg.status)
+        }
         transactionBuffer.update(msg.txnUuid, msg.status, msg.ttl)
       }
       lock.unlock()
@@ -176,7 +182,8 @@ class SubscriberTransactionsRelay[DATATYPE,USERTYPE](subscriber : BasicSubscribi
    * @return Runnable for updating expiring map for this relay
    */
   def getUpdateRunnable() : Runnable = {
-    var totalAmount = 1 //TODO remove after complex testing
+    //TODO remove after complex testing
+    var totalAmount = 1
     val runnable = new Runnable {
       override def run(): Unit = {
         lock.lock()
@@ -187,10 +194,9 @@ class SubscriberTransactionsRelay[DATATYPE,USERTYPE](subscriber : BasicSubscribi
             val key: UUID = entry.getKey
             val (status: ProducerTransactionStatus, _) = entry.getValue
             status match {
-              case ProducerTransactionStatus.opened =>
-                break()
-
-              case ProducerTransactionStatus.updated =>
+              case ProducerTransactionStatus.opened |
+                   ProducerTransactionStatus.updated |
+                   ProducerTransactionStatus.preCheckpoint =>
                 break()
 
               case ProducerTransactionStatus.cancelled =>

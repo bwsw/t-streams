@@ -227,7 +227,7 @@ class BasicConsumer[DATATYPE, USERTYPE](val name : String,
    * @param txn Transaction to update
    * @return Updated transaction
    */
-    private def updateTransaction(txn : UUID, partition : Int) : Option[TransactionSettings] = {
+   def updateTransaction(txn : UUID, partition : Int) : Option[TransactionSettings] = {
       val amount: Option[(Int,Int)] = stream.metadataStorage.commitEntity.getTransactionAmount(
         stream.getName,
         partition,
@@ -238,7 +238,7 @@ class BasicConsumer[DATATYPE, USERTYPE](val name : String,
       }
       else
         None
-    }
+   }
 
   /**
    * Save current offsets in metadata

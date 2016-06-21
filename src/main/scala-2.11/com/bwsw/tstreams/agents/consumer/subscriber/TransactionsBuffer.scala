@@ -1,6 +1,8 @@
 package com.bwsw.tstreams.agents.consumer.subscriber
 
 import java.util.UUID
+import java.util.concurrent.locks.ReentrantLock
+
 import com.bwsw.tstreams.coordination.pubsub.messages.ProducerTransactionStatus
 import ProducerTransactionStatus._
 import com.bwsw.tstreams.coordination.pubsub.messages.ProducerTransactionStatus
@@ -11,6 +13,7 @@ import com.bwsw.tstreams.coordination.pubsub.messages.ProducerTransactionStatus
 class TransactionsBuffer {
   private val map : SortedExpiringMap[UUID, (ProducerTransactionStatus, Long)] =
     new SortedExpiringMap(new UUIDComparator, new SubscriberExpirationPolicy)
+  private val lock = new ReentrantLock(true)
 
   /**
    * Update transaction buffer
@@ -19,15 +22,19 @@ class TransactionsBuffer {
    * @param ttl Transaction ttl(time of expiration)
    */
   def update(txnUuid : UUID, status: ProducerTransactionStatus, ttl : Int) : Unit = {
-    //if update comes after close
-    if (!map.exist(txnUuid) && status == ProducerTransactionStatus.updated)
+    lock.lock()
+
+    //if txn is not opened we'll just wait open event
+    if (!map.exist(txnUuid) && status != ProducerTransactionStatus.opened)
       return
 
+    //if txn closed we'll just ignore events
     if (map.exist(txnUuid)){
       if (map.get(txnUuid)._1 == ProducerTransactionStatus.finalCheckpoint) {
         return
       }
     }
+
     status match {
       case ProducerTransactionStatus.updated =>
         map.put(txnUuid, (status, ttl))
@@ -35,12 +42,19 @@ class TransactionsBuffer {
       case ProducerTransactionStatus.opened =>
         map.put(txnUuid, (status, ttl))
 
+      case ProducerTransactionStatus.preCheckpoint =>
+        //ignore ttl, preCheckpoint will be resolved by another thread
+        map.put(txnUuid, (status, -1))
+
       case ProducerTransactionStatus.finalCheckpoint =>
-        map.put(txnUuid, (status, -1)) //just ignore ttl because transaction is closed
+        //just ignore ttl because transaction is closed
+        map.put(txnUuid, (status, -1))
 
       case ProducerTransactionStatus.cancelled =>
         map.remove(txnUuid)
     }
+
+    lock.unlock()
   }
 
   /**

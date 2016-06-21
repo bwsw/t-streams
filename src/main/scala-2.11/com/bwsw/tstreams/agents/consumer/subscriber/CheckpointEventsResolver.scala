@@ -6,12 +6,13 @@ import java.util.concurrent.locks.ReentrantLock
 
 import com.bwsw.tstreams.coordination.pubsub.messages.ProducerTransactionStatus
 import com.bwsw.tstreams.coordination.pubsub.messages.ProducerTransactionStatus.ProducerTransactionStatus
+import org.slf4j.LoggerFactory
 
 import scala.collection._
 
 class CheckpointEventsResolver(subscriber : BasicSubscribingConsumer[_,_]) {
-  //TODO must be updated first on incoming event
-  private val MAX_RETRIES = 5
+  private val logger = LoggerFactory.getLogger(this.getClass)
+  private val MAX_RETRIES = 2
   private val partitionToBuffer = mutable.Map[Int, TransactionsBuffer]()
   private val partitionToTxns = mutable.Map[Int, mutable.Set[UUID]]()
   private val retries = mutable.Map[Int, mutable.Map[UUID, Int]]()
@@ -20,10 +21,16 @@ class CheckpointEventsResolver(subscriber : BasicSubscribingConsumer[_,_]) {
   private var updateThread : Thread = null
 
   def bindBuffer(partition : Int, buffer : TransactionsBuffer) = {
+    logger.debug(s"[CHECKPOINT EVENT RESOLVER] start bind buffer on partition:{$partition}")
+    lock.lock()
     partitionToBuffer(partition) = buffer
+    lock.unlock()
+    logger.debug(s"[CHECKPOINT EVENT RESOLVER] finish bind buffer on partition:{$partition}")
   }
 
-  def updateTransaction(partition : Int, txn : UUID, status : ProducerTransactionStatus) = {
+  def update(partition : Int, txn : UUID, status : ProducerTransactionStatus) = {
+    logger.debug(s"[CHECKPOINT EVENT RESOLVER] start update CER on partition:{$partition}" +
+      s" with txn:{${txn.timestamp()}}")
     status match {
       case ProducerTransactionStatus.preCheckpoint =>
         lock.lock()
@@ -34,11 +41,17 @@ class CheckpointEventsResolver(subscriber : BasicSubscribingConsumer[_,_]) {
         }
         retries(partition)(txn) = MAX_RETRIES
         lock.unlock()
+        logger.debug(s"[CHECKPOINT EVENT RESOLVER] [UPDATE PRECHECKPOINT] CER on " +
+          s"partition:{$partition}" +
+          s" with txn:{${txn.timestamp()}}")
 
       case ProducerTransactionStatus.finalCheckpoint =>
         lock.lock()
         removeTxn(partition, txn)
         lock.unlock()
+        logger.debug(s"[CHECKPOINT EVENT RESOLVER] [UPDATE FINALCHECKPOINT] CER on " +
+          s"partition:{$partition}" +
+          s" with txn:{${txn.timestamp()}}")
 
       case _ =>
         throw new IllegalStateException("Checkpoint event resolver incorrect state")
@@ -55,6 +68,9 @@ class CheckpointEventsResolver(subscriber : BasicSubscribingConsumer[_,_]) {
       transactions foreach { txn =>
         if (retries(partition)(txn) == 0) {
           removeTxn(partition, txn)
+          logger.debug(s"[CHECKPOINT EVENT RESOLVER] [REFRESH ZERO RETRY] CER on " +
+            s"partition:{$partition}" +
+            s" with txn:{${txn.timestamp()}}")
         } else {
           val updatedTransaction = subscriber.updateTransaction(txn, partition)
           updatedTransaction match {
@@ -62,8 +78,14 @@ class CheckpointEventsResolver(subscriber : BasicSubscribingConsumer[_,_]) {
               if (transactionSettings.totalItems != -1){
                 partitionToBuffer(partition).update(txn, ProducerTransactionStatus.finalCheckpoint, -1)
                 removeTxn(partition, txn)
+                logger.debug(s"[CHECKPOINT EVENT RESOLVER] [REFRESH TB UPDATE] CER on " +
+                  s"partition:{$partition}" +
+                  s" with txn:{${txn.timestamp()}}")
               } else {
                 retries(partition)(txn) -= 1
+                logger.debug(s"[CHECKPOINT EVENT RESOLVER] [REFRESH RETRY DECREASE] CER on " +
+                  s"partition:{$partition}" +
+                  s" with txn:{${txn.timestamp()}}")
               }
 
             case None =>
@@ -76,6 +98,7 @@ class CheckpointEventsResolver(subscriber : BasicSubscribingConsumer[_,_]) {
 
   def start(updateInterval : Int) = {
     isRunning.set(true)
+    clear()
     updateThread = new Thread(new Runnable {
       override def run(): Unit = {
         while(isRunning.get()){
@@ -87,14 +110,14 @@ class CheckpointEventsResolver(subscriber : BasicSubscribingConsumer[_,_]) {
       }
     })
     updateThread.start()
+    logger.debug(s"[CHECKPOINT EVENT RESOLVER] started")
   }
 
   def stop() = {
     isRunning.set(false)
     updateThread.join()
-    clear()
+    logger.debug(s"[CHECKPOINT EVENT RESOLVER] stoped")
   }
-
 
   private def clear() = {
     partitionToBuffer.clear()
