@@ -37,11 +37,14 @@ class CheckpointEventsResolver(subscriber : BasicSubscribingConsumer[_,_]) {
       case ProducerTransactionStatus.preCheckpoint =>
         lock.lock()
         if (partitionToTxns.contains(partition)) {
+          assert(retries.contains(partition))
+          retries(partition)(txn) = MAX_RETRIES
           partitionToTxns(partition) += txn
         } else {
-          partitionToTxns(partition) = mutable.Set[UUID]()
+          assert(!retries.contains(partition))
+          retries(partition) = mutable.Map(txn -> MAX_RETRIES)
+          partitionToTxns(partition) = mutable.Set[UUID](txn)
         }
-        retries(partition)(txn) = MAX_RETRIES
         lock.unlock()
         logger.debug(s"[CHECKPOINT EVENT RESOLVER] [UPDATE PRECHECKPOINT] CER on " +
           s"partition:{$partition}" +
