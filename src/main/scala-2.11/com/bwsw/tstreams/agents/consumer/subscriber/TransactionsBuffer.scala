@@ -17,7 +17,8 @@ class TransactionsBuffer {
 
   /**
    * Update transaction buffer
-   * @param txnUuid Transaction uuid
+    *
+    * @param txnUuid Transaction uuid
    * @param status Transaction status
    * @param ttl Transaction ttl(time of expiration)
    */
@@ -25,12 +26,15 @@ class TransactionsBuffer {
     lock.lock()
 
     //if txn is not opened we'll just wait open event
-    if (!map.exist(txnUuid) && status != ProducerTransactionStatus.opened)
+    if (!map.exist(txnUuid) && status != ProducerTransactionStatus.opened) {
+      lock.unlock()
       return
+    }
 
     //if txn closed we'll just ignore events
     if (map.exist(txnUuid)){
       if (map.get(txnUuid)._1 == ProducerTransactionStatus.finalCheckpoint) {
+        lock.unlock()
         return
       }
     }
@@ -59,7 +63,8 @@ class TransactionsBuffer {
 
   /**
    * Iterator on transaction buffer entry set
-   * @return Iterator
+    *
+    * @return Iterator
    */
   def getIterator() = map.entrySetIterator()
 }
