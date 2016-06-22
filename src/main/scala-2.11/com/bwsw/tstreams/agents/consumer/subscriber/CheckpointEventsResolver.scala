@@ -57,9 +57,6 @@ class CheckpointEventsResolver(subscriber : BasicSubscribingConsumer[_,_]) {
         logger.debug(s"[CHECKPOINT EVENT RESOLVER] [UPDATE FINALCHECKPOINT] CER on " +
           s"partition:{$partition}" +
           s" with txn:{${txn.timestamp()}}")
-
-      case _ =>
-        throw new IllegalStateException("Checkpoint event resolver incorrect state")
     }
   }
 
