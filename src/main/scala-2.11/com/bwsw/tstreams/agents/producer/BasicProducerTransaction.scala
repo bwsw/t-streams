@@ -166,7 +166,6 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](partition : Int,
 
     //close transaction using stream ttl
     if (part > 0) {
-
       val preCheckpoint = ProducerTopicMessage(
         txnUuid = transactionUuid,
         ttl = -1,
@@ -176,7 +175,6 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](partition : Int,
 
       logger.debug(s"[PRE CHECKPOINT PARTITION_$partition] " +
         s"ts=${transactionUuid.timestamp()}")
-
       basicProducer.stream.metadataStorage.commitEntity.commit(
         streamName = basicProducer.stream.getName,
         partition = partition,
