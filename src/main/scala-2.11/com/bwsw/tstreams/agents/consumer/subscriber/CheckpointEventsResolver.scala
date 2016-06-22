@@ -73,8 +73,8 @@ class CheckpointEventsResolver(subscriber : BasicSubscribingConsumer[_,_]) {
       transactions foreach { txn =>
         if (retries(partition)(txn) == 0) {
           removeTxn(partition, txn)
-          logger.debug(s"[CHECKPOINT EVENT RESOLVER] [REFRESH ZERO RETRY] CER on " +
-            s"partition:{$partition}" +
+          logger.debug(s"[CHECKPOINT EVENT RESOLVER] [REFRESH ZERO RETRY] CER on" +
+            s" partition:{$partition}" +
             s" with txn:{${txn.timestamp()}}")
         } else {
           val updatedTransaction = subscriber.updateTransaction(txn, partition)
@@ -83,13 +83,13 @@ class CheckpointEventsResolver(subscriber : BasicSubscribingConsumer[_,_]) {
               if (transactionSettings.totalItems != -1){
                 partitionToBuffer(partition).update(txn, ProducerTransactionStatus.finalCheckpoint, -1)
                 removeTxn(partition, txn)
-                logger.debug(s"[CHECKPOINT EVENT RESOLVER] [REFRESH TB UPDATE] CER on " +
-                  s"partition:{$partition}" +
+                logger.debug(s"[CHECKPOINT EVENT RESOLVER] [REFRESH TB UPDATE] CER on" +
+                  s" partition:{$partition}" +
                   s" with txn:{${txn.timestamp()}}")
               } else {
                 retries(partition)(txn) -= 1
-                logger.debug(s"[CHECKPOINT EVENT RESOLVER] [REFRESH RETRY DECREASE] CER on " +
-                  s"partition:{$partition}" +
+                logger.debug(s"[CHECKPOINT EVENT RESOLVER] [REFRESH RETRY DECREASE] CER on" +
+                  s" partition:{$partition}" +
                   s" with txn:{${txn.timestamp()}}")
               }
 
