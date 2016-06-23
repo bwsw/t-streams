@@ -24,7 +24,6 @@ libraryDependencies ++= Seq(
     .exclude("org.slf4j","slf4j-log4j12"),
   "com.google.guava" % "guava" % "18.0"
 )
-libraryDependencies += "org.slf4j" % "slf4j-simple" % "1.7.21"
 
 
 libraryDependencies += ("com.datastax.cassandra" % "cassandra-driver-core" % "3.0.0")
