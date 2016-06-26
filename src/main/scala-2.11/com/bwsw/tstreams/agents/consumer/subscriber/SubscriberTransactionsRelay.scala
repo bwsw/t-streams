@@ -39,7 +39,7 @@ class SubscriberTransactionsRelay[DATATYPE,USERTYPE](subscriber : BasicSubscribi
   private val lock = new ReentrantLock(true)
   private var lastConsumedTransaction : UUID = lastTransaction
   private val streamName = subscriber.stream.getName
-  checkpointEventsResolver.bindBuffer(partition, transactionBuffer)
+  checkpointEventsResolver.bindBuffer(partition, transactionBuffer, lock)
 
   /**
    * Transaction buffer updater
@@ -198,9 +198,6 @@ class SubscriberTransactionsRelay[DATATYPE,USERTYPE](subscriber : BasicSubscribi
                    ProducerTransactionStatus.updated |
                    ProducerTransactionStatus.preCheckpoint =>
                 break()
-
-              case ProducerTransactionStatus.cancelled =>
-                throw new IllegalStateException
 
               case ProducerTransactionStatus.finalCheckpoint =>
                 logger.debug(s"[QUEUE_UPDATER PARTITION_$partition] ${key.timestamp()}" +

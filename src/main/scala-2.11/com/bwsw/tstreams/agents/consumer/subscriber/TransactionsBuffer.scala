@@ -13,7 +13,6 @@ import com.bwsw.tstreams.coordination.pubsub.messages.ProducerTransactionStatus
 class TransactionsBuffer {
   private val map : SortedExpiringMap[UUID, (ProducerTransactionStatus, Long)] =
     new SortedExpiringMap(new UUIDComparator, new SubscriberExpirationPolicy)
-  private val lock = new ReentrantLock(true)
 
   /**
    * Update transaction buffer
@@ -23,18 +22,14 @@ class TransactionsBuffer {
    * @param ttl Transaction ttl(time of expiration)
    */
   def update(txnUuid : UUID, status: ProducerTransactionStatus, ttl : Int) : Unit = {
-    lock.lock()
-
     //if txn is not opened we'll just wait open event
     if (!map.exist(txnUuid) && status != ProducerTransactionStatus.opened) {
-      lock.unlock()
       return
     }
 
     //if txn closed we'll just ignore events
     if (map.exist(txnUuid)){
       if (map.get(txnUuid)._1 == ProducerTransactionStatus.finalCheckpoint) {
-        lock.unlock()
         return
       }
     }
@@ -57,8 +52,6 @@ class TransactionsBuffer {
       case ProducerTransactionStatus.cancelled =>
         map.remove(txnUuid)
     }
-
-    lock.unlock()
   }
 
   /**

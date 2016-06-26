@@ -15,27 +15,27 @@ class CheckpointEventsResolver(subscriber : BasicSubscribingConsumer[_,_]) {
   private val MAX_RETRIES = 2
 
   private val logger = LoggerFactory.getLogger(this.getClass)
-  private val partitionToBuffer = mutable.Map[Int, TransactionsBuffer]()
+  private val partitionToBuffer = mutable.Map[Int, (TransactionsBuffer, ReentrantLock)]()
   private val partitionToTxns = mutable.Map[Int, mutable.Set[UUID]]()
   private val retries = mutable.Map[Int, mutable.Map[UUID, Int]]()
-  private val lock = new ReentrantLock(true)
+  private val checkpointEventResolverLock = new ReentrantLock(true)
   private val isRunning = new AtomicBoolean(false)
   private var updateThread : Thread = null
 
-  def bindBuffer(partition : Int, buffer : TransactionsBuffer) = {
+  def bindBuffer(partition : Int, buffer : TransactionsBuffer, lock : ReentrantLock) = {
+    checkpointEventResolverLock.lock()
     logger.debug(s"[CHECKPOINT EVENT RESOLVER] start bind buffer on partition:{$partition}")
-    lock.lock()
-    partitionToBuffer(partition) = buffer
-    lock.unlock()
+    partitionToBuffer(partition) = buffer -> lock
     logger.debug(s"[CHECKPOINT EVENT RESOLVER] finish bind buffer on partition:{$partition}")
+    checkpointEventResolverLock.unlock()
   }
 
   def update(partition : Int, txn : UUID, status : ProducerTransactionStatus) = {
+    checkpointEventResolverLock.lock()
     logger.debug(s"[CHECKPOINT EVENT RESOLVER] start update CER on partition:{$partition}" +
       s" with txn:{${txn.timestamp()}}")
     status match {
       case ProducerTransactionStatus.preCheckpoint =>
-        lock.lock()
         if (partitionToTxns.contains(partition)) {
           assert(retries.contains(partition))
           retries(partition)(txn) = MAX_RETRIES
@@ -45,24 +45,32 @@ class CheckpointEventsResolver(subscriber : BasicSubscribingConsumer[_,_]) {
           retries(partition) = mutable.Map(txn -> MAX_RETRIES)
           partitionToTxns(partition) = mutable.Set[UUID](txn)
         }
-        lock.unlock()
         logger.debug(s"[CHECKPOINT EVENT RESOLVER] [UPDATE PRECHECKPOINT] CER on " +
           s"partition:{$partition}" +
           s" with txn:{${txn.timestamp()}}")
 
       case ProducerTransactionStatus.finalCheckpoint =>
-        lock.lock()
         removeTxn(partition, txn)
-        lock.unlock()
         logger.debug(s"[CHECKPOINT EVENT RESOLVER] [UPDATE FINALCHECKPOINT] CER on " +
           s"partition:{$partition}" +
           s" with txn:{${txn.timestamp()}}")
     }
+    checkpointEventResolverLock.unlock()
   }
 
   private def removeTxn(partition : Int, txn : UUID) = {
     retries(partition).remove(txn)
     partitionToTxns(partition).remove(txn)
+  }
+
+  private def updateTransactionBuffer(partition : Int,
+                                      txn : UUID,
+                                      status : ProducerTransactionStatus,
+                                      ttl : Int) = {
+    val (buffer,lock) = partitionToBuffer(partition)
+    lock.lock()
+    buffer.update(txn, status, ttl)
+    lock.unlock()
   }
 
   private def refresh() = {
@@ -78,7 +86,7 @@ class CheckpointEventsResolver(subscriber : BasicSubscribingConsumer[_,_]) {
           updatedTransaction match {
             case Some(transactionSettings) =>
               if (transactionSettings.totalItems != -1){
-                partitionToBuffer(partition).update(txn, ProducerTransactionStatus.finalCheckpoint, -1)
+                updateTransactionBuffer(partition, txn, ProducerTransactionStatus.finalCheckpoint, -1)
                 removeTxn(partition, txn)
                 logger.debug(s"[CHECKPOINT EVENT RESOLVER] [REFRESH TB UPDATE] CER on" +
                   s" partition:{$partition}" +
@@ -92,7 +100,7 @@ class CheckpointEventsResolver(subscriber : BasicSubscribingConsumer[_,_]) {
 
             case None =>
               //the transaction has been deleted by cassandra so we need to remove it from transaction buffer
-              partitionToBuffer(partition).update(txn, ProducerTransactionStatus.opened, 1)
+              updateTransactionBuffer(partition, txn, ProducerTransactionStatus.opened, 1)
               removeTxn(partition,txn)
           }
         }
@@ -106,9 +114,9 @@ class CheckpointEventsResolver(subscriber : BasicSubscribingConsumer[_,_]) {
     updateThread = new Thread(new Runnable {
       override def run(): Unit = {
         while(isRunning.get()){
-          lock.lock()
+          checkpointEventResolverLock.lock()
           refresh()
-          lock.unlock()
+          checkpointEventResolverLock.unlock()
           Thread.sleep(UPDATE_INTERVAL)
         }
       }
