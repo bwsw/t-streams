@@ -22,7 +22,7 @@ class TransactionsBuffer {
    * @param ttl Transaction ttl(time of expiration)
    */
   def update(txnUuid : UUID, status: ProducerTransactionStatus, ttl : Int) : Unit = {
-    //ignore update events until doesn't exist in buffer
+    //ignore update events until txn doesn't exist in buffer
     if (!map.exist(txnUuid) && status == ProducerTransactionStatus.updated) {
       return
     }
