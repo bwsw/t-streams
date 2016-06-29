@@ -1,23 +1,24 @@
 package com.bwsw.tstreams.agents.consumer.subscriber
 
 import java.util.UUID
-import java.util.concurrent.{Executors, ExecutorService}
-import com.bwsw.tstreams.agents.consumer.{SubscriberCoordinationOptions, BasicConsumer, BasicConsumerOptions}
+import java.util.concurrent.{ExecutorService, Executors}
+
+import com.bwsw.tstreams.agents.consumer.{BasicConsumer, BasicConsumerOptions, BasicConsumerTransaction, SubscriberCoordinationOptions}
 import com.bwsw.tstreams.coordination.pubsub.SubscriberCoordinator
 import com.bwsw.tstreams.streams.BasicStream
 import com.bwsw.tstreams.txnqueue.PersistentTransactionQueue
 
 /**
- * Basic consumer with subscribe option
+  * Basic consumer with subscribe option
   *
   * @param name Name of subscriber
- * @param stream Stream from which to consume transactions
- * @param options Basic consumer options
- * @param persistentQueuePath Local path for queue which maintain transactions that already exist
- *                            and new incoming transactions
- * @tparam DATATYPE Storage data type
- * @tparam USERTYPE User data type
- */
+  * @param stream Stream from which to consume transactions
+  * @param options Basic consumer options
+  * @param persistentQueuePath Local path for queue which maintain transactions that already exist
+  *                            and new incoming transactions
+  * @tparam DATATYPE Storage data type
+  * @tparam USERTYPE User data type
+  */
 class BasicSubscribingConsumer[DATATYPE, USERTYPE](name : String,
                                                    stream : BasicStream[DATATYPE],
                                                    options : BasicConsumerOptions[DATATYPE,USERTYPE],
@@ -26,14 +27,14 @@ class BasicSubscribingConsumer[DATATYPE, USERTYPE](name : String,
                                                    persistentQueuePath : String)
   extends BasicConsumer[DATATYPE, USERTYPE](name, stream, options){
   /**
-   * Indicate started or not this subscriber
-   */
+    * Indicate started or not this subscriber
+    */
   private var isStarted = false
 
   /**
-   * Coordinator for providing updates to this subscriber from producers
-   * and establishing stream locks
-   */
+    * Coordinator for providing updates to this subscriber from producers
+    * and establishing stream locks
+    */
   private var coordinator = new SubscriberCoordinator(
     subscriberCoordinationOptions.agentAddress,
     subscriberCoordinationOptions.zkRootPath,
@@ -41,35 +42,35 @@ class BasicSubscribingConsumer[DATATYPE, USERTYPE](name : String,
     subscriberCoordinationOptions.zkSessionTimeout)
 
   /**
-   * Subscriber used partitions
-   */
+    * Subscriber used partitions
+    */
   private val usedPartitions = options.readPolicy.getUsedPartition()
 
   /**
-   * Thread pool size (default is equal to [[usedPartitions.size]]])
-   */
+    * Thread pool size (default is equal to [[usedPartitions.size]]])
+    */
   private val poolSize = if (subscriberCoordinationOptions.threadPoolAmount == -1)
     usedPartitions.size
   else
     subscriberCoordinationOptions.threadPoolAmount
 
   /**
-   * Mapping partitions to executors index
-   */
+    * Mapping partitions to executors index
+    */
   private val partitionsToExecutors = usedPartitions
     .zipWithIndex
     .map{case(partition,execNum) => (partition,execNum % poolSize)}
     .toMap
 
   /**
-   * Executors
-   */
+    * Executors
+    */
   private val executors : scala.collection.mutable.Map[Int, ExecutorService] =
     scala.collection.mutable.Map[Int, ExecutorService]()
 
   /**
-   * Manager for providing updates on transactions
-   */
+    * Manager for providing updates on transactions
+    */
   private val updateManager = new UpdateManager
 
   /**
@@ -78,8 +79,8 @@ class BasicSubscribingConsumer[DATATYPE, USERTYPE](name : String,
   private val checkpointEventsResolver = new CheckpointEventsResolver(this)
 
   /**
-   * Start subscriber to consume new transactions
-   */
+    * Start subscriber to consume new transactions
+    */
   def start() = {
     if (isStarted) throw new IllegalStateException("subscriber already started")
     isStarted = true
@@ -105,7 +106,7 @@ class BasicSubscribingConsumer[DATATYPE, USERTYPE](name : String,
     updateManager.startUpdate(callBack.pollingFrequency)
 
     usedPartitions foreach { partition =>
-      val lastTransactionOpt = getLastTransaction(partition)
+      val lastTransactionOpt = getLastTxn(partition)
       val queue =
         if (lastTransactionOpt.isDefined) {
           val txnUuid = lastTransactionOpt.get.getTxnUUID
@@ -116,10 +117,7 @@ class BasicSubscribingConsumer[DATATYPE, USERTYPE](name : String,
         }
 
       val lastTxnUuid = if (lastTransactionOpt.isDefined) {
-        if (lastTransactionOpt.get.getTxnUUID.timestamp() > currentOffsets(partition).timestamp())
-          lastTransactionOpt.get.getTxnUUID
-        else
-          currentOffsets(partition)
+        lastTransactionOpt.get.getTxnUUID
       }
       else
         currentOffsets(partition)
@@ -139,21 +137,16 @@ class BasicSubscribingConsumer[DATATYPE, USERTYPE](name : String,
         checkpointEventsResolver = checkpointEventsResolver)
 
       //consume all transactions less or equal than last transaction
-      if (lastTransactionOpt.isDefined &&
-        currentOffsets(partition).timestamp() < lastTransactionOpt.get.getTxnUUID.timestamp()) {
-          transactionsRelay.consumeTransactionsLessOrEqualThan(lastTransactionOpt.get.getTxnUUID)
+      if (lastTransactionOpt.isDefined) {
+        transactionsRelay.consumeTransactionsLessOrEqualThan(lastTransactionOpt.get.getTxnUUID)
       }
 
       transactionsRelay.notifyProducersAndStartListen()
 
       //consume all transactions strictly greater than last
       if (lastTransactionOpt.isDefined) {
-        if (currentOffsets(partition).timestamp() < lastTransactionOpt.get.getTxnUUID.timestamp())
-          transactionsRelay.consumeTransactionsMoreThan(lastTransactionOpt.get.getTxnUUID)
-        else
-          transactionsRelay.consumeTransactionsMoreThan(currentOffsets(partition))
-      }
-      else {
+        transactionsRelay.consumeTransactionsMoreThan(lastTransactionOpt.get.getTxnUUID)
+      } else {
         transactionsRelay.consumeTransactionsMoreThan(currentOffsets(partition))
       }
 
@@ -163,9 +156,20 @@ class BasicSubscribingConsumer[DATATYPE, USERTYPE](name : String,
     streamLock.unlock()
   }
 
+  def getLastTxn(partition : Int) : Option[BasicConsumerTransaction[DATATYPE, USERTYPE]] = {
+    val txn: Option[BasicConsumerTransaction[DATATYPE, USERTYPE]] = getLastTransaction(partition)
+    txn.fold[Option[BasicConsumerTransaction[DATATYPE, USERTYPE]]](None){txn =>
+      if (txn.getTxnUUID.timestamp() <= currentOffsets(partition).timestamp()){
+        None
+      } else {
+        Some(txn)
+      }
+    }
+  }
+
   /**
-   * Stop subscriber
-   */
+    * Stop subscriber
+    */
   def stop() = {
     if (!isStarted) throw new IllegalStateException("subscriber is not started")
     isStarted = false
