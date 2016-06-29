@@ -106,7 +106,7 @@ class BasicSubscribingConsumer[DATATYPE, USERTYPE](name : String,
     updateManager.startUpdate(callBack.pollingFrequency)
 
     usedPartitions foreach { partition =>
-      val lastTransactionOpt = getLastTxn(partition)
+      val lastTransactionOpt = resolveLastTxn(partition)
       val queue =
         if (lastTransactionOpt.isDefined) {
           val txnUuid = lastTransactionOpt.get.getTxnUUID
@@ -156,7 +156,7 @@ class BasicSubscribingConsumer[DATATYPE, USERTYPE](name : String,
     streamLock.unlock()
   }
 
-  def getLastTxn(partition : Int) : Option[BasicConsumerTransaction[DATATYPE, USERTYPE]] = {
+  def resolveLastTxn(partition : Int) : Option[BasicConsumerTransaction[DATATYPE, USERTYPE]] = {
     val txn: Option[BasicConsumerTransaction[DATATYPE, USERTYPE]] = getLastTransaction(partition)
     txn.fold[Option[BasicConsumerTransaction[DATATYPE, USERTYPE]]](None){txn =>
       if (txn.getTxnUUID.timestamp() <= currentOffsets(partition).timestamp()){
