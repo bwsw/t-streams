@@ -16,7 +16,7 @@ import collection.JavaConverters._
  */
 class ZkService(prefix : String, zkHosts : List[InetSocketAddress], zkSessionTimeout : Int){
   private val sessionTimeout = Amount.of(new Integer(zkSessionTimeout),com.twitter.common.quantity.Time.SECONDS)
-  private val hosts = zkHosts.toIterable.asJava
+  private val hosts = zkHosts.asJava
   private val twitterZkClient: ZooKeeperClient = new ZooKeeperClient(sessionTimeout, hosts)
   private val zkClient = twitterZkClient.get(Amount.of(7L, com.twitter.common.quantity.Time.SECONDS))
   private val serializer = new JsonSerializer
