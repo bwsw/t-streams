@@ -15,5 +15,4 @@ trait Agent {
    * Metadata storage link for concrete agent
    */
   def getMetadataRef() : MetadataStorage
-
 }

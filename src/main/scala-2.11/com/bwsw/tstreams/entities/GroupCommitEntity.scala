@@ -34,7 +34,7 @@ class GroupCommitEntity(consumerEntityName: String, producerEntityName: String, 
     info foreach {
       case ConsumerCommitInfo(name, stream, partition, offset) =>
           batchStatement.add(consumerCommitStatement.bind(name, stream, new Integer(partition), offset))
-      case ProducerCommitInfo(streamName, partition, transaction, totalCnt, ttl) =>
+      case ProducerCommitInfo(_, _, _, streamName, partition, transaction, totalCnt, ttl) =>
           batchStatement.add(producerCommitStatement.bind(streamName, new Integer(partition), transaction, new Integer(totalCnt), new Integer(ttl)))
     }
     session.execute(batchStatement)

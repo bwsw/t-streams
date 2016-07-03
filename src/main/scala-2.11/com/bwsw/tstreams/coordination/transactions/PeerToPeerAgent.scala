@@ -343,7 +343,7 @@ class PeerToPeerAgent(agentAddress : String,
     }
   }
 
-  //TODO new feature
+  //TODO remove after complex testing
   def publish(msg : ProducerTopicMessage) : Unit = {
     assert(msg.status != ProducerTransactionStatus.updated)
     lockLocalMasters.lock()

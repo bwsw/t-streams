@@ -36,6 +36,11 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](partition : Int,
   def getTxnUUID: UUID = transactionUuid
 
   /**
+   * Return current transaction amount of data
+   */
+  def getCnt = part
+
+  /**
    * Variable for indicating transaction state
    */
   private var closed = false
@@ -157,7 +162,8 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](partition : Int,
         throw new IllegalStateException("Insert Type can't be resolved")
     }
 
-    jobs.foreach(x => x()) // wait all async jobs done before commit
+    // wait all async jobs completeness before commit
+    jobs.foreach(x => x())
 
     updateQueue.put(true)
 
@@ -175,6 +181,7 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](partition : Int,
 
       logger.debug(s"[PRE CHECKPOINT PARTITION_$partition] " +
         s"ts=${transactionUuid.timestamp()}")
+
       basicProducer.stream.metadataStorage.commitEntity.commit(
         streamName = basicProducer.stream.getName,
         partition = partition,

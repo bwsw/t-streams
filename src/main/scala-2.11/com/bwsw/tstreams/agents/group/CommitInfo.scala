@@ -2,21 +2,38 @@ package com.bwsw.tstreams.agents.group
 
 import java.util.UUID
 
+import com.bwsw.tstreams.coordination.pubsub.messages.ProducerTopicMessage
+import com.bwsw.tstreams.coordination.transactions.PeerToPeerAgent
+
 
 /**
  * Basic commit trait
  */
-trait CommitInfo
+sealed trait CommitInfo
 
 /**
  * BasicProducer commit information (not used now)
+ * @param agent Producer agent for sending events
+ * every transaction followed with three actions
+ * first - do precheckpoint event for all subscribers
+ * second - commit txn metadata in cassandra
+ * third - do finalcheckpoint event for all subscribers
+ * @param preCheckpointEvent
+ * @param finalCheckpointEvent
  * @param streamName Stream name
  * @param partition Partition number
  * @param transaction Transaction to commit
  * @param totalCnt Total info in transaction
  * @param ttl Transaction time to live in seconds
  */
-case class ProducerCommitInfo(streamName : String, partition : Int, transaction: UUID, totalCnt : Int, ttl : Int) extends CommitInfo
+case class ProducerCommitInfo(agent: PeerToPeerAgent,
+                              preCheckpointEvent : ProducerTopicMessage,
+                              finalCheckpointEvent : ProducerTopicMessage,
+                              streamName : String,
+                              partition : Int,
+                              transaction: UUID,
+                              totalCnt : Int,
+                              ttl : Int) extends CommitInfo
 
 /**
  * BasicConsumer commit information
@@ -25,4 +42,7 @@ case class ProducerCommitInfo(streamName : String, partition : Int, transaction:
  * @param partition Partition number
  * @param offset Offset to commit
  */
-case class ConsumerCommitInfo(name : String, stream : String, partition : Int, offset : UUID) extends CommitInfo
+case class ConsumerCommitInfo(name : String,
+                              stream : String,
+                              partition : Int,
+                              offset : UUID) extends CommitInfo

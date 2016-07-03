@@ -46,6 +46,24 @@ class CheckpointGroup() {
    */
   def commit() : Unit = {
     val totalCommitInfo: List[CommitInfo] = agents.map(x=>x._2.getCommitInfo()).reduceRight((l1,l2)=>l1 ++ l2)
+    publishGlobalPreCheckpointEvent(totalCommitInfo)
     agents.head._2.getMetadataRef().groupCommitEntity.groupCommit(totalCommitInfo)
+    publishGlobalFinalCheckpointEvent(totalCommitInfo)
+  }
+
+  private def publishGlobalPreCheckpointEvent(info : List[CommitInfo]) = {
+    info foreach {
+      case ProducerCommitInfo(agent, preCheckpointEvent, _, _, _, _, _, _) =>
+        agent.publish(preCheckpointEvent)
+      case ConsumerCommitInfo(_, _, _, _) =>
+    }
+  }
+
+  private def publishGlobalFinalCheckpointEvent(info : List[CommitInfo]) = {
+    info foreach {
+      case ProducerCommitInfo(agent, _, finalCheckpointEvent, _, _, _, _, _) =>
+        agent.publish(finalCheckpointEvent)
+      case ConsumerCommitInfo(_, _, _, _) =>
+    }
   }
 }

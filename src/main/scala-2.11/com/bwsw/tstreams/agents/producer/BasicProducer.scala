@@ -1,10 +1,11 @@
 package com.bwsw.tstreams.agents.producer
 
 import java.util.UUID
-import com.bwsw.tstreams.agents.group.{CommitInfo, Agent}
+
+import com.bwsw.tstreams.agents.group.{Agent, CommitInfo, ProducerCommitInfo}
 import com.bwsw.tstreams.agents.producer.ProducerPolicies.ProducerPolicy
 import com.bwsw.tstreams.coordination.pubsub.ProducerCoordinator
-import com.bwsw.tstreams.coordination.pubsub.messages.{ProducerTransactionStatus, ProducerTopicMessage}
+import com.bwsw.tstreams.coordination.pubsub.messages.{ProducerTopicMessage, ProducerTransactionStatus}
 import com.bwsw.tstreams.coordination.transactions.PeerToPeerAgent
 import com.bwsw.tstreams.coordination.transactions.transport.traits.Interaction
 import com.bwsw.tstreams.metadata.MetadataStorage
@@ -117,10 +118,30 @@ class BasicProducer[USERTYPE,DATATYPE](val name : String,
   /**
    * Info to commit
    */
-  //TODO not atomic now
   override def getCommitInfo(): List[CommitInfo] = {
-    checkpoint()
-    List()
+    val checkpointData = partitionToTransaction.map{ case (partition, txn) =>
+      assert(partition == txn.getPartition)
+      val preCheckpoint = ProducerTopicMessage(
+        txnUuid = txn.getTxnUUID,
+        ttl = -1,
+        status = ProducerTransactionStatus.preCheckpoint,
+        partition = partition)
+      val finalCheckpoint = ProducerTopicMessage(
+        txnUuid = txn.getTxnUUID,
+        ttl = -1,
+        status = ProducerTransactionStatus.finalCheckpoint,
+        partition = partition)
+      ProducerCommitInfo(agent = agent,
+        preCheckpointEvent = preCheckpoint,
+        finalCheckpointEvent = finalCheckpoint,
+        streamName = stream.getName,
+        partition = partition,
+        transaction = txn.getTxnUUID,
+        totalCnt = txn.getCnt,
+        ttl = stream.getTTL)
+    }.filter(pci => pci.partition > 0).toList
+    partitionToTransaction.clear()
+    checkpointData
   }
 
   /**

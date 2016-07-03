@@ -244,28 +244,28 @@ class BasicConsumer[DATATYPE, USERTYPE](val name : String,
    * Save current offsets in metadata
    * to read later from them (in case of system stop/failure)
    */
-    def checkpoint() : Unit = {
-      logger.info(s"Start saving checkpoints for " +
-        s"consumer with name : $name, streamName : ${stream.getName}, streamPartitions : ${stream.getPartitions}\n")
+  def checkpoint() : Unit = {
+    logger.info(s"Start saving checkpoints for " +
+      s"consumer with name : $name, streamName : ${stream.getName}, streamPartitions : ${stream.getPartitions}\n")
 
-      stream.metadataStorage.consumerEntity.saveBatchOffset(name, stream.getName, offsetsForCheckpoint)
-      offsetsForCheckpoint.clear()
-    }
+    stream.metadataStorage.consumerEntity.saveBatchOffset(name, stream.getName, offsetsForCheckpoint)
+    offsetsForCheckpoint.clear()
+  }
 
   /**
    * Info to commit
    */
   override def getCommitInfo(): List[CommitInfo] = {
-    val info = ListBuffer[CommitInfo]()
-    offsetsForCheckpoint.foreach{case(partition, lastTxn) =>
-        info += ConsumerCommitInfo(name, stream.getName, partition, lastTxn)
-    }
+    val checkpointData = offsetsForCheckpoint.map{ case(partition, lastTxn) =>
+        ConsumerCommitInfo(name, stream.getName, partition, lastTxn)
+    }.toList
     offsetsForCheckpoint.clear()
-    info.toList
+    checkpointData
   }
 
   /**
    * @return Metadata storage link for concrete agent
    */
-  override def getMetadataRef(): MetadataStorage = stream.metadataStorage
+  override def getMetadataRef(): MetadataStorage =
+    stream.metadataStorage
 }
