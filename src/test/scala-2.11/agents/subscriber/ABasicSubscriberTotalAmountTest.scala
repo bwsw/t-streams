@@ -4,20 +4,20 @@ import java.io.File
 import java.net.InetSocketAddress
 import java.util.concurrent.locks.ReentrantLock
 import java.util.UUID
+
 import com.aerospike.client.Host
 import com.bwsw.tstreams.agents.consumer.subscriber.{BasicSubscriberCallback, BasicSubscribingConsumer}
-import com.bwsw.tstreams.agents.consumer.{SubscriberCoordinationOptions, BasicConsumerOptions}
+import com.bwsw.tstreams.agents.consumer.{BasicConsumerOptions, SubscriberCoordinationOptions}
 import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
-import com.bwsw.tstreams.agents.producer.{ProducerCoordinationOptions, ProducerPolicies, BasicProducer, BasicProducerOptions}
+import com.bwsw.tstreams.agents.producer.{BasicProducer, BasicProducerOptions, ProducerCoordinationOptions, ProducerPolicies}
 import com.bwsw.tstreams.agents.producer.InsertionType.BatchInsert
-import com.bwsw.tstreams.converter.{StringToArrayByteConverter, ArrayByteToStringConverter}
-import com.bwsw.tstreams.data.aerospike.{AerospikeStorageOptions, AerospikeStorageFactory}
+import com.bwsw.tstreams.converter.{ArrayByteToStringConverter, StringToArrayByteConverter}
+import com.bwsw.tstreams.data.aerospike.{AerospikeStorageFactory, AerospikeStorageOptions}
 import com.bwsw.tstreams.coordination.transactions.transport.impl.TcpTransport
-import com.bwsw.tstreams.common.zkservice.ZkService
 import com.bwsw.tstreams.metadata.MetadataStorageFactory
 import com.bwsw.tstreams.streams.BasicStream
 import com.datastax.driver.core.Cluster
-import org.scalatest.{BeforeAndAfterAll, Matchers, FlatSpec}
+import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import testutils._
 
 
@@ -110,25 +110,56 @@ class ABasicSubscriberTotalAmountTest extends FlatSpec with Matchers with Before
     override def onEvent(subscriber : BasicSubscribingConsumer[Array[Byte], String], partition: Int, transactionUuid: UUID): Unit = {
       lock.lock()
       acc += 1
+      subscriber.setLocalOffset(partition,transactionUuid)
+      subscriber.checkpoint()
       lock.unlock()
     }
     override val pollingFrequency: Int = 100
   }
   val path = randomString
-  val subscribeConsumer = new BasicSubscribingConsumer[Array[Byte],String](
-    "test_consumer",
-    streamForConsumer,
-    consumerOptions,
-    new SubscriberCoordinationOptions("localhost:8588", "/unit", List(new InetSocketAddress("localhost",2181)), 7000),
-    callback,
-    path)
 
   "subscribe consumer" should "retrieve all sent messages" in {
     val totalMsg = 30
     val dataInTxn = 10
     val data = randomString
 
+    var subscribeConsumer = new BasicSubscribingConsumer[Array[Byte],String](
+      "test_consumer",
+      streamForConsumer,
+      consumerOptions,
+      new SubscriberCoordinationOptions("localhost:8588", "/unit", List(new InetSocketAddress("localhost",2181)), 7000),
+      callback,
+      path)
     subscribeConsumer.start()
+
+    sendTxnsAndWait(totalMsg, dataInTxn, data)
+    sendTxnsAndWait(totalMsg, dataInTxn, data)
+
+    subscribeConsumer.stop()
+
+    subscribeConsumer = new BasicSubscribingConsumer[Array[Byte],String](
+      "test_consumer",
+      new BasicStream[Array[Byte]](
+        name = "test_stream",
+        partitions = 3,
+        metadataStorage = metadataStorageInstForConsumer,
+        dataStorage = storageFactory.getInstance(aerospikeOptions),
+        ttl = 60 * 10,
+        description = "some_description"),
+      consumerOptions,
+      new SubscriberCoordinationOptions("localhost:8588", "/unit", List(new InetSocketAddress("localhost",2181)), 7000),
+      callback,
+      path)
+    subscribeConsumer.start()
+
+    Thread.sleep(10000)
+
+    subscribeConsumer.stop()
+
+    acc shouldEqual totalMsg*2
+  }
+
+  def sendTxnsAndWait(totalMsg : Int, dataInTxn : Int, data : String) = {
     (0 until totalMsg) foreach { x=>
       val txn = producer.newTransaction(ProducerPolicies.errorIfOpen)
       (0 until dataInTxn) foreach { _ =>
@@ -137,12 +168,9 @@ class ABasicSubscriberTotalAmountTest extends FlatSpec with Matchers with Before
       txn.checkpoint()
     }
     Thread.sleep(10000)
-
-    acc shouldEqual totalMsg
   }
 
   override def afterAll(): Unit = {
-    subscribeConsumer.stop()
     producer.stop()
     removeZkMetadata("/unit")
     session.execute(s"DROP KEYSPACE $randomKeyspace")

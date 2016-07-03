@@ -37,7 +37,7 @@ class CheckpointGroup() {
    */
   def remove(name : String) : Unit = {
     if (!agents.contains(name))
-      throw new IllegalArgumentException("agents with such name not exist")
+      throw new IllegalArgumentException("agents with such name does not exist")
     agents.remove(name)
   }
 
