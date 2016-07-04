@@ -116,18 +116,15 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](producerLock: ReentrantLock,
    * Canceling current transaction
    */
   def cancel() = {
-    producerLock.lock()
     if (closed)
       throw new IllegalStateException("transaction is already closed")
+    producerLock.lock()
 
     basicProducer.producerOptions.insertType match {
       case InsertionType.SingleElementInsert =>
 
       case InsertionType.BatchInsert(_) =>
         basicProducer.stream.dataStorage.clearBuffer(transactionUuid)
-
-      case _ =>
-        throw new IllegalStateException("Insert Type can't be resolved")
     }
 
     stopKeepAlive()
