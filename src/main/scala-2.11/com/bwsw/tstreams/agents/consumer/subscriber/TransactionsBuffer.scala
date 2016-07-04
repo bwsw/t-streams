@@ -35,6 +35,8 @@ class TransactionsBuffer {
 
         case ProducerTransactionStatus.finalCheckpoint =>
           return
+
+        case _ =>
       }
     }
 
