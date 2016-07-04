@@ -124,12 +124,7 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](partition : Int,
         throw new IllegalStateException("Insert Type can't be resolved")
     }
 
-    jobs.foreach(x=>x()) // wait all async jobs done before commit
-
-    updateQueue.put(true)
-
-    //await till update thread will be stoped
-    updateThread.join()
+    stopKeepAlive()
 
     val msg = ProducerTopicMessage(txnUuid = transactionUuid,
       ttl = -1, status = ProducerTransactionStatus.cancelled, partition = partition)
@@ -138,6 +133,16 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](partition : Int,
     logger.debug(s"[CANCEL PARTITION_${msg.partition}] ts=${msg.txnUuid.timestamp()} status=${msg.status}")
 
     closed = true
+  }
+
+  def stopKeepAlive() = {
+    // wait all async jobs completeness before commit
+    jobs.foreach(x => x())
+
+    updateQueue.put(true)
+
+    //await till update thread will be stoped
+    updateThread.join()
   }
 
   /**
@@ -162,14 +167,6 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](partition : Int,
         throw new IllegalStateException("Insert Type can't be resolved")
     }
 
-    // wait all async jobs completeness before commit
-    jobs.foreach(x => x())
-
-    updateQueue.put(true)
-
-    //await till update thread will be stoped
-    updateThread.join()
-
     //close transaction using stream ttl
     if (part > 0) {
       val preCheckpoint = ProducerTopicMessage(
@@ -181,6 +178,10 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](partition : Int,
 
       logger.debug(s"[PRE CHECKPOINT PARTITION_$partition] " +
         s"ts=${transactionUuid.timestamp()}")
+
+      //we must do it after agent.publish cuz it can be long operation
+      //because of agents re-election
+      stopKeepAlive()
 
       basicProducer.stream.metadataStorage.commitEntity.commit(
         streamName = basicProducer.stream.getName,
@@ -201,6 +202,9 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](partition : Int,
 
       logger.debug(s"[FINAL CHECKPOINT PARTITION_$partition] " +
         s"ts=${transactionUuid.timestamp()}")
+    }
+    else {
+      stopKeepAlive()
     }
 
     closed = true

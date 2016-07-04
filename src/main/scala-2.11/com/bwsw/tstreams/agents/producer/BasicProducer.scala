@@ -131,7 +131,9 @@ class BasicProducer[USERTYPE,DATATYPE](val name : String,
         ttl = -1,
         status = ProducerTransactionStatus.finalCheckpoint,
         partition = partition)
-      ProducerCommitInfo(agent = agent,
+      ProducerCommitInfo(
+        transactionRef = txn,
+        agent = agent,
         preCheckpointEvent = preCheckpoint,
         finalCheckpointEvent = finalCheckpoint,
         streamName = stream.getName,

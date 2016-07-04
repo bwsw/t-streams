@@ -2,8 +2,10 @@ package com.bwsw.tstreams.agents.group
 
 import java.util.UUID
 
+import com.bwsw.tstreams.agents.producer.BasicProducerTransaction
 import com.bwsw.tstreams.coordination.pubsub.messages.ProducerTopicMessage
 import com.bwsw.tstreams.coordination.transactions.PeerToPeerAgent
+import scala.language.existentials
 
 
 /**
@@ -13,6 +15,7 @@ sealed trait CommitInfo
 
 /**
  * BasicProducer commit information (not used now)
+ * @param transactionRef Reference on transaction (used for obliterate update thread)
  * @param agent Producer agent for sending events
  * every transaction followed with three actions
  * first - do precheckpoint event for all subscribers
@@ -26,7 +29,8 @@ sealed trait CommitInfo
  * @param totalCnt Total info in transaction
  * @param ttl Transaction time to live in seconds
  */
-case class ProducerCommitInfo(agent: PeerToPeerAgent,
+case class ProducerCommitInfo(transactionRef : BasicProducerTransaction[_,_],
+                              agent: PeerToPeerAgent,
                               preCheckpointEvent : ProducerTopicMessage,
                               finalCheckpointEvent : ProducerTopicMessage,
                               streamName : String,

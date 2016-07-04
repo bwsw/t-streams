@@ -1,7 +1,6 @@
 package com.bwsw.tstreams.agents.consumer.subscriber
 
 import java.util.UUID
-import java.util.concurrent.locks.ReentrantLock
 
 import com.bwsw.tstreams.coordination.pubsub.messages.ProducerTransactionStatus
 import ProducerTransactionStatus._
@@ -27,10 +26,15 @@ class TransactionsBuffer {
       return
     }
 
-    //if txn closed we'll just ignore events
     if (map.exist(txnUuid)){
-      if (map.get(txnUuid)._1 == ProducerTransactionStatus.finalCheckpoint) {
-        return
+      map.get(txnUuid)._1 match {
+        case ProducerTransactionStatus.preCheckpoint =>
+          if (status != ProducerTransactionStatus.finalCheckpoint ||
+              status != ProducerTransactionStatus.cancelled)
+            return
+
+        case ProducerTransactionStatus.finalCheckpoint =>
+          return
       }
     }
 
