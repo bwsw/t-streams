@@ -100,7 +100,7 @@ class CheckpointEventsResolver(subscriber : BasicSubscribingConsumer[_,_]) {
 
             case None =>
               //the transaction has been deleted by cassandra so we need to remove it from transaction buffer
-              updateTransactionBuffer(partition, txn, ProducerTransactionStatus.opened, 1)
+              updateTransactionBuffer(partition, txn, ProducerTransactionStatus.cancelled, -1)
               removeTxn(partition,txn)
           }
         }

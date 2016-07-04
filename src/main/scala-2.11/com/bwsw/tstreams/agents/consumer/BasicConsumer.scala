@@ -1,11 +1,14 @@
 package com.bwsw.tstreams.agents.consumer
 
 import java.util.UUID
-import com.bwsw.tstreams.agents.group.{ConsumerCommitInfo, CommitInfo, Agent}
+import java.util.concurrent.locks.ReentrantLock
+
+import com.bwsw.tstreams.agents.group.{Agent, CommitInfo, ConsumerCommitInfo}
 import com.bwsw.tstreams.entities.TransactionSettings
 import com.bwsw.tstreams.metadata.MetadataStorage
 import com.bwsw.tstreams.streams.BasicStream
 import org.slf4j.LoggerFactory
+
 import scala.collection.mutable.ListBuffer
 
 
@@ -24,6 +27,11 @@ class BasicConsumer[DATATYPE, USERTYPE](val name : String,
   stream.dataStorage.bind()
 
   private val logger = LoggerFactory.getLogger(this.getClass)
+
+  /**
+    * Lock for managing transactions
+    */
+  private val consumerLock = new ReentrantLock(true)
 
   /**
    * Temporary checkpoints (will be cleared after every checkpoint() invokes)
@@ -101,7 +109,8 @@ class BasicConsumer[DATATYPE, USERTYPE](val name : String,
 
   /**
    * Helper function for getTransaction() method
-   * @return BasicConsumerTransaction or None
+    *
+    * @return BasicConsumerTransaction or None
    */
   private def getTxnOpt : Option[BasicConsumerTransaction[DATATYPE,USERTYPE]] = {
     if (options.readPolicy.isRoundFinished())
@@ -151,16 +160,19 @@ class BasicConsumer[DATATYPE, USERTYPE](val name : String,
    * @return Consumed transaction of None if nothing to consume
    */
   def getTransaction: Option[BasicConsumerTransaction[DATATYPE, USERTYPE]] = {
+    consumerLock.lock()
     logger.debug(s"Start new transaction for consumer with name : $name, streamName : ${stream.getName}, streamPartitions : ${stream.getPartitions}\n")
 
     options.readPolicy.startNewRound()
     val txn: Option[BasicConsumerTransaction[DATATYPE, USERTYPE]] = getTxnOpt
+    consumerLock.unlock()
     txn
   }
 
   /**
    * Getting last transaction from concrete partition
-   * @param partition Partition to get last transaction
+    *
+    * @param partition Partition to get last transaction
    * @return Last txn
    */
     def getLastTransaction(partition : Int): Option[BasicConsumerTransaction[DATATYPE, USERTYPE]] = {
@@ -209,10 +221,12 @@ class BasicConsumer[DATATYPE, USERTYPE](val name : String,
 
   /**
    * Sets offset on concrete partition
-   * @param partition partition to set offset
+    *
+    * @param partition partition to set offset
    * @param uuid offset value
    */
     def setLocalOffset(partition : Int, uuid : UUID) : Unit = {
+      consumerLock.lock()
       offsetsForCheckpoint(partition) = uuid
       currentOffsets(partition) = uuid
       transactionBuffer(partition) = stream.metadataStorage.commitEntity.getTransactions(
@@ -220,11 +234,13 @@ class BasicConsumer[DATATYPE, USERTYPE](val name : String,
         partition,
         uuid,
         options.transactionsPreload)
+      consumerLock.unlock()
     }
 
   /**
    * Update transaction (if transaction is not closed it will have total packets value -1)
-   * @param txn Transaction to update
+    *
+    * @param txn Transaction to update
    * @return Updated transaction
    */
    def updateTransaction(txn : UUID, partition : Int) : Option[TransactionSettings] = {
@@ -245,11 +261,13 @@ class BasicConsumer[DATATYPE, USERTYPE](val name : String,
    * to read later from them (in case of system stop/failure)
    */
   def checkpoint() : Unit = {
+    consumerLock.lock()
     logger.info(s"Start saving checkpoints for " +
       s"consumer with name : $name, streamName : ${stream.getName}, streamPartitions : ${stream.getPartitions}\n")
 
     stream.metadataStorage.consumerEntity.saveBatchOffset(name, stream.getName, offsetsForCheckpoint)
     offsetsForCheckpoint.clear()
+    consumerLock.unlock()
   }
 
   /**
@@ -268,4 +286,9 @@ class BasicConsumer[DATATYPE, USERTYPE](val name : String,
    */
   override def getMetadataRef(): MetadataStorage =
     stream.metadataStorage
+
+  /**
+    * Agent lock on any actions which has to do with checkpoint
+    */
+  override def getAgentLock(): ReentrantLock = consumerLock
 }

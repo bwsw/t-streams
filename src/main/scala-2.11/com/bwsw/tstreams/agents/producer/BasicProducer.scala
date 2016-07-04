@@ -1,6 +1,7 @@
 package com.bwsw.tstreams.agents.producer
 
 import java.util.UUID
+import java.util.concurrent.locks.ReentrantLock
 
 import com.bwsw.tstreams.agents.group.{Agent, CommitInfo, ProducerCommitInfo}
 import com.bwsw.tstreams.agents.producer.ProducerPolicies.ProducerPolicy
@@ -27,6 +28,8 @@ class BasicProducer[USERTYPE,DATATYPE](val name : String,
   stream.dataStorage.bind()
   private val logger = LoggerFactory.getLogger(this.getClass)
 
+  private val producerLock = new ReentrantLock(true)
+
   logger.info(s"Start new Basic producer with name : $name, streamName : ${stream.getName}, streamPartitions : ${stream.getPartitions}\n")
 
   private val partitionToTransaction = scala.collection.mutable.Map[Int, BasicProducerTransaction[USERTYPE,DATATYPE]]()
@@ -50,7 +53,7 @@ class BasicProducer[USERTYPE,DATATYPE](val name : String,
    * @return BasicProducerTransaction instance
    */
   def newTransaction(policy: ProducerPolicy, nextPartition : Int = -1) : BasicProducerTransaction[USERTYPE,DATATYPE] = {
-
+    producerLock.lock()
     val partition = {
       if (nextPartition == -1)
         producerOptions.writePolicy.getNextPartition
@@ -79,23 +82,25 @@ class BasicProducer[USERTYPE,DATATYPE](val name : String,
           }
         }
       }
-      val txn = new BasicProducerTransaction[USERTYPE, DATATYPE](partition, txnUUID, this)
+      val txn = new BasicProducerTransaction[USERTYPE, DATATYPE](producerLock, partition, txnUUID, this)
       partitionToTransaction(partition) = txn
       txn
     }
-
+    producerLock.unlock()
     transaction
   }
 
   /**
    * Return reference for transaction from concrete partition
-   * @param partition Partition from which transaction will be retrieved
+    *
+    * @param partition Partition from which transaction will be retrieved
    * @return Transaction reference if it exist or not closed
    */
   def getTransaction(partition : Int) : Option[BasicProducerTransaction[USERTYPE,DATATYPE]] = {
+    producerLock.lock()
     if (!(partition >= 0 && partition < stream.getPartitions))
       throw new IllegalArgumentException("invalid partition")
-    if (partitionToTransaction.contains(partition)) {
+    val res = if (partitionToTransaction.contains(partition)) {
       val txn = partitionToTransaction(partition)
       if (txn.isClosed)
         return None
@@ -103,6 +108,8 @@ class BasicProducer[USERTYPE,DATATYPE](val name : String,
     }
     else
       None
+    producerLock.unlock()
+    res
   }
 
   /**
@@ -154,7 +161,8 @@ class BasicProducer[USERTYPE,DATATYPE](val name : String,
   /**
    * Method to implement for concrete producer [[PeerToPeerAgent]] method
    * Need only if this producer is master
-   * @return UUID
+    *
+    * @return UUID
    */
   override def getLocalTxn(partition : Int): UUID = {
     val transactionUuid = producerOptions.txnGenerator.getTimeUUID()
@@ -204,4 +212,9 @@ class BasicProducer[USERTYPE,DATATYPE](val name : String,
     agent.stop()
     coordinator.stop()
   }
+
+  /**
+    * Agent lock on any actions which has to do with checkpoint
+    */
+  override def getAgentLock(): ReentrantLock = producerLock
 }

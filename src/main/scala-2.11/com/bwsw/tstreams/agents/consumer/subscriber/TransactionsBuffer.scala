@@ -29,9 +29,10 @@ class TransactionsBuffer {
     if (map.exist(txnUuid)){
       map.get(txnUuid)._1 match {
         case ProducerTransactionStatus.preCheckpoint =>
-          if (status != ProducerTransactionStatus.finalCheckpoint ||
-              status != ProducerTransactionStatus.cancelled)
+          if (status != ProducerTransactionStatus.finalCheckpoint &&
+              status != ProducerTransactionStatus.cancelled) {
             return
+          }
 
         case ProducerTransactionStatus.finalCheckpoint =>
           return

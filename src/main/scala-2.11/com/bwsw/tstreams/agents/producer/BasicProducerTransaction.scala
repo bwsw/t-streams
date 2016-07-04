@@ -1,21 +1,26 @@
 package com.bwsw.tstreams.agents.producer
 
 import java.util.UUID
+import java.util.concurrent.locks.ReentrantLock
 import java.util.concurrent.{CountDownLatch, LinkedBlockingQueue, TimeUnit}
-import com.bwsw.tstreams.coordination.pubsub.messages.{ProducerTransactionStatus, ProducerTopicMessage}
+
+import com.bwsw.tstreams.coordination.pubsub.messages.{ProducerTopicMessage, ProducerTransactionStatus}
 import org.slf4j.LoggerFactory
+
 import scala.collection.mutable.ListBuffer
 import scala.util.control.Breaks._
 
 /**
  * Transaction retrieved by BasicProducer.newTransaction method
+ * @param producerLock Producer Lock for managing actions which has to do with checkpoints
  * @param partition Concrete partition for saving this transaction
  * @param basicProducer Producer class which was invoked newTransaction method
  * @param transactionUuid UUID for this transaction
  * @tparam USERTYPE User data type
  * @tparam DATATYPE Storage data type
  */
-class BasicProducerTransaction[USERTYPE,DATATYPE](partition : Int,
+class BasicProducerTransaction[USERTYPE,DATATYPE](producerLock: ReentrantLock,
+                                                  partition : Int,
                                                   transactionUuid : UUID,
                                                   basicProducer: BasicProducer[USERTYPE,DATATYPE]){
 
@@ -67,9 +72,11 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](partition : Int,
 
   /**
    * Send data to storage
+ *
    * @param obj some user object
    */
   def send(obj : USERTYPE) : Unit = {
+    producerLock.lock()
     if (closed)
       throw new IllegalStateException("transaction is closed")
 
@@ -105,12 +112,14 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](partition : Int,
     }
 
     part += 1
+    producerLock.unlock()
   }
 
   /**
    * Canceling current transaction
    */
   def cancel() = {
+    producerLock.lock()
     if (closed)
       throw new IllegalStateException("transaction is already closed")
 
@@ -133,6 +142,7 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](partition : Int,
     logger.debug(s"[CANCEL PARTITION_${msg.partition}] ts=${msg.txnUuid.timestamp()} status=${msg.status}")
 
     closed = true
+    producerLock.unlock()
   }
 
   def stopKeepAlive() = {
@@ -149,6 +159,7 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](partition : Int,
    * Submit transaction(transaction will be available by consumer only after closing)
    */
   def checkpoint() : Unit = {
+    producerLock.lock()
     if (closed)
       throw new IllegalStateException("transaction is already closed")
 
@@ -208,10 +219,12 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](partition : Int,
     }
 
     closed = true
+    producerLock.unlock()
   }
 
   /**
    * State indicator of the transaction
+ *
    * @return Closed transaction or not
    */
   def isClosed = closed

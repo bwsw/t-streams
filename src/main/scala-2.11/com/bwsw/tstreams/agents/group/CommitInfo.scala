@@ -14,7 +14,7 @@ import scala.language.existentials
 sealed trait CommitInfo
 
 /**
- * BasicProducer commit information (not used now)
+ * BasicProducer commit information
  * @param transactionRef Reference on transaction (used for obliterate update thread)
  * @param agent Producer agent for sending events
  * every transaction followed with three actions
