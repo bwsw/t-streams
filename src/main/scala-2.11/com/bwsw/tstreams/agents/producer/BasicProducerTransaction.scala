@@ -72,13 +72,13 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](producerLock: ReentrantLock,
 
   /**
    * Send data to storage
- *
-   * @param obj some user object
+    *
+    * @param obj some user object
    */
   def send(obj : USERTYPE) : Unit = {
-    producerLock.lock()
     if (closed)
       throw new IllegalStateException("transaction is closed")
+    producerLock.lock()
 
     basicProducer.producerOptions.insertType match {
       case InsertionType.BatchInsert(size) =>
@@ -106,9 +106,6 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](producerLock: ReentrantLock,
           part)
         if (job != null)
           jobs += job
-
-      case _ =>
-        throw new IllegalStateException("InsertType can't be resolved")
     }
 
     part += 1
@@ -159,9 +156,9 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](producerLock: ReentrantLock,
    * Submit transaction(transaction will be available by consumer only after closing)
    */
   def checkpoint() : Unit = {
-    producerLock.lock()
     if (closed)
       throw new IllegalStateException("transaction is already closed")
+    producerLock.lock()
 
     basicProducer.producerOptions.insertType match {
       case InsertionType.SingleElementInsert =>
@@ -173,9 +170,6 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](producerLock: ReentrantLock,
             jobs += job
           basicProducer.stream.dataStorage.clearBuffer(transactionUuid)
         }
-
-      case _ =>
-        throw new IllegalStateException("Insert Type can't be resolved")
     }
 
     //close transaction using stream ttl
@@ -224,8 +218,8 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](producerLock: ReentrantLock,
 
   /**
    * State indicator of the transaction
- *
-   * @return Closed transaction or not
+    *
+    * @return Closed transaction or not
    */
   def isClosed = closed
 

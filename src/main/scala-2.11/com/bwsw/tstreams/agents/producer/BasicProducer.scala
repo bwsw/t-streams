@@ -91,7 +91,7 @@ class BasicProducer[USERTYPE,DATATYPE](val name : String,
   }
 
   /**
-   * Return reference for transaction from concrete partition
+   * Return reference on transaction from concrete partition
     *
     * @param partition Partition from which transaction will be retrieved
    * @return Transaction reference if it exist or not closed
@@ -115,6 +115,7 @@ class BasicProducer[USERTYPE,DATATYPE](val name : String,
   /**
    * Close all opened transactions
    */
+  //TODO lock mb unsafe
   def checkpoint() : Unit = {
     partitionToTransaction.map{case(partition,txn)=>txn}.foreach{ x=>
       if (!x.isClosed)

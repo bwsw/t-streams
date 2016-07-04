@@ -9,7 +9,7 @@ import com.bwsw.tstreams.metadata.MetadataStorage
 import com.bwsw.tstreams.streams.BasicStream
 import org.slf4j.LoggerFactory
 
-import scala.collection.mutable.ListBuffer
+
 
 
 /**
