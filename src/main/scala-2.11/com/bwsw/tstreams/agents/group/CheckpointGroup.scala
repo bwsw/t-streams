@@ -49,13 +49,14 @@ class CheckpointGroup() {
     publishGlobalPreCheckpointEvent(totalCommitInfo)
     agents.head._2.getMetadataRef().groupCommitEntity.groupCommit(totalCommitInfo)
     publishGlobalFinalCheckpointEvent(totalCommitInfo)
+    //TODO stop update threads
   }
 
   private def publishGlobalPreCheckpointEvent(info : List[CommitInfo]) = {
     info foreach {
       case ProducerCommitInfo(agent, preCheckpointEvent, _, _, _, _, _, _) =>
         agent.publish(preCheckpointEvent)
-      case ConsumerCommitInfo(_, _, _, _) =>
+      case _ =>
     }
   }
 
@@ -63,7 +64,7 @@ class CheckpointGroup() {
     info foreach {
       case ProducerCommitInfo(agent, _, finalCheckpointEvent, _, _, _, _, _) =>
         agent.publish(finalCheckpointEvent)
-      case ConsumerCommitInfo(_, _, _, _) =>
+      case _ =>
     }
   }
 }
