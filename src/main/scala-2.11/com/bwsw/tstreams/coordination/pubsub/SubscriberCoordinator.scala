@@ -126,6 +126,7 @@ class SubscriberCoordinator(agentAddress : String,
       s" listener.connectionAmount={${listener.getConnectionsAmount()}} totalConnAmount={$amount}" +
       s" timerVal={$timer}")
 
+    //TODO Сhecks in zk
     while (listener.getConnectionsAmount < amount && timer < SYNCHRONIZE_LIMIT){
       timer += 1
       Thread.sleep(1000)
