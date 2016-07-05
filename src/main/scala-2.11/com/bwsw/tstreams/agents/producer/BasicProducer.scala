@@ -5,6 +5,7 @@ import java.util.concurrent.locks.ReentrantLock
 
 import com.bwsw.tstreams.agents.group.{Agent, CommitInfo, ProducerCommitInfo}
 import com.bwsw.tstreams.agents.producer.ProducerPolicies.ProducerPolicy
+import com.bwsw.tstreams.common.zkservice.ZkService
 import com.bwsw.tstreams.coordination.pubsub.ProducerCoordinator
 import com.bwsw.tstreams.coordination.pubsub.messages.{ProducerTopicMessage, ProducerTransactionStatus}
 import com.bwsw.tstreams.coordination.transactions.PeerToPeerAgent
@@ -115,12 +116,13 @@ class BasicProducer[USERTYPE,DATATYPE](val name : String,
   /**
    * Close all opened transactions
    */
-  //TODO lock mb unsafe
   def checkpoint() : Unit = {
+    producerLock.lock()
     partitionToTransaction.map{case(partition,txn)=>txn}.foreach{ x=>
       if (!x.isClosed)
         x.checkpoint()
     }
+    producerLock.unlock()
   }
 
   /**
@@ -157,7 +159,8 @@ class BasicProducer[USERTYPE,DATATYPE](val name : String,
   /**
    * @return Metadata storage link for concrete agent
    */
-  override def getMetadataRef(): MetadataStorage = stream.metadataStorage
+  override def getMetadataRef(): MetadataStorage =
+    stream.metadataStorage
 
   /**
    * Method to implement for concrete producer [[PeerToPeerAgent]] method
@@ -217,7 +220,7 @@ class BasicProducer[USERTYPE,DATATYPE](val name : String,
   /**
     * Agent lock on any actions which has to do with checkpoint
     */
-  override def getAgentLock(): ReentrantLock = {
+  override def getAgentLock(): ReentrantLock =
     producerLock
-  }
+
 }
