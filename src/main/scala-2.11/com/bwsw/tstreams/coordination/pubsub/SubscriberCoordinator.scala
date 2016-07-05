@@ -19,11 +19,12 @@ import scala.collection.mutable.ListBuffer
 class SubscriberCoordinator(agentAddress : String,
                           zkRootPrefix : String,
                           zkHosts : List[InetSocketAddress],
-                          zkSessionTimeout : Int) {
+                          zkSessionTimeout : Int,
+                          zkConnectionTimeout : Int) {
 
   private val logger = LoggerFactory.getLogger(this.getClass)
   private val SYNCHRONIZE_LIMIT = 60
-  private val zkService = new ZkService(zkRootPrefix, zkHosts, zkSessionTimeout)
+  private val zkService = new ZkService(zkRootPrefix, zkHosts, zkSessionTimeout, zkConnectionTimeout)
   private val (_,port) = getHostPort(agentAddress)
   private val listener: ProducerTopicMessageListener = new ProducerTopicMessageListener(port)
   private var stoped = false

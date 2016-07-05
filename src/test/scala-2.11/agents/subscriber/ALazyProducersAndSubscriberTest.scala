@@ -114,7 +114,7 @@ class ALazyProducersAndSubscriberTest extends FlatSpec with Matchers with Before
       stream = streamInst,
       options = consumerOptions,
       subscriberCoordinationOptions =
-        new SubscriberCoordinationOptions("localhost:8588", "/unit", List(new InetSocketAddress("localhost", 2181)), 7000),
+        new SubscriberCoordinationOptions("localhost:8588", "/unit", List(new InetSocketAddress("localhost", 2181)), 7000, 7000),
       callBack = callback,
       persistentQueuePath = path)
 
@@ -139,10 +139,11 @@ class ALazyProducersAndSubscriberTest extends FlatSpec with Matchers with Before
       agentAddress = s"localhost:$port",
       zkHosts = List(new InetSocketAddress("localhost", 2181)),
       zkRootPath = "/unit",
-      zkTimeout = 7000,
+      zkSessionTimeout = 7000,
       isLowPriorityToBeMaster = false,
       transport = new TcpTransport,
-      transportTimeout = 5)
+      transportTimeout = 5,
+      zkConnectionTimeout = 7)
 
     port += 1
 

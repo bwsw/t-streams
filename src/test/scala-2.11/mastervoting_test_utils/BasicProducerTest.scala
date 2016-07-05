@@ -55,10 +55,11 @@ object BasicProducerTest{
       agentAddress = agentAddress,
       zkHosts = zkHosts.toList,
       zkRootPath = "/unit",
-      zkTimeout = 7000,
+      zkSessionTimeout = 7000,
       isLowPriorityToBeMaster = false,
       transport = new TcpTransport,
-      transportTimeout = 5)
+      transportTimeout = 5,
+      zkConnectionTimeout = 7)
 
     val keyspace = args(7)
 

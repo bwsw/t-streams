@@ -17,10 +17,11 @@ import org.slf4j.LoggerFactory
 
 /**
  * Agent for providing peer to peer interaction between [[BasicProducer]]]
+ *
  * @param agentAddress Concrete agent address
  * @param zkHosts ZkHosts to connect
  * @param zkRootPath Common prefix for all zk created entities
- * @param zkTimeout Timeout to connect to zk
+ * @param zkSessionTimeout Session Zk Timeout
  * @param producer Producer reference
  * @param usedPartitions List of used producer partitions
  * @param isLowPriorityToBeMaster Flag which indicate to have low priority to be master
@@ -30,7 +31,8 @@ import org.slf4j.LoggerFactory
 class PeerToPeerAgent(agentAddress : String,
                       zkHosts : List[InetSocketAddress],
                       zkRootPath : String,
-                      zkTimeout : Int,
+                      zkSessionTimeout: Int,
+                      zkConnectionTimeout : Int,
                       producer : BasicProducer[_,_],
                       usedPartitions : List[Int],
                       isLowPriorityToBeMaster : Boolean,
@@ -40,7 +42,7 @@ class PeerToPeerAgent(agentAddress : String,
 
   private val logger = LoggerFactory.getLogger(this.getClass)
   private val zkRetriesAmount = 60
-  private val zkService = new ZkService(zkRootPath, zkHosts, zkTimeout)
+  private val zkService = new ZkService(zkRootPath, zkHosts, zkSessionTimeout, zkConnectionTimeout)
   private val localMasters = scala.collection.mutable.Map[Int/*partition*/, String/*master*/]()
   private val lockLocalMasters = new ReentrantLock(true)
   private val lockManagingMaster = new ReentrantLock(true)
@@ -71,6 +73,7 @@ class PeerToPeerAgent(agentAddress : String,
 
   /**
    * Validate that agent with [[agentAddress]]] not exist and delete in opposite
+ *
    * @param partition Partition to check
    */
   private def tryCleanAgent(partition : Int) : Unit = {
@@ -90,6 +93,7 @@ class PeerToPeerAgent(agentAddress : String,
 
   /**
    * Amend agent priority
+ *
    * @param partition Partition to update priority
    * @param value Value which will be added to current priority
    */
@@ -113,6 +117,7 @@ class PeerToPeerAgent(agentAddress : String,
 
   /**
    * Helper method for new master voting
+ *
    * @param partition New master partition
    * @param retries Retries to try to set new master
    * @return Selected master address
@@ -154,6 +159,7 @@ class PeerToPeerAgent(agentAddress : String,
 
   /**
    * Voting new master for concrete partition
+ *
    * @param partition Partition to vote new master
    * @return New master Address
    */
@@ -167,6 +173,7 @@ class PeerToPeerAgent(agentAddress : String,
 
   /**
    * Updating master on concrete partition
+ *
    * @param partition Partition to update master
    * @param init If flag true master will be reselected anyway else old master can stay
    * @param retries Retries to try to interact with master
@@ -233,6 +240,7 @@ class PeerToPeerAgent(agentAddress : String,
 
   /**
    * Return master for concrete partition
+ *
    * @param partition Partition to set
    * @return Master address
    */
@@ -250,6 +258,7 @@ class PeerToPeerAgent(agentAddress : String,
 
   /**
    * Set this agent as new master on concrete partition
+ *
    * @param partition Partition to set
    */
   private def setThisAgentAsMaster(partition : Int) : Unit = {
@@ -267,6 +276,7 @@ class PeerToPeerAgent(agentAddress : String,
 
   /**
    * Unset this agent as master on concrete partition
+ *
    * @param partition Partition to set
    */
   private def deleteThisAgentFromMasters(partition : Int) : Unit = {
@@ -309,6 +319,7 @@ class PeerToPeerAgent(agentAddress : String,
 
   /**
    * Retrieve new transaction from agent
+ *
    * @param partition Transaction partition
    * @return Transaction UUID
    */
@@ -424,6 +435,7 @@ class PeerToPeerAgent(agentAddress : String,
 
   /**
    * Create task to handle incoming message
+ *
    * @param request Requested message
    * @return Response
    */

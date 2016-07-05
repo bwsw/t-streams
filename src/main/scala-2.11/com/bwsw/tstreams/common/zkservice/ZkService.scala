@@ -7,7 +7,7 @@ import com.twitter.common.quantity.Amount
 import com.twitter.common.zookeeper.{DistributedLockImpl, ZooKeeperClient}
 import org.apache.zookeeper.ZooDefs.Ids
 import org.apache.zookeeper.ZooKeeper.States
-import org.apache.zookeeper.{CreateMode, Watcher, ZooKeeper}
+import org.apache.zookeeper.{CreateMode, Watcher}
 
 import collection.JavaConverters._
 
@@ -16,13 +16,12 @@ import collection.JavaConverters._
  * @param zkHosts Zk hosts to connect
  * @param zkSessionTimeout Zk session timeout to connect
  */
-class ZkService(prefix : String, zkHosts : List[InetSocketAddress], zkSessionTimeout : Int){
+class ZkService(prefix : String, zkHosts : List[InetSocketAddress], zkSessionTimeout : Int, connectionTimeout : Int){
   //TODO fix zk timeout
   private val sessionTimeout = Amount.of(new Integer(zkSessionTimeout),com.twitter.common.quantity.Time.SECONDS)
   private val hosts = zkHosts.asJava
   private val twitterZkClient: ZooKeeperClient = new ZooKeeperClient(sessionTimeout, hosts)
-  //TODO move 7 sec
-  private val zkClient = twitterZkClient.get(Amount.of(7L, com.twitter.common.quantity.Time.SECONDS))
+  private val zkClient = twitterZkClient.get(Amount.of(connectionTimeout, com.twitter.common.quantity.Time.SECONDS))
   private val serializer = new JsonSerializer
   private val map = scala.collection.mutable.Map[String, DistributedLockImpl]()
 

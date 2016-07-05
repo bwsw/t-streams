@@ -39,7 +39,8 @@ class BasicSubscribingConsumer[DATATYPE, USERTYPE](name : String,
     subscriberCoordinationOptions.agentAddress,
     subscriberCoordinationOptions.zkRootPath,
     subscriberCoordinationOptions.zkHosts,
-    subscriberCoordinationOptions.zkSessionTimeout)
+    subscriberCoordinationOptions.zkSessionTimeout,
+    subscriberCoordinationOptions.zkConnectionTimeout)
 
   /**
     * Subscriber used partitions
@@ -90,7 +91,8 @@ class BasicSubscribingConsumer[DATATYPE, USERTYPE](name : String,
         subscriberCoordinationOptions.agentAddress,
         subscriberCoordinationOptions.zkRootPath,
         subscriberCoordinationOptions.zkHosts,
-        subscriberCoordinationOptions.zkSessionTimeout)
+        subscriberCoordinationOptions.zkSessionTimeout,
+        subscriberCoordinationOptions.zkConnectionTimeout)
     }
 
     checkpointEventsResolver.startUpdate()

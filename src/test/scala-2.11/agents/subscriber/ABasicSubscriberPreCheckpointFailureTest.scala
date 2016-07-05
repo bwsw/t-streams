@@ -20,7 +20,7 @@ import com.datastax.driver.core.Cluster
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import testutils.{CassandraHelper, LocalGeneratorCreator, RoundRobinPolicyCreator, TestUtils}
 
-
+//TODO refactoring
 class ABasicSubscriberPreCheckpointFailureTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils{
   System.setProperty("DEBUG", "true")
   System.setProperty("AfterPreCheckpointFailure", "true")
@@ -78,10 +78,11 @@ class ABasicSubscriberPreCheckpointFailureTest extends FlatSpec with Matchers wi
     agentAddress = s"localhost:8000",
     zkHosts = List(new InetSocketAddress("localhost", 2181)),
     zkRootPath = "/unit",
-    zkTimeout = 7000,
+    zkSessionTimeout = 7000,
     isLowPriorityToBeMaster = false,
     transport = new TcpTransport,
-    transportTimeout = 5)
+    transportTimeout = 5,
+    zkConnectionTimeout = 7)
 
   //producer/consumer options
   val producerOptions = new BasicProducerOptions[String, Array[Byte]](
@@ -129,7 +130,7 @@ class ABasicSubscriberPreCheckpointFailureTest extends FlatSpec with Matchers wi
       "test_consumer",
       streamForConsumer,
       consumerOptions,
-      new SubscriberCoordinationOptions("localhost:8588", "/unit", List(new InetSocketAddress("localhost",2181)), 7000),
+      new SubscriberCoordinationOptions("localhost:8588", "/unit", List(new InetSocketAddress("localhost",2181)), 7000, 7000),
       callback,
       path)
     subscribeConsumer.start()
@@ -149,7 +150,7 @@ class ABasicSubscriberPreCheckpointFailureTest extends FlatSpec with Matchers wi
         ttl = 60 * 10,
         description = "some_description"),
       consumerOptions,
-      new SubscriberCoordinationOptions("localhost:8588", "/unit", List(new InetSocketAddress("localhost",2181)), 7000),
+      new SubscriberCoordinationOptions("localhost:8588", "/unit", List(new InetSocketAddress("localhost",2181)), 7000, 7000),
       callback,
       path)
     subscribeConsumer.start()
@@ -177,6 +178,7 @@ class ABasicSubscriberPreCheckpointFailureTest extends FlatSpec with Matchers wi
   }
 
   override def afterAll(): Unit = {
+    System.clearProperty("DEBUG")
     producer.stop()
     removeZkMetadata("/unit")
     session.execute(s"DROP KEYSPACE $randomKeyspace")

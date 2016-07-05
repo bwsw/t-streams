@@ -84,19 +84,21 @@ class ABasicProducerAndConsumerLazyTest extends FlatSpec with Matchers with Befo
     agentAddress = "localhost:8888",
     zkHosts = List(new InetSocketAddress("localhost", 2181)),
     zkRootPath = "/unit",
-    zkTimeout = 7000,
+    zkSessionTimeout = 7000,
     isLowPriorityToBeMaster = false,
     transport = new TcpTransport,
-    transportTimeout = 5)
+    transportTimeout = 5,
+    zkConnectionTimeout = 7)
 
   val agentSettings2 = new ProducerCoordinationOptions(
     agentAddress = "localhost:8889",
     zkHosts = List(new InetSocketAddress("localhost", 2181)),
     zkRootPath = "/unit",
-    zkTimeout = 7000,
+    zkSessionTimeout = 7000,
     isLowPriorityToBeMaster = false,
     transport = new TcpTransport,
-    transportTimeout = 5)
+    transportTimeout = 5,
+    zkConnectionTimeout = 7)
 
   //options for producers/consumer
   val producerOptions1 = new BasicProducerOptions[String, Array[Byte]](

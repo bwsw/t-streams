@@ -21,8 +21,9 @@ class ProducerCoordinator(prefix : String,
                           streamName : String,
                           usedPartitions : List[Int],
                           zkHosts : List[InetSocketAddress],
-                          zkSessionTimeout : Int) {
-  private val zkService = new ZkService(prefix, zkHosts, zkSessionTimeout)
+                          zkSessionTimeout : Int,
+                          zkConnectionTimeout : Int) {
+  private val zkService = new ZkService(prefix, zkHosts, zkSessionTimeout, zkConnectionTimeout)
   private val broadcaster = new Broadcaster
   private val lock = new ReentrantLock(true)
 

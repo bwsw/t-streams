@@ -132,10 +132,11 @@ class AManyBasicProducersStreamingInManyPartitionsAndConsumerTest extends FlatSp
       agentAddress = s"localhost:$port",
       zkHosts = List(new InetSocketAddress("localhost", 2181)),
       zkRootPath = "/unit",
-      zkTimeout = 7000,
+      zkSessionTimeout = 7000,
       isLowPriorityToBeMaster = false,
       transport = new TcpTransport,
-      transportTimeout = 5)
+      transportTimeout = 5,
+      zkConnectionTimeout = 7)
 
     port += 1
 

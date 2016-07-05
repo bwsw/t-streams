@@ -40,7 +40,8 @@ class BasicProducer[USERTYPE,DATATYPE](val name : String,
     stream.getName,
     producerOptions.writePolicy.getUsedPartition(),
     producerOptions.producerCoordinationSettings.zkHosts,
-    producerOptions.producerCoordinationSettings.zkTimeout)
+    producerOptions.producerCoordinationSettings.zkSessionTimeout,
+    producerOptions.producerCoordinationSettings.zkConnectionTimeout)
 
   private val streamLock = coordinator.getStreamLock(stream.getName)
   //used for managing new agents on stream
@@ -197,7 +198,8 @@ class BasicProducer[USERTYPE,DATATYPE](val name : String,
     agentAddress = producerOptions.producerCoordinationSettings.agentAddress,
     zkHosts = producerOptions.producerCoordinationSettings.zkHosts,
     zkRootPath = producerOptions.producerCoordinationSettings.zkRootPath,
-    zkTimeout = producerOptions.producerCoordinationSettings.zkTimeout,
+    zkSessionTimeout = producerOptions.producerCoordinationSettings.zkSessionTimeout,
+    zkConnectionTimeout = producerOptions.producerCoordinationSettings.zkConnectionTimeout,
     producer = this,
     usedPartitions = producerOptions.writePolicy.getUsedPartition(),
     isLowPriorityToBeMaster = producerOptions.producerCoordinationSettings.isLowPriorityToBeMaster,

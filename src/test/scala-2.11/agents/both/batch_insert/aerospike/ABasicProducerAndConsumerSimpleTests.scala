@@ -73,10 +73,11 @@ class ABasicProducerAndConsumerSimpleTests extends FlatSpec with Matchers with B
     agentAddress = "localhost:8888",
     zkHosts = List(new InetSocketAddress("localhost", 2181)),
     zkRootPath = "/unit",
-    zkTimeout = 7000,
+    zkSessionTimeout = 7000,
     isLowPriorityToBeMaster = false,
     transport = new TcpTransport,
-    transportTimeout = 5)
+    transportTimeout = 5,
+    zkConnectionTimeout = 7)
 
   //producer/consumer options
   val producerOptions = new BasicProducerOptions[String, Array[Byte]](

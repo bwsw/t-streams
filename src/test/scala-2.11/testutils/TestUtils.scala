@@ -10,7 +10,7 @@ import scala.collection.mutable.ListBuffer
  * Test help utils
  */
 trait TestUtils {
-  private val zkService = new ZkService("", List(new InetSocketAddress("localhost",2181)), 7000)
+  private val zkService = new ZkService("", List(new InetSocketAddress("localhost",2181)), 7000, 7000)
   protected val batchSizeTestVal = 5
 
   /**

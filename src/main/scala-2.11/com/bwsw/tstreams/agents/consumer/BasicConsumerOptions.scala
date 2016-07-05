@@ -53,4 +53,5 @@ class SubscriberCoordinationOptions (val agentAddress : String,
                                    val zkRootPath : String,
                                    val zkHosts : List[InetSocketAddress],
                                    val zkSessionTimeout : Int,
+                                   val zkConnectionTimeout : Int,
                                    val threadPoolAmount: Int = -1)
