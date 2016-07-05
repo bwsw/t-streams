@@ -5,6 +5,7 @@ import java.util.concurrent.locks.ReentrantLock
 import java.util.concurrent.{CountDownLatch, LinkedBlockingQueue, TimeUnit}
 
 import com.bwsw.tstreams.coordination.pubsub.messages.{ProducerTopicMessage, ProducerTransactionStatus}
+import com.bwsw.tstreams.debug.GlobalHook
 import org.slf4j.LoggerFactory
 
 import scala.collection.mutable.ListBuffer
@@ -182,6 +183,9 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](producerLock: ReentrantLock,
       logger.debug(s"[PRE CHECKPOINT PARTITION_$partition] " +
         s"ts=${transactionUuid.timestamp()}")
 
+      //debug purposes only
+      GlobalHook.invokePreCheckpointFailure(this)
+
       //must do it after agent.publish cuz it can be long operation
       //because of agents re-election
       stopKeepAlive()
@@ -195,6 +199,9 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](producerLock: ReentrantLock,
 
       logger.debug(s"[COMMIT PARTITION_$partition] " +
         s"ts=${transactionUuid.timestamp()}")
+
+      //debug purposes only
+      GlobalHook.invoke("AfterCommitFailure")
 
       val finalCheckpoint = ProducerTopicMessage(
         txnUuid = transactionUuid,

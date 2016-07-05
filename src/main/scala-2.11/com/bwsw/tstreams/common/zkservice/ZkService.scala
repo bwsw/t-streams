@@ -1,12 +1,14 @@
 package com.bwsw.tstreams.common.zkservice
 
 import java.net.InetSocketAddress
+
 import com.bwsw.tstreams.common.serializer.JsonSerializer
 import com.twitter.common.quantity.Amount
-import com.twitter.common.zookeeper.{ZooKeeperClient, DistributedLockImpl}
+import com.twitter.common.zookeeper.{DistributedLockImpl, ZooKeeperClient}
 import org.apache.zookeeper.ZooDefs.Ids
 import org.apache.zookeeper.ZooKeeper.States
-import org.apache.zookeeper.{Watcher, CreateMode}
+import org.apache.zookeeper.{CreateMode, Watcher, ZooKeeper}
+
 import collection.JavaConverters._
 
 /**
@@ -15,9 +17,11 @@ import collection.JavaConverters._
  * @param zkSessionTimeout Zk session timeout to connect
  */
 class ZkService(prefix : String, zkHosts : List[InetSocketAddress], zkSessionTimeout : Int){
+  //TODO fix zk timeout
   private val sessionTimeout = Amount.of(new Integer(zkSessionTimeout),com.twitter.common.quantity.Time.SECONDS)
   private val hosts = zkHosts.asJava
   private val twitterZkClient: ZooKeeperClient = new ZooKeeperClient(sessionTimeout, hosts)
+  //TODO move 7 sec
   private val zkClient = twitterZkClient.get(Amount.of(7L, com.twitter.common.quantity.Time.SECONDS))
   private val serializer = new JsonSerializer
   private val map = scala.collection.mutable.Map[String, DistributedLockImpl]()
@@ -34,7 +38,9 @@ class ZkService(prefix : String, zkHosts : List[InetSocketAddress], zkSessionTim
 
   def create[T](path : String, data : T, createMode: CreateMode) = {
     val serialized = serializer.serialize(data)
-    val initPath = prefix + path.reverse.dropWhile(_!='/').reverse.dropRight(1)
+    var initPath = prefix + path.reverse.dropWhile(_!='/').reverse.dropRight(1)
+    if (initPath.isEmpty)
+      initPath = "/"
     if (zkClient.exists(initPath, null) == null) {
       val lock = getLock("/producers/create_path_lock")
       lock.lock()
@@ -135,6 +141,9 @@ class ZkService(prefix : String, zkHosts : List[InetSocketAddress], zkSessionTim
   
   def isZkConnected =
     zkClient.getState == States.CONNECTED
+
+  def getSessionTimeout =
+    zkClient.getSessionTimeout
 
   def close() = {
     twitterZkClient.close()
