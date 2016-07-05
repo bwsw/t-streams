@@ -76,9 +76,9 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](producerLock: ReentrantLock,
     * @param obj some user object
    */
   def send(obj : USERTYPE) : Unit = {
+    producerLock.lock()
     if (closed)
       throw new IllegalStateException("transaction is closed")
-    producerLock.lock()
 
     basicProducer.producerOptions.insertType match {
       case InsertionType.BatchInsert(size) =>
@@ -116,9 +116,9 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](producerLock: ReentrantLock,
    * Canceling current transaction
    */
   def cancel() = {
+    producerLock.lock()
     if (closed)
       throw new IllegalStateException("transaction is already closed")
-    producerLock.lock()
 
     basicProducer.producerOptions.insertType match {
       case InsertionType.SingleElementInsert =>
@@ -135,7 +135,6 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](producerLock: ReentrantLock,
     basicProducer.agent.publish(msg)
     logger.debug(s"[CANCEL PARTITION_${msg.partition}] ts=${msg.txnUuid.timestamp()} status=${msg.status}")
 
-    closed = true
     producerLock.unlock()
   }
 
@@ -147,15 +146,17 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](producerLock: ReentrantLock,
 
     //await till update thread will be stoped
     updateThread.join()
+
+    closed = true
   }
 
   /**
    * Submit transaction(transaction will be available by consumer only after closing)
    */
   def checkpoint() : Unit = {
+    producerLock.lock()
     if (closed)
       throw new IllegalStateException("transaction is already closed")
-    producerLock.lock()
 
     basicProducer.producerOptions.insertType match {
       case InsertionType.SingleElementInsert =>
@@ -181,7 +182,7 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](producerLock: ReentrantLock,
       logger.debug(s"[PRE CHECKPOINT PARTITION_$partition] " +
         s"ts=${transactionUuid.timestamp()}")
 
-      //we must do it after agent.publish cuz it can be long operation
+      //must do it after agent.publish cuz it can be long operation
       //because of agents re-election
       stopKeepAlive()
 
@@ -209,7 +210,6 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](producerLock: ReentrantLock,
       stopKeepAlive()
     }
 
-    closed = true
     producerLock.unlock()
   }
 

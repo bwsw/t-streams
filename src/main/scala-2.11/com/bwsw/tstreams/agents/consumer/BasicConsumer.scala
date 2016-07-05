@@ -157,7 +157,7 @@ class BasicConsumer[DATATYPE, USERTYPE](val name : String,
   }
 
   /**
-   * @return Consumed transaction of None if nothing to consume
+   * @return Consumed transaction or None if nothing to consume
    */
   def getTransaction: Option[BasicConsumerTransaction[DATATYPE, USERTYPE]] = {
     consumerLock.lock()

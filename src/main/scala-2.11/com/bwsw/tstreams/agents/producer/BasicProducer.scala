@@ -15,7 +15,8 @@ import org.slf4j.LoggerFactory
 
 /**
  * Basic producer class
- * @param name Producer name
+  *
+  * @param name Producer name
  * @param stream Stream for transaction sending
  * @param producerOptions This producer options
  * @tparam USERTYPE User data type
@@ -27,7 +28,6 @@ class BasicProducer[USERTYPE,DATATYPE](val name : String,
 
   stream.dataStorage.bind()
   private val logger = LoggerFactory.getLogger(this.getClass)
-
   private val producerLock = new ReentrantLock(true)
 
   logger.info(s"Start new Basic producer with name : $name, streamName : ${stream.getName}, streamPartitions : ${stream.getPartitions}\n")
@@ -217,5 +217,7 @@ class BasicProducer[USERTYPE,DATATYPE](val name : String,
   /**
     * Agent lock on any actions which has to do with checkpoint
     */
-  override def getAgentLock(): ReentrantLock = producerLock
+  override def getAgentLock(): ReentrantLock = {
+    producerLock
+  }
 }
