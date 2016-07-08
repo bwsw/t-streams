@@ -103,6 +103,6 @@ class ProducerTopicMessageEncoder extends MessageToMessageEncoder[ProducerTopicM
   val serializer = new JsonSerializer
 
   override def encode(ctx: ChannelHandlerContext, msg: ProducerTopicMessage, out: util.List[AnyRef]): Unit = {
-    out.add(serializer.serialize(msg) + "\n")
+    out.add(serializer.serialize(msg) + "\r\n")
   }
 }

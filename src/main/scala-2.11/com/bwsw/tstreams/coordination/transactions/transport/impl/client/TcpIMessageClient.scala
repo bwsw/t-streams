@@ -1,9 +1,11 @@
 package com.bwsw.tstreams.coordination.transactions.transport.impl.client
 
-import java.io.{IOException, InputStreamReader, BufferedReader}
-import java.net.Socket
+import java.io.{BufferedReader, IOException, InputStreamReader}
+import java.net.{Socket, SocketTimeoutException}
+
 import com.bwsw.tstreams.common.serializer.JsonSerializer
 import com.bwsw.tstreams.coordination.transactions.messages.IMessage
+import com.fasterxml.jackson.core.JsonParseException
 
 /**
  * Client for sending [[IMessage]]]
@@ -44,6 +46,15 @@ class TcpIMessageClient {
   }
 
   /**
+    * Wrap message with line delimiter
+    * @param msg
+    * @return
+    */
+  private def wrapMsg(msg : String): String = {
+    msg + "\r\n"
+  }
+
+  /**
    * Helper method for [[sendAndWaitResponse]]]
    * @param socket Socket to send msg
    * @param msg Msg to send
@@ -51,7 +62,7 @@ class TcpIMessageClient {
    */
   private def writeMsgAndWaitResponse(socket : Socket, msg : IMessage) : IMessage = {
     //do request
-    val string = serializer.serialize(msg) + "\n" // "\n" separator is used on server side to separate incoming messages
+    val string = wrapMsg(serializer.serialize(msg))
     try {
       val outputStream = socket.getOutputStream
       outputStream.write(string.getBytes)
@@ -81,9 +92,8 @@ class TcpIMessageClient {
         }
       }
       catch {
-        case e : java.net.SocketTimeoutException => null.asInstanceOf[IMessage]
-        case e : com.fasterxml.jackson.core.JsonParseException => null.asInstanceOf[IMessage]
-        case e : IOException => null.asInstanceOf[IMessage]
+        case e @ (_: SocketTimeoutException | _: JsonParseException | _: IOException) =>
+          null.asInstanceOf[IMessage]
       }
     }
     if (answer == null) {

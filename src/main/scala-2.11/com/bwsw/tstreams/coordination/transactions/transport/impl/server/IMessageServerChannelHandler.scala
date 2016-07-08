@@ -117,6 +117,6 @@ class IMessageEncoder extends MessageToMessageEncoder[IMessage]{
   val serializer = new JsonSerializer
 
   override def encode(ctx: ChannelHandlerContext, msg: IMessage, out: util.List[AnyRef]): Unit = {
-    out.add(serializer.serialize(msg) + "\n")
+    out.add(serializer.serialize(msg) + "\r\n")
   }
 }
