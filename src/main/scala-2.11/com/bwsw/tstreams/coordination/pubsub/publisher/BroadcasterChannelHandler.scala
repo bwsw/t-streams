@@ -66,7 +66,7 @@ class BroadcasterChannelHandler(broadcaster : Broadcaster) extends SimpleChannel
    */
   def broadcast(msg : ProducerTopicMessage) : Unit = {
     logger.debug(s"[BROADCASTER PUBLISH] partition=${msg.partition} status=${msg.status} uuid=${msg.txnUuid.timestamp()}\n")
-    group.writeAndFlush(msg).await()
+    group.writeAndFlush(msg)
   }
 
   /**
@@ -103,6 +103,6 @@ class ProducerTopicMessageEncoder extends MessageToMessageEncoder[ProducerTopicM
   val serializer = new JsonSerializer
 
   override def encode(ctx: ChannelHandlerContext, msg: ProducerTopicMessage, out: util.List[AnyRef]): Unit = {
-    out.add(serializer.serialize(msg) + "\r\n")
+    out.add(serializer.serialize(msg) + "\n")
   }
 }

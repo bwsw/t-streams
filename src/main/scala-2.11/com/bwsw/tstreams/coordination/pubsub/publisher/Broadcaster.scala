@@ -40,10 +40,12 @@ class Broadcaster {
     assert(splits.size == 2)
     val host = splits(0)
     val port = splits(1).toInt
-    val channelFuture = bootstrap.connect(new InetSocketAddress(host,port)).await()
-    if (channelFuture.isSuccess){
+    //TODO mb wrong according to https://habrahabr.ru/post/136456/
+    //mb need to replace with approach below:
+    //https://github.com/netty/netty/blob/b03b11a24860a1d636744c989dad50d223ffc6bc/src/main/java/org/jboss/netty/example/proxy/HexDumpProxyInboundHandler.java
+    val channelFuture = bootstrap.connect(new InetSocketAddress(host,port)).sync()
+    if (channelFuture.isSuccess)
       channelHandler.updateMap(channelFuture.channel().id(), address)
-    }
   }
 
   /**

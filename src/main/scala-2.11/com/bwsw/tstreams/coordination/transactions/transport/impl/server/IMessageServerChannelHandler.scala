@@ -86,7 +86,7 @@ class IMessageServerChannelHandler extends SimpleChannelInboundHandler[IMessage]
     if (addressToId.contains(responseAddress)){
       val id = addressToId(responseAddress)
       val channel = idToChannel(id)
-      channel.writeAndFlush(msg).await()
+      channel.writeAndFlush(msg)
     }
     lock.unlock()
   }
@@ -117,6 +117,6 @@ class IMessageEncoder extends MessageToMessageEncoder[IMessage]{
   val serializer = new JsonSerializer
 
   override def encode(ctx: ChannelHandlerContext, msg: IMessage, out: util.List[AnyRef]): Unit = {
-    out.add(serializer.serialize(msg) + "\r\n")
+    out.add(serializer.serialize(msg) + "\n")
   }
 }

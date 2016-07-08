@@ -51,7 +51,7 @@ class TcpIMessageClient {
     * @return
     */
   private def wrapMsg(msg : String): String = {
-    msg + "\r\n"
+    msg + "\n"
   }
 
   /**
