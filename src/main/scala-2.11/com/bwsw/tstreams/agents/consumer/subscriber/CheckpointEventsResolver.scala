@@ -77,6 +77,7 @@ class CheckpointEventsResolver(subscriber : BasicSubscribingConsumer[_,_]) {
     partitionToTxns foreach { case (partition, transactions) =>
       transactions foreach { txn =>
         if (retries(partition)(txn) == 0) {
+          updateTransactionBuffer(partition, txn, ProducerTransactionStatus.cancelled, -1)
           removeTxn(partition, txn)
           logger.debug(s"[CHECKPOINT EVENT RESOLVER] [REFRESH ZERO RETRY] CER on" +
             s" partition:{$partition}" +
@@ -128,7 +129,7 @@ class CheckpointEventsResolver(subscriber : BasicSubscribingConsumer[_,_]) {
   def stop() = {
     isRunning.set(false)
     updateThread.join()
-    logger.debug(s"[CHECKPOINT EVENT RESOLVER] stoped")
+    logger.debug(s"[CHECKPOINT EVENT RESOLVER] stop")
   }
 
   private def clear() = {

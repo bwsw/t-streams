@@ -60,11 +60,11 @@ class BasicSubscribingConsumer[DATATYPE, USERTYPE](name : String,
     */
   private val partitionsToExecutors = usedPartitions
     .zipWithIndex
-    .map{case(partition,execNum) => (partition,execNum % poolSize)}
+    .map{case(partition,execNum) => (partition, execNum % poolSize)}
     .toMap
 
   /**
-    * Executors
+    * Executors for each partition to handle transactions flow
     */
   private val executors : scala.collection.mutable.Map[Int, ExecutorService] =
     scala.collection.mutable.Map[Int, ExecutorService]()
@@ -106,16 +106,17 @@ class BasicSubscribingConsumer[DATATYPE, USERTYPE](name : String,
     coordinator.startListen()
     coordinator.startCallback()
     updateManager.startUpdate(callBack.pollingFrequency)
+    val uniquePrefix = UUID.randomUUID()
 
     usedPartitions foreach { partition =>
       val lastTransactionOpt = resolveLastTxn(partition)
       val queue =
         if (lastTransactionOpt.isDefined) {
           val txnUuid = lastTransactionOpt.get.getTxnUUID
-          new PersistentTransactionQueue(persistentQueuePath + s"/${UUID.randomUUID()}/$partition", txnUuid)
+          new PersistentTransactionQueue(persistentQueuePath + s"/$uniquePrefix/$partition", txnUuid)
         }
         else {
-          new PersistentTransactionQueue(persistentQueuePath + s"/${UUID.randomUUID()}/$partition", null)
+          new PersistentTransactionQueue(persistentQueuePath + s"/$uniquePrefix/$partition", null)
         }
 
       val lastTxnUuid = if (lastTransactionOpt.isDefined) {
@@ -129,27 +130,28 @@ class BasicSubscribingConsumer[DATATYPE, USERTYPE](name : String,
 
       val transactionsRelay = new SubscriberTransactionsRelay(
         subscriber = this,
-        offset = currentOffsets(partition),
         partition = partition,
         coordinator = coordinator,
         callback = callBack,
         queue = queue,
-        lastTransaction = lastTxnUuid,
+        lastConsumedTransaction = lastTxnUuid,
         executor = executor,
         checkpointEventsResolver = checkpointEventsResolver)
 
       //consume all transactions less or equal than last transaction
       if (lastTransactionOpt.isDefined) {
-        transactionsRelay.consumeTransactionsLessOrEqualThan(lastTransactionOpt.get.getTxnUUID)
+        transactionsRelay.consumeTransactionsLessOrEqualThan(
+          leftBorder = currentOffsets(partition),
+          rightBorder = lastTransactionOpt.get.getTxnUUID)
       }
 
       transactionsRelay.notifyProducersAndStartListen()
 
       //consume all transactions strictly greater than last
       if (lastTransactionOpt.isDefined) {
-        transactionsRelay.consumeTransactionsMoreThan(lastTransactionOpt.get.getTxnUUID)
+        transactionsRelay.consumeTransactionsMoreThan(leftBorder = lastTransactionOpt.get.getTxnUUID)
       } else {
-        transactionsRelay.consumeTransactionsMoreThan(currentOffsets(partition))
+        transactionsRelay.consumeTransactionsMoreThan(leftBorder = currentOffsets(partition))
       }
 
       updateManager.addExecutorWithRunnable(executor,transactionsRelay.getUpdateRunnable())
@@ -173,7 +175,8 @@ class BasicSubscribingConsumer[DATATYPE, USERTYPE](name : String,
     * Stop subscriber
     */
   def stop() = {
-    if (!isStarted) throw new IllegalStateException("subscriber is not started")
+    if (!isStarted)
+      throw new IllegalStateException("subscriber is not started")
     isStarted = false
     updateManager.stopUpdate()
     if (executors != null) {

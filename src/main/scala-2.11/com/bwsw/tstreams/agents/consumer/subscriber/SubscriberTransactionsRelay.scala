@@ -16,7 +16,6 @@ import scala.util.control.Breaks._
  * Relay for help to consume transactions
  * on concrete partition from concrete offset
  * @param subscriber Subscriber instance
- * @param offset Offset from which to start
  * @param partition Partition from which to consume
  * @param coordinator Coordinator instance for maintaining new transactions updates
  * @param callback Callback on consumed transactions
@@ -25,19 +24,18 @@ import scala.util.control.Breaks._
  * @tparam USERTYPE User data type
  */
 class SubscriberTransactionsRelay[DATATYPE,USERTYPE](subscriber : BasicSubscribingConsumer[DATATYPE,USERTYPE],
-                                                     offset: UUID,
                                                      partition : Int,
                                                      coordinator: SubscriberCoordinator,
                                                      callback: BasicSubscriberCallback[DATATYPE, USERTYPE],
                                                      queue : PersistentTransactionQueue,
-                                                     lastTransaction : UUID,
+                                                     var lastConsumedTransaction : UUID,
                                                      executor : ExecutorService,
                                                      checkpointEventsResolver: CheckpointEventsResolver) {
+
   private val POOLING_INTERVAL_MS = 100
   private val logger = LoggerFactory.getLogger(this.getClass)
   private val transactionBuffer  = new TransactionsBuffer
   private val lock = new ReentrantLock(true)
-  private var lastConsumedTransaction : UUID = lastTransaction
   private val streamName = subscriber.stream.getName
   checkpointEventsResolver.bindBuffer(partition, transactionBuffer, lock)
 
@@ -72,20 +70,18 @@ class SubscriberTransactionsRelay[DATATYPE,USERTYPE](subscriber : BasicSubscribi
   }
 
   /**
-   * Consume all transactions in interval ([[offset]]] ; transactionUUID ]
-    *
-    * @param transactionUUID Right interval border
+   * Consume all transactions in interval (leftBorder ; rightBorder]
    */
-  def consumeTransactionsLessOrEqualThan(transactionUUID : UUID) = {
+  def consumeTransactionsLessOrEqualThan(leftBorder : UUID, rightBorder : UUID) = {
     //TODO remove after complex testing
-    var lastTxn : UUID = offset
+    var lastTxn : UUID = leftBorder
     val runnable = new Runnable {
       override def run(): Unit = {
         val transactionsIterator = subscriber.stream.metadataStorage.commitEntity.getTransactionsIterator(
           streamName = streamName,
           partition = partition,
-          leftBorder = offset,
-          rightBorder = transactionUUID)
+          leftBorder = leftBorder,
+          rightBorder = rightBorder)
 
         while (transactionsIterator.hasNext) {
           val entry = transactionsIterator.next()
@@ -126,8 +122,8 @@ class SubscriberTransactionsRelay[DATATYPE,USERTYPE](subscriber : BasicSubscribi
           }
         }
 
-        assert(lastTxn.timestamp() == transactionUUID.timestamp(),
-          logger.debug(s"[RELAY WRONG ASSERT] ${transactionUUID.timestamp()} " +
+        assert(lastTxn.timestamp() == rightBorder.timestamp(),
+          logger.debug(s"[RELAY WRONG ASSERT] ${rightBorder.timestamp()} " +
             s"with lastTxn={${lastTxn.timestamp()}}\n"))
       }
     }
@@ -136,18 +132,18 @@ class SubscriberTransactionsRelay[DATATYPE,USERTYPE](subscriber : BasicSubscribi
   }
 
   /**
-   * Consume all transaction in interval (transactionUUID ; inf)
+   * Consume all transaction in interval (leftBorder ; inf)
     *
-    * @param transactionUUID Left interval border
+    * @param leftBorder Left interval border
    */
-  def consumeTransactionsMoreThan(transactionUUID : UUID) = {
+  def consumeTransactionsMoreThan(leftBorder : UUID) = {
     //TODO remove after complex testing
-    var lastTxn : UUID = lastTransaction
+    var lastTxn : UUID = leftBorder
     val transactionsGreaterThanLast =
       subscriber.stream.metadataStorage.commitEntity.getTransactions(
         streamName,
         partition,
-        transactionUUID)
+        leftBorder)
 
     lock.lock()
     transactionsGreaterThanLast foreach { txn =>

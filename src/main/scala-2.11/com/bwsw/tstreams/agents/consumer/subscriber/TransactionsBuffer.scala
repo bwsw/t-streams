@@ -21,6 +21,8 @@ class TransactionsBuffer {
    * @param ttl Transaction ttl(time of expiration)
    */
   def update(txnUuid : UUID, status: ProducerTransactionStatus, ttl : Int) : Unit = {
+
+    //TODO wrap all checks in validate method and log it
     //ignore update events until txn doesn't exist in buffer
     if (!map.exist(txnUuid) && status == ProducerTransactionStatus.updated) {
       return
@@ -42,18 +44,16 @@ class TransactionsBuffer {
     }
 
     status match {
-      case ProducerTransactionStatus.updated =>
+      case ProducerTransactionStatus.updated |
+           ProducerTransactionStatus.opened =>
         map.put(txnUuid, (status, ttl))
 
-      case ProducerTransactionStatus.opened =>
-        map.put(txnUuid, (status, ttl))
-
+      //ignore ttl, preCheckpoint will be resolved by another thread
       case ProducerTransactionStatus.preCheckpoint =>
-        //ignore ttl, preCheckpoint will be resolved by another thread
         map.put(txnUuid, (status, -1))
 
+      //just ignore ttl because transaction is closed
       case ProducerTransactionStatus.finalCheckpoint =>
-        //just ignore ttl because transaction is closed
         map.put(txnUuid, (status, -1))
 
       case ProducerTransactionStatus.cancelled =>
