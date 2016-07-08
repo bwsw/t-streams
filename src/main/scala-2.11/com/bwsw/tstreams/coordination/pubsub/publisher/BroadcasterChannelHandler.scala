@@ -12,7 +12,8 @@ import org.slf4j.LoggerFactory
 
 /**
  * Broadcaster accepted connection manager
- * @param broadcaster Broadcaster link
+  *
+  * @param broadcaster Broadcaster link
  */
 @ChannelHandler.Sharable
 class BroadcasterChannelHandler(broadcaster : Broadcaster) extends SimpleChannelInboundHandler[ProducerTopicMessage] {
@@ -31,7 +32,8 @@ class BroadcasterChannelHandler(broadcaster : Broadcaster) extends SimpleChannel
 
   /**
    * Triggered on connect to new subscriber
-   * @param ctx Netty ctx
+    *
+    * @param ctx Netty ctx
    */
   override def channelActive(ctx: ChannelHandlerContext) : Unit = {
     group.add(ctx.channel())
@@ -39,20 +41,24 @@ class BroadcasterChannelHandler(broadcaster : Broadcaster) extends SimpleChannel
 
   /**
    * Triggered on disconnect of subscriber
-   * @param ctx Netty ctx
+    *
+    * @param ctx Netty ctx
    */
   override def channelInactive(ctx: ChannelHandlerContext) : Unit = {
     lock.lock()
     val id = ctx.channel().id()
-    val address = idToAddress(id)
-    idToAddress.remove(id)
-    addressToId.remove(address)
+    if (idToAddress contains id) {
+      val address = idToAddress(id)
+      idToAddress.remove(id)
+      addressToId.remove(address)
+    }
     lock.unlock()
   }
 
   /**
    * Triggered on exception
-   * @param ctx Netty ctx
+    *
+    * @param ctx Netty ctx
    * @param cause Cause of exception
    */
   override def exceptionCaught(ctx: ChannelHandlerContext, cause: Throwable) = {
@@ -62,7 +68,8 @@ class BroadcasterChannelHandler(broadcaster : Broadcaster) extends SimpleChannel
 
   /**
    * Broadcast msg to all subscribers
-   * @param msg Msg to broadcast
+    *
+    * @param msg Msg to broadcast
    */
   def broadcast(msg : ProducerTopicMessage) : Unit = {
     logger.debug(s"[BROADCASTER PUBLISH] partition=${msg.partition} status=${msg.status} uuid=${msg.txnUuid.timestamp()}\n")
@@ -85,7 +92,8 @@ class BroadcasterChannelHandler(broadcaster : Broadcaster) extends SimpleChannel
 
   /**
    * Update [[idToAddress]]] [[addressToId]]] with new values
-   * @param channelId Netty channel id
+    *
+    * @param channelId Netty channel id
    * @param address subscriber address
    */
   def updateMap(channelId: ChannelId, address : String) = {
