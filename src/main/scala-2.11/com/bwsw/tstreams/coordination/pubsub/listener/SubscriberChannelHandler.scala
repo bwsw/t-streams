@@ -140,7 +140,7 @@ class ProducerTopicMessageDecoder extends MessageToMessageDecoder[String]{
     }
     catch {
       case e @ (_:  JsonMappingException | _: JsonParseException) =>
-        logger.warn(s"wrong serialization for msg : $msg\n")
+        logger.warn(s"exception occured: ${e.getMessage}\n")
     }
   }
 }
