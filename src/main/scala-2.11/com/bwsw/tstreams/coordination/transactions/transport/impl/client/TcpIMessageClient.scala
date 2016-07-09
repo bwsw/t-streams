@@ -50,12 +50,28 @@ class TcpIMessageClient {
   }
 
   /**
-    * Wrap message with line delimiter
+    * Wrap message with line delimiter to separate it on server side
     * @param msg
     * @return
     */
   private def wrapMsg(msg : String): String = {
     msg + "\n"
+  }
+
+  /**
+    *
+    * @param socket
+    * @param msg
+    */
+  private def closeSocketAndUpdateMap(socket: Socket, msg : IMessage) = {
+    try {
+      socket.close()
+    } catch {
+      case e : IOException =>
+        logger.warn(s"exception occurred: ${e.getMessage}")
+    } finally {
+      addressToConnection.remove(msg.receiverID)
+    }
   }
 
   /**
@@ -75,15 +91,8 @@ class TcpIMessageClient {
     catch {
       case e : IOException =>
         logger.warn(s"exception occurred: ${e.getMessage}")
-        try {
-          socket.close()
-        } catch {
-          case e : IOException =>
-            logger.warn(s"exception occurred: ${e.getMessage}")
-        } finally {
-          addressToConnection.remove(msg.receiverID)
-          return null.asInstanceOf[IMessage]
-        }
+        closeSocketAndUpdateMap(socket, msg)
+        return null.asInstanceOf[IMessage]
     }
     //wait response with timeout
     var answer = {
@@ -105,8 +114,7 @@ class TcpIMessageClient {
     }
     if (answer == null || msg.msgID != answer.msgID) {
       answer = null
-      socket.close()
-      addressToConnection.remove(msg.receiverID)
+      closeSocketAndUpdateMap(socket, msg)
     }
 
     answer

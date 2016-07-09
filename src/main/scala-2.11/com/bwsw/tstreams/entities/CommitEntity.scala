@@ -52,21 +52,6 @@ class CommitEntity(commitLog : String, session: Session) {
   }
 
   /**
-   * Retrieving some set of transactions more than last transaction
-   * @param streamName Name of the stream
-   * @param partition Number of the partition
-   * @param lastTransaction Transaction from which start to retrieve
-   * @return Iterator of selected transactions
-   */
-  def getTransactionsIterator(streamName : String, partition : Int, lastTransaction : UUID) : util.Iterator[Row] = {
-    val values : List[AnyRef] = List(streamName, new Integer(partition), lastTransaction)
-    val statementWithBindings = selectTransactionsMoreThanStatementWithoutLimit.bind(values: _*)
-    val selected = session.execute(statementWithBindings)
-    val it: util.Iterator[Row] = selected.iterator()
-    it
-  }
-
-  /**
    * Retrieving some set of transactions more than last transaction (if cnt is default will be no limit to retrieve)
    * @param streamName Name of the stream
    * @param partition Number of the partition

@@ -35,16 +35,16 @@ class SubscriberTransactionsRelay[DATATYPE,USERTYPE](subscriber : BasicSubscribi
   private val POOLING_INTERVAL_MS = 100
   private val logger = LoggerFactory.getLogger(this.getClass)
   private val transactionBuffer  = new TransactionsBuffer
-  private val lock = new ReentrantLock(true)
+  private val transactionBufferLock = new ReentrantLock(true)
   private val streamName = subscriber.stream.getName
-  checkpointEventsResolver.bindBuffer(partition, transactionBuffer, lock)
+  checkpointEventsResolver.bindBuffer(partition, transactionBuffer, transactionBufferLock)
 
   /**
    * Transaction buffer updater
    */
   private val updateCallback = (msg : ProducerTopicMessage) => {
     if (msg.partition == partition) {
-      lock.lock()
+      transactionBufferLock.lock()
       logger.debug(s"[UPDATE_CALLBACK PARTITION_$partition] consumed msg with uuid:{${msg.txnUuid.timestamp()}}," +
         s" status:{${msg.status}}\n")
       if (msg.txnUuid.timestamp() > lastConsumedTransaction.timestamp()) {
@@ -54,7 +54,7 @@ class SubscriberTransactionsRelay[DATATYPE,USERTYPE](subscriber : BasicSubscribi
         }
         transactionBuffer.update(msg.txnUuid, msg.status, msg.ttl)
       }
-      lock.unlock()
+      transactionBufferLock.unlock()
     }
   }
 
@@ -145,7 +145,7 @@ class SubscriberTransactionsRelay[DATATYPE,USERTYPE](subscriber : BasicSubscribi
         partition,
         leftBorder)
 
-    lock.lock()
+    transactionBufferLock.lock()
     transactionsGreaterThanLast foreach { txn =>
       logger.debug(s"[MORE_LAST PARTITION_$partition] consumed txn with uuid:{${txn.txnUuid.timestamp()}}\n")
       if (txn.totalItems == -1) {
@@ -158,7 +158,7 @@ class SubscriberTransactionsRelay[DATATYPE,USERTYPE](subscriber : BasicSubscribi
           s"with lastTxn={${lastTxn.timestamp()}}\n"))
       lastTxn = txn.txnUuid
     }
-    lock.unlock()
+    transactionBufferLock.unlock()
   }
 
   /**
@@ -182,7 +182,7 @@ class SubscriberTransactionsRelay[DATATYPE,USERTYPE](subscriber : BasicSubscribi
     var totalAmount = 1
     val runnable = new Runnable {
       override def run(): Unit = {
-        lock.lock()
+        transactionBufferLock.lock()
         val it = transactionBuffer.getIterator()
         breakable {
           while (it.hasNext) {
@@ -211,7 +211,7 @@ class SubscriberTransactionsRelay[DATATYPE,USERTYPE](subscriber : BasicSubscribi
             it.remove()
           }
         }
-        lock.unlock()
+        transactionBufferLock.unlock()
       }
     }
     runnable
