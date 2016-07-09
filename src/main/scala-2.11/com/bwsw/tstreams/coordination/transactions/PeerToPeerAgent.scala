@@ -523,7 +523,9 @@ class PeerToPeerAgent(agentAddress : String,
             transport.response(response)
 
           case EmptyRequest(snd,rcv,p) =>
-            transport.response(EmptyResponse(rcv,snd,p))
+            val response = EmptyResponse(rcv,snd,p)
+            response.msgID = request.msgID
+            transport.response(response)
         }
       }
     }

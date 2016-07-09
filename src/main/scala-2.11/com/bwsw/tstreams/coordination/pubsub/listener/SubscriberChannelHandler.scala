@@ -5,8 +5,11 @@ import java.util.UUID
 import java.util.concurrent.{CountDownLatch, LinkedBlockingQueue}
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.locks.ReentrantLock
+
 import com.bwsw.tstreams.common.serializer.JsonSerializer
-import com.bwsw.tstreams.coordination.pubsub.messages.{ProducerTransactionStatus, ProducerTopicMessage}
+import com.bwsw.tstreams.coordination.pubsub.messages.{ProducerTopicMessage, ProducerTransactionStatus}
+import com.fasterxml.jackson.core.JsonParseException
+import com.fasterxml.jackson.databind.JsonMappingException
 import io.netty.channel.ChannelHandler.Sharable
 import io.netty.channel.{ChannelHandlerContext, SimpleChannelInboundHandler}
 import io.netty.handler.codec.MessageToMessageDecoder
@@ -107,7 +110,7 @@ class SubscriberChannelHandler extends SimpleChannelInboundHandler[ProducerTopic
    * @param msg [[ProducerTopicMessage]]]
    */
   override def channelRead0(ctx: ChannelHandlerContext, msg: ProducerTopicMessage): Unit = {
-    logger.debug(s"[READ PARTITION_${msg.partition}] ts=${msg.txnUuid.timestamp()} ttl=${msg.ttl} status=${msg.status}")
+    logger.debug(s"[READ PARTITION_${msg.partition}] ts=${msg.txnUuid.timestamp()} ttl=${msg.ttl} status=${msg.status}\n")
     queue.put(msg)
     ReferenceCountUtil.release(msg)
   }
@@ -127,6 +130,7 @@ class SubscriberChannelHandler extends SimpleChannelInboundHandler[ProducerTopic
  * Decoder to convert [[java.lang.String]] to [[ProducerTopicMessage]]]
  */
 class ProducerTopicMessageDecoder extends MessageToMessageDecoder[String]{
+  private val logger = LoggerFactory.getLogger(this.getClass)
   val serializer = new JsonSerializer
 
   override def decode(ctx: ChannelHandlerContext, msg: String, out: util.List[AnyRef]): Unit = {
@@ -135,8 +139,8 @@ class ProducerTopicMessageDecoder extends MessageToMessageDecoder[String]{
         out.add(serializer.deserialize[ProducerTopicMessage](msg))
     }
     catch {
-      case e : com.fasterxml.jackson.core.JsonParseException =>
-      case e : com.fasterxml.jackson.databind.JsonMappingException =>
+      case e @ (_:  JsonMappingException | _: JsonParseException) =>
+        logger.warn(s"wrong serialization for msg : $msg\n")
     }
   }
 }

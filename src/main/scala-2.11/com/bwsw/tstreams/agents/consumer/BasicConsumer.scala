@@ -102,10 +102,10 @@ class BasicConsumer[DATATYPE, USERTYPE](val name : String,
   //fill transaction buffer using current offsets
   for (i <- 0 until stream.getPartitions)
     transactionBuffer(i) = stream.metadataStorage.commitEntity.getTransactions(
-      stream.getName,
-      i,
-      currentOffsets(i),
-      options.transactionsPreload)
+      streamName = stream.getName,
+      partition = i,
+      lastTransaction = currentOffsets(i),
+      cnt = options.transactionsPreload)
 
   /**
    * Helper function for getTransaction() method
@@ -120,10 +120,10 @@ class BasicConsumer[DATATYPE, USERTYPE](val name : String,
 
     if (transactionBuffer(curPartition).isEmpty) {
       transactionBuffer(curPartition) = stream.metadataStorage.commitEntity.getTransactions(
-        stream.getName,
-        curPartition,
-        currentOffsets(curPartition),
-        options.transactionsPreload)
+        streamName = stream.getName,
+        partition = curPartition,
+        lastTransaction = currentOffsets(curPartition),
+        cnt = options.transactionsPreload)
     }
 
     if (transactionBuffer(curPartition).isEmpty)

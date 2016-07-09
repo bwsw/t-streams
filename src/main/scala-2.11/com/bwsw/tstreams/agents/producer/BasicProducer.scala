@@ -36,12 +36,12 @@ class BasicProducer[USERTYPE,DATATYPE](val name : String,
   private val partitionToTransaction = scala.collection.mutable.Map[Int, BasicProducerTransaction[USERTYPE,DATATYPE]]()
 
   val coordinator = new ProducerCoordinator(
-    producerOptions.producerCoordinationSettings.zkRootPath,
-    stream.getName,
-    producerOptions.writePolicy.getUsedPartition(),
-    producerOptions.producerCoordinationSettings.zkHosts,
-    producerOptions.producerCoordinationSettings.zkSessionTimeout,
-    producerOptions.producerCoordinationSettings.zkConnectionTimeout)
+    prefix = producerOptions.producerCoordinationSettings.zkRootPath,
+    streamName = stream.getName,
+    usedPartitions = producerOptions.writePolicy.getUsedPartition(),
+    zkHosts = producerOptions.producerCoordinationSettings.zkHosts,
+    zkSessionTimeout = producerOptions.producerCoordinationSettings.zkSessionTimeout,
+    zkConnectionTimeout = producerOptions.producerCoordinationSettings.zkConnectionTimeout)
 
   private val streamLock = coordinator.getStreamLock(stream.getName)
   //used for managing new agents on stream

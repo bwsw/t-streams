@@ -6,6 +6,7 @@ import java.net.{Socket, SocketTimeoutException}
 import com.bwsw.tstreams.common.serializer.JsonSerializer
 import com.bwsw.tstreams.coordination.transactions.messages.IMessage
 import com.fasterxml.jackson.core.JsonParseException
+import org.slf4j.LoggerFactory
 
 /**
  * Client for sending [[IMessage]]]
@@ -13,6 +14,7 @@ import com.fasterxml.jackson.core.JsonParseException
 class TcpIMessageClient {
   private val addressToConnection = scala.collection.mutable.Map[String, Socket]()
   private val serializer = new JsonSerializer
+  private val logger = LoggerFactory.getLogger(this.getClass)
 
   /**
    * @param msg Message to send
@@ -40,7 +42,9 @@ class TcpIMessageClient {
         addressToConnection(rcvAddress) = sock
         writeMsgAndWaitResponse(sock, msg)
       } catch {
-        case e: IOException => null.asInstanceOf[IMessage]
+        case e: IOException =>
+          logger.warn(s"exception occurred: ${e.getMessage}")
+          null.asInstanceOf[IMessage]
       }
     }
   }
@@ -70,17 +74,19 @@ class TcpIMessageClient {
     }
     catch {
       case e : IOException =>
+        logger.warn(s"exception occurred: ${e.getMessage}")
         try {
           socket.close()
         } catch {
           case e : IOException =>
+            logger.warn(s"exception occurred: ${e.getMessage}")
         } finally {
           addressToConnection.remove(msg.receiverID)
           return null.asInstanceOf[IMessage]
         }
     }
     //wait response with timeout
-    val answer = {
+    var answer = {
       try {
         val reader = new BufferedReader(new InputStreamReader(socket.getInputStream))
         val string = reader.readLine()
@@ -93,10 +99,12 @@ class TcpIMessageClient {
       }
       catch {
         case e @ (_: SocketTimeoutException | _: JsonParseException | _: IOException) =>
+          logger.warn(s"exception occurred: ${e.getMessage}")
           null.asInstanceOf[IMessage]
       }
     }
-    if (answer == null) {
+    if (answer == null || msg.msgID != answer.msgID) {
+      answer = null
       socket.close()
       addressToConnection.remove(msg.receiverID)
     }
@@ -113,6 +121,7 @@ class TcpIMessageClient {
         x._2.close()
       } catch {
         case e: IOException =>
+          logger.warn(s"exception occurred: ${e.getMessage}")
       }
     }
     addressToConnection.clear()

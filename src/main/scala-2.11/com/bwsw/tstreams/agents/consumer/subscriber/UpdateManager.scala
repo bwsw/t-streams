@@ -9,7 +9,7 @@ import scala.collection.mutable.ListBuffer
  * Manager for maintain async updates on [[TransactionsBuffer]]]
  */
 class UpdateManager {
-  private val lock = new ReentrantLock(true)
+  private val lockExecutors = new ReentrantLock(true)
   private val executorWithRunnable = ListBuffer[(Executor, Runnable)]()
   private var updateThread : Thread = null
   private val isUpdating = new AtomicBoolean(false)
@@ -20,9 +20,9 @@ class UpdateManager {
    * @param r Runnable ref
    */
   def addExecutorWithRunnable(e : Executor, r : Runnable) = {
-    lock.lock()
+    lockExecutors.lock()
     executorWithRunnable += ((e, r))
-    lock.unlock()
+    lockExecutors.unlock()
   }
 
   /**
@@ -36,9 +36,9 @@ class UpdateManager {
     updateThread = new Thread(new Runnable {
       override def run(): Unit = {
         while(isUpdating.get()){
-          lock.lock()
+          lockExecutors.lock()
           executorWithRunnable.foreach{case(e,r)=>e.execute(r)}
-          lock.unlock()
+          lockExecutors.unlock()
           Thread.sleep(updateInterval)
         }
       }

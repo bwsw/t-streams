@@ -59,8 +59,10 @@ class CheckpointEventsResolver(subscriber : BasicSubscribingConsumer[_,_]) {
   }
 
   private def removeTxn(partition : Int, txn : UUID) = {
-    retries(partition).remove(txn)
-    partitionToTxns(partition).remove(txn)
+    if (retries.contains(partition) && retries(partition).contains(txn)) {
+      retries(partition).remove(txn)
+      partitionToTxns(partition).remove(txn)
+    }
   }
 
   private def updateTransactionBuffer(partition : Int,

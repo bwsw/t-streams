@@ -14,6 +14,7 @@ import com.bwsw.tstreams.agents.producer.{BasicProducer, BasicProducerOptions, P
 import com.bwsw.tstreams.converter.{ArrayByteToStringConverter, StringToArrayByteConverter}
 import com.bwsw.tstreams.coordination.transactions.transport.impl.TcpTransport
 import com.bwsw.tstreams.data.aerospike.{AerospikeStorageFactory, AerospikeStorageOptions}
+import com.bwsw.tstreams.debug.GlobalHook
 import com.bwsw.tstreams.metadata.MetadataStorageFactory
 import com.bwsw.tstreams.streams.BasicStream
 import com.datastax.driver.core.Cluster
@@ -21,10 +22,10 @@ import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import testutils.{CassandraHelper, LocalGeneratorCreator, RoundRobinPolicyCreator, TestUtils}
 
 //TODO refactoring
-class ABasicSubscriberPreCheckpointFailureTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils{
+class ABasicSubscriberPreCommitFailureTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils{
   System.setProperty("DEBUG", "true")
-  System.setProperty("AfterPreCheckpointFailure", "true")
-  //creating keyspace, metadata
+  GlobalHook.addHook("PreCommitFailure", () => throw new RuntimeException)
+
   val randomKeyspace = randomString
   val cluster = Cluster.builder().addContactPoint("localhost").build()
   val session = cluster.connect()

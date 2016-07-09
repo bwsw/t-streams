@@ -2,11 +2,15 @@ package com.bwsw.tstreams.coordination.transactions.transport.impl.server
 
 import java.util
 import java.util.concurrent.locks.ReentrantLock
+
 import com.bwsw.tstreams.common.serializer.JsonSerializer
 import com.bwsw.tstreams.coordination.transactions.messages.IMessage
+import com.fasterxml.jackson.core.JsonParseException
+import com.fasterxml.jackson.databind.JsonMappingException
 import io.netty.channel._
 import io.netty.handler.codec.{MessageToMessageDecoder, MessageToMessageEncoder}
 import io.netty.util.ReferenceCountUtil
+import org.slf4j.LoggerFactory
 
 import scala.collection.mutable.ListBuffer
 
@@ -97,6 +101,7 @@ class IMessageServerChannelHandler extends SimpleChannelInboundHandler[IMessage]
  */
 class IMessageDecoder extends MessageToMessageDecoder[String]{
   val serializer = new JsonSerializer
+  private val logger = LoggerFactory.getLogger(this.getClass)
 
   override def decode(ctx: ChannelHandlerContext, msg: String, out: util.List[AnyRef]): Unit = {
     try {
@@ -104,8 +109,8 @@ class IMessageDecoder extends MessageToMessageDecoder[String]{
         out.add(serializer.deserialize[IMessage](msg))
     }
     catch {
-      case e : com.fasterxml.jackson.core.JsonParseException =>
-      case e : com.fasterxml.jackson.databind.JsonMappingException =>
+      case e @ (_: JsonParseException | _: JsonMappingException) =>
+        logger.warn(s"exception occured : ${e.getMessage}")
     }
   }
 }

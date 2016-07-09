@@ -183,12 +183,12 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](producerLock: ReentrantLock,
       logger.debug(s"[PRE CHECKPOINT PARTITION_$partition] " +
         s"ts=${transactionUuid.timestamp()}")
 
-      //debug purposes only
-      GlobalHook.invokePreCheckpointFailure(this)
-
       //must do it after agent.publish cuz it can be long operation
       //because of agents re-election
       stopKeepAlive()
+
+      //debug purposes only
+      GlobalHook.invoke("PreCommitFailure")
 
       basicProducer.stream.metadataStorage.commitEntity.commit(
         streamName = basicProducer.stream.getName,

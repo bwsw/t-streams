@@ -1,6 +1,5 @@
 package com.bwsw.tstreams.debug
 
-import com.bwsw.tstreams.agents.producer.BasicProducerTransaction
 import org.slf4j.LoggerFactory
 
 /**
@@ -20,14 +19,6 @@ object GlobalHook {
       val event = hooks(name)
       logger.debug(s"[GLOBALHOOK] called hook name:{$name}")
       event()
-    }
-  }
-
-  def invokePreCheckpointFailure(txn : BasicProducerTransaction[_,_]) = {
-    if (System.getProperty("DEBUG") == "true" &&
-        System.getProperty("AfterPreCheckpointFailure") == "true") {
-      txn.stopKeepAlive()
-      throw new RuntimeException
     }
   }
 }

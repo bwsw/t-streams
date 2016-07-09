@@ -11,13 +11,13 @@ import org.apache.zookeeper.{CreateMode, Watcher}
 
 import collection.JavaConverters._
 
+//TODO test it harder on zk ephemeral nodes elimination
 /**
  * @param prefix Prefix path for all created entities
  * @param zkHosts Zk hosts to connect
  * @param zkSessionTimeout Zk session timeout to connect
  */
 class ZkService(prefix : String, zkHosts : List[InetSocketAddress], zkSessionTimeout : Int, connectionTimeout : Int){
-  //TODO fix zk timeout
   private val sessionTimeout = Amount.of(new Integer(zkSessionTimeout),com.twitter.common.quantity.Time.SECONDS)
   private val hosts = zkHosts.asJava
   private val twitterZkClient: ZooKeeperClient = new ZooKeeperClient(sessionTimeout, hosts)
