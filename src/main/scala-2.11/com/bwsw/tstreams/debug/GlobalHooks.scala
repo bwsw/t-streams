@@ -6,7 +6,7 @@ import org.slf4j.LoggerFactory
   * ONLY FOR DEBUGGING PURPOSES
   * Used for injecting events in runtime
   */
-object GlobalHook {
+object GlobalHooks {
   private val logger = LoggerFactory.getLogger(this.getClass)
   private val hooks = scala.collection.mutable.Map[String, () => Unit]()
 
@@ -20,5 +20,9 @@ object GlobalHook {
       logger.debug(s"[GLOBALHOOK] called hook name:{$name}")
       event()
     }
+  }
+
+  def clear() : Unit = {
+    hooks.clear()
   }
 }

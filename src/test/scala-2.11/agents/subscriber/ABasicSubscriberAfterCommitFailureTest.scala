@@ -14,7 +14,7 @@ import com.bwsw.tstreams.agents.producer.{BasicProducer, BasicProducerOptions, P
 import com.bwsw.tstreams.converter.{ArrayByteToStringConverter, StringToArrayByteConverter}
 import com.bwsw.tstreams.coordination.transactions.transport.impl.TcpTransport
 import com.bwsw.tstreams.data.aerospike.{AerospikeStorageFactory, AerospikeStorageOptions}
-import com.bwsw.tstreams.debug.GlobalHook
+import com.bwsw.tstreams.debug.GlobalHooks
 import com.bwsw.tstreams.metadata.MetadataStorageFactory
 import com.bwsw.tstreams.streams.BasicStream
 import com.datastax.driver.core.Cluster
@@ -23,9 +23,9 @@ import testutils.{CassandraHelper, LocalGeneratorCreator, RoundRobinPolicyCreato
 
 //TODO refactoring
 class ABasicSubscriberAfterCommitFailureTest extends FlatSpec with Matchers
-  with BeforeAndAfterAll with TestUtils with OneInstancePerTest {
+  with BeforeAndAfterAll with TestUtils {
   System.setProperty("DEBUG", "true")
-  GlobalHook.addHook("AfterCommitFailure", () => throw new RuntimeException)
+  GlobalHooks.addHook("AfterCommitFailure", () => throw new RuntimeException)
 
   //creating keyspace, metadata
   val randomKeyspace = randomString
@@ -182,6 +182,7 @@ class ABasicSubscriberAfterCommitFailureTest extends FlatSpec with Matchers
 
   override def afterAll(): Unit = {
     System.clearProperty("DEBUG")
+    GlobalHooks.clear()
     producer.stop()
     removeZkMetadata("/unit")
     session.execute(s"DROP KEYSPACE $randomKeyspace")

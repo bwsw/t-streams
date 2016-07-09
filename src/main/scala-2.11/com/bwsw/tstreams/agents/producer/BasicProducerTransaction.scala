@@ -5,7 +5,7 @@ import java.util.concurrent.locks.ReentrantLock
 import java.util.concurrent.{CountDownLatch, LinkedBlockingQueue, TimeUnit}
 
 import com.bwsw.tstreams.coordination.pubsub.messages.{ProducerTopicMessage, ProducerTransactionStatus}
-import com.bwsw.tstreams.debug.GlobalHook
+import com.bwsw.tstreams.debug.GlobalHooks
 import org.slf4j.LoggerFactory
 
 import scala.collection.mutable.ListBuffer
@@ -13,6 +13,7 @@ import scala.util.control.Breaks._
 
 /**
  * Transaction retrieved by BasicProducer.newTransaction method
+ *
  * @param producerLock Producer Lock for managing actions which has to do with checkpoints
  * @param partition Concrete partition for saving this transaction
  * @param basicProducer Producer class which was invoked newTransaction method
@@ -188,7 +189,7 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](producerLock: ReentrantLock,
       stopKeepAlive()
 
       //debug purposes only
-      GlobalHook.invoke("PreCommitFailure")
+      GlobalHooks.invoke("PreCommitFailure")
 
       basicProducer.stream.metadataStorage.commitEntity.commit(
         streamName = basicProducer.stream.getName,
@@ -201,7 +202,7 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](producerLock: ReentrantLock,
         s"ts=${transactionUuid.timestamp()}")
 
       //debug purposes only
-      GlobalHook.invoke("AfterCommitFailure")
+      GlobalHooks.invoke("AfterCommitFailure")
 
       val finalCheckpoint = ProducerTopicMessage(
         txnUuid = transactionUuid,
