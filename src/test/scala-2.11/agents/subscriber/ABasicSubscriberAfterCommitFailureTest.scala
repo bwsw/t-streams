@@ -18,11 +18,12 @@ import com.bwsw.tstreams.debug.GlobalHook
 import com.bwsw.tstreams.metadata.MetadataStorageFactory
 import com.bwsw.tstreams.streams.BasicStream
 import com.datastax.driver.core.Cluster
-import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
+import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers, OneInstancePerTest}
 import testutils.{CassandraHelper, LocalGeneratorCreator, RoundRobinPolicyCreator, TestUtils}
 
 //TODO refactoring
-class ABasicSubscriberAfterCommitFailureTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils{
+class ABasicSubscriberAfterCommitFailureTest extends FlatSpec with Matchers
+  with BeforeAndAfterAll with TestUtils with OneInstancePerTest {
   System.setProperty("DEBUG", "true")
   GlobalHook.addHook("AfterCommitFailure", () => throw new RuntimeException)
 
