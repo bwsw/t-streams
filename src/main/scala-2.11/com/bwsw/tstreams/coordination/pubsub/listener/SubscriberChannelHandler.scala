@@ -69,7 +69,7 @@ class SubscriberChannelHandler extends SimpleChannelInboundHandler[ProducerTopic
   def stopCallback() : Unit = {
     if (isCallback.get()) {
       isCallback.set(false)
-      queue.put(ProducerTopicMessage(UUID.randomUUID(), 0, ProducerTransactionStatus.cancelled, -1))
+      queue.add(ProducerTopicMessage(UUID.randomUUID(), 0, ProducerTransactionStatus.cancelled, -1))
       callbackThread.join()
     }
   }
