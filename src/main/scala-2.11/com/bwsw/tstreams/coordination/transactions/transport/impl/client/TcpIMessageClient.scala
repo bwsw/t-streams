@@ -8,11 +8,13 @@ import com.bwsw.tstreams.coordination.transactions.messages.IMessage
 import com.fasterxml.jackson.core.JsonParseException
 import org.slf4j.LoggerFactory
 
+import scala.collection.mutable
+
 /**
  * Client for sending [[IMessage]]]
  */
 class TcpIMessageClient {
-  private val addressToConnection = scala.collection.mutable.Map[String, Socket]()
+  private val addressToConnection = mutable.Map[String, Socket]()
   private val serializer = new JsonSerializer
   private val logger = LoggerFactory.getLogger(this.getClass)
 
