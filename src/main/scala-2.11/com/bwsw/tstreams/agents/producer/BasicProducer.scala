@@ -5,10 +5,9 @@ import java.util.concurrent.locks.ReentrantLock
 
 import com.bwsw.tstreams.agents.group.{Agent, CommitInfo, ProducerCommitInfo}
 import com.bwsw.tstreams.agents.producer.ProducerPolicies.ProducerPolicy
-import com.bwsw.tstreams.common.zkservice.ZkService
 import com.bwsw.tstreams.coordination.pubsub.ProducerCoordinator
 import com.bwsw.tstreams.coordination.pubsub.messages.{ProducerTopicMessage, ProducerTransactionStatus}
-import com.bwsw.tstreams.coordination.transactions.PeerToPeerAgent
+import com.bwsw.tstreams.coordination.transactions.peertopeer.PeerToPeerAgent
 import com.bwsw.tstreams.coordination.transactions.transport.traits.Interaction
 import com.bwsw.tstreams.metadata.MetadataStorage
 import com.bwsw.tstreams.streams.BasicStream

@@ -1,4 +1,4 @@
-package com.bwsw.tstreams.coordination.transactions
+package com.bwsw.tstreams.coordination.transactions.peertopeer
 
 /**
  * Agent representation of every agent in [/producers/agents/{agent}]

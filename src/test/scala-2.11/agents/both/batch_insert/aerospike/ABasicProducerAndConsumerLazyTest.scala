@@ -1,11 +1,13 @@
 package agents.both.batch_insert.aerospike
 
 import java.net.InetSocketAddress
+
+import akka.actor.ActorSystem
 import com.aerospike.client.Host
 import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
-import com.bwsw.tstreams.agents.consumer.{SubscriberCoordinationOptions, BasicConsumer, BasicConsumerOptions}
+import com.bwsw.tstreams.agents.consumer.{BasicConsumer, BasicConsumerOptions, SubscriberCoordinationOptions}
 import com.bwsw.tstreams.agents.producer.InsertionType.BatchInsert
-import com.bwsw.tstreams.agents.producer.{ProducerCoordinationOptions, ProducerPolicies, BasicProducer, BasicProducerOptions}
+import com.bwsw.tstreams.agents.producer.{BasicProducer, BasicProducerOptions, ProducerCoordinationOptions, ProducerPolicies}
 import com.bwsw.tstreams.converter.{ArrayByteToStringConverter, StringToArrayByteConverter}
 import com.bwsw.tstreams.data.aerospike.{AerospikeStorageFactory, AerospikeStorageOptions}
 import com.bwsw.tstreams.coordination.transactions.transport.impl.TcpTransport
@@ -14,10 +16,13 @@ import com.bwsw.tstreams.streams.BasicStream
 import com.datastax.driver.core.Cluster
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import testutils._
+
 import scala.util.control.Breaks._
 
 
 class ABasicProducerAndConsumerLazyTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils{
+  implicit val system = ActorSystem("UTEST")
+
   //creating keyspace, metadata
   val randomKeyspace = randomString
   val cluster = Cluster.builder().addContactPoint("localhost").build()

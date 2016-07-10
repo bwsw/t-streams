@@ -1,13 +1,14 @@
 package com.bwsw.tstreams.coordination.transactions.messages
 
 import java.util.UUID
+
 import com.bwsw.tstreams.coordination.pubsub.messages.ProducerTopicMessage
 import com.fasterxml.jackson.annotation.JsonSubTypes.Type
 import com.fasterxml.jackson.annotation.{JsonSubTypes, JsonTypeInfo}
 
 /**
  * Messages which used for providing
- * interaction between [[com.bwsw.tstreams.coordination.transactions.PeerToPeerAgent]]]
+ * interaction between [[com.bwsw.tstreams.coordination.transactions.peertopeer.PeerToPeerAgent]]]
  */
 
 @JsonTypeInfo(

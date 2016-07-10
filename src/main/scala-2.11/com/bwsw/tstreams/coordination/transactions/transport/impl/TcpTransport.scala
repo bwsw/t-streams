@@ -1,6 +1,8 @@
 package com.bwsw.tstreams.coordination.transactions.transport.impl
 
 import java.util.concurrent.LinkedBlockingQueue
+
+import akka.actor.ActorSystem
 import com.bwsw.tstreams.coordination.transactions.messages._
 import com.bwsw.tstreams.coordination.transactions.transport.impl.client.TcpIMessageClient
 import com.bwsw.tstreams.coordination.transactions.transport.impl.server.TcpIMessageListener
@@ -9,7 +11,7 @@ import com.bwsw.tstreams.coordination.transactions.transport.traits.ITransport
 /**
  * [[ITransport]] implementation
  */
-class TcpTransport extends ITransport{
+class TcpTransport(implicit system : ActorSystem) extends ITransport{
   private var listener : TcpIMessageListener = null
   private val sender : TcpIMessageClient = new TcpIMessageClient
   private val msgQueue = new LinkedBlockingQueue[IMessage]()
@@ -88,7 +90,9 @@ class TcpTransport extends ITransport{
     assert(splits.size == 2)
     val port = splits(1).toInt
     listener = new TcpIMessageListener(port)
-    listener.addCallback((msg: IMessage) => {msgQueue.add(msg)})
+    listener.addCallback((msg: IMessage) => {
+      msgQueue.add(msg)
+    })
     listener.start()
   }
 

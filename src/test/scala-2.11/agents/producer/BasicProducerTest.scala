@@ -1,20 +1,24 @@
 package agents.producer
 
 import java.net.InetSocketAddress
+
+import akka.actor.ActorSystem
 import com.bwsw.tstreams.agents.producer.InsertionType.SingleElementInsert
 import com.bwsw.tstreams.agents.producer._
 import com.bwsw.tstreams.converter.StringToArrayByteConverter
-import com.bwsw.tstreams.data.cassandra.{CassandraStorageOptions, CassandraStorageFactory}
+import com.bwsw.tstreams.data.cassandra.{CassandraStorageFactory, CassandraStorageOptions}
 import com.bwsw.tstreams.coordination.transactions.transport.impl.TcpTransport
 import com.bwsw.tstreams.common.zkservice.ZkService
 import com.bwsw.tstreams.metadata.MetadataStorageFactory
 import com.bwsw.tstreams.services.BasicStreamService
 import com.datastax.driver.core.Cluster
-import org.scalatest.{BeforeAndAfterAll, Matchers, FlatSpec}
+import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import testutils._
 
 
 class BasicProducerTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils{
+  implicit val system = ActorSystem("UTEST")
+
   val randomKeyspace = randomString
   val temporaryCluster = Cluster.builder().addContactPoint("localhost").build()
   val temporarySession = temporaryCluster.connect()

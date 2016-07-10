@@ -30,16 +30,16 @@ class SubscriberChannelHandler extends SimpleChannelInboundHandler[ProducerTopic
   private val queue = new LinkedBlockingQueue[ProducerTopicMessage]()
   private var callbackThread : Thread = null
   private val isCallback = new AtomicBoolean(false)
-  private val lock = new ReentrantLock(true)
+  private val lockCallback = new ReentrantLock(true)
 
   /**
    * Add new callback which is used to handle incoming events([[ProducerTopicMessage]]])
    * @param callback Event callback
    */
-  def addCallback(callback : (ProducerTopicMessage)=>Unit) : Unit = {
-    lock.lock()
+  def addCallback(callback : (ProducerTopicMessage) => Unit) : Unit = {
+    lockCallback.lock()
     callbacks += callback
-    lock.unlock()
+    lockCallback.unlock()
   }
 
   /**
@@ -53,9 +53,9 @@ class SubscriberChannelHandler extends SimpleChannelInboundHandler[ProducerTopic
         sync.countDown()
         while(isCallback.get()) {
           val msg = queue.take()
-          lock.lock()
+          lockCallback.lock()
           callbacks.foreach(x => x(msg))
-          lock.unlock()
+          lockCallback.unlock()
         }
       }
     })
@@ -130,7 +130,7 @@ class SubscriberChannelHandler extends SimpleChannelInboundHandler[ProducerTopic
  * Decoder to convert [[java.lang.String]] to [[ProducerTopicMessage]]]
  */
 class ProducerTopicMessageDecoder extends MessageToMessageDecoder[String]{
-  private val logger = LoggerFactory.getLogger(this.getClass)
+  val logger = LoggerFactory.getLogger(this.getClass)
   val serializer = new JsonSerializer
 
   override def decode(ctx: ChannelHandlerContext, msg: String, out: util.List[AnyRef]): Unit = {

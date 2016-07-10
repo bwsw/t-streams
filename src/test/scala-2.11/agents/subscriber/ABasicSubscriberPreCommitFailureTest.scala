@@ -5,6 +5,7 @@ import java.net.InetSocketAddress
 import java.util.UUID
 import java.util.concurrent.locks.ReentrantLock
 
+import akka.actor.ActorSystem
 import com.aerospike.client.Host
 import com.bwsw.tstreams.agents.consumer.{BasicConsumerOptions, SubscriberCoordinationOptions}
 import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
@@ -24,6 +25,8 @@ import testutils.{CassandraHelper, LocalGeneratorCreator, RoundRobinPolicyCreato
 //TODO refactoring
 class ABasicSubscriberPreCommitFailureTest extends FlatSpec with Matchers
   with BeforeAndAfterAll with TestUtils {
+  implicit val system = ActorSystem("UTEST")
+
   System.setProperty("DEBUG", "true")
   GlobalHooks.addHook("PreCommitFailure", () => throw new RuntimeException)
 

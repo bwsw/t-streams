@@ -5,6 +5,7 @@ import java.net.InetSocketAddress
 import java.util.concurrent.locks.ReentrantLock
 import java.util.UUID
 
+import akka.actor.ActorSystem
 import com.aerospike.client.Host
 import com.bwsw.tstreams.agents.consumer.subscriber.{BasicSubscriberCallback, BasicSubscribingConsumer}
 import com.bwsw.tstreams.agents.consumer.{BasicConsumerOptions, SubscriberCoordinationOptions}
@@ -22,6 +23,8 @@ import testutils._
 
 //TODO refactoring
 class ABasicSubscriberTotalAmountTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils{
+  implicit val system = ActorSystem("UTEST")
+
   //creating keyspace, metadata
   val randomKeyspace = randomString
   val cluster = Cluster.builder().addContactPoint("localhost").build()

@@ -4,7 +4,8 @@ import java.util.UUID
 
 import com.bwsw.tstreams.agents.producer.BasicProducerTransaction
 import com.bwsw.tstreams.coordination.pubsub.messages.ProducerTopicMessage
-import com.bwsw.tstreams.coordination.transactions.PeerToPeerAgent
+import com.bwsw.tstreams.coordination.transactions.peertopeer.PeerToPeerAgent
+
 import scala.language.existentials
 
 

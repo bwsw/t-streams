@@ -3,9 +3,10 @@ package mastervoting_test_utils
 import java.net.InetSocketAddress
 import java.util.logging.LogManager
 
+import akka.actor.ActorSystem
 import com.aerospike.client.Host
 import com.bwsw.tstreams.agents.producer.InsertionType.BatchInsert
-import com.bwsw.tstreams.agents.producer.{ProducerPolicies, BasicProducer, BasicProducerOptions, ProducerCoordinationOptions}
+import com.bwsw.tstreams.agents.producer.{BasicProducer, BasicProducerOptions, ProducerCoordinationOptions, ProducerPolicies}
 import com.bwsw.tstreams.converter.StringToArrayByteConverter
 import com.bwsw.tstreams.data.aerospike.{AerospikeStorageFactory, AerospikeStorageOptions}
 import com.bwsw.tstreams.generator.LocalTimeUUIDGenerator
@@ -18,6 +19,7 @@ import org.slf4j.LoggerFactory
 
 object BasicProducerTest{
   def main(args: Array[String]) {
+    implicit val system = ActorSystem("UTEST")
     LogManager.getLogManager.reset()
 //    System.setProperty(org.slf4j.impl.SimpleLogger.DEFAULT_LOG_LEVEL_KEY, "WARN")
     System.setProperty("org.slf4j.simpleLogger.logFile","testlog.log")

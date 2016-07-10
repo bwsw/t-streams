@@ -1,4 +1,4 @@
-package com.bwsw.tstreams.coordination.transactions
+package com.bwsw.tstreams.coordination.transactions.peertopeer
 
 import java.net.InetSocketAddress
 import java.util.UUID
@@ -7,10 +7,10 @@ import java.util.concurrent.locks.ReentrantLock
 import java.util.concurrent.{CountDownLatch, ExecutorService, Executors}
 
 import com.bwsw.tstreams.agents.producer.BasicProducer
-import com.bwsw.tstreams.coordination.pubsub.messages.{ProducerTransactionStatus, ProducerTopicMessage}
+import com.bwsw.tstreams.common.zkservice.ZkService
+import com.bwsw.tstreams.coordination.pubsub.messages.{ProducerTopicMessage, ProducerTransactionStatus}
 import com.bwsw.tstreams.coordination.transactions.messages._
 import com.bwsw.tstreams.coordination.transactions.transport.traits.ITransport
-import com.bwsw.tstreams.common.zkservice.ZkService
 import org.apache.zookeeper.CreateMode
 import org.slf4j.LoggerFactory
 

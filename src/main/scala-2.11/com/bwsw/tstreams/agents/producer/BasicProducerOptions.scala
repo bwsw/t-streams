@@ -1,11 +1,14 @@
 package com.bwsw.tstreams.agents.producer
 
 import java.net.InetSocketAddress
+
 import com.bwsw.tstreams.agents.producer.InsertionType.InsertType
 import com.bwsw.tstreams.converter.IConverter
+import com.bwsw.tstreams.coordination.transactions.peertopeer.PeerToPeerAgent
 import com.bwsw.tstreams.coordination.transactions.transport.traits.ITransport
 import com.bwsw.tstreams.policy.AbstractPolicy
 import com.bwsw.tstreams.generator.IUUIDGenerator
+
 import scala.language.existentials
 
 /**
@@ -63,17 +66,17 @@ class BasicProducerOptions[USERTYPE,DATATYPE](val transactionTTL : Int,
 
 
 /**
- * @param agentAddress Address of producer in network
- * @param zkHosts Zk hosts to connect
- * @param zkRootPath Zk root path for all metadata
- * @param zkSessionTimeout Zk session timeout
+ * @param agentAddress            Address of producer in network
+ * @param zkHosts                 Zk hosts to connect
+ * @param zkRootPath              Zk root path for all metadata
+ * @param zkSessionTimeout        Zk session timeout
  * @param isLowPriorityToBeMaster Flag which indicate priority to became master on stream/partition
  *                                of this agent
- * @param transport Transport providing interaction between agents
- * @param transportTimeout Transport timeout in seconds
- * @param threadPoolAmount Thread pool amount which is used by
- *                         [[com.bwsw.tstreams.coordination.transactions.PeerToPeerAgent]]]
- *                         by default (threads_amount == used_producer_partitions)
+ * @param transport               Transport providing interaction between agents
+ * @param transportTimeout        Transport timeout in seconds
+ * @param threadPoolAmount        Thread pool amount which is used by
+ *                                [[PeerToPeerAgent]]]
+ *                                by default (threads_amount == used_producer_partitions)
  */
 class ProducerCoordinationOptions(val agentAddress : String,
                                   val zkHosts : List[InetSocketAddress],

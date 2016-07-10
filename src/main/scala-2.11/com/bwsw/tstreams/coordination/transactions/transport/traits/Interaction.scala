@@ -2,7 +2,7 @@ package com.bwsw.tstreams.coordination.transactions.transport.traits
 
 import java.util.UUID
 
-import com.bwsw.tstreams.coordination.transactions.PeerToPeerAgent
+import com.bwsw.tstreams.coordination.transactions.peertopeer.PeerToPeerAgent
 
 /**
  * Trait for producers
@@ -11,6 +11,7 @@ trait Interaction {
   /**
    * Method to implement for concrete producer
    * Need only if this producer is master
+ *
    * @return UUID
    */
   def getLocalTxn(partition : Int) : UUID

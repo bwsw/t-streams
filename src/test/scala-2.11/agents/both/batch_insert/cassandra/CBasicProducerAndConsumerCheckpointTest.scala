@@ -1,12 +1,14 @@
 package agents.both.batch_insert.cassandra
 
 import java.net.InetSocketAddress
+
+import akka.actor.ActorSystem
 import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
-import com.bwsw.tstreams.agents.consumer.{SubscriberCoordinationOptions, BasicConsumer, BasicConsumerOptions, BasicConsumerTransaction}
+import com.bwsw.tstreams.agents.consumer.{BasicConsumer, BasicConsumerOptions, BasicConsumerTransaction, SubscriberCoordinationOptions}
 import com.bwsw.tstreams.agents.producer.InsertionType.BatchInsert
-import com.bwsw.tstreams.agents.producer.{ProducerCoordinationOptions, BasicProducer, BasicProducerOptions, ProducerPolicies}
+import com.bwsw.tstreams.agents.producer.{BasicProducer, BasicProducerOptions, ProducerCoordinationOptions, ProducerPolicies}
 import com.bwsw.tstreams.converter.{ArrayByteToStringConverter, StringToArrayByteConverter}
-import com.bwsw.tstreams.data.cassandra.{CassandraStorageOptions, CassandraStorageFactory}
+import com.bwsw.tstreams.data.cassandra.{CassandraStorageFactory, CassandraStorageOptions}
 import com.bwsw.tstreams.coordination.transactions.transport.impl.TcpTransport
 import com.bwsw.tstreams.common.zkservice.ZkService
 import com.bwsw.tstreams.metadata.MetadataStorageFactory
@@ -17,6 +19,8 @@ import testutils._
 
 
 class CBasicProducerAndConsumerCheckpointTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils{
+  implicit val system = ActorSystem("UTEST")
+
   //creating keyspace, metadata, data
   val randomKeyspace = randomString
   val cluster = Cluster.builder().addContactPoint("localhost").build()

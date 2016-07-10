@@ -1,7 +1,10 @@
 package com.bwsw.tstreams.coordination.transactions.transport.impl.server
 
 import java.util.concurrent.CountDownLatch
+
+import akka.actor.ActorSystem
 import com.bwsw.tstreams.coordination.transactions.messages.IMessage
+import com.bwsw.tstreams.coordination.transactions.transport.impl.server.actors.IMessageListenerManager
 import io.netty.bootstrap.ServerBootstrap
 import io.netty.channel.ChannelInitializer
 import io.netty.channel.nio.NioEventLoopGroup
@@ -14,13 +17,14 @@ import io.netty.handler.logging.{LogLevel, LoggingHandler}
 /**
  * @param port Listener port
  */
-class TcpIMessageListener(port : Int){
+class TcpIMessageListener(port : Int)(implicit system : ActorSystem){
   //socket accept worker
   private val bossGroup = new NioEventLoopGroup(1)
   //channel workers
   private val workerGroup = new NioEventLoopGroup()
   private val MAX_FRAME_LENGTH = 8192
-  private val channelHandler : IMessageServerChannelHandler = new IMessageServerChannelHandler
+  private val manager = new IMessageListenerManager(system)
+  private val channelHandler : IMessageServerChannelHandler = new IMessageServerChannelHandler(manager)
   private var listenerThread : Thread = null
 
   /**
@@ -36,14 +40,14 @@ class TcpIMessageListener(port : Int){
    * @param callback Event callback
    */
   def addCallback(callback : (IMessage) => Unit) : Unit = {
-    channelHandler.addCallback(callback)
+    manager.addCallback(callback)
   }
 
   /**
    * Response with [[IMessage]]]
    */
   def response(msg : IMessage) : Unit = {
-    channelHandler.response(msg)
+    manager.response(msg)
   }
 
   /**

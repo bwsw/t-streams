@@ -2,23 +2,26 @@ package agents.both.group_commit
 
 import java.net.InetSocketAddress
 
+import akka.actor.ActorSystem
 import com.aerospike.client.Host
 import com.bwsw.tstreams.agents.consumer.{BasicConsumer, BasicConsumerOptions}
 import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
 import com.bwsw.tstreams.agents.group.CheckpointGroup
-import com.bwsw.tstreams.agents.producer.{ProducerCoordinationOptions, ProducerPolicies, BasicProducer, BasicProducerOptions}
+import com.bwsw.tstreams.agents.producer.{BasicProducer, BasicProducerOptions, ProducerCoordinationOptions, ProducerPolicies}
 import com.bwsw.tstreams.agents.producer.InsertionType.SingleElementInsert
-import com.bwsw.tstreams.converter.{StringToArrayByteConverter, ArrayByteToStringConverter}
-import com.bwsw.tstreams.data.aerospike.{AerospikeStorageOptions, AerospikeStorageFactory}
+import com.bwsw.tstreams.converter.{ArrayByteToStringConverter, StringToArrayByteConverter}
+import com.bwsw.tstreams.data.aerospike.{AerospikeStorageFactory, AerospikeStorageOptions}
 import com.bwsw.tstreams.coordination.transactions.transport.impl.TcpTransport
 import com.bwsw.tstreams.metadata.MetadataStorageFactory
 import com.bwsw.tstreams.streams.BasicStream
 import com.datastax.driver.core.Cluster
-import org.scalatest.{BeforeAndAfterAll, Matchers, FlatSpec}
+import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import testutils._
 
 
 class GroupCommitTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils{
+  implicit val system = ActorSystem("UTEST")
+
   val randomKeyspace = randomString
   val cluster = Cluster.builder().addContactPoint("localhost").build()
   val session = cluster.connect()
