@@ -27,8 +27,8 @@ class SubscriberCoordinator(agentAddress : String,
   private val zkService = new ZkService(zkRootPrefix, zkHosts, zkSessionTimeout, zkConnectionTimeout)
   private val (_,port) = getHostPort(agentAddress)
   private val listener: ProducerTopicMessageListener = new ProducerTopicMessageListener(port)
-  private var stoped = false
-  private val partitionToUniqAgentsAmount = scala.collection.mutable.Map[Int, Int]()
+  private var isFinished = false
+  private val partitionToUniqueAgentsAmount = scala.collection.mutable.Map[Int, Int]()
 
   /**
    * Extract host/port from string
@@ -55,13 +55,13 @@ class SubscriberCoordinator(agentAddress : String,
   def stop() = {
     listener.stop()
     zkService.close()
-    stoped = true
+    isFinished = true
   }
 
   /**
    * @return Coordinator state
    */
-  def isStoped = stoped
+  def isStoped = isFinished
 
   /**
    * Start listen of all [[com.bwsw.tstreams.agents.producer.BasicProducer]]] updates
@@ -101,14 +101,14 @@ class SubscriberCoordinator(agentAddress : String,
    * (if agent was on previous partitions it will not be counted)
    */
   def initSynchronization(streamName : String, partitions : List[Int]) : Unit = {
-    partitionToUniqAgentsAmount.clear()
+    partitionToUniqueAgentsAmount.clear()
     var alreadyExist = Set[String]()
     partitions foreach { p=>
       val agents = zkService.getAllSubPath(s"/producers/agents/$streamName/$p").getOrElse(List())
       assert(agents.distinct.size == agents.size)
       val filtered = agents.filter(x=> !alreadyExist.contains(x))
       filtered foreach (x=> alreadyExist += x)
-      partitionToUniqAgentsAmount(p) = filtered.size
+      partitionToUniqueAgentsAmount(p) = filtered.size
     }
   }
 
@@ -120,7 +120,7 @@ class SubscriberCoordinator(agentAddress : String,
    */
   def synchronize(streamName : String, partition : Int) = {
     var timer = 0
-    val amount = partitionToUniqAgentsAmount(partition)
+    val amount = partitionToUniqueAgentsAmount(partition)
 
     logger.debug(s"[SUBSCRIBER COORDINATOR BEFORE SYNC] stream={$streamName} partition={$partition}" +
       s" listener.connectionAmount={${listener.getConnectionsAmount()}} totalConnAmount={$amount}" +
