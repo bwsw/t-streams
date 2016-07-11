@@ -47,7 +47,7 @@ class BroadcasterChannelHandler(broadcaster : Broadcaster) extends SimpleChannel
   override def channelInactive(ctx: ChannelHandlerContext) : Unit = {
     lock.lock()
     val id = ctx.channel().id()
-    if (idToAddress contains id) {
+    if (idToAddress.contains(id)) {
       val address = idToAddress(id)
       idToAddress.remove(id)
       addressToId.remove(address)
