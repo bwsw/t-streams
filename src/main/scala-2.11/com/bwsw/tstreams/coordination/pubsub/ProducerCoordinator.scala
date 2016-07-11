@@ -1,7 +1,6 @@
 package com.bwsw.tstreams.coordination.pubsub
 
 import java.net.InetSocketAddress
-import java.util.concurrent.locks.ReentrantLock
 
 import akka.actor.ActorSystem
 import com.bwsw.tstreams.common.zkservice.ZkService

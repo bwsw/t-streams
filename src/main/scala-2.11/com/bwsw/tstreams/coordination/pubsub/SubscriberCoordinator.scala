@@ -8,7 +8,6 @@ import com.bwsw.tstreams.coordination.pubsub.listener.ProducerTopicMessageListen
 import org.apache.zookeeper.CreateMode
 import org.slf4j.LoggerFactory
 
-import scala.collection.mutable.ListBuffer
 
 /**
  * @param agentAddress Subscriber address

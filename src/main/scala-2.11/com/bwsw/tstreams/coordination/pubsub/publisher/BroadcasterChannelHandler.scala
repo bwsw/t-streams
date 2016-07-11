@@ -1,7 +1,6 @@
 package com.bwsw.tstreams.coordination.pubsub.publisher
 
 import java.util
-import java.util.concurrent.locks.ReentrantLock
 
 import com.bwsw.tstreams.common.serializer.JsonSerializer
 import com.bwsw.tstreams.coordination.pubsub.messages.ProducerTopicMessage
