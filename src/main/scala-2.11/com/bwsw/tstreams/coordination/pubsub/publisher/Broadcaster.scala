@@ -1,7 +1,8 @@
 package com.bwsw.tstreams.coordination.pubsub.publisher
 
-import java.net.InetSocketAddress
+import akka.actor.ActorSystem
 import com.bwsw.tstreams.coordination.pubsub.messages.ProducerTopicMessage
+import com.bwsw.tstreams.coordination.pubsub.publisher.actors.ConnectionManager
 import io.netty.bootstrap.Bootstrap
 import io.netty.channel.ChannelInitializer
 import io.netty.channel.nio.NioEventLoopGroup
@@ -13,10 +14,11 @@ import io.netty.handler.codec.string.{StringDecoder, StringEncoder}
  * Broadcaster for [[com.bwsw.tstreams.agents.producer.BasicProducer]]]
  * to broadcast messages for all [[com.bwsw.tstreams.agents.consumer.subscriber.BasicSubscribingConsumer]]]
  */
-class Broadcaster {
+class Broadcaster(implicit system : ActorSystem) {
   private val group = new NioEventLoopGroup()
-  private val channelHandler = new BroadcasterChannelHandler(this)
   private val bootstrap = new Bootstrap()
+  private val connectionManager = new ConnectionManager(system, bootstrap)
+  private val channelHandler = new BroadcasterChannelHandler(connectionManager)
 
   bootstrap
     .group(group)
@@ -32,23 +34,6 @@ class Broadcaster {
     })
 
   /**
-   * Connect to some subscriber
-   * @param address Subscriber address in network
-   */
-  def connect(address : String) = {
-    val splits = address.split(":")
-    assert(splits.size == 2)
-    val host = splits(0)
-    val port = splits(1).toInt
-    //TODO mb wrong according to https://habrahabr.ru/post/136456/
-    //mb need to replace with approach below:
-    //https://github.com/netty/netty/blob/b03b11a24860a1d636744c989dad50d223ffc6bc/src/main/java/org/jboss/netty/example/proxy/HexDumpProxyInboundHandler.java
-    val channelFuture = bootstrap.connect(new InetSocketAddress(host,port)).sync()
-    if (channelFuture.isSuccess)
-      channelHandler.updateMap(channelFuture.channel().id(), address)
-  }
-
-  /**
    * Send msg to all connected subscribers
    * @param msg Msg to send
    */
@@ -57,17 +42,17 @@ class Broadcaster {
   }
 
   /**
+    * Update subscribers with new set of subscribers
+    * @param subscribers New subscribers
+    */
+  def updateSubscribers(subscribers : List[String]) = {
+    connectionManager.updateSubscribers(subscribers)
+  }
+
+  /**
    * Close broadcaster
    */
   def close() : Unit = {
     group.shutdownGracefully().await()
-  }
-
-  /**
-   * Update subscribers with new addresses
-   * @param newSubscribers New subscribers list of addresses
-   */
-  def updateSubscribers(newSubscribers : List[String]) : Unit = {
-    channelHandler.updateSubscribers(newSubscribers)
   }
 }

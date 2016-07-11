@@ -12,7 +12,7 @@ import io.netty.util.ReferenceCountUtil
 import org.slf4j.LoggerFactory
 
 /**
- * Handler for managing new connections for [[TcpIMessageListener]]]
+ * Handler for managing new connections for [[IMessageListener]]]
  */
 @ChannelHandler.Sharable
 class IMessageServerChannelHandler(manager : IMessageListenerManager) extends SimpleChannelInboundHandler[IMessage] {

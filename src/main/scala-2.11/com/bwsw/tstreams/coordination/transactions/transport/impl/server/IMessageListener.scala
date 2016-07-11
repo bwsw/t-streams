@@ -17,7 +17,7 @@ import io.netty.handler.logging.{LogLevel, LoggingHandler}
 /**
  * @param port Listener port
  */
-class TcpIMessageListener(port : Int)(implicit system : ActorSystem){
+class IMessageListener(port : Int)(implicit system : ActorSystem){
   //socket accept worker
   private val bossGroup = new NioEventLoopGroup(1)
   //channel workers

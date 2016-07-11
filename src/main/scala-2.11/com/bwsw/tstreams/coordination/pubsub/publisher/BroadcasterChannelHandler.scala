@@ -2,26 +2,23 @@ package com.bwsw.tstreams.coordination.pubsub.publisher
 
 import java.util
 import java.util.concurrent.locks.ReentrantLock
+
 import com.bwsw.tstreams.common.serializer.JsonSerializer
 import com.bwsw.tstreams.coordination.pubsub.messages.ProducerTopicMessage
+import com.bwsw.tstreams.coordination.pubsub.publisher.actors.ConnectionManager
 import io.netty.channel._
 import io.netty.channel.group.DefaultChannelGroup
 import io.netty.handler.codec.MessageToMessageEncoder
 import io.netty.util.concurrent.GlobalEventExecutor
 import org.slf4j.LoggerFactory
 
-/**
- * Broadcaster accepted connection manager
-  *
-  * @param broadcaster Broadcaster link
- */
+
 @ChannelHandler.Sharable
-class BroadcasterChannelHandler(broadcaster : Broadcaster) extends SimpleChannelInboundHandler[ProducerTopicMessage] {
+class BroadcasterChannelHandler(connectionManager: ConnectionManager)
+  extends SimpleChannelInboundHandler[ProducerTopicMessage] {
+
   private val logger = LoggerFactory.getLogger(this.getClass)
   private val group = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE)
-  private val idToAddress = scala.collection.mutable.Map[ChannelId, String]()
-  private val addressToId = scala.collection.mutable.Map[String, ChannelId]()
-  private val lock = new ReentrantLock(true)
 
   /**
    * Triggered on read from channel (incorrect state because broadcaster must only broadcast)
@@ -45,14 +42,8 @@ class BroadcasterChannelHandler(broadcaster : Broadcaster) extends SimpleChannel
     * @param ctx Netty ctx
    */
   override def channelInactive(ctx: ChannelHandlerContext) : Unit = {
-    lock.lock()
     val id = ctx.channel().id()
-    if (idToAddress.contains(id)) {
-      val address = idToAddress(id)
-      idToAddress.remove(id)
-      addressToId.remove(address)
-    }
-    lock.unlock()
+    connectionManager.channelInactive(id)
   }
 
   /**
@@ -74,33 +65,6 @@ class BroadcasterChannelHandler(broadcaster : Broadcaster) extends SimpleChannel
   def broadcast(msg : ProducerTopicMessage) : Unit = {
     logger.debug(s"[BROADCASTER PUBLISH] partition=${msg.partition} status=${msg.status} uuid=${msg.txnUuid.timestamp()}\n")
     group.writeAndFlush(msg)
-  }
-
-  /**
-   * Update subscribers with list of new subscribers
-   */
-  def updateSubscribers(newSubscribers : List[String]): Unit = {
-    lock.lock()
-    logger.debug(s"[BROADCASTER] start updating subscribers:{${addressToId.keys.mkString(",")}}" +
-      s" using newSubscribers:{${newSubscribers.mkString(",")}}\n")
-    newSubscribers.diff(addressToId.keys.toList) foreach { subscriber =>
-      broadcaster.connect(subscriber)
-    }
-    logger.debug(s"[BROADCASTER] updated subscribers:{${addressToId.keys.mkString(",")}}, current group size: {${group.size()}}\n")
-    lock.unlock()
-  }
-
-  /**
-   * Update [[idToAddress]]] [[addressToId]]] with new values
-    *
-    * @param channelId Netty channel id
-   * @param address subscriber address
-   */
-  def updateMap(channelId: ChannelId, address : String) = {
-    lock.lock()
-    idToAddress(channelId) = address
-    addressToId(address) = channelId
-    lock.unlock()
   }
 }
 

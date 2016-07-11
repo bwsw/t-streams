@@ -3,6 +3,7 @@ package com.bwsw.tstreams.coordination.pubsub
 import java.net.InetSocketAddress
 import java.util.concurrent.locks.ReentrantLock
 
+import akka.actor.ActorSystem
 import com.bwsw.tstreams.common.zkservice.ZkService
 import com.bwsw.tstreams.coordination.pubsub.publisher.Broadcaster
 import com.bwsw.tstreams.coordination.pubsub.messages.ProducerTopicMessage
@@ -22,10 +23,9 @@ class ProducerCoordinator(prefix : String,
                           usedPartitions : List[Int],
                           zkHosts : List[InetSocketAddress],
                           zkSessionTimeout : Int,
-                          zkConnectionTimeout : Int) {
+                          zkConnectionTimeout : Int)(implicit system : ActorSystem) {
   private val zkService = new ZkService(prefix, zkHosts, zkSessionTimeout, zkConnectionTimeout)
   private val broadcaster = new Broadcaster
-  private val lock = new ReentrantLock(true)
 
   /**
    * Initialize coordinator
@@ -48,20 +48,16 @@ class ProducerCoordinator(prefix : String,
    * @param msg [[ProducerTopicMessage]]]
    */
   def publish(msg : ProducerTopicMessage) = {
-    lock.lock()
     broadcaster.broadcast(msg)
-    lock.unlock()
   }
 
   /**
    * Update subscribers on specific partition
    */
   private def updateSubscribers(partition : Int) = {
-    lock.lock()
     val subscribersPathOpt = zkService.getAllSubNodesData[String](s"/subscribers/agents/$streamName/$partition")
     if (subscribersPathOpt.isDefined)
       broadcaster.updateSubscribers(subscribersPathOpt.get)
-    lock.unlock()
   }
 
   /**
