@@ -6,7 +6,7 @@ import com.bwsw.tstreams.common.serializer.JsonSerializer
 import com.bwsw.tstreams.coordination.pubsub.messages.ProducerTopicMessage
 import com.bwsw.tstreams.coordination.pubsub.publisher.actors.ConnectionManager
 import io.netty.channel._
-import io.netty.channel.group.DefaultChannelGroup
+import io.netty.channel.group.{ChannelGroupFuture, ChannelGroupFutureListener, DefaultChannelGroup}
 import io.netty.handler.codec.MessageToMessageEncoder
 import io.netty.util.concurrent.GlobalEventExecutor
 import org.slf4j.LoggerFactory
@@ -64,8 +64,8 @@ class BroadcasterChannelHandler(connectionManager: ConnectionManager)
   def broadcast(msg : ProducerTopicMessage, onComplete: () => Unit) : Unit = {
     logger.debug(s"[BROADCASTER PUBLISH] partition=${msg.partition} status=${msg.status} uuid=${msg.txnUuid.timestamp()}\n")
     val cf = group.writeAndFlush(msg)
-    cf.addListener(new ChannelFutureListener {
-      override def operationComplete(future: ChannelFuture): Unit = {
+    cf.addListener(new ChannelGroupFutureListener {
+      override def operationComplete(future: ChannelGroupFuture): Unit = {
         onComplete()
       }
     })
