@@ -8,7 +8,6 @@ import com.bwsw.tstreams.coordination.pubsub.messages.{ProducerTopicMessage, Pro
 import ProducerTransactionStatus._
 import com.bwsw.tstreams.txnqueue.PersistentTransactionQueue
 import org.slf4j.LoggerFactory
-import scala.collection.mutable.ListBuffer
 import scala.util.control.Breaks._
 
 

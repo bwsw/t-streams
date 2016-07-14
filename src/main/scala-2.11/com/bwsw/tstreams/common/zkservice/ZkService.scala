@@ -41,7 +41,7 @@ class ZkService(prefix : String, zkHosts : List[InetSocketAddress], zkSessionTim
     if (initPath.isEmpty)
       initPath = "/"
     if (zkClient.exists(initPath, null) == null) {
-      val lock = getLock("/producers/create_path_lock")
+      val lock = getLock("/locks/create_path_lock")
       lock.lock()
       if (zkClient.exists(initPath, null) == null)
         createPathRecursive(initPath, CreateMode.PERSISTENT)
@@ -56,7 +56,7 @@ class ZkService(prefix : String, zkHosts : List[InetSocketAddress], zkSessionTim
 
   def setWatcher(path : String, watcher : Watcher) : Unit = {
     if (zkClient.exists(prefix+path, null) == null) {
-      val lock = getLock("/producers/watcher_path_lock")
+      val lock = getLock("/locks/watcher_path_lock")
       lock.lock()
       if (zkClient.exists(prefix+path, null) == null)
         createPathRecursive(prefix+path, CreateMode.PERSISTENT)

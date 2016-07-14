@@ -54,7 +54,7 @@ class PeerToPeerAgent(agentAddress : String,
   logger.debug(s"[INIT] Start initialize agent with address:{$agentAddress}," +
     s"stream:{$streamName},partitions:{${usedPartitions.mkString(",")}}\n")
   usedPartitions foreach {p =>
-    tryCleanAgent(p)
+    tryCleanThisAgent(p)
   }
   transport.bindLocalAddress(agentAddress)
   startValidator()
@@ -76,7 +76,7 @@ class PeerToPeerAgent(agentAddress : String,
  *
    * @param partition Partition to check
    */
-  private def tryCleanAgent(partition : Int) : Unit = {
+  private def tryCleanThisAgent(partition : Int) : Unit = {
     val agentsOpt = zkService.getAllSubPath(s"/producers/agents/$streamName/$partition")
     if (agentsOpt.isEmpty)
       return
@@ -208,7 +208,6 @@ class PeerToPeerAgent(agentAddress : String,
             localMasters(partition) = newMaster
             lockLocalMasters.unlock()
         }
-
       } else {
         transport.pingRequest(PingRequest(agentAddress, master, partition), transportTimeout) match {
           case null =>
@@ -291,7 +290,7 @@ class PeerToPeerAgent(agentAddress : String,
   }
 
   /**
-   * Starting validate zk connection(if it will be down, exception will be thrown)
+   * Starting validate zk connection (if it will be down, exception will be thrown)
    */
   private def startValidator() = {
     val latch = new CountDownLatch(1)
@@ -306,7 +305,7 @@ class PeerToPeerAgent(agentAddress : String,
             retries = 0
           if (retries >= 3) {
             println("Zk connection Lost\n")
-            //TODO replace System.exit with exception
+            //TODO replace somehow System.exit with exception
             System.exit(1)
           }
           Thread.sleep(1000)
@@ -437,7 +436,6 @@ class PeerToPeerAgent(agentAddress : String,
    * Create task to handle incoming message
  *
    * @param request Requested message
-   * @return Response
    */
   private def createTask(request : IMessage): Runnable = {
     new Runnable {
@@ -513,8 +511,10 @@ class PeerToPeerAgent(agentAddress : String,
             val response = {
               if (localMasters.contains(msg.partition) && localMasters(msg.partition) == agentAddress) {
                 producer.coordinator.publish(msg)
-                PublishResponse(rcv, snd,
-                  ProducerTopicMessage(UUID.randomUUID(),0,ProducerTransactionStatus.opened,msg.partition))
+                PublishResponse(
+                  senderID = rcv,
+                  receiverID = snd,
+                  msg = ProducerTopicMessage(UUID.randomUUID(), 0, ProducerTransactionStatus.opened, msg.partition))
               } else
                 EmptyResponse(rcv, snd, msg.partition)
             }
