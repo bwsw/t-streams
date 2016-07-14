@@ -4,7 +4,7 @@ import java.util
 
 import com.bwsw.tstreams.common.serializer.JsonSerializer
 import com.bwsw.tstreams.coordination.pubsub.messages.ProducerTopicMessage
-import com.bwsw.tstreams.coordination.pubsub.publisher.actors.ConnectionManager
+import com.bwsw.tstreams.coordination.pubsub.publisher.actors.BroadcasterConnectionManager
 import io.netty.channel._
 import io.netty.channel.group.{ChannelGroupFuture, ChannelGroupFutureListener, DefaultChannelGroup}
 import io.netty.handler.codec.MessageToMessageEncoder
@@ -13,7 +13,7 @@ import org.slf4j.LoggerFactory
 
 
 @ChannelHandler.Sharable
-class BroadcasterChannelHandler(connectionManager: ConnectionManager)
+class BroadcasterChannelHandler(connectionManager: BroadcasterConnectionManager)
   extends SimpleChannelInboundHandler[ProducerTopicMessage] {
 
   private val logger = LoggerFactory.getLogger(this.getClass)

@@ -1,6 +1,9 @@
 package com.bwsw.tstreams.coordination.pubsub.listener
 
 import java.util.concurrent.CountDownLatch
+
+import akka.actor.ActorSystem
+import com.bwsw.tstreams.coordination.pubsub.listener.actors.SubscriberManager
 import com.bwsw.tstreams.coordination.pubsub.messages.ProducerTopicMessage
 import io.netty.bootstrap.ServerBootstrap
 import io.netty.channel.ChannelInitializer
@@ -8,18 +11,19 @@ import io.netty.channel.nio.NioEventLoopGroup
 import io.netty.channel.socket.SocketChannel
 import io.netty.channel.socket.nio.NioServerSocketChannel
 import io.netty.handler.codec.string.StringDecoder
-import io.netty.handler.codec.{Delimiters, DelimiterBasedFrameDecoder}
+import io.netty.handler.codec.{DelimiterBasedFrameDecoder, Delimiters}
 import io.netty.handler.logging.{LogLevel, LoggingHandler}
 
 /**
  * Listener of [[ProducerTopicMessage]]
  * @param port Listener port
  */
-class ProducerTopicMessageListener(port : Int) {
+class SubscriberListener(port : Int)(implicit system : ActorSystem) {
   private val bossGroup = new NioEventLoopGroup(1)
   private val workerGroup = new NioEventLoopGroup()
   private val MAX_FRAME_LENGTH = 8192
-  private val channelHandler : SubscriberChannelHandler = new SubscriberChannelHandler
+  private val subscriberManager = new SubscriberManager(system)
+  private val channelHandler : SubscriberChannelHandler = new SubscriberChannelHandler(subscriberManager)
   private var listenerThread : Thread = null
 
   /**
@@ -35,7 +39,7 @@ class ProducerTopicMessageListener(port : Int) {
    * @param callback Event callback
    */
   def addCallbackToChannelHandler(callback : (ProducerTopicMessage) => Unit) : Unit = {
-    channelHandler.addCallback(callback)
+    subscriberManager.addCallback(callback)
   }
 
   /**
@@ -43,11 +47,11 @@ class ProducerTopicMessageListener(port : Int) {
    * connection managed by [[channelHandler]]]
    */
   def getConnectionsAmount() : Int = {
-    channelHandler.getCount()
+    subscriberManager.getCount()
   }
 
   def resetConnectionsAmount() : Unit = {
-    channelHandler.resetCount()
+    subscriberManager.resetCount()
   }
 
   /**

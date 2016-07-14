@@ -2,7 +2,7 @@ package com.bwsw.tstreams.coordination.pubsub.publisher
 
 import akka.actor.ActorSystem
 import com.bwsw.tstreams.coordination.pubsub.messages.ProducerTopicMessage
-import com.bwsw.tstreams.coordination.pubsub.publisher.actors.ConnectionManager
+import com.bwsw.tstreams.coordination.pubsub.publisher.actors.BroadcasterConnectionManager
 import io.netty.bootstrap.Bootstrap
 import io.netty.channel.ChannelInitializer
 import io.netty.channel.nio.NioEventLoopGroup
@@ -17,7 +17,7 @@ import io.netty.handler.codec.string.{StringDecoder, StringEncoder}
 class Broadcaster(implicit system : ActorSystem) {
   private val group = new NioEventLoopGroup()
   private val bootstrap = new Bootstrap()
-  private val connectionManager = new ConnectionManager(system, bootstrap)
+  private val connectionManager = new BroadcasterConnectionManager(system, bootstrap)
   private val channelHandler = new BroadcasterChannelHandler(connectionManager)
 
   bootstrap
@@ -35,6 +35,7 @@ class Broadcaster(implicit system : ActorSystem) {
 
   /**
    * Send msg to all connected subscribers
+ *
    * @param msg Msg to send
    */
   def broadcast(msg : ProducerTopicMessage, onComplete: () => Unit) : Unit = {
@@ -43,6 +44,7 @@ class Broadcaster(implicit system : ActorSystem) {
 
   /**
     * Update subscribers with new set of subscribers
+ *
     * @param subscribers New subscribers
     */
   def updateSubscribers(subscribers : List[String]) = {

@@ -496,11 +496,12 @@ class PeerToPeerAgent(agentAddress : String,
             assert(rcv == agentAddress)
             if (localMasters.contains(partition) && localMasters(partition) == agentAddress) {
               val txnUUID: UUID = producer.getTransactionUUID()
-              producer.commitLocalTxn(txnUUID, partition, () => {
-                val response = TransactionResponse(rcv, snd, txnUUID, partition)
-                response.msgID = request.msgID
-                transport.response(response)
-              })
+              producer.commitLocalTxn(txnUUID, partition,
+                onComplete = () => {
+                  val response = TransactionResponse(rcv, snd, txnUUID, partition)
+                  response.msgID = request.msgID
+                  transport.response(response)
+                })
             } else {
               val response = EmptyResponse(rcv, snd, partition)
               response.msgID = request.msgID
@@ -512,14 +513,15 @@ class PeerToPeerAgent(agentAddress : String,
             lockLocalMasters.lock()
             assert(rcv == agentAddress)
             if (localMasters.contains(msg.partition) && localMasters(msg.partition) == agentAddress) {
-              producer.coordinator.publish(msg, () => {
-                val response = PublishResponse(
-                  senderID = rcv,
-                  receiverID = snd,
-                  msg = ProducerTopicMessage(UUID.randomUUID(), 0, ProducerTransactionStatus.opened, msg.partition))
-                response.msgID = request.msgID
-                transport.response(response)
-              })
+              producer.coordinator.publish(msg,
+                onComplete = () => {
+                  val response = PublishResponse(
+                    senderID = rcv,
+                    receiverID = snd,
+                    msg = ProducerTopicMessage(UUID.randomUUID(), 0, ProducerTransactionStatus.opened, msg.partition))
+                  response.msgID = request.msgID
+                  transport.response(response)
+                })
             } else {
               val response = EmptyResponse(rcv, snd, msg.partition)
               response.msgID = request.msgID

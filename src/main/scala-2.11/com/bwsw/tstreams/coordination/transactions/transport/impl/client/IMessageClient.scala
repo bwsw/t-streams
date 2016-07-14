@@ -13,7 +13,7 @@ import scala.collection.mutable
 /**
  * Client for sending [[IMessage]]]
  */
-class TcpIMessageClient {
+class IMessageClient {
   private val addressToConnection = mutable.Map[String, Socket]()
   private val serializer = new JsonSerializer
   private val logger = LoggerFactory.getLogger(this.getClass)

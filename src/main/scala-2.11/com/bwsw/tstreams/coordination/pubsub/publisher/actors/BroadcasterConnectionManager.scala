@@ -5,7 +5,7 @@ import com.bwsw.tstreams.coordination.pubsub.publisher.actors.ConnectionActor.{C
 import io.netty.bootstrap.Bootstrap
 import io.netty.channel.ChannelId
 
-class ConnectionManager(system : ActorSystem, bootstrap : Bootstrap) {
+class BroadcasterConnectionManager(system : ActorSystem, bootstrap : Bootstrap) {
   private val handler: ActorRef = system.actorOf(
     props = Props(new ConnectionActor(bootstrap)))
 

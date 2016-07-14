@@ -1,9 +1,9 @@
 package com.bwsw.tstreams.coordination.pubsub.listener
 
 import java.util
-import java.util.concurrent.locks.ReentrantLock
 
 import com.bwsw.tstreams.common.serializer.JsonSerializer
+import com.bwsw.tstreams.coordination.pubsub.listener.actors.SubscriberManager
 import com.bwsw.tstreams.coordination.pubsub.messages.{ProducerTopicMessage, ProducerTransactionStatus}
 import com.fasterxml.jackson.core.JsonParseException
 import com.fasterxml.jackson.databind.JsonMappingException
@@ -13,57 +13,20 @@ import io.netty.handler.codec.MessageToMessageDecoder
 import io.netty.util.ReferenceCountUtil
 import org.slf4j.LoggerFactory
 
-import scala.collection.mutable.ListBuffer
 
 /**
- * Incoming connections manager for [[ProducerTopicMessageListener]]]
+ * Incoming connections manager for [[SubscriberListener]]]
  */
 @Sharable
-class SubscriberChannelHandler extends SimpleChannelInboundHandler[ProducerTopicMessage] {
+class SubscriberChannelHandler(subscriberManager: SubscriberManager) extends SimpleChannelInboundHandler[ProducerTopicMessage] {
   private val logger = LoggerFactory.getLogger(this.getClass)
-  private var count = 0
-  private val callbacks = new ListBuffer[(ProducerTopicMessage)=>Unit]()
-  private val lockCount = new ReentrantLock(true)
-  private val lockCallback = new ReentrantLock(true)
-
-  /**
-   * Add new callback which is used to handle incoming events([[ProducerTopicMessage]]])
-   * @param callback Event callback
-   */
-  def addCallback(callback : (ProducerTopicMessage) => Unit) : Unit = {
-    lockCallback.lock()
-    callbacks += callback
-    lockCallback.unlock()
-  }
-
-  /**
-   * Get accepted connections amount
-   * @return Amount of connections
-   */
-  def getCount(): Int = {
-    lockCount.lock()
-    val cnt = count
-    lockCount.unlock()
-    cnt
-  }
-
-  /**
-   * Reset connection amount
-   */
-  def resetCount() : Unit = {
-    lockCount.lock()
-    count = 0
-    lockCount.unlock()
-  }
 
   /**
    * Triggered when new connection accept
    * @param ctx Netty ctx
    */
   override def channelActive(ctx: ChannelHandlerContext) : Unit = {
-    lockCount.lock()
-    count += 1
-    lockCount.unlock()
+    subscriberManager.incrementCount()
   }
 
   /**
@@ -73,9 +36,7 @@ class SubscriberChannelHandler extends SimpleChannelInboundHandler[ProducerTopic
    */
   override def channelRead0(ctx: ChannelHandlerContext, msg: ProducerTopicMessage): Unit = {
     logger.debug(s"[READ PARTITION_${msg.partition}] ts=${msg.txnUuid.timestamp()} ttl=${msg.ttl} status=${msg.status}\n")
-    lockCallback.lock()
-    callbacks.foreach(x => x(msg))
-    lockCallback.unlock()
+    subscriberManager.invokeCallbacks(msg)
     ReferenceCountUtil.release(msg)
   }
 

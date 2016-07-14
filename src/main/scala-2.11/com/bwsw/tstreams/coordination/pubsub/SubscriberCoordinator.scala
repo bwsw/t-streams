@@ -2,9 +2,10 @@ package com.bwsw.tstreams.coordination.pubsub
 
 import java.net.InetSocketAddress
 
+import akka.actor.ActorSystem
 import com.bwsw.tstreams.common.zkservice.ZkService
 import com.bwsw.tstreams.coordination.pubsub.messages.ProducerTopicMessage
-import com.bwsw.tstreams.coordination.pubsub.listener.ProducerTopicMessageListener
+import com.bwsw.tstreams.coordination.pubsub.listener.SubscriberListener
 import org.apache.zookeeper.CreateMode
 import org.slf4j.LoggerFactory
 
@@ -19,13 +20,13 @@ class SubscriberCoordinator(agentAddress : String,
                           zkRootPrefix : String,
                           zkHosts : List[InetSocketAddress],
                           zkSessionTimeout : Int,
-                          zkConnectionTimeout : Int) {
+                          zkConnectionTimeout : Int)(implicit system : ActorSystem) {
 
   private val logger = LoggerFactory.getLogger(this.getClass)
   private val SYNCHRONIZE_LIMIT = 60
   private val zkService = new ZkService(zkRootPrefix, zkHosts, zkSessionTimeout, zkConnectionTimeout)
   private val (_,port) = getHostPort(agentAddress)
-  private val listener: ProducerTopicMessageListener = new ProducerTopicMessageListener(port)
+  private val listener: SubscriberListener = new SubscriberListener(port)
   private var isFinished = false
   private val partitionToUniqueAgentsAmount = scala.collection.mutable.Map[Int, Int]()
 
@@ -42,6 +43,7 @@ class SubscriberCoordinator(agentAddress : String,
 
   /**
    * Add new event callback to listener
+ *
    * @param callback Event callback
    */
   def addCallback(callback : (ProducerTopicMessage) => Unit) = {
@@ -130,6 +132,7 @@ class SubscriberCoordinator(agentAddress : String,
 
   /**
    * Global distributed Lock on stream
+ *
    * @return [[com.twitter.common.zookeeper.DistributedLockImpl]]]
    */
   def getStreamLock(streamName : String)  = {
