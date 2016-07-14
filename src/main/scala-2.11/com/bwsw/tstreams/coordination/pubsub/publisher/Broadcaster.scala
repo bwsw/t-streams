@@ -37,8 +37,8 @@ class Broadcaster(implicit system : ActorSystem) {
    * Send msg to all connected subscribers
    * @param msg Msg to send
    */
-  def broadcast(msg : ProducerTopicMessage) : Unit = {
-    channelHandler.broadcast(msg)
+  def broadcast(msg : ProducerTopicMessage, onComplete: () => Unit) : Unit = {
+    channelHandler.broadcast(msg, onComplete)
   }
 
   /**

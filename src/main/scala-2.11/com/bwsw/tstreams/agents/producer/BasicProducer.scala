@@ -165,30 +165,36 @@ class BasicProducer[USERTYPE,DATATYPE](val name : String,
     stream.metadataStorage
 
   /**
+    *
+    * @return
+    */
+  def getTransactionUUID(): UUID = {
+    val transactionUuid = producerOptions.txnGenerator.getTimeUUID()
+    transactionUuid
+  }
+
+  /**
    * Method to implement for concrete producer [[PeerToPeerAgent]] method
    * Need only if this producer is master
     *
     * @return UUID
    */
-  override def getLocalTxn(partition : Int): UUID = {
-    val transactionUuid = producerOptions.txnGenerator.getTimeUUID()
-
+  override def commitLocalTxn(txnUUID : UUID, partition : Int, onComplete: () => Unit) : Unit = {
     stream.metadataStorage.commitEntity.commit(
       streamName = stream.getName,
       partition = partition,
-      transaction = transactionUuid,
+      transaction = txnUUID,
       totalCnt = -1,
       ttl = producerOptions.transactionTTL)
 
     val msg = ProducerTopicMessage(
-      txnUuid = transactionUuid,
+      txnUuid = txnUUID,
       ttl = producerOptions.transactionTTL,
       status = ProducerTransactionStatus.opened,
       partition = partition)
 
-    logger.debug(s"[GET_LOCAL_TXN PRODUCER] update with msg partition=$partition uuid=${transactionUuid.timestamp()} opened")
-    coordinator.publish(msg)
-    transactionUuid
+    logger.debug(s"[GET_LOCAL_TXN PRODUCER] update with msg partition=$partition uuid=${txnUUID.timestamp()} opened")
+    coordinator.publish(msg, onComplete)
   }
 
   /**
@@ -210,7 +216,6 @@ class BasicProducer[USERTYPE,DATATYPE](val name : String,
                   producerOptions.writePolicy.getUsedPartition().size
                else
                   producerOptions.producerCoordinationSettings.threadPoolAmount)
-
 
   /**
    * Stop this agent

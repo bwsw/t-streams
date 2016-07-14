@@ -1,7 +1,6 @@
 package com.bwsw.tstreams.coordination.pubsub.publisher
 
 import java.util
-import java.util.concurrent.CountDownLatch
 
 import com.bwsw.tstreams.common.serializer.JsonSerializer
 import com.bwsw.tstreams.coordination.pubsub.messages.ProducerTopicMessage
@@ -62,15 +61,14 @@ class BroadcasterChannelHandler(connectionManager: ConnectionManager)
     *
     * @param msg Msg to broadcast
    */
-  def broadcast(msg : ProducerTopicMessage) : Unit = {
+  def broadcast(msg : ProducerTopicMessage, onComplete: () => Unit) : Unit = {
     logger.debug(s"[BROADCASTER PUBLISH] partition=${msg.partition} status=${msg.status} uuid=${msg.txnUuid.timestamp()}\n")
-    val latch = new CountDownLatch(1)
-    group.writeAndFlush(msg).addListener(new ChannelFutureListener {
+    val cf = group.writeAndFlush(msg)
+    cf.addListener(new ChannelFutureListener {
       override def operationComplete(future: ChannelFuture): Unit = {
-        latch.countDown()
+        onComplete()
       }
     })
-    latch.await()
   }
 }
 

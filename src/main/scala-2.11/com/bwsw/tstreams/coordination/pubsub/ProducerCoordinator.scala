@@ -46,8 +46,8 @@ class ProducerCoordinator(prefix : String,
    * Publish [[ProducerTopicMessage]]] to all accepted subscribers
    * @param msg [[ProducerTopicMessage]]]
    */
-  def publish(msg : ProducerTopicMessage) = {
-    broadcaster.broadcast(msg)
+  def publish(msg : ProducerTopicMessage, onComplete: () => Unit) = {
+    broadcaster.broadcast(msg, onComplete)
   }
 
   /**

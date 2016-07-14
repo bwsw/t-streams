@@ -258,7 +258,7 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](producerLock: ReentrantLock,
             partition = partition)
 
           //publish that current txn is being updating
-          basicProducer.coordinator.publish(msg)
+          basicProducer.coordinator.publish(msg, ()=>())
           logger.debug(s"[KEEP_ALIVE THREAD PARTITION_${msg.partition}] ts=${msg.txnUuid.timestamp()} status=${msg.status}")
         }}
       }
