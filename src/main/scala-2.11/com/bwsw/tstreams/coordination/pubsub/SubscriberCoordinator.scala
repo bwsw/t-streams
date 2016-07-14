@@ -124,7 +124,7 @@ class SubscriberCoordinator(agentAddress : String,
     }
 
     logger.debug(s"[SUBSCRIBER COORDINATOR AFTER SYNC] stream={$streamName} partition={$partition}" +
-      s" listener.connectionAmount={${listener.getConnectionsAmount()}} totalConnAmount={$amount}" +
+      s" connectionAmount={${listener.getConnectionsAmount()}} totalConnAmount={$amount}" +
       s" timerVal={$timer}")
   }
 

@@ -64,11 +64,11 @@ class BroadcasterChannelHandler(connectionManager: ConnectionManager)
   def broadcast(msg : ProducerTopicMessage, onComplete: () => Unit) : Unit = {
     logger.debug(s"[BROADCASTER PUBLISH] partition=${msg.partition} status=${msg.status} uuid=${msg.txnUuid.timestamp()}\n")
     val cf = group.writeAndFlush(msg)
-//    cf.addListener(new ChannelFutureListener {
-//      override def operationComplete(future: ChannelFuture): Unit = {
-//        onComplete()
-//      }
-//    })
+    cf.addListener(new ChannelFutureListener {
+      override def operationComplete(future: ChannelFuture): Unit = {
+        onComplete()
+      }
+    })
   }
 }
 
