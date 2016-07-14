@@ -104,7 +104,6 @@ class BasicSubscribingConsumer[DATATYPE, USERTYPE](name : String,
     }
     coordinator.initSynchronization(stream.getName, usedPartitions)
     coordinator.startListen()
-    coordinator.startCallback()
     updateManager.startUpdate(callBack.pollingFrequency)
     val uniquePrefix = UUID.randomUUID()
 

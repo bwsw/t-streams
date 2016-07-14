@@ -30,9 +30,10 @@ class ConnectionActor(bootstrap : Bootstrap) extends Actor{
     val latch = new CountDownLatch(1)
     val channelFuture = bootstrap.connect(new InetSocketAddress(host, port)).addListener(new ChannelFutureListener {
       override def operationComplete(future: ChannelFuture): Unit = {
-        latch.await()
+        latch.countDown()
       }
     })
+    latch.await()
     if (channelFuture.isSuccess){
       idToAddress(channelFuture.channel().id()) = subscriber
       addressToId(subscriber) = channelFuture.channel().id()

@@ -70,6 +70,7 @@ class BroadcasterChannelHandler(connectionManager: ConnectionManager)
         latch.countDown()
       }
     })
+    latch.await()
   }
 }
 

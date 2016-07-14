@@ -26,7 +26,6 @@ class ProducerTopicMessageListener(port : Int) {
    * Stop to listen [[ProducerTopicMessage]]]
    */
   def stop() : Unit = {
-    channelHandler.stopCallback()
     workerGroup.shutdownGracefully().await()
     bossGroup.shutdownGracefully().await()
   }
@@ -49,13 +48,6 @@ class ProducerTopicMessageListener(port : Int) {
 
   def resetConnectionsAmount() : Unit = {
     channelHandler.resetCount()
-  }
-
-  /**
-   * Start invoking callbacks on new [[ProducerTopicMessage]]]
-   */
-  def startCallback() : Unit = {
-    channelHandler.startCallBack()
   }
 
   /**

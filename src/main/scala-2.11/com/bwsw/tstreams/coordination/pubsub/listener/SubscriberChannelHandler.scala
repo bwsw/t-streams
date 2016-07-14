@@ -1,9 +1,6 @@
 package com.bwsw.tstreams.coordination.pubsub.listener
 
 import java.util
-import java.util.UUID
-import java.util.concurrent.{CountDownLatch, LinkedBlockingQueue}
-import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.locks.ReentrantLock
 
 import com.bwsw.tstreams.common.serializer.JsonSerializer
@@ -27,9 +24,6 @@ class SubscriberChannelHandler extends SimpleChannelInboundHandler[ProducerTopic
   private var count = 0
   private val callbacks = new ListBuffer[(ProducerTopicMessage)=>Unit]()
   private val lockCount = new ReentrantLock(true)
-  private val queue = new LinkedBlockingQueue[ProducerTopicMessage]()
-  private var callbackThread : Thread = null
-  private val isCallback = new AtomicBoolean(false)
   private val lockCallback = new ReentrantLock(true)
 
   /**
@@ -40,38 +34,6 @@ class SubscriberChannelHandler extends SimpleChannelInboundHandler[ProducerTopic
     lockCallback.lock()
     callbacks += callback
     lockCallback.unlock()
-  }
-
-  /**
-   * Start callback on incoming events [[ProducerTopicMessage]]]
-   */
-  def startCallBack() = {
-    val sync = new CountDownLatch(1)
-    isCallback.set(true)
-    callbackThread = new Thread(new Runnable {
-      override def run(): Unit = {
-        sync.countDown()
-        while(isCallback.get()) {
-          val msg = queue.take()
-          lockCallback.lock()
-          callbacks.foreach(x => x(msg))
-          lockCallback.unlock()
-        }
-      }
-    })
-    callbackThread.start()
-    sync.await()
-  }
-
-  /**
-   * Stop thread which is consuming incoming events [[ProducerTopicMessage]]]
-   */
-  def stopCallback() : Unit = {
-    if (isCallback.get()) {
-      isCallback.set(false)
-      queue.add(ProducerTopicMessage(UUID.randomUUID(), 0, ProducerTransactionStatus.cancelled, -1))
-      callbackThread.join()
-    }
   }
 
   /**
@@ -111,7 +73,9 @@ class SubscriberChannelHandler extends SimpleChannelInboundHandler[ProducerTopic
    */
   override def channelRead0(ctx: ChannelHandlerContext, msg: ProducerTopicMessage): Unit = {
     logger.debug(s"[READ PARTITION_${msg.partition}] ts=${msg.txnUuid.timestamp()} ttl=${msg.ttl} status=${msg.status}\n")
-    queue.put(msg)
+    lockCallback.lock()
+    callbacks.foreach(x => x(msg))
+    lockCallback.unlock()
     ReferenceCountUtil.release(msg)
   }
 

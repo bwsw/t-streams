@@ -70,14 +70,6 @@ class SubscriberCoordinator(agentAddress : String,
   }
 
   /**
-   * Start callback on incoming updates of
-   * [[com.bwsw.tstreams.agents.producer.BasicProducer]]]
-   */
-  def startCallback() = {
-    listener.startCallback()
-  }
-
-  /**
    * Register subscriber
    * on stream/partition
    */
