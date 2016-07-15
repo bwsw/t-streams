@@ -18,43 +18,45 @@ import com.bwsw.tstreams.metadata.MetadataStorageFactory
 import com.bwsw.tstreams.streams.BasicStream
 import com.datastax.driver.core.Cluster
 
-object Velocity {
-  implicit val system = ActorSystem("UTEST")
-  val keyspace = "velocity"
+  object Common {
+    implicit val system = ActorSystem("UTEST")
+    val keyspace = "velocity"
 
-  //metadata/data factories
-  val metadataStorageFactory = new MetadataStorageFactory
-  val storageFactory = new AerospikeStorageFactory
+    //metadata/data factories
+    val metadataStorageFactory = new MetadataStorageFactory
+    val storageFactory = new AerospikeStorageFactory
 
-  //converters to convert usertype->storagetype; storagetype->usertype
-  val stringToArrayByteConverter = new StringToArrayByteConverter
-  val arrayByteToStringConverter = new ArrayByteToStringConverter
+    //converters to convert usertype->storagetype; storagetype->usertype
+    val stringToArrayByteConverter = new StringToArrayByteConverter
+    val arrayByteToStringConverter = new ArrayByteToStringConverter
 
-  //aerospike storage instances
-  val hosts = List(
-    new Host("t-streams-1.z1.netpoint-dc.com", 3000),
-    new Host("t-streams-1.z1.netpoint-dc.com", 3001),
-    new Host("t-streams-1.z1.netpoint-dc.com", 3002),
-    new Host("t-streams-1.z1.netpoint-dc.com", 3003))
-  val aerospikeOptions = new AerospikeStorageOptions("test", hosts)
-  val aerospikeInst = storageFactory.getInstance(aerospikeOptions)
+    //aerospike storage instances
+    val hosts = List(
+      new Host("t-streams-1.z1.netpoint-dc.com", 3000),
+      new Host("t-streams-1.z1.netpoint-dc.com", 3001),
+      new Host("t-streams-1.z1.netpoint-dc.com", 3002),
+      new Host("t-streams-1.z1.netpoint-dc.com", 3003))
+    val aerospikeOptions = new AerospikeStorageOptions("test", hosts)
+    val aerospikeInst = storageFactory.getInstance(aerospikeOptions)
 
-  //metadata storage instances
-  val metadataStorageInst = metadataStorageFactory.getInstance(
-    cassandraHosts = List(new InetSocketAddress("t-streams-1.z1.netpoint-dc.com", 9042)),
-    keyspace = keyspace)
+    //metadata storage instances
+    val metadataStorageInst = metadataStorageFactory.getInstance(
+      cassandraHosts = List(new InetSocketAddress("t-streams-1.z1.netpoint-dc.com", 9042)),
+      keyspace = keyspace)
 
-  //stream instances for producer/consumer
-  val stream: BasicStream[Array[Byte]] = new BasicStream[Array[Byte]](
-    name = "test_stream",
-    partitions = 1,
-    metadataStorage = metadataStorageInst,
-    dataStorage = aerospikeInst,
-    ttl = 60 * 15,
-    description = "some_description")
+    //stream instances for producer/consumer
+    val stream: BasicStream[Array[Byte]] = new BasicStream[Array[Byte]](
+      name = "test_stream",
+      partitions = 1,
+      metadataStorage = metadataStorageInst,
+      dataStorage = aerospikeInst,
+      ttl = 60 * 15,
+      description = "some_description")
+  }
 
   object ProducerRunner {
     def main(args: Array[String]) {
+      import Common._
       //producer/consumer options
       val agentSettings = new ProducerCoordinationOptions(
         agentAddress = "t-streams-2.z1.netpoint-dc.com:8888",
@@ -98,6 +100,7 @@ object Velocity {
 
   object SubscriberRunner {
     def main(args: Array[String]) {
+      import Common._
       val consumerOptions = new BasicConsumerOptions[Array[Byte], String](
         transactionsPreload = 10,
         dataPreload = 7,
@@ -143,6 +146,7 @@ object Velocity {
   }
 
   object MasterRunner {
+    import Common._
     def main(args: Array[String]) {
       //producer/consumer options
       val agentSettings = new ProducerCoordinationOptions(
@@ -171,10 +175,10 @@ object Velocity {
 
   object MetadataCreator {
     def main(args: Array[String]) {
+      import Common._
       val cluster = Cluster.builder().addContactPoint("localhost").build()
       val session = cluster.connect()
       CassandraHelper.createKeyspace(session, keyspace)
       CassandraHelper.createMetadataTables(session, keyspace)
     }
   }
-}
