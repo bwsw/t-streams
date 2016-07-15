@@ -38,7 +38,7 @@ object Common {
   //stream instances for producer/consumer
   lazy val stream: BasicStream[Array[Byte]] = new BasicStream[Array[Byte]](
     name = "test_stream",
-    partitions = 1,
+    partitions = 10,
     metadataStorage = metadataStorageInst,
     dataStorage = aerospikeInst,
     ttl = 60 * 15,
