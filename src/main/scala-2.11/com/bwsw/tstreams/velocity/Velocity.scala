@@ -1,4 +1,4 @@
-package velocity
+package com.bwsw.tstreams.velocity
 
 import java.net.InetSocketAddress
 import java.util.UUID
@@ -17,11 +17,10 @@ import com.bwsw.tstreams.data.aerospike.{AerospikeStorageFactory, AerospikeStora
 import com.bwsw.tstreams.metadata.MetadataStorageFactory
 import com.bwsw.tstreams.streams.BasicStream
 import com.datastax.driver.core.Cluster
-import testutils.{CassandraHelper, LocalGeneratorCreator, RoundRobinPolicyCreator, TestUtils}
 
 object Velocity {
   implicit val system = ActorSystem("UTEST")
-  val keyspace = "velocity"
+  val keyspace = "com/bwsw/tstreams/velocity"
 
   //metadata/data factories
   val metadataStorageFactory = new MetadataStorageFactory
@@ -60,7 +59,7 @@ object Velocity {
       val agentSettings = new ProducerCoordinationOptions(
         agentAddress = "t-streams-2.z1.netpoint-dc.com:8888",
         zkHosts = List(new InetSocketAddress("t-streams-1.z1.netpoint-dc.com", 2181)),
-        zkRootPath = "/velocity",
+        zkRootPath = "/com/bwsw/tstreams/velocity",
         zkSessionTimeout = 7000,
         isLowPriorityToBeMaster = true,
         transport = new TcpTransport,
@@ -133,7 +132,7 @@ object Velocity {
         options = consumerOptions,
         subscriberCoordinationOptions =
           new SubscriberCoordinationOptions(agentAddress = "t-streams-4.z1.netpoint-dc.com:8588",
-            zkRootPath = "/velocity",
+            zkRootPath = "/com/bwsw/tstreams/velocity",
             zkHosts = List(new InetSocketAddress("localhost", 2181)),
             zkSessionTimeout = 7,
             zkConnectionTimeout = 7),
@@ -149,7 +148,7 @@ object Velocity {
       val agentSettings = new ProducerCoordinationOptions(
         agentAddress = "t-streams-3.z1.netpoint-dc.com:8888",
         zkHosts = List(new InetSocketAddress("t-streams-1.z1.netpoint-dc.com", 2181)),
-        zkRootPath = "/velocity",
+        zkRootPath = "/com/bwsw/tstreams/velocity",
         zkSessionTimeout = 7000,
         isLowPriorityToBeMaster = false,
         transport = new TcpTransport,
@@ -170,8 +169,9 @@ object Velocity {
     }
   }
 
-  object MetadataCreator extends TestUtils {
+  object MetadataCreator {
     def main(args: Array[String]) {
+      def randomString = RandomStringCreator.randomAlphaString(10)
       val randomKeyspace = randomString
       val cluster = Cluster.builder().addContactPoint("localhost").build()
       val session = cluster.connect()
