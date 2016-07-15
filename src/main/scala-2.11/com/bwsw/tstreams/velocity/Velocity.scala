@@ -20,7 +20,7 @@ import com.datastax.driver.core.Cluster
 
 object Velocity {
   implicit val system = ActorSystem("UTEST")
-  val keyspace = "com/bwsw/tstreams/velocity"
+  val keyspace = "velocity"
 
   //metadata/data factories
   val metadataStorageFactory = new MetadataStorageFactory
@@ -171,12 +171,10 @@ object Velocity {
 
   object MetadataCreator {
     def main(args: Array[String]) {
-      def randomString = RandomStringCreator.randomAlphaString(10)
-      val randomKeyspace = randomString
       val cluster = Cluster.builder().addContactPoint("localhost").build()
       val session = cluster.connect()
-      CassandraHelper.createKeyspace(session, randomKeyspace)
-      CassandraHelper.createMetadataTables(session, randomKeyspace)
+      CassandraHelper.createKeyspace(session, keyspace)
+      CassandraHelper.createMetadataTables(session, keyspace)
     }
   }
 }
