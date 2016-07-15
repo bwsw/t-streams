@@ -13,7 +13,7 @@ object MasterRunner {
     //producer/consumer options
     val agentSettings = new ProducerCoordinationOptions(
       agentAddress = "t-streams-3.z1.netpoint-dc.com:8888",
-      zkHosts = List(new InetSocketAddress("t-streams-1.z1.netpoint-dc.com", 2181)),
+      zkHosts = List(new InetSocketAddress("176.120.27.82", 2181)),
       zkRootPath = "/velocity",
       zkSessionTimeout = 7000,
       isLowPriorityToBeMaster = false,

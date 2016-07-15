@@ -23,16 +23,16 @@ object Common {
 
   //aerospike storage instances
   lazy val hosts = List(
-    new Host("t-streams-1.z1.netpoint-dc.com", 3000),
-    new Host("t-streams-1.z1.netpoint-dc.com", 3001),
-    new Host("t-streams-1.z1.netpoint-dc.com", 3002),
-    new Host("t-streams-1.z1.netpoint-dc.com", 3003))
+    new Host("176.120.27.82", 3000),
+    new Host("176.120.27.82", 3001),
+    new Host("176.120.27.82", 3002),
+    new Host("176.120.27.82", 3003))
   lazy val aerospikeOptions = new AerospikeStorageOptions("test", hosts)
   lazy val aerospikeInst = storageFactory.getInstance(aerospikeOptions)
 
   //metadata storage instances
   lazy val metadataStorageInst = metadataStorageFactory.getInstance(
-    cassandraHosts = List(new InetSocketAddress("t-streams-1.z1.netpoint-dc.com", 9042)),
+    cassandraHosts = List(new InetSocketAddress("176.120.27.82", 9042)),
     keyspace = keyspace)
 
   //stream instances for producer/consumer

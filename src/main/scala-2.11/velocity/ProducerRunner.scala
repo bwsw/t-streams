@@ -13,7 +13,7 @@ object ProducerRunner {
     //producer/consumer options
     val agentSettings = new ProducerCoordinationOptions(
       agentAddress = "t-streams-2.z1.netpoint-dc.com:8888",
-      zkHosts = List(new InetSocketAddress("t-streams-1.z1.netpoint-dc.com", 2181)),
+      zkHosts = List(new InetSocketAddress("176.120.27.82", 2181)),
       zkRootPath = "/velocity",
       zkSessionTimeout = 7000,
       isLowPriorityToBeMaster = true,
@@ -34,7 +34,14 @@ object ProducerRunner {
     val producer = new BasicProducer[String, Array[Byte]]("producer", stream, producerOptions)
     var cnt = 0
     var timeNow = System.currentTimeMillis()
+
+    var t1 = System.currentTimeMillis()
+    var t2 = System.currentTimeMillis()
+    var t3 = System.currentTimeMillis()
+    var t4 = System.currentTimeMillis()
+
     while (true) {
+
       val txn = producer.newTransaction(ProducerPolicies.errorIfOpen)
       0 until 10 foreach { x =>
         txn.send(x.toString)

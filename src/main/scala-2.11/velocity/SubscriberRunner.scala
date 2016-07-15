@@ -48,7 +48,7 @@ object SubscriberRunner {
       subscriberCoordinationOptions =
         new SubscriberCoordinationOptions(agentAddress = "t-streams-4.z1.netpoint-dc.com:8588",
           zkRootPath = "/velocity",
-          zkHosts = List(new InetSocketAddress("localhost", 2181)),
+          zkHosts = List(new InetSocketAddress("176.120.27.82", 2181)),
           zkSessionTimeout = 7,
           zkConnectionTimeout = 7),
       callBack = callback,
