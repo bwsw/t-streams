@@ -14,7 +14,7 @@ object ProducerRunner {
     val agentSettings = new ProducerCoordinationOptions(
       agentAddress = "t-streams-2.z1.netpoint-dc.com:8888",
       zkHosts = List(new InetSocketAddress("t-streams-1.z1.netpoint-dc.com", 2181)),
-      zkRootPath = "velocity",
+      zkRootPath = "/velocity",
       zkSessionTimeout = 7000,
       isLowPriorityToBeMaster = true,
       transport = new TcpTransport,
