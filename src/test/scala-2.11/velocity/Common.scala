@@ -1,4 +1,4 @@
-package com.bwsw.tstreams.velocity
+package velocity
 
 import java.net.InetSocketAddress
 
