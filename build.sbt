@@ -2,7 +2,7 @@ name := "t-streams"
 
 version := "1.0"
 
-scalaVersion := "2.11.4"
+scalaVersion := "2.11.8"
 
 scalacOptions += "-feature"
 scalacOptions += "-deprecation"
@@ -23,7 +23,7 @@ libraryDependencies ++= Seq(
   ("org.apache.zookeeper" % "zookeeper" % "3.4.6")
     .exclude("org.slf4j","slf4j-log4j12"),
   "com.google.guava" % "guava" % "18.0",
-  "com.typesafe.akka" % "akka-actor_2.11" % "2.4.8"
+  "com.typesafe.akka" % "akka-actor_2.11" % "2.4.1"
 )
 
 
