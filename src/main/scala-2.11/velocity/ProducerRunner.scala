@@ -25,7 +25,7 @@ object ProducerRunner {
       transactionTTL = 6,
       transactionKeepAliveInterval = 2,
       producerKeepAliveInterval = 1,
-      RoundRobinPolicyCreator.getRoundRobinPolicy(stream, (0 until 10).toList),
+      RoundRobinPolicyCreator.getRoundRobinPolicy(stream, List(0)),
       BatchInsert(10),
       LocalGeneratorCreator.getGen(),
       agentSettings,
