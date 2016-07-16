@@ -52,7 +52,7 @@ object SubscriberRunner {
           zkSessionTimeout = 7,
           zkConnectionTimeout = 7),
       callBack = callback,
-      persistentQueuePath = "Persistent queue path")
+      persistentQueuePath = "persistent_queue_path")
     subscribeConsumer.start()
   }
 }
