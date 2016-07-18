@@ -1,37 +1,30 @@
 package com.bwsw.tstreams.agents.consumer.subscriber
 
 import java.util.UUID
-import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.locks.ReentrantLock
 
+import akka.actor.Actor
+import com.bwsw.tstreams.agents.consumer.subscriber.CheckpointEventsResolverActor._
 import com.bwsw.tstreams.coordination.pubsub.messages.ProducerTransactionStatus
 import com.bwsw.tstreams.coordination.pubsub.messages.ProducerTransactionStatus.ProducerTransactionStatus
 import org.slf4j.LoggerFactory
 
 import scala.collection._
 
-class CheckpointEventsResolver(subscriber : BasicSubscribingConsumer[_,_]) {
-  private val UPDATE_INTERVAL = 5000
+class CheckpointEventsResolverActor(subscriber : BasicSubscribingConsumer[_,_]) extends Actor{
   private val MAX_RETRIES = 2
-
   private val logger = LoggerFactory.getLogger(this.getClass)
   private val partitionToBuffer = mutable.Map[Int, (TransactionsBuffer, ReentrantLock)]()
   private val partitionToTxns = mutable.Map[Int, mutable.Set[UUID]]()
   private val retries = mutable.Map[Int, mutable.Map[UUID, Int]]()
-  private val checkpointEventResolverLock = new ReentrantLock(true)
-  private val isRunning = new AtomicBoolean(false)
-  private var updateThread : Thread = null
 
-  def bindBuffer(partition : Int, buffer : TransactionsBuffer, lock : ReentrantLock) = {
-    checkpointEventResolverLock.lock()
+  private def bindBuffer(partition : Int, buffer : TransactionsBuffer, lock : ReentrantLock) = {
     logger.debug(s"[CHECKPOINT EVENT RESOLVER] start bind buffer on partition:{$partition}")
     partitionToBuffer(partition) = buffer -> lock
     logger.debug(s"[CHECKPOINT EVENT RESOLVER] finish bind buffer on partition:{$partition}")
-    checkpointEventResolverLock.unlock()
   }
 
-  def update(partition : Int, txn : UUID, status : ProducerTransactionStatus) = {
-    checkpointEventResolverLock.lock()
+  private def update(partition : Int, txn : UUID, status : ProducerTransactionStatus) = {
     logger.debug(s"[CHECKPOINT EVENT RESOLVER] start update CER on partition:{$partition}" +
       s" with txn:{${txn.timestamp()}}")
     status match {
@@ -55,7 +48,6 @@ class CheckpointEventsResolver(subscriber : BasicSubscribingConsumer[_,_]) {
           s"partition:{$partition}" +
           s" with txn:{${txn.timestamp()}}")
     }
-    checkpointEventResolverLock.unlock()
   }
 
   private def removeTxn(partition : Int, txn : UUID) = {
@@ -111,32 +103,37 @@ class CheckpointEventsResolver(subscriber : BasicSubscribingConsumer[_,_]) {
     }
   }
 
-  def startUpdate() = {
-    isRunning.set(true)
-    clear()
-    updateThread = new Thread(new Runnable {
-      override def run(): Unit = {
-        while(isRunning.get()){
-          checkpointEventResolverLock.lock()
-          refresh()
-          checkpointEventResolverLock.unlock()
-          Thread.sleep(UPDATE_INTERVAL)
-        }
-      }
-    })
-    updateThread.start()
-    logger.debug(s"[CHECKPOINT EVENT RESOLVER] started")
-  }
-
-  def stop() = {
-    isRunning.set(false)
-    updateThread.join()
-    logger.debug(s"[CHECKPOINT EVENT RESOLVER] stop")
-  }
-
   private def clear() = {
     partitionToBuffer.clear()
     partitionToTxns.clear()
     retries.clear()
   }
+
+  override def receive: Receive = {
+    case BindBufferCommand(partition,buffer,lock) =>
+      bindBuffer(partition,buffer,lock)
+      sender ! BindBufferResponse
+
+    case UpdateCommand(partition, txn, status) =>
+      update(partition, txn, status)
+      sender ! UpdateResponse
+
+    case RefreshCommand =>
+      refresh()
+
+    case ClearCommand =>
+      clear()
+  }
+}
+
+object CheckpointEventsResolverActor{
+  case class BindBufferCommand(partition : Int, buffer : TransactionsBuffer, lock : ReentrantLock)
+  case object BindBufferResponse
+
+  case class UpdateCommand(partition : Int, txn : UUID, status : ProducerTransactionStatus)
+  case object UpdateResponse
+
+  case object RefreshCommand
+
+  case object ClearCommand
 }

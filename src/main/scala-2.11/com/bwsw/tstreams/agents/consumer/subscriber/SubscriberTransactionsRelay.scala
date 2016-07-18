@@ -29,7 +29,7 @@ class SubscriberTransactionsRelay[DATATYPE,USERTYPE](subscriber : BasicSubscribi
                                                      queue : PersistentTransactionQueue,
                                                      var lastConsumedTransaction : UUID,
                                                      executor : ExecutorService,
-                                                     checkpointEventsResolver: CheckpointEventsResolver) {
+                                                     checkpointEventsResolver: CheckpointEventResolver) {
 
   private val POOLING_INTERVAL_MS = 100
   private val logger = LoggerFactory.getLogger(this.getClass)

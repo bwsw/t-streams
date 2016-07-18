@@ -78,7 +78,7 @@ class BasicSubscribingConsumer[DATATYPE, USERTYPE](name : String,
   /**
     * Resolver for resolving pre/final commit's
     */
-  private val checkpointEventsResolver = new CheckpointEventsResolver(this)
+  private val checkpointEventsResolver = new CheckpointEventResolver(this)
 
   /**
     * Start subscriber to consume new transactions
