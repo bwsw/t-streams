@@ -18,18 +18,18 @@ import scala.concurrent.ExecutionContext.Implicits.global
 class CheckpointEventResolver(subscriber : BasicSubscribingConsumer[_,_])(implicit system : ActorSystem) {
   private var updater : Cancellable = null
   private val UPDATE_INTERVAL = 5000
-  private val AWAIT_TIMEOUT = 10 seconds
+  private val AWAIT_TIMEOUT = 30 seconds
   implicit val asTimeout = Timeout(AWAIT_TIMEOUT)
 
   private val handler: ActorRef = system.actorOf(
     props = Props(new CheckpointEventsResolverActor(subscriber)))
 
   def bindBuffer(partition : Int, buffer : TransactionsBuffer, lock : ReentrantLock) = {
-    Await.result(handler ? BindBufferCommand(partition, buffer, lock), 1 second)
+    Await.result(handler ? BindBufferCommand(partition, buffer, lock), asTimeout.duration)
   }
 
   def update(partition : Int, txn : UUID, status : ProducerTransactionStatus) = {
-    Await.result(handler ? UpdateCommand(partition, txn, status), 1 second)
+    Await.result(handler ? UpdateCommand(partition, txn, status), asTimeout.duration)
   }
 
   def startUpdate() = {

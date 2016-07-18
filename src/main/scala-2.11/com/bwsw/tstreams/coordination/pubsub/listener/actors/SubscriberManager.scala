@@ -15,7 +15,7 @@ class SubscriberManager (system : ActorSystem) {
   private val handler: ActorRef = system.actorOf(
     props = Props[SubscriberActor])
 
-  private val AWAIT_TIMEOUT = 10 seconds
+  private val AWAIT_TIMEOUT = 30 seconds
   implicit val asTimeout = Timeout(AWAIT_TIMEOUT)
 
   def addCallback(callback : (ProducerTopicMessage) => Unit) = {
@@ -24,7 +24,7 @@ class SubscriberManager (system : ActorSystem) {
 
   def getCount() : Int = {
     val countFuture = handler ? GetCountCommand
-    val count = Await.result(countFuture, 1 second).asInstanceOf[GetCountResponse].count
+    val count = Await.result(countFuture, asTimeout.duration).asInstanceOf[GetCountResponse].count
     count
   }
 
