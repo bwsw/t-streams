@@ -3,18 +3,23 @@ package com.bwsw.tstreams.agents.consumer.subscriber
 import java.util.UUID
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.locks.ReentrantLock
+
 import com.bwsw.tstreams.coordination.pubsub.SubscriberCoordinator
 import com.bwsw.tstreams.coordination.pubsub.messages.{ProducerTopicMessage, ProducerTransactionStatus}
 import ProducerTransactionStatus._
 import com.bwsw.tstreams.txnqueue.PersistentTransactionQueue
 import org.slf4j.LoggerFactory
+
+import scala.concurrent.duration.Duration
+import scala.concurrent.{Await, Future}
 import scala.util.control.Breaks._
 
 
 /**
  * Relay for help to consume transactions
  * on concrete partition from concrete offset
- * @param subscriber Subscriber instance
+  *
+  * @param subscriber Subscriber instance
  * @param partition Partition from which to consume
  * @param coordinator Coordinator instance for maintaining new transactions updates
  * @param callback Callback on consumed transactions
@@ -43,14 +48,20 @@ class SubscriberTransactionsRelay[DATATYPE,USERTYPE](subscriber : BasicSubscribi
    */
   private val updateCallback = (msg : ProducerTopicMessage) => {
     if (msg.partition == partition) {
+      var awaitable : Future[Any] = null
       transactionBufferLock.lock()
       logger.debug(s"[UPDATE_CALLBACK PARTITION_$partition] consumed msg with uuid:{${msg.txnUuid.timestamp()}}," +
         s" status:{${msg.status}}\n")
       if (msg.txnUuid.timestamp() > lastConsumedTransaction.timestamp()) {
         if (msg.status == ProducerTransactionStatus.preCheckpoint ||
             msg.status == ProducerTransactionStatus.finalCheckpoint){
-          checkpointEventsResolver.update(partition, msg.txnUuid, msg.status)
+          awaitable = checkpointEventsResolver.update(partition, msg.txnUuid, msg.status)
         }
+      }
+      transactionBufferLock.unlock()
+      Await.ready(awaitable, Duration.Inf)
+      transactionBufferLock.lock()
+      if (msg.txnUuid.timestamp() > lastConsumedTransaction.timestamp()) {
         transactionBuffer.update(msg.txnUuid, msg.status, msg.ttl)
       }
       transactionBufferLock.unlock()

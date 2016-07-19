@@ -9,7 +9,7 @@ import akka.pattern.ask
 import com.bwsw.tstreams.agents.consumer.subscriber.CheckpointEventsResolverActor.{BindBufferCommand, ClearCommand, RefreshCommand, UpdateCommand}
 import com.bwsw.tstreams.coordination.pubsub.messages.ProducerTransactionStatus._
 
-import scala.concurrent.Await
+import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
 import scala.language.postfixOps
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -28,8 +28,9 @@ class CheckpointEventResolver(subscriber : BasicSubscribingConsumer[_,_])(implic
     Await.result(handler ? BindBufferCommand(partition, buffer, lock), asTimeout.duration)
   }
 
-  def update(partition : Int, txn : UUID, status : ProducerTransactionStatus) = {
-    Await.result(handler ? UpdateCommand(partition, txn, status), asTimeout.duration)
+  def update(partition : Int, txn : UUID, status : ProducerTransactionStatus): Future[Any] = {
+    val fut = handler ? UpdateCommand(partition, txn, status)
+    fut
   }
 
   def startUpdate() = {
