@@ -71,6 +71,11 @@ class SubscriberCoordinator(agentAddress : String,
     listener.start()
   }
 
+  /**
+    * Try remove this subscriber if it was already created
+    * @param streamName
+    * @param partition
+    */
   private def tryClean(streamName : String, partition : Int) : Unit = {
     val agentsOpt = zkService.getAllSubPath(s"/subscribers/agents/$streamName/$partition")
     if (agentsOpt.isEmpty)

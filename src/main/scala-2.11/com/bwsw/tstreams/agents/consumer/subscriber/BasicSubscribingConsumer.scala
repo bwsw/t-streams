@@ -127,6 +127,7 @@ class BasicSubscribingConsumer[DATATYPE, USERTYPE](name : String,
 
       val executorIndex = partitionsToExecutors(partition)
       val executor = executors(executorIndex)
+      val lastTxn = new LastTransactionWrapper(lastTxnUuid)
 
       val transactionsRelay = new SubscriberTransactionsRelay(
         subscriber = this,
@@ -134,7 +135,7 @@ class BasicSubscribingConsumer[DATATYPE, USERTYPE](name : String,
         coordinator = coordinator,
         callback = callBack,
         queue = queue,
-        lastConsumedTransaction = lastTxnUuid,
+        lastConsumedTransaction = lastTxn,
         executor = executor,
         checkpointEventsResolver = checkpointEventsResolver)
 

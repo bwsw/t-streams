@@ -10,8 +10,6 @@ import ProducerTransactionStatus._
 import com.bwsw.tstreams.txnqueue.PersistentTransactionQueue
 import org.slf4j.LoggerFactory
 
-import scala.concurrent.duration.Duration
-import scala.concurrent.{Await, Future}
 import scala.util.control.Breaks._
 
 
@@ -32,7 +30,7 @@ class SubscriberTransactionsRelay[DATATYPE,USERTYPE](subscriber : BasicSubscribi
                                                      coordinator: SubscriberCoordinator,
                                                      callback: BasicSubscriberCallback[DATATYPE, USERTYPE],
                                                      queue : PersistentTransactionQueue,
-                                                     var lastConsumedTransaction : UUID,
+                                                     lastConsumedTransaction : LastTransactionWrapper,
                                                      executor : ExecutorService,
                                                      checkpointEventsResolver: CheckpointEventResolver) {
 
@@ -41,27 +39,21 @@ class SubscriberTransactionsRelay[DATATYPE,USERTYPE](subscriber : BasicSubscribi
   private val transactionBuffer  = new TransactionsBuffer
   private val transactionBufferLock = new ReentrantLock(true)
   private val streamName = subscriber.stream.getName
-  checkpointEventsResolver.bindBuffer(partition, transactionBuffer, transactionBufferLock)
+  checkpointEventsResolver.bindBuffer(partition, transactionBuffer, transactionBufferLock, lastConsumedTransaction)
 
   /**
    * Transaction buffer updater
    */
   private val updateCallback = (msg : ProducerTopicMessage) => {
     if (msg.partition == partition) {
-      var awaitable : Future[Any] = null
       transactionBufferLock.lock()
       logger.debug(s"[UPDATE_CALLBACK PARTITION_$partition] consumed msg with uuid:{${msg.txnUuid.timestamp()}}," +
         s" status:{${msg.status}}\n")
-      if (msg.txnUuid.timestamp() > lastConsumedTransaction.timestamp()) {
+      if (msg.txnUuid.timestamp() > lastConsumedTransaction.get().timestamp()) {
         if (msg.status == ProducerTransactionStatus.preCheckpoint ||
-            msg.status == ProducerTransactionStatus.finalCheckpoint){
-          awaitable = checkpointEventsResolver.update(partition, msg.txnUuid, msg.status)
+          msg.status == ProducerTransactionStatus.finalCheckpoint){
+          checkpointEventsResolver.update(partition, msg.txnUuid, msg.status)
         }
-      }
-      transactionBufferLock.unlock()
-      Await.ready(awaitable, Duration.Inf)
-      transactionBufferLock.lock()
-      if (msg.txnUuid.timestamp() > lastConsumedTransaction.timestamp()) {
         transactionBuffer.update(msg.txnUuid, msg.status, msg.ttl)
       }
       transactionBufferLock.unlock()
@@ -207,17 +199,17 @@ class SubscriberTransactionsRelay[DATATYPE,USERTYPE](subscriber : BasicSubscribi
 
               case ProducerTransactionStatus.finalCheckpoint =>
                 logger.debug(s"[QUEUE_UPDATER PARTITION_$partition] ${key.timestamp()}" +
-                  s" last_consumed=${lastConsumedTransaction.timestamp()} curr_amount=$totalAmount\n")
+                  s" last_consumed=${lastConsumedTransaction.get().timestamp()} curr_amount=$totalAmount\n")
                 totalAmount += 1
                 queue.put(key)
                 executor.execute(queueConsumer)
             }
 
             //TODO remove after complex testing
-            if (lastConsumedTransaction.timestamp() >= key.timestamp())
+            if (lastConsumedTransaction.get().timestamp() >= key.timestamp())
               throw new IllegalStateException("incorrect subscriber state")
 
-            lastConsumedTransaction = key
+            lastConsumedTransaction.set(key)
             it.remove()
           }
         }

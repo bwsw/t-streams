@@ -11,16 +11,22 @@ import org.slf4j.LoggerFactory
 
 import scala.collection._
 
+case class TransactionBufferUtils(buffer : TransactionsBuffer, lock : ReentrantLock, lastConsumedTxn : LastTransactionWrapper)
+
 class CheckpointEventsResolverActor(subscriber : BasicSubscribingConsumer[_,_]) extends Actor{
   private val MAX_RETRIES = 2
   private val logger = LoggerFactory.getLogger(this.getClass)
-  private val partitionToBuffer = mutable.Map[Int, (TransactionsBuffer, ReentrantLock)]()
+  private val partitionToBuffer = mutable.Map[Int, TransactionBufferUtils]()
   private val partitionToTxns = mutable.Map[Int, mutable.Set[UUID]]()
   private val retries = mutable.Map[Int, mutable.Map[UUID, Int]]()
 
-  private def bindBuffer(partition : Int, buffer : TransactionsBuffer, lock : ReentrantLock) = {
+  private def bindBuffer(partition : Int,
+                         buffer : TransactionsBuffer,
+                         lock : ReentrantLock,
+                         lastTransactionWrapper: LastTransactionWrapper) = {
+
     logger.debug(s"[CHECKPOINT EVENT RESOLVER] start bind buffer on partition:{$partition}")
-    partitionToBuffer(partition) = buffer -> lock
+    partitionToBuffer(partition) = TransactionBufferUtils(buffer,lock,lastTransactionWrapper)
     logger.debug(s"[CHECKPOINT EVENT RESOLVER] finish bind buffer on partition:{$partition}")
   }
 
@@ -61,10 +67,11 @@ class CheckpointEventsResolverActor(subscriber : BasicSubscribingConsumer[_,_]) 
                                       txn : UUID,
                                       status : ProducerTransactionStatus,
                                       ttl : Int) = {
-    val (buffer,lock) = partitionToBuffer(partition)
-    lock.lock()
-    buffer.update(txn, status, ttl)
-    lock.unlock()
+    val transactionBufferUtils = partitionToBuffer(partition)
+    transactionBufferUtils.lock.lock()
+    if (txn.timestamp() > transactionBufferUtils.lastConsumedTxn.get().timestamp())
+      transactionBufferUtils.buffer.update(txn, status, ttl)
+    transactionBufferUtils.lock.unlock()
   }
 
   private def refresh() = {
@@ -110,13 +117,12 @@ class CheckpointEventsResolverActor(subscriber : BasicSubscribingConsumer[_,_]) 
   }
 
   override def receive: Receive = {
-    case BindBufferCommand(partition,buffer,lock) =>
-      bindBuffer(partition,buffer,lock)
+    case BindBufferCommand(partition,buffer,lock, lastTxn) =>
+      bindBuffer(partition,buffer,lock, lastTxn)
       sender ! BindBufferResponse
 
     case UpdateCommand(partition, txn, status) =>
       update(partition, txn, status)
-      sender ! UpdateResponse
 
     case RefreshCommand =>
       refresh()
@@ -127,13 +133,10 @@ class CheckpointEventsResolverActor(subscriber : BasicSubscribingConsumer[_,_]) 
 }
 
 object CheckpointEventsResolverActor{
-  case class BindBufferCommand(partition : Int, buffer : TransactionsBuffer, lock : ReentrantLock)
+  case class BindBufferCommand(partition : Int, buffer : TransactionsBuffer, lock : ReentrantLock, lastTxn : LastTransactionWrapper)
   case object BindBufferResponse
 
   case class UpdateCommand(partition : Int, txn : UUID, status : ProducerTransactionStatus)
-  case object UpdateResponse
-
   case object RefreshCommand
-
   case object ClearCommand
 }
