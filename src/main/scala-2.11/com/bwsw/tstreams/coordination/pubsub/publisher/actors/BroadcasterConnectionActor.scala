@@ -34,7 +34,6 @@ class BroadcasterConnectionActor(bootstrap : Bootstrap) extends Actor{
   }
 
   private def updateSubscribers(newSubscribers : List[String]): Unit = {
-    println(s"oldsub=${addressToId.keys.toList}  newsub="+newSubscribers)
     logger.debug(s"[BROADCASTER] start updating subscribers:{${addressToId.keys.mkString(",")}}" +
       s" using newSubscribers:{${newSubscribers.mkString(",")}}\n")
     newSubscribers.diff(addressToId.keys.toList) foreach { subscriber =>
