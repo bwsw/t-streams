@@ -11,7 +11,7 @@ import com.bwsw.tstreams.common.zkservice.ZkService
 import com.bwsw.tstreams.coordination.pubsub.messages.{ProducerTopicMessage, ProducerTransactionStatus}
 import com.bwsw.tstreams.coordination.transactions.messages._
 import com.bwsw.tstreams.coordination.transactions.transport.traits.ITransport
-import org.apache.zookeeper.CreateMode
+import org.apache.zookeeper.{CreateMode, KeeperException}
 import org.slf4j.LoggerFactory
 
 
@@ -85,7 +85,11 @@ class PeerToPeerAgent(agentAddress : String,
     filtered foreach { path =>
       logger.debug(s"[INIT CLEAN] Delete agent on address:{$path} on" +
         s"stream:{$streamName},partition:{$partition}\n")
-      zkService.delete(s"/producers/agents/$streamName/$partition/" + path)
+      try {
+        zkService.delete(s"/producers/agents/$streamName/$partition/" + path)
+      } catch {
+        case e : KeeperException =>
+      }
       logger.debug(s"[INIT CLEAN FINISHED] Delete agent on address:{$path} on" +
         s"stream:{$streamName},partition:{$partition}\n")
     }

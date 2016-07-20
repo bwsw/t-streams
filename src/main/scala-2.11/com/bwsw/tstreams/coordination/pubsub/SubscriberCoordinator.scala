@@ -6,7 +6,7 @@ import akka.actor.ActorSystem
 import com.bwsw.tstreams.common.zkservice.ZkService
 import com.bwsw.tstreams.coordination.pubsub.messages.ProducerTopicMessage
 import com.bwsw.tstreams.coordination.pubsub.listener.SubscriberListener
-import org.apache.zookeeper.CreateMode
+import org.apache.zookeeper.{CreateMode, KeeperException}
 import org.slf4j.LoggerFactory
 
 
@@ -71,12 +71,28 @@ class SubscriberCoordinator(agentAddress : String,
     listener.start()
   }
 
+  private def tryClean(streamName : String, partition : Int) : Unit = {
+    val agentsOpt = zkService.getAllSubPath(s"/subscribers/agents/$streamName/$partition")
+    if (agentsOpt.isEmpty)
+      return
+    val agents: List[String] = agentsOpt.get
+    val filtered = agents.filter(_ contains s"_${agentAddress}_")
+    filtered foreach { path =>
+      try {
+        zkService.delete(s"/producers/agents/$streamName/$partition/" + path)
+      } catch {
+        case e : KeeperException =>
+      }
+    }
+  }
+
   /**
-   * Register subscriber
-   * on stream/partition
-   */
+    * Register subscriber
+    * on stream/partition
+    */
   def registerSubscriber(streamName : String, partition : Int) : Unit = {
-    zkService.create(s"/subscribers/agents/$streamName/$partition/subscriber_", agentAddress, CreateMode.EPHEMERAL_SEQUENTIAL)
+    tryClean(streamName, partition)
+    zkService.create(s"/subscribers/agents/$streamName/$partition/subscriber_${agentAddress}_", agentAddress, CreateMode.EPHEMERAL_SEQUENTIAL)
   }
 
   /**
