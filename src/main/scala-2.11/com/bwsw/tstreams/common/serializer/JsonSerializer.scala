@@ -6,7 +6,7 @@ import com.fasterxml.jackson.core.`type`.TypeReference
 import com.fasterxml.jackson.databind.{DeserializationFeature, ObjectMapper}
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
 
-class JsonSerializer extends Serializer {
+class JsonSerializer {
   val mapper = new ObjectMapper()
   mapper.registerModule(DefaultScalaModule)
 
@@ -20,12 +20,6 @@ class JsonSerializer extends Serializer {
   def deserialize[T: Manifest](value: String): T =
     mapper.readValue(value, typeReference[T])
 
-  //WorkAround for Observer
-  //Works with class hierarchies where we pass manifest of subclass(_) and retrieve an instance of superclass (T) (but the actual type is the subclass type)
-  def deserializeWithManifest[T](value: String, manifest : Manifest[_]): T =
-    mapper.readValue(value, new TypeReference[T] {
-      override def getType = typeFromManifest(manifest)
-    })
 
   private def typeReference[T: Manifest] = new TypeReference[T] {
     override def getType = typeFromManifest(manifest[T])
@@ -42,17 +36,5 @@ class JsonSerializer extends Serializer {
 
       def getOwnerType = null
     }
-  }
-
-  override def setIgnoreUnknown(ignore: Boolean): Unit = {
-    if (ignore) {
-      mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
-    } else {
-      mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, true)
-    }
-  }
-
-  override def getIgnoreUnknown(): Boolean = {
-    !((mapper.getDeserializationConfig.getDeserializationFeatures & DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES.getMask) == DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES.getMask)
   }
 }

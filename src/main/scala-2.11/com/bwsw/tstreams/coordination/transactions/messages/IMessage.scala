@@ -6,6 +6,8 @@ import com.bwsw.tstreams.coordination.pubsub.messages.ProducerTopicMessage
 import com.fasterxml.jackson.annotation.JsonSubTypes.Type
 import com.fasterxml.jackson.annotation.{JsonSubTypes, JsonTypeInfo}
 
+import scala.util.Random
+
 /**
  * Messages which used for providing
  * interaction between [[com.bwsw.tstreams.coordination.transactions.peertopeer.PeerToPeerAgent]]]
@@ -30,7 +32,7 @@ import com.fasterxml.jackson.annotation.{JsonSubTypes, JsonTypeInfo}
   new Type(value = classOf[EmptyRequest], name = "EmptyRequest")
 ))
 trait IMessage {
-  var msgID : String = UUID.randomUUID().toString
+  var msgID : Long = Random.nextLong()
   val senderID : String
   val receiverID : String
   val partition : Int
