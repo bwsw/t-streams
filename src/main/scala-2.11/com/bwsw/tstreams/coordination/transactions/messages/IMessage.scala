@@ -3,9 +3,6 @@ package com.bwsw.tstreams.coordination.transactions.messages
 import java.util.UUID
 
 import com.bwsw.tstreams.coordination.pubsub.messages.ProducerTopicMessage
-import com.fasterxml.jackson.annotation.JsonSubTypes.Type
-import com.fasterxml.jackson.annotation.{JsonSubTypes, JsonTypeInfo}
-
 import scala.util.Random
 
 /**
