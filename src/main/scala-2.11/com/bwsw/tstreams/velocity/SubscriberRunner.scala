@@ -7,7 +7,6 @@ import java.util.concurrent.locks.ReentrantLock
 import com.bwsw.tstreams.agents.consumer.{BasicConsumerOptions, SubscriberCoordinationOptions}
 import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
 import com.bwsw.tstreams.agents.consumer.subscriber.{BasicSubscriberCallback, BasicSubscribingConsumer}
-import testutils.{LocalGeneratorCreator, RoundRobinPolicyCreator}
 
 
 object SubscriberRunner {

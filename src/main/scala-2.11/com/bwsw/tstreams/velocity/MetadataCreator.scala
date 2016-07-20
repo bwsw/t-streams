@@ -1,7 +1,6 @@
 package com.bwsw.tstreams.velocity
 
 import com.datastax.driver.core.Cluster
-import testutils.CassandraHelper
 
 object MetadataCreator {
   def main(args: Array[String]) {
