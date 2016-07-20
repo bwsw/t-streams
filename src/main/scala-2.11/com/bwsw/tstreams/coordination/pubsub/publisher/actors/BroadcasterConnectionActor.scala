@@ -3,12 +3,12 @@ package com.bwsw.tstreams.coordination.pubsub.publisher.actors
 import java.net.InetSocketAddress
 
 import akka.actor.Actor
-import com.bwsw.tstreams.coordination.pubsub.publisher.actors.ConnectionActor.{ChannelInactiveCommand, UpdateSubscribersCommand}
+import com.bwsw.tstreams.coordination.pubsub.publisher.actors.BroadcasterConnectionActor.{ChannelInactiveCommand, UpdateSubscribersCommand}
 import io.netty.bootstrap.Bootstrap
 import io.netty.channel.ChannelId
 import org.slf4j.LoggerFactory
 
-class ConnectionActor(bootstrap : Bootstrap) extends Actor{
+class BroadcasterConnectionActor(bootstrap : Bootstrap) extends Actor{
   private val logger = LoggerFactory.getLogger(this.getClass)
   private val idToAddress = scala.collection.mutable.Map[ChannelId, String]()
   private val addressToId = scala.collection.mutable.Map[String, ChannelId]()
@@ -34,6 +34,7 @@ class ConnectionActor(bootstrap : Bootstrap) extends Actor{
   }
 
   private def updateSubscribers(newSubscribers : List[String]): Unit = {
+    println(s"oldsub=${addressToId.keys.toList}  newsub="+newSubscribers)
     logger.debug(s"[BROADCASTER] start updating subscribers:{${addressToId.keys.mkString(",")}}" +
       s" using newSubscribers:{${newSubscribers.mkString(",")}}\n")
     newSubscribers.diff(addressToId.keys.toList) foreach { subscriber =>
@@ -48,7 +49,7 @@ class ConnectionActor(bootstrap : Bootstrap) extends Actor{
   }
 }
 
-object ConnectionActor {
+object BroadcasterConnectionActor {
   case class UpdateSubscribersCommand(newSubscribers : List[String])
   case class ChannelInactiveCommand(id : ChannelId)
 }
