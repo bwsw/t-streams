@@ -84,7 +84,7 @@ class SubscriberCoordinator(agentAddress : String,
     val filtered = agents.filter(_ contains s"_${agentAddress}_")
     filtered foreach { path =>
       try {
-        zkService.delete(s"/producers/agents/$streamName/$partition/" + path)
+        zkService.delete(s"/subscribers/agents/$streamName/$partition/" + path)
       } catch {
         case e : KeeperException =>
       }
