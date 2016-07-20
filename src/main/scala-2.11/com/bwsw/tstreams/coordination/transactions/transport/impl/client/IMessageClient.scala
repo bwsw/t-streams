@@ -10,6 +10,7 @@ import org.slf4j.LoggerFactory
 
 import scala.collection.mutable
 
+
 /**
  * Client for sending [[IMessage]]]
  */
@@ -27,12 +28,14 @@ class IMessageClient {
     val rcvAddress = msg.receiverID
     if (addressToConnection.contains(rcvAddress)){
       val sock = addressToConnection(rcvAddress)
+      val reader = new BufferedReader(new InputStreamReader(sock.getInputStream))
+      val socketAndReader = SocketAndReader(sock,reader)
       if (sock.isClosed || !sock.isConnected || sock.isOutputShutdown) {
         addressToConnection.remove(rcvAddress)
         sendAndWaitResponse(msg, timeout)
       }
       else
-        writeMsgAndWaitResponse(sock, msg)
+        writeMsgAndWaitResponse(socketAndReader, msg)
     } else {
       try {
         val splits = rcvAddress.split(":")
@@ -40,9 +43,11 @@ class IMessageClient {
         val host = splits(0)
         val port = splits(1).toInt
         val sock = new Socket(host, port)
+        val reader = new BufferedReader(new InputStreamReader(sock.getInputStream))
+        val socketAndReader = SocketAndReader(sock,reader)
         sock.setSoTimeout(timeout*1000)
         addressToConnection(rcvAddress) = sock
-        writeMsgAndWaitResponse(sock, msg)
+        writeMsgAndWaitResponse(socketAndReader, msg)
       } catch {
         case e: IOException =>
           logger.warn(s"exception occurred: ${e.getMessage}")
@@ -78,29 +83,28 @@ class IMessageClient {
 
   /**
    * Helper method for [[sendAndWaitResponse]]]
-   * @param socket Socket to send msg
+   * @param socketAndReader Socket and its reader to send msg
    * @param msg Msg to send
    * @return Response message
    */
-  private def writeMsgAndWaitResponse(socket : Socket, msg : IMessage) : IMessage = {
+  private def writeMsgAndWaitResponse(socketAndReader: SocketAndReader, msg : IMessage) : IMessage = {
     //do request
     val string = wrapMsg(serializer.serialize(msg))
     try {
-      val outputStream = socket.getOutputStream
+      val outputStream = socketAndReader.sock.getOutputStream
       outputStream.write(string.getBytes)
       outputStream.flush()
     }
     catch {
       case e : IOException =>
         logger.warn(s"exception occurred: ${e.getMessage}")
-        closeSocketAndUpdateMap(socket, msg)
+        closeSocketAndUpdateMap(socketAndReader.sock, msg)
         return null.asInstanceOf[IMessage]
     }
     //wait response with timeout
     var answer = {
       try {
-        val reader = new BufferedReader(new InputStreamReader(socket.getInputStream))
-        val string = reader.readLine()
+        val string = socketAndReader.reader.readLine()
         if (string == null)
           null.asInstanceOf[IMessage]
         else {
@@ -116,7 +120,7 @@ class IMessageClient {
     }
     if (answer == null || msg.msgID != answer.msgID) {
       answer = null
-      closeSocketAndUpdateMap(socket, msg)
+      closeSocketAndUpdateMap(socketAndReader.sock, msg)
     }
 
     answer
@@ -137,3 +141,5 @@ class IMessageClient {
     addressToConnection.clear()
   }
 }
+
+case class SocketAndReader(sock : Socket, reader : BufferedReader)
