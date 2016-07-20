@@ -3,7 +3,7 @@ package com.bwsw.tstreams.coordination.transactions.transport.impl.client
 import java.io.{BufferedReader, IOException, InputStreamReader}
 import java.net.{Socket, SocketTimeoutException}
 
-import com.bwsw.tstreams.common.serializer.JsonSerializer
+import com.bwsw.tstreams.common.serializer.TStreamsSerializer
 import com.bwsw.tstreams.coordination.transactions.messages.IMessage
 import com.fasterxml.jackson.core.JsonParseException
 import org.slf4j.LoggerFactory
@@ -15,7 +15,7 @@ import scala.collection.mutable
  */
 class IMessageClient {
   private val addressToConnection = mutable.Map[String, Socket]()
-  private val serializer = new JsonSerializer
+  private val serializer = new TStreamsSerializer
   private val logger = LoggerFactory.getLogger(this.getClass)
 
   /**

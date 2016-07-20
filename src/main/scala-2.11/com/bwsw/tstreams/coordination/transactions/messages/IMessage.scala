@@ -12,25 +12,6 @@ import scala.util.Random
  * Messages which used for providing
  * interaction between [[com.bwsw.tstreams.coordination.transactions.peertopeer.PeerToPeerAgent]]]
  */
-
-@JsonTypeInfo(
-  use = JsonTypeInfo.Id.NAME,
-  include = JsonTypeInfo.As.PROPERTY,
-  property = "type")
-@JsonSubTypes(Array(
-  new Type(value = classOf[TransactionRequest], name = "TransactionRequest"),
-  new Type(value = classOf[TransactionResponse], name = "TransactionResponse"),
-  new Type(value = classOf[DeleteMasterRequest], name = "DeleteMasterRequest"),
-  new Type(value = classOf[DeleteMasterResponse], name = "DeleteMasterResponse"),
-  new Type(value = classOf[SetMasterRequest], name = "SetMasterRequest"),
-  new Type(value = classOf[SetMasterResponse], name = "SetMasterResponse"),
-  new Type(value = classOf[PingRequest], name = "PingRequest"),
-  new Type(value = classOf[PingResponse], name = "PingResponse"),
-  new Type(value = classOf[PublishRequest], name = "PublishRequest"),
-  new Type(value = classOf[PublishResponse], name = "PublishResponse"),
-  new Type(value = classOf[EmptyResponse], name = "EmptyResponse"),
-  new Type(value = classOf[EmptyRequest], name = "EmptyRequest")
-))
 trait IMessage {
   var msgID : Long = Random.nextLong()
   val senderID : String

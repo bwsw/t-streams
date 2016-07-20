@@ -2,7 +2,7 @@ package com.bwsw.tstreams.coordination.pubsub.listener
 
 import java.util
 
-import com.bwsw.tstreams.common.serializer.JsonSerializer
+import com.bwsw.tstreams.common.serializer.TStreamsSerializer
 import com.bwsw.tstreams.coordination.pubsub.listener.actors.SubscriberManager
 import com.bwsw.tstreams.coordination.pubsub.messages.{ProducerTopicMessage, ProducerTransactionStatus}
 import com.fasterxml.jackson.core.JsonParseException
@@ -56,7 +56,7 @@ class SubscriberChannelHandler(subscriberManager: SubscriberManager) extends Sim
  */
 class ProducerTopicMessageDecoder extends MessageToMessageDecoder[String]{
   val logger = LoggerFactory.getLogger(this.getClass)
-  val serializer = new JsonSerializer
+  val serializer = new TStreamsSerializer
 
   override def decode(ctx: ChannelHandlerContext, msg: String, out: util.List[AnyRef]): Unit = {
     try {

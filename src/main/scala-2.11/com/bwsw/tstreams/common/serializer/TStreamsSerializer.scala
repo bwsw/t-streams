@@ -3,13 +3,20 @@ import java.util.UUID
 
 import com.bwsw.tstreams.coordination.pubsub.messages.{ProducerTopicMessage, ProducerTransactionStatus}
 import com.bwsw.tstreams.coordination.transactions.messages._
+import com.bwsw.tstreams.coordination.transactions.peertopeer.AgentSettings
 
 import scala.collection.mutable
 import scala.util.control.Breaks._
 
+/**
+  * TStreams object serializer
+  */
 class TStreamsSerializer {
   def serialize(value: Any): String = {
     value match {
+      case AgentSettings(id, prior, penalty) =>
+        s"{AS,$id,$prior,$penalty}"
+
       case x : DeleteMasterRequest =>
         s"{DMRq,${x.senderID},${x.receiverID},${x.partition},${x.msgID}}"
 
@@ -167,6 +174,9 @@ class TStreamsSerializer {
         assert(tokens.size == 5)
         ProducerTopicMessage(UUID.fromString(tokens(1).toString), tokens(2).toString.toInt,
           tokens(3).asInstanceOf[ProducerTransactionStatus.ProducerTransactionStatus], tokens(4).toString.toInt)
+      case "AS" =>
+        assert(tokens.size == 4)
+        AgentSettings(tokens(1).toString, tokens(2).toString.toInt, tokens(3).toString.toInt)
       case "P" =>
         assert(tokens.size == 1)
         ProducerTransactionStatus.preCheckpoint

@@ -1,7 +1,8 @@
 package com.bwsw.tstreams.coordination.transactions.transport.impl.server
 
 import java.util
-import com.bwsw.tstreams.common.serializer.JsonSerializer
+
+import com.bwsw.tstreams.common.serializer.TStreamsSerializer
 import com.bwsw.tstreams.coordination.transactions.messages.IMessage
 import com.bwsw.tstreams.coordination.transactions.transport.impl.server.actors.IMessageListenerManager
 import com.fasterxml.jackson.core.JsonParseException
@@ -54,7 +55,7 @@ class IMessageServerChannelHandler(manager : IMessageListenerManager) extends Si
  * Decoder [[java.lang.String]]] to [[IMessage]]]
  */
 class IMessageDecoder extends MessageToMessageDecoder[String]{
-  val serializer = new JsonSerializer
+  val serializer = new TStreamsSerializer
   private val logger = LoggerFactory.getLogger(this.getClass)
 
   override def decode(ctx: ChannelHandlerContext, msg: String, out: util.List[AnyRef]): Unit = {
@@ -73,7 +74,7 @@ class IMessageDecoder extends MessageToMessageDecoder[String]{
  * Encoder [[IMessage]]] to [[java.lang.String]]]
  */
 class IMessageEncoder extends MessageToMessageEncoder[IMessage]{
-  val serializer = new JsonSerializer
+  val serializer = new TStreamsSerializer
 
   override def encode(ctx: ChannelHandlerContext, msg: IMessage, out: util.List[AnyRef]): Unit = {
     out.add(serializer.serialize(msg) + "\n")

@@ -5,6 +5,7 @@ import java.util.UUID
 import com.bwsw.tstreams.common.serializer.TStreamsSerializer
 import com.bwsw.tstreams.coordination.pubsub.messages.{ProducerTopicMessage, ProducerTransactionStatus}
 import com.bwsw.tstreams.coordination.transactions.messages._
+import com.bwsw.tstreams.coordination.transactions.peertopeer.AgentSettings
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import testutils.TestUtils
 
@@ -102,5 +103,10 @@ class TStreamsSerializerTest extends FlatSpec with Matchers with BeforeAndAfterA
     assert(serializer.deserialize[ProducerTransactionStatus.ProducerTransactionStatus](serializer.serialize(updated)) == updated)
     assert(serializer.deserialize[ProducerTransactionStatus.ProducerTransactionStatus](serializer.serialize(opened)) == opened)
   }
-
+  "TStreams serializer" should "serialize and deserialize AgentSettings" in {
+    val clazz = new AgentSettings("agent",21212,12121212)
+    val string = serializer.serialize(clazz)
+    val req = serializer.deserialize[AgentSettings](string)
+    clazz shouldEqual req
+  }
 }
