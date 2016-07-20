@@ -12,21 +12,6 @@ import testutils.TestUtils
 class TStreamsSerializerTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils{
   val serializer = new TStreamsSerializer
 
-
-//  serializer.serialize(PublishRequest)
-//  serializer.serialize(PublishResponse)
-//  serializer.serialize(SetMasterRequest)
-//  serializer.serialize(SetMasterResponse)
-//  serializer.serialize(TransactionRequest)
-//  serializer.serialize(TransactionResponse)
-//
-//  serializer.serialize(ProducerTopicMessage)
-//  serializer.serialize(ProducerTransactionStatus.opened)
-//  serializer.serialize(ProducerTransactionStatus.cancelled)
-//  serializer.serialize(ProducerTransactionStatus.preCheckpoint)
-//  serializer.serialize(ProducerTransactionStatus.updated)
-//  serializer.serialize(ProducerTransactionStatus.finalCheckpoint)
-
   "TStreams serializer" should "serialize and deserialize DeleteMasterRequest" in {
     val clazz = DeleteMasterRequest("snd","rcv",0)
     val string = serializer.serialize(clazz)
@@ -66,8 +51,56 @@ class TStreamsSerializerTest extends FlatSpec with Matchers with BeforeAndAfterA
   "TStreams serializer" should "serialize and deserialize PublishRequest" in {
     val clazz = PublishRequest("snd","rcv",ProducerTopicMessage(UUID.randomUUID(),228,ProducerTransactionStatus.cancelled,1488))
     val string = serializer.serialize(clazz)
-    println(string)
-//    val req = serializer.deserialize[PublishRequest](string)
-//    clazz shouldEqual req
+    val req = serializer.deserialize[PublishRequest](string)
+    clazz shouldEqual req
   }
+  "TStreams serializer" should "serialize and deserialize PublishResponse" in {
+    val clazz = PublishResponse("snd","rcv",ProducerTopicMessage(UUID.randomUUID(),228,ProducerTransactionStatus.cancelled,1488))
+    val string = serializer.serialize(clazz)
+    val req = serializer.deserialize[PublishResponse](string)
+    clazz shouldEqual req
+  }
+  "TStreams serializer" should "serialize and deserialize SetMasterRequest" in {
+    val clazz = SetMasterRequest("snd","rcv",-1)
+    val string = serializer.serialize(clazz)
+    val req = serializer.deserialize[SetMasterRequest](string)
+    clazz shouldEqual req
+  }
+  "TStreams serializer" should "serialize and deserialize SetMasterResponse" in {
+    val clazz = SetMasterResponse("snd","rcv",-1)
+    val string = serializer.serialize(clazz)
+    val req = serializer.deserialize[SetMasterResponse](string)
+    clazz shouldEqual req
+  }
+  "TStreams serializer" should "serialize and deserialize TransactionRequest" in {
+    val clazz = TransactionRequest("snd","rcv",-1)
+    val string = serializer.serialize(clazz)
+    val req = serializer.deserialize[TransactionRequest](string)
+    clazz shouldEqual req
+  }
+  "TStreams serializer" should "serialize and deserialize TransactionResponse" in {
+    val clazz = TransactionResponse("snd","rcv",UUID.randomUUID(),228)
+    val string = serializer.serialize(clazz)
+    val req = serializer.deserialize[TransactionResponse](string)
+    clazz shouldEqual req
+  }
+  "TStreams serializer" should "serialize and deserialize PTM" in {
+    val clazz = ProducerTopicMessage(UUID.randomUUID(),123,ProducerTransactionStatus.finalCheckpoint,5)
+    val string = serializer.serialize(clazz)
+    val req = serializer.deserialize[ProducerTopicMessage](string)
+    clazz shouldEqual req
+  }
+  "TStreams serializer" should "serialize and deserialize PTS" in {
+    val pre = ProducerTransactionStatus.preCheckpoint
+    val fin = ProducerTransactionStatus.finalCheckpoint
+    val canceled = ProducerTransactionStatus.cancelled
+    val updated = ProducerTransactionStatus.updated
+    val opened = ProducerTransactionStatus.opened
+    assert(serializer.deserialize[ProducerTransactionStatus.ProducerTransactionStatus](serializer.serialize(pre)) == pre)
+    assert(serializer.deserialize[ProducerTransactionStatus.ProducerTransactionStatus](serializer.serialize(fin)) == fin)
+    assert(serializer.deserialize[ProducerTransactionStatus.ProducerTransactionStatus](serializer.serialize(canceled)) == canceled)
+    assert(serializer.deserialize[ProducerTransactionStatus.ProducerTransactionStatus](serializer.serialize(updated)) == updated)
+    assert(serializer.deserialize[ProducerTransactionStatus.ProducerTransactionStatus](serializer.serialize(opened)) == opened)
+  }
+
 }

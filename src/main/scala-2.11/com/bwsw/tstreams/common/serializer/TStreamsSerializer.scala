@@ -34,7 +34,7 @@ class TStreamsSerializer {
 
       case x : PublishResponse =>
         val serializedMsg = serialize(x.msg)
-        s"{PuRs,${x.senderID},${x.receiverID},$serializedMsg},${x.msgID}}"
+        s"{PuRs,${x.senderID},${x.receiverID},$serializedMsg,${x.msgID}}"
 
       case x : SetMasterRequest =>
         s"{SMRq,${x.senderID},${x.receiverID},${x.partition},${x.msgID}}"
@@ -69,14 +69,15 @@ class TStreamsSerializer {
       val char = value(i)
       char match {
         case ',' =>
-          tokens += temp
+          if (temp.nonEmpty)
+            tokens += temp
           temp = ""
           i += 1
         case '{' =>
           var pos = -1
           var cntOpen = 0
           breakable {
-            for (j <- i until value.length - 1) {
+            for (j <- i + 1 until value.length - 1) {
               if (value(j) == '{')
                 cntOpen += 1
               if (cntOpen == 0 && value(j) == '}'){
@@ -135,6 +136,7 @@ class TStreamsSerializer {
         assert(tokens.size == 5)
         val res = PublishRequest(tokens(1).toString, tokens(2).toString, tokens(3).asInstanceOf[ProducerTopicMessage])
         res.msgID = tokens(4).toString.toLong
+        res
       case "PuRs" =>
         assert(tokens.size == 5)
         val res = PublishResponse(tokens(1).toString, tokens(2).toString, tokens(3).asInstanceOf[ProducerTopicMessage])
