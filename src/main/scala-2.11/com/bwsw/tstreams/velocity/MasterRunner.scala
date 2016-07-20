@@ -5,7 +5,6 @@ import java.net.InetSocketAddress
 import com.bwsw.tstreams.agents.producer.InsertionType.BatchInsert
 import com.bwsw.tstreams.agents.producer.{BasicProducer, BasicProducerOptions, ProducerCoordinationOptions}
 import com.bwsw.tstreams.coordination.transactions.transport.impl.TcpTransport
-import testutils.{LocalGeneratorCreator, RoundRobinPolicyCreator}
 
 object MasterRunner {
   import Common._
