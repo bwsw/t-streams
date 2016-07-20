@@ -74,12 +74,17 @@ class TStreamsSerializer {
           i += 1
         case '{' =>
           var pos = -1
+          var cntOpen = 0
           breakable {
             for (j <- i until value.length - 1) {
-              if (value(j) == '}'){
+              if (value(j) == '{')
+                cntOpen += 1
+              if (cntOpen == 0 && value(j) == '}'){
                 pos = j
                 break()
               }
+              if (value(j) == '}')
+                cntOpen -= 1
             }
           }
           assert(pos != -1)
