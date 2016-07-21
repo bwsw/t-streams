@@ -34,5 +34,5 @@ class AerospikeStorageOptions(val namespace : String,
    * Read policy
    */
   if (readPolicy == null)
-    readPolicy = new Policy
+    readPolicy = new Policy()
 }
