@@ -3,19 +3,23 @@ package com.bwsw.tstreams.utils
 import java.net.{InetSocketAddress}
 import java.security.InvalidParameterException
 
+import akka.actor.ActorSystem
 import com.aerospike.client.Host
 import com.aerospike.client.policy.{Policy, WritePolicy, ClientPolicy}
 import com.bwsw.tstreams.agents.consumer.BasicConsumer
 import com.bwsw.tstreams.agents.consumer.subscriber.{BasicSubscriberCallback, BasicSubscribingConsumer}
-import com.bwsw.tstreams.agents.producer.BasicProducer
+import com.bwsw.tstreams.agents.producer.InsertionType.SingleElementInsert
+import com.bwsw.tstreams.agents.producer.{BasicProducerOptions, ProducerCoordinationOptions, BasicProducer}
 import com.bwsw.tstreams.converter.IConverter
+import com.bwsw.tstreams.coordination.transactions.transport.impl.TcpTransport
 import com.bwsw.tstreams.data.IStorage
 import com.bwsw.tstreams.data.aerospike.{AerospikeStorageOptions, AerospikeStorageFactory}
 import com.bwsw.tstreams.data.cassandra.{CassandraStorageOptions, CassandraStorageFactory}
 import com.bwsw.tstreams.generator.IUUIDGenerator
 import com.bwsw.tstreams.metadata.MetadataStorageFactory
-import com.datastax.driver.core.policies.RoundRobinPolicy
-import org.omg.PortableServer.THREAD_POLICY_ID
+import com.bwsw.tstreams.policy.AbstractPolicy
+import com.bwsw.tstreams.streams.BasicStream
+import com.bwsw.tstreams.velocity.RoundRobinPolicyCreator
 
 import scala.collection.mutable.{Map, HashMap}
 
@@ -47,6 +51,11 @@ object UF_Dictionary {
         * endpoint list of the metadata datastore, comma separated: host1:port1,host2:port2,host3:port3,...
         */
       val endpoints = "metadata.cluster.endpoints"
+
+      /**
+        * keyspace for metadata storage
+        */
+      val keyspace = "metadata.cluster.keyspace"
       /**
         * login of the user which can access to the metadata store
         */
@@ -173,6 +182,11 @@ object UF_Dictionary {
     */
   object Producer {
     /**
+      * name of producer
+      */
+    val name = "producer.name"
+
+    /**
       * amount of threads which handles works with transactions on master
       */
     val thread_pool = "producer.thread-pool"
@@ -233,6 +247,11 @@ object UF_Dictionary {
     */
   object Consumer {
     /**
+      * name of consumer
+      */
+    val name = "producer.name"
+
+    /**
       * amount of transactions to preload from C* to avoid additional select ops
       */
     val transaction_preload = "consumer.transaction-preload"
@@ -266,15 +285,16 @@ object UF_Dictionary {
 /**
   * Created by ivan on 21.07.16.
   */
-class UniversalFactory {
+class UniversalFactory(envname: String = "T-streams") {
 
   var propertyMap = new HashMap[String,Any]()
 
   // common
-  propertyMap += (UF_Dictionary.ActorSystem.name            -> "T-Streams")
+  implicit val system = ActorSystem(envname.toString)
 
   // metadata cluster scope
   propertyMap += (UF_Dictionary.Metadata.Cluster.endpoints  -> "localhost:9042")
+  propertyMap += (UF_Dictionary.Metadata.Cluster.keyspace   -> "test")
   propertyMap += (UF_Dictionary.Metadata.Cluster.login      -> null)
   propertyMap += (UF_Dictionary.Metadata.Cluster.password   -> null)
 
@@ -302,6 +322,7 @@ class UniversalFactory {
   propertyMap += (UF_Dictionary.Stream.description          -> "Test stream")
 
   // producer scope
+  propertyMap += (UF_Dictionary.Producer.name                                 -> "test-producer-1")
   propertyMap += (UF_Dictionary.Producer.master_bind_host                     -> "localhost")
   propertyMap += (UF_Dictionary.Producer.master_bind_port                     -> 18000)
   propertyMap += (UF_Dictionary.Producer.master_timeout                       -> 5)
@@ -346,7 +367,7 @@ class UniversalFactory {
   def getAerospikeCompatibleHostList(h: String): List[Host] =
     h.split(',').map((sh: String) => new Host(sh.split(':').head, Integer.parseInt(sh.split(':').tail.head))).toList
 
-  def getCassandraCompatibleHostList(h: String): List[InetSocketAddress] =
+  def getInetSocketAddressCompatibleHostList(h: String): List[InetSocketAddress] =
     h.split(',').map((sh: String) => new InetSocketAddress(sh.split(':').head, Integer.parseInt(sh.split(':').tail.head))).toList
 
   /**
@@ -422,20 +443,83 @@ class UniversalFactory {
 
       val opts = new CassandraStorageOptions(
         keyspace = propertyMap.get(UF_Dictionary.Data.Cluster.namespace).toString,
-        cassandraHosts = getCassandraCompatibleHostList(propertyMap.get(UF_Dictionary.Data.Cluster.endpoints).toString),
+        cassandraHosts = getInetSocketAddressCompatibleHostList(propertyMap.get(UF_Dictionary.Data.Cluster.endpoints).toString),
         login = login,
         password = password
       )
 
       ds = dsf.getInstance(opts)
-    } else
+    }
+    else
     {
       throw new InvalidParameterException("Only UF_Dictionary.Data.Cluster.Consts.DATA_DRIVER_CASSANDRA and " +
                                           "UF_Dictionary.Data.Cluster.Consts.DATA_DRIVER_AEROSPIKE engines " +
                                           "are supported currently in UniversalFactory.")
     }
 
-    null
+    val msLogin = propertyMap.get(UF_Dictionary.Metadata.Cluster.login)
+    val msPassword = propertyMap.get(UF_Dictionary.Metadata.Cluster.password)
+
+    val login = if (msLogin != null) msLogin.toString else null
+    val password = if (msPassword != null) msPassword.toString else null
+
+    // construct metadata storage
+    val ms = msFactory.getInstance(
+      keyspace        = propertyMap.get(UF_Dictionary.Metadata.Cluster.keyspace).toString,
+      cassandraHosts  = getInetSocketAddressCompatibleHostList(propertyMap.get(UF_Dictionary.Metadata.Cluster.endpoints).toString),
+      login = login,
+      password = password
+    )
+
+    // construct stream
+    val stream = new BasicStream[Array[Byte]](
+      name            = propertyMap.get(UF_Dictionary.Stream.name).toString,
+      partitions      = Integer.parseInt(propertyMap.get(UF_Dictionary.Stream.partitions).toString),
+      metadataStorage = ms,
+      dataStorage     = ds,
+      ttl             = Integer.parseInt(propertyMap.get(UF_Dictionary.Stream.ttl).toString),
+      description     = propertyMap.get(UF_Dictionary.Stream.description).toString)
+
+    // construct coordination agent options
+    val cao = new ProducerCoordinationOptions(
+      agentAddress            = propertyMap.get(UF_Dictionary.Producer.master_bind_host).toString + ":" + propertyMap.get(UF_Dictionary.Producer.master_bind_port).toString,
+      zkHosts                 = getInetSocketAddressCompatibleHostList(propertyMap.get(UF_Dictionary.Coordination.endpoints).toString),
+      zkRootPath              = propertyMap.get(UF_Dictionary.Coordination.root).toString,
+      zkSessionTimeout        = Integer.parseInt(propertyMap.get(UF_Dictionary.Coordination.ttl).toString),
+      isLowPriorityToBeMaster = isLowPriority,
+      transport               = new TcpTransport,
+      transportTimeout        = Integer.parseInt(propertyMap.get(UF_Dictionary.Producer.master_timeout).toString),
+      zkConnectionTimeout     = Integer.parseInt(propertyMap.get(UF_Dictionary.Coordination.connection_timeout).toString))
+
+    val transactionTTL = Integer.parseInt(propertyMap.get(UF_Dictionary.Producer.Transaction.ttl).toString)
+    val transactionKeepAlive = Integer.parseInt(propertyMap.get(UF_Dictionary.Producer.Transaction.keep_alive).toString)
+
+    var p: AbstractPolicy = null
+
+    if (propertyMap.get(UF_Dictionary.Producer.Transaction.distribution_policy).
+          equals(propertyMap.get(UF_Dictionary.Producer.Transaction.Consts.DISTRIBUTION_POLICY_RR))) {
+      p = RoundRobinPolicyCreator.getRoundRobinPolicy(stream, partitions)
+    }
+    else
+    {
+      throw new InvalidParameterException("Only UF_Dictionary.Producer.Transaction.Consts.DISTRIBUTION_POLICY_RR policy" +
+        "is supported currently in UniversalFactory.")
+    }
+
+    val po = new BasicProducerOptions[USERTYPE, Array[Byte]](
+      transactionTTL = transactionTTL,
+      transactionKeepAliveInterval = transactionKeepAlive,
+      producerKeepAliveInterval = 1, // TODO: deprecated!
+      writePolicy = p,
+      insertType = SingleElementInsert,
+      txnGenerator = txnGenerator,
+      producerCoordinationSettings = cao,
+      converter = converter)
+
+    new BasicProducer[USERTYPE, Array[Byte]](
+      name = propertyMap.get(UF_Dictionary.Producer.name).toString,
+      stream = stream,
+      producerOptions = po)
   }
 
   /**
