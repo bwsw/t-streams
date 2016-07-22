@@ -10,39 +10,221 @@ import com.datastax.driver.core.policies.RoundRobinPolicy
 import scala.collection.mutable.{Map, HashMap}
 
 /**
+  * Class which holds definitions for UniversalFactory
+  */
+public object UF_Dictionary {
+
+  /**
+    * UF_Dictionary actor-system scope
+    */
+  object ActorSystem {
+    /**
+      * name of the actor system which is used with t-streams
+      */
+    val name = "actor-system.name"
+  }
+
+  /**
+    * UF_Dictionary metadata scope
+    */
+  object Metadata {
+
+    /**
+      * UF_Dictionary.Metadata cluster scope
+      */
+    object Cluster {
+      /**
+        * endpoint list of the metadata datastore, comma separated: host1:port1,host2:port2,host3:port3,...
+        */
+      val endpoints = "metadata.cluster.endpoints"
+      /**
+        * login of the user which can access to the metadata store
+        */
+      val login = "metadata.cluster.login"
+      /**
+        * password of the user which can access to the metadata store
+        */
+      val password = "metadata.cluster.password"
+    }
+  }
+
+  /**
+    * UF_Dictionary data scope
+    */
+  object Data {
+
+    /**
+      * UF_Dictionary cluster scope
+      */
+    object Cluster {
+      /**
+        *   the database driver which is used for data storage (currently UniversalFactory supports aerospike
+        */
+      val driver = "data.cluster.driver"
+      /**
+        * the name of akka actor system used with t-streams
+        */
+      val endpoints = "data.cluster.endpoints"
+      /**
+        * endpoints list of the database where txn data is stored, comma separated: host1:port1,host2:port2,host3:port3,...
+        */
+      val namespace = "data.cluster.namespace"
+      /**
+        * login name of the user which can access the data storage
+        */
+      val login = "data.cluster.login"
+      /**
+        * password of the user which can access the data storage
+        */
+      val password = "data.cluster.password"
+
+      /**
+        * Stores consts for UF_Dictionary.Data.Cluster
+        */
+      object Consts {
+        /**
+          * Definition for aerospike backend
+          */
+        val DATA_DRIVER_AEROSPIKE = "aerospike"
+        /**
+          * Definition for cassandra backend
+          */
+        val DATA_DRIVER_CASSANDRA = "cassandra"
+      }
+    }
+  }
+
+  /**
+    * UF_Dictionary coordination scope
+    */
+  object Coordination {
+    /**
+      * endpoint list for zookeeper coordination service, comma separated: host1:port1,host2:port2,host3:port3,...
+      */
+    val endpoints = "coordination.endpoints"
+    /**
+      * ZK root node which holds coordination tree
+      */
+    val root = "coordination.root"
+    /**
+      * ZK ttl for coordination
+      */
+    val ttl = "coordination.ttl"
+
+    /**
+      * ZK connection timeout
+      */
+    val connection_timeout = "coordination.connection-timeout"
+  }
+
+  /**
+    * UF_Dictionary stream scope
+    */
+  object Stream {
+    /**
+      * name of the stream to work with
+      */
+    val name = "stream.name"
+    /**
+      * amount of stream partitions
+      */
+    val partitions = "stream.partitions"
+    /**
+      * stream time to leave (data expunged from datastore after that time)
+      */
+    val ttl = "stream.ttl"
+    /**
+      * random string description
+      */
+    val description = "stream.description"
+  }
+
+  /**
+    * UF_Dictionary producer scope
+    */
+  object Producer {
+    /**
+      * amount of threads which handles works with transactions on master
+      */
+    val thread_pool = "producer.thread-pool"
+
+    /**
+      * hostname or ip of producer master listener
+      */
+    val host = "producer.host"
+    /**
+      * port of producer master listener
+      */
+    val port = "producer.port"
+    /**
+      * Transport timeout is maximum time to wait for master to respond
+      */
+    val master_timeout = "producer.master-timeout" //TODO: fix internals transport->master
+
+
+    object Transaction {
+      /**
+        * TTL of transaction to wait until determine it's broken
+        */
+      val ttl = "producer.transaction.ttl"
+      /**
+        * Time to wait for successful end of opening operation on master for transaction
+        */
+      val open_maxwait = "producer.transaction.open-maxwait"
+      /**
+        * Time to update transaction state (keep it alive for long transactions)
+        */
+      val keep_alive = "producer.transaction.keep-alive"
+      /**
+        * amount of data items to batch when write data into txn
+        */
+      val data_write_batch_size = "producer.transaction.data-write-batch-size"
+      /**
+        * policy to distribute transactions over stream partitions
+        */
+      val distribution_policy = "producer.transaction.distribution-policy" // TODO: fix internals write->distribution
+
+    }
+  }
+
+}
+
+/**
   * Created by ivan on 21.07.16.
   */
 class UniversalFactory {
+
   var propertyMap = new HashMap[String,Any]()
-  propertyMap += ("actor-system.name" -> "T-Streams")
-  propertyMap += ("metadata.cluster.endpoints" -> "localhost:9042")
-  propertyMap += ("metadata.cluster.login" -> null)
-  propertyMap += ("metadata.cluster.password" -> null)
+  propertyMap += (UF_Dictionary.ActorSystem.name            -> "T-Streams")
+  propertyMap += (UF_Dictionary.Metadata.Cluster.endpoints  -> "localhost:9042")
+  propertyMap += (UF_Dictionary.Metadata.Cluster.login      -> null)
+  propertyMap += (UF_Dictionary.Metadata.Cluster.password   -> null)
 
-  propertyMap += ("data.cluster.driver" -> "aerospike")
-  propertyMap += ("data.cluster.endpoints" -> "localhost:3000")
-  propertyMap += ("data.cluster.namespace" -> "test")
-  propertyMap += ("data.cluster.login" -> null)
-  propertyMap += ("data.cluster.password" -> null)
+  propertyMap += (UF_Dictionary.Data.Cluster.driver         -> UF_Dictionary.Data.Cluster.Consts.DATA_DRIVER_AEROSPIKE)
+  propertyMap += (UF_Dictionary.Data.Cluster.endpoints      -> "localhost:3000")
+  propertyMap += (UF_Dictionary.Data.Cluster.namespace      -> "test")
+  propertyMap += (UF_Dictionary.Data.Cluster.login          -> null)
+  propertyMap += (UF_Dictionary.Data.Cluster.password       -> null)
 
-  propertyMap += ("coordination.endpoints" -> "localhost:2181")
-  propertyMap += ("coordination.root" -> "/t-streams")
-  propertyMap += ("coordination.ttl" -> 7)
-  propertyMap += ("coordination.connection.timeout" -> 7)
+  propertyMap += (UF_Dictionary.Coordination.endpoints          -> "localhost:2181")
+  propertyMap += (UF_Dictionary.Coordination.root               -> "/t-streams")
+  propertyMap += (UF_Dictionary.Coordination.ttl                -> 7)
+  propertyMap += (UF_Dictionary.Coordination.connection_timeout -> 7)
 
-  propertyMap += ("stream.name" -> "test")
-  propertyMap += ("stream.partitions" -> 1)
-  propertyMap += ("stream.ttl" -> 60 * 60 * 24)
-  propertyMap += ("stream.description" -> "Test stream")
+  propertyMap += (UF_Dictionary.Stream.name                 -> "test")
+  propertyMap += (UF_Dictionary.Stream.partitions           -> 1)
+  propertyMap += (UF_Dictionary.Stream.ttl                  -> 60 * 60 * 24)
+  propertyMap += (UF_Dictionary.Stream.description          -> "Test stream")
 
-  propertyMap += ("producer.endpoint.host" -> "localhost")
-  propertyMap += ("producer.endpoint.port" -> 18000)
-  propertyMap += ("producer.transport.timeout" -> 5)
-  propertyMap += ("producer.transaction.ttl" -> 6)
-  propertyMap += ("producer.transaction.keepalive" -> 2)
-  propertyMap += ("producer.transaction.insert-single" -> true)
-  propertyMap += ("producer.transaction.insert-policy" -> RoundRobinPolicy)
-  propertyMap += ("producer.thread-pool" -> 4)
+  propertyMap += (UF_Dictionary.Producer.host                                 -> "localhost")
+  propertyMap += (UF_Dictionary.Producer.port                                 -> 18000)
+  propertyMap += (UF_Dictionary.Producer.master_timeout                       -> 5)
+  propertyMap += (UF_Dictionary.Producer.Transaction.ttl                      -> 6)
+  propertyMap += (UF_Dictionary.Producer.Transaction.open_maxwait             -> 5)
+  propertyMap += (UF_Dictionary.Producer.Transaction.keep_alive               -> 2)
+  propertyMap += (UF_Dictionary.Producer.Transaction.data_write_batch_size    -> 100)
+  propertyMap += (UF_Dictionary.Producer.Transaction.distribution_policy      -> RoundRobinPolicy)
+  propertyMap += (UF_Dictionary.Producer.thread_pool -> 4)
 
 
   propertyMap += ("consumer.transaction.preload" -> 10)
@@ -52,7 +234,12 @@ class UniversalFactory {
   propertyMap += ("subscriber.endpoint.port" -> 18001)
   propertyMap += ("subscriber.persistent-queue.path" -> "/tmp")
 
-
+  /**
+    *
+    * @param key
+    * @param value
+    * @return
+    */
   def setProperty(key: String, value: Any): UniversalFactory = {
     if(propertyMap contains key)
       propertyMap += (key -> value)
@@ -61,8 +248,23 @@ class UniversalFactory {
     return this
   }
 
+  /**
+    *
+    * @param key
+    * @return
+    */
   def getProperty(key: String): Any = propertyMap get key
 
+  /**
+    *
+    * @param isLowPriority
+    * @param txnGenerator
+    * @param converter
+    * @param partitions
+    * @tparam F
+    * @tparam T
+    * @return
+    */
   def getProducer[F,T](isLowPriority : Boolean,
                        txnGenerator : IUUIDGenerator,
                        converter : IConverter[F,T],
@@ -71,6 +273,15 @@ class UniversalFactory {
     null
   }
 
+  /**
+    *
+    * @param txnGenerator
+    * @param converter
+    * @param partitions
+    * @tparam F
+    * @tparam T
+    * @return
+    */
   def getConsumer[F,T](txnGenerator : IUUIDGenerator,
                        converter : IConverter[F,T],
                        partitions : List
@@ -78,6 +289,16 @@ class UniversalFactory {
     null
   }
 
+  /**
+    *
+    * @param txnGenerator
+    * @param converter
+    * @param partitions
+    * @param callback
+    * @tparam F
+    * @tparam T
+    * @return
+    */
   def getSubscriber[F,T](txnGenerator : IUUIDGenerator,
                          converter : IConverter[F,T],
                          partitions : List,
