@@ -292,6 +292,12 @@ class UniversalFactory(envname: String = "T-streams") {
   // common
   implicit val system = ActorSystem(envname.toString)
 
+  /**
+    * returnes actor system for whole world
+    * @return
+    */
+  def getActorSystem() = system
+
   // metadata cluster scope
   propertyMap += (UF_Dictionary.Metadata.Cluster.endpoints  -> "localhost:9042")
   propertyMap += (UF_Dictionary.Metadata.Cluster.keyspace   -> "test")
