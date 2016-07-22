@@ -151,11 +151,11 @@ public object UF_Dictionary {
     /**
       * hostname or ip of producer master listener
       */
-    val host = "producer.host"
+    val master_bind_host = "producer.master-bind-host"
     /**
       * port of producer master listener
       */
-    val port = "producer.port"
+    val master_bind_port = "producer.master-bind-port"
     /**
       * Transport timeout is maximum time to wait for master to respond
       */
@@ -187,6 +187,39 @@ public object UF_Dictionary {
     }
   }
 
+  /**
+    * UF_Dictionary consumer scope
+    */
+  object Consumer {
+    /**
+      * amount of transactions to preload from C* to avoid additional select ops
+      */
+    val transaction_preload = "consumer.transaction-preload"
+    /**
+      * amount of data items to load at once from data storage
+      */
+    val data_preload = "consumer.data-preload"
+
+    /**
+      * UF_Dictionary.Consumer subscriber scope
+      */
+    object Subscriber {
+      /**
+        * host/ip to bind
+        */
+      val bind_host = "consumer.subscriber.bind-host"
+      /**
+        * port to bind
+        */
+      val bind_port = "consumer.subscriber.bind-port"
+
+      /**
+        * persistent queue path (fast disk where to store bursted data
+        */
+      val persistent_queue_path = "subscriber.persistent-queue.path"
+    }
+  }
+
 }
 
 /**
@@ -195,6 +228,7 @@ public object UF_Dictionary {
 class UniversalFactory {
 
   var propertyMap = new HashMap[String,Any]()
+
   propertyMap += (UF_Dictionary.ActorSystem.name            -> "T-Streams")
   propertyMap += (UF_Dictionary.Metadata.Cluster.endpoints  -> "localhost:9042")
   propertyMap += (UF_Dictionary.Metadata.Cluster.login      -> null)
@@ -216,23 +250,23 @@ class UniversalFactory {
   propertyMap += (UF_Dictionary.Stream.ttl                  -> 60 * 60 * 24)
   propertyMap += (UF_Dictionary.Stream.description          -> "Test stream")
 
-  propertyMap += (UF_Dictionary.Producer.host                                 -> "localhost")
-  propertyMap += (UF_Dictionary.Producer.port                                 -> 18000)
+  propertyMap += (UF_Dictionary.Producer.master_bind_host                     -> "localhost")
+  propertyMap += (UF_Dictionary.Producer.master_bind_port                     -> 18000)
   propertyMap += (UF_Dictionary.Producer.master_timeout                       -> 5)
   propertyMap += (UF_Dictionary.Producer.Transaction.ttl                      -> 6)
   propertyMap += (UF_Dictionary.Producer.Transaction.open_maxwait             -> 5)
   propertyMap += (UF_Dictionary.Producer.Transaction.keep_alive               -> 2)
   propertyMap += (UF_Dictionary.Producer.Transaction.data_write_batch_size    -> 100)
   propertyMap += (UF_Dictionary.Producer.Transaction.distribution_policy      -> RoundRobinPolicy)
-  propertyMap += (UF_Dictionary.Producer.thread_pool -> 4)
+  propertyMap += (UF_Dictionary.Producer.thread_pool                          -> 4)
 
 
-  propertyMap += ("consumer.transaction.preload" -> 10)
-  propertyMap += ("consumer.data.preload" -> 100)
+  propertyMap += (UF_Dictionary.Consumer.transaction_preload      -> 10)
+  propertyMap += (UF_Dictionary.Consumer.data_preload             -> 100)
 
-  propertyMap += ("subscriber.endpoint.host" -> "localhost")
-  propertyMap += ("subscriber.endpoint.port" -> 18001)
-  propertyMap += ("subscriber.persistent-queue.path" -> "/tmp")
+  propertyMap += (UF_Dictionary.Consumer.Subscriber.bind_host             -> "localhost")
+  propertyMap += (UF_Dictionary.Consumer.Subscriber.bind_port             -> 18001)
+  propertyMap += (UF_Dictionary.Consumer.Subscriber.persistent_queue_path -> "/tmp")
 
   /**
     *
