@@ -1,27 +1,28 @@
 package com.bwsw.tstreams.utils
 
-import java.net.{InetSocketAddress}
+import java.net.InetSocketAddress
 import java.security.InvalidParameterException
 
 import akka.actor.ActorSystem
 import com.aerospike.client.Host
-import com.aerospike.client.policy.{Policy, WritePolicy, ClientPolicy}
+import com.aerospike.client.policy.{ClientPolicy, Policy, WritePolicy}
 import com.bwsw.tstreams.agents.consumer.BasicConsumer
 import com.bwsw.tstreams.agents.consumer.subscriber.{BasicSubscriberCallback, BasicSubscribingConsumer}
 import com.bwsw.tstreams.agents.producer.InsertionType.SingleElementInsert
-import com.bwsw.tstreams.agents.producer.{BasicProducerOptions, ProducerCoordinationOptions, BasicProducer}
+import com.bwsw.tstreams.agents.producer.{BasicProducer, BasicProducerOptions, ProducerCoordinationOptions}
 import com.bwsw.tstreams.converter.IConverter
 import com.bwsw.tstreams.coordination.transactions.transport.impl.TcpTransport
 import com.bwsw.tstreams.data.IStorage
-import com.bwsw.tstreams.data.aerospike.{AerospikeStorageOptions, AerospikeStorageFactory}
-import com.bwsw.tstreams.data.cassandra.{CassandraStorageOptions, CassandraStorageFactory}
+import com.bwsw.tstreams.data.aerospike.{AerospikeStorageFactory, AerospikeStorageOptions}
+import com.bwsw.tstreams.data.cassandra.{CassandraStorageFactory, CassandraStorageOptions}
 import com.bwsw.tstreams.generator.IUUIDGenerator
 import com.bwsw.tstreams.metadata.MetadataStorageFactory
 import com.bwsw.tstreams.policy.AbstractPolicy
 import com.bwsw.tstreams.streams.BasicStream
 import com.bwsw.tstreams.velocity.RoundRobinPolicyCreator
+import org.slf4j.LoggerFactory
 
-import scala.collection.mutable.{Map, HashMap}
+import scala.collection.mutable.{HashMap, Map}
 
 /**
   * Class which holds definitions for UniversalFactory
@@ -287,6 +288,8 @@ object UF_Dictionary {
   */
 class UniversalFactory(envname: String = "T-streams") {
 
+  private val logger = LoggerFactory.getLogger(this.getClass)
+
   var propertyMap = new HashMap[String,Any]()
 
   // common
@@ -334,7 +337,7 @@ class UniversalFactory(envname: String = "T-streams") {
   propertyMap += (UF_Dictionary.Producer.master_timeout                       -> 5)
   propertyMap += (UF_Dictionary.Producer.Transaction.ttl                      -> 6)
   propertyMap += (UF_Dictionary.Producer.Transaction.open_maxwait             -> 5)
-  propertyMap += (UF_Dictionary.Producer.Transaction.keep_alive               -> 2)
+  propertyMap += (UF_Dictionary.Producer.Transaction.keep_alive               -> 1)
   propertyMap += (UF_Dictionary.Producer.Transaction.data_write_batch_size    -> 100)
   propertyMap += (UF_Dictionary.Producer.Transaction.distribution_policy      -> UF_Dictionary.Producer.Transaction.Consts.DISTRIBUTION_POLICY_RR)
   propertyMap += (UF_Dictionary.Producer.thread_pool                          -> 4)
@@ -356,6 +359,7 @@ class UniversalFactory(envname: String = "T-streams") {
     * @return
     */
   def setProperty(key: String, value: Any): UniversalFactory = {
+    logger.debug("get property " + key + " = " + value)
     if(propertyMap contains key)
       propertyMap += (key -> value)
     else
@@ -368,12 +372,24 @@ class UniversalFactory(envname: String = "T-streams") {
     * @param key
     * @return
     */
-  def getProperty(key: String): Any = propertyMap get key
+  def getProperty(key: String): Any = {
+    val v = propertyMap get key
+    logger.debug("get property " + key + " = " + v)
+    v
+  }
 
-  def getAerospikeCompatibleHostList(h: String): List[Host] =
+  private def pAsInt(key: String, default: Int = 0): Int = if(null == getProperty(key)) default else Integer.parseInt(getProperty(key).toString)
+  private def pAsString(key: String, default: String = null): String = if(null == getProperty(key)) default else getProperty(key).toString
+
+  private def pAssertIntRange(value: Int, min: Int, max: Int): Int =  {
+    assert(value >= min && value <= max)
+    value
+  }
+
+  private def getAerospikeCompatibleHostList(h: String): List[Host] =
     h.split(',').map((sh: String) => new Host(sh.split(':').head, Integer.parseInt(sh.split(':').tail.head))).toList
 
-  def getInetSocketAddressCompatibleHostList(h: String): List[InetSocketAddress] =
+  private def getInetSocketAddressCompatibleHostList(h: String): List[InetSocketAddress] =
     h.split(',').map((sh: String) => new InetSocketAddress(sh.split(':').head, Integer.parseInt(sh.split(':').tail.head))).toList
 
   /**
@@ -404,13 +420,8 @@ class UniversalFactory(envname: String = "T-streams") {
       else
         cp = propertyMap.get(UF_Dictionary.Data.Cluster.Aerospike.client_policy).asInstanceOf[ClientPolicy]
 
-      val dsLogin = propertyMap.get(UF_Dictionary.Data.Cluster.login)
-      if (dsLogin != null)
-        cp.user = dsLogin.toString
-
-      val dsPassword = propertyMap.get(UF_Dictionary.Data.Cluster.password)
-      if (dsPassword != null)
-        cp.password = dsPassword.toString
+      cp.user     = pAsString(UF_Dictionary.Data.Cluster.login, null)
+      cp.password = pAsString(UF_Dictionary.Data.Cluster.password, null)
 
       // construct write policy
       var wp: WritePolicy = null
@@ -426,9 +437,12 @@ class UniversalFactory(envname: String = "T-streams") {
       else
         rp = propertyMap.get(UF_Dictionary.Data.Cluster.Aerospike.read_policy).asInstanceOf[Policy]
 
+      assert(pAsString(UF_Dictionary.Data.Cluster.namespace) != null)
+      assert(pAsString(UF_Dictionary.Data.Cluster.endpoints) != null)
+
       val opts = new AerospikeStorageOptions(
-        namespace     = propertyMap.get(UF_Dictionary.Data.Cluster.namespace).toString,
-        hosts         = getAerospikeCompatibleHostList(propertyMap.get(UF_Dictionary.Data.Cluster.endpoints).toString),
+        namespace     = pAsString(UF_Dictionary.Data.Cluster.namespace),
+        hosts         = getAerospikeCompatibleHostList(pAsString(UF_Dictionary.Data.Cluster.endpoints)),
         clientPolicy  = cp,
         writePolicy   = wp,
         readPolicy    = rp)
@@ -441,17 +455,17 @@ class UniversalFactory(envname: String = "T-streams") {
     {
       val dsf = new CassandraStorageFactory
 
-      val dsLogin = propertyMap.get(UF_Dictionary.Data.Cluster.login)
-      val login = if (dsLogin != null) dsLogin.toString else null
+      val login     = pAsString(UF_Dictionary.Data.Cluster.login, null)
+      val password  = pAsString(UF_Dictionary.Data.Cluster.password, null)
 
-      val dsPassword = propertyMap.get(UF_Dictionary.Data.Cluster.password)
-      val password = if (dsPassword != null) dsPassword.toString else null
+      assert(pAsString(UF_Dictionary.Data.Cluster.namespace) != null)
+      assert(pAsString(UF_Dictionary.Data.Cluster.endpoints) != null)
 
       val opts = new CassandraStorageOptions(
-        keyspace = propertyMap.get(UF_Dictionary.Data.Cluster.namespace).toString,
-        cassandraHosts = getInetSocketAddressCompatibleHostList(propertyMap.get(UF_Dictionary.Data.Cluster.endpoints).toString),
-        login = login,
-        password = password
+        keyspace        = pAsString(UF_Dictionary.Data.Cluster.namespace),
+        cassandraHosts  = getInetSocketAddressCompatibleHostList(pAsString(UF_Dictionary.Data.Cluster.endpoints)),
+        login           = login,
+        password        = password
       )
 
       ds = dsf.getInstance(opts)
@@ -463,42 +477,52 @@ class UniversalFactory(envname: String = "T-streams") {
                                           "are supported currently in UniversalFactory.")
     }
 
-    val msLogin = propertyMap.get(UF_Dictionary.Metadata.Cluster.login)
-    val msPassword = propertyMap.get(UF_Dictionary.Metadata.Cluster.password)
+    val login = pAsString(UF_Dictionary.Metadata.Cluster.login, null)
+    val password = pAsString(UF_Dictionary.Metadata.Cluster.password, null)
 
-    val login = if (msLogin != null) msLogin.toString else null
-    val password = if (msPassword != null) msPassword.toString else null
+    assert(pAsString(UF_Dictionary.Metadata.Cluster.keyspace) != null)
+    assert(pAsString(UF_Dictionary.Metadata.Cluster.endpoints) != null)
 
     // construct metadata storage
     val ms = msFactory.getInstance(
-      keyspace        = propertyMap.get(UF_Dictionary.Metadata.Cluster.keyspace).toString,
-      cassandraHosts  = getInetSocketAddressCompatibleHostList(propertyMap.get(UF_Dictionary.Metadata.Cluster.endpoints).toString),
-      login = login,
-      password = password
-    )
+      keyspace        = pAsString(UF_Dictionary.Metadata.Cluster.keyspace),
+      cassandraHosts  = getInetSocketAddressCompatibleHostList(pAsString(UF_Dictionary.Metadata.Cluster.endpoints)),
+      login           = login,
+      password        = password)
+
+    assert(pAsString(UF_Dictionary.Stream.name) != null)
+    pAssertIntRange(pAsInt(UF_Dictionary.Stream.partitions, 1), 1, 100000000)
+    pAssertIntRange(pAsInt(UF_Dictionary.Stream.ttl, 60), 60, 315360000)
 
     // construct stream
     val stream = new BasicStream[Array[Byte]](
-      name            = propertyMap.get(UF_Dictionary.Stream.name).toString,
-      partitions      = Integer.parseInt(propertyMap.get(UF_Dictionary.Stream.partitions).toString),
+      name            = pAsString(UF_Dictionary.Stream.name),
+      partitions      = pAsInt(UF_Dictionary.Stream.partitions, -1),
       metadataStorage = ms,
       dataStorage     = ds,
-      ttl             = Integer.parseInt(propertyMap.get(UF_Dictionary.Stream.ttl).toString),
-      description     = propertyMap.get(UF_Dictionary.Stream.description).toString)
+      ttl             = pAsInt(UF_Dictionary.Stream.ttl, 60),
+      description     = pAsString(UF_Dictionary.Stream.description, ""))
+
+    assert(pAsString(UF_Dictionary.Producer.master_bind_host) != null)
+    assert(pAsString(UF_Dictionary.Producer.master_bind_port) != null)
+    assert(pAsString(UF_Dictionary.Coordination.endpoints)    != null)
+    assert(pAsString(UF_Dictionary.Coordination.root)    != null)
+
+    pAssertIntRange(pAsInt(UF_Dictionary.Coordination.ttl, 30), 1, 30)
+    pAssertIntRange(pAsInt(UF_Dictionary.Producer.master_timeout, 5), 1, 10)
+    pAssertIntRange(pAsInt(UF_Dictionary.Coordination.connection_timeout, 5), 1, 30)
 
     // construct coordination agent options
     val cao = new ProducerCoordinationOptions(
-      agentAddress            = propertyMap.get(UF_Dictionary.Producer.master_bind_host).toString + ":" + propertyMap.get(UF_Dictionary.Producer.master_bind_port).toString,
-      zkHosts                 = getInetSocketAddressCompatibleHostList(propertyMap.get(UF_Dictionary.Coordination.endpoints).toString),
-      zkRootPath              = propertyMap.get(UF_Dictionary.Coordination.root).toString,
-      zkSessionTimeout        = Integer.parseInt(propertyMap.get(UF_Dictionary.Coordination.ttl).toString),
+      agentAddress            = pAsString(UF_Dictionary.Producer.master_bind_host) + ":" + pAsString(UF_Dictionary.Producer.master_bind_port),
+      zkHosts                 = getInetSocketAddressCompatibleHostList(pAsString(UF_Dictionary.Coordination.endpoints)),
+      zkRootPath              = pAsString(UF_Dictionary.Coordination.root),
+      zkSessionTimeout        = pAsInt(UF_Dictionary.Coordination.ttl, 30),
       isLowPriorityToBeMaster = isLowPriority,
       transport               = new TcpTransport,
-      transportTimeout        = Integer.parseInt(propertyMap.get(UF_Dictionary.Producer.master_timeout).toString),
-      zkConnectionTimeout     = Integer.parseInt(propertyMap.get(UF_Dictionary.Coordination.connection_timeout).toString))
+      transportTimeout        = pAsInt(UF_Dictionary.Producer.master_timeout, 5),
+      zkConnectionTimeout     = pAsInt(UF_Dictionary.Coordination.connection_timeout, 5))
 
-    val transactionTTL = Integer.parseInt(propertyMap.get(UF_Dictionary.Producer.Transaction.ttl).toString)
-    val transactionKeepAlive = Integer.parseInt(propertyMap.get(UF_Dictionary.Producer.Transaction.keep_alive).toString)
 
     var writePolicy: AbstractPolicy = null
 
@@ -512,9 +536,12 @@ class UniversalFactory(envname: String = "T-streams") {
         "is supported currently in UniversalFactory.")
     }
 
+    pAssertIntRange(pAsInt(UF_Dictionary.Producer.Transaction.ttl, 6), 6, 30)
+    pAssertIntRange(pAsInt(UF_Dictionary.Producer.Transaction.keep_alive, 1), 1, 4)
+
     val po = new BasicProducerOptions[USERTYPE, Array[Byte]](
-      transactionTTL                = transactionTTL,
-      transactionKeepAliveInterval  = transactionKeepAlive,
+      transactionTTL                = pAsInt(UF_Dictionary.Producer.Transaction.ttl, 6),
+      transactionKeepAliveInterval  = pAsInt(UF_Dictionary.Producer.Transaction.keep_alive, 1),
       producerKeepAliveInterval     = 1, // TODO: deprecated, remove when https://github.com/bwsw/t-streams/issues/19 will be fixed!
       writePolicy                   = writePolicy,
       insertType                    = SingleElementInsert,
@@ -522,10 +549,12 @@ class UniversalFactory(envname: String = "T-streams") {
       producerCoordinationSettings  = cao,
       converter                     = converter)
 
+    assert(pAsString(UF_Dictionary.Producer.name) != null)
+
     new BasicProducer[USERTYPE, Array[Byte]](
-      name = propertyMap.get(UF_Dictionary.Producer.name).toString,
-      stream = stream,
-      producerOptions = po)
+      name              = pAsString(UF_Dictionary.Producer.name),
+      stream            = stream,
+      producerOptions   = po)
   }
 
   /**

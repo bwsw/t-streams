@@ -41,6 +41,10 @@ class CassandraStorageFactory {
         clusterMap(sortedHosts)
       else{
         val builder: Builder = Cluster.builder()
+
+        if (cassandraStorageOptions.login != null && cassandraStorageOptions.password != null)
+          builder.withCredentials(cassandraStorageOptions.login, cassandraStorageOptions.password)
+
         cassandraStorageOptions.cassandraHosts.foreach(x => builder.addContactPointsWithPorts(x))
         val cluster = builder.build()
         clusterMap(sortedHosts) = cluster

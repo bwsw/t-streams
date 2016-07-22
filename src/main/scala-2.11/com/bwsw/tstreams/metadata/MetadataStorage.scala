@@ -180,7 +180,7 @@ class MetadataStorageFactory {
     * @param keyspace Keyspace to use for metadata storage
     * @return Instance of MetadataStorage
     */
-  def getInstance(cassandraHosts : List[InetSocketAddress], keyspace : String): MetadataStorage = {
+  def getInstance(cassandraHosts : List[InetSocketAddress], keyspace : String, login: String = null, password: String = null): MetadataStorage = {
     lock.lock()
     logger.info("start MetadataStorage instance creation\n")
 
@@ -191,6 +191,8 @@ class MetadataStorageFactory {
         clusterMap(sortedHosts)
       else{
         val builder: Builder = Cluster.builder()
+        if (login != null && password != null)
+          builder.withCredentials(login, password)
         cassandraHosts.foreach(x => builder.addContactPointsWithPorts(x))
         val cluster = builder.build()
         clusterMap(sortedHosts) = cluster
