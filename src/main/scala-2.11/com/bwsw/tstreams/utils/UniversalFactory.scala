@@ -500,11 +500,11 @@ class UniversalFactory(envname: String = "T-streams") {
     val transactionTTL = Integer.parseInt(propertyMap.get(UF_Dictionary.Producer.Transaction.ttl).toString)
     val transactionKeepAlive = Integer.parseInt(propertyMap.get(UF_Dictionary.Producer.Transaction.keep_alive).toString)
 
-    var p: AbstractPolicy = null
+    var writePolicy: AbstractPolicy = null
 
     if (propertyMap.get(UF_Dictionary.Producer.Transaction.distribution_policy).
           equals(propertyMap.get(UF_Dictionary.Producer.Transaction.Consts.DISTRIBUTION_POLICY_RR))) {
-      p = RoundRobinPolicyCreator.getRoundRobinPolicy(stream, partitions)
+      writePolicy = RoundRobinPolicyCreator.getRoundRobinPolicy(stream, partitions)
     }
     else
     {
@@ -513,14 +513,14 @@ class UniversalFactory(envname: String = "T-streams") {
     }
 
     val po = new BasicProducerOptions[USERTYPE, Array[Byte]](
-      transactionTTL = transactionTTL,
-      transactionKeepAliveInterval = transactionKeepAlive,
-      producerKeepAliveInterval = 1, // TODO: deprecated!
-      writePolicy = p,
-      insertType = SingleElementInsert,
-      txnGenerator = txnGenerator,
-      producerCoordinationSettings = cao,
-      converter = converter)
+      transactionTTL                = transactionTTL,
+      transactionKeepAliveInterval  = transactionKeepAlive,
+      producerKeepAliveInterval     = 1, // TODO: deprecated, remove when https://github.com/bwsw/t-streams/issues/19 will be fixed!
+      writePolicy                   = writePolicy,
+      insertType                    = SingleElementInsert,
+      txnGenerator                  = txnGenerator,
+      producerCoordinationSettings  = cao,
+      converter                     = converter)
 
     new BasicProducer[USERTYPE, Array[Byte]](
       name = propertyMap.get(UF_Dictionary.Producer.name).toString,
