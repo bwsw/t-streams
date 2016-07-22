@@ -409,33 +409,33 @@ class UniversalFactory(envname: String = "T-streams") {
 
     var ds: IStorage[Array[Byte]] = null
 
-    if ((propertyMap get UF_Dictionary.Data.Cluster.driver).equals(UF_Dictionary.Data.Cluster.Consts.DATA_DRIVER_AEROSPIKE))
+    if (getProperty(UF_Dictionary.Data.Cluster.driver).equals(UF_Dictionary.Data.Cluster.Consts.DATA_DRIVER_AEROSPIKE))
     {
       val dsf = new AerospikeStorageFactory
 
       // construct client policy
       var cp: ClientPolicy = null
-      if (propertyMap.get(UF_Dictionary.Data.Cluster.Aerospike.client_policy) == null)
+      if (getProperty(UF_Dictionary.Data.Cluster.Aerospike.client_policy) == null)
         cp = new ClientPolicy()
       else
-        cp = propertyMap.get(UF_Dictionary.Data.Cluster.Aerospike.client_policy).asInstanceOf[ClientPolicy]
+        cp = getProperty(UF_Dictionary.Data.Cluster.Aerospike.client_policy).asInstanceOf[ClientPolicy]
 
       cp.user     = pAsString(UF_Dictionary.Data.Cluster.login, null)
       cp.password = pAsString(UF_Dictionary.Data.Cluster.password, null)
 
       // construct write policy
       var wp: WritePolicy = null
-      if (propertyMap.get(UF_Dictionary.Data.Cluster.Aerospike.write_policy) == null)
+      if (getProperty(UF_Dictionary.Data.Cluster.Aerospike.write_policy) == null)
         wp = new WritePolicy()
       else
-        wp = propertyMap.get(UF_Dictionary.Data.Cluster.Aerospike.write_policy).asInstanceOf[WritePolicy]
+        wp = getProperty(UF_Dictionary.Data.Cluster.Aerospike.write_policy).asInstanceOf[WritePolicy]
 
       // construct write policy
       var rp: Policy = null
-      if (propertyMap.get(UF_Dictionary.Data.Cluster.Aerospike.read_policy) == null)
+      if (getProperty(UF_Dictionary.Data.Cluster.Aerospike.read_policy) == null)
         rp = new WritePolicy()
       else
-        rp = propertyMap.get(UF_Dictionary.Data.Cluster.Aerospike.read_policy).asInstanceOf[Policy]
+        rp = getProperty(UF_Dictionary.Data.Cluster.Aerospike.read_policy).asInstanceOf[Policy]
 
       assert(pAsString(UF_Dictionary.Data.Cluster.namespace) != null)
       assert(pAsString(UF_Dictionary.Data.Cluster.endpoints) != null)
@@ -451,7 +451,7 @@ class UniversalFactory(envname: String = "T-streams") {
       ds = dsf.getInstance(opts)
 
     }
-    else if ((propertyMap get UF_Dictionary.Data.Cluster.driver).equals(UF_Dictionary.Data.Cluster.Consts.DATA_DRIVER_CASSANDRA))
+    else if (getProperty(UF_Dictionary.Data.Cluster.driver).equals(UF_Dictionary.Data.Cluster.Consts.DATA_DRIVER_CASSANDRA))
     {
       val dsf = new CassandraStorageFactory
 
@@ -477,8 +477,8 @@ class UniversalFactory(envname: String = "T-streams") {
                                           "are supported currently in UniversalFactory.")
     }
 
-    val login = pAsString(UF_Dictionary.Metadata.Cluster.login, null)
-    val password = pAsString(UF_Dictionary.Metadata.Cluster.password, null)
+    val login     = pAsString(UF_Dictionary.Metadata.Cluster.login, null)
+    val password  = pAsString(UF_Dictionary.Metadata.Cluster.password, null)
 
     assert(pAsString(UF_Dictionary.Metadata.Cluster.keyspace) != null)
     assert(pAsString(UF_Dictionary.Metadata.Cluster.endpoints) != null)
@@ -526,8 +526,8 @@ class UniversalFactory(envname: String = "T-streams") {
 
     var writePolicy: AbstractPolicy = null
 
-    if (propertyMap.get(UF_Dictionary.Producer.Transaction.distribution_policy).
-          equals(propertyMap.get(UF_Dictionary.Producer.Transaction.Consts.DISTRIBUTION_POLICY_RR))) {
+    if (getProperty(UF_Dictionary.Producer.Transaction.distribution_policy).
+          equals(getProperty(UF_Dictionary.Producer.Transaction.Consts.DISTRIBUTION_POLICY_RR))) {
       writePolicy = RoundRobinPolicyCreator.getRoundRobinPolicy(stream, partitions)
     }
     else
