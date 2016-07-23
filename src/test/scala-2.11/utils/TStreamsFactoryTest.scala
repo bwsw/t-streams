@@ -1,7 +1,7 @@
 package utils
 
 import com.bwsw.tstreams.converter.StringToArrayByteConverter
-import com.bwsw.tstreams.utils.{UF_Dictionary, UniversalFactory}
+import com.bwsw.tstreams.env.{TSF_Dictionary, TStreamsFactory}
 import com.datastax.driver.core.Cluster
 
 /**
@@ -11,7 +11,7 @@ import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import testutils._
 
 
-class UniversalFactoryTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
+class TStreamsFactoryTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
   "UniversalFactory.getProducer" should "return producer object" in {
 
     val randomKeyspace = randomString
@@ -22,10 +22,10 @@ class UniversalFactoryTest extends FlatSpec with Matchers with BeforeAndAfterAll
     session.close()
     cluster.close()
 
-    val f = new UniversalFactory()
-    f.setProperty(UF_Dictionary.Metadata.Cluster.namespace,randomKeyspace).
-      setProperty(UF_Dictionary.Data.Cluster.namespace,"test").
-      setProperty(UF_Dictionary.Stream.name, "test-stream")
+    val f = new TStreamsFactory()
+    f.setProperty(TSF_Dictionary.Metadata.Cluster.namespace,randomKeyspace).
+      setProperty(TSF_Dictionary.Data.Cluster.namespace,"test").
+      setProperty(TSF_Dictionary.Stream.name, "test-stream")
 
 
     val p = f.getProducer[String](
