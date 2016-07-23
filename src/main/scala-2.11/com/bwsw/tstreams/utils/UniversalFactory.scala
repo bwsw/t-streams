@@ -29,15 +29,6 @@ import scala.collection.mutable.{HashMap, Map}
   */
 object UF_Dictionary {
 
-  /**
-    * UF_Dictionary actor-system scope
-    */
-  object ActorSystem {
-    /**
-      * name of the actor system which is used with t-streams
-      */
-    val name = "actor-system.name"
-  }
 
   /**
     * UF_Dictionary metadata scope
@@ -56,7 +47,7 @@ object UF_Dictionary {
       /**
         * keyspace for metadata storage
         */
-      val keyspace = "metadata.cluster.keyspace"
+      val namespace = "metadata.cluster.namespace"
       /**
         * login of the user which can access to the metadata store
         */
@@ -303,7 +294,7 @@ class UniversalFactory(envname: String = "T-streams") {
 
   // metadata cluster scope
   propertyMap += (UF_Dictionary.Metadata.Cluster.endpoints  -> "localhost:9042")
-  propertyMap += (UF_Dictionary.Metadata.Cluster.keyspace   -> "test")
+  propertyMap += (UF_Dictionary.Metadata.Cluster.namespace   -> "test")
   propertyMap += (UF_Dictionary.Metadata.Cluster.login      -> null)
   propertyMap += (UF_Dictionary.Metadata.Cluster.password   -> null)
 
@@ -415,26 +406,59 @@ class UniversalFactory(envname: String = "T-streams") {
     */
   def getProperty(key: String): Any = {
     val v = propertyMap get key
-    logger.debug("get property " + key + " = " + v)
-    v
+    logger.info("get property " + key + " = " + v)
+    v.getOrElse(null)
   }
 
+  /** variant method to get option as int with default value if null
+    * @param key key to request
+    * @param default assign it if the value received from options is null
+    * @return
+    */
   private def pAsInt(key: String, default: Int = 0): Int = if(null == getProperty(key)) default else Integer.parseInt(getProperty(key).toString)
+
+  /**
+    * variant method to get option as string with default value if null
+    * @param key key to request
+    * @param default assign it if the value received from options is null
+    * @return
+    */
   private def pAsString(key: String, default: String = null): String = if(null == getProperty(key)) default else getProperty(key).toString
 
+  /**
+    * checks that int inside interval
+    * @param value
+    * @param min
+    * @param max
+    * @return
+    */
   private def pAssertIntRange(value: Int, min: Int, max: Int): Int =  {
     assert(value >= min && value <= max)
     value
   }
 
+  /**
+    * transforms host:port,host:port to list(Host, Host) for Aerospike
+    * @param h
+    * @return
+    */
   private def getAerospikeCompatibleHostList(h: String): List[Host] =
-    h.split(',').map((sh: String) => new Host(sh.split(':').head, Integer.parseInt(sh.split(':').tail.head))).toList
+  h.split(',').map((sh: String) => new Host(sh.split(':').head, Integer.parseInt(sh.split(':').tail.head))).toList
 
+  /**
+    * transforms host:port,host:port to list(InetSocketAddr, InetSocketAddr) for C*
+    * @param h
+    * @return
+    */
   private def getInetSocketAddressCompatibleHostList(h: String): List[InetSocketAddress] =
-    h.split(',').map((sh: String) => new InetSocketAddress(sh.split(':').head, Integer.parseInt(sh.split(':').tail.head))).toList
+  h.split(',').map((sh: String) => new InetSocketAddress(sh.split(':').head, Integer.parseInt(sh.split(':').tail.head))).toList
 
+  /**
+    * common routine allows getting ready to use data store object
+    * @return
+    */
   private def getDataStorage(): IStorage[Array[Byte]] = {
-    if (getProperty(UF_Dictionary.Data.Cluster.driver).equals(UF_Dictionary.Data.Cluster.Consts.DATA_DRIVER_AEROSPIKE))
+    if (pAsString(UF_Dictionary.Data.Cluster.driver) == UF_Dictionary.Data.Cluster.Consts.DATA_DRIVER_AEROSPIKE)
     {
       val dsf = new AerospikeStorageFactory
 
@@ -476,7 +500,7 @@ class UniversalFactory(envname: String = "T-streams") {
       return dsf.getInstance(opts)
 
     }
-    else if (getProperty(UF_Dictionary.Data.Cluster.driver).equals(UF_Dictionary.Data.Cluster.Consts.DATA_DRIVER_CASSANDRA))
+    else if (pAsString(UF_Dictionary.Data.Cluster.driver) == UF_Dictionary.Data.Cluster.Consts.DATA_DRIVER_CASSANDRA)
     {
       val dsf = new CassandraStorageFactory
 
@@ -499,26 +523,36 @@ class UniversalFactory(envname: String = "T-streams") {
     {
       throw new InvalidParameterException("Only UF_Dictionary.Data.Cluster.Consts.DATA_DRIVER_CASSANDRA and " +
         "UF_Dictionary.Data.Cluster.Consts.DATA_DRIVER_AEROSPIKE engines " +
-        "are supported currently in UniversalFactory.")
+        "are supported currently in UniversalFactory. Received: " + pAsString(UF_Dictionary.Data.Cluster.driver))
     }
     null
   }
 
+  /**
+    * common routine which allows getting ready to use metadata object
+    * @return
+    */
   private def getMetadataStorage(): MetadataStorage = {
     val login     = pAsString(UF_Dictionary.Metadata.Cluster.login, null)
     val password  = pAsString(UF_Dictionary.Metadata.Cluster.password, null)
 
-    assert(pAsString(UF_Dictionary.Metadata.Cluster.keyspace) != null)
+    assert(pAsString(UF_Dictionary.Metadata.Cluster.namespace) != null)
     assert(pAsString(UF_Dictionary.Metadata.Cluster.endpoints) != null)
 
     // construct metadata storage
     return msFactory.getInstance(
-      keyspace        = pAsString(UF_Dictionary.Metadata.Cluster.keyspace),
+      keyspace        = pAsString(UF_Dictionary.Metadata.Cluster.namespace),
       cassandraHosts  = getInetSocketAddressCompatibleHostList(pAsString(UF_Dictionary.Metadata.Cluster.endpoints)),
       login           = login,
       password        = password)
   }
 
+  /**
+    * common routine which allows to get ready to use stream object by env
+    * @param metadatastorage
+    * @param datastorage
+    * @return
+    */
   private def getStream(metadatastorage: MetadataStorage, datastorage: IStorage[Array[Byte]]): BasicStream[Array[Byte]] = {
     assert(pAsString(UF_Dictionary.Stream.name) != null)
     pAssertIntRange(pAsInt(UF_Dictionary.Stream.partitions, Stream_partitions_default), Stream_partitions_min, Stream_partitions_max)
@@ -545,10 +579,10 @@ class UniversalFactory(envname: String = "T-streams") {
     * @return
     */
   def getProducer[USERTYPE](isLowPriority : Boolean,
-                       txnGenerator  : IUUIDGenerator,
-                       converter     : IConverter[USERTYPE,Array[Byte]],
-                       partitions    : List[Int]
-                      ): BasicProducer[USERTYPE,Array[Byte]] = {
+                            txnGenerator  : IUUIDGenerator,
+                            converter     : IConverter[USERTYPE,Array[Byte]],
+                            partitions    : List[Int]
+                           ): BasicProducer[USERTYPE,Array[Byte]] = {
 
     val ds: IStorage[Array[Byte]]         = getDataStorage()
     val ms: MetadataStorage               = getMetadataStorage()
@@ -562,7 +596,7 @@ class UniversalFactory(envname: String = "T-streams") {
     pAssertIntRange(pAsInt(UF_Dictionary.Coordination.ttl, Coordination_ttl_default), Coordination_ttl_min, Coordination_ttl_max)
     pAssertIntRange(pAsInt(UF_Dictionary.Producer.master_timeout, Producer_master_timeout_default), Producer_master_timeout_min, Producer_master_timeout_max)
     pAssertIntRange(pAsInt(UF_Dictionary.Coordination.connection_timeout, Coordination_connection_timeout_default),
-                        Coordination_connection_timeout_min, Coordination_connection_timeout_max)
+      Coordination_connection_timeout_min, Coordination_connection_timeout_max)
 
     // construct coordination agent options
     val cao = new ProducerCoordinationOptions(
@@ -578,20 +612,20 @@ class UniversalFactory(envname: String = "T-streams") {
 
     var writePolicy: AbstractPolicy = null
 
-    if (getProperty(UF_Dictionary.Producer.Transaction.distribution_policy).
-          equals(getProperty(UF_Dictionary.Producer.Transaction.Consts.DISTRIBUTION_POLICY_RR))) {
+    if (pAsString(UF_Dictionary.Producer.Transaction.distribution_policy) ==
+      UF_Dictionary.Producer.Transaction.Consts.DISTRIBUTION_POLICY_RR) {
       writePolicy = RoundRobinPolicyCreator.getRoundRobinPolicy(stream, partitions)
     }
     else
     {
-      throw new InvalidParameterException("Only UF_Dictionary.Producer.Transaction.Consts.DISTRIBUTION_POLICY_RR policy" +
+      throw new InvalidParameterException("Only UF_Dictionary.Producer.Transaction.Consts.DISTRIBUTION_POLICY_RR policy " +
         "is supported currently in UniversalFactory.")
     }
 
     pAssertIntRange(pAsInt(UF_Dictionary.Producer.Transaction.ttl, Producer_transaction_ttl_default), Producer_transaction_ttl_min, Producer_transaction_ttl_max)
     pAssertIntRange(pAsInt(UF_Dictionary.Producer.Transaction.keep_alive, Producer_transaction_keep_alive_default), Producer_transaction_keep_alive_min, Producer_transaction_keep_alive_max)
     assert(pAsInt(UF_Dictionary.Producer.Transaction.ttl, Producer_transaction_ttl_default) >=
-            pAsInt(UF_Dictionary.Producer.Transaction.keep_alive, Producer_transaction_keep_alive_default) * 3)
+      pAsInt(UF_Dictionary.Producer.Transaction.keep_alive, Producer_transaction_keep_alive_default) * 3)
 
     var insertType: InsertType = SingleElementInsert
 
@@ -600,7 +634,7 @@ class UniversalFactory(envname: String = "T-streams") {
       Producer_transaction_data_write_batch_size_min, Producer_transaction_data_write_batch_size_max)
 
     if (insertCnt > 1)
-        insertType = BatchInsert(insertCnt)
+      insertType = BatchInsert(insertCnt)
 
     val po = new BasicProducerOptions[USERTYPE, Array[Byte]](
       transactionTTL                = pAsInt(UF_Dictionary.Producer.Transaction.ttl, Producer_transaction_ttl_default),
@@ -629,9 +663,9 @@ class UniversalFactory(envname: String = "T-streams") {
     * @return
     */
   def getConsumer[USERTYPE](txnGenerator : IUUIDGenerator,
-                       converter : IConverter[Array[Byte],USERTYPE],
-                       partitions : List[Int]
-                      ): BasicConsumer[Array[Byte],USERTYPE] = {
+                            converter : IConverter[Array[Byte],USERTYPE],
+                            partitions : List[Int]
+                           ): BasicConsumer[Array[Byte],USERTYPE] = {
     null
   }
 
@@ -645,9 +679,9 @@ class UniversalFactory(envname: String = "T-streams") {
     * @return
     */
   def getSubscriber[USERTYPE](txnGenerator : IUUIDGenerator,
-                         converter : IConverter[Array[Byte],USERTYPE],
-                         partitions : List[Int],
-                         callback: BasicSubscriberCallback[Array[Byte],USERTYPE]): BasicSubscribingConsumer[Array[Byte],USERTYPE] = {
+                              converter : IConverter[Array[Byte],USERTYPE],
+                              partitions : List[Int],
+                              callback: BasicSubscriberCallback[Array[Byte],USERTYPE]): BasicSubscribingConsumer[Array[Byte],USERTYPE] = {
     null
   }
 
