@@ -16,7 +16,7 @@ import com.bwsw.tstreams.data.IStorage
 import com.bwsw.tstreams.data.aerospike.{AerospikeStorageFactory, AerospikeStorageOptions}
 import com.bwsw.tstreams.data.cassandra.{CassandraStorageFactory, CassandraStorageOptions}
 import com.bwsw.tstreams.generator.IUUIDGenerator
-import com.bwsw.tstreams.metadata.MetadataStorageFactory
+import com.bwsw.tstreams.metadata.{MetadataStorage, MetadataStorageFactory}
 import com.bwsw.tstreams.policy.AbstractPolicy
 import com.bwsw.tstreams.streams.BasicStream
 import com.bwsw.tstreams.velocity.RoundRobinPolicyCreator
@@ -433,23 +433,7 @@ class UniversalFactory(envname: String = "T-streams") {
   private def getInetSocketAddressCompatibleHostList(h: String): List[InetSocketAddress] =
     h.split(',').map((sh: String) => new InetSocketAddress(sh.split(':').head, Integer.parseInt(sh.split(':').tail.head))).toList
 
-  /**
-    *
-    * @param isLowPriority
-    * @param txnGenerator
-    * @param converter
-    * @param partitions
-    * @tparam USERTYPE - type convert data from
-    * @return
-    */
-  def getProducer[USERTYPE](isLowPriority : Boolean,
-                       txnGenerator  : IUUIDGenerator,
-                       converter     : IConverter[USERTYPE,Array[Byte]],
-                       partitions    : List[Int]
-                      ): BasicProducer[USERTYPE,Array[Byte]] = {
-
-    var ds: IStorage[Array[Byte]] = null
-
+  private def getDataStorage(): IStorage[Array[Byte]] = {
     if (getProperty(UF_Dictionary.Data.Cluster.driver).equals(UF_Dictionary.Data.Cluster.Consts.DATA_DRIVER_AEROSPIKE))
     {
       val dsf = new AerospikeStorageFactory
@@ -489,7 +473,7 @@ class UniversalFactory(envname: String = "T-streams") {
         readPolicy    = rp)
 
       // create instance of aerospike data storage
-      ds = dsf.getInstance(opts)
+      return dsf.getInstance(opts)
 
     }
     else if (getProperty(UF_Dictionary.Data.Cluster.driver).equals(UF_Dictionary.Data.Cluster.Consts.DATA_DRIVER_CASSANDRA))
@@ -509,15 +493,18 @@ class UniversalFactory(envname: String = "T-streams") {
         password        = password
       )
 
-      ds = dsf.getInstance(opts)
+      return dsf.getInstance(opts)
     }
     else
     {
       throw new InvalidParameterException("Only UF_Dictionary.Data.Cluster.Consts.DATA_DRIVER_CASSANDRA and " +
-                                          "UF_Dictionary.Data.Cluster.Consts.DATA_DRIVER_AEROSPIKE engines " +
-                                          "are supported currently in UniversalFactory.")
+        "UF_Dictionary.Data.Cluster.Consts.DATA_DRIVER_AEROSPIKE engines " +
+        "are supported currently in UniversalFactory.")
     }
+    null
+  }
 
+  private def getMetadataStorage(): MetadataStorage = {
     val login     = pAsString(UF_Dictionary.Metadata.Cluster.login, null)
     val password  = pAsString(UF_Dictionary.Metadata.Cluster.password, null)
 
@@ -525,12 +512,14 @@ class UniversalFactory(envname: String = "T-streams") {
     assert(pAsString(UF_Dictionary.Metadata.Cluster.endpoints) != null)
 
     // construct metadata storage
-    val ms = msFactory.getInstance(
+    return msFactory.getInstance(
       keyspace        = pAsString(UF_Dictionary.Metadata.Cluster.keyspace),
       cassandraHosts  = getInetSocketAddressCompatibleHostList(pAsString(UF_Dictionary.Metadata.Cluster.endpoints)),
       login           = login,
       password        = password)
+  }
 
+  private def getStream(metadatastorage: MetadataStorage, datastorage: IStorage[Array[Byte]]): BasicStream[Array[Byte]] = {
     assert(pAsString(UF_Dictionary.Stream.name) != null)
     pAssertIntRange(pAsInt(UF_Dictionary.Stream.partitions, Stream_partitions_default), Stream_partitions_min, Stream_partitions_max)
     pAssertIntRange(pAsInt(UF_Dictionary.Stream.ttl, Stream_ttl_default), Stream_ttl_min, Stream_ttl_max)
@@ -539,10 +528,31 @@ class UniversalFactory(envname: String = "T-streams") {
     val stream = new BasicStream[Array[Byte]](
       name            = pAsString(UF_Dictionary.Stream.name),
       partitions      = pAsInt(UF_Dictionary.Stream.partitions, Stream_partitions_default),
-      metadataStorage = ms,
-      dataStorage     = ds,
+      metadataStorage = metadatastorage,
+      dataStorage     = datastorage,
       ttl             = pAsInt(UF_Dictionary.Stream.ttl, Stream_ttl_default),
       description     = pAsString(UF_Dictionary.Stream.description, ""))
+    return stream
+  }
+
+  /**
+    *
+    * @param isLowPriority
+    * @param txnGenerator
+    * @param converter
+    * @param partitions
+    * @tparam USERTYPE - type convert data from
+    * @return
+    */
+  def getProducer[USERTYPE](isLowPriority : Boolean,
+                       txnGenerator  : IUUIDGenerator,
+                       converter     : IConverter[USERTYPE,Array[Byte]],
+                       partitions    : List[Int]
+                      ): BasicProducer[USERTYPE,Array[Byte]] = {
+
+    val ds: IStorage[Array[Byte]]         = getDataStorage()
+    val ms: MetadataStorage               = getMetadataStorage()
+    val stream: BasicStream[Array[Byte]]  = getStream(metadatastorage = ms, datastorage = ds)
 
     assert(pAsString(UF_Dictionary.Producer.master_bind_host) != null)
     assert(pAsString(UF_Dictionary.Producer.master_bind_port) != null)
