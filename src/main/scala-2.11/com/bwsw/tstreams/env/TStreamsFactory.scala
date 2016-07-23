@@ -391,7 +391,7 @@ class TStreamsFactory(envname: String = "T-streams") {
     * @return
     */
   def setProperty(key: String, value: Any): TStreamsFactory = {
-    logger.debug("get property " + key + " = " + value)
+    logger.info("set property " + key + " = " + value)
     if(propertyMap contains key)
       propertyMap += (key -> value)
     else
@@ -406,7 +406,7 @@ class TStreamsFactory(envname: String = "T-streams") {
     */
   def getProperty(key: String): Any = {
     val v = propertyMap get key
-    logger.info("get property " + key + " = " + v)
+    logger.info("get property " + key + " = " + v.getOrElse(null))
     v.getOrElse(null)
   }
 
@@ -423,7 +423,12 @@ class TStreamsFactory(envname: String = "T-streams") {
     * @param default assign it if the value received from options is null
     * @return
     */
-  private def pAsString(key: String, default: String = null): String = if(null == getProperty(key)) default else getProperty(key).toString
+  private def pAsString(key: String, default: String = null): String = {
+    val s = getProperty(key)
+    if(null == s)
+      return default
+    s.toString
+  }
 
   /**
     * checks that int inside interval
@@ -486,12 +491,14 @@ class TStreamsFactory(envname: String = "T-streams") {
       else
         rp = getProperty(TSF_Dictionary.Data.Cluster.Aerospike.read_policy).asInstanceOf[Policy]
 
-      assert(pAsString(TSF_Dictionary.Data.Cluster.namespace) != null)
-      assert(pAsString(TSF_Dictionary.Data.Cluster.endpoints) != null)
+      val namespace = pAsString(TSF_Dictionary.Data.Cluster.namespace)
+      val data_cluster_endpoints = pAsString(TSF_Dictionary.Data.Cluster.endpoints)
+      assert(namespace != null)
+      assert(data_cluster_endpoints != null)
 
       val opts = new AerospikeStorageOptions(
-        namespace     = pAsString(TSF_Dictionary.Data.Cluster.namespace),
-        hosts         = getAerospikeCompatibleHostList(pAsString(TSF_Dictionary.Data.Cluster.endpoints)),
+        namespace     = namespace,
+        hosts         = getAerospikeCompatibleHostList(data_cluster_endpoints),
         clientPolicy  = cp,
         writePolicy   = wp,
         readPolicy    = rp)
