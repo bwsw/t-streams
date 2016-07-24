@@ -18,6 +18,7 @@ import collection.JavaConverters._
  * @param zkSessionTimeout Zk session timeout to connect
  */
 class ZkService(prefix : String, zkHosts : List[InetSocketAddress], zkSessionTimeout : Int, connectionTimeout : Int){
+  // TODO: check sessionTimeout correctness
   private val sessionTimeout = Amount.of(new Integer(zkSessionTimeout),com.twitter.common.quantity.Time.SECONDS)
   private val hosts = zkHosts.asJava
   private val twitterZkClient: ZooKeeperClient = new ZooKeeperClient(sessionTimeout, hosts)

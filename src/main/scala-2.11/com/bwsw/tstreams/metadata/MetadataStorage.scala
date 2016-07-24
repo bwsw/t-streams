@@ -35,10 +35,10 @@ class MetadataStorage(cluster: Cluster, session: Session, keyspace: String) {
    */
   val commitEntity = new CommitEntity("commit_log", session)
 
-  /**
-   * Commit entity instance for producer async txn update
-   */
-  val producerCommitEntity = new CommitEntity("commit_log", session)
+  ///**
+  // * Commit entity instance for producer async txn update
+  // */
+  ////val producerCommitEntity = new CommitEntity("commit_log", session)
 
   /**
    * Consumer entity instance
