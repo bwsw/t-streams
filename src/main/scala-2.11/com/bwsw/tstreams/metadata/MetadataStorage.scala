@@ -53,7 +53,7 @@ class MetadataStorage(cluster: Cluster, session: Session, keyspace: String) {
   /**
    * @return Closed this storage or not
    */
-  def isClosed : Boolean = session.isClosed && cluster.isClosed
+  def isClosed : Boolean = session.isClosed // && cluster.isClosed TODO: check it
 
   /**
     * Removes MetadataStorage
@@ -174,6 +174,8 @@ class MetadataStorageFactory {
    */
   private val instancesMap = scala.collection.mutable.Map[(List[InetSocketAddress], String), Session]()
 
+  private val metadataMap = scala.collection.mutable.Map[Session, MetadataStorage]()
+
   /**
     * Fabric method which returns new MetadataStorage
     * @param cassandraHosts List of hosts to connect in C* cluster
@@ -203,18 +205,29 @@ class MetadataStorageFactory {
     val session = {
       if (instancesMap.contains((sortedHosts,keyspace)))
         instancesMap((sortedHosts,keyspace))
-      else{
+      else {
         val session: Session = cluster.connect(keyspace)
         instancesMap((sortedHosts, keyspace)) = session
         session
       }
     }
 
+    val metadataStorage = {
+      if (metadataMap.contains(session))
+        metadataMap(session)
+      else {
+
+        val m = new MetadataStorage(cluster, session, keyspace)
+        metadataMap(session) = m
+        m
+      }
+    }
+
     logger.info("finished MetadataStorage instance creation\n")
-    val inst = new MetadataStorage(cluster,session,keyspace)
+    //val inst = new MetadataStorage(cluster,session,keyspace)
     lock.unlock()
 
-    inst
+    metadataStorage
   }
 
   /**

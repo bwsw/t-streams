@@ -6,7 +6,8 @@ import java.security.InvalidParameterException
 import akka.actor.ActorSystem
 import com.aerospike.client.Host
 import com.aerospike.client.policy.{ClientPolicy, Policy, WritePolicy}
-import com.bwsw.tstreams.agents.consumer.BasicConsumer
+import com.bwsw.tstreams.agents.consumer.Offsets.{IOffset, Oldest}
+import com.bwsw.tstreams.agents.consumer.{BasicConsumer, BasicConsumerOptions}
 import com.bwsw.tstreams.agents.consumer.subscriber.{BasicSubscriberCallback, BasicSubscribingConsumer}
 import com.bwsw.tstreams.agents.producer.InsertionType.{BatchInsert, InsertType, SingleElementInsert}
 import com.bwsw.tstreams.agents.producer.{BasicProducer, BasicProducerOptions, ProducerCoordinationOptions}
@@ -173,10 +174,6 @@ object TSF_Dictionary {
     * UF_Dictionary producer scope
     */
   object Producer {
-    /**
-      * name of producer
-      */
-    val name = "producer.name"
 
     /**
       * amount of threads which handles works with transactions on master
@@ -338,7 +335,6 @@ class TStreamsFactory(envname: String = "T-streams") {
   propertyMap += (TSF_Dictionary.Stream.description          -> "Test stream")
 
   // producer scope
-  propertyMap += (TSF_Dictionary.Producer.name                                 -> "test-producer-1")
   propertyMap += (TSF_Dictionary.Producer.master_bind_host                     -> "localhost")
   propertyMap += (TSF_Dictionary.Producer.master_bind_port                     -> 18000)
   val Producer_master_timeout_default                                         = 5
@@ -374,8 +370,12 @@ class TStreamsFactory(envname: String = "T-streams") {
 
   // consumer scope
   val Consumer_transaction_preload_default                                = 10
+  val Consumer_transaction_preload_min                                    = 1
+  val Consumer_transaction_preload_max                                    = 100
   propertyMap += (TSF_Dictionary.Consumer.transaction_preload              -> Consumer_transaction_preload_default)
   val Consumer_data_preload_default                                       = 100
+  val Consumer_data_preload_min                                           = 10
+  val Consumer_data_preload_max                                           = 200
   propertyMap += (TSF_Dictionary.Consumer.data_preload                     -> Consumer_data_preload_default)
   propertyMap += (TSF_Dictionary.Consumer.Subscriber.bind_host             -> "localhost")
   propertyMap += (TSF_Dictionary.Consumer.Subscriber.bind_port             -> 18001)
@@ -578,6 +578,7 @@ class TStreamsFactory(envname: String = "T-streams") {
 
   /**
     *
+    * @param name Producer name
     * @param isLowPriority
     * @param txnGenerator
     * @param converter
@@ -585,7 +586,8 @@ class TStreamsFactory(envname: String = "T-streams") {
     * @tparam USERTYPE - type convert data from
     * @return
     */
-  def getProducer[USERTYPE](isLowPriority : Boolean,
+  def getProducer[USERTYPE](name: String,
+                            isLowPriority : Boolean = false,
                             txnGenerator  : IUUIDGenerator,
                             converter     : IConverter[USERTYPE,Array[Byte]],
                             partitions    : List[Int]
@@ -653,27 +655,50 @@ class TStreamsFactory(envname: String = "T-streams") {
       producerCoordinationSettings  = cao,
       converter                     = converter)
 
-    assert(pAsString(TSF_Dictionary.Producer.name) != null)
-
     new BasicProducer[USERTYPE, Array[Byte]](
-      name              = pAsString(TSF_Dictionary.Producer.name),
+      name              = name,
       stream            = stream,
       producerOptions   = po)
   }
 
   /**
     *
+    * @param name Consumer name
     * @param txnGenerator
     * @param converter
     * @param partitions
     * @tparam USERTYPE type to convert data to
     * @return
     */
-  def getConsumer[USERTYPE](txnGenerator : IUUIDGenerator,
-                            converter : IConverter[Array[Byte],USERTYPE],
-                            partitions : List[Int]
+  def getConsumer[USERTYPE](name          : String,
+                            txnGenerator  : IUUIDGenerator,
+                            converter     : IConverter[Array[Byte],USERTYPE],
+                            partitions    : List[Int],
+                            offset        : IOffset,
+                            isUseLastOffset : Boolean = true
                            ): BasicConsumer[Array[Byte],USERTYPE] = {
-    null
+
+    val ds: IStorage[Array[Byte]]         = getDataStorage()
+    val ms: MetadataStorage               = getMetadataStorage()
+    val stream: BasicStream[Array[Byte]]  = getStream(metadatastorage = ms, datastorage = ds)
+
+    val consumer_transaction_preload = pAsInt(TSF_Dictionary.Consumer.transaction_preload, Consumer_transaction_preload_default)
+    pAssertIntRange(consumer_transaction_preload, Consumer_transaction_preload_min, Consumer_transaction_preload_max)
+
+    val consumer_data_preload = pAsInt(TSF_Dictionary.Consumer.data_preload, Consumer_data_preload_default)
+    pAssertIntRange(consumer_data_preload, Consumer_data_preload_min, Consumer_data_preload_max)
+
+    val consumerOptions = new BasicConsumerOptions[Array[Byte], USERTYPE](
+      transactionsPreload       = consumer_transaction_preload,
+      dataPreload               = consumer_data_preload,
+      consumerKeepAliveInterval = 5,  // TODO: deprecated, unused, to remove
+      converter                 = converter,
+      readPolicy                = RoundRobinPolicyCreator.getRoundRobinPolicy(stream, partitions),
+      offset                    = offset,
+      txnGenerator              = txnGenerator,
+      useLastOffset             = isUseLastOffset)
+
+    new BasicConsumer(name, stream, consumerOptions)
   }
 
   /**
