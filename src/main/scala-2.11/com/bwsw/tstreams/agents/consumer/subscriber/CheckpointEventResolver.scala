@@ -73,11 +73,11 @@ class CheckpointEventResolver(subscriber : BasicSubscribingConsumer[_,_]) {
   }
 
   def stop() = {
+    isRunning.set(false)
+    updateThread.join()
     partitionToBuffer.clear()
     partitionToTxns.clear()
     retries.clear()
-    isRunning.set(false)
-    updateThread.join()
   }
 
   private def removeTxn(partition : Int, txn : UUID) = {
