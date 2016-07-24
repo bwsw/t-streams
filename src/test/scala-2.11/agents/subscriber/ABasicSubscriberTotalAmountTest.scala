@@ -77,7 +77,7 @@ class ABasicSubscriberTotalAmountTest extends FlatSpec with Matchers with Before
     agentAddress = s"localhost:8000",
     zkHosts = List(new InetSocketAddress("localhost", 2181)),
     zkRootPath = "/unit",
-    zkSessionTimeout = 7000,
+    zkSessionTimeout = 7,
     isLowPriorityToBeMaster = false,
     transport = new TcpTransport,
     transportTimeout = 5,
