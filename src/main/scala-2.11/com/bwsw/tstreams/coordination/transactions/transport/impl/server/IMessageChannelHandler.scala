@@ -45,8 +45,8 @@ class IMessageServerChannelHandler(manager : IMessageListenerManager) extends Si
    * @param cause Cause of exception
    */
   override def exceptionCaught(ctx: ChannelHandlerContext, cause: Throwable) = {
-    cause.printStackTrace()
-    ctx.close()
+    println(s"IMessageServer exception : ${cause.getMessage}")
+//    ctx.close()
   }
 }
 

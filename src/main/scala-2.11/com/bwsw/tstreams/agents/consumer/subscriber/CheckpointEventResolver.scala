@@ -64,8 +64,8 @@ class CheckpointEventResolver(subscriber : BasicSubscribingConsumer[_,_]) {
         while(isRunning.get()){
           checkpointEventResolverLock.lock()
           refresh()
-          Thread.sleep(UPDATE_INTERVAL)
           checkpointEventResolverLock.unlock()
+          Thread.sleep(UPDATE_INTERVAL)
         }
       }
     })

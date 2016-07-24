@@ -22,7 +22,7 @@ class BroadcasterChannelHandler(connectionManager: BroadcasterConnectionManager)
    * Triggered on read from channel (incorrect state because broadcaster must only broadcast)
    */
   override def channelRead0(ctx: ChannelHandlerContext, msg: ProducerTopicMessage): Unit = {
-    throw new IllegalStateException("Broadcaster must only broadcast messages without any response")
+    logger.warn("[BroadcasterChannelHandler] Broadcaster must only broadcast messages")
   }
 
   /**
@@ -51,8 +51,8 @@ class BroadcasterChannelHandler(connectionManager: BroadcasterConnectionManager)
    * @param cause Cause of exception
    */
   override def exceptionCaught(ctx: ChannelHandlerContext, cause: Throwable) = {
-    cause.printStackTrace()
-    ctx.close()
+    println(s"Broadcaster exception : ${cause.getMessage}")
+//    ctx.close()
   }
 
   /**

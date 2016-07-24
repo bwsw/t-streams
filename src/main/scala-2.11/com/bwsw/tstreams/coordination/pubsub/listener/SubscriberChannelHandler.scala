@@ -3,7 +3,7 @@ package com.bwsw.tstreams.coordination.pubsub.listener
 import java.util
 
 import com.bwsw.tstreams.common.serializer.TStreamsSerializer
-import com.bwsw.tstreams.coordination.pubsub.messages.{ProducerTopicMessage, ProducerTransactionStatus}
+import com.bwsw.tstreams.coordination.pubsub.messages.ProducerTopicMessage
 import com.fasterxml.jackson.core.JsonParseException
 import com.fasterxml.jackson.databind.JsonMappingException
 import io.netty.channel.ChannelHandler.Sharable
@@ -45,8 +45,8 @@ class SubscriberChannelHandler(subscriberManager: SubscriberManager) extends Sim
    * @param cause Exception cause
    */
   override def exceptionCaught(ctx: ChannelHandlerContext, cause: Throwable) = {
-    cause.printStackTrace()
-    ctx.close()
+    println(s"SubscriberListener exception : ${cause.getMessage}")
+//    ctx.close()
   }
 }
 
