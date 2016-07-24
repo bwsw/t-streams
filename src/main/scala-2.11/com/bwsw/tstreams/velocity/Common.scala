@@ -2,7 +2,6 @@ package com.bwsw.tstreams.velocity
 
 import java.net.InetSocketAddress
 
-import akka.actor.ActorSystem
 import com.aerospike.client.Host
 import com.bwsw.tstreams.converter.{ArrayByteToStringConverter, StringToArrayByteConverter}
 import com.bwsw.tstreams.data.aerospike.{AerospikeStorageFactory, AerospikeStorageOptions}
@@ -10,7 +9,6 @@ import com.bwsw.tstreams.metadata.MetadataStorageFactory
 import com.bwsw.tstreams.streams.BasicStream
 
 object Common {
-  implicit val system = ActorSystem("UTEST")
   val zkHost = "t-streams-1.z1.netpoint-dc.com"
   val keyspace = "velocity"
 

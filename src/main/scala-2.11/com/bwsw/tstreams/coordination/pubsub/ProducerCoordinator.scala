@@ -2,7 +2,6 @@ package com.bwsw.tstreams.coordination.pubsub
 
 import java.net.InetSocketAddress
 
-import akka.actor.ActorSystem
 import com.bwsw.tstreams.common.zkservice.ZkService
 import com.bwsw.tstreams.coordination.pubsub.publisher.Broadcaster
 import com.bwsw.tstreams.coordination.pubsub.messages.ProducerTopicMessage
@@ -22,7 +21,7 @@ class ProducerCoordinator(prefix : String,
                           usedPartitions : List[Int],
                           zkHosts : List[InetSocketAddress],
                           zkSessionTimeout : Int,
-                          zkConnectionTimeout : Int)(implicit system : ActorSystem) {
+                          zkConnectionTimeout : Int) {
   private val zkService = new ZkService(prefix, zkHosts, zkSessionTimeout, zkConnectionTimeout)
   private val broadcaster = new Broadcaster
 

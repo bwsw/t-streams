@@ -1,8 +1,6 @@
 package com.bwsw.tstreams.coordination.pubsub.publisher
 
-import akka.actor.ActorSystem
 import com.bwsw.tstreams.coordination.pubsub.messages.ProducerTopicMessage
-import com.bwsw.tstreams.coordination.pubsub.publisher.actors.BroadcasterConnectionManager
 import io.netty.bootstrap.Bootstrap
 import io.netty.channel.ChannelInitializer
 import io.netty.channel.nio.NioEventLoopGroup
@@ -14,10 +12,10 @@ import io.netty.handler.codec.string.{StringDecoder, StringEncoder}
  * Broadcaster for [[com.bwsw.tstreams.agents.producer.BasicProducer]]]
  * to broadcast messages for all [[com.bwsw.tstreams.agents.consumer.subscriber.BasicSubscribingConsumer]]]
  */
-class Broadcaster(implicit system : ActorSystem) {
+class Broadcaster {
   private val group = new NioEventLoopGroup()
   private val bootstrap = new Bootstrap()
-  private val connectionManager = new BroadcasterConnectionManager(system, bootstrap)
+  private val connectionManager = new BroadcasterConnectionManager(bootstrap)
   private val channelHandler = new BroadcasterChannelHandler(connectionManager)
 
   bootstrap

@@ -3,7 +3,6 @@ package com.bwsw.tstreams.agents.producer
 import java.util.UUID
 import java.util.concurrent.locks.ReentrantLock
 
-import akka.actor.ActorSystem
 import com.bwsw.tstreams.agents.group.{Agent, CommitInfo, ProducerCommitInfo}
 import com.bwsw.tstreams.agents.producer.ProducerPolicies.ProducerPolicy
 import com.bwsw.tstreams.coordination.pubsub.ProducerCoordinator
@@ -25,7 +24,7 @@ import org.slf4j.LoggerFactory
  */
 class BasicProducer[USERTYPE,DATATYPE](val name : String,
                                        val stream : BasicStream[DATATYPE],
-                                       val producerOptions: BasicProducerOptions[USERTYPE,DATATYPE])(implicit system : ActorSystem)
+                                       val producerOptions: BasicProducerOptions[USERTYPE,DATATYPE])
   extends Agent with Interaction{
 
   stream.dataStorage.bind()

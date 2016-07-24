@@ -2,7 +2,6 @@ package agents.both.batch_insert.aerospike
 
 import java.net.InetSocketAddress
 
-import akka.actor.ActorSystem
 import com.aerospike.client.Host
 import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
 import com.bwsw.tstreams.agents.consumer.{BasicConsumer, BasicConsumerOptions, BasicConsumerTransaction, SubscriberCoordinationOptions}
@@ -19,8 +18,6 @@ import testutils._
 
 
 class ABasicProducerAndConsumerCheckpointTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils{
-  implicit val system = ActorSystem("UTEST")
-
   //creating keyspace, metadata
   val randomKeyspace = randomString
   val cluster = Cluster.builder().addContactPoint("localhost").build()

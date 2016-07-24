@@ -3,7 +3,6 @@ package com.bwsw.tstreams.coordination.pubsub.listener
 import java.util
 
 import com.bwsw.tstreams.common.serializer.TStreamsSerializer
-import com.bwsw.tstreams.coordination.pubsub.listener.actors.SubscriberManager
 import com.bwsw.tstreams.coordination.pubsub.messages.{ProducerTopicMessage, ProducerTransactionStatus}
 import com.fasterxml.jackson.core.JsonParseException
 import com.fasterxml.jackson.databind.JsonMappingException

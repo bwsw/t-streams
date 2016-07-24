@@ -2,7 +2,6 @@ package agents.both.batch_insert.cassandra
 
 import java.net.InetSocketAddress
 
-import akka.actor.ActorSystem
 import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
 import com.bwsw.tstreams.agents.consumer.{BasicConsumer, BasicConsumerOptions, SubscriberCoordinationOptions}
 import com.bwsw.tstreams.agents.producer.InsertionType.BatchInsert
@@ -19,7 +18,6 @@ import testutils._
 
 
 class CManyBasicProducersStreamingInManyPartitionsAndConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils{
-  implicit val system = ActorSystem("UTEST")
 
   var port = 8000
 

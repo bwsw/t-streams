@@ -2,8 +2,6 @@ package com.bwsw.tstreams.coordination.pubsub.listener
 
 import java.util.concurrent.CountDownLatch
 
-import akka.actor.ActorSystem
-import com.bwsw.tstreams.coordination.pubsub.listener.actors.SubscriberManager
 import com.bwsw.tstreams.coordination.pubsub.messages.ProducerTopicMessage
 import io.netty.bootstrap.ServerBootstrap
 import io.netty.channel.ChannelInitializer
@@ -18,11 +16,11 @@ import io.netty.handler.logging.{LogLevel, LoggingHandler}
  * Listener of [[ProducerTopicMessage]]
  * @param port Listener port
  */
-class SubscriberListener(port : Int)(implicit system : ActorSystem) {
+class SubscriberListener(port : Int) {
   private val bossGroup = new NioEventLoopGroup(1)
   private val workerGroup = new NioEventLoopGroup()
   private val MAX_FRAME_LENGTH = 8192
-  private val subscriberManager = new SubscriberManager(system)
+  private val subscriberManager = new SubscriberManager()
   private val channelHandler : SubscriberChannelHandler = new SubscriberChannelHandler(subscriberManager)
   private var listenerThread : Thread = null
 

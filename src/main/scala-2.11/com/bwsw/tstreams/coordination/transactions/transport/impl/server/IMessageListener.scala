@@ -2,9 +2,7 @@ package com.bwsw.tstreams.coordination.transactions.transport.impl.server
 
 import java.util.concurrent.CountDownLatch
 
-import akka.actor.ActorSystem
 import com.bwsw.tstreams.coordination.transactions.messages.IMessage
-import com.bwsw.tstreams.coordination.transactions.transport.impl.server.actors.IMessageListenerManager
 import io.netty.bootstrap.ServerBootstrap
 import io.netty.channel.ChannelInitializer
 import io.netty.channel.nio.NioEventLoopGroup
@@ -17,13 +15,13 @@ import io.netty.handler.logging.{LogLevel, LoggingHandler}
 /**
  * @param port Listener port
  */
-class IMessageListener(port : Int)(implicit system : ActorSystem){
+class IMessageListener(port : Int){
   //socket accept worker
   private val bossGroup = new NioEventLoopGroup(1)
   //channel workers
   private val workerGroup = new NioEventLoopGroup()
   private val MAX_FRAME_LENGTH = 8192
-  private val manager = new IMessageListenerManager(system)
+  private val manager = new IMessageListenerManager()
   private val channelHandler : IMessageServerChannelHandler = new IMessageServerChannelHandler(manager)
   private var listenerThread : Thread = null
 

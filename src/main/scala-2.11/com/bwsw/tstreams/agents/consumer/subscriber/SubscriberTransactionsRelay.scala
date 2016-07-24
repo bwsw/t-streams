@@ -50,13 +50,16 @@ class SubscriberTransactionsRelay[DATATYPE,USERTYPE](subscriber : BasicSubscribi
       logger.debug(s"[UPDATE_CALLBACK PARTITION_$partition] consumed msg with uuid:{${msg.txnUuid.timestamp()}}," +
         s" status:{${msg.status}}\n")
       if (msg.txnUuid.timestamp() > lastConsumedTransaction.get().timestamp()) {
-        if (msg.status == ProducerTransactionStatus.preCheckpoint ||
-          msg.status == ProducerTransactionStatus.finalCheckpoint){
-          checkpointEventsResolver.update(partition, msg.txnUuid, msg.status)
-        }
         transactionBuffer.update(msg.txnUuid, msg.status, msg.ttl)
       }
       transactionBufferLock.unlock()
+
+      if (msg.status == ProducerTransactionStatus.preCheckpoint ||
+        msg.status == ProducerTransactionStatus.finalCheckpoint){
+        logger.debug(s"[UPDATE_CALLBACK CER PARTITION_$partition] consumed msg with uuid:{${msg.txnUuid.timestamp()}}," +
+          s" status:{${msg.status}}\n")
+        checkpointEventsResolver.update(partition, msg.txnUuid, msg.status)
+      }
     }
   }
 

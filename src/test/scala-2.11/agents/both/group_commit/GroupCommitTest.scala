@@ -2,7 +2,6 @@ package agents.both.group_commit
 
 import java.net.InetSocketAddress
 
-import akka.actor.ActorSystem
 import com.aerospike.client.Host
 import com.bwsw.tstreams.agents.consumer.{BasicConsumer, BasicConsumerOptions}
 import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
@@ -20,7 +19,6 @@ import testutils._
 
 
 class GroupCommitTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils{
-  implicit val system = ActorSystem("UTEST")
 
   val randomKeyspace = randomString
   val cluster = Cluster.builder().addContactPoint("localhost").build()

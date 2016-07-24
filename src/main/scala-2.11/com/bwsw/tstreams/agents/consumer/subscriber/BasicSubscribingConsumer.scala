@@ -3,7 +3,6 @@ package com.bwsw.tstreams.agents.consumer.subscriber
 import java.util.UUID
 import java.util.concurrent.{ExecutorService, Executors}
 
-import akka.actor.ActorSystem
 import com.bwsw.tstreams.agents.consumer.{BasicConsumer, BasicConsumerOptions, BasicConsumerTransaction, SubscriberCoordinationOptions}
 import com.bwsw.tstreams.coordination.pubsub.SubscriberCoordinator
 import com.bwsw.tstreams.streams.BasicStream
@@ -25,7 +24,7 @@ class BasicSubscribingConsumer[DATATYPE, USERTYPE](name : String,
                                                    options : BasicConsumerOptions[DATATYPE,USERTYPE],
                                                    subscriberCoordinationOptions : SubscriberCoordinationOptions,
                                                    callBack : BasicSubscriberCallback[DATATYPE, USERTYPE],
-                                                   persistentQueuePath : String)(implicit system : ActorSystem)
+                                                   persistentQueuePath : String)
   extends BasicConsumer[DATATYPE, USERTYPE](name, stream, options){
   /**
     * Indicate started or not this subscriber

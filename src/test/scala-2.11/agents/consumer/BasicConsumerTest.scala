@@ -3,7 +3,6 @@ package agents.consumer
 import java.net.InetSocketAddress
 import java.util.UUID
 
-import akka.actor.ActorSystem
 import com.aerospike.client.Host
 import com.bwsw.tstreams.agents.consumer.{BasicConsumer, BasicConsumerOptions, BasicConsumerTransaction, SubscriberCoordinationOptions}
 import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
@@ -23,7 +22,6 @@ import testutils._
 
 
 class BasicConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils{
-  implicit val system = ActorSystem("UTEST")
 
   val randomKeyspace = randomString
   val cluster = Cluster.builder().addContactPoint("localhost").build()

@@ -2,7 +2,6 @@ package com.bwsw.tstreams.coordination.pubsub
 
 import java.net.InetSocketAddress
 
-import akka.actor.ActorSystem
 import com.bwsw.tstreams.common.zkservice.ZkService
 import com.bwsw.tstreams.coordination.pubsub.messages.ProducerTopicMessage
 import com.bwsw.tstreams.coordination.pubsub.listener.SubscriberListener
@@ -20,7 +19,7 @@ class SubscriberCoordinator(agentAddress : String,
                           zkRootPrefix : String,
                           zkHosts : List[InetSocketAddress],
                           zkSessionTimeout : Int,
-                          zkConnectionTimeout : Int)(implicit system : ActorSystem) {
+                          zkConnectionTimeout : Int) {
 
   private val logger = LoggerFactory.getLogger(this.getClass)
   private val SYNCHRONIZE_LIMIT = 60

@@ -4,7 +4,6 @@ import java.util
 
 import com.bwsw.tstreams.common.serializer.TStreamsSerializer
 import com.bwsw.tstreams.coordination.transactions.messages.IMessage
-import com.bwsw.tstreams.coordination.transactions.transport.impl.server.actors.IMessageListenerManager
 import com.fasterxml.jackson.core.JsonParseException
 import com.fasterxml.jackson.databind.JsonMappingException
 import io.netty.channel._

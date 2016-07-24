@@ -1,48 +1,138 @@
 package com.bwsw.tstreams.agents.consumer.subscriber
 
 import java.util.UUID
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.locks.ReentrantLock
 
-import akka.actor.{ActorRef, ActorSystem, Cancellable, Props}
-import akka.util.Timeout
-import akka.pattern.ask
-import com.bwsw.tstreams.agents.consumer.subscriber.CheckpointEventsResolverActor.{BindBufferCommand, ClearCommand, RefreshCommand, UpdateCommand}
+import com.bwsw.tstreams.coordination.pubsub.messages.ProducerTransactionStatus
 import com.bwsw.tstreams.coordination.pubsub.messages.ProducerTransactionStatus._
+import org.slf4j.LoggerFactory
 
-import scala.concurrent.{Await, Future}
-import scala.concurrent.duration._
-import scala.language.postfixOps
-import scala.concurrent.ExecutionContext.Implicits.global
+import scala.collection.mutable
 
-
-class CheckpointEventResolver(subscriber : BasicSubscribingConsumer[_,_])(implicit system : ActorSystem) {
-  private var updater : Cancellable = null
+class CheckpointEventResolver(subscriber : BasicSubscribingConsumer[_,_]) {
+  private val MAX_RETRIES = 2
   private val UPDATE_INTERVAL = 5000
-  private val AWAIT_TIMEOUT = 10 seconds
-  implicit val asTimeout = Timeout(AWAIT_TIMEOUT)
-
-  private val handler: ActorRef = system.actorOf(
-    props = Props(new CheckpointEventsResolverActor(subscriber)))
+  private var updateThread : Thread = null
+  private val isRunning = new AtomicBoolean(false)
+  private val checkpointEventResolverLock = new ReentrantLock(true)
+  private val logger = LoggerFactory.getLogger(this.getClass)
+  private val partitionToBuffer = mutable.Map[Int, TransactionBufferUtils]()
+  private val partitionToTxns = mutable.Map[Int, mutable.Set[UUID]]()
+  private val retries = mutable.Map[Int, mutable.Map[UUID, Int]]()
 
   def bindBuffer(partition : Int, buffer : TransactionsBuffer, lock : ReentrantLock, lastTxn : LastTransactionWrapper) = {
-    Await.result(handler ? BindBufferCommand(partition, buffer, lock, lastTxn), asTimeout.duration)
+    checkpointEventResolverLock.lock()
+    logger.debug(s"[CHECKPOINT EVENT RESOLVER] start bind buffer on partition:{$partition}")
+    partitionToBuffer(partition) = TransactionBufferUtils(buffer,lock,lastTxn)
+    logger.debug(s"[CHECKPOINT EVENT RESOLVER] finish bind buffer on partition:{$partition}")
+    checkpointEventResolverLock.unlock()
   }
 
   def update(partition : Int, txn : UUID, status : ProducerTransactionStatus) = {
-    handler ! UpdateCommand(partition, txn, status)
+    checkpointEventResolverLock.lock()
+    logger.debug(s"[CHECKPOINT EVENT RESOLVER] start update CER on partition:{$partition}" +
+      s" with txn:{${txn.timestamp()}}")
+    status match {
+      case ProducerTransactionStatus.preCheckpoint =>
+        if (partitionToTxns.contains(partition)) {
+          assert(retries.contains(partition))
+          retries(partition)(txn) = MAX_RETRIES
+          partitionToTxns(partition) += txn
+        } else {
+          assert(!retries.contains(partition))
+          retries(partition) = mutable.Map(txn -> MAX_RETRIES)
+          partitionToTxns(partition) = mutable.Set[UUID](txn)
+        }
+        logger.debug(s"[CHECKPOINT EVENT RESOLVER] [UPDATE PRECHECKPOINT] CER on " +
+          s"partition:{$partition}" +
+          s" with txn:{${txn.timestamp()}}")
+
+      case ProducerTransactionStatus.finalCheckpoint =>
+        removeTxn(partition, txn)
+        logger.debug(s"[CHECKPOINT EVENT RESOLVER] [UPDATE FINALCHECKPOINT] CER on " +
+          s"partition:{$partition}" +
+          s" with txn:{${txn.timestamp()}}")
+    }
+    checkpointEventResolverLock.unlock()
   }
 
   def startUpdate() = {
-    updater = system.scheduler.schedule(
-      initialDelay = 0 milliseconds,
-      interval = UPDATE_INTERVAL milliseconds,
-      receiver = handler,
-      message = RefreshCommand
-    )
+    isRunning.set(true)
+    updateThread = new Thread(new Runnable {
+      override def run(): Unit = {
+        while(isRunning.get()){
+          checkpointEventResolverLock.lock()
+          refresh()
+          Thread.sleep(UPDATE_INTERVAL)
+          checkpointEventResolverLock.unlock()
+        }
+      }
+    })
+    updateThread.start()
   }
 
   def stop() = {
-    updater.cancel()
-    handler ! ClearCommand
+    partitionToBuffer.clear()
+    partitionToTxns.clear()
+    retries.clear()
+    isRunning.set(false)
+    updateThread.join()
+  }
+
+  private def removeTxn(partition : Int, txn : UUID) = {
+    if (retries.contains(partition) && retries(partition).contains(txn)) {
+      retries(partition).remove(txn)
+      partitionToTxns(partition).remove(txn)
+    }
+  }
+
+  private def updateTransactionBuffer(partition : Int,
+                                      txn : UUID,
+                                      status : ProducerTransactionStatus,
+                                      ttl : Int) = {
+    val transactionBufferUtils = partitionToBuffer(partition)
+    transactionBufferUtils.lock.lock()
+    if (txn.timestamp() > transactionBufferUtils.lastConsumedTxn.get().timestamp())
+      transactionBufferUtils.buffer.update(txn, status, ttl)
+    transactionBufferUtils.lock.unlock()
+  }
+
+  private def refresh() = {
+    partitionToTxns foreach { case (partition, transactions) =>
+      transactions foreach { txn =>
+        if (retries(partition)(txn) == 0) {
+          updateTransactionBuffer(partition, txn, ProducerTransactionStatus.cancelled, -1)
+          removeTxn(partition, txn)
+          logger.debug(s"[CHECKPOINT EVENT RESOLVER] [REFRESH ZERO RETRY] CER on" +
+            s" partition:{$partition}" +
+            s" with txn:{${txn.timestamp()}}")
+        } else {
+          val updatedTransaction = subscriber.updateTransaction(txn, partition)
+          updatedTransaction match {
+            case Some(transactionSettings) =>
+              if (transactionSettings.totalItems != -1){
+                updateTransactionBuffer(partition, txn, ProducerTransactionStatus.finalCheckpoint, -1)
+                removeTxn(partition, txn)
+                logger.debug(s"[CHECKPOINT EVENT RESOLVER] [REFRESH TB UPDATE] CER on" +
+                  s" partition:{$partition}" +
+                  s" with txn:{${txn.timestamp()}}")
+              } else {
+                retries(partition)(txn) -= 1
+                logger.debug(s"[CHECKPOINT EVENT RESOLVER] [REFRESH RETRY DECREASE] CER on" +
+                  s" partition:{$partition}" +
+                  s" with txn:{${txn.timestamp()}}")
+              }
+
+            case None =>
+              //the transaction has been deleted by cassandra so we need to remove it from transaction buffer
+              updateTransactionBuffer(partition, txn, ProducerTransactionStatus.cancelled, -1)
+              removeTxn(partition,txn)
+          }
+        }
+      }
+    }
   }
 }
+
+case class TransactionBufferUtils(buffer : TransactionsBuffer, lock : ReentrantLock, lastConsumedTxn : LastTransactionWrapper)

@@ -17,6 +17,5 @@ object MetadataCreator {
     CassandraHelper.createMetadataTables(session, keyspace)
     cluster.close()
     session.close()
-    system.shutdown()
   }
 }
