@@ -1,5 +1,6 @@
 package utils
 
+import com.bwsw.tstreams.agents.producer.ProducerPolicies
 import com.bwsw.tstreams.converter.StringToArrayByteConverter
 import com.bwsw.tstreams.env.{TSF_Dictionary, TStreamsFactory}
 import com.datastax.driver.core.Cluster
@@ -37,6 +38,14 @@ class TStreamsFactoryTest extends FlatSpec with Matchers with BeforeAndAfterAll 
   "UniversalFactory.getProducer" should "return producer object" in {
     p != null shouldEqual true
   }
+
+  val txn = p.newTransaction(policy = ProducerPolicies.errorIfOpen,
+                              nextPartition = 0)
+  txn.send("test1")
+  txn.send("test2")
+  txn.checkpoint()
+
+  p.stop()
 
   session.close()
   cluster.close()
