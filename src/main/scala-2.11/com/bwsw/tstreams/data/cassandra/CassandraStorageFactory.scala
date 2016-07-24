@@ -11,6 +11,7 @@ import com.datastax.driver.core.{Cluster, Session}
  */
 class CassandraStorageFactory {
 
+  var isClosed = false
   /**
    * Map for memorize clusters which are already created
    */
@@ -33,6 +34,9 @@ class CassandraStorageFactory {
    */
   def getInstance(cassandraStorageOptions: CassandraStorageOptions) : CassandraStorage = {
     lock.lock()
+
+    if(isClosed)
+      throw new IllegalStateException("CassandraStorageFactory is closed. This is the illegal usage of the object.")
 
     val sortedHosts = cassandraStorageOptions.cassandraHosts.map(x=>(x,x.hashCode())).sortBy(_._2).map(x=>x._1)
 
@@ -72,9 +76,17 @@ class CassandraStorageFactory {
    * Close all factory storage instances
    */
   def closeFactory() : Unit = {
+    lock.lock()
+
+    if(isClosed)
+      throw new IllegalStateException("CassandraStorageFactory is closed. This is repeatable close operation.")
+    isClosed = true
+
     clusterMap.foreach{x=>x._2.close()}
     sessionMap.foreach{x=>x._2.close()}
     clusterMap.clear()
     sessionMap.clear()
+
+    lock.unlock()
   }
 }

@@ -18,17 +18,12 @@ class TStreamsFactoryTest extends FlatSpec with Matchers with BeforeAndAfterAll 
 
   private val logger = LoggerFactory.getLogger(this.getClass)
 
-  val randomKeyspace = randomString
-  val cluster = Cluster.builder().addContactPoint("localhost").build()
-  val session = cluster.connect()
-  CassandraHelper.createKeyspace(session, randomKeyspace)
-  CassandraHelper.createMetadataTables(session, randomKeyspace)
+  val randomKeyspace = createRandomKeyspace
 
   val f = new TStreamsFactory()
   f.setProperty(TSF_Dictionary.Metadata.Cluster.namespace,randomKeyspace).
     setProperty(TSF_Dictionary.Data.Cluster.namespace,"test").
     setProperty(TSF_Dictionary.Stream.name, "test-stream")
-
 
   "UniversalFactory.getProducer" should "return producer object" in {
     val p = f.getProducer[String](
@@ -41,7 +36,7 @@ class TStreamsFactoryTest extends FlatSpec with Matchers with BeforeAndAfterAll 
     p != null shouldEqual true
 
     val txn = p.newTransaction(
-      policy        = ProducerPolicies.errorIfOpen,
+      policy        = ProducerPolicies.errorIfOpened,
       nextPartition = 0)
 
     txn.send("test1")
@@ -49,6 +44,7 @@ class TStreamsFactoryTest extends FlatSpec with Matchers with BeforeAndAfterAll 
     txn.checkpoint()
 
     p.stop()
+
   }
 
   "UniversalFactory.getConsumer" should "return consumer object" in {
@@ -60,20 +56,11 @@ class TStreamsFactoryTest extends FlatSpec with Matchers with BeforeAndAfterAll 
       offset        = Oldest)
 
     c != null shouldEqual true
-
-    /*
-    val txn = p.newTransaction(
-      policy        = ProducerPolicies.errorIfOpen,
-      nextPartition = 0)
-
-    txn.send("test1")
-    txn.send("test2")
-    txn.checkpoint()
-    */
   }
 
-
-  session.close()
-  cluster.close()
+  override def afterAll(): Unit = {
+    f.close()
+    super.afterAll()
+  }
 
 }

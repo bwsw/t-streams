@@ -2,6 +2,7 @@ package com.bwsw.tstreams.env
 
 import java.net.InetSocketAddress
 import java.security.InvalidParameterException
+import java.util.concurrent.locks.ReentrantLock
 
 import akka.actor.ActorSystem
 import com.aerospike.client.Host
@@ -276,9 +277,10 @@ object TSF_Dictionary {
   */
 class TStreamsFactory(envname: String = "T-streams") {
 
-  private val logger = LoggerFactory.getLogger(this.getClass)
-
-  var propertyMap = new HashMap[String,Any]()
+  private val logger  = LoggerFactory.getLogger(this.getClass)
+  private val lock    = new ReentrantLock(true)
+  val propertyMap     = new HashMap[String,Any]()
+  var isClosed        = false
 
   // common
   implicit val system = ActorSystem(envname.toString)
@@ -382,7 +384,9 @@ class TStreamsFactory(envname: String = "T-streams") {
   propertyMap += (TSF_Dictionary.Consumer.Subscriber.persistent_queue_path -> "/tmp")
 
   //metadata/data factories
-  val msFactory = new MetadataStorageFactory
+  val msFactory               = new MetadataStorageFactory
+  val aerospikeStorageFactory = new AerospikeStorageFactory
+  val cassandraStorageFactory = new CassandraStorageFactory
 
   /**
     *
@@ -458,14 +462,17 @@ class TStreamsFactory(envname: String = "T-streams") {
   private def getInetSocketAddressCompatibleHostList(h: String): List[InetSocketAddress] =
   h.split(',').map((sh: String) => new InetSocketAddress(sh.split(':').head, Integer.parseInt(sh.split(':').tail.head))).toList
 
+
+
   /**
     * common routine allows getting ready to use data store object
+    *
     * @return
     */
   private def getDataStorage(): IStorage[Array[Byte]] = {
     if (pAsString(TSF_Dictionary.Data.Cluster.driver) == TSF_Dictionary.Data.Cluster.Consts.DATA_DRIVER_AEROSPIKE)
     {
-      val dsf = new AerospikeStorageFactory
+      val dsf = aerospikeStorageFactory
 
       // construct client policy
       var cp: ClientPolicy = null
@@ -509,7 +516,7 @@ class TStreamsFactory(envname: String = "T-streams") {
     }
     else if (pAsString(TSF_Dictionary.Data.Cluster.driver) == TSF_Dictionary.Data.Cluster.Consts.DATA_DRIVER_CASSANDRA)
     {
-      val dsf = new CassandraStorageFactory
+      val dsf = cassandraStorageFactory
 
       val login     = pAsString(TSF_Dictionary.Data.Cluster.login, null)
       val password  = pAsString(TSF_Dictionary.Data.Cluster.password, null)
@@ -593,6 +600,11 @@ class TStreamsFactory(envname: String = "T-streams") {
                             partitions    : List[Int]
                            ): BasicProducer[USERTYPE,Array[Byte]] = {
 
+    lock.lock()
+
+    if(isClosed)
+      throw new IllegalStateException("TStreamsFactory is closed. This is the illegal usage of the object.")
+
     val ds: IStorage[Array[Byte]]         = getDataStorage()
     val ms: MetadataStorage               = getMetadataStorage()
     val stream: BasicStream[Array[Byte]]  = getStream(metadatastorage = ms, datastorage = ds)
@@ -655,10 +667,13 @@ class TStreamsFactory(envname: String = "T-streams") {
       producerCoordinationSettings  = cao,
       converter                     = converter)
 
-    new BasicProducer[USERTYPE, Array[Byte]](
+    val producer = new BasicProducer[USERTYPE, Array[Byte]](
       name              = name,
       stream            = stream,
       producerOptions   = po)
+
+    lock.unlock()
+    producer
   }
 
   /**
@@ -677,6 +692,11 @@ class TStreamsFactory(envname: String = "T-streams") {
                             offset        : IOffset,
                             isUseLastOffset : Boolean = true
                            ): BasicConsumer[Array[Byte],USERTYPE] = {
+
+    lock.lock()
+
+    if(isClosed)
+      throw new IllegalStateException("TStreamsFactory is closed. This is the illegal usage of the object.")
 
     val ds: IStorage[Array[Byte]]         = getDataStorage()
     val ms: MetadataStorage               = getMetadataStorage()
@@ -698,7 +718,10 @@ class TStreamsFactory(envname: String = "T-streams") {
       txnGenerator              = txnGenerator,
       useLastOffset             = isUseLastOffset)
 
-    new BasicConsumer(name, stream, consumerOptions)
+    val consumer = new BasicConsumer(name, stream, consumerOptions)
+    lock.unlock()
+
+    consumer
   }
 
   /**
@@ -714,7 +737,24 @@ class TStreamsFactory(envname: String = "T-streams") {
                               converter : IConverter[Array[Byte],USERTYPE],
                               partitions : List[Int],
                               callback: BasicSubscriberCallback[Array[Byte],USERTYPE]): BasicSubscribingConsumer[Array[Byte],USERTYPE] = {
+    lock.lock()
+    if(isClosed)
+      throw new IllegalStateException("TStreamsFactory is closed. This is the illegal usage of the object.")
+    lock.unlock()
     null
+  }
+
+  def close(): Unit = {
+    lock.lock()
+    if(isClosed)
+      throw new IllegalStateException("TStreamsFactory is closed. This is repeatable close operation.")
+
+    isClosed = true
+    msFactory.closeFactory()
+    cassandraStorageFactory.closeFactory()
+    aerospikeStorageFactory.closeFactory()
+
+    lock.unlock()
   }
 
 }
