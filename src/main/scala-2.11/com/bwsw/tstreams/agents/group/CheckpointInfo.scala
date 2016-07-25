@@ -12,10 +12,11 @@ import scala.language.existentials
 /**
  * Basic commit trait
  */
-sealed trait CommitInfo
+sealed trait CheckpointInfo
 
 /**
- * BasicProducer commit information
+  * BasicProducer commit information
+ *
  * @param transactionRef Reference on transaction (used for obliterate update thread)
  * @param agent Producer agent for sending events
  * every transaction followed with three actions
@@ -30,24 +31,25 @@ sealed trait CommitInfo
  * @param totalCnt Total info in transaction
  * @param ttl Transaction time to live in seconds
  */
-case class ProducerCommitInfo(transactionRef : BasicProducerTransaction[_,_],
-                              agent: PeerToPeerAgent,
-                              preCheckpointEvent : ProducerTopicMessage,
-                              finalCheckpointEvent : ProducerTopicMessage,
-                              streamName : String,
-                              partition : Int,
-                              transaction: UUID,
-                              totalCnt : Int,
-                              ttl : Int) extends CommitInfo
+case class ProducerCheckpointInfo(transactionRef : BasicProducerTransaction[_],
+                                  agent: PeerToPeerAgent,
+                                  preCheckpointEvent : ProducerTopicMessage,
+                                  finalCheckpointEvent : ProducerTopicMessage,
+                                  streamName : String,
+                                  partition : Int,
+                                  transaction: UUID,
+                                  totalCnt : Int,
+                                  ttl : Int) extends CheckpointInfo
 
 /**
  * BasicConsumer commit information
+ *
  * @param name Concrete consumer name
  * @param stream Stream name
  * @param partition Partition number
  * @param offset Offset to commit
  */
-case class ConsumerCommitInfo(name : String,
-                              stream : String,
-                              partition : Int,
-                              offset : UUID) extends CommitInfo
+case class ConsumerCheckpointInfo(name : String,
+                                  stream : String,
+                                  partition : Int,
+                                  offset : UUID) extends CheckpointInfo

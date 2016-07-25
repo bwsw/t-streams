@@ -89,7 +89,7 @@ object BasicProducerTest{
       description = "some_description")
 
     //producer/consumer options
-    val producerOptions = new BasicProducerOptions[String, Array[Byte]](
+    val producerOptions = new BasicProducerOptions[String](
       transactionTTL = 6,
       transactionKeepAliveInterval = 2,
       producerKeepAliveInterval = 1,
@@ -109,7 +109,7 @@ object BasicProducerTest{
       println(s"txn with uuid:{${txn.getTxnUUID.timestamp()}} was sent")
     }
 
-    producer.agent.stop()
+    producer.master_p2p_agent.stop()
     metadataStorageFactory.closeFactory()
   }
 }

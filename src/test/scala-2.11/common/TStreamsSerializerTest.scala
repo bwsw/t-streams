@@ -50,13 +50,13 @@ class TStreamsSerializerTest extends FlatSpec with Matchers with BeforeAndAfterA
     clazz shouldEqual req
   }
   "TStreams serializer" should "serialize and deserialize PublishRequest" in {
-    val clazz = PublishRequest("snd","rcv",ProducerTopicMessage(UUID.randomUUID(),228,ProducerTransactionStatus.cancelled,1488))
+    val clazz = PublishRequest("snd","rcv",ProducerTopicMessage(UUID.randomUUID(),228,ProducerTransactionStatus.cancel,1488))
     val string = serializer.serialize(clazz)
     val req = serializer.deserialize[PublishRequest](string)
     clazz shouldEqual req
   }
   "TStreams serializer" should "serialize and deserialize PublishResponse" in {
-    val clazz = PublishResponse("snd","rcv",ProducerTopicMessage(UUID.randomUUID(),228,ProducerTransactionStatus.cancelled,1488))
+    val clazz = PublishResponse("snd","rcv",ProducerTopicMessage(UUID.randomUUID(),228,ProducerTransactionStatus.cancel,1488))
     val string = serializer.serialize(clazz)
     val req = serializer.deserialize[PublishResponse](string)
     clazz shouldEqual req
@@ -86,16 +86,16 @@ class TStreamsSerializerTest extends FlatSpec with Matchers with BeforeAndAfterA
     clazz shouldEqual req
   }
   "TStreams serializer" should "serialize and deserialize PTM" in {
-    val clazz = ProducerTopicMessage(UUID.randomUUID(),123,ProducerTransactionStatus.finalCheckpoint,5)
+    val clazz = ProducerTopicMessage(UUID.randomUUID(),123,ProducerTransactionStatus.postCheckpoint,5)
     val string = serializer.serialize(clazz)
     val req = serializer.deserialize[ProducerTopicMessage](string)
     clazz shouldEqual req
   }
   "TStreams serializer" should "serialize and deserialize PTS" in {
     val pre = ProducerTransactionStatus.preCheckpoint
-    val fin = ProducerTransactionStatus.finalCheckpoint
-    val canceled = ProducerTransactionStatus.cancelled
-    val updated = ProducerTransactionStatus.updated
+    val fin = ProducerTransactionStatus.postCheckpoint
+    val canceled = ProducerTransactionStatus.cancel
+    val updated = ProducerTransactionStatus.update
     val opened = ProducerTransactionStatus.opened
     assert(serializer.deserialize[ProducerTransactionStatus.ProducerTransactionStatus](serializer.serialize(pre)) == pre)
     assert(serializer.deserialize[ProducerTransactionStatus.ProducerTransactionStatus](serializer.serialize(fin)) == fin)

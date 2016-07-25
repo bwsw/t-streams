@@ -53,7 +53,7 @@ class AManyBasicProducersStreamingInOnePartitionAndConsumerTest extends FlatSpec
     val totalElementsInTxn = 10
     val producersAmount = 15
     val dataToSend = (for (part <- 0 until totalElementsInTxn) yield randomString).sorted
-    val producers: List[BasicProducer[String, Array[Byte]]] = (0 until producersAmount).toList.map(x=>getProducer)
+    val producers: List[BasicProducer[String]] = (0 until producersAmount).toList.map(x=>getProducer)
     val producersThreads = producers.map(p =>
       new Thread(new Runnable {
         def run(){
@@ -119,7 +119,7 @@ class AManyBasicProducersStreamingInOnePartitionAndConsumerTest extends FlatSpec
     checkVal shouldEqual true
   }
 
-  def getProducer: BasicProducer[String,Array[Byte]] = {
+  def getProducer: BasicProducer[String] = {
     val stream = getStream
 
     val agentSettings = new ProducerCoordinationOptions(
@@ -134,7 +134,7 @@ class AManyBasicProducersStreamingInOnePartitionAndConsumerTest extends FlatSpec
 
     port += 1
 
-    val producerOptions = new BasicProducerOptions[String, Array[Byte]](
+    val producerOptions = new BasicProducerOptions[String](
       transactionTTL = 6,
       transactionKeepAliveInterval = 2,
       producerKeepAliveInterval = 1,

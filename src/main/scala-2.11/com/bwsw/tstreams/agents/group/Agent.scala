@@ -12,12 +12,12 @@ trait Agent {
  /**
   * Agent lock on any actions which has to do with checkpoint
   */
-  def getAgentLock() : ReentrantLock
+  def getThreadLock() : ReentrantLock
 
   /**
    * Info to commit
    */
-  def getCommitInfo() : List[CommitInfo]
+  def getCheckpointInfoAndClear() : List[CheckpointInfo]
 
   /**
    * Metadata storage link for concrete agent

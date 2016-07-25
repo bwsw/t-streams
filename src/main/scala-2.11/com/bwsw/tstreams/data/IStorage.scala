@@ -112,15 +112,15 @@ trait IStorage[T] {
   /**
    * Flag indicating binded this IStorage or not
    */
-  private var isBinded = false
+  private var isBound = false
 
 
   /**
    * Bind this storage for agent
    */
   def bind() = {
-    if (isBinded)
+    if (isBound)
       throw new IllegalStateException("storage is already binded")
-    isBinded = true
+    isBound = true
   }
 }

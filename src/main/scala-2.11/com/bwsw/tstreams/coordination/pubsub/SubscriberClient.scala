@@ -16,13 +16,14 @@ import org.apache.zookeeper.{WatchedEvent, Watcher}
  * @param zkHosts Zookeeper hosts to connect
  * @param zkSessionTimeout Zookeeper connect timeout
  */
-class ProducerCoordinator(prefix : String,
-                          streamName : String,
-                          usedPartitions : List[Int],
-                          zkHosts : List[InetSocketAddress],
-                          zkSessionTimeout : Int,
-                          zkConnectionTimeout : Int) {
-  private val zkService = new ZkService(prefix, zkHosts, zkSessionTimeout, zkConnectionTimeout)
+class SubscriberClient(prefix          : String,
+                       streamName      : String,
+                       usedPartitions  : List[Int],
+                       zkHosts         : List[InetSocketAddress],
+                       zkSessionTimeout    : Int,
+                       zkConnectionTimeout : Int) {
+
+  private val zkService   = new ZkService(prefix, zkHosts, zkSessionTimeout, zkConnectionTimeout)
   private val broadcaster = new Broadcaster
 
   /**
@@ -36,8 +37,7 @@ class ProducerCoordinator(prefix : String,
           zkService.setWatcher(s"/subscribers/event/$streamName/$p", this)
         }
       }
-      zkService.setWatcher(s"/subscribers/event/$streamName/$p", watcher)
-      updateSubscribers(p)
+      watcher.process(null)
     }
   }
 
@@ -69,7 +69,7 @@ class ProducerCoordinator(prefix : String,
   }
 
   /**
-   * Stop this coordinator
+   * Stop this Subscriber client
    */
   def stop() = {
     broadcaster.close()

@@ -48,7 +48,7 @@ class BasicProducerTest extends FlatSpec with Matchers with BeforeAndAfterAll wi
     transportTimeout = 5,
     zkConnectionTimeout = 7)
 
-  val producerOptions = new BasicProducerOptions[String, Array[Byte]](
+  val producerOptions = new BasicProducerOptions[String](
     transactionTTL = 10,
     transactionKeepAliveInterval = 2,
     producerKeepAliveInterval = 1,
@@ -61,13 +61,13 @@ class BasicProducerTest extends FlatSpec with Matchers with BeforeAndAfterAll wi
   val producer = new BasicProducer("test_producer", stream, producerOptions)
 
   "BasicProducer.newTransaction()" should "return BasicProducerTransaction instance" in {
-    val txn: BasicProducerTransaction[String, Array[Byte]] = producer.newTransaction(ProducerPolicies.errorIfOpened)
+    val txn: BasicProducerTransaction[String] = producer.newTransaction(ProducerPolicies.errorIfOpened)
     txn.checkpoint()
-    txn.isInstanceOf[BasicProducerTransaction[_,_]] shouldEqual true
+    txn.isInstanceOf[BasicProducerTransaction[_]] shouldEqual true
   }
 
   "BasicProducer.newTransaction(ProducerPolicies.errorIfOpen)" should "throw exception if previous transaction was not closed" in {
-    val txn1: BasicProducerTransaction[String, Array[Byte]] = producer.newTransaction(ProducerPolicies.checkpointIfOpened, 2)
+    val txn1: BasicProducerTransaction[String] = producer.newTransaction(ProducerPolicies.checkpointIfOpened, 2)
     intercept[IllegalStateException] {
        producer.newTransaction(ProducerPolicies.errorIfOpened, 2)
     }
@@ -82,7 +82,7 @@ class BasicProducerTest extends FlatSpec with Matchers with BeforeAndAfterAll wi
 
   "BasicProducer.getTransaction()" should "return transaction reference if it was created or None" in {
     val txn = producer.newTransaction(ProducerPolicies.checkpointIfOpened, 1)
-    val txnRef = producer.getTransaction(1)
+    val txnRef = producer.getOpenTransactionForPartition(1)
     txn.checkpoint()
     val checkVal = txnRef.get == txn
     checkVal shouldEqual true

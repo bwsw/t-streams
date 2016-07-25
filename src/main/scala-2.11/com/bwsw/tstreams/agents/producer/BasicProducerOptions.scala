@@ -20,16 +20,15 @@ import scala.language.existentials
  * @param insertType Insertion Type (only BatchInsert and SingleElementInsert are allowed now)
  * @param txnGenerator Generator for generating UUIDs
  * @tparam USERTYPE User object type
- * @tparam DATATYPE Storage object type
  */
-class BasicProducerOptions[USERTYPE,DATATYPE](val transactionTTL : Int,
+class BasicProducerOptions[USERTYPE](val transactionTTL : Int,
                                               val transactionKeepAliveInterval : Int,
                                               val producerKeepAliveInterval : Int,
                                               val writePolicy : AbstractPolicy,
                                               val insertType: InsertType,
                                               val txnGenerator: IUUIDGenerator,
                                               val producerCoordinationSettings : ProducerCoordinationOptions,
-                                              val converter : IConverter[USERTYPE,DATATYPE]) {
+                                              val converter : IConverter[USERTYPE,Array[Byte]]) {
 
   /**
    * Transaction minimum ttl time

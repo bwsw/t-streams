@@ -60,9 +60,9 @@ class TStreamsSerializer {
         s"{PTM,${txnUuid.toString},$ttl,$serializedStatus,$partition}"
 
       case ProducerTransactionStatus.preCheckpoint => s"{P}"
-      case ProducerTransactionStatus.finalCheckpoint => "{F}"
-      case ProducerTransactionStatus.updated => "{U}"
-      case ProducerTransactionStatus.cancelled => "{C}"
+      case ProducerTransactionStatus.`postCheckpoint` => "{F}"
+      case ProducerTransactionStatus.`update` => "{U}"
+      case ProducerTransactionStatus.`cancel` => "{C}"
       case ProducerTransactionStatus.opened => "{O}"
     }
   }
@@ -182,13 +182,13 @@ class TStreamsSerializer {
         ProducerTransactionStatus.preCheckpoint
       case "F" =>
         assert(tokens.size == 1)
-        ProducerTransactionStatus.finalCheckpoint
+        ProducerTransactionStatus.postCheckpoint
       case "U" =>
         assert(tokens.size == 1)
-        ProducerTransactionStatus.updated
+        ProducerTransactionStatus.update
       case "C" =>
         assert(tokens.size == 1)
-        ProducerTransactionStatus.cancelled
+        ProducerTransactionStatus.cancel
       case "O" =>
         assert(tokens.size == 1)
         ProducerTransactionStatus.opened

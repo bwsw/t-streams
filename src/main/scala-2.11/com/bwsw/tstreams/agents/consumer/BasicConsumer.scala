@@ -3,7 +3,7 @@ package com.bwsw.tstreams.agents.consumer
 import java.util.UUID
 import java.util.concurrent.locks.ReentrantLock
 
-import com.bwsw.tstreams.agents.group.{Agent, CommitInfo, ConsumerCommitInfo}
+import com.bwsw.tstreams.agents.group.{Agent, CheckpointInfo, ConsumerCheckpointInfo}
 import com.bwsw.tstreams.entities.TransactionSettings
 import com.bwsw.tstreams.metadata.MetadataStorage
 import com.bwsw.tstreams.streams.BasicStream
@@ -14,7 +14,8 @@ import org.slf4j.LoggerFactory
 
 /**
  * Basic consumer class
- * @param name Name of consumer
+  *
+  * @param name Name of consumer
  * @param stream Stream from which to consume transactions
  * @param options Basic consumer options
  * @tparam DATATYPE Storage data type
@@ -273,9 +274,9 @@ class BasicConsumer[DATATYPE, USERTYPE](val name : String,
   /**
    * Info to commit
    */
-  override def getCommitInfo(): List[CommitInfo] = {
+  override def getCheckpointInfoAndClear(): List[CheckpointInfo] = {
     val checkpointData = offsetsForCheckpoint.map{ case(partition, lastTxn) =>
-        ConsumerCommitInfo(name, stream.getName, partition, lastTxn)
+      ConsumerCheckpointInfo(name, stream.getName, partition, lastTxn)
     }.toList
     offsetsForCheckpoint.clear()
     checkpointData
@@ -290,5 +291,5 @@ class BasicConsumer[DATATYPE, USERTYPE](val name : String,
   /**
     * Agent lock on any actions which has to do with checkpoint
     */
-  override def getAgentLock(): ReentrantLock = consumerLock
+  override def getThreadLock(): ReentrantLock = consumerLock
 }

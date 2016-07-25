@@ -51,7 +51,7 @@ class CManyBasicProducersStreamingInManyPartitionsAndConsumerTest extends FlatSp
     val producersAmount = 10
     val dataToSend = (for (part <- 0 until totalElementsInTxn) yield randomString).sorted
 
-    val producers: List[BasicProducer[String, Array[Byte]]] =
+    val producers: List[BasicProducer[String]] =
       (0 until producersAmount)
         .toList
         .map(x=>getProducer(List(x%totalPartitions),totalPartitions))
@@ -123,7 +123,7 @@ class CManyBasicProducersStreamingInManyPartitionsAndConsumerTest extends FlatSp
     checkVal shouldEqual true
   }
 
-  def getProducer(usedPartitions : List[Int], totalPartitions : Int) : BasicProducer[String,Array[Byte]] = {
+  def getProducer(usedPartitions : List[Int], totalPartitions : Int) : BasicProducer[String] = {
     val stream = getStream(totalPartitions)
 
     val agentSettings = new ProducerCoordinationOptions(
@@ -138,7 +138,7 @@ class CManyBasicProducersStreamingInManyPartitionsAndConsumerTest extends FlatSp
 
     port += 1
 
-    val producerOptions = new BasicProducerOptions[String, Array[Byte]](
+    val producerOptions = new BasicProducerOptions[String](
       transactionTTL = 6,
       transactionKeepAliveInterval = 2,
       producerKeepAliveInterval = 1,

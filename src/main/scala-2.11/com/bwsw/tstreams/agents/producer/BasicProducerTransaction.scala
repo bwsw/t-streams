@@ -4,6 +4,7 @@ import java.util.UUID
 import java.util.concurrent.locks.ReentrantLock
 import java.util.concurrent.{CountDownLatch, LinkedBlockingQueue, TimeUnit}
 
+import com.bwsw.tstreams.common.ThreadSignalSleepVar
 import com.bwsw.tstreams.coordination.pubsub.messages.{ProducerTopicMessage, ProducerTransactionStatus}
 import com.bwsw.tstreams.debug.GlobalHooks
 import org.slf4j.LoggerFactory
@@ -14,23 +15,29 @@ import scala.util.control.Breaks._
 /**
  * Transaction retrieved by BasicProducer.newTransaction method
  *
- * @param producerLock Producer Lock for managing actions which has to do with checkpoints
+ * @param threadLock Producer Lock for managing actions which has to do with checkpoints
  * @param partition Concrete partition for saving this transaction
- * @param basicProducer Producer class which was invoked newTransaction method
+ * @param txnOwner Producer class which was invoked newTransaction method
  * @param transactionUuid UUID for this transaction
  * @tparam USERTYPE User data type
- * @tparam DATATYPE Storage data type
  */
-class BasicProducerTransaction[USERTYPE,DATATYPE](producerLock: ReentrantLock,
-                                                  partition : Int,
-                                                  transactionUuid : UUID,
-                                                  basicProducer: BasicProducer[USERTYPE,DATATYPE]){
+class BasicProducerTransaction[USERTYPE](threadLock       : ReentrantLock,
+                                         partition        : Int,
+                                         transactionUuid  : UUID,
+                                         txnOwner    : BasicProducer[USERTYPE]){
+
+  /**
+    * State indicator of the transaction
+    *
+    * @return Closed transaction or not
+    */
+  def isClosed = closed
 
   /**
    * BasicProducerTransaction logger for logging
    */
   private val logger = LoggerFactory.getLogger(this.getClass)
-  logger.debug(s"Open transaction for stream,partition : {${basicProducer.stream.getName}},{$partition}\n")
+  logger.debug(s"Open transaction for stream,partition : {${txnOwner.stream.getName}},{$partition}\n")
 
   /**
    * Return transaction partition
@@ -65,12 +72,12 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](producerLock: ReentrantLock,
   /**
    * Queue to figure out moment when transaction is going to close
    */
-  private val updateQueue = new LinkedBlockingQueue[Boolean](10)
+  private val endKeepAliveThread = new ThreadSignalSleepVar[Boolean](1)
 
   /**
    * Thread to keep this transaction alive
    */
-  private val updateThread: Thread = startAsyncKeepAlive()
+  //private val keepAliveThread: Thread = startAsyncKeepAlive()
 
   /**
    * Send data to storage
@@ -78,76 +85,86 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](producerLock: ReentrantLock,
     * @param obj some user object
    */
   def send(obj : USERTYPE) : Unit = {
-    producerLock.lock()
+    threadLock.lock()
+
     if (closed)
       throw new IllegalStateException("transaction is closed")
 
-    basicProducer.producerOptions.insertType match {
+    txnOwner.producerOptions.insertType match {
+
       case InsertionType.BatchInsert(size) =>
-        basicProducer.stream.dataStorage.putInBuffer(
-          basicProducer.stream.getName,
-          partition,
-          transactionUuid,
-          basicProducer.stream.getTTL,
-          basicProducer.producerOptions.converter.convert(obj),
-          part)
-        if (basicProducer.stream.dataStorage.getBufferSize(transactionUuid) == size) {
-          val job: () => Unit = basicProducer.stream.dataStorage.saveBuffer(transactionUuid)
-          if (job != null)
-            jobs += job
-          basicProducer.stream.dataStorage.clearBuffer(transactionUuid)
+
+        txnOwner.stream.dataStorage.putInBuffer(
+                                            txnOwner.stream.getName,
+                                            partition,
+                                            transactionUuid,
+                                            txnOwner.stream.getTTL,
+                                            txnOwner.producerOptions.converter.convert(obj),
+                                            part)
+
+        if (txnOwner.stream.dataStorage.getBufferSize(transactionUuid) == size) {
+
+          val job: () => Unit = txnOwner.stream.dataStorage.saveBuffer(transactionUuid)
+          if (job != null) jobs += job
+          txnOwner.stream.dataStorage.clearBuffer(transactionUuid)
+
         }
 
       case InsertionType.SingleElementInsert =>
-        val job: () => Unit = basicProducer.stream.dataStorage.put(
-          basicProducer.stream.getName,
-          partition,
-          transactionUuid,
-          basicProducer.stream.getTTL,
-          basicProducer.producerOptions.converter.convert(obj),
-          part)
-        if (job != null)
-          jobs += job
+
+        val job: () => Unit = txnOwner.stream.dataStorage.put(
+                                            txnOwner.stream.getName,
+                                            partition,
+                                            transactionUuid,
+                                            txnOwner.stream.getTTL,
+                                            txnOwner.producerOptions.converter.convert(obj),
+                                            part)
+        if (job != null) jobs += job
     }
 
     part += 1
-    producerLock.unlock()
+    threadLock.unlock()
   }
 
   /**
    * Canceling current transaction
    */
   def cancel() = {
-    producerLock.lock()
+    threadLock.lock()
+
     if (closed)
       throw new IllegalStateException("transaction is already closed")
 
-    basicProducer.producerOptions.insertType match {
+    stopKeepAlive()
+
+    txnOwner.producerOptions.insertType match {
       case InsertionType.SingleElementInsert =>
 
       case InsertionType.BatchInsert(_) =>
-        basicProducer.stream.dataStorage.clearBuffer(transactionUuid)
+        txnOwner.stream.dataStorage.clearBuffer(transactionUuid)
     }
 
-    stopKeepAlive()
+    threadLock.unlock()
 
-    val msg = ProducerTopicMessage(txnUuid = transactionUuid,
-      ttl = -1, status = ProducerTransactionStatus.cancelled, partition = partition)
+    val msg = ProducerTopicMessage(txnUuid   = transactionUuid,
+                                    ttl       = -1,
+                                    status    = ProducerTransactionStatus.cancel,
+                                    partition = partition)
 
-    basicProducer.agent.publish(msg)
+    txnOwner.master_p2p_agent.publish(msg)
     logger.debug(s"[CANCEL PARTITION_${msg.partition}] ts=${msg.txnUuid.timestamp()} status=${msg.status}")
 
-    producerLock.unlock()
   }
 
   def stopKeepAlive() = {
     // wait all async jobs completeness before commit
     jobs.foreach(x => x())
 
-    updateQueue.put(true)
+    // signal keep alive thread to stop
+    //endKeepAliveThread.signal(true)
 
     //await till update thread will be stoped
-    updateThread.join()
+    //keepAliveThread.join()
 
     closed = true
   }
@@ -156,30 +173,31 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](producerLock: ReentrantLock,
    * Submit transaction(transaction will be available by consumer only after closing)
    */
   def checkpoint() : Unit = {
-    producerLock.lock()
+    threadLock.lock()
+
     if (closed)
       throw new IllegalStateException("transaction is already closed")
 
-    basicProducer.producerOptions.insertType match {
+    txnOwner.producerOptions.insertType match {
+
       case InsertionType.SingleElementInsert =>
 
       case InsertionType.BatchInsert(size) =>
-        if (basicProducer.stream.dataStorage.getBufferSize(transactionUuid) > 0) {
-          val job: () => Unit = basicProducer.stream.dataStorage.saveBuffer(transactionUuid)
-          if (job != null)
-            jobs += job
-          basicProducer.stream.dataStorage.clearBuffer(transactionUuid)
+        if (txnOwner.stream.dataStorage.getBufferSize(transactionUuid) > 0) {
+          val job: () => Unit = txnOwner.stream.dataStorage.saveBuffer(transactionUuid)
+          if (job != null) jobs += job
+          txnOwner.stream.dataStorage.clearBuffer(transactionUuid)
         }
     }
 
     //close transaction using stream ttl
     if (part > 0) {
-      val preCheckpoint = ProducerTopicMessage(
-        txnUuid = transactionUuid,
-        ttl = -1,
-        status = ProducerTransactionStatus.preCheckpoint,
-        partition = partition)
-      basicProducer.agent.publish(preCheckpoint)
+
+      txnOwner.master_p2p_agent.publish(ProducerTopicMessage(
+                                          txnUuid   = transactionUuid,
+                                          ttl       = -1,
+                                          status    = ProducerTransactionStatus.preCheckpoint,
+                                          partition = partition))
 
       logger.debug(s"[PRE CHECKPOINT PARTITION_$partition] " +
         s"ts=${transactionUuid.timestamp()}")
@@ -191,81 +209,81 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](producerLock: ReentrantLock,
       //debug purposes only
       GlobalHooks.invoke("PreCommitFailure")
 
-      basicProducer.stream.metadataStorage.commitEntity.commit(
-        streamName = basicProducer.stream.getName,
-        partition = partition,
-        transaction = transactionUuid,
-        totalCnt = part,
-        ttl = basicProducer.stream.getTTL)
+      txnOwner.stream.metadataStorage.commitEntity.commit(
+                                      streamName  = txnOwner.stream.getName,
+                                      partition   = partition,
+                                      transaction = transactionUuid,
+                                      totalCnt    = part,
+                                      ttl         = txnOwner.stream.getTTL)
 
-      logger.debug(s"[COMMIT PARTITION_$partition] " +
-        s"ts=${transactionUuid.timestamp()}")
+      logger.debug(s"[COMMIT PARTITION_$partition] ts=${transactionUuid.timestamp()}")
 
       //debug purposes only
       GlobalHooks.invoke("AfterCommitFailure")
 
-      val finalCheckpoint = ProducerTopicMessage(
-        txnUuid = transactionUuid,
-        ttl = -1,
-        status = ProducerTransactionStatus.finalCheckpoint,
-        partition = partition)
-      basicProducer.agent.publish(finalCheckpoint)
+      txnOwner.master_p2p_agent.publish(ProducerTopicMessage(
+                                              txnUuid   = transactionUuid,
+                                              ttl       = -1,
+                                              status    = ProducerTransactionStatus.postCheckpoint,
+                                              partition = partition))
 
       logger.debug(s"[FINAL CHECKPOINT PARTITION_$partition] " +
         s"ts=${transactionUuid.timestamp()}")
     }
     else {
+      txnOwner.master_p2p_agent.publish(ProducerTopicMessage(
+                                            txnUuid   = transactionUuid,
+                                            ttl       = -1,
+                                            status    = ProducerTransactionStatus.cancel,
+                                            partition = partition))
       stopKeepAlive()
     }
-
-    producerLock.unlock()
+    threadLock.unlock()
   }
 
-  /**
-   * State indicator of the transaction
-    *
-    * @return Closed transaction or not
-   */
-  def isClosed = closed
 
   /**
    * Async job for keeping alive current transaction
    */
   private def startAsyncKeepAlive() : Thread = {
-    val latch = new CountDownLatch(1)
-    val updater = new Thread(new Runnable {
+    val latch              = new CountDownLatch(1)
+    val txnKeepAliveThread = new Thread(new Runnable {
       override def run(): Unit = {
         latch.countDown()
         logger.debug(s"[START KEEP_ALIVE THREAD PARTITION=$partition UUID=${transactionUuid.timestamp()}")
-        breakable { while (true) {
-          val value = updateQueue.poll(basicProducer.producerOptions.transactionKeepAliveInterval * 1000, TimeUnit.MILLISECONDS)
-
-          if (value)
-            break()
-
-          //-1 here indicate that transaction is started but is not finished yet
-          // TODO: changedd producerCommitEntity to commitEntity
-          basicProducer.stream.metadataStorage.commitEntity.commit(
-            streamName = basicProducer.stream.getName,
-            partition = partition,
-            transaction = transactionUuid,
-            totalCnt = -1,
-            ttl = basicProducer.producerOptions.transactionTTL)
-
-          val msg = ProducerTopicMessage(
-            txnUuid = transactionUuid,
-            ttl = basicProducer.producerOptions.transactionTTL,
-            status = ProducerTransactionStatus.updated,
-            partition = partition)
-
-          //publish that current txn is being updating
-          basicProducer.coordinator.publish(msg, ()=>())
-          logger.debug(s"[KEEP_ALIVE THREAD PARTITION_${msg.partition}] ts=${msg.txnUuid.timestamp()} status=${msg.status}")
-        }}
+        breakable {
+          while (true) {
+            val value: Boolean = endKeepAliveThread.wait(txnOwner.producerOptions.transactionKeepAliveInterval * 1000)
+            if (value) {
+              logger.info("Transaction object either checkpointed or cancelled. Exit KeepAliveThread.")
+              break()
+            }
+            updateTxnKeepAliveState()
+          }
+        }
       }
     })
-    updater.start()
+    txnKeepAliveThread.start()
     latch.await()
-    updater
+    txnKeepAliveThread
+  }
+
+  def updateTxnKeepAliveState() = {
+    //-1 here indicate that transaction is started but is not finished yet
+    txnOwner.stream.metadataStorage.commitEntity.commit(
+      streamName      = txnOwner.stream.getName,
+      partition       = partition,
+      transaction     = transactionUuid,
+      totalCnt        = -1,
+      ttl             = txnOwner.producerOptions.transactionTTL)
+
+
+    //publish that current txn is being updating
+    txnOwner.subscriber_client.publish(ProducerTopicMessage(
+      txnUuid   = transactionUuid,
+      ttl       = txnOwner.producerOptions.transactionTTL,
+      status    = ProducerTransactionStatus.update,
+      partition = partition), ()=>())
+    logger.debug(s"[KEEP_ALIVE THREAD PARTITION_${partition}] ts=${transactionUuid.timestamp()} status=${ProducerTransactionStatus.update}")
   }
 }

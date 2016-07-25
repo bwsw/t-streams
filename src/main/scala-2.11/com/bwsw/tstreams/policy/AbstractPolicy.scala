@@ -4,6 +4,7 @@ import com.bwsw.tstreams.streams.BasicStream
 
 /**
   * Basic interface for policies
+  * Class is not thread safe. User must create separate instance for every producer/consumer
   */
 abstract class AbstractPolicy(stream : BasicStream[_], usedPartitions : List[Int]){
 
@@ -20,7 +21,7 @@ abstract class AbstractPolicy(stream : BasicStream[_], usedPartitions : List[Int
 
 
   /**
-   * Used by classes who implement some policy logic to determine current partition
+   * Used by classes that implement policy logic to determine current partition
    */
   protected var currentPos = 0
 

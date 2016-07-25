@@ -89,7 +89,7 @@ class ABasicSubscriberAfterCommitFailureTest extends FlatSpec with Matchers
     zkConnectionTimeout = 7)
 
   //producer/consumer options
-  val producerOptions = new BasicProducerOptions[String, Array[Byte]](
+  val producerOptions = new BasicProducerOptions[String](
     transactionTTL = 6,
     transactionKeepAliveInterval = 2,
     producerKeepAliveInterval = 1,

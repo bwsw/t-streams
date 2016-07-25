@@ -14,10 +14,10 @@ trait Interaction {
  *
    * @return UUID
    */
-  def commitLocalTxn(txnUUID : UUID, partition : Int, onComplete: () => Unit) : Unit
+  def openTxnLocal(txnUUID : UUID, partition : Int, onComplete: () => Unit) : Unit
 
   /**
    * Agent for producer to provide producers communication
    */
-  val agent : PeerToPeerAgent
+  val master_p2p_agent : PeerToPeerAgent
 }

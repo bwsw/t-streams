@@ -33,7 +33,7 @@ class PeerToPeerAgent(agentAddress : String,
                       zkRootPath : String,
                       zkSessionTimeout: Int,
                       zkConnectionTimeout : Int,
-                      producer : BasicProducer[_,_],
+                      producer : BasicProducer[_],
                       usedPartitions : List[Int],
                       isLowPriorityToBeMaster : Boolean,
                       transport: ITransport,
@@ -359,7 +359,7 @@ class PeerToPeerAgent(agentAddress : String,
 
   //TODO remove after complex testing
   def publish(msg : ProducerTopicMessage) : Unit = {
-    assert(msg.status != ProducerTransactionStatus.updated)
+    assert(msg.status != ProducerTransactionStatus.update)
     lockLocalMasters.lock()
     val condition = localMasters.contains(msg.partition)
     val localMaster = if (condition) localMasters(msg.partition) else null
@@ -499,8 +499,8 @@ class PeerToPeerAgent(agentAddress : String,
             lockLocalMasters.lock()
             assert(rcv == agentAddress)
             if (localMasters.contains(partition) && localMasters(partition) == agentAddress) {
-              val txnUUID: UUID = producer.getTransactionUUID()
-              producer.commitLocalTxn(txnUUID, partition,
+              val txnUUID: UUID = producer.getNewTxnUUIDLocal()
+              producer.openTxnLocal(txnUUID, partition,
                 onComplete = () => {
                   val response = TransactionResponse(rcv, snd, txnUUID, partition)
                   response.msgID = request.msgID
@@ -517,7 +517,7 @@ class PeerToPeerAgent(agentAddress : String,
             lockLocalMasters.lock()
             assert(rcv == agentAddress)
             if (localMasters.contains(msg.partition) && localMasters(msg.partition) == agentAddress) {
-              producer.coordinator.publish(msg,
+              producer.subscriber_client.publish(msg,
                 onComplete = () => {
                   val response = PublishResponse(
                     senderID = rcv,

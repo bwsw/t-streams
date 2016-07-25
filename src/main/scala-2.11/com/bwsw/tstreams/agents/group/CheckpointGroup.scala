@@ -21,7 +21,8 @@ class CheckpointGroup() {
 
   /**
    * Add new agent in group
-   * @param agent Agent ref
+    *
+    * @param agent Agent ref
    * @param name Agent name
    */
   def add(name : String, agent : Agent) : Unit = {
@@ -33,7 +34,8 @@ class CheckpointGroup() {
 
   /**
    * Remove agent from group
-   * @param name Agent name
+    *
+    * @param name Agent name
    */
   def remove(name : String) : Unit = {
     if (!agents.contains(name))
@@ -46,10 +48,10 @@ class CheckpointGroup() {
    */
   def commit() : Unit = {
     agents.foreach{ case(name,agent) =>
-      agent.getAgentLock().lock()
+      agent.getThreadLock().lock()
     }
-    val totalCommitInfo: List[CommitInfo] = agents.map{ case(name,agent) =>
-      agent.getCommitInfo()
+    val totalCommitInfo: List[CheckpointInfo] = agents.map{ case(name,agent) =>
+      agent.getCheckpointInfoAndClear()
     }.reduceRight((l1,l2)=>l1 ++ l2)
     publishGlobalPreCheckpointEvent(totalCommitInfo)
     stopTransactionKeepAliveUpdates(totalCommitInfo)
@@ -57,29 +59,29 @@ class CheckpointGroup() {
     agents.head._2.getMetadataRef().groupCommitEntity.groupCommit(totalCommitInfo)
     publishGlobalFinalCheckpointEvent(totalCommitInfo)
     agents.foreach{ case(name,agent) =>
-      agent.getAgentLock().unlock()
+      agent.getThreadLock().unlock()
     }
   }
 
-  private def publishGlobalPreCheckpointEvent(info : List[CommitInfo]) = {
+  private def publishGlobalPreCheckpointEvent(info : List[CheckpointInfo]) = {
     info foreach {
-      case ProducerCommitInfo(_, agent, preCheckpointEvent, _, _, _, _, _, _) =>
+      case ProducerCheckpointInfo(_, agent, preCheckpointEvent, _, _, _, _, _, _) =>
         agent.publish(preCheckpointEvent)
       case _ =>
     }
   }
 
-  private def stopTransactionKeepAliveUpdates(info : List[CommitInfo]) = {
+  private def stopTransactionKeepAliveUpdates(info : List[CheckpointInfo]) = {
     info foreach {
-      case ProducerCommitInfo(txnRef, _, _, _, _, _, _, _, _) =>
+      case ProducerCheckpointInfo(txnRef, _, _, _, _, _, _, _, _) =>
         txnRef.stopKeepAlive()
       case _ =>
     }
   }
 
-  private def publishGlobalFinalCheckpointEvent(info : List[CommitInfo]) = {
+  private def publishGlobalFinalCheckpointEvent(info : List[CheckpointInfo]) = {
     info foreach {
-      case ProducerCommitInfo(_, agent, _, finalCheckpointEvent, _, _, _, _, _) =>
+      case ProducerCheckpointInfo(_, agent, _, finalCheckpointEvent, _, _, _, _, _) =>
         agent.publish(finalCheckpointEvent)
       case _ =>
     }

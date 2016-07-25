@@ -103,7 +103,7 @@ class ABasicProducerAndConsumerLazyTest extends FlatSpec with Matchers with Befo
     zkConnectionTimeout = 7)
 
   //options for producers/consumer
-  val producerOptions1 = new BasicProducerOptions[String, Array[Byte]](
+  val producerOptions1 = new BasicProducerOptions[String](
     transactionTTL = 6,
     transactionKeepAliveInterval = 2,
     producerKeepAliveInterval = 1,
@@ -113,7 +113,7 @@ class ABasicProducerAndConsumerLazyTest extends FlatSpec with Matchers with Befo
     agentSettings1,
     stringToArrayByteConverter)
 
-  val producerOptions2 = new BasicProducerOptions[String, Array[Byte]](
+  val producerOptions2 = new BasicProducerOptions[String](
     transactionTTL = 6,
     transactionKeepAliveInterval = 2,
     producerKeepAliveInterval = 1,

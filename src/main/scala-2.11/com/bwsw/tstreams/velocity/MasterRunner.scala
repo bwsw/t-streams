@@ -20,7 +20,7 @@ object MasterRunner {
       transportTimeout = 5,
       zkConnectionTimeout = 7)
 
-    val producerOptions = new BasicProducerOptions[String, Array[Byte]](
+    val producerOptions = new BasicProducerOptions[String](
       transactionTTL = 6,
       transactionKeepAliveInterval = 2,
       producerKeepAliveInterval = 1,
@@ -30,6 +30,6 @@ object MasterRunner {
       agentSettings,
       stringToArrayByteConverter)
 
-    new BasicProducer[String, Array[Byte]]("master", stream, producerOptions)
+    new BasicProducer[String]("master", stream, producerOptions)
   }
 }

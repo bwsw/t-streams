@@ -70,7 +70,7 @@ class GroupCommitTest extends FlatSpec with Matchers with BeforeAndAfterAll with
     transportTimeout = 5,
     zkConnectionTimeout = 7)
 
-  val producerOptions = new BasicProducerOptions[String, Array[Byte]](
+  val producerOptions = new BasicProducerOptions[String](
     transactionTTL = 6,
     transactionKeepAliveInterval = 2,
     producerKeepAliveInterval = 1,

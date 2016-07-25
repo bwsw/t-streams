@@ -19,16 +19,16 @@ object ProducerTransactionStatus extends Enumeration {
   /**
    * If transaction is finally checkpointed
    */
-  val finalCheckpoint = Value
+  val postCheckpoint = Value
 
   /**
    * If transaction is cancelled
    */
-  val cancelled = Value
+  val cancel = Value
 
   /**
    * If transaction is updated
    */
-  val updated = Value
+  val update = Value
 
 }

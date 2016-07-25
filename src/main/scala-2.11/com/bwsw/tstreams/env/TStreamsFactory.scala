@@ -628,7 +628,7 @@ class TStreamsFactory(envname: String = "T-streams") {
                             txnGenerator  : IUUIDGenerator,
                             converter     : IConverter[USERTYPE,Array[Byte]],
                             partitions    : List[Int]
-                           ): BasicProducer[USERTYPE,Array[Byte]] = {
+                           ): BasicProducer[USERTYPE] = {
 
     lock.lock()
 
@@ -687,7 +687,7 @@ class TStreamsFactory(envname: String = "T-streams") {
     if (insertCnt > 1)
       insertType = BatchInsert(insertCnt)
 
-    val po = new BasicProducerOptions[USERTYPE, Array[Byte]](
+    val po = new BasicProducerOptions[USERTYPE](
       transactionTTL                = pAsInt(TSF_Dictionary.Producer.Transaction.ttl, Producer_transaction_ttl_default),
       transactionKeepAliveInterval  = pAsInt(TSF_Dictionary.Producer.Transaction.keep_alive, Producer_transaction_keep_alive_default),
       producerKeepAliveInterval     = 1, // TODO: deprecated, remove when https://github.com/bwsw/t-streams/issues/19 will be fixed!
@@ -697,8 +697,7 @@ class TStreamsFactory(envname: String = "T-streams") {
       producerCoordinationSettings  = cao,
       converter                     = converter)
 
-    // TODO FIX: Stream is not required as argument for BasicProducer - it's already in options
-    val producer = new BasicProducer[USERTYPE, Array[Byte]](
+    val producer = new BasicProducer[USERTYPE](
       name              = name,
       stream            = stream,
       producerOptions   = po)

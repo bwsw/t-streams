@@ -56,7 +56,7 @@ class SubscriberTransactionsRelay[DATATYPE,USERTYPE](subscriber : BasicSubscribi
       transactionBufferLock.unlock()
 
       if (msg.status == ProducerTransactionStatus.preCheckpoint ||
-        msg.status == ProducerTransactionStatus.finalCheckpoint){
+        msg.status == ProducerTransactionStatus.postCheckpoint){
         logger.debug(s"[UPDATE_CALLBACK CER PARTITION_$partition] consumed msg with uuid:{${msg.txnUuid.timestamp()}}," +
           s" status:{${msg.status}}\n")
         checkpointEventsResolver.update(partition, msg.txnUuid, msg.status)
@@ -152,7 +152,7 @@ class SubscriberTransactionsRelay[DATATYPE,USERTYPE](subscriber : BasicSubscribi
       if (txn.totalItems == -1) {
         transactionBuffer.update(txn.txnUuid, ProducerTransactionStatus.opened, txn.ttl)
       } else {
-        transactionBuffer.update(txn.txnUuid, ProducerTransactionStatus.finalCheckpoint, -1)
+        transactionBuffer.update(txn.txnUuid, ProducerTransactionStatus.postCheckpoint, -1)
       }
       assert(txn.txnUuid.timestamp() > lastTxn.timestamp(),
         logger.debug(s"[RELAY WRONG ASSERT] ${txn.txnUuid.timestamp()} " +
@@ -192,11 +192,11 @@ class SubscriberTransactionsRelay[DATATYPE,USERTYPE](subscriber : BasicSubscribi
             val (status: ProducerTransactionStatus, _) = entry.getValue
             status match {
               case ProducerTransactionStatus.opened |
-                   ProducerTransactionStatus.updated |
+                   ProducerTransactionStatus.`update` |
                    ProducerTransactionStatus.preCheckpoint =>
                 break()
 
-              case ProducerTransactionStatus.finalCheckpoint =>
+              case ProducerTransactionStatus.`postCheckpoint` =>
                 logger.debug(s"[QUEUE_UPDATER PARTITION_$partition] ${key.timestamp()}" +
                   s" last_consumed=${lastConsumedTransaction.get().timestamp()} curr_amount=$totalAmount\n")
                 totalAmount += 1
