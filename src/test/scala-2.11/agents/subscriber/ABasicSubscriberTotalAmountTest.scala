@@ -165,7 +165,7 @@ class ABasicSubscriberTotalAmountTest extends FlatSpec with Matchers with Before
 
   def sendTxnsAndWait(totalMsg : Int, dataInTxn : Int, data : String) = {
     (0 until totalMsg) foreach { x=>
-      val txn = producer.newTransaction(ProducerPolicies.errorIfOpen)
+      val txn = producer.newTransaction(ProducerPolicies.errorIfOpened)
       (0 until dataInTxn) foreach { _ =>
         txn.send(data)
       }

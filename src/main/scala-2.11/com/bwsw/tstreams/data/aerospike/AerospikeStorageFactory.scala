@@ -16,6 +16,7 @@ class AerospikeStorageFactory{
    */
   private val aerospikeClients = scala.collection.mutable.Map[(List[Host], ClientPolicy), AerospikeClient]()
 
+  private var isClosed = false
 
   /**
    * Lock for providing getInstance thread safeness
@@ -28,6 +29,10 @@ class AerospikeStorageFactory{
    */
   def getInstance(aerospikeOptions: AerospikeStorageOptions) : AerospikeStorage = {
     lock.lock()
+
+    if(isClosed)
+      throw new IllegalStateException("AerospikeStorageFactory is closed. This is the illegal usage of the object.")
+
 
     val client = {
       if (aerospikeClients.contains((aerospikeOptions.hosts, aerospikeOptions.clientPolicy))) {
@@ -50,7 +55,14 @@ class AerospikeStorageFactory{
    * Close all factory storage instances
    */
   def closeFactory() : Unit = {
+    lock.lock()
+
+    if(isClosed)
+      throw new IllegalStateException("AerospikeStorageFactory is closed. This is repeatable close operation.")
+    isClosed = true
+
     aerospikeClients.foreach(x=>x._2.close())
     aerospikeClients.clear()
+    lock.unlock()
   }
 }
