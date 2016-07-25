@@ -19,5 +19,5 @@ trait Interaction {
   /**
    * Agent for producer to provide producers communication
    */
-  val master_p2p_agent : PeerToPeerAgent
+  val masterP2PAgent : PeerToPeerAgent
 }

@@ -109,7 +109,7 @@ object BasicProducerTest{
       println(s"txn with uuid:{${txn.getTxnUUID.timestamp()}} was sent")
     }
 
-    producer.master_p2p_agent.stop()
+    producer.masterP2PAgent.stop()
     metadataStorageFactory.closeFactory()
   }
 }

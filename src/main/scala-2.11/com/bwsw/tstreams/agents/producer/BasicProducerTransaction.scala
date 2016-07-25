@@ -151,7 +151,7 @@ class BasicProducerTransaction[USERTYPE](threadLock       : ReentrantLock,
                                     status    = ProducerTransactionStatus.cancel,
                                     partition = partition)
 
-    txnOwner.master_p2p_agent.publish(msg)
+    txnOwner.masterP2PAgent.publish(msg)
     logger.debug(s"[CANCEL PARTITION_${msg.partition}] ts=${msg.txnUuid.timestamp()} status=${msg.status}")
 
   }
@@ -193,7 +193,7 @@ class BasicProducerTransaction[USERTYPE](threadLock       : ReentrantLock,
     //close transaction using stream ttl
     if (part > 0) {
 
-      txnOwner.master_p2p_agent.publish(ProducerTopicMessage(
+      txnOwner.masterP2PAgent.publish(ProducerTopicMessage(
                                           txnUuid   = transactionUuid,
                                           ttl       = -1,
                                           status    = ProducerTransactionStatus.preCheckpoint,
@@ -221,7 +221,7 @@ class BasicProducerTransaction[USERTYPE](threadLock       : ReentrantLock,
       //debug purposes only
       GlobalHooks.invoke("AfterCommitFailure")
 
-      txnOwner.master_p2p_agent.publish(ProducerTopicMessage(
+      txnOwner.masterP2PAgent.publish(ProducerTopicMessage(
                                               txnUuid   = transactionUuid,
                                               ttl       = -1,
                                               status    = ProducerTransactionStatus.postCheckpoint,
@@ -231,7 +231,7 @@ class BasicProducerTransaction[USERTYPE](threadLock       : ReentrantLock,
         s"ts=${transactionUuid.timestamp()}")
     }
     else {
-      txnOwner.master_p2p_agent.publish(ProducerTopicMessage(
+      txnOwner.masterP2PAgent.publish(ProducerTopicMessage(
                                             txnUuid   = transactionUuid,
                                             ttl       = -1,
                                             status    = ProducerTransactionStatus.cancel,

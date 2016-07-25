@@ -64,7 +64,7 @@ class BasicProducer[USERTYPE](val name : String,
     * P2P Agent for producers interaction
     * (getNewTxn uuid; publish openTxn event; publish closeTxn event)
     */
-  override val master_p2p_agent: PeerToPeerAgent = new PeerToPeerAgent(
+  override val masterP2PAgent: PeerToPeerAgent = new PeerToPeerAgent(
                                               agentAddress        = pcs.agentAddress,
                                               zkHosts             = pcs.zkHosts,
                                               zkRootPath          = pcs.zkRootPath,
@@ -149,7 +149,7 @@ class BasicProducer[USERTYPE](val name : String,
       throw new IllegalArgumentException("invalid partition")
 
     val transaction = {
-      val txnUUID = master_p2p_agent.getNewTxn(partition)
+      val txnUUID = masterP2PAgent.getNewTxn(partition)
       logger.debug(s"[NEW_TRANSACTION PARTITION_$partition] uuid=${txnUUID.timestamp()}\n")
       if (openTransactionsMap.contains(partition)) {
         val prevTxn = openTransactionsMap(partition)
@@ -235,7 +235,7 @@ class BasicProducer[USERTYPE](val name : String,
                                       partition = partition)
 
           ProducerCheckpointInfo(transactionRef        = txn,
-                                  agent                 = master_p2p_agent,
+                                  agent                 = masterP2PAgent,
                                   preCheckpointEvent    = preCheckpoint,
                                   finalCheckpointEvent  = finalCheckpoint,
                                   streamName            = stream.getName,
@@ -298,7 +298,7 @@ class BasicProducer[USERTYPE](val name : String,
     endKeepAliveThread.signal(true)
     txnKeepAliveThread.join()
 
-    master_p2p_agent.stop()
+    masterP2PAgent.stop()
     subscriber_client.stop()
 
     threadLock.unlock()
