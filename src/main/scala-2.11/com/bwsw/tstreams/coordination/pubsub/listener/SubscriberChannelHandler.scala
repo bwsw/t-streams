@@ -58,6 +58,7 @@ class ProducerTopicMessageDecoder extends MessageToMessageDecoder[String]{
   val serializer = new TStreamsSerializer
 
   override def decode(ctx: ChannelHandlerContext, msg: String, out: util.List[AnyRef]): Unit = {
+    //TODO replace with proper exceptions
     try {
       if (msg != null)
         out.add(serializer.deserialize[ProducerTopicMessage](msg))
