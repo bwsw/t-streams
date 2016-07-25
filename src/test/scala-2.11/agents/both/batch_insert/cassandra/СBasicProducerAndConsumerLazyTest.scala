@@ -146,7 +146,7 @@ class СBasicProducerAndConsumerLazyTest extends FlatSpec with Matchers with Bef
 
     val producer1Thread = new Thread(new Runnable {
       def run() {
-        val txn = producer1.newTransaction(ProducerPolicies.errorIfOpen)
+        val txn = producer1.newTransaction(ProducerPolicies.errorIfOpened)
         dataToSend1.foreach { x =>
           txn.send(x)
           Thread.sleep(2000)
@@ -158,7 +158,7 @@ class СBasicProducerAndConsumerLazyTest extends FlatSpec with Matchers with Bef
     val producer2Thread = new Thread(new Runnable {
       def run() {
         Thread.sleep(2000)
-        val txn = producer2.newTransaction(ProducerPolicies.errorIfOpen)
+        val txn = producer2.newTransaction(ProducerPolicies.errorIfOpened)
         dataToSend2.foreach{ x=>
           txn.send(x)
         }

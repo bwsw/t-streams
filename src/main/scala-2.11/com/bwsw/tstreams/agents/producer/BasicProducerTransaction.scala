@@ -244,7 +244,8 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](producerLock: ReentrantLock,
             break()
 
           //-1 here indicate that transaction is started but is not finished yet
-          basicProducer.stream.metadataStorage.producerCommitEntity.commit(
+          // TODO: changedd producerCommitEntity to commitEntity
+          basicProducer.stream.metadataStorage.commitEntity.commit(
             streamName = basicProducer.stream.getName,
             partition = partition,
             transaction = transactionUuid,

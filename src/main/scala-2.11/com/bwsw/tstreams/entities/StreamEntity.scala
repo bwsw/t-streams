@@ -1,6 +1,7 @@
 package com.bwsw.tstreams.entities
 
 import com.datastax.driver.core.Session
+import org.slf4j.LoggerFactory
 
 /**
  * Settings of stream in metadata storage
@@ -16,6 +17,8 @@ case class StreamSettings(name : String, partitions : Int, ttl : Int, descriptio
   * @param entityName name of certain table in C*
   */
 class StreamEntity(entityName : String, session: Session){
+
+  private val logger = LoggerFactory.getLogger(this.getClass)
 
   /**
    * Session prepared statement for stream creation

@@ -100,7 +100,7 @@ class GroupCommitTest extends FlatSpec with Matchers with BeforeAndAfterAll with
     group.add("producer", producer)
     group.add("consumer", consumer)
 
-    val txn = producer.newTransaction(ProducerPolicies.errorIfOpen)
+    val txn = producer.newTransaction(ProducerPolicies.errorIfOpened)
     txn.send("info1")
     txn.checkpoint()
 
@@ -108,7 +108,7 @@ class GroupCommitTest extends FlatSpec with Matchers with BeforeAndAfterAll with
     consumer.getTransaction.get
 
     //open transaction without close
-    producer.newTransaction(ProducerPolicies.errorIfOpen).send("info2")
+    producer.newTransaction(ProducerPolicies.errorIfOpened).send("info2")
 
     group.commit()
 
