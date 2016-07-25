@@ -832,6 +832,9 @@ class TStreamsFactory(envname: String = "T-streams") {
     subscribeConsumer
   }
 
+  /**
+    * closes t-streams factory and stops further object creation
+    */
   def close(): Unit = {
     lock.lock()
 
