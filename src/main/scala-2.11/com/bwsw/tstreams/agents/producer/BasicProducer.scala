@@ -152,7 +152,7 @@ class BasicProducer[USERTYPE,DATATYPE](val name : String,
         transaction = txn.getTxnUUID,
         totalCnt = txn.getCnt,
         ttl = stream.getTTL)
-    }.filter(pci => pci.partition > 0).toList
+    }.toList
     partitionToTransaction.clear()
     checkpointData
   }

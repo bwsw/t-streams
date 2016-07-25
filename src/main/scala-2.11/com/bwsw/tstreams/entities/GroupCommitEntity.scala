@@ -30,7 +30,6 @@ class GroupCommitEntity(consumerEntityName: String, producerEntityName: String, 
    */
   def groupCommit(info : List[CommitInfo]): Unit ={
     val batchStatement = new BatchStatement()
-
     info foreach {
       case ConsumerCommitInfo(name, stream, partition, offset) =>
           batchStatement.add(consumerCommitStatement.bind(name, stream, new Integer(partition), offset))

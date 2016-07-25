@@ -119,7 +119,7 @@ class GroupCommitTest extends FlatSpec with Matchers with BeforeAndAfterAll with
       description = "some_description")
     consumer = new BasicConsumer("test_consumer", newStreamForConsumer, consumerOptions)
     //assert that the second transaction was closed and consumer offsets was moved
-    consumer.getTransaction.get.getAll().head == "info2"
+    assert(consumer.getTransaction.get.getAll().head == "info2")
   }
 
   override def afterAll(): Unit = {
