@@ -8,7 +8,7 @@ import akka.actor.ActorSystem
 import com.aerospike.client.Host
 import com.aerospike.client.policy.{ClientPolicy, Policy, WritePolicy}
 import com.bwsw.tstreams.agents.consumer.Offsets.{IOffset, Oldest}
-import com.bwsw.tstreams.agents.consumer.{BasicConsumer, BasicConsumerOptions}
+import com.bwsw.tstreams.agents.consumer.{BasicConsumer, BasicConsumerOptions, SubscriberCoordinationOptions}
 import com.bwsw.tstreams.agents.consumer.subscriber.{BasicSubscriberCallback, BasicSubscribingConsumer}
 import com.bwsw.tstreams.agents.producer.InsertionType.{BatchInsert, InsertType, SingleElementInsert}
 import com.bwsw.tstreams.agents.producer.{BasicProducer, BasicProducerOptions, ProducerCoordinationOptions}
@@ -266,7 +266,13 @@ object TSF_Dictionary {
       /**
         * persistent queue path (fast disk where to store bursted data
         */
-      val persistent_queue_path = "subscriber.persistent-queue.path"
+      val persistent_queue_path = "consumer.subscriber.persistent-queue.path"
+
+      /**
+        * thread pool size
+        */
+      val thread_pool = "consumer.subscriber.thread-pool"
+
     }
   }
 
@@ -382,6 +388,12 @@ class TStreamsFactory(envname: String = "T-streams") {
   propertyMap += (TSF_Dictionary.Consumer.Subscriber.bind_host             -> "localhost")
   propertyMap += (TSF_Dictionary.Consumer.Subscriber.bind_port             -> 18001)
   propertyMap += (TSF_Dictionary.Consumer.Subscriber.persistent_queue_path -> "/tmp")
+
+  val Subscriber_thread_pool_default                                            = 4
+  val Subscriber_thread_pool_min                                                = 1
+  val Subscriber_thread_pool_max                                                = 64
+  propertyMap += (TSF_Dictionary.Consumer.Subscriber.thread_pool                -> Subscriber_thread_pool_default)
+
 
   //metadata/data factories
   val msFactory               = new MetadataStorageFactory
@@ -584,7 +596,35 @@ class TStreamsFactory(envname: String = "T-streams") {
   }
 
   /**
-    *
+    * reusable method which returns consumer options object
+    */
+  private def getBasicConsumerOptions[USERTYPE](stream          : BasicStream[Array[Byte]],
+                                                partitions      : List[Int],
+                                                converter       : IConverter[Array[Byte],USERTYPE],
+                                                txnGenerator    : IUUIDGenerator,
+                                                offset          : IOffset,
+                                                isUseLastOffset : Boolean = true): BasicConsumerOptions[Array[Byte],USERTYPE] = {
+    val consumer_transaction_preload = pAsInt(TSF_Dictionary.Consumer.transaction_preload, Consumer_transaction_preload_default)
+    pAssertIntRange(consumer_transaction_preload, Consumer_transaction_preload_min, Consumer_transaction_preload_max)
+
+    val consumer_data_preload = pAsInt(TSF_Dictionary.Consumer.data_preload, Consumer_data_preload_default)
+    pAssertIntRange(consumer_data_preload, Consumer_data_preload_min, Consumer_data_preload_max)
+
+    val consumerOptions = new BasicConsumerOptions[Array[Byte], USERTYPE](
+      transactionsPreload       = consumer_transaction_preload,
+      dataPreload               = consumer_data_preload,
+      consumerKeepAliveInterval = 5,  // TODO: deprecated, unused, to remove
+      converter                 = converter,
+      readPolicy                = RoundRobinPolicyCreator.getRoundRobinPolicy(stream, partitions),
+      offset                    = offset,
+      txnGenerator              = txnGenerator,
+      useLastOffset             = isUseLastOffset)
+
+    consumerOptions
+  }
+
+  /**
+    * returns ready to use producer object
     * @param name Producer name
     * @param isLowPriority
     * @param txnGenerator
@@ -667,6 +707,7 @@ class TStreamsFactory(envname: String = "T-streams") {
       producerCoordinationSettings  = cao,
       converter                     = converter)
 
+    // TODO FIX: Stream is not required as argument for BasicProducer - it's already in options
     val producer = new BasicProducer[USERTYPE, Array[Byte]](
       name              = name,
       stream            = stream,
@@ -677,7 +718,7 @@ class TStreamsFactory(envname: String = "T-streams") {
   }
 
   /**
-    *
+    * returns ready to use consumer object
     * @param name Consumer name
     * @param txnGenerator
     * @param converter
@@ -701,31 +742,21 @@ class TStreamsFactory(envname: String = "T-streams") {
     val ds: IStorage[Array[Byte]]         = getDataStorage()
     val ms: MetadataStorage               = getMetadataStorage()
     val stream: BasicStream[Array[Byte]]  = getStream(metadatastorage = ms, datastorage = ds)
+    val consumerOptions = getBasicConsumerOptions(txnGenerator  = txnGenerator,
+                                                  stream        = stream,
+                                                  partitions    = partitions,
+                                                  converter     = converter,
+                                                  offset        = offset,
+                                                  isUseLastOffset = isUseLastOffset)
 
-    val consumer_transaction_preload = pAsInt(TSF_Dictionary.Consumer.transaction_preload, Consumer_transaction_preload_default)
-    pAssertIntRange(consumer_transaction_preload, Consumer_transaction_preload_min, Consumer_transaction_preload_max)
-
-    val consumer_data_preload = pAsInt(TSF_Dictionary.Consumer.data_preload, Consumer_data_preload_default)
-    pAssertIntRange(consumer_data_preload, Consumer_data_preload_min, Consumer_data_preload_max)
-
-    val consumerOptions = new BasicConsumerOptions[Array[Byte], USERTYPE](
-      transactionsPreload       = consumer_transaction_preload,
-      dataPreload               = consumer_data_preload,
-      consumerKeepAliveInterval = 5,  // TODO: deprecated, unused, to remove
-      converter                 = converter,
-      readPolicy                = RoundRobinPolicyCreator.getRoundRobinPolicy(stream, partitions),
-      offset                    = offset,
-      txnGenerator              = txnGenerator,
-      useLastOffset             = isUseLastOffset)
-
-    val consumer = new BasicConsumer(name, stream, consumerOptions)
+    val consumer = new BasicConsumer(name, stream, consumerOptions)  // TODO FIX: Stream is not required as argument for BasicConsumer - it's already in options
     lock.unlock()
 
     consumer
   }
 
   /**
-    *
+    * returns ready to use subscribing consumer object
     * @param txnGenerator
     * @param converter
     * @param partitions
@@ -733,19 +764,77 @@ class TStreamsFactory(envname: String = "T-streams") {
     * @tparam USERTYPE - type to convert data to
     * @return
     */
-  def getSubscriber[USERTYPE](txnGenerator : IUUIDGenerator,
-                              converter : IConverter[Array[Byte],USERTYPE],
-                              partitions : List[Int],
+  def getSubscriber[USERTYPE](name          : String,
+                              txnGenerator  : IUUIDGenerator,
+                              converter     : IConverter[Array[Byte],USERTYPE],
+                              partitions    : List[Int],
+                              offset        : IOffset,
+                              isUseLastOffset : Boolean = true,
                               callback: BasicSubscriberCallback[Array[Byte],USERTYPE]): BasicSubscribingConsumer[Array[Byte],USERTYPE] = {
     lock.lock()
     if(isClosed)
       throw new IllegalStateException("TStreamsFactory is closed. This is the illegal usage of the object.")
+
+    val ds: IStorage[Array[Byte]]         = getDataStorage()
+    val ms: MetadataStorage               = getMetadataStorage()
+    val stream: BasicStream[Array[Byte]]  = getStream(metadatastorage = ms, datastorage = ds)
+
+    val consumerOptions = getBasicConsumerOptions(txnGenerator  = txnGenerator,
+                                                  stream        = stream,
+                                                  partitions    = partitions,
+                                                  converter     = converter,
+                                                  offset        = offset,
+                                                  isUseLastOffset = isUseLastOffset)
+
+    //val consumer = new BasicConsumer(name, stream, consumerOptions)
+    val bind_host = pAsString(TSF_Dictionary.Consumer.Subscriber.bind_host)
+    assert(bind_host != null)
+    val bind_port = pAsString(TSF_Dictionary.Consumer.Subscriber.bind_port)
+    assert(bind_port != null)
+    val endpoints = pAsString(TSF_Dictionary.Coordination.endpoints)
+    assert(endpoints != null)
+    val root = pAsString(TSF_Dictionary.Coordination.root)
+    assert(root != null)
+
+    val ttl = pAsInt(TSF_Dictionary.Coordination.ttl, Coordination_ttl_default)
+    pAssertIntRange(ttl, Coordination_ttl_min, Coordination_ttl_max)
+    val conn_timeout = pAsInt(TSF_Dictionary.Coordination.connection_timeout, Coordination_connection_timeout_default)
+    pAssertIntRange(conn_timeout,
+      Coordination_connection_timeout_min, Coordination_connection_timeout_max)
+
+    val thread_pool = pAsInt(TSF_Dictionary.Consumer.Subscriber.thread_pool, Subscriber_thread_pool_default)
+    pAssertIntRange(thread_pool,
+      Subscriber_thread_pool_min, Subscriber_thread_pool_max)
+
+    val coordinationOptions = new SubscriberCoordinationOptions(
+                                                agentAddress  = bind_host + ":" + bind_port,
+                                                zkRootPath    = root,
+                                                zkHosts       = getInetSocketAddressCompatibleHostList(endpoints),
+                                                zkSessionTimeout    = ttl,
+                                                zkConnectionTimeout = conn_timeout,
+                                                threadPoolAmount    = thread_pool)
+
+    val queue_path = pAsString(TSF_Dictionary.Consumer.Subscriber.persistent_queue_path)
+    assert(queue_path != null)
+
+    val subscribeConsumer = new BasicSubscribingConsumer[Array[Byte],USERTYPE](
+                      name                          = name,
+                      stream                        = stream, // TODO FIX: Stream is not required as argument for BasicSubscribingConsumer - it's already in options
+                      options                       = consumerOptions,
+                      subscriberCoordinationOptions = coordinationOptions,
+                      callBack                      = callback,
+                      persistentQueuePath           = queue_path)
+
+    subscribeConsumer.start()
+
     lock.unlock()
-    null
+
+    subscribeConsumer
   }
 
   def close(): Unit = {
     lock.lock()
+
     if(isClosed)
       throw new IllegalStateException("TStreamsFactory is closed. This is repeatable close operation.")
 

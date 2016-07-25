@@ -56,6 +56,12 @@ class TStreamsFactoryTest extends FlatSpec with Matchers with BeforeAndAfterAll 
       offset        = Oldest)
 
     c != null shouldEqual true
+
+    val txn = c.getTransaction.get
+    val data = txn.getAll()
+
+    data.size shouldBe 2
+    c.checkpoint()
   }
 
   override def afterAll(): Unit = {
