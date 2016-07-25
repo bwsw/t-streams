@@ -64,7 +64,7 @@ class IMessageDecoder extends MessageToMessageDecoder[String]{
     }
     catch {
       case e @ (_: JsonParseException | _: JsonMappingException) =>
-        logger.warn(s"exception occured : ${e.getMessage}")
+        logger.warn(s"exception occurred : ${e.getMessage}")
     }
   }
 }
