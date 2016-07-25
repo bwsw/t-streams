@@ -9,15 +9,15 @@ object ProducerPolicies extends Enumeration {
   /**
    * If previous transaction was opened it will be closed
    */
-  val checkpointIfOpen = Value
+  val checkpointIfOpened = Value
 
   /**
    * If previous transaction was opened it will be canceled
    */
-  val cancelIfOpen = Value
+  val cancelIfOpened = Value
 
   /**
    * If previous transaction was opened exception will be thrown
    */
-  val errorIfOpen = Value
+  val errorIfOpened = Value
 }

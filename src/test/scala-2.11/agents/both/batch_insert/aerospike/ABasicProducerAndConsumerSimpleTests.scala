@@ -109,7 +109,7 @@ class ABasicProducerAndConsumerSimpleTests extends FlatSpec with Matchers with B
   "producer, consumer" should "producer - generate one transaction, consumer - retrieve it with getAll method" in {
     CassandraHelper.clearMetadataTables(session, randomKeyspace)
     val totalDataInTxn = 10
-    val producerTransaction = producer.newTransaction(ProducerPolicies.errorIfOpen)
+    val producerTransaction = producer.newTransaction(ProducerPolicies.errorIfOpened)
     val sendData = (for (part <- 0 until totalDataInTxn) yield "data_part_" + randomString).sorted
     sendData.foreach{ x=>
       producerTransaction.send(x)
@@ -131,7 +131,7 @@ class ABasicProducerAndConsumerSimpleTests extends FlatSpec with Matchers with B
   "producer, consumer" should "producer - generate one transaction, consumer - retrieve it using iterator" in {
     CassandraHelper.clearMetadataTables(session, randomKeyspace)
     val totalDataInTxn = 10
-    val producerTransaction = producer.newTransaction(ProducerPolicies.errorIfOpen)
+    val producerTransaction = producer.newTransaction(ProducerPolicies.errorIfOpened)
     val sendData = (for (part <- 0 until totalDataInTxn) yield "data_part_" + randomString).sorted
     sendData.foreach{ x=>
       producerTransaction.send(x)
@@ -164,7 +164,7 @@ class ABasicProducerAndConsumerSimpleTests extends FlatSpec with Matchers with B
     val sendData = (for (part <- 0 until totalDataInTxn) yield "data_part_" + randomString).sorted
 
     (0 until totalTxn).foreach { _=>
-        val producerTransaction = producer.newTransaction(ProducerPolicies.errorIfOpen)
+        val producerTransaction = producer.newTransaction(ProducerPolicies.errorIfOpened)
         sendData.foreach{ x=>
           producerTransaction.send(x)
         }
@@ -195,7 +195,7 @@ class ABasicProducerAndConsumerSimpleTests extends FlatSpec with Matchers with B
 
     val producerThread = new Thread(new Runnable {
       def run() {
-        val txn = producer.newTransaction(ProducerPolicies.errorIfOpen)
+        val txn = producer.newTransaction(ProducerPolicies.errorIfOpened)
         sendData.foreach{ x=>
           txn.send(x)
           Thread.sleep(1000)

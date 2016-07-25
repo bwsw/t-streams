@@ -109,7 +109,7 @@ class BasicConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll wi
   "consumer.getTransactionById" should "return sent transaction" in {
     val totalDataInTxn = 10
     val data = (for (i <- 0 until totalDataInTxn) yield randomString).toList.sorted
-    val txn = producer.newTransaction(ProducerPolicies.errorIfOpen, 1)
+    val txn = producer.newTransaction(ProducerPolicies.errorIfOpened, 1)
     val txnUuid = txn.getTxnUUID
     data.foreach(x=>txn.send(x))
     txn.checkpoint()

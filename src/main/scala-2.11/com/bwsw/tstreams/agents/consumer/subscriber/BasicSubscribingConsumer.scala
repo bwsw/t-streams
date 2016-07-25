@@ -7,6 +7,7 @@ import com.bwsw.tstreams.agents.consumer.{BasicConsumer, BasicConsumerOptions, B
 import com.bwsw.tstreams.coordination.pubsub.SubscriberCoordinator
 import com.bwsw.tstreams.streams.BasicStream
 import com.bwsw.tstreams.txnqueue.PersistentTransactionQueue
+import org.slf4j.LoggerFactory
 
 /**
   * Basic consumer with subscribe option
@@ -30,17 +31,18 @@ class BasicSubscribingConsumer[DATATYPE, USERTYPE](name : String,
     * Indicate started or not this subscriber
     */
   private var isStarted = false
+  private val logger  = LoggerFactory.getLogger(this.getClass)
 
   /**
     * Coordinator for providing updates to this subscriber from producers
     * and establishing stream locks
     */
   private var coordinator = new SubscriberCoordinator(
-    subscriberCoordinationOptions.agentAddress,
-    subscriberCoordinationOptions.zkRootPath,
-    subscriberCoordinationOptions.zkHosts,
-    subscriberCoordinationOptions.zkSessionTimeout,
-    subscriberCoordinationOptions.zkConnectionTimeout)
+                                              subscriberCoordinationOptions.agentAddress,
+                                              subscriberCoordinationOptions.zkRootPath,
+                                              subscriberCoordinationOptions.zkHosts,
+                                              subscriberCoordinationOptions.zkSessionTimeout,
+                                              subscriberCoordinationOptions.zkConnectionTimeout)
 
   /**
     * Subscriber used partitions
@@ -54,6 +56,8 @@ class BasicSubscribingConsumer[DATATYPE, USERTYPE](name : String,
     usedPartitions.size
   else
     subscriberCoordinationOptions.threadPoolAmount
+
+  logger.info("Will start " + poolSize + " executors to serve master and asynchronous activity.")
 
   /**
     * Mapping partitions to executors index
@@ -77,31 +81,35 @@ class BasicSubscribingConsumer[DATATYPE, USERTYPE](name : String,
   /**
     * Resolver for resolving pre/final commit's
     */
-  private val checkpointEventsResolver = new CheckpointEventResolver(this)
+  private val checkpointEventsResolver = new BrokenTransactionsResolver(this)
 
   /**
     * Start subscriber to consume new transactions
     */
   def start() = {
-    if (isStarted) throw new IllegalStateException("subscriber already started")
+    if (isStarted)
+      throw new IllegalStateException("subscriber already started")
     isStarted = true
 
+    // TODO: why it can be stopped, why reconstruct?
     if (coordinator.isStoped){
       coordinator = new SubscriberCoordinator(
-        subscriberCoordinationOptions.agentAddress,
-        subscriberCoordinationOptions.zkRootPath,
-        subscriberCoordinationOptions.zkHosts,
-        subscriberCoordinationOptions.zkSessionTimeout,
-        subscriberCoordinationOptions.zkConnectionTimeout)
+                                subscriberCoordinationOptions.agentAddress,
+                                subscriberCoordinationOptions.zkRootPath,
+                                subscriberCoordinationOptions.zkHosts,
+                                subscriberCoordinationOptions.zkSessionTimeout,
+                                subscriberCoordinationOptions.zkConnectionTimeout)
     }
 
     checkpointEventsResolver.startUpdate()
 
     val streamLock = coordinator.getStreamLock(stream.getName)
     streamLock.lock()
+
     (0 until poolSize) foreach { x =>
       executors(x) = Executors.newSingleThreadExecutor()
     }
+
     coordinator.initSynchronization(stream.getName, usedPartitions)
     coordinator.startListen()
     updateManager.startUpdate(callBack.pollingFrequency)
@@ -112,10 +120,10 @@ class BasicSubscribingConsumer[DATATYPE, USERTYPE](name : String,
       val queue =
         if (lastTransactionOpt.isDefined) {
           val txnUuid = lastTransactionOpt.get.getTxnUUID
-          new PersistentTransactionQueue(persistentQueuePath + s"/$uniquePrefix/$partition", txnUuid)
+          new PersistentTransactionQueue(persistentQueuePath + s"/$uniquePrefix/$partition", txnUuid) // TODO: fix with correct FS concat
         }
         else {
-          new PersistentTransactionQueue(persistentQueuePath + s"/$uniquePrefix/$partition", null)
+          new PersistentTransactionQueue(persistentQueuePath + s"/$uniquePrefix/$partition", null) // TODO: fix with correct FS concat
         }
 
       val lastTxnUuid = if (lastTransactionOpt.isDefined) {
@@ -129,20 +137,22 @@ class BasicSubscribingConsumer[DATATYPE, USERTYPE](name : String,
       val lastTxn = new LastTransactionWrapper(lastTxnUuid)
 
       val transactionsRelay = new SubscriberTransactionsRelay(
-        subscriber = this,
-        partition = partition,
-        coordinator = coordinator,
-        callback = callBack,
-        queue = queue,
-        lastConsumedTransaction = lastTxn,
-        executor = executor,
-        checkpointEventsResolver = checkpointEventsResolver)
+                                            subscriber      = this,
+                                            partition       = partition,
+                                            coordinator     = coordinator,
+                                            callback        = callBack,
+                                            queue           = queue,
+                                            lastConsumedTransaction   = lastTxn,
+                                            executor                  = executor,
+                                            checkpointEventsResolver  = checkpointEventsResolver)
 
       //consume all transactions less or equal than last transaction
       if (lastTransactionOpt.isDefined) {
         transactionsRelay.consumeTransactionsLessOrEqualThan(
-          leftBorder = currentOffsets(partition),
-          rightBorder = lastTransactionOpt.get.getTxnUUID)
+                                  leftBorder = currentOffsets(partition),
+                                  rightBorder = lastTransactionOpt.get.getTxnUUID)
+      } else {
+        //TODO: what behaviour
       }
 
       transactionsRelay.notifyProducersAndStartListen()

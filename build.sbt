@@ -44,7 +44,6 @@ libraryDependencies += ("com.twitter.common.zookeeper" % "lock" % "0.0.38")
   .exclude("org.apache.zookeeper", "zookeeper")
 
 
-
 //ASSEMBLY STRATEGY
 assemblyJarName in assembly := "t-streams.jar"
 

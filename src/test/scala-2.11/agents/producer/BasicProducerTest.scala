@@ -61,27 +61,27 @@ class BasicProducerTest extends FlatSpec with Matchers with BeforeAndAfterAll wi
   val producer = new BasicProducer("test_producer", stream, producerOptions)
 
   "BasicProducer.newTransaction()" should "return BasicProducerTransaction instance" in {
-    val txn: BasicProducerTransaction[String, Array[Byte]] = producer.newTransaction(ProducerPolicies.errorIfOpen)
+    val txn: BasicProducerTransaction[String, Array[Byte]] = producer.newTransaction(ProducerPolicies.errorIfOpened)
     txn.checkpoint()
     txn.isInstanceOf[BasicProducerTransaction[_,_]] shouldEqual true
   }
 
   "BasicProducer.newTransaction(ProducerPolicies.errorIfOpen)" should "throw exception if previous transaction was not closed" in {
-    val txn1: BasicProducerTransaction[String, Array[Byte]] = producer.newTransaction(ProducerPolicies.checkpointIfOpen, 2)
+    val txn1: BasicProducerTransaction[String, Array[Byte]] = producer.newTransaction(ProducerPolicies.checkpointIfOpened, 2)
     intercept[IllegalStateException] {
-       producer.newTransaction(ProducerPolicies.errorIfOpen, 2)
+       producer.newTransaction(ProducerPolicies.errorIfOpened, 2)
     }
     txn1.checkpoint()
   }
 
   "BasicProducer.newTransaction(checkpointIfOpen)" should "not throw exception if previous transaction was not closed" in {
-    producer.newTransaction(ProducerPolicies.checkpointIfOpen, 2)
-    val txn2 = producer.newTransaction(ProducerPolicies.checkpointIfOpen, 2)
+    producer.newTransaction(ProducerPolicies.checkpointIfOpened, 2)
+    val txn2 = producer.newTransaction(ProducerPolicies.checkpointIfOpened, 2)
     txn2.checkpoint()
   }
 
   "BasicProducer.getTransaction()" should "return transaction reference if it was created or None" in {
-    val txn = producer.newTransaction(ProducerPolicies.checkpointIfOpen, 1)
+    val txn = producer.newTransaction(ProducerPolicies.checkpointIfOpened, 1)
     val txnRef = producer.getTransaction(1)
     txn.checkpoint()
     val checkVal = txnRef.get == txn

@@ -74,7 +74,7 @@ class ALazyProducersAndSubscriberTest extends FlatSpec with Matchers with Before
           var i = 0
           while(i < totalTxn) {
             Thread.sleep(2000)
-            val txn = p.newTransaction(ProducerPolicies.errorIfOpen)
+            val txn = p.newTransaction(ProducerPolicies.errorIfOpened)
             dataToSend.foreach(x => txn.send(x))
             txn.checkpoint()
             i+=1

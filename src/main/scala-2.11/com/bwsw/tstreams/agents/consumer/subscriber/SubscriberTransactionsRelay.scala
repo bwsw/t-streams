@@ -32,13 +32,14 @@ class SubscriberTransactionsRelay[DATATYPE,USERTYPE](subscriber : BasicSubscribi
                                                      queue : PersistentTransactionQueue,
                                                      lastConsumedTransaction : LastTransactionWrapper,
                                                      executor : ExecutorService,
-                                                     checkpointEventsResolver: CheckpointEventResolver) {
+                                                     checkpointEventsResolver: BrokenTransactionsResolver) {
 
   private val POOLING_INTERVAL_MS = 100
   private val logger = LoggerFactory.getLogger(this.getClass)
   private val transactionBuffer  = new TransactionsBuffer
   private val transactionBufferLock = new ReentrantLock(true)
   private val streamName = subscriber.stream.getName
+
   checkpointEventsResolver.bindBuffer(partition, transactionBuffer, transactionBufferLock, lastConsumedTransaction)
 
   /**

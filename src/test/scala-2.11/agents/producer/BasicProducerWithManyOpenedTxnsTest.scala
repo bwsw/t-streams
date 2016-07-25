@@ -90,9 +90,9 @@ class BasicProducerWithManyOpenedTxnsTest extends FlatSpec with Matchers with Be
     val data1 = (for (i <- 0 until 10) yield randomString).sorted
     val data2 = (for (i <- 0 until 10) yield randomString).sorted
     val data3 = (for (i <- 0 until 10) yield randomString).sorted
-    val txn1: BasicProducerTransaction[String, Array[Byte]] = producer.newTransaction(ProducerPolicies.errorIfOpen)
-    val txn2: BasicProducerTransaction[String, Array[Byte]] = producer.newTransaction(ProducerPolicies.errorIfOpen)
-    val txn3: BasicProducerTransaction[String, Array[Byte]] = producer.newTransaction(ProducerPolicies.errorIfOpen)
+    val txn1: BasicProducerTransaction[String, Array[Byte]] = producer.newTransaction(ProducerPolicies.errorIfOpened)
+    val txn2: BasicProducerTransaction[String, Array[Byte]] = producer.newTransaction(ProducerPolicies.errorIfOpened)
+    val txn3: BasicProducerTransaction[String, Array[Byte]] = producer.newTransaction(ProducerPolicies.errorIfOpened)
     data1.foreach(x=>txn1.send(x))
     data2.foreach(x=>txn2.send(x))
     data3.foreach(x=>txn3.send(x))

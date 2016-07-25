@@ -8,7 +8,9 @@ import java.net.InetSocketAddress
  * @param keyspace Cassandra keyspace to connect
  */
 class CassandraStorageOptions(val cassandraHosts : List[InetSocketAddress],
-                              val keyspace : String){
+                              val keyspace : String,
+                              val login: String = null,
+                              val password: String = null){
   if (cassandraHosts.isEmpty)
     throw new IllegalArgumentException("cassandra hosts can't be empty")
   if (keyspace == null)

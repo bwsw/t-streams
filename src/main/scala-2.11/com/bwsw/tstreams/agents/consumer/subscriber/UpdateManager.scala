@@ -5,7 +5,6 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.locks.ReentrantLock
 import scala.collection.mutable.ListBuffer
 
-//TODO use actor approach
 /**
  * Manager for maintain async updates on [[TransactionsBuffer]]]
  */

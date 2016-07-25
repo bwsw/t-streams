@@ -10,7 +10,7 @@ import org.slf4j.LoggerFactory
 
 import scala.collection.mutable
 
-class CheckpointEventResolver(subscriber : BasicSubscribingConsumer[_,_]) {
+class BrokenTransactionsResolver(subscriber : BasicSubscribingConsumer[_,_]) {
   private val MAX_RETRIES = 2
   private val UPDATE_INTERVAL = 5000
   private var updateThread : Thread = null

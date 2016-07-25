@@ -102,7 +102,7 @@ object BasicProducerTest{
     val producer = new BasicProducer("test_producer", streamForProducer, producerOptions)
 
     0 until cnt foreach { _ =>
-      val txn = producer.newTransaction(ProducerPolicies.errorIfOpen)
+      val txn = producer.newTransaction(ProducerPolicies.errorIfOpened)
       txn.send("info")
       txn.checkpoint()
       Thread.sleep(delay*1000L)
