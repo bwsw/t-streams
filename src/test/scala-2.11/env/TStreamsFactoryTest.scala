@@ -1,6 +1,9 @@
 package env
 
+import java.util.UUID
+
 import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
+import com.bwsw.tstreams.agents.consumer.subscriber.{BasicSubscribingConsumer, BasicSubscriberCallback}
 import com.bwsw.tstreams.agents.producer.ProducerPolicies
 import com.bwsw.tstreams.converter.{ArrayByteToStringConverter, StringToArrayByteConverter}
 import com.bwsw.tstreams.env.{TSF_Dictionary, TStreamsFactory}
@@ -62,6 +65,23 @@ class TStreamsFactoryTest extends FlatSpec with Matchers with BeforeAndAfterAll 
 
     data.size shouldBe 2
     c.checkpoint()
+  }
+
+  "UniversalFactory.getSubscriber" should "return subscriber object" in {
+    val sub = f.getSubscriber[String](
+      name = "test-subscriber",
+      txnGenerator = LocalGeneratorCreator.getGen,
+      converter = new ArrayByteToStringConverter,
+      partitions = List(0),
+      offset = Oldest,
+      callback = new BasicSubscriberCallback[Array[Byte],String] {
+          override def onEvent(subscriber: BasicSubscribingConsumer[Array[Byte], String], partition: Int, transactionUuid: UUID): Unit = {}
+          override val pollingFrequency: Int = 1
+      })
+
+    sub != null shouldEqual true
+    Thread.sleep(2000) // TODO: fix it. Bug #31
+    sub.stop()
   }
 
   override def afterAll(): Unit = {

@@ -768,9 +768,10 @@ class TStreamsFactory(envname: String = "T-streams") {
                               txnGenerator  : IUUIDGenerator,
                               converter     : IConverter[Array[Byte],USERTYPE],
                               partitions    : List[Int],
+                              callback: BasicSubscriberCallback[Array[Byte],USERTYPE],
                               offset        : IOffset,
-                              isUseLastOffset : Boolean = true,
-                              callback: BasicSubscriberCallback[Array[Byte],USERTYPE]): BasicSubscribingConsumer[Array[Byte],USERTYPE] = {
+                              isUseLastOffset : Boolean = true
+                             ): BasicSubscribingConsumer[Array[Byte],USERTYPE] = {
     lock.lock()
     if(isClosed)
       throw new IllegalStateException("TStreamsFactory is closed. This is the illegal usage of the object.")
@@ -817,7 +818,7 @@ class TStreamsFactory(envname: String = "T-streams") {
     val queue_path = pAsString(TSF_Dictionary.Consumer.Subscriber.persistent_queue_path)
     assert(queue_path != null)
 
-    val subscribeConsumer = new BasicSubscribingConsumer[Array[Byte],USERTYPE](
+    val subscriberConsumer = new BasicSubscribingConsumer[Array[Byte],USERTYPE](
                       name                          = name,
                       stream                        = stream, // TODO FIX: Stream is not required as argument for BasicSubscribingConsumer - it's already in options
                       options                       = consumerOptions,
@@ -825,11 +826,11 @@ class TStreamsFactory(envname: String = "T-streams") {
                       callBack                      = callback,
                       persistentQueuePath           = queue_path)
 
-    subscribeConsumer.start()
+    subscriberConsumer.start()
 
     lock.unlock()
 
-    subscribeConsumer
+    subscriberConsumer
   }
 
   /**

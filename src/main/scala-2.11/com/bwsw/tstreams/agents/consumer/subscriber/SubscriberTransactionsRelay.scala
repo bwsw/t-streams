@@ -10,6 +10,7 @@ import ProducerTransactionStatus._
 import com.bwsw.tstreams.txnqueue.PersistentTransactionQueue
 import org.slf4j.LoggerFactory
 
+import scala.concurrent.Future
 import scala.util.control.Breaks._
 
 
@@ -39,6 +40,7 @@ class SubscriberTransactionsRelay[DATATYPE,USERTYPE](subscriber : BasicSubscribi
   private val transactionBuffer  = new TransactionsBuffer
   private val transactionBufferLock = new ReentrantLock(true)
   private val streamName = subscriber.stream.getName
+
   checkpointEventsResolver.bindBuffer(partition, transactionBuffer, transactionBufferLock, lastConsumedTransaction)
 
   /**
@@ -130,7 +132,7 @@ class SubscriberTransactionsRelay[DATATYPE,USERTYPE](subscriber : BasicSubscribi
       }
     }
 
-    executor.execute(runnable)
+    executor.submit(runnable)
   }
 
   /**
