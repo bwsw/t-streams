@@ -517,7 +517,7 @@ class PeerToPeerAgent(agentAddress : String,
             lockLocalMasters.lock()
             assert(rcv == agentAddress)
             if (localMasters.contains(msg.partition) && localMasters(msg.partition) == agentAddress) {
-              producer.subscriber_client.publish(msg,
+              producer.subscriberClient.publish(msg,
                 onComplete = () => {
                   val response = PublishResponse(
                     senderID = rcv,

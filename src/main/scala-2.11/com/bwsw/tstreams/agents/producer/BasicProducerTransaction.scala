@@ -70,16 +70,6 @@ class BasicProducerTransaction[USERTYPE](threadLock       : ReentrantLock,
   private var jobs = ListBuffer[() => Unit]()
 
   /**
-   * Queue to figure out moment when transaction is going to close
-   */
-  private val endKeepAliveThread = new ThreadSignalSleepVar[Boolean](1)
-
-  /**
-   * Thread to keep this transaction alive
-   */
-  //private val keepAliveThread: Thread = startAsyncKeepAlive()
-
-  /**
    * Send data to storage
     *
     * @param obj some user object
@@ -135,7 +125,7 @@ class BasicProducerTransaction[USERTYPE](threadLock       : ReentrantLock,
     if (closed)
       throw new IllegalStateException("transaction is already closed")
 
-    stopKeepAlive()
+    closed = true
 
     txnOwner.producerOptions.insertType match {
       case InsertionType.SingleElementInsert =>
@@ -144,29 +134,17 @@ class BasicProducerTransaction[USERTYPE](threadLock       : ReentrantLock,
         txnOwner.stream.dataStorage.clearBuffer(transactionUuid)
     }
 
-    threadLock.unlock()
 
     val msg = ProducerTopicMessage(txnUuid   = transactionUuid,
                                     ttl       = -1,
                                     status    = ProducerTransactionStatus.cancel,
                                     partition = partition)
 
-    txnOwner.masterP2PAgent.publish(msg)
+    txnOwner.subscriberClient.publish(msg, ()=>())
     logger.debug(s"[CANCEL PARTITION_${msg.partition}] ts=${msg.txnUuid.timestamp()} status=${msg.status}")
 
-  }
+    threadLock.unlock()
 
-  def stopKeepAlive() = {
-    // wait all async jobs completeness before commit
-    jobs.foreach(x => x())
-
-    // signal keep alive thread to stop
-    //endKeepAliveThread.signal(true)
-
-    //await till update thread will be stoped
-    //keepAliveThread.join()
-
-    closed = true
   }
 
   /**
@@ -177,6 +155,8 @@ class BasicProducerTransaction[USERTYPE](threadLock       : ReentrantLock,
 
     if (closed)
       throw new IllegalStateException("transaction is already closed")
+
+    closed = true
 
     txnOwner.producerOptions.insertType match {
 
@@ -192,7 +172,7 @@ class BasicProducerTransaction[USERTYPE](threadLock       : ReentrantLock,
 
     //close transaction using stream ttl
     if (part > 0) {
-
+      jobs.foreach(x => x())
       txnOwner.masterP2PAgent.publish(ProducerTopicMessage(
                                           txnUuid   = transactionUuid,
                                           ttl       = -1,
@@ -201,10 +181,6 @@ class BasicProducerTransaction[USERTYPE](threadLock       : ReentrantLock,
 
       logger.debug(s"[PRE CHECKPOINT PARTITION_$partition] " +
         s"ts=${transactionUuid.timestamp()}")
-
-      //must do it after agent.publish cuz it can be long operation
-      //because of agents re-election
-      stopKeepAlive()
 
       //debug purposes only
       GlobalHooks.invoke("PreCommitFailure")
@@ -221,55 +197,28 @@ class BasicProducerTransaction[USERTYPE](threadLock       : ReentrantLock,
       //debug purposes only
       GlobalHooks.invoke("AfterCommitFailure")
 
-      txnOwner.masterP2PAgent.publish(ProducerTopicMessage(
+      txnOwner.subscriberClient.publish(ProducerTopicMessage(
                                               txnUuid   = transactionUuid,
                                               ttl       = -1,
                                               status    = ProducerTransactionStatus.postCheckpoint,
-                                              partition = partition))
+                                              partition = partition), ()=>())
 
       logger.debug(s"[FINAL CHECKPOINT PARTITION_$partition] " +
         s"ts=${transactionUuid.timestamp()}")
     }
     else {
-      txnOwner.masterP2PAgent.publish(ProducerTopicMessage(
+      txnOwner.subscriberClient.publish(ProducerTopicMessage(
                                             txnUuid   = transactionUuid,
                                             ttl       = -1,
                                             status    = ProducerTransactionStatus.cancel,
-                                            partition = partition))
-      stopKeepAlive()
+                                            partition = partition), ()=>())
     }
     threadLock.unlock()
   }
 
-
-  /**
-   * Async job for keeping alive current transaction
-   */
-  private def startAsyncKeepAlive() : Thread = {
-    val latch              = new CountDownLatch(1)
-    val txnKeepAliveThread = new Thread(new Runnable {
-      override def run(): Unit = {
-        latch.countDown()
-        logger.debug(s"[START KEEP_ALIVE THREAD PARTITION=$partition UUID=${transactionUuid.timestamp()}")
-        breakable {
-          while (true) {
-            val value: Boolean = endKeepAliveThread.wait(txnOwner.producerOptions.transactionKeepAliveInterval * 1000)
-            if (value) {
-              logger.info("Transaction object either checkpointed or cancelled. Exit KeepAliveThread.")
-              break()
-            }
-            updateTxnKeepAliveState()
-          }
-        }
-      }
-    })
-    txnKeepAliveThread.start()
-    latch.await()
-    txnKeepAliveThread
-  }
-
   def updateTxnKeepAliveState() = {
     //-1 here indicate that transaction is started but is not finished yet
+    logger.info(s"Update event for txn ${transactionUuid}, partition: ${partition}")
     txnOwner.stream.metadataStorage.commitEntity.commit(
       streamName      = txnOwner.stream.getName,
       partition       = partition,
@@ -279,7 +228,7 @@ class BasicProducerTransaction[USERTYPE](threadLock       : ReentrantLock,
 
 
     //publish that current txn is being updating
-    txnOwner.subscriber_client.publish(ProducerTopicMessage(
+    txnOwner.subscriberClient.publish(ProducerTopicMessage(
       txnUuid   = transactionUuid,
       ttl       = txnOwner.producerOptions.transactionTTL,
       status    = ProducerTransactionStatus.update,

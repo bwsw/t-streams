@@ -72,11 +72,11 @@ class CheckpointGroup() {
   }
 
   private def stopTransactionKeepAliveUpdates(info : List[CheckpointInfo]) = {
-    info foreach {
-      case ProducerCheckpointInfo(txnRef, _, _, _, _, _, _, _, _) =>
-        txnRef.stopKeepAlive()
-      case _ =>
-    }
+//    info foreach {
+//      case ProducerCheckpointInfo(txnRef, _, _, _, _, _, _, _, _) =>
+//        txnRef.stopKeepAlive()
+//      case _ =>
+//    }
   }
 
   private def publishGlobalFinalCheckpointEvent(info : List[CheckpointInfo]) = {
