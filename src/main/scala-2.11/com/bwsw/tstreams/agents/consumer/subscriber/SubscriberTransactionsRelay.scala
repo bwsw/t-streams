@@ -80,60 +80,55 @@ class SubscriberTransactionsRelay[DATATYPE,USERTYPE](subscriber : BasicSubscribi
   def consumeTransactionsLessOrEqualThan(leftBorder : UUID, rightBorder : UUID) = {
     //TODO remove after complex testing
     var lastTxn : UUID = leftBorder
-    val runnable = new Runnable {
-      override def run(): Unit = {
-        val transactionsIterator = subscriber.stream.metadataStorage.commitEntity.getTransactionsIterator(
-          streamName = streamName,
-          partition = partition,
-          leftBorder = leftBorder,
-          rightBorder = rightBorder)
 
-        while (transactionsIterator.hasNext) {
-          val entry = transactionsIterator.next()
-          val (uuid,cnt) = (entry.getUUID("transaction"), entry.getInt("cnt"))
-          logger.debug(s"[BEFORE_OR_EQUAL_LAST PARTITION_$partition] consumed txn with uuid:{${uuid.timestamp()}}\n")
-          if (cnt == -1) {
-            breakable {
-              while(true) {
-                val updatedTxnOpt = subscriber.
-                  stream.
-                  metadataStorage.
-                  commitEntity.
-                  getTransactionAmount(streamName, partition, uuid)
-                if (updatedTxnOpt.isDefined){
-                  val (amount,_) = updatedTxnOpt.get
-                  if (amount != -1){
-                    queue.put(uuid)
-                    executor.execute(queueConsumer)
-                    assert(uuid.timestamp() > lastTxn.timestamp(),
-                      logger.debug(s"[RELAY WRONG ASSERT] ${uuid.timestamp()} " +
-                        s"with lastTxn={${lastTxn.timestamp()}}\n"))
-                    lastTxn = uuid
-                    break()
-                  }
-                }
-                else
-                  break()
-                Thread.sleep(POOLING_INTERVAL_MS)
+    val transactionsIterator = subscriber.stream.metadataStorage.commitEntity.getTransactionsIterator(
+      streamName = streamName,
+      partition = partition,
+      leftBorder = leftBorder,
+      rightBorder = rightBorder)
+
+    while (transactionsIterator.hasNext) {
+      val entry = transactionsIterator.next()
+      val (uuid,cnt) = (entry.getUUID("transaction"), entry.getInt("cnt"))
+      logger.debug(s"[BEFORE_OR_EQUAL_LAST PARTITION_$partition] consumed txn with uuid:{${uuid.timestamp()}}\n")
+      if (cnt == -1) {
+        breakable {
+          while(true) {
+            val updatedTxnOpt = subscriber.
+              stream.
+              metadataStorage.
+              commitEntity.
+              getTransactionAmount(streamName, partition, uuid)
+            if (updatedTxnOpt.isDefined){
+              val (amount,_) = updatedTxnOpt.get
+              if (amount != -1){
+                queue.put(uuid)
+                executor.execute(queueConsumer)
+                assert(uuid.timestamp() > lastTxn.timestamp(),
+                  logger.debug(s"[RELAY WRONG ASSERT] ${uuid.timestamp()} " +
+                    s"with lastTxn={${lastTxn.timestamp()}}\n"))
+                lastTxn = uuid
+                break()
               }
             }
-          } else {
-            queue.put(uuid)
-            executor.execute(queueConsumer)
-            assert(uuid.timestamp() > lastTxn.timestamp(),
-              logger.debug(s"[RELAY WRONG ASSERT] ${uuid.timestamp()} " +
-                s"with lastTxn={${lastTxn.timestamp()}}\n"))
-            lastTxn = uuid
+            else
+              break()
+            Thread.sleep(POOLING_INTERVAL_MS)
           }
         }
-
-        assert(lastTxn.timestamp() == rightBorder.timestamp(),
-          logger.debug(s"[RELAY WRONG ASSERT] ${rightBorder.timestamp()} " +
+      } else {
+        queue.put(uuid)
+        executor.execute(queueConsumer)
+        assert(uuid.timestamp() > lastTxn.timestamp(),
+          logger.debug(s"[RELAY WRONG ASSERT] ${uuid.timestamp()} " +
             s"with lastTxn={${lastTxn.timestamp()}}\n"))
+        lastTxn = uuid
       }
     }
 
-    executor.execute(runnable)
+    assert(lastTxn.timestamp() == rightBorder.timestamp(),
+      logger.debug(s"[RELAY WRONG ASSERT] ${rightBorder.timestamp()} " +
+        s"with lastTxn={${lastTxn.timestamp()}}\n"))
   }
 
   /**
