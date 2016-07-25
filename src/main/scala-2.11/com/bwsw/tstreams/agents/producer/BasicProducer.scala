@@ -141,6 +141,9 @@ class BasicProducer[USERTYPE](val name : String,
   def newTransaction(policy: ProducerPolicy, nextPartition : Int = -1) : BasicProducerTransaction[USERTYPE] = {
     threadLock.lock()
 
+    if(isStop)
+      throw new IllegalStateException(s"Producer ${this.name} is already stopped. Unable to get new transaction.")
+
     val partition = {
       if (nextPartition == -1)
         producerOptions.writePolicy.getNextPartition
@@ -296,23 +299,24 @@ class BasicProducer[USERTYPE](val name : String,
    * Stop this agent
    */
   def stop() = {
-
     threadLock.lock()
-
     if(isStop)
       throw new IllegalStateException(s"Producer ${this.name} is already stopped. Duplicate action.")
     isStop = true
-
-    masterP2PAgent.stop()
-    subscriberClient.stop()
-
     threadLock.unlock()
 
+    // stop provide master features to public
+    masterP2PAgent.stop()
+
+    // stop update state of all open transactions
     endKeepAliveThread.signal(true)
     txnKeepAliveThread.join()
 
+    // stop executor
     backendActivityService.shutdown()
 
+    // stop function which works with subscribers
+    subscriberClient.stop()
   }
 
   /**

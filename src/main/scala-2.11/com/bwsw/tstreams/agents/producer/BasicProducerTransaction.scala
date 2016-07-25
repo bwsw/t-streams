@@ -116,6 +116,27 @@ class BasicProducerTransaction[USERTYPE](threadLock       : ReentrantLock,
     threadLock.unlock()
   }
 
+
+  def cancelAsync() = {
+    threadLock.lock()
+    txnOwner.producerOptions.insertType match {
+      case InsertionType.SingleElementInsert =>
+
+      case InsertionType.BatchInsert(_) =>
+        txnOwner.stream.dataStorage.clearBuffer(transactionUuid)
+    }
+
+
+    val msg = ProducerTopicMessage(txnUuid   = transactionUuid,
+      ttl       = -1,
+      status    = ProducerTransactionStatus.cancel,
+      partition = partition)
+
+    txnOwner.subscriberClient.publish(msg, ()=>())
+    logger.debug(s"[CANCEL PARTITION_${msg.partition}] ts=${msg.txnUuid.timestamp()} status=${msg.status}")
+
+    threadLock.unlock()
+  }
   /**
    * Canceling current transaction
    */
@@ -127,37 +148,14 @@ class BasicProducerTransaction[USERTYPE](threadLock       : ReentrantLock,
 
     closed = true
 
-    txnOwner.producerOptions.insertType match {
-      case InsertionType.SingleElementInsert =>
-
-      case InsertionType.BatchInsert(_) =>
-        txnOwner.stream.dataStorage.clearBuffer(transactionUuid)
-    }
-
-
-    val msg = ProducerTopicMessage(txnUuid   = transactionUuid,
-                                    ttl       = -1,
-                                    status    = ProducerTransactionStatus.cancel,
-                                    partition = partition)
-
-    txnOwner.subscriberClient.publish(msg, ()=>())
-    logger.debug(s"[CANCEL PARTITION_${msg.partition}] ts=${msg.txnUuid.timestamp()} status=${msg.status}")
+    txnOwner.backendActivityService.submit(new Runnable {override def run(): Unit = cancelAsync()})
 
     threadLock.unlock()
 
   }
 
-  /**
-   * Submit transaction(transaction will be available by consumer only after closing)
-   */
-  def checkpoint() : Unit = {
+  def checkpointAsync() = {
     threadLock.lock()
-
-    if (closed)
-      throw new IllegalStateException("transaction is already closed")
-
-    closed = true
-
     txnOwner.producerOptions.insertType match {
 
       case InsertionType.SingleElementInsert =>
@@ -174,10 +172,10 @@ class BasicProducerTransaction[USERTYPE](threadLock       : ReentrantLock,
     if (part > 0) {
       jobs.foreach(x => x())
       txnOwner.masterP2PAgent.publish(ProducerTopicMessage(
-                                          txnUuid   = transactionUuid,
-                                          ttl       = -1,
-                                          status    = ProducerTransactionStatus.preCheckpoint,
-                                          partition = partition))
+        txnUuid   = transactionUuid,
+        ttl       = -1,
+        status    = ProducerTransactionStatus.preCheckpoint,
+        partition = partition))
 
       logger.debug(s"[PRE CHECKPOINT PARTITION_$partition] " +
         s"ts=${transactionUuid.timestamp()}")
@@ -186,11 +184,11 @@ class BasicProducerTransaction[USERTYPE](threadLock       : ReentrantLock,
       GlobalHooks.invoke("PreCommitFailure")
 
       txnOwner.stream.metadataStorage.commitEntity.commit(
-                                      streamName  = txnOwner.stream.getName,
-                                      partition   = partition,
-                                      transaction = transactionUuid,
-                                      totalCnt    = part,
-                                      ttl         = txnOwner.stream.getTTL)
+        streamName  = txnOwner.stream.getName,
+        partition   = partition,
+        transaction = transactionUuid,
+        totalCnt    = part,
+        ttl         = txnOwner.stream.getTTL)
 
       logger.debug(s"[COMMIT PARTITION_$partition] ts=${transactionUuid.timestamp()}")
 
@@ -198,22 +196,39 @@ class BasicProducerTransaction[USERTYPE](threadLock       : ReentrantLock,
       GlobalHooks.invoke("AfterCommitFailure")
 
       txnOwner.subscriberClient.publish(ProducerTopicMessage(
-                                              txnUuid   = transactionUuid,
-                                              ttl       = -1,
-                                              status    = ProducerTransactionStatus.postCheckpoint,
-                                              partition = partition), ()=>())
+        txnUuid   = transactionUuid,
+        ttl       = -1,
+        status    = ProducerTransactionStatus.postCheckpoint,
+        partition = partition), ()=>())
 
       logger.debug(s"[FINAL CHECKPOINT PARTITION_$partition] " +
         s"ts=${transactionUuid.timestamp()}")
     }
     else {
       txnOwner.subscriberClient.publish(ProducerTopicMessage(
-                                            txnUuid   = transactionUuid,
-                                            ttl       = -1,
-                                            status    = ProducerTransactionStatus.cancel,
-                                            partition = partition), ()=>())
+        txnUuid   = transactionUuid,
+        ttl       = -1,
+        status    = ProducerTransactionStatus.cancel,
+        partition = partition), ()=>())
     }
     threadLock.unlock()
+  }
+
+  /**
+   * Submit transaction(transaction will be available by consumer only after closing)
+   */
+  def checkpoint() : Unit = {
+    threadLock.lock()
+
+    if (closed)
+      throw new IllegalStateException("transaction is already closed")
+
+    closed = true
+
+    txnOwner.backendActivityService.submit(new Runnable {override def run(): Unit = checkpointAsync()})
+
+    threadLock.unlock()
+
   }
 
   def updateTxnKeepAliveState() = {
