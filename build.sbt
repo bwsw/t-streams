@@ -51,7 +51,6 @@ libraryDependencies += ("com.twitter.common.zookeeper" % "lock" % "0.0.38")
 assemblyJarName in assembly := "t-streams" + tstreams_version + ".jar"
 
 assemblyMergeStrategy in assembly := {
-  case PathList("org","slf4f","slf4j-simple", xs @ _*) => MergeStrategy.discard
   case PathList("com","typesafe","akka", xs @ _*) => MergeStrategy.first
   case PathList("com","twitter","common","zookeeper", xs @ _*) => MergeStrategy.first
   case PathList("io", "netty", xs @ _*) => MergeStrategy.first
@@ -63,8 +62,11 @@ assemblyMergeStrategy in assembly := {
   case PathList("com", "fasterxml","jackson","module", xs @ _*) => MergeStrategy.first
   case PathList("net", "openhft", xs @ _*) => MergeStrategy.first
   case x =>
-    val oldStrategy = (assemblyMergeStrategy in assembly).value
-    oldStrategy(x)
+    if (x.contains("slf4j-simple")) MergeStrategy.discard
+    else {
+      val oldStrategy = (assemblyMergeStrategy in assembly).value
+      oldStrategy(x)
+    }
 }
 
 

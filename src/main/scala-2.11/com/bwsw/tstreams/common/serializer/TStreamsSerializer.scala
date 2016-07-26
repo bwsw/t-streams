@@ -1,6 +1,7 @@
 package com.bwsw.tstreams.common.serializer
 import java.util.UUID
 
+import com.bwsw.tstreams.common.serializer.TStreamsSerializer.TStreamsSerializerException
 import com.bwsw.tstreams.coordination.pubsub.messages.{ProducerTopicMessage, ProducerTransactionStatus}
 import com.bwsw.tstreams.coordination.transactions.messages._
 import com.bwsw.tstreams.coordination.transactions.peertopeer.AgentSettings
@@ -12,7 +13,7 @@ import scala.util.control.Breaks._
   * TStreams object serializer
   */
 class TStreamsSerializer {
-  def serialize(value: Any): String = {
+  private def serializeInternal(value: Any): String = {
     value match {
       case AgentSettings(id, prior, penalty) =>
         s"{AS,$id,$prior,$penalty}"
@@ -36,11 +37,11 @@ class TStreamsSerializer {
         s"{PiRs,${x.senderID},${x.receiverID},${x.partition},${x.msgID}}"
 
       case x : PublishRequest =>
-        val serializedMsg = serialize(x.msg)
+        val serializedMsg = serializeInternal(x.msg)
         s"{PuRq,${x.senderID},${x.receiverID},$serializedMsg,${x.msgID}}"
 
       case x : PublishResponse =>
-        val serializedMsg = serialize(x.msg)
+        val serializedMsg = serializeInternal(x.msg)
         s"{PuRs,${x.senderID},${x.receiverID},$serializedMsg,${x.msgID}}"
 
       case x : SetMasterRequest =>
@@ -56,7 +57,7 @@ class TStreamsSerializer {
         s"{TRs,${x.senderID},${x.receiverID},${x.txnUUID.toString},${x.partition},${x.msgID}}"
 
       case ProducerTopicMessage(txnUuid,ttl,status,partition) =>
-        val serializedStatus = serialize(status)
+        val serializedStatus = serializeInternal(status)
         s"{PTM,${txnUuid.toString},$ttl,$serializedStatus,$partition}"
 
       case ProducerTransactionStatus.preCheckpoint => s"{P}"
@@ -195,9 +196,29 @@ class TStreamsSerializer {
     }
   }
 
+  def serialize(value : Any) : String = {
+    try {
+      serializeInternal(value)
+    }
+    catch {
+      case e : Exception =>
+        throw new TStreamsSerializerException(s"msg : {${e.getMessage}} for value : {$value}")
+    }
+  }
+
   def deserialize[T](value : String) : T = {
-    val any = deserializeToAny(value)
-    any.asInstanceOf[T]
+    try {
+      val any = deserializeToAny(value)
+      any.asInstanceOf[T]
+    }
+    catch {
+      case e : Exception =>
+        throw new TStreamsSerializerException(s"msg : {${e.getMessage}} for value : {$value}")
+    }
   }
 }
 
+
+object TStreamsSerializer{
+  class TStreamsSerializerException(msg : String) extends Exception(msg)
+}
