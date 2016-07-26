@@ -46,9 +46,10 @@ libraryDependencies += ("com.twitter.common.zookeeper" % "lock" % "0.0.38")
 
 
 //ASSEMBLY STRATEGY
-assemblyJarName in assembly := "t-streams" + version + ".jar"
+assemblyJarName in assembly := "t-streams" + version.key.label + ".jar"
 
 assemblyMergeStrategy in assembly := {
+  case PathList("org","slf4f","slf4j-simple", xs @ _*) => MergeStrategy.discard
   case PathList("com","typesafe","akka", xs @ _*) => MergeStrategy.first
   case PathList("com","twitter","common","zookeeper", xs @ _*) => MergeStrategy.first
   case PathList("io", "netty", xs @ _*) => MergeStrategy.first
