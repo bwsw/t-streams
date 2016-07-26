@@ -5,11 +5,9 @@ import java.util.concurrent.locks.ReentrantLock
 
 import com.bwsw.tstreams.coordination.pubsub.messages.{ProducerTopicMessage, ProducerTransactionStatus}
 import com.bwsw.tstreams.debug.GlobalHooks
-import com.google.common.util.concurrent.{FutureCallback, Futures}
 import org.slf4j.LoggerFactory
 
 import scala.collection.mutable.ListBuffer
-import com.datastax.driver.core.ResultSet
 
 /**
  * Transaction retrieved by BasicProducer.newTransaction method
@@ -116,7 +114,7 @@ class BasicProducerTransaction[USERTYPE](threadLock       : ReentrantLock,
   }
 
 
-  def cancelAsync() = {
+  private def cancelAsync() = {
     threadLock.lock()
     txnOwner.producerOptions.insertType match {
       case InsertionType.SingleElementInsert =>

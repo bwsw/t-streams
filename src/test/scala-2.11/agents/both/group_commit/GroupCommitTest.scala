@@ -93,6 +93,7 @@ class GroupCommitTest extends FlatSpec with Matchers with BeforeAndAfterAll with
     val txn = producer.newTransaction(ProducerPolicies.errorIfOpened)
     txn.send("info1")
     txn.checkpoint()
+    Thread.sleep(2000)
 
     //move consumer offsets
     consumer.getTransaction.get

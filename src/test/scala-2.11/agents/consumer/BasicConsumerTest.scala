@@ -105,7 +105,7 @@ class BasicConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll wi
     val txnUuid = txn.getTxnUUID
     data.foreach(x=>txn.send(x))
     txn.checkpoint()
-
+    Thread.sleep(2000)
     var checkVal = true
 
     val consumedTxn = consumer.getTransactionById(1, txnUuid).get
