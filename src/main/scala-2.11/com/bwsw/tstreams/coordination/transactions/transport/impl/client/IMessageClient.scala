@@ -4,8 +4,8 @@ import java.io.{BufferedReader, IOException, InputStreamReader}
 import java.net.{Socket, SocketTimeoutException}
 
 import com.bwsw.tstreams.common.serializer.TStreamsSerializer
+import com.bwsw.tstreams.common.serializer.TStreamsSerializer.TStreamsSerializerException
 import com.bwsw.tstreams.coordination.transactions.messages.IMessage
-import com.fasterxml.jackson.core.JsonParseException
 import org.slf4j.LoggerFactory
 
 import scala.collection.mutable
@@ -113,7 +113,7 @@ class IMessageClient {
         }
       }
       catch {
-        case e @ (_: SocketTimeoutException | _: JsonParseException | _: IOException) =>
+        case e @ (_: SocketTimeoutException | _: TStreamsSerializerException | _: IOException) =>
           logger.warn(s"exception occurred: ${e.getMessage}")
           null.asInstanceOf[IMessage]
       }

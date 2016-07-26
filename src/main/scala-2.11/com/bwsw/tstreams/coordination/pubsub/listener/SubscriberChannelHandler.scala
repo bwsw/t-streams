@@ -3,9 +3,8 @@ package com.bwsw.tstreams.coordination.pubsub.listener
 import java.util
 
 import com.bwsw.tstreams.common.serializer.TStreamsSerializer
+import com.bwsw.tstreams.common.serializer.TStreamsSerializer.TStreamsSerializerException
 import com.bwsw.tstreams.coordination.pubsub.messages.ProducerTopicMessage
-import com.fasterxml.jackson.core.JsonParseException
-import com.fasterxml.jackson.databind.JsonMappingException
 import io.netty.channel.ChannelHandler.Sharable
 import io.netty.channel.{ChannelHandlerContext, SimpleChannelInboundHandler}
 import io.netty.handler.codec.MessageToMessageDecoder
@@ -58,14 +57,13 @@ class ProducerTopicMessageDecoder extends MessageToMessageDecoder[String]{
   val serializer = new TStreamsSerializer
 
   override def decode(ctx: ChannelHandlerContext, msg: String, out: util.List[AnyRef]): Unit = {
-    //TODO replace with proper exceptions
     try {
       if (msg != null)
         out.add(serializer.deserialize[ProducerTopicMessage](msg))
     }
     catch {
-      case e @ (_:  JsonMappingException | _: JsonParseException) =>
-        logger.warn(s"exception occured: ${e.getMessage}\n")
+      case e : TStreamsSerializerException =>
+        logger.warn(s"TStreams Serializer Exception: ${e.getMessage}\n")
     }
   }
 }

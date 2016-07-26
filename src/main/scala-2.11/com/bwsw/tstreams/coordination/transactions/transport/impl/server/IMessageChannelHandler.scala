@@ -3,9 +3,8 @@ package com.bwsw.tstreams.coordination.transactions.transport.impl.server
 import java.util
 
 import com.bwsw.tstreams.common.serializer.TStreamsSerializer
+import com.bwsw.tstreams.common.serializer.TStreamsSerializer.TStreamsSerializerException
 import com.bwsw.tstreams.coordination.transactions.messages.IMessage
-import com.fasterxml.jackson.core.JsonParseException
-import com.fasterxml.jackson.databind.JsonMappingException
 import io.netty.channel._
 import io.netty.handler.codec.{MessageToMessageDecoder, MessageToMessageEncoder}
 import io.netty.util.ReferenceCountUtil
@@ -58,14 +57,13 @@ class IMessageDecoder extends MessageToMessageDecoder[String]{
   private val logger = LoggerFactory.getLogger(this.getClass)
 
   override def decode(ctx: ChannelHandlerContext, msg: String, out: util.List[AnyRef]): Unit = {
-    //TODO replace with proper exceptions
     try {
       if (msg != null)
         out.add(serializer.deserialize[IMessage](msg))
     }
     catch {
-      case e @ (_: JsonParseException | _: JsonMappingException) =>
-        logger.warn(s"exception occurred : ${e.getMessage}")
+      case e : TStreamsSerializerException =>
+        logger.warn(s"TStreamsSerializerException : ${e.getMessage}")
     }
   }
 }
