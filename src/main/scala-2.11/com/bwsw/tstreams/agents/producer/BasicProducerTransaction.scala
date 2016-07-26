@@ -182,7 +182,6 @@ class BasicProducerTransaction[USERTYPE](threadLock       : ReentrantLock,
           txnOwner.stream.dataStorage.clearBuffer(transactionUuid)
         }
     }
-
     //close transaction using stream ttl
     if (part > 0) {
       jobs.foreach(x => x())
@@ -229,7 +228,16 @@ class BasicProducerTransaction[USERTYPE](threadLock       : ReentrantLock,
 
     closed = true
 
-    txnOwner.backendActivityService.submit(new Runnable {override def run(): Unit = checkpointAsync()})
+    txnOwner.backendActivityService.submit(new Runnable {override def run(): Unit =
+      try {
+        checkpointAsync()
+      } catch {
+//        will be only in debug mode in case of precheckpoint failure test
+//        or postcheckpoint failure test
+        case e : RuntimeException =>
+          threadLock.unlock()
+      }
+    })
 
     threadLock.unlock()
 
