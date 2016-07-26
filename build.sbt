@@ -1,6 +1,8 @@
 name := "t-streams"
 
-version := "1.0"
+val tstreams_version = "1.0"
+
+version := tstreams_version
 
 scalaVersion := "2.11.8"
 
@@ -46,7 +48,7 @@ libraryDependencies += ("com.twitter.common.zookeeper" % "lock" % "0.0.38")
 
 
 //ASSEMBLY STRATEGY
-assemblyJarName in assembly := "t-streams" + version.key.label + ".jar"
+assemblyJarName in assembly := "t-streams" + tstreams_version + ".jar"
 
 assemblyMergeStrategy in assembly := {
   case PathList("org","slf4f","slf4j-simple", xs @ _*) => MergeStrategy.discard
