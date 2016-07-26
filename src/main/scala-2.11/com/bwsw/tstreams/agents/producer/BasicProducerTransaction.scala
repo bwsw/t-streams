@@ -165,7 +165,7 @@ class BasicProducerTransaction[USERTYPE](threadLock       : ReentrantLock,
   }
 
   private def checkpointPostEventPart() = {
-    logger.info(s"[COMMIT PARTITION_$partition] ts=${transactionUuid.timestamp()}")
+    logger.debug(s"[COMMIT PARTITION_$partition] ts=${transactionUuid.timestamp()}")
 
     //debug purposes only
     GlobalHooks.invoke("AfterCommitFailure")
@@ -176,7 +176,7 @@ class BasicProducerTransaction[USERTYPE](threadLock       : ReentrantLock,
       status    = ProducerTransactionStatus.postCheckpoint,
       partition = partition), ()=>())
 
-    logger.info(s"[FINAL CHECKPOINT PARTITION_$partition] " +
+    logger.debug(s"[FINAL CHECKPOINT PARTITION_$partition] " +
       s"ts=${transactionUuid.timestamp()}")
   }
 
@@ -269,7 +269,7 @@ class BasicProducerTransaction[USERTYPE](threadLock       : ReentrantLock,
 
   def updateTxnKeepAliveState() = {
     //-1 here indicate that transaction is started but is not finished yet
-    logger.info(s"Update event for txn ${transactionUuid}, partition: ${partition}")
+    logger.debug(s"Update event for txn ${transactionUuid}, partition: ${partition}")
     val f = txnOwner.stream.metadataStorage.commitEntity.commitAsync(
                                                         streamName      = txnOwner.stream.getName,
                                                         partition       = partition,

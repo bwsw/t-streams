@@ -20,15 +20,7 @@ object MasterRunner {
       transportTimeout = 5,
       zkConnectionTimeout = 7)
 
-    val producerOptions = new BasicProducerOptions[String](
-      transactionTTL = 6,
-      transactionKeepAliveInterval = 2,
-      producerKeepAliveInterval = 1,
-      RoundRobinPolicyCreator.getRoundRobinPolicy(stream, List(0)),
-      BatchInsert(10),
-      LocalGeneratorCreator.getGen(),
-      agentSettings,
-      stringToArrayByteConverter)
+    val producerOptions = new BasicProducerOptions[String](transactionTTL = 6, transactionKeepAliveInterval = 2, RoundRobinPolicyCreator.getRoundRobinPolicy(stream, List(0)), BatchInsert(10), LocalGeneratorCreator.getGen(), agentSettings, stringToArrayByteConverter)
 
     new BasicProducer[String]("master", stream, producerOptions)
   }

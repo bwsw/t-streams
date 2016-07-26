@@ -687,15 +687,7 @@ class TStreamsFactory(envname: String = "T-streams") {
     if (insertCnt > 1)
       insertType = BatchInsert(insertCnt)
 
-    val po = new BasicProducerOptions[USERTYPE](
-      transactionTTL                = pAsInt(TSF_Dictionary.Producer.Transaction.ttl, Producer_transaction_ttl_default),
-      transactionKeepAliveInterval  = pAsInt(TSF_Dictionary.Producer.Transaction.keep_alive, Producer_transaction_keep_alive_default),
-      producerKeepAliveInterval     = 1, // TODO: deprecated, remove when https://github.com/bwsw/t-streams/issues/19 will be fixed!
-      writePolicy                   = writePolicy,
-      insertType                    = SingleElementInsert,
-      txnGenerator                  = txnGenerator,
-      producerCoordinationSettings  = cao,
-      converter                     = converter)
+    val po = new BasicProducerOptions[USERTYPE](transactionTTL                = pAsInt(TSF_Dictionary.Producer.Transaction.ttl, Producer_transaction_ttl_default), transactionKeepAliveInterval  = pAsInt(TSF_Dictionary.Producer.Transaction.keep_alive, Producer_transaction_keep_alive_default), writePolicy                   = writePolicy, insertType                    = SingleElementInsert, txnGenerator                  = txnGenerator, producerCoordinationSettings  = cao, converter                     = converter)
 
     val producer = new BasicProducer[USERTYPE](
       name              = name,

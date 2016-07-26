@@ -83,15 +83,7 @@ class ABasicProducerAndConsumerSimpleTests extends FlatSpec with Matchers with B
     zkConnectionTimeout = 7)
 
   //producer/consumer options
-  val producerOptions = new BasicProducerOptions[String](
-    transactionTTL = 6,
-    transactionKeepAliveInterval = 2,
-    producerKeepAliveInterval = 1,
-    RoundRobinPolicyCreator.getRoundRobinPolicy(streamForProducer, List(0,1,2)),
-    BatchInsert(batchSizeTestVal),
-    LocalGeneratorCreator.getGen(),
-    agentSettings,
-    stringToArrayByteConverter)
+  val producerOptions = new BasicProducerOptions[String](transactionTTL = 6, transactionKeepAliveInterval = 2, RoundRobinPolicyCreator.getRoundRobinPolicy(streamForProducer, List(0,1,2)), BatchInsert(batchSizeTestVal), LocalGeneratorCreator.getGen(), agentSettings, stringToArrayByteConverter)
 
   val consumerOptions = new BasicConsumerOptions[Array[Byte], String](
     transactionsPreload = 10,

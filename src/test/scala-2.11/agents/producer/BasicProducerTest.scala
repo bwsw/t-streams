@@ -48,15 +48,7 @@ class BasicProducerTest extends FlatSpec with Matchers with BeforeAndAfterAll wi
     transportTimeout = 5,
     zkConnectionTimeout = 7)
 
-  val producerOptions = new BasicProducerOptions[String](
-    transactionTTL = 10,
-    transactionKeepAliveInterval = 2,
-    producerKeepAliveInterval = 1,
-    RoundRobinPolicyCreator.getRoundRobinPolicy(stream, List(0,1,2)),
-    SingleElementInsert,
-    LocalGeneratorCreator.getGen(),
-    agentSettings,
-    stringToArrayByteConverter)
+  val producerOptions = new BasicProducerOptions[String](transactionTTL = 10, transactionKeepAliveInterval = 2, RoundRobinPolicyCreator.getRoundRobinPolicy(stream, List(0,1,2)), SingleElementInsert, LocalGeneratorCreator.getGen(), agentSettings, stringToArrayByteConverter)
 
   val producer = new BasicProducer("test_producer", stream, producerOptions)
 
