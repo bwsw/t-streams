@@ -2,11 +2,14 @@ package com.bwsw.tstreams.entities
 
 import java.util
 import java.util.UUID
-import com.datastax.driver.core.{Row, Session}
+import java.util.concurrent.Executor
+import com.datastax.driver.core.{ResultSet, ResultSetFuture, Row, Session}
+import com.google.common.util.concurrent.{FutureCallback, Futures}
 
 
 /**
- * Transactions settings
+  * Transactions settings
+ *
  * @param txnUuid Time of transaction
  * @param totalItems Total packets in transaction
  * @param ttl Transaction expiration time in seconds
@@ -15,7 +18,8 @@ case class TransactionSettings(txnUuid : UUID, totalItems : Int, ttl : Int)
 
 /**
  * Metadata entity for commits
- * @param commitLog Table name in C*
+  *
+  * @param commitLog Table name in C*
  * @param session Session to use for this entity
  */
 class CommitEntity(commitLog : String, session: Session) {
@@ -36,10 +40,11 @@ class CommitEntity(commitLog : String, session: Session) {
 
   private val selectTransactionAmountStatement = session
     .prepare(s"select cnt,TTL(cnt) from $commitLog where stream=? AND partition=? AND transaction=? LIMIT 1")
-  
+
   /**
    * Closing some specific transaction
-   * @param streamName name of the stream
+    *
+    * @param streamName name of the stream
    * @param partition number of partition
    * @param transaction transaction unique id
    * @param totalCnt total amount of pieces of data in concrete transaction
@@ -52,7 +57,38 @@ class CommitEntity(commitLog : String, session: Session) {
   }
 
   /**
+    * Does asynchronous commit to C*
+    *
+    * @param streamName name of stream
+    * @param partition
+    * @param transaction UUID
+    * @param totalCnt amount of values
+    * @param ttl
+    * @return
+    */
+  def commitAsync(streamName  : String,
+                  partition   : Int,
+                  transaction : UUID,
+                  totalCnt    : Int,
+                  ttl         : Int,
+                  executor    : Executor,
+                  function: () => Unit): Unit = {
+    val values = List(streamName, new Integer(partition), transaction, new Integer(totalCnt), new Integer(ttl))
+    val statementWithBindings = commitStatement.bind(values:_*)
+    val f = session.executeAsync(statementWithBindings)
+    Futures.addCallback(f, new FutureCallback[ResultSet]() {
+      override def onSuccess(r: ResultSet) = {
+        function()
+      }
+      override def onFailure(r: Throwable) = {
+        throw new IllegalStateException("PostCommit Callback execution failed! Wrong state!")
+      }
+    }, executor)
+  }
+
+  /**
    * Retrieving some set of transactions more than last transaction (if cnt is default will be no limit to retrieve)
+ *
    * @param streamName Name of the stream
    * @param partition Number of the partition
    * @param lastTransaction Transaction from which start to retrieve
@@ -83,6 +119,7 @@ class CommitEntity(commitLog : String, session: Session) {
 
   /**
    * Retrieving some set of transactions(used only by getLastTransaction)
+ *
    * @param streamName Name of the stream
    * @param partition Number of the partition
    * @param lastTransaction Transaction from which start to retrieve
@@ -106,6 +143,7 @@ class CommitEntity(commitLog : String, session: Session) {
 
   /**
    * Retrieving some set of transactions between bounds (L,R]
+ *
    * @param streamName Name of the stream
    * @param partition Number of the partition
    * @param leftBorder Left border of transactions to consume
@@ -124,6 +162,7 @@ class CommitEntity(commitLog : String, session: Session) {
 
   /**
    * Retrieving only one concrete transaction amount and ttl
+ *
    * @param streamName Name of concrete stream
    * @param partition Number of partition
    * @param transaction Concrete transaction time
