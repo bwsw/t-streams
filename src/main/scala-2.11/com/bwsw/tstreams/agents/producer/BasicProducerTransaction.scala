@@ -5,9 +5,11 @@ import java.util.concurrent.locks.ReentrantLock
 
 import com.bwsw.tstreams.coordination.pubsub.messages.{ProducerTopicMessage, ProducerTransactionStatus}
 import com.bwsw.tstreams.debug.GlobalHooks
+import com.google.common.util.concurrent.{FutureCallback, Futures}
 import org.slf4j.LoggerFactory
 
 import scala.collection.mutable.ListBuffer
+import com.datastax.driver.core.ResultSet
 
 /**
  * Transaction retrieved by BasicProducer.newTransaction method
@@ -151,7 +153,23 @@ class BasicProducerTransaction[USERTYPE](threadLock       : ReentrantLock,
 
   }
 
-  def checkpointAsync() = {
+  private def checkpointPostEventPart() = {
+    logger.info(s"[COMMIT PARTITION_$partition] ts=${transactionUuid.timestamp()}")
+
+    //debug purposes only
+    GlobalHooks.invoke("AfterCommitFailure")
+
+    txnOwner.subscriberClient.publish(ProducerTopicMessage(
+      txnUuid   = transactionUuid,
+      ttl       = -1,
+      status    = ProducerTransactionStatus.postCheckpoint,
+      partition = partition), ()=>())
+
+    logger.info(s"[FINAL CHECKPOINT PARTITION_$partition] " +
+      s"ts=${transactionUuid.timestamp()}")
+  }
+
+  private def checkpointAsync() = {
     threadLock.lock()
     txnOwner.producerOptions.insertType match {
 
@@ -179,26 +197,15 @@ class BasicProducerTransaction[USERTYPE](threadLock       : ReentrantLock,
       //debug purposes only
       GlobalHooks.invoke("PreCommitFailure")
 
-      txnOwner.stream.metadataStorage.commitEntity.commit(
+      txnOwner.stream.metadataStorage.commitEntity.commitAsync(
         streamName  = txnOwner.stream.getName,
         partition   = partition,
         transaction = transactionUuid,
         totalCnt    = part,
-        ttl         = txnOwner.stream.getTTL)
+        ttl         = txnOwner.stream.getTTL,
+        executor    = txnOwner.backendActivityService,
+        function    = checkpointPostEventPart)
 
-      logger.debug(s"[COMMIT PARTITION_$partition] ts=${transactionUuid.timestamp()}")
-
-      //debug purposes only
-      GlobalHooks.invoke("AfterCommitFailure")
-
-      txnOwner.subscriberClient.publish(ProducerTopicMessage(
-        txnUuid   = transactionUuid,
-        ttl       = -1,
-        status    = ProducerTransactionStatus.postCheckpoint,
-        partition = partition), ()=>())
-
-      logger.debug(s"[FINAL CHECKPOINT PARTITION_$partition] " +
-        s"ts=${transactionUuid.timestamp()}")
     }
     else {
       txnOwner.subscriberClient.publish(ProducerTopicMessage(
@@ -236,23 +243,27 @@ class BasicProducerTransaction[USERTYPE](threadLock       : ReentrantLock,
 
   }
 
+  private def doSendUpdateMessage() = {
+    //publish that current txn is being updating
+    txnOwner.subscriberClient.publish(ProducerTopicMessage(
+                                                      txnUuid   = transactionUuid,
+                                                      ttl       = txnOwner.producerOptions.transactionTTL,
+                                                      status    = ProducerTransactionStatus.update,
+                                                      partition = partition), ()=>())
+    logger.debug(s"[KEEP_ALIVE THREAD PARTITION_${partition}] ts=${transactionUuid.timestamp()} status=${ProducerTransactionStatus.update}")
+
+  }
+
   def updateTxnKeepAliveState() = {
     //-1 here indicate that transaction is started but is not finished yet
     logger.info(s"Update event for txn ${transactionUuid}, partition: ${partition}")
-    txnOwner.stream.metadataStorage.commitEntity.commit(
-      streamName      = txnOwner.stream.getName,
-      partition       = partition,
-      transaction     = transactionUuid,
-      totalCnt        = -1,
-      ttl             = txnOwner.producerOptions.transactionTTL)
-
-
-    //publish that current txn is being updating
-    txnOwner.subscriberClient.publish(ProducerTopicMessage(
-      txnUuid   = transactionUuid,
-      ttl       = txnOwner.producerOptions.transactionTTL,
-      status    = ProducerTransactionStatus.update,
-      partition = partition), ()=>())
-    logger.debug(s"[KEEP_ALIVE THREAD PARTITION_${partition}] ts=${transactionUuid.timestamp()} status=${ProducerTransactionStatus.update}")
+    val f = txnOwner.stream.metadataStorage.commitEntity.commitAsync(
+                                                        streamName      = txnOwner.stream.getName,
+                                                        partition       = partition,
+                                                        transaction     = transactionUuid,
+                                                        totalCnt        = -1,
+                                                        ttl             = txnOwner.producerOptions.transactionTTL,
+                                                        executor        = txnOwner.backendActivityService,
+                                                        function        = doSendUpdateMessage)
   }
 }

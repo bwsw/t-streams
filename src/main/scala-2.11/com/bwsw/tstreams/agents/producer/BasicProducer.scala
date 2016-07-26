@@ -104,12 +104,12 @@ class BasicProducer[USERTYPE](val name : String,
     val txnKeepAliveThread          = new Thread(new Runnable {
       override def run(): Unit = {
         latch.countDown()
-        logger.info("Producer ${name} - object is started, launched open transaction update thread")
+        logger.info(s"Producer ${name} - object is started, launched open transaction update thread")
         breakable {
           while (true) {
             val value: Boolean = endKeepAliveThread.wait(producerOptions.transactionKeepAliveInterval * 1000)
             if (value) {
-              logger.info("Producer ${name} - object either checkpointed or cancelled. Exit KeepAliveThread.")
+              logger.info(s"Producer ${name} - object either checkpointed or cancelled. Exit KeepAliveThread.")
               break()
             }
             backendActivityService.submit(new Runnable { override def run(): Unit = updateOpenedTxns() })
@@ -152,7 +152,7 @@ class BasicProducer[USERTYPE](val name : String,
     }
 
     if (!(partition >= 0 && partition < stream.getPartitions))
-      throw new IllegalArgumentException("Producer ${name} - invalid partition")
+      throw new IllegalArgumentException(s"Producer ${name} - invalid partition")
 
     val transaction = {
       val txnUUID = masterP2PAgent.getNewTxn(partition)
@@ -168,7 +168,7 @@ class BasicProducer[USERTYPE](val name : String,
               prevTxn.cancel()
 
             case ProducerPolicies.`errorIfOpened` =>
-              throw new IllegalStateException("Producer ${name} - previous transaction was not closed")
+              throw new IllegalStateException(s"Producer ${name} - previous transaction was not closed")
           }
         }
       }
@@ -191,7 +191,7 @@ class BasicProducer[USERTYPE](val name : String,
     threadLock.lock()
 
     if (!(partition >= 0 && partition < stream.getPartitions))
-      throw new IllegalArgumentException("Producer ${name} - invalid partition")
+      throw new IllegalArgumentException(s"Producer ${name} - invalid partition")
 
     val res = if (openTransactionsMap.contains(partition)) {
       val txn = openTransactionsMap(partition)
