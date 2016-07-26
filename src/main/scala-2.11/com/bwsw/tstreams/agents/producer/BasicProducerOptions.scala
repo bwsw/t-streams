@@ -14,21 +14,13 @@ import scala.language.existentials
 /**
  * @param transactionTTL Single transaction live time
  * @param transactionKeepAliveInterval Update transaction interval which is used to keep alive transaction in time when it is opened
- * @param producerKeepAliveInterval Update producer interval for updating producer info
  * @param writePolicy Strategy for selecting next partition
  * @param converter User defined or basic converter for converting USERTYPE objects to DATATYPE objects(storage object type)
  * @param insertType Insertion Type (only BatchInsert and SingleElementInsert are allowed now)
  * @param txnGenerator Generator for generating UUIDs
  * @tparam USERTYPE User object type
  */
-class BasicProducerOptions[USERTYPE](val transactionTTL : Int,
-                                              val transactionKeepAliveInterval : Int,
-                                              val producerKeepAliveInterval : Int,
-                                              val writePolicy : AbstractPolicy,
-                                              val insertType: InsertType,
-                                              val txnGenerator: IUUIDGenerator,
-                                              val producerCoordinationSettings : ProducerCoordinationOptions,
-                                              val converter : IConverter[USERTYPE,Array[Byte]]) {
+class BasicProducerOptions[USERTYPE](val transactionTTL: Int, val transactionKeepAliveInterval: Int, val writePolicy: AbstractPolicy, val insertType: InsertType, val txnGenerator: IUUIDGenerator, val producerCoordinationSettings: ProducerCoordinationOptions, val converter: IConverter[USERTYPE, Array[Byte]]) {
 
   /**
    * Transaction minimum ttl time
@@ -46,10 +38,6 @@ class BasicProducerOptions[USERTYPE](val transactionTTL : Int,
 
     if (transactionKeepAliveInterval.toDouble > transactionTTL.toDouble / 3.0)
       throw new IllegalArgumentException("transactionTTL should be three times greater than transaction")
-
-    if (producerKeepAliveInterval < 1)
-      throw new IllegalArgumentException("producerKeepAlive interval should be greater or equal than 1")
-
 
     insertType match {
       case InsertionType.SingleElementInsert =>

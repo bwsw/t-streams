@@ -89,15 +89,7 @@ object BasicProducerTest{
       description = "some_description")
 
     //producer/consumer options
-    val producerOptions = new BasicProducerOptions[String](
-      transactionTTL = 6,
-      transactionKeepAliveInterval = 2,
-      producerKeepAliveInterval = 1,
-      new RoundRobinPolicy(streamForProducer, (0 until args(8).toInt).toList),
-      BatchInsert(10),
-      new LocalTimeUUIDGenerator,
-      agentSettings,
-      stringToArrayByteConverter)
+    val producerOptions = new BasicProducerOptions[String](transactionTTL = 6, transactionKeepAliveInterval = 2, new RoundRobinPolicy(streamForProducer, (0 until args(8).toInt).toList), BatchInsert(10), new LocalTimeUUIDGenerator, agentSettings, stringToArrayByteConverter)
 
     val producer = new BasicProducer("test_producer", streamForProducer, producerOptions)
 

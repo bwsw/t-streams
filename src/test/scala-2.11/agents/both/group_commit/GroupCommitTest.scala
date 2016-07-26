@@ -70,15 +70,7 @@ class GroupCommitTest extends FlatSpec with Matchers with BeforeAndAfterAll with
     transportTimeout = 5,
     zkConnectionTimeout = 7)
 
-  val producerOptions = new BasicProducerOptions[String](
-    transactionTTL = 6,
-    transactionKeepAliveInterval = 2,
-    producerKeepAliveInterval = 1,
-    RoundRobinPolicyCreator.getRoundRobinPolicy(streamForProducer, List(0,1,2)),
-    SingleElementInsert,
-    LocalGeneratorCreator.getGen(),
-    agentSettings,
-    stringToArrayByteConverter)
+  val producerOptions = new BasicProducerOptions[String](transactionTTL = 6, transactionKeepAliveInterval = 2, RoundRobinPolicyCreator.getRoundRobinPolicy(streamForProducer, List(0,1,2)), SingleElementInsert, LocalGeneratorCreator.getGen(), agentSettings, stringToArrayByteConverter)
 
   val consumerOptions = new BasicConsumerOptions[Array[Byte], String](
     transactionsPreload = 10,

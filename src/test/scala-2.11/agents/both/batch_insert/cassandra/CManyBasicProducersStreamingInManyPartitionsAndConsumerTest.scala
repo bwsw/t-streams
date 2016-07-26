@@ -138,15 +138,7 @@ class CManyBasicProducersStreamingInManyPartitionsAndConsumerTest extends FlatSp
 
     port += 1
 
-    val producerOptions = new BasicProducerOptions[String](
-      transactionTTL = 6,
-      transactionKeepAliveInterval = 2,
-      producerKeepAliveInterval = 1,
-      writePolicy = RoundRobinPolicyCreator.getRoundRobinPolicy(stream, usedPartitions),
-      BatchInsert(batchSizeTestVal),
-      LocalGeneratorCreator.getGen(),
-      agentSettings,
-      converter = stringToArrayByteConverter)
+    val producerOptions = new BasicProducerOptions[String](transactionTTL = 6, transactionKeepAliveInterval = 2, writePolicy = RoundRobinPolicyCreator.getRoundRobinPolicy(stream, usedPartitions), BatchInsert(batchSizeTestVal), LocalGeneratorCreator.getGen(), agentSettings, converter = stringToArrayByteConverter)
 
     val producer = new BasicProducer("test_producer1", stream, producerOptions)
     producer

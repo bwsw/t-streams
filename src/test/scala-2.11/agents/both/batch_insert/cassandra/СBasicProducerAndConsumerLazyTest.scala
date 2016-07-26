@@ -100,25 +100,9 @@ class СBasicProducerAndConsumerLazyTest extends FlatSpec with Matchers with Bef
     zkConnectionTimeout = 7)
 
   //options for producers/consumer
-  val producerOptions1 = new BasicProducerOptions[String](
-    transactionTTL = 6,
-    transactionKeepAliveInterval = 2,
-    producerKeepAliveInterval = 1,
-    RoundRobinPolicyCreator.getRoundRobinPolicy(streamForProducer1, List(0,1,2)),
-    BatchInsert(batchSizeTestVal),
-    LocalGeneratorCreator.getGen(),
-    agentSettings1,
-    stringToArrayByteConverter)
+  val producerOptions1 = new BasicProducerOptions[String](transactionTTL = 6, transactionKeepAliveInterval = 2, RoundRobinPolicyCreator.getRoundRobinPolicy(streamForProducer1, List(0,1,2)), BatchInsert(batchSizeTestVal), LocalGeneratorCreator.getGen(), agentSettings1, stringToArrayByteConverter)
 
-  val producerOptions2 = new BasicProducerOptions[String](
-    transactionTTL = 6,
-    transactionKeepAliveInterval = 2,
-    producerKeepAliveInterval = 1,
-    RoundRobinPolicyCreator.getRoundRobinPolicy(streamForProducer2, List(0,1,2)),
-    BatchInsert(batchSizeTestVal),
-    LocalGeneratorCreator.getGen(),
-    agentSettings2,
-    stringToArrayByteConverter)
+  val producerOptions2 = new BasicProducerOptions[String](transactionTTL = 6, transactionKeepAliveInterval = 2, RoundRobinPolicyCreator.getRoundRobinPolicy(streamForProducer2, List(0,1,2)), BatchInsert(batchSizeTestVal), LocalGeneratorCreator.getGen(), agentSettings2, stringToArrayByteConverter)
 
   val consumerOptions = new BasicConsumerOptions[Array[Byte], String](
     transactionsPreload = 10,
