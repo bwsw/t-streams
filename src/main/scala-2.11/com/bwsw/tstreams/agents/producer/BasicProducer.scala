@@ -94,7 +94,7 @@ class BasicProducer[USERTYPE](val name : String,
     */
   private val endKeepAliveThread  = new ThreadSignalSleepVar[Boolean](10)
   private val txnKeepAliveThread = getTxnKeepAliveThread
-  val backendActivityService                         = Executors.newSingleThreadExecutor()
+  val backendActivityService = Executors.newSingleThreadScheduledExecutor()
 
   /**
     *
@@ -125,7 +125,7 @@ class BasicProducer[USERTYPE](val name : String,
     *
     */
   def updateOpenedTxns() = {
-    logger.info(s"Producer ${name} - scheduled for long lasting transactions")
+    logger.debug(s"Producer ${name} - scheduled for long lasting transactions")
     threadLock.lock()
     openTransactionsMap.
       map { case(partition,txn) => txn }.

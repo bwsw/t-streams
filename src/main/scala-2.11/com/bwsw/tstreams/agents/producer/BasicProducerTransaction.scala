@@ -153,6 +153,17 @@ class BasicProducerTransaction[USERTYPE](threadLock       : ReentrantLock,
 
   }
 
+  private def checkpointPostEventPartSafe() = {
+    try {
+      checkpointPostEventPart()
+    } catch {
+      //        will be only in debug mode in case of precheckpoint failure test
+      //        or postcheckpoint failure test
+      case e : RuntimeException =>
+        threadLock.unlock()
+    }
+  }
+
   private def checkpointPostEventPart() = {
     logger.info(s"[COMMIT PARTITION_$partition] ts=${transactionUuid.timestamp()}")
 
@@ -167,6 +178,17 @@ class BasicProducerTransaction[USERTYPE](threadLock       : ReentrantLock,
 
     logger.info(s"[FINAL CHECKPOINT PARTITION_$partition] " +
       s"ts=${transactionUuid.timestamp()}")
+  }
+
+  private def checkpointAsyncSafe() = {
+    try {
+      checkpointAsync()
+    } catch {
+      //        will be only in debug mode in case of precheckpoint failure test
+      //        or postcheckpoint failure test
+      case e : RuntimeException =>
+        threadLock.unlock()
+    }
   }
 
   private def checkpointAsync() = {
@@ -204,7 +226,7 @@ class BasicProducerTransaction[USERTYPE](threadLock       : ReentrantLock,
         totalCnt    = part,
         ttl         = txnOwner.stream.getTTL,
         executor    = txnOwner.backendActivityService,
-        function    = checkpointPostEventPart)
+        function    = checkpointPostEventPartSafe)
 
     }
     else {
@@ -228,16 +250,7 @@ class BasicProducerTransaction[USERTYPE](threadLock       : ReentrantLock,
 
     closed = true
 
-    txnOwner.backendActivityService.submit(new Runnable {override def run(): Unit =
-      try {
-        checkpointAsync()
-      } catch {
-//        will be only in debug mode in case of precheckpoint failure test
-//        or postcheckpoint failure test
-        case e : RuntimeException =>
-          threadLock.unlock()
-      }
-    })
+    txnOwner.backendActivityService.submit(new Runnable {override def run(): Unit = checkpointAsyncSafe() })
 
     threadLock.unlock()
 
