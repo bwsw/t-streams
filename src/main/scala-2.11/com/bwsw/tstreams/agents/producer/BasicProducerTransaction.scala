@@ -2,15 +2,12 @@ package com.bwsw.tstreams.agents.producer
 
 import java.util.UUID
 import java.util.concurrent.locks.ReentrantLock
-import java.util.concurrent.{CountDownLatch, LinkedBlockingQueue, TimeUnit}
 
-import com.bwsw.tstreams.common.ThreadSignalSleepVar
 import com.bwsw.tstreams.coordination.pubsub.messages.{ProducerTopicMessage, ProducerTransactionStatus}
 import com.bwsw.tstreams.debug.GlobalHooks
 import org.slf4j.LoggerFactory
 
 import scala.collection.mutable.ListBuffer
-import scala.util.control.Breaks._
 
 /**
  * Transaction retrieved by BasicProducer.newTransaction method
@@ -167,7 +164,6 @@ class BasicProducerTransaction[USERTYPE](threadLock       : ReentrantLock,
           txnOwner.stream.dataStorage.clearBuffer(transactionUuid)
         }
     }
-
     //close transaction using stream ttl
     if (part > 0) {
       jobs.foreach(x => x())
@@ -225,7 +221,16 @@ class BasicProducerTransaction[USERTYPE](threadLock       : ReentrantLock,
 
     closed = true
 
-    txnOwner.backendActivityService.submit(new Runnable {override def run(): Unit = checkpointAsync()})
+    txnOwner.backendActivityService.submit(new Runnable {override def run(): Unit =
+      try {
+        checkpointAsync()
+      } catch {
+//        will be only in debug mode in case of precheckpoint failure test
+//        or postcheckpoint failure test
+        case e : RuntimeException =>
+          threadLock.unlock()
+      }
+    })
 
     threadLock.unlock()
 

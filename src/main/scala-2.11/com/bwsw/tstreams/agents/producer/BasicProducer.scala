@@ -248,7 +248,7 @@ class BasicProducer[USERTYPE](val name : String,
                                   partition             = partition,
                                   transaction           = txn.getTxnUUID,
                                   totalCnt              = txn.getCnt,
-                                  ttl                   = stream.getTTL) }.filter(pci => pci.partition > 0).toList
+                                  ttl                   = stream.getTTL) }.toList
 
     openTransactionsMap.clear()
     threadLock.unlock()
