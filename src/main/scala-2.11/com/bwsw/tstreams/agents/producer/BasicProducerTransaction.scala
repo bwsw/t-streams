@@ -37,6 +37,12 @@ class BasicProducerTransaction[USERTYPE](threadLock       : ReentrantLock,
   logger.debug(s"Open transaction for stream,partition : {${txnOwner.stream.getName}},{$partition}\n")
 
   /**
+    *
+    */
+  def setAsClosed() =
+    closed = true
+
+  /**
    * Return transaction partition
    */
   def getPartition : Int = partition
@@ -279,7 +285,7 @@ class BasicProducerTransaction[USERTYPE](threadLock       : ReentrantLock,
   }
 
   /**
-    * accesor to lock object for external agents
+    * accessor to lock object for external agents
     * @return
     */
   def getTransactionLock(): ReentrantLock = threadLock

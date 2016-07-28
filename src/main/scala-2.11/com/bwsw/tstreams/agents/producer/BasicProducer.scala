@@ -51,14 +51,15 @@ class BasicProducer[USERTYPE](val name : String,
 
   val txnLocks = new Array[ReentrantLock](threadPoolSize)
 
-  for( idx <- 0 until threadPoolSize )
+  ( 0 until threadPoolSize ) foreach { idx =>
     txnLocks(idx) = new ReentrantLock()
+  }
 
   stream.dataStorage.bind() //TODO: fix, probably deprecated
 
   logger.info(s"Start new Basic producer with name : $name, streamName : ${stream.getName}, streamPartitions : ${stream.getPartitions}\n")
 
-  // this client is used to find new
+  // this client is used to find new subscribers
   val subscriberClient = new SubscriberClient(
                                   prefix              = pcs.zkRootPath,
                                   streamName          = stream.getName,
@@ -228,7 +229,6 @@ class BasicProducer[USERTYPE](val name : String,
    * Info to commit
    */
   override def getCheckpointInfoAndClear(): List[CheckpointInfo] = {
-    threadLock.lock()
     val checkpointData = openTransactionsMap.map {
       case (partition, txn) =>
 
@@ -236,6 +236,7 @@ class BasicProducer[USERTYPE](val name : String,
         val txnUuid = txn.getTxnUUID
         val txnCnt  = txn.getCnt
         val txnPartition = txn.getPartition
+        txn.setAsClosed()
         txn.getTransactionLock.unlock
 
         assert(partition == txnPartition)
@@ -263,7 +264,6 @@ class BasicProducer[USERTYPE](val name : String,
                                 ttl                   = stream.getTTL) }.toList
 
     openTransactionsMap.clear()
-    threadLock.unlock()
     checkpointData
   }
 
