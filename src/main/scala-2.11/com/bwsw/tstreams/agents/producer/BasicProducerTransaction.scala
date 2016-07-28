@@ -277,4 +277,10 @@ class BasicProducerTransaction[USERTYPE](threadLock       : ReentrantLock,
                                                         executor        = txnOwner.backendActivityService,
                                                         function        = doSendUpdateMessage)
   }
+
+  /**
+    * accesor to lock object for external agents
+    * @return
+    */
+  def getTransactionLock(): ReentrantLock = threadLock
 }

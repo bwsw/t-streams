@@ -42,12 +42,17 @@ class BasicProducer[USERTYPE](val name : String,
   private val threadLock          = new ReentrantLock(true)
 
   // amount of threads which will handle partitions in masters, etc
-  val thread_pool_size = {
+  val threadPoolSize: Int = {
     if (pcs.threadPoolAmount == -1)
       producerOptions.writePolicy.getUsedPartition().size
     else
       pcs.threadPoolAmount
   }
+
+  val txnLocks = new Array[ReentrantLock](threadPoolSize)
+
+  for( idx <- 0 until threadPoolSize )
+    txnLocks(idx) = new ReentrantLock()
 
   stream.dataStorage.bind() //TODO: fix, probably deprecated
 
@@ -77,7 +82,7 @@ class BasicProducer[USERTYPE](val name : String,
                                               isLowPriorityToBeMaster = pcs.isLowPriorityToBeMaster,
                                               transport               = pcs.transport,
                                               transportTimeout        = pcs.transportTimeout,
-                                              poolSize                = thread_pool_size)
+                                              poolSize                = threadPoolSize)
 
   //used for managing new agents on stream
 
@@ -173,7 +178,7 @@ class BasicProducer[USERTYPE](val name : String,
         }
       }
 
-      val txn = new BasicProducerTransaction[USERTYPE](threadLock, partition, txnUUID, this)
+      val txn = new BasicProducerTransaction[USERTYPE](txnLocks(partition % threadPoolSize), partition, txnUUID, this)
       openTransactionsMap(partition) = txn
       txn
     }
@@ -226,29 +231,36 @@ class BasicProducer[USERTYPE](val name : String,
     threadLock.lock()
     val checkpointData = openTransactionsMap.map {
       case (partition, txn) =>
-          assert(partition == txn.getPartition)
 
-          val preCheckpoint = ProducerTopicMessage(
-                                      txnUuid = txn.getTxnUUID,
-                                      ttl = -1,
-                                      status = ProducerTransactionStatus.preCheckpoint,
-                                      partition = partition)
+        txn.getTransactionLock.lock
+        val txnUuid = txn.getTxnUUID
+        val txnCnt  = txn.getCnt
+        val txnPartition = txn.getPartition
+        txn.getTransactionLock.unlock
 
-          val finalCheckpoint = ProducerTopicMessage(
-                                      txnUuid = txn.getTxnUUID,
-                                      ttl = -1,
-                                      status = ProducerTransactionStatus.postCheckpoint,
-                                      partition = partition)
+        assert(partition == txnPartition)
 
-          ProducerCheckpointInfo(transactionRef        = txn,
-                                  agent                 = masterP2PAgent,
-                                  preCheckpointEvent    = preCheckpoint,
-                                  finalCheckpointEvent  = finalCheckpoint,
-                                  streamName            = stream.getName,
-                                  partition             = partition,
-                                  transaction           = txn.getTxnUUID,
-                                  totalCnt              = txn.getCnt,
-                                  ttl                   = stream.getTTL) }.toList
+        val preCheckpoint = ProducerTopicMessage(
+                                    txnUuid = txnUuid,
+                                    ttl = -1,
+                                    status = ProducerTransactionStatus.preCheckpoint,
+                                    partition = partition)
+
+        val finalCheckpoint = ProducerTopicMessage(
+                                    txnUuid = txnUuid,
+                                    ttl = -1,
+                                    status = ProducerTransactionStatus.postCheckpoint,
+                                    partition = partition)
+
+        ProducerCheckpointInfo(transactionRef        = txn,
+                                agent                 = masterP2PAgent,
+                                preCheckpointEvent    = preCheckpoint,
+                                finalCheckpointEvent  = finalCheckpoint,
+                                streamName            = stream.getName,
+                                partition             = partition,
+                                transaction           = txnUuid,
+                                totalCnt              = txnCnt,
+                                ttl                   = stream.getTTL) }.toList
 
     openTransactionsMap.clear()
     threadLock.unlock()
