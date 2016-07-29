@@ -11,7 +11,7 @@ import com.bwsw.tstreams.common.MandatoryExecutor.MandatoryExecutorException
   * execution but on any failure exception will be thrown
   */
 class MandatoryExecutor {
-  private val AWAIT_TIMEOUT = 100
+  private val AWAIT_TIMEOUT = 3000
   private val awaitSignalVar = new ResettableCountDownLatch(1)
   private val queue = new LinkedBlockingQueue[Runnable]()
   private val isRunning = new AtomicBoolean(true)
@@ -66,6 +66,8 @@ class MandatoryExecutor {
     * @return
     */
   def await() = {
+    //TODO put it queue msg and handle it with thread
+    //need reengineering
     if (executor != null && !executor.isAlive){
       throw new MandatoryExecutorException(message)
     }
