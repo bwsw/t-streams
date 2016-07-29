@@ -1,45 +1,53 @@
 package com.bwsw.tstreams.common
 
-import java.util.concurrent.Executors
-import java.util.concurrent.locks.ReentrantLock
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.{LinkedBlockingQueue, TimeUnit}
 
 import com.bwsw.ResettableCountDownLatch
 import com.bwsw.tstreams.common.MandatoryExecutor.MandatoryExecutorException
-
-import scala.collection.mutable
 
 /**
   * Executor which provides sequence runnable
   * execution but on any failure exception will be thrown
   */
 class MandatoryExecutor {
-  private val executorService = Executors.newSingleThreadScheduledExecutor()
-  private val lock = new ReentrantLock(true)
+  private val AWAIT_TIMEOUT = 100
   private val awaitSignalVar = new ResettableCountDownLatch(1)
-  private val queue = mutable.Queue[Runnable]()
-  private var isReady = true
+  private val queue = new LinkedBlockingQueue[Runnable]()
+  private var executor : Thread = null
+  private val isRunning = new AtomicBoolean(true)
 
   /**
     *
     */
-  private def tryGetTaskAndExecute() : Unit = {
-    lock.lock()
-    if (queue.nonEmpty) {
-      val finishedFut = executorService.submit(new CallbackTask(queue.dequeue(), tryGetTaskAndExecute))
-      try {
-        finishedFut.get()
+  private def startExecutor() : Unit = {
+    //TODO somehow rethrow exception from this thread
+    executor = new Thread(new Runnable {
+      override def run(): Unit = startInternal()
+    })
+    executor.start()
+  }
+
+  /**
+    *
+    */
+  private def startInternal() : Unit = {
+    while (isRunning.get()) {
+      val task: Runnable = queue.poll(AWAIT_TIMEOUT, TimeUnit.MILLISECONDS)
+      if (task == null) {
+        awaitSignalVar.countDown()
+        awaitSignalVar.reset()
       }
-      catch {
-        case e : Exception =>
-          throw new MandatoryExecutorException(s"Runnable failure: ${e.getMessage}")
+      else {
+        try {
+          task.run()
+        }
+        catch {
+          case e: Exception =>
+            throw new MandatoryExecutorException(s"Runnable failure with msg { ${e.getMessage} }")
+        }
       }
     }
-    else {
-      isReady = true
-      awaitSignalVar.countDown()
-      awaitSignalVar.reset()
-    }
-    lock.unlock()
   }
 
   /**
@@ -47,15 +55,7 @@ class MandatoryExecutor {
     * @param task
     */
   def submit(task : Runnable) = {
-    lock.lock()
-    if (isReady){
-      queue.enqueue(task)
-      tryGetTaskAndExecute()
-      isReady = false
-    } else {
-      queue.enqueue(task)
-    }
-    lock.unlock()
+    queue.add(task)
   }
 
   /**
@@ -72,19 +72,6 @@ class MandatoryExecutor {
   */
 object MandatoryExecutor {
   class MandatoryExecutorException(msg : String) extends Exception(msg)
-}
-
-/**
-  * Runnable task with callback lambda
-  * @param task
-  * @param callback
-  */
-sealed class CallbackTask(private val task: Runnable, private val callback: () => Unit)
-  extends Runnable {
-  def run() {
-    task.run()
-    callback()
-  }
 }
 
 
