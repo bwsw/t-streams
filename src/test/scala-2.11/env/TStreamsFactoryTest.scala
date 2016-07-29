@@ -34,14 +34,6 @@ class TStreamsFactoryTest extends FlatSpec with Matchers with BeforeAndAfterAll 
 
     p != null shouldEqual true
 
-    val txn = p.newTransaction(
-      policy        = ProducerPolicies.errorIfOpened,
-      nextPartition = 0)
-
-    txn.send("test1")
-    txn.send("test2")
-    txn.checkpoint()
-
     p.stop()
 
   }
@@ -56,11 +48,6 @@ class TStreamsFactoryTest extends FlatSpec with Matchers with BeforeAndAfterAll 
 
     c != null shouldEqual true
 
-    val txn = c.getTransaction.get
-    val data = txn.getAll()
-
-    data.size shouldBe 2
-    c.checkpoint()
   }
 
   "UniversalFactory.getSubscriber" should "return subscriber object" in {

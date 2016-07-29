@@ -1,6 +1,6 @@
 package com.bwsw.tstreams.coordination.transactions.transport.impl.server
 
-import java.util.concurrent.CountDownLatch
+import java.util.concurrent.{TimeUnit, CountDownLatch}
 
 import com.bwsw.tstreams.coordination.transactions.messages.IMessage
 import io.netty.bootstrap.ServerBootstrap
@@ -29,8 +29,8 @@ class IMessageListener(port : Int){
    * Stop this listener
    */
   def stop() : Unit = {
-    workerGroup.shutdownGracefully().await()
-    bossGroup.shutdownGracefully().await()
+    workerGroup.shutdownGracefully(0,0,TimeUnit.SECONDS).await()
+    bossGroup.shutdownGracefully(0,0,TimeUnit.SECONDS).await()
   }
 
   /**
@@ -75,8 +75,8 @@ class IMessageListener(port : Int){
           syncPoint.countDown()
           f.channel().closeFuture().sync()
         } finally {
-          workerGroup.shutdownGracefully()
-          bossGroup.shutdownGracefully()
+          workerGroup.shutdownGracefully(0,0,TimeUnit.SECONDS)
+          bossGroup.shutdownGracefully(0,0,TimeUnit.SECONDS)
         }
       }
     })

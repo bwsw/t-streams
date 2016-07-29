@@ -1,6 +1,6 @@
 package com.bwsw.tstreams.coordination.pubsub.listener
 
-import java.util.concurrent.CountDownLatch
+import java.util.concurrent.{TimeUnit, CountDownLatch}
 
 import com.bwsw.tstreams.coordination.pubsub.messages.ProducerTopicMessage
 import io.netty.bootstrap.ServerBootstrap
@@ -28,8 +28,8 @@ class SubscriberListener(port : Int) {
    * Stop to listen [[ProducerTopicMessage]]]
    */
   def stop() : Unit = {
-    workerGroup.shutdownGracefully().await()
-    bossGroup.shutdownGracefully().await()
+    workerGroup.shutdownGracefully(0,0,TimeUnit.SECONDS).await()
+    bossGroup.shutdownGracefully(0,0,TimeUnit.SECONDS).await()
   }
 
   /**
@@ -77,8 +77,8 @@ class SubscriberListener(port : Int) {
           syncPoint.countDown()
           f.channel().closeFuture().sync()
         } finally {
-          workerGroup.shutdownGracefully()
-          bossGroup.shutdownGracefully()
+          workerGroup.shutdownGracefully(0,0,TimeUnit.SECONDS)
+          bossGroup.shutdownGracefully(0,0,TimeUnit.SECONDS)
         }
       }
     })
