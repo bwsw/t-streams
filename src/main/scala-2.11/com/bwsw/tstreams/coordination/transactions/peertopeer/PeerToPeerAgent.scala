@@ -42,6 +42,7 @@ class PeerToPeerAgent(agentAddress : String,
 
   private val logger = LoggerFactory.getLogger(this.getClass)
   private val zkRetriesAmount = 60
+  private val externalAccessLock = new ReentrantLock(true)
   private val zkService = new ZkService(zkRootPath, zkHosts, zkSessionTimeout, zkConnectionTimeout)
   private val localMasters = scala.collection.mutable.Map[Int/*partition*/, String/*master*/]()
   private val lockLocalMasters = new ReentrantLock(true)
@@ -327,12 +328,14 @@ class PeerToPeerAgent(agentAddress : String,
    * @return Transaction UUID
    */
   def getNewTxn(partition : Int) : UUID = {
+    externalAccessLock.lock()
     lockLocalMasters.lock()
     val condition = localMasters.contains(partition)
     val localMaster = if (condition) localMasters(partition) else null
     lockLocalMasters.unlock()
     logger.debug(s"[GETTXN] Start retrieve txn for agent with address:{$agentAddress}," +
       s"stream:{$streamName},partition:{$partition} from [MASTER:{$localMaster}]\n")
+    val res =
     if (condition){
       val txnResponse = transport.transactionRequest(TransactionRequest(agentAddress, localMaster, partition), transportTimeout)
       txnResponse match {
@@ -355,10 +358,13 @@ class PeerToPeerAgent(agentAddress : String,
       updateMaster(partition, init = false)
       getNewTxn(partition)
     }
+    externalAccessLock.unlock()
+    res
   }
 
   //TODO remove after complex testing
   def publish(msg : ProducerTopicMessage) : Unit = {
+    externalAccessLock.lock()
     assert(msg.status != ProducerTransactionStatus.update)
     lockLocalMasters.lock()
     val condition = localMasters.contains(msg.partition)
@@ -387,6 +393,7 @@ class PeerToPeerAgent(agentAddress : String,
       updateMaster(msg.partition, init = false)
       publish(msg)
     }
+    externalAccessLock.unlock()
   }
 
   /**
