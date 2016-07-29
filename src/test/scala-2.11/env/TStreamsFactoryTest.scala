@@ -3,27 +3,26 @@ package env
 import java.util.UUID
 
 import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
-import com.bwsw.tstreams.agents.consumer.subscriber.{BasicSubscribingConsumer, BasicSubscriberCallback}
-import com.bwsw.tstreams.agents.producer.ProducerPolicies
+import com.bwsw.tstreams.agents.consumer.subscriber.{BasicSubscriberCallback, BasicSubscribingConsumer}
 import com.bwsw.tstreams.converter.{ArrayByteToStringConverter, StringToArrayByteConverter}
-import com.bwsw.tstreams.env.{TSF_Dictionary, TStreamsFactory}
+import com.bwsw.tstreams.velocity.LocalGeneratorCreator
 
 /**
   * Created by ivan on 23.07.16.
   */
-import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
-import testutils._
 
+import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
+import testutils.TestUtils
 
 class TStreamsFactoryTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
 
   "UniversalFactory.getProducer" should "return producer object" in {
     val p = f.getProducer[String](
-      name          = "test-producer-1",
+      name = "test-producer-1",
       isLowPriority = false,
-      txnGenerator  = LocalGeneratorCreator.getGen(),
-      converter     = new StringToArrayByteConverter,
-      partitions    = List(0) )
+      txnGenerator = LocalGeneratorCreator.getGen(),
+      converter = new StringToArrayByteConverter,
+      partitions = List(0))
 
     p != null shouldEqual true
 
@@ -33,11 +32,11 @@ class TStreamsFactoryTest extends FlatSpec with Matchers with BeforeAndAfterAll 
 
   "UniversalFactory.getConsumer" should "return consumer object" in {
     val c = f.getConsumer[String](
-      name          = "test-consumer-1",
-      txnGenerator  = LocalGeneratorCreator.getGen(),
-      converter     = new ArrayByteToStringConverter,
-      partitions    = List(0),
-      offset        = Oldest)
+      name = "test-consumer-1",
+      txnGenerator = LocalGeneratorCreator.getGen(),
+      converter = new ArrayByteToStringConverter,
+      partitions = List(0),
+      offset = Oldest)
 
     c != null shouldEqual true
 
@@ -50,9 +49,10 @@ class TStreamsFactoryTest extends FlatSpec with Matchers with BeforeAndAfterAll 
       converter = new ArrayByteToStringConverter,
       partitions = List(0),
       offset = Oldest,
-      callback = new BasicSubscriberCallback[Array[Byte],String] {
-          override def onEvent(subscriber: BasicSubscribingConsumer[Array[Byte], String], partition: Int, transactionUuid: UUID): Unit = {}
-          override val pollingFrequency: Int = 1
+      callback = new BasicSubscriberCallback[Array[Byte], String] {
+        override def onEvent(subscriber: BasicSubscribingConsumer[Array[Byte], String], partition: Int, transactionUuid: UUID): Unit = {}
+
+        override val pollingFrequency: Int = 1
       })
 
     sub != null shouldEqual true
@@ -61,7 +61,6 @@ class TStreamsFactoryTest extends FlatSpec with Matchers with BeforeAndAfterAll 
   }
 
   override def afterAll(): Unit = {
-    f.close()
     super.afterAll()
   }
 

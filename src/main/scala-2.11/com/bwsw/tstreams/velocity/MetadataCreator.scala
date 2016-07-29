@@ -1,5 +1,6 @@
 package com.bwsw.tstreams.velocity
 
+import com.bwsw.tstreams.common.CassandraHelper
 import com.datastax.driver.core.Cluster
 
 object MetadataCreator {
@@ -11,7 +12,7 @@ object MetadataCreator {
       session.execute(s"DROP KEYSPACE $keyspace")
     }
     catch {
-      case e : Exception => println(s"msg=${e.getMessage}")
+      case e: Exception => println(s"msg=${e.getMessage}")
     }
     CassandraHelper.createKeyspace(session, keyspace)
     CassandraHelper.createMetadataTables(session, keyspace)

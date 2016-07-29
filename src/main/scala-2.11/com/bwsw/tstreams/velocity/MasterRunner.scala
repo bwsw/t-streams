@@ -7,7 +7,9 @@ import com.bwsw.tstreams.agents.producer.{BasicProducer, BasicProducerOptions, P
 import com.bwsw.tstreams.coordination.transactions.transport.impl.TcpTransport
 
 object MasterRunner {
+
   import Common._
+
   def main(args: Array[String]) {
     //producer/consumer options
     val agentSettings = new ProducerCoordinationOptions(

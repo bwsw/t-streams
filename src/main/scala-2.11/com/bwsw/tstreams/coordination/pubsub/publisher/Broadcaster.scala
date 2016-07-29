@@ -11,9 +11,9 @@ import io.netty.channel.socket.nio.NioSocketChannel
 import io.netty.handler.codec.string.{StringDecoder, StringEncoder}
 
 /**
- * Broadcaster for [[com.bwsw.tstreams.agents.producer.BasicProducer]]]
- * to broadcast messages for all [[com.bwsw.tstreams.agents.consumer.subscriber.BasicSubscribingConsumer]]]
- */
+  * Broadcaster for [[com.bwsw.tstreams.agents.producer.BasicProducer]]]
+  * to broadcast messages for all [[com.bwsw.tstreams.agents.consumer.subscriber.BasicSubscribingConsumer]]]
+  */
 class Broadcaster {
   private val group = new NioEventLoopGroup()
   private val bootstrap = new Bootstrap()
@@ -34,27 +34,27 @@ class Broadcaster {
     })
 
   /**
-   * Send msg to all connected subscribers
- *
-   * @param msg Msg to send
-   */
-  def broadcast(msg : ProducerTopicMessage, onComplete: () => Unit) : Unit = {
+    * Send msg to all connected subscribers
+    *
+    * @param msg Msg to send
+    */
+  def broadcast(msg: ProducerTopicMessage, onComplete: () => Unit): Unit = {
     channelHandler.broadcast(msg, onComplete)
   }
 
   /**
     * Update subscribers with new set of subscribers
- *
+    *
     * @param subscribers New subscribers
     */
-  def updateSubscribers(subscribers : List[String]) = {
+  def updateSubscribers(subscribers: List[String]) = {
     connectionManager.updateSubscribers(subscribers)
   }
 
   /**
-   * Close broadcaster
-   */
-  def close() : Unit = {
-    group.shutdownGracefully(0,0,TimeUnit.SECONDS).await()
+    * Close broadcaster
+    */
+  def close(): Unit = {
+    group.shutdownGracefully(0, 0, TimeUnit.SECONDS).await()
   }
 }

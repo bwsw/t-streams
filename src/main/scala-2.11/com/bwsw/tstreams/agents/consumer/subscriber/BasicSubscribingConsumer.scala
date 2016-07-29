@@ -12,37 +12,37 @@ import org.slf4j.LoggerFactory
 /**
   * Basic consumer with subscribe option
   *
-  * @param name Name of subscriber
-  * @param stream Stream from which to consume transactions
-  * @param options Basic consumer options
+  * @param name                Name of subscriber
+  * @param stream              Stream from which to consume transactions
+  * @param options             Basic consumer options
   * @param persistentQueuePath Local path for queue which maintain transactions that already exist
   *                            and new incoming transactions
   * @tparam DATATYPE Storage data type
   * @tparam USERTYPE User data type
   */
-class BasicSubscribingConsumer[DATATYPE, USERTYPE](name : String,
-                                                   stream : BasicStream[DATATYPE],
-                                                   options : BasicConsumerOptions[DATATYPE,USERTYPE],
-                                                   subscriberCoordinationOptions : SubscriberCoordinationOptions,
-                                                   callBack : BasicSubscriberCallback[DATATYPE, USERTYPE],
-                                                   persistentQueuePath : String)
-  extends BasicConsumer[DATATYPE, USERTYPE](name, stream, options){
+class BasicSubscribingConsumer[DATATYPE, USERTYPE](name: String,
+                                                   stream: BasicStream[DATATYPE],
+                                                   options: BasicConsumerOptions[DATATYPE, USERTYPE],
+                                                   subscriberCoordinationOptions: SubscriberCoordinationOptions,
+                                                   callBack: BasicSubscriberCallback[DATATYPE, USERTYPE],
+                                                   persistentQueuePath: String)
+  extends BasicConsumer[DATATYPE, USERTYPE](name, stream, options) {
   /**
     * Indicate started or not this subscriber
     */
   private var isStarted = false
-  private val logger  = LoggerFactory.getLogger(this.getClass)
+  private val logger = LoggerFactory.getLogger(this.getClass)
 
   /**
     * Coordinator for providing updates to this subscriber from producers
     * and establishing stream locks
     */
   private var coordinator = new SubscriberCoordinator(
-                                              subscriberCoordinationOptions.agentAddress,
-                                              subscriberCoordinationOptions.zkRootPath,
-                                              subscriberCoordinationOptions.zkHosts,
-                                              subscriberCoordinationOptions.zkSessionTimeout,
-                                              subscriberCoordinationOptions.zkConnectionTimeout)
+    subscriberCoordinationOptions.agentAddress,
+    subscriberCoordinationOptions.zkRootPath,
+    subscriberCoordinationOptions.zkHosts,
+    subscriberCoordinationOptions.zkSessionTimeout,
+    subscriberCoordinationOptions.zkConnectionTimeout)
 
   /**
     * Subscriber used partitions
@@ -64,13 +64,13 @@ class BasicSubscribingConsumer[DATATYPE, USERTYPE](name : String,
     */
   private val partitionsToExecutors = usedPartitions
     .zipWithIndex
-    .map{case(partition,execNum) => (partition, execNum % poolSize)}
+    .map { case (partition, execNum) => (partition, execNum % poolSize) }
     .toMap
 
   /**
     * Executors for each partition to handle transactions flow
     */
-  private val executors : scala.collection.mutable.Map[Int, ExecutorService] =
+  private val executors: scala.collection.mutable.Map[Int, ExecutorService] =
     scala.collection.mutable.Map[Int, ExecutorService]()
 
   /**
@@ -92,13 +92,13 @@ class BasicSubscribingConsumer[DATATYPE, USERTYPE](name : String,
     isStarted = true
 
     // TODO: why it can be stopped, why reconstruct?
-    if (coordinator.isStoped){
+    if (coordinator.isStoped) {
       coordinator = new SubscriberCoordinator(
-                                subscriberCoordinationOptions.agentAddress,
-                                subscriberCoordinationOptions.zkRootPath,
-                                subscriberCoordinationOptions.zkHosts,
-                                subscriberCoordinationOptions.zkSessionTimeout,
-                                subscriberCoordinationOptions.zkConnectionTimeout)
+        subscriberCoordinationOptions.agentAddress,
+        subscriberCoordinationOptions.zkRootPath,
+        subscriberCoordinationOptions.zkHosts,
+        subscriberCoordinationOptions.zkSessionTimeout,
+        subscriberCoordinationOptions.zkConnectionTimeout)
     }
 
     brokenTransactionsResolver.startUpdate()
@@ -137,20 +137,20 @@ class BasicSubscribingConsumer[DATATYPE, USERTYPE](name : String,
       val lastTxn = new LastTransactionWrapper(lastTxnUuid)
 
       val transactionsRelay = new SubscriberTransactionsRelay(
-                                            subscriber      = this,
-                                            partition       = partition,
-                                            coordinator     = coordinator,
-                                            callback        = callBack,
-                                            queue           = queue,
-                                            lastConsumedTransaction   = lastTxn,
-                                            executor                  = executor,
-                                            checkpointEventsResolver  = brokenTransactionsResolver)
+        subscriber = this,
+        partition = partition,
+        coordinator = coordinator,
+        callback = callBack,
+        queue = queue,
+        lastConsumedTransaction = lastTxn,
+        executor = executor,
+        checkpointEventsResolver = brokenTransactionsResolver)
 
       //consume all transactions less or equal than last transaction
       if (lastTransactionOpt.isDefined) {
         transactionsRelay.consumeTransactionsLessOrEqualThan(
-                                  leftBorder = currentOffsets(partition),
-                                  rightBorder = lastTransactionOpt.get.getTxnUUID)
+          leftBorder = currentOffsets(partition),
+          rightBorder = lastTransactionOpt.get.getTxnUUID)
       } else {
         //TODO: what behaviour
       }
@@ -164,16 +164,16 @@ class BasicSubscribingConsumer[DATATYPE, USERTYPE](name : String,
         transactionsRelay.consumeTransactionsMoreThan(leftBorder = currentOffsets(partition))
       }
 
-      updateManager.addExecutorWithRunnable(executor,transactionsRelay.getUpdateRunnable())
+      updateManager.addExecutorWithRunnable(executor, transactionsRelay.getUpdateRunnable())
     }
 
     streamLock.unlock()
   }
 
-  def resolveLastTxn(partition : Int) : Option[BasicConsumerTransaction[DATATYPE, USERTYPE]] = {
+  def resolveLastTxn(partition: Int): Option[BasicConsumerTransaction[DATATYPE, USERTYPE]] = {
     val txn: Option[BasicConsumerTransaction[DATATYPE, USERTYPE]] = getLastTransaction(partition)
-    txn.fold[Option[BasicConsumerTransaction[DATATYPE, USERTYPE]]](None){txn =>
-      if (txn.getTxnUUID.timestamp() <= currentOffsets(partition).timestamp()){
+    txn.fold[Option[BasicConsumerTransaction[DATATYPE, USERTYPE]]](None) { txn =>
+      if (txn.getTxnUUID.timestamp() <= currentOffsets(partition).timestamp()) {
         None
       } else {
         Some(txn)

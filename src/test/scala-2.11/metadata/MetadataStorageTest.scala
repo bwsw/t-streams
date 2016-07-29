@@ -1,18 +1,12 @@
 package metadata
 
 import com.bwsw.tstreams.metadata.MetadataStorage
-import com.datastax.driver.core.Cluster
 import org.scalatest._
-import testutils.{RandomStringCreator, CassandraHelper}
+import testutils.TestUtils
 
 
-class MetadataStorageTest extends FlatSpec with Matchers with BeforeAndAfterAll {
-  def randomString: String = RandomStringCreator.randomAlphaString(10)
-  val randomKeyspace = randomString
-  val cluster = Cluster.builder().addContactPoint("localhost").build()
-  val session = cluster.connect()
-  CassandraHelper.createKeyspace(session,randomKeyspace)
-  CassandraHelper.createMetadataTables(session,randomKeyspace)
+class MetadataStorageTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
+
   val connectedSession = cluster.connect(randomKeyspace)
 
   "MetadataStorage.init(), MetadataStorage.truncate() and MetadataStorage.remove()" should "create, truncate and remove metadata tables" in {
@@ -25,16 +19,13 @@ class MetadataStorageTest extends FlatSpec with Matchers with BeforeAndAfterAll 
       metadataStorage.init()
       metadataStorage.truncate()
     }
-    catch{
-      case e : Exception => checkVal = false
+    catch {
+      case e: Exception => checkVal = false
     }
     checkVal shouldEqual true
   }
 
-  override def afterAll() : Unit = {
-    session.execute(s"DROP KEYSPACE $randomKeyspace")
-    cluster.close()
-    session.close()
-    connectedSession.close()
+  override def afterAll(): Unit = {
+    onAfterAll()
   }
 }

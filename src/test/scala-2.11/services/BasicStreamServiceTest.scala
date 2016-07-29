@@ -1,42 +1,25 @@
 package services
 
 import java.net.InetSocketAddress
-import com.aerospike.client.Host
-import com.bwsw.tstreams.data.aerospike.{AerospikeStorageFactory, AerospikeStorageOptions}
-import com.bwsw.tstreams.metadata.MetadataStorageFactory
+
 import com.bwsw.tstreams.services.BasicStreamService
 import com.bwsw.tstreams.streams.BasicStream
-import com.datastax.driver.core.Cluster
-import org.scalatest.{BeforeAndAfterAll, Matchers, FlatSpec}
-import testutils.{CassandraHelper, RandomStringCreator}
+import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
+import testutils.{RandomStringCreator, TestUtils}
 
 
-class BasicStreamServiceTest extends FlatSpec with Matchers with BeforeAndAfterAll {
-  def randomString: String = RandomStringCreator.randomAlphaString(10)
-  val randomKeyspace = randomString
-  val temporaryCluster = Cluster.builder().addContactPoint("localhost").build()
-  val temporarySession = temporaryCluster.connect()
-  CassandraHelper.createKeyspace(temporarySession, randomKeyspace)
-  CassandraHelper.createMetadataTables(temporarySession, randomKeyspace)
+class BasicStreamServiceTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
 
-  val dataStorageFactory = new AerospikeStorageFactory
-  val metadataStorageFactory = new MetadataStorageFactory
-  
-  val hosts = List(
-    new Host("localhost",3000),
-    new Host("localhost",3001),
-    new Host("localhost",3002),
-    new Host("localhost",3003))
-  val aerospikeOptions = new AerospikeStorageOptions("test", hosts)
-
-  val storageInst = dataStorageFactory.getInstance(aerospikeOptions)
+  val storageInst = storageFactory.getInstance(aerospikeOptions)
   val metadataStorageInst = metadataStorageFactory.getInstance(
     cassandraHosts = List(new InetSocketAddress("localhost", 9042)),
     keyspace = randomKeyspace)
 
+  def randomVal: String = RandomStringCreator.randomAlphaString(10)
+
 
   "BasicStreamService.createStream()" should "create stream" in {
-    val name = randomString
+    val name = randomVal
 
     val stream: BasicStream[_] = BasicStreamService.createStream(
       streamName = name,
@@ -53,15 +36,15 @@ class BasicStreamServiceTest extends FlatSpec with Matchers with BeforeAndAfterA
 
   "BasicStreamService.createStream()" should "throw exception if stream already created" in {
     intercept[IllegalArgumentException] {
-      val name = randomString
+      val name = randomVal
 
       BasicStreamService.createStream(
-      streamName = name,
-      partitions = 3,
-      ttl = 100,
-      description = "some_description",
-      metadataStorage = metadataStorageInst,
-      dataStorage = storageInst)
+        streamName = name,
+        partitions = 3,
+        ttl = 100,
+        description = "some_description",
+        metadataStorage = metadataStorageInst,
+        dataStorage = storageInst)
 
       BasicStreamService.createStream(
         streamName = name,
@@ -74,7 +57,7 @@ class BasicStreamServiceTest extends FlatSpec with Matchers with BeforeAndAfterA
   }
 
   "BasicStreamService.loadStream()" should "load created stream" in {
-    val name = randomString
+    val name = randomVal
 
     BasicStreamService.createStream(
       streamName = name,
@@ -90,8 +73,8 @@ class BasicStreamServiceTest extends FlatSpec with Matchers with BeforeAndAfterA
   }
 
   "BasicStreamService.isExist()" should "say exist concrete stream or not" in {
-    val name = randomString
-    val notExistName = randomString
+    val name = randomVal
+    val notExistName = randomVal
 
     BasicStreamService.createStream(
       streamName = name,
@@ -109,7 +92,7 @@ class BasicStreamServiceTest extends FlatSpec with Matchers with BeforeAndAfterA
   }
 
   "BasicStreamService.loadStream()" should "throw exception if stream not exist" in {
-    val name = randomString
+    val name = randomVal
 
     intercept[IllegalArgumentException] {
       BasicStreamService.loadStream(name, metadataStorageInst, storageInst)
@@ -117,7 +100,7 @@ class BasicStreamServiceTest extends FlatSpec with Matchers with BeforeAndAfterA
   }
 
   "BasicStreamService.deleteStream()" should "delete created stream" in {
-    val name = randomString
+    val name = randomVal
 
     BasicStreamService.createStream(
       streamName = name,
@@ -135,7 +118,7 @@ class BasicStreamServiceTest extends FlatSpec with Matchers with BeforeAndAfterA
   }
 
   "BasicStreamService.deleteStream()" should "throw exception if stream was not created before" in {
-    val name = randomString
+    val name = randomVal
 
     intercept[IllegalArgumentException] {
       BasicStreamService.deleteStream(name, metadataStorageInst)
@@ -143,8 +126,6 @@ class BasicStreamServiceTest extends FlatSpec with Matchers with BeforeAndAfterA
   }
 
   override def afterAll(): Unit = {
-    temporarySession.execute(s"DROP KEYSPACE $randomKeyspace")
-    temporarySession.close()
-    temporaryCluster.close()
+    onAfterAll()
   }
 }

@@ -7,23 +7,23 @@ import com.aerospike.client.Host
 import com.bwsw.tstreams.agents.producer.InsertionType.BatchInsert
 import com.bwsw.tstreams.agents.producer.{BasicProducer, BasicProducerOptions, ProducerCoordinationOptions, ProducerPolicies}
 import com.bwsw.tstreams.converter.StringToArrayByteConverter
+import com.bwsw.tstreams.coordination.transactions.transport.impl.TcpTransport
 import com.bwsw.tstreams.data.aerospike.{AerospikeStorageFactory, AerospikeStorageOptions}
 import com.bwsw.tstreams.generator.LocalTimeUUIDGenerator
-import com.bwsw.tstreams.coordination.transactions.transport.impl.TcpTransport
 import com.bwsw.tstreams.metadata.MetadataStorageFactory
 import com.bwsw.tstreams.policy.RoundRobinPolicy
 import com.bwsw.tstreams.streams.BasicStream
 
 
-object BasicProducerTest{
+object BasicProducerTest {
   def main(args: Array[String]) {
     LogManager.getLogManager.reset()
-//    System.setProperty(org.slf4j.impl.SimpleLogger.DEFAULT_LOG_LEVEL_KEY, "WARN")
-    System.setProperty("org.slf4j.simpleLogger.logFile","testlog.log")
-    System.setProperty("org.slf4j.simpleLogger.showDateTime","false")
-    System.setProperty("org.slf4j.simpleLogger.log.com.bwsw","DEBUG")
+    //    System.setProperty(org.slf4j.impl.SimpleLogger.DEFAULT_LOG_LEVEL_KEY, "WARN")
+    System.setProperty("org.slf4j.simpleLogger.logFile", "testlog.log")
+    System.setProperty("org.slf4j.simpleLogger.showDateTime", "false")
+    System.setProperty("org.slf4j.simpleLogger.log.com.bwsw", "DEBUG")
 
-    if (args.length != 9){
+    if (args.length != 9) {
       println(s"args size:{${args.length}}")
       args.foreach(println)
       throw new IllegalArgumentException("usage: [cnt] [agentAddress] [zk{host:port}] [cassandra{host:port}]" +
@@ -32,20 +32,20 @@ object BasicProducerTest{
     }
     val cnt = args(0).toInt
     val agentAddress = args(1)
-    val zkHosts = args(2).split("/").map{x=>
+    val zkHosts = args(2).split("/").map { x =>
       val hp = x.split(":")
-      val (host,port) = (hp(0),hp(1))
-      new InetSocketAddress(host,port.toInt)
+      val (host, port) = (hp(0), hp(1))
+      new InetSocketAddress(host, port.toInt)
     }
-    val cassandraHosts = args(3).split("/").map{x=>
+    val cassandraHosts = args(3).split("/").map { x =>
       val hp = x.split(":")
-      val (host,port) = (hp(0),hp(1))
-      new InetSocketAddress(host,port.toInt)
+      val (host, port) = (hp(0), hp(1))
+      new InetSocketAddress(host, port.toInt)
     }
-    val aerospikeHosts = args(4).split("/").map{x=>
+    val aerospikeHosts = args(4).split("/").map { x =>
       val hp = x.split(":")
-      val (host,port) = (hp(0),hp(1))
-      new Host(host,port.toInt)
+      val (host, port) = (hp(0), hp(1))
+      new Host(host, port.toInt)
     }
     val redisHost = args(5)
     val delay = args(6).toInt
@@ -97,7 +97,7 @@ object BasicProducerTest{
       val txn = producer.newTransaction(ProducerPolicies.errorIfOpened)
       txn.send("info")
       txn.checkpoint()
-      Thread.sleep(delay*1000L)
+      Thread.sleep(delay * 1000L)
       println(s"txn with uuid:{${txn.getTxnUUID.timestamp()}} was sent")
     }
 

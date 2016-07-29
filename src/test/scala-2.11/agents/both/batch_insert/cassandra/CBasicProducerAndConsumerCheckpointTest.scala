@@ -3,21 +3,16 @@ package agents.both.batch_insert.cassandra
 import java.net.InetSocketAddress
 
 import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
-import com.bwsw.tstreams.agents.consumer.{BasicConsumer, BasicConsumerOptions, BasicConsumerTransaction, SubscriberCoordinationOptions}
+import com.bwsw.tstreams.agents.consumer.{BasicConsumer, BasicConsumerOptions, BasicConsumerTransaction}
 import com.bwsw.tstreams.agents.producer.InsertionType.BatchInsert
 import com.bwsw.tstreams.agents.producer.{BasicProducer, BasicProducerOptions, ProducerCoordinationOptions, ProducerPolicies}
-import com.bwsw.tstreams.converter.{ArrayByteToStringConverter, StringToArrayByteConverter}
-import com.bwsw.tstreams.data.cassandra.{CassandraStorageFactory, CassandraStorageOptions}
 import com.bwsw.tstreams.coordination.transactions.transport.impl.TcpTransport
-import com.bwsw.tstreams.common.zkservice.ZkService
-import com.bwsw.tstreams.metadata.MetadataStorageFactory
 import com.bwsw.tstreams.streams.BasicStream
-import com.datastax.driver.core.Cluster
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import testutils._
 
 
-class CBasicProducerAndConsumerCheckpointTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils{
+class CBasicProducerAndConsumerCheckpointTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
 
   val cassandraInstForProducer = cassandraStorageFactory.getInstance(cassandraStorageOptions)
   val cassandraInstForConsumer = cassandraStorageFactory.getInstance(cassandraStorageOptions)
@@ -58,14 +53,14 @@ class CBasicProducerAndConsumerCheckpointTest extends FlatSpec with Matchers wit
     zkConnectionTimeout = 7)
 
   //producer/consumer options
-  val producerOptions = new BasicProducerOptions[String](transactionTTL = 6, transactionKeepAliveInterval = 2, RoundRobinPolicyCreator.getRoundRobinPolicy(streamForProducer, List(0,1,2)), BatchInsert(batchSizeTestVal), LocalGeneratorCreator.getGen(), agentSettings, stringToArrayByteConverter)
+  val producerOptions = new BasicProducerOptions[String](transactionTTL = 6, transactionKeepAliveInterval = 2, RoundRobinPolicyCreator.getRoundRobinPolicy(streamForProducer, List(0, 1, 2)), BatchInsert(batchSizeTestVal), LocalGeneratorCreator.getGen(), agentSettings, stringToArrayByteConverter)
 
   val consumerOptions = new BasicConsumerOptions[Array[Byte], String](
     transactionsPreload = 10,
     dataPreload = 7,
     consumerKeepAliveInterval = 5,
     arrayByteToStringConverter,
-    RoundRobinPolicyCreator.getRoundRobinPolicy(streamForConsumer, List(0,1,2)),
+    RoundRobinPolicyCreator.getRoundRobinPolicy(streamForConsumer, List(0, 1, 2)),
     Oldest,
     LocalGeneratorCreator.getGen(),
     useLastOffset = true)
@@ -86,7 +81,7 @@ class CBasicProducerAndConsumerCheckpointTest extends FlatSpec with Matchers wit
       txn.checkpoint()
     }
 
-    val firstPart = txnNum/3
+    val firstPart = txnNum / 3
     val secondPart = txnNum - firstPart
 
     var checkVal = true
@@ -116,7 +111,7 @@ class CBasicProducerAndConsumerCheckpointTest extends FlatSpec with Matchers wit
     }
 
     //assert that is nothing to read
-    (0 until streamForConsumer.getPartitions) foreach { _=>
+    (0 until streamForConsumer.getPartitions) foreach { _ =>
       checkVal &= consumer.getTransaction.isEmpty
     }
 
@@ -125,7 +120,6 @@ class CBasicProducerAndConsumerCheckpointTest extends FlatSpec with Matchers wit
 
   override def afterAll(): Unit = {
     producer.stop()
-    removeZkMetadata("/unit")
     onAfterAll()
   }
 }

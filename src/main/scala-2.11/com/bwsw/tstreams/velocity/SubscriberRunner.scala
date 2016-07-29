@@ -4,9 +4,9 @@ import java.net.InetSocketAddress
 import java.util.UUID
 import java.util.concurrent.locks.ReentrantLock
 
-import com.bwsw.tstreams.agents.consumer.{BasicConsumerOptions, SubscriberCoordinationOptions}
 import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
 import com.bwsw.tstreams.agents.consumer.subscriber.{BasicSubscriberCallback, BasicSubscribingConsumer}
+import com.bwsw.tstreams.agents.consumer.{BasicConsumerOptions, SubscriberCoordinationOptions}
 
 
 object SubscriberRunner {
@@ -28,7 +28,7 @@ object SubscriberRunner {
     val callback = new BasicSubscriberCallback[Array[Byte], String] {
       override def onEvent(subscriber: BasicSubscribingConsumer[Array[Byte], String], partition: Int, transactionUuid: UUID): Unit = {
         lock.lock()
-        if (cnt % 1000 == 0){
+        if (cnt % 1000 == 0) {
           val time = System.currentTimeMillis()
           val diff = time - timeNow
           println(s"subscriber_time = $diff; cnt=$cnt")
@@ -37,6 +37,7 @@ object SubscriberRunner {
         cnt += 1
         lock.unlock()
       }
+
       override val pollingFrequency: Int = 100
     }
 
