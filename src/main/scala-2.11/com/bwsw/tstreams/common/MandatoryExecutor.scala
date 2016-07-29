@@ -1,22 +1,27 @@
 package com.bwsw.tstreams.common
 
-import java.util.concurrent.{Executors, Phaser}
+import java.util.concurrent.Executors
 import java.util.concurrent.locks.ReentrantLock
 
+import com.bwsw.ResettableCountDownLatch
 import com.bwsw.tstreams.common.MandatoryExecutor.MandatoryExecutorException
 
 import scala.collection.mutable
 
 /**
-  *
+  * Executor which provides sequence runnable
+  * execution but on any failure exception will be thrown
   */
 class MandatoryExecutor {
   private val executorService = Executors.newSingleThreadScheduledExecutor()
   private val lock = new ReentrantLock(true)
-  private val awaitSignalVar = new Phaser(1)
+  private val awaitSignalVar = new ResettableCountDownLatch(1)
   private val queue = mutable.Queue[Runnable]()
   private var isReady = true
 
+  /**
+    *
+    */
   private def tryGetTaskAndExecute() : Unit = {
     lock.lock()
     if (queue.nonEmpty) {
@@ -31,8 +36,8 @@ class MandatoryExecutor {
     }
     else {
       isReady = true
-      awaitSignalVar.arriveAndDeregister()
-      awaitSignalVar.register()
+      awaitSignalVar.countDown()
+      awaitSignalVar.reset()
     }
     lock.unlock()
   }
@@ -58,16 +63,19 @@ class MandatoryExecutor {
     * @return
     */
   def await() = {
-    awaitSignalVar.arriveAndAwaitAdvance()
+    awaitSignalVar.await()
   }
 }
 
+/**
+  *
+  */
 object MandatoryExecutor {
   class MandatoryExecutorException(msg : String) extends Exception(msg)
 }
 
 /**
-  *
+  * Runnable task with callback lambda
   * @param task
   * @param callback
   */
