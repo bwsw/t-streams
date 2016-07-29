@@ -21,27 +21,9 @@ import scala.util.control.Breaks._
 
 class СBasicProducerAndConsumerLazyTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils{
 
-  //creating keyspace, metadata
-  val randomKeyspace = randomString
-  val cluster = Cluster.builder().addContactPoint("localhost").build()
-  val session = cluster.connect()
-  CassandraHelper.createKeyspace(session, randomKeyspace)
-  CassandraHelper.createMetadataTables(session, randomKeyspace)
-  CassandraHelper.createDataTable(session, randomKeyspace)
-
-  //metadata/data factories
-  val metadataStorageFactory = new MetadataStorageFactory
-  val storageFactory = new CassandraStorageFactory
-
-  //converters to convert usertype->storagetype; storagetype->usertype
-  val arrayByteToStringConverter = new ArrayByteToStringConverter
-  val stringToArrayByteConverter = new StringToArrayByteConverter
-
-  //cassandra storage instances
-  val cassandraStorageOptions = new CassandraStorageOptions(List(new InetSocketAddress("localhost",9042)), randomKeyspace)
-  val cassandraInstForProducer1 = storageFactory.getInstance(cassandraStorageOptions)
-  val cassandraInstForProducer2 = storageFactory.getInstance(cassandraStorageOptions)
-  val cassandraInstForConsumer = storageFactory.getInstance(cassandraStorageOptions)
+  val cassandraInstForProducer1 = cassandraStorageFactory.getInstance(cassandraStorageOptions)
+  val cassandraInstForProducer2 = cassandraStorageFactory.getInstance(cassandraStorageOptions)
+  val cassandraInstForConsumer = cassandraStorageFactory.getInstance(cassandraStorageOptions)
 
   //metadata storage instances
   val metadataStorageInstForProducer1 = metadataStorageFactory.getInstance(
@@ -195,10 +177,6 @@ class СBasicProducerAndConsumerLazyTest extends FlatSpec with Matchers with Bef
     producer1.stop()
     producer2.stop()
     removeZkMetadata("/unit")
-    session.execute(s"DROP KEYSPACE $randomKeyspace")
-    session.close()
-    cluster.close()
-    metadataStorageFactory.closeFactory()
-    storageFactory.closeFactory()
+    onAfterAll()
   }
 }

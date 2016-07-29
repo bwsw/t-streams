@@ -21,24 +21,6 @@ class CManyBasicProducersStreamingInManyPartitionsAndConsumerTest extends FlatSp
 
   var port = 8000
 
-  //creating keyspace, metadata, data
-  val randomKeyspace = randomString
-  val cluster = Cluster.builder().addContactPoint("localhost").build()
-  val session = cluster.connect()
-  CassandraHelper.createKeyspace(session, randomKeyspace)
-  CassandraHelper.createMetadataTables(session, randomKeyspace)
-  CassandraHelper.createDataTable(session, randomKeyspace)
-
-  //metadata/data factories
-  val metadataStorageFactory = new MetadataStorageFactory
-  val storageFactory = new CassandraStorageFactory
-
-  //converters to convert usertype->storagetype; storagetype->usertype
-  val arrayByteToStringConverter = new ArrayByteToStringConverter
-  val stringToArrayByteConverter = new StringToArrayByteConverter
-
-  //cassandra storage options
-  val cassandraStorageOptions = new CassandraStorageOptions(List(new InetSocketAddress("localhost",9042)), randomKeyspace)
 
   "Some amount of producers and one consumer" should "producers - send transactions in many partition" +
     " (each producer send each txn in only one partition without intersection " +
@@ -149,7 +131,7 @@ class CManyBasicProducersStreamingInManyPartitionsAndConsumerTest extends FlatSp
     val metadataStorageInst = metadataStorageFactory.getInstance(
       cassandraHosts = List(new InetSocketAddress("localhost", 9042)),
       keyspace = randomKeyspace)
-    val dataStorageInst = storageFactory.getInstance(cassandraStorageOptions)
+    val dataStorageInst = cassandraStorageFactory.getInstance(cassandraStorageOptions)
     new BasicStream[Array[Byte]](
       name = "stream_name",
       partitions = partitions,
@@ -161,10 +143,6 @@ class CManyBasicProducersStreamingInManyPartitionsAndConsumerTest extends FlatSp
 
   override def afterAll(): Unit = {
     removeZkMetadata("/unit")
-    session.execute(s"DROP KEYSPACE $randomKeyspace")
-    session.close()
-    cluster.close()
-    metadataStorageFactory.closeFactory()
-    storageFactory.closeFactory()
+    onAfterAll()
   }
 }
