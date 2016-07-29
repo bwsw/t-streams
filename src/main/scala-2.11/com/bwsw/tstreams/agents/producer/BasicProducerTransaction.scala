@@ -12,13 +12,13 @@ import scala.collection.mutable.ListBuffer
 /**
  * Transaction retrieved by BasicProducer.newTransaction method
  *
- * @param threadLock Producer Lock for managing actions which has to do with checkpoints
+ * @param transactionLock Transaction Lock for managing actions which has to do with checkpoints
  * @param partition Concrete partition for saving this transaction
  * @param txnOwner Producer class which was invoked newTransaction method
  * @param transactionUuid UUID for this transaction
  * @tparam USERTYPE User data type
  */
-class BasicProducerTransaction[USERTYPE](threadLock       : ReentrantLock,
+class BasicProducerTransaction[USERTYPE](transactionLock: ReentrantLock,
                                          partition        : Int,
                                          transactionUuid  : UUID,
                                          txnOwner    : BasicProducer[USERTYPE]){
@@ -78,7 +78,7 @@ class BasicProducerTransaction[USERTYPE](threadLock       : ReentrantLock,
     * @param obj some user object
    */
   def send(obj : USERTYPE) : Unit = {
-    threadLock.lock()
+    transactionLock.lock()
 
     if (closed)
       throw new IllegalStateException("transaction is closed")
@@ -116,12 +116,12 @@ class BasicProducerTransaction[USERTYPE](threadLock       : ReentrantLock,
     }
 
     part += 1
-    threadLock.unlock()
+    transactionLock.unlock()
   }
 
 
   private def cancelAsync() = {
-    threadLock.lock()
+    transactionLock.lock()
     txnOwner.producerOptions.insertType match {
       case InsertionType.SingleElementInsert =>
 
@@ -135,16 +135,16 @@ class BasicProducerTransaction[USERTYPE](threadLock       : ReentrantLock,
       status    = ProducerTransactionStatus.cancel,
       partition = partition)
 
-    txnOwner.subscriberClient.publish(msg, ()=>())
+    txnOwner.masterP2PAgent.publish(msg)
     logger.debug(s"[CANCEL PARTITION_${msg.partition}] ts=${msg.txnUuid.timestamp()} status=${msg.status}")
 
-    threadLock.unlock()
+    transactionLock.unlock()
   }
   /**
    * Canceling current transaction
    */
   def cancel() = {
-    threadLock.lock()
+    transactionLock.lock()
 
     if (closed)
       throw new IllegalStateException("transaction is already closed")
@@ -153,7 +153,7 @@ class BasicProducerTransaction[USERTYPE](threadLock       : ReentrantLock,
 
     txnOwner.backendActivityService.submit(new Runnable {override def run(): Unit = cancelAsync()})
 
-    threadLock.unlock()
+    transactionLock.unlock()
 
   }
 
@@ -164,7 +164,7 @@ class BasicProducerTransaction[USERTYPE](threadLock       : ReentrantLock,
       //        will be only in debug mode in case of precheckpoint failure test
       //        or postcheckpoint failure test
       case e : RuntimeException =>
-        threadLock.unlock()
+        transactionLock.unlock()
     }
   }
 
@@ -174,11 +174,11 @@ class BasicProducerTransaction[USERTYPE](threadLock       : ReentrantLock,
     //debug purposes only
     GlobalHooks.invoke("AfterCommitFailure")
 
-    txnOwner.subscriberClient.publish(ProducerTopicMessage(
+    txnOwner.masterP2PAgent.publish(ProducerTopicMessage(
       txnUuid   = transactionUuid,
       ttl       = -1,
       status    = ProducerTransactionStatus.postCheckpoint,
-      partition = partition), ()=>())
+      partition = partition))
 
     logger.debug(s"[FINAL CHECKPOINT PARTITION_$partition] " +
       s"ts=${transactionUuid.timestamp()}")
@@ -191,12 +191,13 @@ class BasicProducerTransaction[USERTYPE](threadLock       : ReentrantLock,
       //        will be only in debug mode in case of precheckpoint failure test
       //        or postcheckpoint failure test
       case e : RuntimeException =>
-        threadLock.unlock()
+        transactionLock.unlock()
+        throw e
     }
   }
 
   private def checkpointAsync() = {
-    threadLock.lock()
+    transactionLock.lock()
     txnOwner.producerOptions.insertType match {
 
       case InsertionType.SingleElementInsert =>
@@ -211,14 +212,15 @@ class BasicProducerTransaction[USERTYPE](threadLock       : ReentrantLock,
     //close transaction using stream ttl
     if (part > 0) {
       jobs.foreach(x => x())
+
+      logger.debug(s"[START PRE CHECKPOINT PARTITION_$partition] " +
+        s"ts=${transactionUuid.timestamp()}")
+
       txnOwner.masterP2PAgent.publish(ProducerTopicMessage(
         txnUuid   = transactionUuid,
         ttl       = -1,
         status    = ProducerTransactionStatus.preCheckpoint,
         partition = partition))
-
-      logger.debug(s"[PRE CHECKPOINT PARTITION_$partition] " +
-        s"ts=${transactionUuid.timestamp()}")
 
       //debug purposes only
       GlobalHooks.invoke("PreCommitFailure")
@@ -231,23 +233,22 @@ class BasicProducerTransaction[USERTYPE](threadLock       : ReentrantLock,
         ttl         = txnOwner.stream.getTTL,
         executor    = txnOwner.backendActivityService,
         function    = checkpointPostEventPartSafe)
-
     }
     else {
-      txnOwner.subscriberClient.publish(ProducerTopicMessage(
+      txnOwner.masterP2PAgent.publish(ProducerTopicMessage(
         txnUuid   = transactionUuid,
         ttl       = -1,
         status    = ProducerTransactionStatus.cancel,
-        partition = partition), ()=>())
+        partition = partition))
     }
-    threadLock.unlock()
+    transactionLock.unlock()
   }
 
   /**
    * Submit transaction(transaction will be available by consumer only after closing)
    */
   def checkpoint() : Unit = {
-    threadLock.lock()
+    transactionLock.lock()
 
     if (closed)
       throw new IllegalStateException("transaction is already closed")
@@ -256,7 +257,7 @@ class BasicProducerTransaction[USERTYPE](threadLock       : ReentrantLock,
 
     txnOwner.backendActivityService.submit(new Runnable {override def run(): Unit = checkpointAsyncSafe() })
 
-    threadLock.unlock()
+    transactionLock.unlock()
 
   }
 
@@ -286,7 +287,8 @@ class BasicProducerTransaction[USERTYPE](threadLock       : ReentrantLock,
 
   /**
     * accessor to lock object for external agents
+    *
     * @return
     */
-  def getTransactionLock(): ReentrantLock = threadLock
+  def getTransactionLock(): ReentrantLock = transactionLock
 }

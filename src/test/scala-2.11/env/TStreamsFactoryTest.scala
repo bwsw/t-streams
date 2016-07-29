@@ -7,8 +7,6 @@ import com.bwsw.tstreams.agents.consumer.subscriber.{BasicSubscribingConsumer, B
 import com.bwsw.tstreams.agents.producer.ProducerPolicies
 import com.bwsw.tstreams.converter.{ArrayByteToStringConverter, StringToArrayByteConverter}
 import com.bwsw.tstreams.env.{TSF_Dictionary, TStreamsFactory}
-import com.datastax.driver.core.Cluster
-import org.slf4j.LoggerFactory
 
 /**
   * Created by ivan on 23.07.16.
@@ -18,8 +16,6 @@ import testutils._
 
 
 class TStreamsFactoryTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
-
-  private val logger = LoggerFactory.getLogger(this.getClass)
 
   val randomKeyspace = createRandomKeyspace
 
