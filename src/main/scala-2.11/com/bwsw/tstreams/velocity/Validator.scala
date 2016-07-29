@@ -7,8 +7,8 @@ import com.datastax.driver.core.Cluster
 
 import scala.collection.mutable.ListBuffer
 
-object Validator{
-  def isSorted(list : ListBuffer[UUID]) : Boolean = {
+object Validator {
+  def isSorted(list: ListBuffer[UUID]): Boolean = {
     if (list.isEmpty)
       return true
     var curVal = list.head
@@ -26,9 +26,9 @@ object Validator{
   }
 
   def main(args: Array[String]) {
-//    if (args.length != 1)
-//      throw new IllegalArgumentException("specify [keyspace]")
-//    val keyspace = args(0)
+    //    if (args.length != 1)
+    //      throw new IllegalArgumentException("specify [keyspace]")
+    //    val keyspace = args(0)
 
     val cluster = Cluster.builder().addContactPointsWithPorts(new InetSocketAddress("176.120.27.82", 9042)).build()
     val session = cluster.connect()
@@ -37,18 +37,18 @@ object Validator{
     val it = set.iterator()
     val buffers = scala.collection.mutable.Map[Int, ListBuffer[UUID]]()
 
-    while(it.hasNext) {
+    while (it.hasNext) {
       val row = it.next()
       val partition = row.getInt("partition")
       val uuid = row.getUUID("transaction")
-      if (!buffers.contains(partition)){
+      if (!buffers.contains(partition)) {
         buffers(partition) = ListBuffer(uuid)
       } else {
         buffers(partition) += uuid
       }
     }
 
-    val checkVal = buffers.map(x=>isSorted(x._2)).reduceLeft((a,b)=>a&b)
+    val checkVal = buffers.map(x => isSorted(x._2)).reduceLeft((a, b) => a & b)
 
     if (checkVal)
       println("sorted")

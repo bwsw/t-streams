@@ -1,10 +1,10 @@
 package metadata
 
 import java.net.InetSocketAddress
+
 import com.bwsw.tstreams.metadata.{MetadataStorage, MetadataStorageFactory}
-import com.datastax.driver.core.Cluster
-import org.scalatest.{BeforeAndAfterAll, Matchers, FlatSpec}
-import testutils.{TestUtils, RandomStringCreator}
+import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
+import testutils.TestUtils
 
 
 class MetadataStorageFactoryTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {

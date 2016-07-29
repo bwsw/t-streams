@@ -24,12 +24,12 @@ libraryDependencies ++= Seq(
   "org.scala-lang.modules" % "scala-xml_2.11" % "1.0.4",
   "log4j" % "log4j" % "1.2.17",
   ("org.apache.zookeeper" % "zookeeper" % "3.4.6")
-    .exclude("org.slf4j","slf4j-log4j12"),
+    .exclude("org.slf4j", "slf4j-log4j12"),
   "com.google.guava" % "guava" % "18.0")
 
 
 libraryDependencies += ("com.datastax.cassandra" % "cassandra-driver-core" % "3.0.0")
-  .exclude("com.google.guava","guava")
+  .exclude("com.google.guava", "guava")
   .exclude("io.netty", "netty-common")
   .exclude("io.netty", "netty-codec")
   .exclude("io.netty", "netty-transport")
@@ -39,11 +39,11 @@ libraryDependencies += ("com.datastax.cassandra" % "cassandra-driver-core" % "3.
 //COORDINATION
 resolvers += "twitter resolver" at "http://maven.twttr.com"
 libraryDependencies += ("com.twitter.common.zookeeper" % "lock" % "0.0.38")
-  .exclude("com.google.guava","guava")
+  .exclude("com.google.guava", "guava")
   .exclude("org.slf4f", "slf4j-api")
-  .exclude("log4j","log4j")
+  .exclude("log4j", "log4j")
   .exclude("io.netty", "netty")
-  .exclude("org.slf4j","slf4j-log4j12")
+  .exclude("org.slf4j", "slf4j-log4j12")
   .exclude("org.apache.zookeeper", "zookeeper")
 
 
@@ -51,16 +51,16 @@ libraryDependencies += ("com.twitter.common.zookeeper" % "lock" % "0.0.38")
 assemblyJarName in assembly := "t-streams" + tstreams_version + ".jar"
 
 assemblyMergeStrategy in assembly := {
-  case PathList("com","typesafe","akka", xs @ _*) => MergeStrategy.first
-  case PathList("com","twitter","common","zookeeper", xs @ _*) => MergeStrategy.first
-  case PathList("io", "netty", xs @ _*) => MergeStrategy.first
-  case PathList("com", "datastax", "cassandra", xs @ _*) => MergeStrategy.first
-  case PathList("org", "slf4j", xs @ _*) => MergeStrategy.first
-  case PathList("org", "scalatest", xs @ _*) => MergeStrategy.first
-  case PathList("com", "aerospike", xs @ _*) => MergeStrategy.first
-  case PathList("org", "apache", "commons", xs @ _*) => MergeStrategy.first
-  case PathList("com", "fasterxml","jackson","module", xs @ _*) => MergeStrategy.first
-  case PathList("net", "openhft", xs @ _*) => MergeStrategy.first
+  case PathList("com", "typesafe", "akka", xs@_*) => MergeStrategy.first
+  case PathList("com", "twitter", "common", "zookeeper", xs@_*) => MergeStrategy.first
+  case PathList("io", "netty", xs@_*) => MergeStrategy.first
+  case PathList("com", "datastax", "cassandra", xs@_*) => MergeStrategy.first
+  case PathList("org", "slf4j", xs@_*) => MergeStrategy.first
+  case PathList("org", "scalatest", xs@_*) => MergeStrategy.first
+  case PathList("com", "aerospike", xs@_*) => MergeStrategy.first
+  case PathList("org", "apache", "commons", xs@_*) => MergeStrategy.first
+  case PathList("com", "fasterxml", "jackson", "module", xs@_*) => MergeStrategy.first
+  case PathList("net", "openhft", xs@_*) => MergeStrategy.first
   case x =>
     if (x.contains("slf4j-simple")) MergeStrategy.discard
     else {

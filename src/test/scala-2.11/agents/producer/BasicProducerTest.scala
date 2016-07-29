@@ -4,20 +4,17 @@ import java.net.InetSocketAddress
 
 import com.bwsw.tstreams.agents.producer.InsertionType.SingleElementInsert
 import com.bwsw.tstreams.agents.producer._
-import com.bwsw.tstreams.converter.StringToArrayByteConverter
-import com.bwsw.tstreams.data.cassandra.{CassandraStorageFactory, CassandraStorageOptions}
 import com.bwsw.tstreams.coordination.transactions.transport.impl.TcpTransport
-import com.bwsw.tstreams.metadata.MetadataStorageFactory
+import com.bwsw.tstreams.data.cassandra.CassandraStorageOptions
 import com.bwsw.tstreams.services.BasicStreamService
-import com.datastax.driver.core.Cluster
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import testutils._
 
 
-class BasicProducerTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils{
+class BasicProducerTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
 
 
-  val cassandraOptions = new CassandraStorageOptions(List(new InetSocketAddress("localhost",9042)), randomKeyspace)
+  val cassandraOptions = new CassandraStorageOptions(List(new InetSocketAddress("localhost", 9042)), randomKeyspace)
 
   val stream = BasicStreamService.createStream(
     streamName = "test_stream",
@@ -37,7 +34,7 @@ class BasicProducerTest extends FlatSpec with Matchers with BeforeAndAfterAll wi
     transportTimeout = 5,
     zkConnectionTimeout = 7)
 
-  val producerOptions = new BasicProducerOptions[String](transactionTTL = 10, transactionKeepAliveInterval = 2, RoundRobinPolicyCreator.getRoundRobinPolicy(stream, List(0,1,2)), SingleElementInsert, LocalGeneratorCreator.getGen(), agentSettings, stringToArrayByteConverter)
+  val producerOptions = new BasicProducerOptions[String](transactionTTL = 10, transactionKeepAliveInterval = 2, RoundRobinPolicyCreator.getRoundRobinPolicy(stream, List(0, 1, 2)), SingleElementInsert, LocalGeneratorCreator.getGen(), agentSettings, stringToArrayByteConverter)
 
   val producer = new BasicProducer("test_producer", stream, producerOptions)
 
@@ -50,7 +47,7 @@ class BasicProducerTest extends FlatSpec with Matchers with BeforeAndAfterAll wi
   "BasicProducer.newTransaction(ProducerPolicies.errorIfOpen)" should "throw exception if previous transaction was not closed" in {
     val txn1: BasicProducerTransaction[String] = producer.newTransaction(ProducerPolicies.checkpointIfOpened, 2)
     intercept[IllegalStateException] {
-       producer.newTransaction(ProducerPolicies.errorIfOpened, 2)
+      producer.newTransaction(ProducerPolicies.errorIfOpened, 2)
     }
     txn1.checkpoint()
   }

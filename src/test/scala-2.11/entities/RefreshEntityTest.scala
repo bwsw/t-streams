@@ -3,12 +3,13 @@ package entities
 import com.bwsw.tstreams.common.CassandraHelper
 import com.bwsw.tstreams.entities.CommitEntity
 import com.datastax.driver.core.utils.UUIDs
-import org.scalatest.{BeforeAndAfterAll, Matchers, FlatSpec}
-import testutils.{TestUtils, RandomStringCreator}
+import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
+import testutils.{RandomStringCreator, TestUtils}
 
 
 class RefreshEntityTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
   def randomVal: String = RandomStringCreator.randomAlphaString(10)
+
   val connectedSession = cluster.connect(randomKeyspace)
 
   "After dropping metadata tables and creating them again commit entity" should "work" in {

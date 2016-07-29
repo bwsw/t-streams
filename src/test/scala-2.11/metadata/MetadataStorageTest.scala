@@ -1,9 +1,8 @@
 package metadata
 
 import com.bwsw.tstreams.metadata.MetadataStorage
-import com.datastax.driver.core.Cluster
 import org.scalatest._
-import testutils.{TestUtils, RandomStringCreator}
+import testutils.TestUtils
 
 
 class MetadataStorageTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
@@ -20,13 +19,13 @@ class MetadataStorageTest extends FlatSpec with Matchers with BeforeAndAfterAll 
       metadataStorage.init()
       metadataStorage.truncate()
     }
-    catch{
-      case e : Exception => checkVal = false
+    catch {
+      case e: Exception => checkVal = false
     }
     checkVal shouldEqual true
   }
 
-  override def afterAll() : Unit = {
+  override def afterAll(): Unit = {
     onAfterAll()
   }
 }

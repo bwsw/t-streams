@@ -1,29 +1,23 @@
 package agents.subscriber
 
-import java.io.File
 import java.net.InetSocketAddress
 import java.util.UUID
 import java.util.concurrent.locks.ReentrantLock
 
-import com.aerospike.client.Host
 import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
 import com.bwsw.tstreams.agents.consumer.subscriber.{BasicSubscriberCallback, BasicSubscribingConsumer}
 import com.bwsw.tstreams.agents.consumer.{BasicConsumerOptions, SubscriberCoordinationOptions}
 import com.bwsw.tstreams.agents.producer.InsertionType.BatchInsert
 import com.bwsw.tstreams.agents.producer.{BasicProducer, BasicProducerOptions, ProducerCoordinationOptions, ProducerPolicies}
-import com.bwsw.tstreams.converter.{ArrayByteToStringConverter, StringToArrayByteConverter}
-import com.bwsw.tstreams.data.aerospike.{AerospikeStorageFactory, AerospikeStorageOptions}
 import com.bwsw.tstreams.coordination.transactions.transport.impl.TcpTransport
-import com.bwsw.tstreams.metadata.MetadataStorageFactory
 import com.bwsw.tstreams.streams.BasicStream
-import com.datastax.driver.core.Cluster
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import testutils._
 
 import scala.collection.mutable.ListBuffer
 
 
-class AManyBasicProducersStreamingInManyPartitionsAndSubscriberTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils{
+class AManyBasicProducersStreamingInManyPartitionsAndSubscriberTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
 
   var port = 8000
 
@@ -44,18 +38,18 @@ class AManyBasicProducersStreamingInManyPartitionsAndSubscriberTest extends Flat
     val producers: List[BasicProducer[String]] =
       (0 until producersAmount)
         .toList
-        .map(x=>getProducer(List(x%totalPartitions),totalPartitions))
+        .map(x => getProducer(List(x % totalPartitions), totalPartitions))
 
     val producersThreads = producers.map(p =>
       new Thread(new Runnable {
-        def run(){
+        def run() {
           var i = 0
-          while(i < totalTxn) {
+          while (i < totalTxn) {
             Thread.sleep(2000)
             val txn = p.newTransaction(ProducerPolicies.errorIfOpened)
             dataToSend.foreach(x => txn.send(x))
             txn.checkpoint()
-            i+=1
+            i += 1
           }
         }
       }))
@@ -75,43 +69,44 @@ class AManyBasicProducersStreamingInManyPartitionsAndSubscriberTest extends Flat
       useLastOffset = false)
 
     val lock = new ReentrantLock()
-    val map = scala.collection.mutable.Map[Int,ListBuffer[UUID]]()
+    val map = scala.collection.mutable.Map[Int, ListBuffer[UUID]]()
     (0 until streamInst.getPartitions) foreach { partition =>
       map(partition) = ListBuffer.empty[UUID]
     }
 
     var cnt = 0
     val callback = new BasicSubscriberCallback[Array[Byte], String] {
-      override def onEvent(subscriber : BasicSubscribingConsumer[Array[Byte], String], partition: Int, transactionUuid: UUID): Unit = {
+      override def onEvent(subscriber: BasicSubscribingConsumer[Array[Byte], String], partition: Int, transactionUuid: UUID): Unit = {
         lock.lock()
         map(partition) += transactionUuid
         cnt += 1
         lock.unlock()
       }
+
       override val pollingFrequency: Int = 100
     }
     val subscriber = new BasicSubscribingConsumer(name = "test_consumer",
       stream = streamInst,
       options = consumerOptions,
       subscriberCoordinationOptions =
-        new SubscriberCoordinationOptions("localhost:8588", "/unit", List(new InetSocketAddress("localhost", 2181)), 7000,7000),
+        new SubscriberCoordinationOptions("localhost:8588", "/unit", List(new InetSocketAddress("localhost", 2181)), 7000, 7000),
       callBack = callback,
       persistentQueuePath = path)
     subscriber.start()
-    producersThreads.foreach(x=>x.start())
-    producersThreads.foreach(x=>x.join(timeoutForWaiting*1000L))
-    Thread.sleep(20*1000)
+    producersThreads.foreach(x => x.start())
+    producersThreads.foreach(x => x.join(timeoutForWaiting * 1000L))
+    Thread.sleep(20 * 1000)
 
     producers.foreach(_.stop())
     subscriber.stop()
 
-    assert(map.values.map(x=>x.size).sum == totalTxn*producersAmount)
-    map foreach { case(_,list) =>
-      list.map(x=>(x,x.timestamp())).sortBy(_._2).map(x=>x._1) shouldEqual list
+    assert(map.values.map(x => x.size).sum == totalTxn * producersAmount)
+    map foreach { case (_, list) =>
+      list.map(x => (x, x.timestamp())).sortBy(_._2).map(x => x._1) shouldEqual list
     }
   }
 
-  def getProducer(usedPartitions : List[Int], totalPartitions : Int) : BasicProducer[String] = {
+  def getProducer(usedPartitions: List[Int], totalPartitions: Int): BasicProducer[String] = {
     val stream = getStream(totalPartitions)
 
     val agentSettings = new ProducerCoordinationOptions(
@@ -132,7 +127,7 @@ class AManyBasicProducersStreamingInManyPartitionsAndSubscriberTest extends Flat
     producer
   }
 
-  def getStream(partitions : Int): BasicStream[Array[Byte]] = {
+  def getStream(partitions: Int): BasicStream[Array[Byte]] = {
     //storage instances
     val metadataStorageInst = metadataStorageFactory.getInstance(
       cassandraHosts = List(new InetSocketAddress("localhost", 9042)),

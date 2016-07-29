@@ -1,14 +1,11 @@
 package services
 
 import java.net.InetSocketAddress
-import com.aerospike.client.Host
-import com.bwsw.tstreams.data.aerospike.{AerospikeStorageFactory, AerospikeStorageOptions}
-import com.bwsw.tstreams.metadata.MetadataStorageFactory
+
 import com.bwsw.tstreams.services.BasicStreamService
 import com.bwsw.tstreams.streams.BasicStream
-import com.datastax.driver.core.Cluster
-import org.scalatest.{BeforeAndAfterAll, Matchers, FlatSpec}
-import testutils.{TestUtils, RandomStringCreator}
+import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
+import testutils.TestUtils
 
 
 class BasicStreamServiceTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
@@ -40,12 +37,12 @@ class BasicStreamServiceTest extends FlatSpec with Matchers with BeforeAndAfterA
       val name = randomString
 
       BasicStreamService.createStream(
-      streamName = name,
-      partitions = 3,
-      ttl = 100,
-      description = "some_description",
-      metadataStorage = metadataStorageInst,
-      dataStorage = storageInst)
+        streamName = name,
+        partitions = 3,
+        ttl = 100,
+        description = "some_description",
+        metadataStorage = metadataStorageInst,
+        dataStorage = storageInst)
 
       BasicStreamService.createStream(
         streamName = name,

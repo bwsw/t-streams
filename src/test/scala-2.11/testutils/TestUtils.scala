@@ -5,11 +5,11 @@ import java.net.InetSocketAddress
 import java.util.UUID
 
 import com.aerospike.client.Host
-import com.bwsw.tstreams.common.{CassandraHelper, CassandraConnectionPool}
 import com.bwsw.tstreams.common.zkservice.ZkService
-import com.bwsw.tstreams.converter.{StringToArrayByteConverter, ArrayByteToStringConverter}
-import com.bwsw.tstreams.data.aerospike.{AerospikeStorageOptions, AerospikeStorageFactory}
-import com.bwsw.tstreams.data.cassandra.{CassandraStorageOptions, CassandraStorageFactory}
+import com.bwsw.tstreams.common.{CassandraConnectionPool, CassandraHelper}
+import com.bwsw.tstreams.converter.{ArrayByteToStringConverter, StringToArrayByteConverter}
+import com.bwsw.tstreams.data.aerospike.{AerospikeStorageFactory, AerospikeStorageOptions}
+import com.bwsw.tstreams.data.cassandra.{CassandraStorageFactory, CassandraStorageOptions}
 import com.bwsw.tstreams.env.{TSF_Dictionary, TStreamsFactory}
 import com.bwsw.tstreams.metadata.MetadataStorageFactory
 import org.slf4j.LoggerFactory
@@ -17,8 +17,8 @@ import org.slf4j.LoggerFactory
 import scala.collection.mutable.ListBuffer
 
 /**
- * Test help utils
- */
+  * Test help utils
+  */
 trait TestUtils {
   protected val batchSizeTestVal = 5
 
@@ -53,16 +53,15 @@ trait TestUtils {
   val randomKeyspace = createRandomKeyspace()
 
   val f = new TStreamsFactory()
-  f.setProperty(TSF_Dictionary.Metadata.Cluster.namespace,randomKeyspace).
-    setProperty(TSF_Dictionary.Data.Cluster.namespace,"test").
+  f.setProperty(TSF_Dictionary.Metadata.Cluster.namespace, randomKeyspace).
+    setProperty(TSF_Dictionary.Data.Cluster.namespace, "test").
     setProperty(TSF_Dictionary.Stream.name, "test-stream")
 
   //metadata/data factories
   val metadataStorageFactory = new MetadataStorageFactory
   val storageFactory = new AerospikeStorageFactory
   val cassandraStorageFactory = new CassandraStorageFactory
-  val cassandraStorageOptions = new CassandraStorageOptions(List(new InetSocketAddress("localhost",9042)), randomKeyspace)
-
+  val cassandraStorageOptions = new CassandraStorageOptions(List(new InetSocketAddress("localhost", 9042)), randomKeyspace)
 
 
   //converters to convert usertype->storagetype; storagetype->usertype
@@ -71,7 +70,7 @@ trait TestUtils {
 
   //aerospike storage options
   val hosts = List(
-    new Host("localhost",3000))
+    new Host("localhost", 3000))
 
   val aerospikeOptions = new AerospikeStorageOptions("test", hosts)
   val zkService = new ZkService("", List(new InetSocketAddress("localhost", 2181)), 7, 7)
@@ -79,7 +78,7 @@ trait TestUtils {
   /**
     * Sorting checker
     */
-  def isSorted(list : ListBuffer[UUID]) : Boolean = {
+  def isSorted(list: ListBuffer[UUID]): Boolean = {
     if (list.isEmpty)
       return true
     var checkVal = true
@@ -98,7 +97,7 @@ trait TestUtils {
     *
     * @param path Zk root to delete
     */
-  def removeZkMetadata(path : String) = {
+  def removeZkMetadata(path: String) = {
     if (zkService.exist(path))
       zkService.deleteRecursive(path)
   }
@@ -108,7 +107,7 @@ trait TestUtils {
     *
     * @param f Dir to remove
     */
-  def remove(f : File) : Unit = {
+  def remove(f: File): Unit = {
     if (f.isDirectory) {
       for (c <- f.listFiles())
         remove(c)

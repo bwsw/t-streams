@@ -1,9 +1,8 @@
 package com.bwsw.tstreams.agents.producer
 
 import java.util.UUID
-import java.util.concurrent.CountDownLatch
 import java.util.concurrent.locks.ReentrantLock
-import java.util.concurrent.Executors
+import java.util.concurrent.{CountDownLatch, Executors}
 
 import com.bwsw.tstreams.agents.group.{Agent, CheckpointInfo, ProducerCheckpointInfo}
 import com.bwsw.tstreams.agents.producer.ProducerPolicies.ProducerPolicy
@@ -19,16 +18,16 @@ import org.slf4j.LoggerFactory
 import scala.util.control.Breaks._
 
 /**
- * Basic producer class
+  * Basic producer class
   *
-  * @param name Producer name
- * @param stream Stream for transaction sending
- * @param producerOptions This producer options
- * @tparam USERTYPE User data type
- */
-class BasicProducer[USERTYPE](val name : String,
-                                       val stream : BasicStream[Array[Byte]],
-                                       val producerOptions: BasicProducerOptions[USERTYPE])
+  * @param name            Producer name
+  * @param stream          Stream for transaction sending
+  * @param producerOptions This producer options
+  * @tparam USERTYPE User data type
+  */
+class BasicProducer[USERTYPE](val name: String,
+                              val stream: BasicStream[Array[Byte]],
+                              val producerOptions: BasicProducerOptions[USERTYPE])
   extends Agent with Interaction {
 
   // shortkey
@@ -38,8 +37,8 @@ class BasicProducer[USERTYPE](val name : String,
 
   // stores currently opened transactions per partition
   private val openTransactionsMap = scala.collection.mutable.Map[Int, BasicProducerTransaction[USERTYPE]]()
-  private val logger              = LoggerFactory.getLogger(this.getClass)
-  private val threadLock          = new ReentrantLock(true)
+  private val logger = LoggerFactory.getLogger(this.getClass)
+  private val threadLock = new ReentrantLock(true)
 
   // amount of threads which will handle partitions in masters, etc
   val threadPoolSize: Int = {
@@ -51,39 +50,39 @@ class BasicProducer[USERTYPE](val name : String,
 
   val txnLocks = new Array[ReentrantLock](threadPoolSize)
 
-  ( 0 until threadPoolSize ) foreach { idx =>
+  (0 until threadPoolSize) foreach { idx =>
     txnLocks(idx) = new ReentrantLock()
   }
 
   stream.dataStorage.bind() //TODO: fix, probably deprecated
 
-  logger.info(s"Start new Basic producer with name : $name, streamName : ${stream.getName}, streamPartitions : ${stream.getPartitions}\n")
+  logger.info(s"Start new Basic producer with name : $name, streamName : ${stream.getName}, streamPartitions : ${stream.getPartitions}")
 
   // this client is used to find new subscribers
   val subscriberClient = new SubscriberClient(
-                                  prefix              = pcs.zkRootPath,
-                                  streamName          = stream.getName,
-                                  usedPartitions      = producerOptions.writePolicy.getUsedPartition(),
-                                  zkHosts             = pcs.zkHosts,
-                                  zkSessionTimeout    = pcs.zkSessionTimeout,
-                                  zkConnectionTimeout = pcs.zkConnectionTimeout)
+    prefix = pcs.zkRootPath,
+    streamName = stream.getName,
+    usedPartitions = producerOptions.writePolicy.getUsedPartition(),
+    zkHosts = pcs.zkHosts,
+    zkSessionTimeout = pcs.zkSessionTimeout,
+    zkConnectionTimeout = pcs.zkConnectionTimeout)
 
   /**
     * P2P Agent for producers interaction
     * (getNewTxn uuid; publish openTxn event; publish closeTxn event)
     */
   override val masterP2PAgent: PeerToPeerAgent = new PeerToPeerAgent(
-                                              agentAddress        = pcs.agentAddress,
-                                              zkHosts             = pcs.zkHosts,
-                                              zkRootPath          = pcs.zkRootPath,
-                                              zkSessionTimeout    = pcs.zkSessionTimeout,
-                                              zkConnectionTimeout = pcs.zkConnectionTimeout,
-                                              producer            = this,
-                                              usedPartitions      = producerOptions.writePolicy.getUsedPartition(),
-                                              isLowPriorityToBeMaster = pcs.isLowPriorityToBeMaster,
-                                              transport               = pcs.transport,
-                                              transportTimeout        = pcs.transportTimeout,
-                                              poolSize                = threadPoolSize)
+    agentAddress = pcs.agentAddress,
+    zkHosts = pcs.zkHosts,
+    zkRootPath = pcs.zkRootPath,
+    zkSessionTimeout = pcs.zkSessionTimeout,
+    zkConnectionTimeout = pcs.zkConnectionTimeout,
+    producer = this,
+    usedPartitions = producerOptions.writePolicy.getUsedPartition(),
+    isLowPriorityToBeMaster = pcs.isLowPriorityToBeMaster,
+    transport = pcs.transport,
+    transportTimeout = pcs.transportTimeout,
+    poolSize = threadPoolSize)
 
   //used for managing new agents on stream
 
@@ -98,7 +97,7 @@ class BasicProducer[USERTYPE](val name : String,
   /**
     * Queue to figure out moment when transaction is going to close
     */
-  private val endKeepAliveThread  = new ThreadSignalSleepVar[Boolean](10)
+  private val endKeepAliveThread = new ThreadSignalSleepVar[Boolean](10)
   private val txnKeepAliveThread = getTxnKeepAliveThread
   val backendActivityService = Executors.newSingleThreadScheduledExecutor()
 
@@ -106,8 +105,8 @@ class BasicProducer[USERTYPE](val name : String,
     *
     */
   def getTxnKeepAliveThread: Thread = {
-    val latch                       = new CountDownLatch(1)
-    val txnKeepAliveThread          = new Thread(new Runnable {
+    val latch = new CountDownLatch(1)
+    val txnKeepAliveThread = new Thread(new Runnable {
       override def run(): Unit = {
         latch.countDown()
         logger.info(s"Producer ${name} - object is started, launched open transaction update thread")
@@ -118,7 +117,9 @@ class BasicProducer[USERTYPE](val name : String,
               logger.info(s"Producer ${name} - object either checkpointed or cancelled. Exit KeepAliveThread.")
               break()
             }
-            backendActivityService.submit(new Runnable { override def run(): Unit = updateOpenedTxns() })
+            backendActivityService.submit(new Runnable {
+              override def run(): Unit = updateOpenedTxns()
+            })
           }
         }
       }
@@ -135,20 +136,20 @@ class BasicProducer[USERTYPE](val name : String,
     logger.debug(s"Producer ${name} - scheduled for long lasting transactions")
     threadLock.lock()
     openTransactionsMap.
-      map { case(partition,txn) => txn }.
-      foreach { x=> if (!x.isClosed) x.updateTxnKeepAliveState() }
+      map { case (partition, txn) => txn }.
+      foreach { x => if (!x.isClosed) x.updateTxnKeepAliveState() }
     threadLock.unlock()
   }
 
   /**
-   * @param policy Policy for previous transaction on concrete partition
-   * @param nextPartition Next partition to use for transaction (default -1 which mean that write policy will be used)
-   * @return BasicProducerTransaction instance
-   */
-  def newTransaction(policy: ProducerPolicy, nextPartition : Int = -1) : BasicProducerTransaction[USERTYPE] = {
+    * @param policy        Policy for previous transaction on concrete partition
+    * @param nextPartition Next partition to use for transaction (default -1 which mean that write policy will be used)
+    * @return BasicProducerTransaction instance
+    */
+  def newTransaction(policy: ProducerPolicy, nextPartition: Int = -1): BasicProducerTransaction[USERTYPE] = {
     threadLock.lock()
 
-    if(isStop)
+    if (isStop)
       throw new IllegalStateException(s"Producer ${this.name} is already stopped. Unable to get new transaction.")
 
     val partition = {
@@ -163,7 +164,7 @@ class BasicProducer[USERTYPE](val name : String,
 
     val transaction = {
       val txnUUID = masterP2PAgent.getNewTxn(partition)
-      logger.debug(s"[NEW_TRANSACTION PARTITION_$partition] uuid=${txnUUID.timestamp()}\n")
+      logger.debug(s"[NEW_TRANSACTION PARTITION_$partition] uuid=${txnUUID.timestamp()}")
       if (openTransactionsMap.contains(partition)) {
         val prevTxn = openTransactionsMap(partition)
         if (!prevTxn.isClosed) {
@@ -189,12 +190,12 @@ class BasicProducer[USERTYPE](val name : String,
   }
 
   /**
-   * Return reference on transaction from concrete partition
+    * Return reference on transaction from concrete partition
     *
     * @param partition Partition from which transaction will be retrieved
-   * @return Transaction reference if it exist or not closed
-   */
-  def getOpenTransactionForPartition(partition : Int) : Option[BasicProducerTransaction[USERTYPE]] = {
+    * @return Transaction reference if it exist or not closed
+    */
+  def getOpenTransactionForPartition(partition: Int): Option[BasicProducerTransaction[USERTYPE]] = {
     threadLock.lock()
 
     if (!(partition >= 0 && partition < stream.getPartitions))
@@ -214,28 +215,28 @@ class BasicProducer[USERTYPE](val name : String,
   }
 
   /**
-   * Close all opened transactions
-   */
-  def checkpoint() : Unit = {
+    * Close all opened transactions
+    */
+  def checkpoint(): Unit = {
     threadLock.lock()
 
     openTransactionsMap.
-        map { case(partition,txn)=>txn }.
-          foreach { x=> if (!x.isClosed) x.checkpoint() }
+      map { case (partition, txn) => txn }.
+      foreach { x => if (!x.isClosed) x.checkpoint() }
 
     threadLock.unlock()
   }
 
   /**
-   * Info to commit
-   */
+    * Info to commit
+    */
   override def getCheckpointInfoAndClear(): List[CheckpointInfo] = {
     val checkpointData = openTransactionsMap.map {
       case (partition, txn) =>
 
         txn.getTransactionLock.lock
         val txnUuid = txn.getTxnUUID
-        val txnCnt  = txn.getCnt
+        val txnCnt = txn.getCnt
         val txnPartition = txn.getPartition
         txn.setAsClosed()
         txn.getTransactionLock.unlock
@@ -243,34 +244,35 @@ class BasicProducer[USERTYPE](val name : String,
         assert(partition == txnPartition)
 
         val preCheckpoint = ProducerTopicMessage(
-                                    txnUuid = txnUuid,
-                                    ttl = -1,
-                                    status = ProducerTransactionStatus.preCheckpoint,
-                                    partition = partition)
+          txnUuid = txnUuid,
+          ttl = -1,
+          status = ProducerTransactionStatus.preCheckpoint,
+          partition = partition)
 
         val finalCheckpoint = ProducerTopicMessage(
-                                    txnUuid = txnUuid,
-                                    ttl = -1,
-                                    status = ProducerTransactionStatus.postCheckpoint,
-                                    partition = partition)
+          txnUuid = txnUuid,
+          ttl = -1,
+          status = ProducerTransactionStatus.postCheckpoint,
+          partition = partition)
 
-        ProducerCheckpointInfo(transactionRef        = txn,
-                                agent                 = masterP2PAgent,
-                                preCheckpointEvent    = preCheckpoint,
-                                finalCheckpointEvent  = finalCheckpoint,
-                                streamName            = stream.getName,
-                                partition             = partition,
-                                transaction           = txnUuid,
-                                totalCnt              = txnCnt,
-                                ttl                   = stream.getTTL) }.toList
+        ProducerCheckpointInfo(transactionRef = txn,
+          agent = masterP2PAgent,
+          preCheckpointEvent = preCheckpoint,
+          finalCheckpointEvent = finalCheckpoint,
+          streamName = stream.getName,
+          partition = partition,
+          transaction = txnUuid,
+          totalCnt = txnCnt,
+          ttl = stream.getTTL)
+    }.toList
 
     openTransactionsMap.clear()
     checkpointData
   }
 
   /**
-   * @return Metadata storage link for concrete agent
-   */
+    * @return Metadata storage link for concrete agent
+    */
   override def getMetadataRef(): MetadataStorage =
     stream.metadataStorage
 
@@ -284,24 +286,24 @@ class BasicProducer[USERTYPE](val name : String,
   }
 
   /**
-   * Method to implement for concrete producer [[PeerToPeerAgent]] method
-   * Need only if this producer is master
+    * Method to implement for concrete producer [[PeerToPeerAgent]] method
+    * Need only if this producer is master
     *
     * @return UUID
-   */
-  override def openTxnLocal(txnUUID : UUID, partition : Int, onComplete: () => Unit) : Unit = {
+    */
+  override def openTxnLocal(txnUUID: UUID, partition: Int, onComplete: () => Unit): Unit = {
     stream.metadataStorage.commitEntity.commit(
-                                streamName  = stream.getName,
-                                partition   = partition,
-                                transaction = txnUUID,
-                                totalCnt    = -1,
-                                ttl         = producerOptions.transactionTTL)
+      streamName = stream.getName,
+      partition = partition,
+      transaction = txnUUID,
+      totalCnt = -1,
+      ttl = producerOptions.transactionTTL)
 
     val msg = ProducerTopicMessage(
-                                txnUuid     = txnUUID,
-                                ttl         = producerOptions.transactionTTL,
-                                status      = ProducerTransactionStatus.opened,
-                                partition   = partition)
+      txnUuid = txnUUID,
+      ttl = producerOptions.transactionTTL,
+      status = ProducerTransactionStatus.opened,
+      partition = partition)
 
     logger.debug(s"Producer ${name} - [GET_LOCAL_TXN PRODUCER] update with msg partition=$partition uuid=${txnUUID.timestamp()} opened")
     subscriberClient.publish(msg, onComplete)
@@ -309,11 +311,11 @@ class BasicProducer[USERTYPE](val name : String,
 
 
   /**
-   * Stop this agent
-   */
+    * Stop this agent
+    */
   def stop() = {
     threadLock.lock()
-    if(isStop)
+    if (isStop)
       throw new IllegalStateException(s"Producer ${this.name} is already stopped. Duplicate action.")
     isStop = true
     threadLock.unlock()

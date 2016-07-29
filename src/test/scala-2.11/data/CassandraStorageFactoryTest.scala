@@ -1,9 +1,7 @@
 package data
 
-import java.net.InetSocketAddress
-
-import com.bwsw.tstreams.data.cassandra.{CassandraStorageOptions, CassandraStorageFactory, CassandraStorage}
-import org.scalatest.{BeforeAndAfterAll, Matchers, FlatSpec}
+import com.bwsw.tstreams.data.cassandra.{CassandraStorage, CassandraStorageFactory}
+import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import testutils.TestUtils
 
 class CassandraStorageFactoryTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
@@ -28,6 +26,6 @@ class CassandraStorageFactoryTest extends FlatSpec with Matchers with BeforeAndA
   }
 
   override def afterAll(): Unit = {
-      onAfterAll()
+    onAfterAll()
   }
 }

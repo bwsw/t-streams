@@ -6,23 +6,24 @@ import org.slf4j.LoggerFactory
 
 
 /**
- * Service for metadata storage. Include static methods for cluster initialization,
- * creating new keyspace, dropping keyspace
- */
+  * Service for metadata storage. Include static methods for cluster initialization,
+  * creating new keyspace, dropping keyspace
+  */
 object CassandraStorageService {
 
   /**
-   * MetadataStorageServiceLogger for logging
-   */
+    * MetadataStorageServiceLogger for logging
+    */
   private val logger = LoggerFactory.getLogger(this.getClass)
 
   /**
-   * Creates keyspace for Metadata.
-   * @param cassandraHosts Ring hosts to join
-   * @param keyspace Keyspace to create
-   * @param replicationStrategy One of supported C* strategies (enum CassandraStrategies.CassandraStrategies)
-   * @param replicationFactor How to replicate data. Default = 1
-   */
+    * Creates keyspace for Metadata.
+    *
+    * @param cassandraHosts      Ring hosts to join
+    * @param keyspace            Keyspace to create
+    * @param replicationStrategy One of supported C* strategies (enum CassandraStrategies.CassandraStrategies)
+    * @param replicationFactor   How to replicate data. Default = 1
+    */
   def createKeyspace(cassandraHosts: List[String],
                      keyspace: String,
                      replicationStrategy: CassandraStrategies.CassandraStrategies,
@@ -45,10 +46,11 @@ object CassandraStorageService {
   }
 
   /**
-   * Internal method to create cluster without session
-   * @param hosts Hosts connect to
-   * @return Cluster connected to hosts
-   */
+    * Internal method to create cluster without session
+    *
+    * @param hosts Hosts connect to
+    * @return Cluster connected to hosts
+    */
   private def getCluster(hosts: List[String]): Cluster = {
     logger.info(s"Start create cluster for hosts : {${hosts.mkString(",")}")
     val builder: Builder = Cluster.builder()
@@ -59,10 +61,11 @@ object CassandraStorageService {
   }
 
   /**
-   * Drops keyspace for Metadata.
-   * @param cassandraHosts Ring hosts to join
-   * @param keyspace Keyspace to drop
-   */
+    * Drops keyspace for Metadata.
+    *
+    * @param cassandraHosts Ring hosts to join
+    * @param keyspace       Keyspace to drop
+    */
   def dropKeyspace(cassandraHosts: List[String],
                    keyspace: String) = {
 
@@ -81,8 +84,8 @@ object CassandraStorageService {
 }
 
 /**
- * Enumeration for accessing available network topologies
- */
+  * Enumeration for accessing available network topologies
+  */
 object CassandraStrategies extends Enumeration {
   type CassandraStrategies = Value
   val SimpleStrategy = Value("SimpleStrategy")

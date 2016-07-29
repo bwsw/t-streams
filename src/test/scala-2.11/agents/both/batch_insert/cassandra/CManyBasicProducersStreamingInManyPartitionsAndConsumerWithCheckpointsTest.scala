@@ -3,21 +3,17 @@ package agents.both.batch_insert.cassandra
 import java.net.InetSocketAddress
 
 import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
-import com.bwsw.tstreams.agents.consumer.{BasicConsumer, BasicConsumerOptions, SubscriberCoordinationOptions}
+import com.bwsw.tstreams.agents.consumer.{BasicConsumer, BasicConsumerOptions}
 import com.bwsw.tstreams.agents.producer.InsertionType.BatchInsert
 import com.bwsw.tstreams.agents.producer.{BasicProducer, BasicProducerOptions, ProducerCoordinationOptions, ProducerPolicies}
-import com.bwsw.tstreams.converter.{ArrayByteToStringConverter, StringToArrayByteConverter}
-import com.bwsw.tstreams.data.cassandra.{CassandraStorageFactory, CassandraStorageOptions}
 import com.bwsw.tstreams.coordination.transactions.transport.impl.TcpTransport
-import com.bwsw.tstreams.metadata.MetadataStorageFactory
 import com.bwsw.tstreams.streams.BasicStream
-import com.datastax.driver.core.Cluster
-import testutils._
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
+import testutils._
 
 
 class CManyBasicProducersStreamingInManyPartitionsAndConsumerWithCheckpointsTest extends FlatSpec
-with Matchers with BeforeAndAfterAll with TestUtils{
+  with Matchers with BeforeAndAfterAll with TestUtils {
   var port = 8000
 
 
@@ -25,7 +21,7 @@ with Matchers with BeforeAndAfterAll with TestUtils{
     " (each producer send each txn in only one partition without intersection " +
     " for ex. producer1 in partition1, producer2 in partition2, producer3 in partition3 etc...) " +
     " consumer - retrieve them all with reinitialization every 30 transactions" in {
-    val timeoutForWaiting = 60*5
+    val timeoutForWaiting = 60 * 5
     val totalPartitions = 4
     val totalTxn = 10
     val totalElementsInTxn = 3
@@ -35,18 +31,18 @@ with Matchers with BeforeAndAfterAll with TestUtils{
     val producers: List[BasicProducer[String]] =
       (0 until producersAmount)
         .toList
-        .map(x=>getProducer(List(x%totalPartitions),totalPartitions))
+        .map(x => getProducer(List(x % totalPartitions), totalPartitions))
 
     val producersThreads = producers.map(p =>
       new Thread(new Runnable {
-        def run(){
+        def run() {
           var i = 0
-          while(i < totalTxn) {
+          while (i < totalTxn) {
             Thread.sleep(2000)
             val txn = p.newTransaction(ProducerPolicies.errorIfOpened)
             dataToSend.foreach(x => txn.send(x))
             txn.checkpoint()
-            i+=1
+            i += 1
           }
         }
       }))
@@ -72,9 +68,10 @@ with Matchers with BeforeAndAfterAll with TestUtils{
     val consumerThread = new Thread(
       new Runnable {
         Thread.sleep(3000)
+
         def run() = {
           var i = 0
-          while(i < totalTxn*producersAmount) {
+          while (i < totalTxn * producersAmount) {
 
             if (i % 30 == 0) {
               consumer.checkpoint()
@@ -92,9 +89,9 @@ with Matchers with BeforeAndAfterAll with TestUtils{
 
             val txn = consumer.getTransaction
 
-            if (txn.isDefined){
+            if (txn.isDefined) {
               checkVal &= txn.get.getAll().sorted == dataToSend
-              i+=1
+              i += 1
             }
 
             Thread.sleep(200)
@@ -102,25 +99,25 @@ with Matchers with BeforeAndAfterAll with TestUtils{
         }
       })
 
-    producersThreads.foreach(x=>x.start())
+    producersThreads.foreach(x => x.start())
     consumerThread.start()
     consumerThread.join(timeoutForWaiting * 1000)
-    producersThreads.foreach(x=>x.join(timeoutForWaiting * 1000))
+    producersThreads.foreach(x => x.join(timeoutForWaiting * 1000))
 
     //assert that is nothing to read
-    (0 until totalPartitions) foreach { _=>
+    (0 until totalPartitions) foreach { _ =>
       checkVal &= consumer.getTransaction.isEmpty
     }
 
     checkVal &= !consumerThread.isAlive
-    producersThreads.foreach(x=> checkVal &= !x.isAlive)
+    producersThreads.foreach(x => checkVal &= !x.isAlive)
 
-    producers.foreach(x=>x.stop())
+    producers.foreach(x => x.stop())
 
     checkVal shouldEqual true
   }
 
-  def getProducer(usedPartitions : List[Int], totalPartitions : Int) : BasicProducer[String] = {
+  def getProducer(usedPartitions: List[Int], totalPartitions: Int): BasicProducer[String] = {
     val stream = getStream(totalPartitions)
 
     val agentSettings = new ProducerCoordinationOptions(
@@ -141,7 +138,7 @@ with Matchers with BeforeAndAfterAll with TestUtils{
     producer
   }
 
-  def getStream(partitions : Int): BasicStream[Array[Byte]] = {
+  def getStream(partitions: Int): BasicStream[Array[Byte]] = {
     //storage instances
     val metadataStorageInst = metadataStorageFactory.getInstance(
       cassandraHosts = List(new InetSocketAddress("localhost", 9042)),

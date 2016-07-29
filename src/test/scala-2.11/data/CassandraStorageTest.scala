@@ -2,12 +2,13 @@ package data
 
 import java.net.InetSocketAddress
 import java.util.UUID
+
 import com.bwsw.tstreams.common.CassandraConnectionPool
 import com.bwsw.tstreams.data.cassandra.CassandraStorage
-import com.datastax.driver.core.Cluster
 import com.datastax.driver.core.utils.UUIDs
-import org.scalatest.{BeforeAndAfterAll, Matchers, FlatSpec}
-import testutils.{TestUtils, RandomStringCreator}
+import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
+import testutils.TestUtils
+
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 import scala.language.postfixOps
@@ -33,7 +34,7 @@ class CassandraStorageTest extends FlatSpec with Matchers with BeforeAndAfterAll
       cassandraStorage.truncate()
     }
     catch {
-      case e : Exception =>
+      case e: Exception =>
         checkVal = false
         logger.info(e.toString)
     }
@@ -56,13 +57,13 @@ class CassandraStorageTest extends FlatSpec with Matchers with BeforeAndAfterAll
     val jobs = ListBuffer[() => Unit]()
 
     for (i <- 0 until 1000) {
-      val future = cassandraStorage.put(streamName, partition, transaction, 60*60*24, data.getBytes, i)
+      val future = cassandraStorage.put(streamName, partition, transaction, 60 * 60 * 24, data.getBytes, i)
       jobs += future
     }
 
-    jobs.foreach(x=> x())
+    jobs.foreach(x => x())
 
-    val queue: mutable.Queue[Array[Byte]] = cassandraStorage.get(streamName, partition, transaction, 0, cnt-1)
+    val queue: mutable.Queue[Array[Byte]] = cassandraStorage.get(streamName, partition, transaction, 0, cnt - 1)
     val emptyQueueForLeftBound = cassandraStorage.get(streamName, partition, transaction, -100, -1)
     val emptyQueueForRightBound = cassandraStorage.get(streamName, partition, transaction, cnt, cnt + 100)
 
@@ -71,7 +72,7 @@ class CassandraStorageTest extends FlatSpec with Matchers with BeforeAndAfterAll
     if (emptyQueueForLeftBound.nonEmpty || emptyQueueForRightBound.nonEmpty)
       checkVal = false
 
-    while(queue.nonEmpty){
+    while (queue.nonEmpty) {
       val part: String = new String(queue.dequeue())
       if (part != data)
         checkVal = false
@@ -81,7 +82,7 @@ class CassandraStorageTest extends FlatSpec with Matchers with BeforeAndAfterAll
   }
 
 
-  override def afterAll() : Unit = {
+  override def afterAll(): Unit = {
     onAfterAll()
   }
 }

@@ -4,19 +4,21 @@ import com.bwsw.tstreams.common.CassandraHelper
 import com.bwsw.tstreams.services.{CassandraStorageService, CassandraStrategies}
 import com.datastax.driver.core.Cluster
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
-import testutils.{RandomStringCreator}
+import testutils.RandomStringCreator
+
 import scala.collection.mutable.ListBuffer
 
 
 class CassandraStorageServiceTest extends FlatSpec with Matchers with BeforeAndAfterAll {
   def randomString: String = RandomStringCreator.randomAlphaString(10)
+
   var maybeCreatedKeyspaces = ListBuffer[String]()
 
   "MetadataStorageService.createKeyspace() and MetadataStorageService.dropKeyspace()" should
     "create keyspace and drop it in cassandra" in {
 
     val randomKeyspace = randomString
-    maybeCreatedKeyspaces+=randomKeyspace
+    maybeCreatedKeyspaces += randomKeyspace
 
     val cluster: Cluster = Cluster.builder().addContactPoint("localhost").build()
 
@@ -83,9 +85,9 @@ class CassandraStorageServiceTest extends FlatSpec with Matchers with BeforeAndA
     val cluster: Cluster = Cluster.builder().addContactPoint("localhost").build()
     val session = cluster.connect()
     val metadata = cluster.getMetadata
-    maybeCreatedKeyspaces.foreach{ x=>
-        if (metadata.getKeyspace(x) != null)
-          session.execute(s"DROP KEYSPACE $x")
+    maybeCreatedKeyspaces.foreach { x =>
+      if (metadata.getKeyspace(x) != null)
+        session.execute(s"DROP KEYSPACE $x")
     }
     cluster.close()
     session.close()
