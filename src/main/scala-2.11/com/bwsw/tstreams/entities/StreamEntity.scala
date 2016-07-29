@@ -20,23 +20,24 @@ class StreamEntity(entityName : String, session: Session){
 
   private val logger = LoggerFactory.getLogger(this.getClass)
 
+  logger.info(s"INSERT INTO $entityName (stream_name, partitions, ttl, description) VALUES (?,?,?,?)")
   /**
    * Session prepared statement for stream creation
    */
   private val createStreamStatement = session
-    .prepare(s"insert into $entityName (stream_name, partitions, ttl, description) values(?,?,?,?)")
+    .prepare(s"INSERT INTO $entityName (stream_name, partitions, ttl, description) VALUES (?,?,?,?)")
 
   /**
    * Session prepared statement for stream deleting
    */
   private val deleteStreamStatement = session
-    .prepare(s"delete from $entityName where stream_name=?")
+    .prepare(s"DELETE FROM $entityName WHERE stream_name=?")
 
   /**
    * Session prepared statement for stream settings retrieving
    */
   private val getStreamStatement = session
-    .prepare(s"select * from $entityName where stream_name=? limit 1")
+    .prepare(s"SELECT * FROM $entityName WHERE stream_name=? LIMIT 1")
 
   /**
     * Create stream with parameters

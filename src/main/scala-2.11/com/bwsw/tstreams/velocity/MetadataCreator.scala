@@ -1,5 +1,6 @@
 package com.bwsw.tstreams.velocity
 
+import com.bwsw.tstreams.common.CassandraHelper
 import com.datastax.driver.core.Cluster
 
 object MetadataCreator {

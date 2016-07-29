@@ -15,15 +15,14 @@ import com.bwsw.tstreams.metadata.MetadataStorageFactory
 import com.bwsw.tstreams.streams.BasicStream
 import com.datastax.driver.core.Cluster
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
-import testutils.{CassandraHelper, LocalGeneratorCreator, RoundRobinPolicyCreator, TestUtils}
+import testutils.{LocalGeneratorCreator, RoundRobinPolicyCreator, TestUtils}
 
 import scala.collection.mutable.ListBuffer
 
 
-class AManyBasicProducersStreamingInOnePartitionAndConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils{
+class AManyBasicProducersStreamingInOnePartitionAndConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
 
   var port = 8000
-
 
   "Some amount of producers and one consumer" should "producers - send transactions in one partition and consumer - retrieve them all" in {
     val timeoutForWaiting = 60*5
@@ -134,7 +133,6 @@ class AManyBasicProducersStreamingInOnePartitionAndConsumerTest extends FlatSpec
   }
 
   override def afterAll(): Unit = {
-    removeZkMetadata("/unit")
     onAfterAll()
   }
 }

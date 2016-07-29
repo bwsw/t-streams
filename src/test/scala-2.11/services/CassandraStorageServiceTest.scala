@@ -1,9 +1,10 @@
 package services
 
+import com.bwsw.tstreams.common.CassandraHelper
 import com.bwsw.tstreams.services.{CassandraStorageService, CassandraStrategies}
 import com.datastax.driver.core.Cluster
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
-import testutils.{RandomStringCreator, CassandraHelper}
+import testutils.{RandomStringCreator}
 import scala.collection.mutable.ListBuffer
 
 

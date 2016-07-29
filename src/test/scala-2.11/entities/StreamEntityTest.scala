@@ -1,8 +1,9 @@
 package entities
 
+import com.bwsw.tstreams.common.CassandraHelper
 import com.datastax.driver.core.Cluster
 import org.scalatest.{BeforeAndAfterAll, Matchers, FlatSpec}
-import testutils.{CassandraHelper, RandomStringCreator}
+import testutils.{RandomStringCreator}
 import com.bwsw.tstreams.entities.StreamEntity
 
 

@@ -1,6 +1,7 @@
-package com.bwsw.tstreams.velocity
+package com.bwsw.tstreams.common
 
 import com.datastax.driver.core.Session
+
 
 /**
  * Test util for creating C* entities
@@ -12,7 +13,7 @@ object CassandraHelper {
    * @param session Session instance which will be used for keyspace creation
    * @param keyspace Keyspace name
    */
-  def createKeyspace(session: Session, keyspace : String) = session.execute(s"CREATE KEYSPACE $keyspace WITH replication = " +
+  def createKeyspace(session: Session, keyspace : String) = session.execute(s"CREATE KEYSPACE IF NOT EXISTS $keyspace WITH replication = " +
                                                                   s" {'class': 'SimpleStrategy', 'replication_factor': '1'} " +
                                                                   s" AND durable_writes = true")
 
@@ -23,13 +24,13 @@ object CassandraHelper {
    */
   def createMetadataTables(session : Session, keyspace : String) = {
     
-    session.execute(s"CREATE TABLE $keyspace.stream_commit_last (" +
+    session.execute(s"CREATE TABLE IF NOT EXISTS $keyspace.stream_commit_last (" +
       s"stream text, " +
       s"partition int, " +
       s"transaction timeuuid, " +
       s"PRIMARY KEY (stream, partition))")
     
-    session.execute(s"CREATE TABLE $keyspace.consumers (" +
+    session.execute(s"CREATE TABLE IF NOT EXISTS $keyspace.consumers (" +
       s"name text, " +
       s"stream text, " +
       s"partition int, " +
@@ -37,14 +38,14 @@ object CassandraHelper {
       s"PRIMARY KEY (name, stream, partition))")
 
     
-    session.execute(s"CREATE TABLE $keyspace.streams (" +
+    session.execute(s"CREATE TABLE IF NOT EXISTS $keyspace.streams (" +
       s"stream_name text PRIMARY KEY, " +
       s"partitions int," +
       s"ttl int, " +
       s"description text)")
 
     
-    session.execute(s"CREATE TABLE $keyspace.commit_log (" +
+    session.execute(s"CREATE TABLE IF NOT EXISTS $keyspace.commit_log (" +
       s"stream text, " +
       s"partition int, " +
       s"transaction timeuuid, " +
@@ -52,7 +53,7 @@ object CassandraHelper {
       s"PRIMARY KEY (stream, partition, transaction))")
 
     
-    session.execute(s"CREATE TABLE $keyspace.generators (" +
+    session.execute(s"CREATE TABLE IF NOT EXISTS $keyspace.generators (" +
       s"name text, " +
       s"time timeuuid, " +
       s"PRIMARY KEY (name))")
@@ -66,7 +67,7 @@ object CassandraHelper {
    */
   def createDataTable(session: Session, keyspace: String) = {
 
-    session.execute(s"CREATE TABLE $keyspace.data_queue ( " +
+    session.execute(s"CREATE TABLE IF NOT EXISTS $keyspace.data_queue ( " +
       s"stream text, " +
       s"partition int, " +
       s"transaction timeuuid, " +
@@ -90,15 +91,11 @@ object CassandraHelper {
    * @param keyspace Keyspace name
    */
   def dropMetadataTables(session: Session, keyspace : String) = {
-    session.execute(s"DROP TABLE $keyspace.stream_commit_last")
-
-    session.execute(s"DROP TABLE $keyspace.consumers")
-
-    session.execute(s"DROP TABLE $keyspace.streams")
-
-    session.execute(s"DROP TABLE $keyspace.commit_log")
-
-    session.execute(s"DROP TABLE $keyspace.generators")
+    session.execute(s"DROP TABLE IF EXISTS $keyspace.stream_commit_last")
+    session.execute(s"DROP TABLE IF EXISTS $keyspace.consumers")
+    session.execute(s"DROP TABLE IF EXISTS $keyspace.streams")
+    session.execute(s"DROP TABLE IF EXISTS $keyspace.commit_log")
+    session.execute(s"DROP TABLE IF EXISTS $keyspace.generators")
   }
 
   /**
@@ -107,8 +104,11 @@ object CassandraHelper {
    * @param keyspace Keyspace name
    */
   def clearMetadataTables(session: Session, keyspace : String) = {
-    dropMetadataTables(session, keyspace)
-    createMetadataTables(session, keyspace)
+    session.execute(s"TRUNCATE $keyspace.stream_commit_last")
+    session.execute(s"TRUNCATE $keyspace.consumers")
+    session.execute(s"TRUNCATE $keyspace.streams")
+    session.execute(s"TRUNCATE $keyspace.commit_log")
+    session.execute(s"TRUNCATE $keyspace.generators")
   }
 
 
@@ -118,7 +118,6 @@ object CassandraHelper {
    * @param keyspace Keyspace name
    */
   def clearDataTable(session: Session, keyspace : String) = {
-    dropDataTable(session, keyspace)
-    createDataTable(session, keyspace)
+    session.execute(s"TRUNCATE $keyspace.data_queue")
   }
 }

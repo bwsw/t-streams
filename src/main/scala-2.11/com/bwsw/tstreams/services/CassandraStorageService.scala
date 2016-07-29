@@ -27,20 +27,21 @@ object CassandraStorageService {
                      keyspace: String,
                      replicationStrategy: CassandraStrategies.CassandraStrategies,
                      replicationFactor: Int = 1) = {
-    logger.info(s"start creation keyspace:$keyspace\n")
+    logger.info(s"Create keyspace: $keyspace")
 
     val cluster = getCluster(cassandraHosts)
     val session: Session = cluster.connect()
 
-    logger.debug(s"start executing creation statement for keyspace:{$keyspace}\n")
-    session.execute(s"CREATE KEYSPACE $keyspace WITH replication = " +
+    logger.debug(s"Execute create statement for keyspace:{$keyspace}")
+
+    session.execute(s"CREATE KEYSPACE IF NOT EXISTS $keyspace WITH replication = " +
       s" {'class': '$replicationStrategy', 'replication_factor': '$replicationFactor'} " +
       s" AND durable_writes = true")
 
     session.close()
     cluster.close()
 
-    logger.info(s"finished creation keyspace:$keyspace\n")
+    logger.info(s"End create keyspace: $keyspace")
   }
 
   /**
@@ -49,11 +50,11 @@ object CassandraStorageService {
    * @return Cluster connected to hosts
    */
   private def getCluster(hosts: List[String]): Cluster = {
-    logger.info(s"start creating cluster for hosts : {${hosts.mkString(",")}\n")
+    logger.info(s"Start create cluster for hosts : {${hosts.mkString(",")}")
     val builder: Builder = Cluster.builder()
     hosts.foreach(x => builder.addContactPoint(x))
     val cluster = builder.build()
-    logger.info(s"finished creating cluster for hosts : {${hosts.mkString(",")}\n")
+    logger.info(s"End create cluster for hosts : {${hosts.mkString(",")}")
     cluster
   }
 
@@ -64,18 +65,17 @@ object CassandraStorageService {
    */
   def dropKeyspace(cassandraHosts: List[String],
                    keyspace: String) = {
-    logger.info(s"start dropping keyspace:$keyspace\n")
 
     val cluster = getCluster(cassandraHosts)
     val session: Session = cluster.connect()
 
-    logger.debug(s"start keyspace:$keyspace dropping\n")
-    session.execute(s"DROP KEYSPACE $keyspace")
+    logger.debug(s"Start drop keyspace: $keyspace")
+    session.execute(s"DROP KEYSPACE IF EXISTS $keyspace")
 
     session.close()
     cluster.close()
 
-    logger.info(s"finished dropping keyspace:$keyspace\n")
+    logger.info(s"End drop keyspace:$keyspace")
   }
 
 }

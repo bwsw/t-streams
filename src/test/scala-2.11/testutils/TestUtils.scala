@@ -5,14 +5,13 @@ import java.net.InetSocketAddress
 import java.util.UUID
 
 import com.aerospike.client.Host
-import com.bwsw.tstreams.common.CassandraConnectionPool
+import com.bwsw.tstreams.common.{CassandraHelper, CassandraConnectionPool}
 import com.bwsw.tstreams.common.zkservice.ZkService
 import com.bwsw.tstreams.converter.{StringToArrayByteConverter, ArrayByteToStringConverter}
 import com.bwsw.tstreams.data.aerospike.{AerospikeStorageOptions, AerospikeStorageFactory}
 import com.bwsw.tstreams.data.cassandra.{CassandraStorageOptions, CassandraStorageFactory}
 import com.bwsw.tstreams.env.{TSF_Dictionary, TStreamsFactory}
 import com.bwsw.tstreams.metadata.MetadataStorageFactory
-import com.datastax.driver.core.Cluster
 import org.slf4j.LoggerFactory
 
 import scala.collection.mutable.ListBuffer
@@ -36,8 +35,9 @@ trait TestUtils {
   logger.info("Test suite " + this.getClass.toString + " started")
   logger.info("-------------------------------------------------------")
 
+
   val cluster = CassandraConnectionPool.getCluster(List(new InetSocketAddress("localhost", 9042)))
-  val session = CassandraConnectionPool.getSession(List(new InetSocketAddress("localhost", 9042)), randomKeyspace)
+  val session = CassandraConnectionPool.getSession(List(new InetSocketAddress("localhost", 9042)), null)
 
   def createRandomKeyspace(): String = {
     val randomKeyspace = randomString

@@ -125,7 +125,6 @@ class CBasicProducerAndConsumerCheckpointTest extends FlatSpec with Matchers wit
 
   override def afterAll(): Unit = {
     producer.stop()
-    removeZkMetadata("/unit")
     onAfterAll()
   }
 }

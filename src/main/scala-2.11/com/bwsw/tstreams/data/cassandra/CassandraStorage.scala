@@ -22,13 +22,13 @@ class CassandraStorage(cluster: Cluster, session: Session, keyspace: String) ext
    * Prepared C* statement for data insertion
    */
   private val insertStatement = session
-    .prepare(s"insert into data_queue (stream,partition,transaction,seq,data) values(?,?,?,?,?) USING TTL ?")
+    .prepare(s"INSERT INTO data_queue (stream,partition,transaction,seq,data) values(?,?,?,?,?) USING TTL ?")
 
   /**
    * Prepared C* statement for select queries
    */
   private val selectStatement = session
-    .prepare(s"select data from data_queue where stream=? AND partition=? AND transaction=? AND seq>=? AND seq<=? LIMIT ?")
+    .prepare(s"SELECT data FROM data_queue WHERE stream=? AND partition=? AND transaction=? AND seq>=? AND seq<=? LIMIT ?")
 
   /**
    * Put data in the cassandra storage
@@ -98,7 +98,7 @@ class CassandraStorage(cluster: Cluster, session: Session, keyspace: String) ext
   override def init(): Unit = {
     logger.info("start initializing CassandraStorage table\n")
 
-    session.execute(s"CREATE TABLE data_queue ( " +
+    session.execute(s"CREATE TABLE IF NOT EXISTS data_queue ( " +
       s"stream text, " +
       s"partition int, " +
       s"transaction timeuuid, " +
@@ -126,7 +126,7 @@ class CassandraStorage(cluster: Cluster, session: Session, keyspace: String) ext
   override def remove(): Unit = {
     logger.info("start removing CassandraStorage data_queue table\n")
 
-    session.execute("DROP TABLE data_queue")
+    session.execute("DROP TABLE IF EXISTS data_queue")
 
     logger.info("finished removing CassandraStorage data_queue table\n")
   }

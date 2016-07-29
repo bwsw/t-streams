@@ -7,13 +7,13 @@ import com.bwsw.tstreams.agents.consumer.subscriber.{BasicSubscribingConsumer, B
 import com.bwsw.tstreams.agents.producer.ProducerPolicies
 import com.bwsw.tstreams.converter.{ArrayByteToStringConverter, StringToArrayByteConverter}
 import com.bwsw.tstreams.env.{TSF_Dictionary, TStreamsFactory}
+import com.bwsw.tstreams.velocity.LocalGeneratorCreator
 
 /**
   * Created by ivan on 23.07.16.
   */
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
-import testutils._
-
+import testutils.TestUtils
 
 class TStreamsFactoryTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
 
@@ -61,7 +61,6 @@ class TStreamsFactoryTest extends FlatSpec with Matchers with BeforeAndAfterAll 
   }
 
   override def afterAll(): Unit = {
-    f.close()
     super.afterAll()
   }
 

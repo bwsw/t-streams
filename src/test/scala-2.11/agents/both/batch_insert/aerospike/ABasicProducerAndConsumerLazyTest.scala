@@ -175,7 +175,6 @@ class ABasicProducerAndConsumerLazyTest extends FlatSpec with Matchers with Befo
   override def afterAll(): Unit = {
     producer1.stop()
     producer2.stop()
-    removeZkMetadata("/unit")
     onAfterAll()
   }
 }

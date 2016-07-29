@@ -140,7 +140,6 @@ class AManyBasicProducersStreamingInManyPartitionsAndConsumerTest extends FlatSp
   }
 
   override def afterAll(): Unit = {
-    removeZkMetadata("/unit")
     onAfterAll()
   }
 }

@@ -158,7 +158,6 @@ with Matchers with BeforeAndAfterAll with TestUtils{
   }
 
   override def afterAll(): Unit = {
-    removeZkMetadata("/unit")
     onAfterAll()
   }
 }

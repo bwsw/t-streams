@@ -131,7 +131,6 @@ class CManyBasicProducersStreamingInOnePartitionAndConsumerTest extends FlatSpec
   }
 
   override def afterAll(): Unit = {
-    removeZkMetadata("/unit")
     onAfterAll()
   }
 }

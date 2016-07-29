@@ -19,7 +19,7 @@ import com.bwsw.tstreams.metadata.MetadataStorageFactory
 import com.bwsw.tstreams.streams.BasicStream
 import com.datastax.driver.core.Cluster
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers, OneInstancePerTest}
-import testutils.{CassandraHelper, LocalGeneratorCreator, RoundRobinPolicyCreator, TestUtils}
+import testutils.{LocalGeneratorCreator, RoundRobinPolicyCreator, TestUtils}
 
 //TODO refactoring
 class ABasicSubscriberAfterCommitFailureTest extends FlatSpec with Matchers
