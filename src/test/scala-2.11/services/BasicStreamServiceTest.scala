@@ -5,7 +5,7 @@ import java.net.InetSocketAddress
 import com.bwsw.tstreams.services.BasicStreamService
 import com.bwsw.tstreams.streams.BasicStream
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
-import testutils.TestUtils
+import testutils.{RandomStringCreator, TestUtils}
 
 
 class BasicStreamServiceTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
@@ -15,9 +15,11 @@ class BasicStreamServiceTest extends FlatSpec with Matchers with BeforeAndAfterA
     cassandraHosts = List(new InetSocketAddress("localhost", 9042)),
     keyspace = randomKeyspace)
 
+  def randomVal: String = RandomStringCreator.randomAlphaString(10)
+
 
   "BasicStreamService.createStream()" should "create stream" in {
-    val name = randomString
+    val name = randomVal
 
     val stream: BasicStream[_] = BasicStreamService.createStream(
       streamName = name,
@@ -34,7 +36,7 @@ class BasicStreamServiceTest extends FlatSpec with Matchers with BeforeAndAfterA
 
   "BasicStreamService.createStream()" should "throw exception if stream already created" in {
     intercept[IllegalArgumentException] {
-      val name = randomString
+      val name = randomVal
 
       BasicStreamService.createStream(
         streamName = name,
@@ -55,7 +57,7 @@ class BasicStreamServiceTest extends FlatSpec with Matchers with BeforeAndAfterA
   }
 
   "BasicStreamService.loadStream()" should "load created stream" in {
-    val name = randomString
+    val name = randomVal
 
     BasicStreamService.createStream(
       streamName = name,
@@ -71,8 +73,8 @@ class BasicStreamServiceTest extends FlatSpec with Matchers with BeforeAndAfterA
   }
 
   "BasicStreamService.isExist()" should "say exist concrete stream or not" in {
-    val name = randomString
-    val notExistName = randomString
+    val name = randomVal
+    val notExistName = randomVal
 
     BasicStreamService.createStream(
       streamName = name,
@@ -90,7 +92,7 @@ class BasicStreamServiceTest extends FlatSpec with Matchers with BeforeAndAfterA
   }
 
   "BasicStreamService.loadStream()" should "throw exception if stream not exist" in {
-    val name = randomString
+    val name = randomVal
 
     intercept[IllegalArgumentException] {
       BasicStreamService.loadStream(name, metadataStorageInst, storageInst)
@@ -98,7 +100,7 @@ class BasicStreamServiceTest extends FlatSpec with Matchers with BeforeAndAfterA
   }
 
   "BasicStreamService.deleteStream()" should "delete created stream" in {
-    val name = randomString
+    val name = randomVal
 
     BasicStreamService.createStream(
       streamName = name,
@@ -116,7 +118,7 @@ class BasicStreamServiceTest extends FlatSpec with Matchers with BeforeAndAfterA
   }
 
   "BasicStreamService.deleteStream()" should "throw exception if stream was not created before" in {
-    val name = randomString
+    val name = randomVal
 
     intercept[IllegalArgumentException] {
       BasicStreamService.deleteStream(name, metadataStorageInst)
