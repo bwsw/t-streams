@@ -127,6 +127,7 @@ class BasicProducer[USERTYPE](val name : String,
     latch.await()
     txnKeepAliveThread
   }
+
   /**
     *
     */

@@ -92,6 +92,9 @@ class BasicProducerWithManyOpenedTxnsTest extends FlatSpec with Matchers with Be
     txn2.checkpoint()
     txn1.checkpoint()
 
+    //TODO implement await method
+    Thread.sleep(2000)
+
     assert(consumer.getTransaction.get.getAll().sorted == data1)
     assert(consumer.getTransaction.get.getAll().sorted == data2)
     assert(consumer.getTransaction.get.getAll().sorted == data3)
