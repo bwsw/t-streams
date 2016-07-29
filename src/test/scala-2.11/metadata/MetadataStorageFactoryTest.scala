@@ -1,19 +1,13 @@
 package metadata
 
 import java.net.InetSocketAddress
+
 import com.bwsw.tstreams.metadata.{MetadataStorage, MetadataStorageFactory}
-import com.datastax.driver.core.Cluster
-import org.scalatest.{BeforeAndAfterAll, Matchers, FlatSpec}
-import testutils.{RandomStringCreator, CassandraHelper}
+import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
+import testutils.TestUtils
 
 
-class MetadataStorageFactoryTest extends FlatSpec with Matchers with BeforeAndAfterAll {
-  def randomString: String = RandomStringCreator.randomAlphaString(10)
-  val randomKeyspace = randomString
-  val temporaryCluster = Cluster.builder().addContactPoint("localhost").build()
-  val temporarySession = temporaryCluster.connect()
-  CassandraHelper.createKeyspace(temporarySession, randomKeyspace)
-  CassandraHelper.createMetadataTables(temporarySession, randomKeyspace)
+class MetadataStorageFactoryTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
 
   "MetadataStorageFactory.getInstance()" should "return MetadataStorage instance" in {
     val factory = new MetadataStorageFactory
@@ -23,8 +17,6 @@ class MetadataStorageFactoryTest extends FlatSpec with Matchers with BeforeAndAf
   }
 
   override def afterAll(): Unit = {
-    temporarySession.execute(s"DROP KEYSPACE $randomKeyspace")
-    temporarySession.close()
-    temporaryCluster.close()
+    onAfterAll()
   }
 }

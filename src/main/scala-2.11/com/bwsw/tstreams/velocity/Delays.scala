@@ -3,7 +3,7 @@ package com.bwsw.tstreams.velocity
 object Delays {
   private val arr = new Array[Long](5)
 
-  def addDelay(d1 : Long, d2 : Long, d3 : Long, d4 : Long, d5 : Long) = {
+  def addDelay(d1: Long, d2: Long, d3: Long, d4: Long, d5: Long) = {
     arr(0) += d1
     arr(1) += d2
     arr(2) += d3

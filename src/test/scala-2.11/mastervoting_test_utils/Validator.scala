@@ -3,10 +3,11 @@ package mastervoting_test_utils
 import java.util.UUID
 
 import com.datastax.driver.core.Cluster
+
 import scala.collection.mutable.ListBuffer
 
-object Validator{
-  def isSorted(list : ListBuffer[UUID]) : Boolean = {
+object Validator {
+  def isSorted(list: ListBuffer[UUID]): Boolean = {
     if (list.isEmpty)
       return true
     var checkVal = true
@@ -32,18 +33,18 @@ object Validator{
     val it = set.iterator()
     val buffers = scala.collection.mutable.Map[Int, ListBuffer[UUID]]()
 
-    while(it.hasNext){
+    while (it.hasNext) {
       val row = it.next()
       val partition = row.getInt("partition")
       val uuid = row.getUUID("transaction")
-      if (!buffers.contains(partition)){
+      if (!buffers.contains(partition)) {
         buffers(partition) = ListBuffer(uuid)
       } else {
         buffers(partition) += uuid
       }
     }
 
-    val checkVal = buffers.map(x=>isSorted(x._2)).reduceLeft((a,b)=>a&b)
+    val checkVal = buffers.map(x => isSorted(x._2)).reduceLeft((a, b) => a & b)
 
     if (checkVal)
       println("sorted")

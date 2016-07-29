@@ -19,49 +19,49 @@ class BroadcasterChannelHandler(connectionManager: BroadcasterConnectionManager)
   private val group = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE)
 
   /**
-   * Triggered on read from channel (incorrect state because broadcaster must only broadcast)
-   */
+    * Triggered on read from channel (incorrect state because broadcaster must only broadcast)
+    */
   override def channelRead0(ctx: ChannelHandlerContext, msg: ProducerTopicMessage): Unit = {
     logger.warn("[BroadcasterChannelHandler] Broadcaster must only broadcast messages")
   }
 
   /**
-   * Triggered on connect to new subscriber
+    * Triggered on connect to new subscriber
     *
     * @param ctx Netty ctx
-   */
-  override def channelActive(ctx: ChannelHandlerContext) : Unit = {
+    */
+  override def channelActive(ctx: ChannelHandlerContext): Unit = {
     group.add(ctx.channel())
   }
 
   /**
-   * Triggered on disconnect of subscriber
+    * Triggered on disconnect of subscriber
     *
     * @param ctx Netty ctx
-   */
-  override def channelInactive(ctx: ChannelHandlerContext) : Unit = {
+    */
+  override def channelInactive(ctx: ChannelHandlerContext): Unit = {
     val id = ctx.channel().id()
     connectionManager.channelInactive(id)
   }
 
   /**
-   * Triggered on exception
+    * Triggered on exception
     *
-    * @param ctx Netty ctx
-   * @param cause Cause of exception
-   */
+    * @param ctx   Netty ctx
+    * @param cause Cause of exception
+    */
   override def exceptionCaught(ctx: ChannelHandlerContext, cause: Throwable) = {
     println(s"Broadcaster exception : ${cause.getMessage}")
-//    ctx.close()
+    //    ctx.close()
   }
 
   /**
-   * Broadcast msg to all subscribers
+    * Broadcast msg to all subscribers
     *
     * @param msg Msg to broadcast
-   */
-  def broadcast(msg : ProducerTopicMessage, onComplete: () => Unit) : Unit = {
-    logger.debug(s"[BROADCASTER PUBLISH] partition=${msg.partition} status=${msg.status} uuid=${msg.txnUuid.timestamp()}\n")
+    */
+  def broadcast(msg: ProducerTopicMessage, onComplete: () => Unit): Unit = {
+    logger.debug(s"[BROADCASTER PUBLISH] partition=${msg.partition} status=${msg.status} uuid=${msg.txnUuid.timestamp()}")
     val cf = group.writeAndFlush(msg)
     cf.addListener(new ChannelGroupFutureListener {
       override def operationComplete(future: ChannelGroupFuture): Unit = {
@@ -72,9 +72,9 @@ class BroadcasterChannelHandler(connectionManager: BroadcasterConnectionManager)
 }
 
 /**
- * Encoder [[ProducerTopicMessage]]] to [[java.lang.String]]]
- */
-class ProducerTopicMessageEncoder extends MessageToMessageEncoder[ProducerTopicMessage]{
+  * Encoder [[ProducerTopicMessage]]] to [[java.lang.String]]]
+  */
+class ProducerTopicMessageEncoder extends MessageToMessageEncoder[ProducerTopicMessage] {
   val serializer = new TStreamsSerializer
 
   override def encode(ctx: ChannelHandlerContext, msg: ProducerTopicMessage, out: util.List[AnyRef]): Unit = {

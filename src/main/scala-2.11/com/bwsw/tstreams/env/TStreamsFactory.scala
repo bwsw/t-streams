@@ -6,9 +6,9 @@ import java.util.concurrent.locks.ReentrantLock
 
 import com.aerospike.client.Host
 import com.aerospike.client.policy.{ClientPolicy, Policy, WritePolicy}
-import com.bwsw.tstreams.agents.consumer.Offsets.{IOffset, Oldest}
-import com.bwsw.tstreams.agents.consumer.{BasicConsumer, BasicConsumerOptions, SubscriberCoordinationOptions}
+import com.bwsw.tstreams.agents.consumer.Offsets.IOffset
 import com.bwsw.tstreams.agents.consumer.subscriber.{BasicSubscriberCallback, BasicSubscribingConsumer}
+import com.bwsw.tstreams.agents.consumer.{BasicConsumer, BasicConsumerOptions, SubscriberCoordinationOptions}
 import com.bwsw.tstreams.agents.producer.InsertionType.{BatchInsert, InsertType, SingleElementInsert}
 import com.bwsw.tstreams.agents.producer.{BasicProducer, BasicProducerOptions, ProducerCoordinationOptions}
 import com.bwsw.tstreams.converter.IConverter
@@ -23,7 +23,7 @@ import com.bwsw.tstreams.streams.BasicStream
 import com.bwsw.tstreams.velocity.RoundRobinPolicyCreator
 import org.slf4j.LoggerFactory
 
-import scala.collection.mutable.{HashMap, Map}
+import scala.collection.mutable.HashMap
 
 /**
   * Class which holds definitions for UniversalFactory
@@ -58,6 +58,7 @@ object TSF_Dictionary {
         */
       val password = "metadata.cluster.password"
     }
+
   }
 
   /**
@@ -70,7 +71,7 @@ object TSF_Dictionary {
       */
     object Cluster {
       /**
-        *   the database driver which is used for data storage (currently UniversalFactory supports aerospike
+        * the database driver which is used for data storage (currently UniversalFactory supports aerospike
         */
       val driver = "data.cluster.driver"
       /**
@@ -122,7 +123,9 @@ object TSF_Dictionary {
         val client_policy = "data.cluster.aerospike.client-policy"
 
       }
+
     }
+
   }
 
   /**
@@ -191,7 +194,9 @@ object TSF_Dictionary {
     /**
       * Transport timeout is maximum time to wait for master to respond
       */
-    val master_timeout = "producer.master-timeout" //TODO: fix internals transport->master
+    val master_timeout = "producer.master-timeout"
+
+    //TODO: fix internals transport->master
 
 
     object Transaction {
@@ -214,7 +219,9 @@ object TSF_Dictionary {
       /**
         * policy to distribute transactions over stream partitions
         */
-      val distribution_policy = "producer.transaction.distribution-policy" // TODO: fix internals write->distribution
+      val distribution_policy = "producer.transaction.distribution-policy"
+
+      // TODO: fix internals write->distribution
 
       /**
         * UF_Dictionary.Producer.Transaction consts scope
@@ -273,6 +280,7 @@ object TSF_Dictionary {
       val thread_pool = "consumer.subscriber.thread-pool"
 
     }
+
   }
 
 }
@@ -282,111 +290,111 @@ object TSF_Dictionary {
   */
 class TStreamsFactory(envname: String = "T-streams") {
 
-  private val logger  = LoggerFactory.getLogger(this.getClass)
-  private val lock    = new ReentrantLock(true)
-  val propertyMap     = new HashMap[String,Any]()
-  var isClosed        = false
+  private val logger = LoggerFactory.getLogger(this.getClass)
+  private val lock = new ReentrantLock(true)
+  val propertyMap = new HashMap[String, Any]()
+  var isClosed = false
 
   // metadata cluster scope
-  propertyMap += (TSF_Dictionary.Metadata.Cluster.endpoints  -> "localhost:9042")
-  propertyMap += (TSF_Dictionary.Metadata.Cluster.namespace   -> "test")
-  propertyMap += (TSF_Dictionary.Metadata.Cluster.login      -> null)
-  propertyMap += (TSF_Dictionary.Metadata.Cluster.password   -> null)
+  propertyMap += (TSF_Dictionary.Metadata.Cluster.endpoints -> "localhost:9042")
+  propertyMap += (TSF_Dictionary.Metadata.Cluster.namespace -> "test")
+  propertyMap += (TSF_Dictionary.Metadata.Cluster.login -> null)
+  propertyMap += (TSF_Dictionary.Metadata.Cluster.password -> null)
 
   // data cluster scope
-  propertyMap += (TSF_Dictionary.Data.Cluster.driver         -> TSF_Dictionary.Data.Cluster.Consts.DATA_DRIVER_AEROSPIKE)
-  propertyMap += (TSF_Dictionary.Data.Cluster.endpoints      -> "localhost:3000")
-  propertyMap += (TSF_Dictionary.Data.Cluster.namespace      -> "test")
-  propertyMap += (TSF_Dictionary.Data.Cluster.login          -> null)
-  propertyMap += (TSF_Dictionary.Data.Cluster.password       -> null)
-  propertyMap += (TSF_Dictionary.Data.Cluster.Aerospike.write_policy      -> null)
-  propertyMap += (TSF_Dictionary.Data.Cluster.Aerospike.read_policy       -> null)
-  propertyMap += (TSF_Dictionary.Data.Cluster.Aerospike.client_policy     -> null)
+  propertyMap += (TSF_Dictionary.Data.Cluster.driver -> TSF_Dictionary.Data.Cluster.Consts.DATA_DRIVER_AEROSPIKE)
+  propertyMap += (TSF_Dictionary.Data.Cluster.endpoints -> "localhost:3000")
+  propertyMap += (TSF_Dictionary.Data.Cluster.namespace -> "test")
+  propertyMap += (TSF_Dictionary.Data.Cluster.login -> null)
+  propertyMap += (TSF_Dictionary.Data.Cluster.password -> null)
+  propertyMap += (TSF_Dictionary.Data.Cluster.Aerospike.write_policy -> null)
+  propertyMap += (TSF_Dictionary.Data.Cluster.Aerospike.read_policy -> null)
+  propertyMap += (TSF_Dictionary.Data.Cluster.Aerospike.client_policy -> null)
 
 
   // coordination scope
-  propertyMap += (TSF_Dictionary.Coordination.endpoints          -> "localhost:2181")
-  propertyMap += (TSF_Dictionary.Coordination.root               -> "/t-streams")
+  propertyMap += (TSF_Dictionary.Coordination.endpoints -> "localhost:2181")
+  propertyMap += (TSF_Dictionary.Coordination.root -> "/t-streams")
 
-  val Coordination_ttl_default                                  = 7
-  val Coordination_ttl_min                                      = 1
-  val Coordination_ttl_max                                      = 30
-  propertyMap += (TSF_Dictionary.Coordination.ttl                -> Coordination_ttl_default)
+  val Coordination_ttl_default = 7
+  val Coordination_ttl_min = 1
+  val Coordination_ttl_max = 30
+  propertyMap += (TSF_Dictionary.Coordination.ttl -> Coordination_ttl_default)
 
-  val Coordination_connection_timeout_default                   = 7
-  val Coordination_connection_timeout_min                       = 1
-  val Coordination_connection_timeout_max                       = 30
+  val Coordination_connection_timeout_default = 7
+  val Coordination_connection_timeout_min = 1
+  val Coordination_connection_timeout_max = 30
   propertyMap += (TSF_Dictionary.Coordination.connection_timeout -> Coordination_connection_timeout_default)
 
   // stream scope
-  propertyMap += (TSF_Dictionary.Stream.name                 -> "test")
+  propertyMap += (TSF_Dictionary.Stream.name -> "test")
 
-  val Stream_partitions_default                             = 1
-  val Stream_partitions_min                                 = 1
-  val Stream_partitions_max                                 = 100000000
-  propertyMap += (TSF_Dictionary.Stream.partitions           -> Stream_partitions_default)
+  val Stream_partitions_default = 1
+  val Stream_partitions_min = 1
+  val Stream_partitions_max = 100000000
+  propertyMap += (TSF_Dictionary.Stream.partitions -> Stream_partitions_default)
 
-  val Stream_ttl_default                                    = 60 * 60 * 24
-  val Stream_ttl_min                                        = 60
-  val Stream_ttl_max                                        = 315360000
-  propertyMap += (TSF_Dictionary.Stream.ttl                  -> Stream_ttl_default)
-  propertyMap += (TSF_Dictionary.Stream.description          -> "Test stream")
+  val Stream_ttl_default = 60 * 60 * 24
+  val Stream_ttl_min = 60
+  val Stream_ttl_max = 315360000
+  propertyMap += (TSF_Dictionary.Stream.ttl -> Stream_ttl_default)
+  propertyMap += (TSF_Dictionary.Stream.description -> "Test stream")
 
   // producer scope
-  propertyMap += (TSF_Dictionary.Producer.master_bind_host                     -> "localhost")
-  propertyMap += (TSF_Dictionary.Producer.master_bind_port                     -> 18000)
-  val Producer_master_timeout_default                                         = 5
-  val Producer_master_timeout_min                                             = 1
-  val Producer_master_timeout_max                                             = 10
-  propertyMap += (TSF_Dictionary.Producer.master_timeout                       -> Producer_master_timeout_default)
+  propertyMap += (TSF_Dictionary.Producer.master_bind_host -> "localhost")
+  propertyMap += (TSF_Dictionary.Producer.master_bind_port -> 18000)
+  val Producer_master_timeout_default = 5
+  val Producer_master_timeout_min = 1
+  val Producer_master_timeout_max = 10
+  propertyMap += (TSF_Dictionary.Producer.master_timeout -> Producer_master_timeout_default)
 
-  val Producer_transaction_ttl_default                                        = 6
-  val Producer_transaction_ttl_min                                            = 3
-  val Producer_transaction_ttl_max                                            = 15
-  propertyMap += (TSF_Dictionary.Producer.Transaction.ttl                      -> Producer_transaction_ttl_default)
+  val Producer_transaction_ttl_default = 6
+  val Producer_transaction_ttl_min = 3
+  val Producer_transaction_ttl_max = 15
+  propertyMap += (TSF_Dictionary.Producer.Transaction.ttl -> Producer_transaction_ttl_default)
 
-  val Producer_transaction_open_maxwait_default                               = 5
-  val Producer_transaction_open_maxwait_min                                   = 1
-  val Producer_transaction_open_maxwait_max                                   = 10
-  propertyMap += (TSF_Dictionary.Producer.Transaction.open_maxwait             -> Producer_transaction_open_maxwait_default)
+  val Producer_transaction_open_maxwait_default = 5
+  val Producer_transaction_open_maxwait_min = 1
+  val Producer_transaction_open_maxwait_max = 10
+  propertyMap += (TSF_Dictionary.Producer.Transaction.open_maxwait -> Producer_transaction_open_maxwait_default)
 
-  val Producer_transaction_keep_alive_default                                 = 1
-  val Producer_transaction_keep_alive_min                                     = 1
-  val Producer_transaction_keep_alive_max                                     = 2
-  propertyMap += (TSF_Dictionary.Producer.Transaction.keep_alive               -> Producer_transaction_keep_alive_default)
+  val Producer_transaction_keep_alive_default = 1
+  val Producer_transaction_keep_alive_min = 1
+  val Producer_transaction_keep_alive_max = 2
+  propertyMap += (TSF_Dictionary.Producer.Transaction.keep_alive -> Producer_transaction_keep_alive_default)
 
-  val Producer_transaction_data_write_batch_size_default                      = 100
-  val Producer_transaction_data_write_batch_size_min                          = 1
-  val Producer_transaction_data_write_batch_size_max                          = 1000
-  propertyMap += (TSF_Dictionary.Producer.Transaction.data_write_batch_size    -> Producer_transaction_data_write_batch_size_default)
-  propertyMap += (TSF_Dictionary.Producer.Transaction.distribution_policy      -> TSF_Dictionary.Producer.Transaction.Consts.DISTRIBUTION_POLICY_RR)
+  val Producer_transaction_data_write_batch_size_default = 100
+  val Producer_transaction_data_write_batch_size_min = 1
+  val Producer_transaction_data_write_batch_size_max = 1000
+  propertyMap += (TSF_Dictionary.Producer.Transaction.data_write_batch_size -> Producer_transaction_data_write_batch_size_default)
+  propertyMap += (TSF_Dictionary.Producer.Transaction.distribution_policy -> TSF_Dictionary.Producer.Transaction.Consts.DISTRIBUTION_POLICY_RR)
 
-  val Producer_thread_pool_default                                            = 4
-  val Producer_thread_pool_min                                                = 1
-  val Producer_thread_pool_max                                                = 64
-  propertyMap += (TSF_Dictionary.Producer.thread_pool                          -> Producer_thread_pool_default)
+  val Producer_thread_pool_default = 4
+  val Producer_thread_pool_min = 1
+  val Producer_thread_pool_max = 64
+  propertyMap += (TSF_Dictionary.Producer.thread_pool -> Producer_thread_pool_default)
 
   // consumer scope
-  val Consumer_transaction_preload_default                                = 10
-  val Consumer_transaction_preload_min                                    = 1
-  val Consumer_transaction_preload_max                                    = 100
-  propertyMap += (TSF_Dictionary.Consumer.transaction_preload              -> Consumer_transaction_preload_default)
-  val Consumer_data_preload_default                                       = 100
-  val Consumer_data_preload_min                                           = 10
-  val Consumer_data_preload_max                                           = 200
-  propertyMap += (TSF_Dictionary.Consumer.data_preload                     -> Consumer_data_preload_default)
-  propertyMap += (TSF_Dictionary.Consumer.Subscriber.bind_host             -> "localhost")
-  propertyMap += (TSF_Dictionary.Consumer.Subscriber.bind_port             -> 18001)
+  val Consumer_transaction_preload_default = 10
+  val Consumer_transaction_preload_min = 1
+  val Consumer_transaction_preload_max = 100
+  propertyMap += (TSF_Dictionary.Consumer.transaction_preload -> Consumer_transaction_preload_default)
+  val Consumer_data_preload_default = 100
+  val Consumer_data_preload_min = 10
+  val Consumer_data_preload_max = 200
+  propertyMap += (TSF_Dictionary.Consumer.data_preload -> Consumer_data_preload_default)
+  propertyMap += (TSF_Dictionary.Consumer.Subscriber.bind_host -> "localhost")
+  propertyMap += (TSF_Dictionary.Consumer.Subscriber.bind_port -> 18001)
   propertyMap += (TSF_Dictionary.Consumer.Subscriber.persistent_queue_path -> "/tmp")
 
-  val Subscriber_thread_pool_default                                            = 4
-  val Subscriber_thread_pool_min                                                = 1
-  val Subscriber_thread_pool_max                                                = 64
-  propertyMap += (TSF_Dictionary.Consumer.Subscriber.thread_pool                -> Subscriber_thread_pool_default)
+  val Subscriber_thread_pool_default = 4
+  val Subscriber_thread_pool_min = 1
+  val Subscriber_thread_pool_max = 64
+  propertyMap += (TSF_Dictionary.Consumer.Subscriber.thread_pool -> Subscriber_thread_pool_default)
 
 
   //metadata/data factories
-  val msFactory               = new MetadataStorageFactory
+  val msFactory = new MetadataStorageFactory
   val aerospikeStorageFactory = new AerospikeStorageFactory
   val cassandraStorageFactory = new CassandraStorageFactory
 
@@ -398,7 +406,7 @@ class TStreamsFactory(envname: String = "T-streams") {
     */
   def setProperty(key: String, value: Any): TStreamsFactory = {
     logger.info("set property " + key + " = " + value)
-    if(propertyMap contains key)
+    if (propertyMap contains key)
       propertyMap += (key -> value)
     else
       throw new IllegalArgumentException("Property " + key + " is unknown and can not be altered.")
@@ -417,53 +425,57 @@ class TStreamsFactory(envname: String = "T-streams") {
   }
 
   /** variant method to get option as int with default value if null
-    * @param key key to request
+    *
+    * @param key     key to request
     * @param default assign it if the value received from options is null
     * @return
     */
-  private def pAsInt(key: String, default: Int = 0): Int = if(null == getProperty(key)) default else Integer.parseInt(getProperty(key).toString)
+  private def pAsInt(key: String, default: Int = 0): Int = if (null == getProperty(key)) default else Integer.parseInt(getProperty(key).toString)
 
   /**
     * variant method to get option as string with default value if null
-    * @param key key to request
+    *
+    * @param key     key to request
     * @param default assign it if the value received from options is null
     * @return
     */
   private def pAsString(key: String, default: String = null): String = {
     val s = getProperty(key)
-    if(null == s)
+    if (null == s)
       return default
     s.toString
   }
 
   /**
     * checks that int inside interval
+    *
     * @param value
     * @param min
     * @param max
     * @return
     */
-  private def pAssertIntRange(value: Int, min: Int, max: Int): Int =  {
+  private def pAssertIntRange(value: Int, min: Int, max: Int): Int = {
     assert(value >= min && value <= max)
     value
   }
 
   /**
     * transforms host:port,host:port to list(Host, Host) for Aerospike
+    *
     * @param h
     * @return
     */
   private def getAerospikeCompatibleHostList(h: String): List[Host] =
-  h.split(',').map((sh: String) => new Host(sh.split(':').head, Integer.parseInt(sh.split(':').tail.head))).toList
+    h.split(',').map((sh: String) => new Host(sh.split(':').head, Integer.parseInt(sh.split(':').tail.head))).toList
 
   /**
     * transforms host:port,host:port to list(InetSocketAddr, InetSocketAddr) for C*
+    *
     * @param h
     * @return
     */
   private def getInetSocketAddressCompatibleHostList(h: String): List[InetSocketAddress] =
-  h.split(',').map((sh: String) => new InetSocketAddress(sh.split(':').head, Integer.parseInt(sh.split(':').tail.head))).toList
-
+    h.split(',').map((sh: String) => new InetSocketAddress(sh.split(':').head, Integer.parseInt(sh.split(':').tail.head))).toList
 
 
   /**
@@ -472,8 +484,7 @@ class TStreamsFactory(envname: String = "T-streams") {
     * @return
     */
   private def getDataStorage(): IStorage[Array[Byte]] = {
-    if (pAsString(TSF_Dictionary.Data.Cluster.driver) == TSF_Dictionary.Data.Cluster.Consts.DATA_DRIVER_AEROSPIKE)
-    {
+    if (pAsString(TSF_Dictionary.Data.Cluster.driver) == TSF_Dictionary.Data.Cluster.Consts.DATA_DRIVER_AEROSPIKE) {
       val dsf = aerospikeStorageFactory
 
       // construct client policy
@@ -483,7 +494,7 @@ class TStreamsFactory(envname: String = "T-streams") {
       else
         cp = getProperty(TSF_Dictionary.Data.Cluster.Aerospike.client_policy).asInstanceOf[ClientPolicy]
 
-      cp.user     = pAsString(TSF_Dictionary.Data.Cluster.login, null)
+      cp.user = pAsString(TSF_Dictionary.Data.Cluster.login, null)
       cp.password = pAsString(TSF_Dictionary.Data.Cluster.password, null)
 
       // construct write policy
@@ -506,37 +517,35 @@ class TStreamsFactory(envname: String = "T-streams") {
       assert(data_cluster_endpoints != null)
 
       val opts = new AerospikeStorageOptions(
-        namespace     = namespace,
-        hosts         = getAerospikeCompatibleHostList(data_cluster_endpoints),
-        clientPolicy  = cp,
-        writePolicy   = wp,
-        readPolicy    = rp)
+        namespace = namespace,
+        hosts = getAerospikeCompatibleHostList(data_cluster_endpoints),
+        clientPolicy = cp,
+        writePolicy = wp,
+        readPolicy = rp)
 
       // create instance of aerospike data storage
       return dsf.getInstance(opts)
 
     }
-    else if (pAsString(TSF_Dictionary.Data.Cluster.driver) == TSF_Dictionary.Data.Cluster.Consts.DATA_DRIVER_CASSANDRA)
-    {
+    else if (pAsString(TSF_Dictionary.Data.Cluster.driver) == TSF_Dictionary.Data.Cluster.Consts.DATA_DRIVER_CASSANDRA) {
       val dsf = cassandraStorageFactory
 
-      val login     = pAsString(TSF_Dictionary.Data.Cluster.login, null)
-      val password  = pAsString(TSF_Dictionary.Data.Cluster.password, null)
+      val login = pAsString(TSF_Dictionary.Data.Cluster.login, null)
+      val password = pAsString(TSF_Dictionary.Data.Cluster.password, null)
 
       assert(pAsString(TSF_Dictionary.Data.Cluster.namespace) != null)
       assert(pAsString(TSF_Dictionary.Data.Cluster.endpoints) != null)
 
       val opts = new CassandraStorageOptions(
-        keyspace        = pAsString(TSF_Dictionary.Data.Cluster.namespace),
-        cassandraHosts  = getInetSocketAddressCompatibleHostList(pAsString(TSF_Dictionary.Data.Cluster.endpoints)),
-        login           = login,
-        password        = password
+        keyspace = pAsString(TSF_Dictionary.Data.Cluster.namespace),
+        cassandraHosts = getInetSocketAddressCompatibleHostList(pAsString(TSF_Dictionary.Data.Cluster.endpoints)),
+        login = login,
+        password = password
       )
 
       return dsf.getInstance(opts)
     }
-    else
-    {
+    else {
       throw new InvalidParameterException("Only UF_Dictionary.Data.Cluster.Consts.DATA_DRIVER_CASSANDRA and " +
         "UF_Dictionary.Data.Cluster.Consts.DATA_DRIVER_AEROSPIKE engines " +
         "are supported currently in UniversalFactory. Received: " + pAsString(TSF_Dictionary.Data.Cluster.driver))
@@ -546,25 +555,27 @@ class TStreamsFactory(envname: String = "T-streams") {
 
   /**
     * common routine which allows getting ready to use metadata object
+    *
     * @return
     */
   private def getMetadataStorage(): MetadataStorage = {
-    val login     = pAsString(TSF_Dictionary.Metadata.Cluster.login, null)
-    val password  = pAsString(TSF_Dictionary.Metadata.Cluster.password, null)
+    val login = pAsString(TSF_Dictionary.Metadata.Cluster.login, null)
+    val password = pAsString(TSF_Dictionary.Metadata.Cluster.password, null)
 
     assert(pAsString(TSF_Dictionary.Metadata.Cluster.namespace) != null)
     assert(pAsString(TSF_Dictionary.Metadata.Cluster.endpoints) != null)
 
     // construct metadata storage
     return msFactory.getInstance(
-      keyspace        = pAsString(TSF_Dictionary.Metadata.Cluster.namespace),
-      cassandraHosts  = getInetSocketAddressCompatibleHostList(pAsString(TSF_Dictionary.Metadata.Cluster.endpoints)),
-      login           = login,
-      password        = password)
+      keyspace = pAsString(TSF_Dictionary.Metadata.Cluster.namespace),
+      cassandraHosts = getInetSocketAddressCompatibleHostList(pAsString(TSF_Dictionary.Metadata.Cluster.endpoints)),
+      login = login,
+      password = password)
   }
 
   /**
     * common routine which allows to get ready to use stream object by env
+    *
     * @param metadatastorage
     * @param datastorage
     * @return
@@ -576,24 +587,24 @@ class TStreamsFactory(envname: String = "T-streams") {
 
     // construct stream
     val stream = new BasicStream[Array[Byte]](
-      name            = pAsString(TSF_Dictionary.Stream.name),
-      partitions      = pAsInt(TSF_Dictionary.Stream.partitions, Stream_partitions_default),
+      name = pAsString(TSF_Dictionary.Stream.name),
+      partitions = pAsInt(TSF_Dictionary.Stream.partitions, Stream_partitions_default),
       metadataStorage = metadatastorage,
-      dataStorage     = datastorage,
-      ttl             = pAsInt(TSF_Dictionary.Stream.ttl, Stream_ttl_default),
-      description     = pAsString(TSF_Dictionary.Stream.description, ""))
+      dataStorage = datastorage,
+      ttl = pAsInt(TSF_Dictionary.Stream.ttl, Stream_ttl_default),
+      description = pAsString(TSF_Dictionary.Stream.description, ""))
     return stream
   }
 
   /**
     * reusable method which returns consumer options object
     */
-  private def getBasicConsumerOptions[USERTYPE](stream          : BasicStream[Array[Byte]],
-                                                partitions      : List[Int],
-                                                converter       : IConverter[Array[Byte],USERTYPE],
-                                                txnGenerator    : IUUIDGenerator,
-                                                offset          : IOffset,
-                                                isUseLastOffset : Boolean = true): BasicConsumerOptions[Array[Byte],USERTYPE] = {
+  private def getBasicConsumerOptions[USERTYPE](stream: BasicStream[Array[Byte]],
+                                                partitions: List[Int],
+                                                converter: IConverter[Array[Byte], USERTYPE],
+                                                txnGenerator: IUUIDGenerator,
+                                                offset: IOffset,
+                                                isUseLastOffset: Boolean = true): BasicConsumerOptions[Array[Byte], USERTYPE] = {
     val consumer_transaction_preload = pAsInt(TSF_Dictionary.Consumer.transaction_preload, Consumer_transaction_preload_default)
     pAssertIntRange(consumer_transaction_preload, Consumer_transaction_preload_min, Consumer_transaction_preload_max)
 
@@ -601,20 +612,21 @@ class TStreamsFactory(envname: String = "T-streams") {
     pAssertIntRange(consumer_data_preload, Consumer_data_preload_min, Consumer_data_preload_max)
 
     val consumerOptions = new BasicConsumerOptions[Array[Byte], USERTYPE](
-      transactionsPreload       = consumer_transaction_preload,
-      dataPreload               = consumer_data_preload,
-      consumerKeepAliveInterval = 5,  // TODO: deprecated, unused, to remove
-      converter                 = converter,
-      readPolicy                = RoundRobinPolicyCreator.getRoundRobinPolicy(stream, partitions),
-      offset                    = offset,
-      txnGenerator              = txnGenerator,
-      useLastOffset             = isUseLastOffset)
+      transactionsPreload = consumer_transaction_preload,
+      dataPreload = consumer_data_preload,
+      consumerKeepAliveInterval = 5, // TODO: deprecated, unused, to remove
+      converter = converter,
+      readPolicy = RoundRobinPolicyCreator.getRoundRobinPolicy(stream, partitions),
+      offset = offset,
+      txnGenerator = txnGenerator,
+      useLastOffset = isUseLastOffset)
 
     consumerOptions
   }
 
   /**
     * returns ready to use producer object
+    *
     * @param name Producer name
     * @param isLowPriority
     * @param txnGenerator
@@ -624,25 +636,25 @@ class TStreamsFactory(envname: String = "T-streams") {
     * @return
     */
   def getProducer[USERTYPE](name: String,
-                            isLowPriority : Boolean = false,
-                            txnGenerator  : IUUIDGenerator,
-                            converter     : IConverter[USERTYPE,Array[Byte]],
-                            partitions    : List[Int]
+                            isLowPriority: Boolean = false,
+                            txnGenerator: IUUIDGenerator,
+                            converter: IConverter[USERTYPE, Array[Byte]],
+                            partitions: List[Int]
                            ): BasicProducer[USERTYPE] = {
 
     lock.lock()
 
-    if(isClosed)
+    if (isClosed)
       throw new IllegalStateException("TStreamsFactory is closed. This is the illegal usage of the object.")
 
-    val ds: IStorage[Array[Byte]]         = getDataStorage()
-    val ms: MetadataStorage               = getMetadataStorage()
-    val stream: BasicStream[Array[Byte]]  = getStream(metadatastorage = ms, datastorage = ds)
+    val ds: IStorage[Array[Byte]] = getDataStorage()
+    val ms: MetadataStorage = getMetadataStorage()
+    val stream: BasicStream[Array[Byte]] = getStream(metadatastorage = ms, datastorage = ds)
 
     assert(pAsString(TSF_Dictionary.Producer.master_bind_host) != null)
     assert(pAsString(TSF_Dictionary.Producer.master_bind_port) != null)
-    assert(pAsString(TSF_Dictionary.Coordination.endpoints)    != null)
-    assert(pAsString(TSF_Dictionary.Coordination.root)    != null)
+    assert(pAsString(TSF_Dictionary.Coordination.endpoints) != null)
+    assert(pAsString(TSF_Dictionary.Coordination.root) != null)
 
     pAssertIntRange(pAsInt(TSF_Dictionary.Coordination.ttl, Coordination_ttl_default), Coordination_ttl_min, Coordination_ttl_max)
     pAssertIntRange(pAsInt(TSF_Dictionary.Producer.master_timeout, Producer_master_timeout_default), Producer_master_timeout_min, Producer_master_timeout_max)
@@ -651,14 +663,14 @@ class TStreamsFactory(envname: String = "T-streams") {
 
     // construct coordination agent options
     val cao = new ProducerCoordinationOptions(
-      agentAddress            = pAsString(TSF_Dictionary.Producer.master_bind_host) + ":" + pAsString(TSF_Dictionary.Producer.master_bind_port),
-      zkHosts                 = getInetSocketAddressCompatibleHostList(pAsString(TSF_Dictionary.Coordination.endpoints)),
-      zkRootPath              = pAsString(TSF_Dictionary.Coordination.root),
-      zkSessionTimeout        = pAsInt(TSF_Dictionary.Coordination.ttl, Coordination_ttl_default),
+      agentAddress = pAsString(TSF_Dictionary.Producer.master_bind_host) + ":" + pAsString(TSF_Dictionary.Producer.master_bind_port),
+      zkHosts = getInetSocketAddressCompatibleHostList(pAsString(TSF_Dictionary.Coordination.endpoints)),
+      zkRootPath = pAsString(TSF_Dictionary.Coordination.root),
+      zkSessionTimeout = pAsInt(TSF_Dictionary.Coordination.ttl, Coordination_ttl_default),
       isLowPriorityToBeMaster = isLowPriority,
-      transport               = new TcpTransport,
-      transportTimeout        = pAsInt(TSF_Dictionary.Producer.master_timeout, Producer_master_timeout_default),
-      zkConnectionTimeout     = pAsInt(TSF_Dictionary.Coordination.connection_timeout, Coordination_connection_timeout_default))
+      transport = new TcpTransport,
+      transportTimeout = pAsInt(TSF_Dictionary.Producer.master_timeout, Producer_master_timeout_default),
+      zkConnectionTimeout = pAsInt(TSF_Dictionary.Coordination.connection_timeout, Coordination_connection_timeout_default))
 
 
     var writePolicy: AbstractPolicy = null
@@ -667,8 +679,7 @@ class TStreamsFactory(envname: String = "T-streams") {
       TSF_Dictionary.Producer.Transaction.Consts.DISTRIBUTION_POLICY_RR) {
       writePolicy = RoundRobinPolicyCreator.getRoundRobinPolicy(stream, partitions)
     }
-    else
-    {
+    else {
       throw new InvalidParameterException("Only UF_Dictionary.Producer.Transaction.Consts.DISTRIBUTION_POLICY_RR policy " +
         "is supported currently in UniversalFactory.")
     }
@@ -687,12 +698,12 @@ class TStreamsFactory(envname: String = "T-streams") {
     if (insertCnt > 1)
       insertType = BatchInsert(insertCnt)
 
-    val po = new BasicProducerOptions[USERTYPE](transactionTTL                = pAsInt(TSF_Dictionary.Producer.Transaction.ttl, Producer_transaction_ttl_default), transactionKeepAliveInterval  = pAsInt(TSF_Dictionary.Producer.Transaction.keep_alive, Producer_transaction_keep_alive_default), writePolicy                   = writePolicy, insertType                    = SingleElementInsert, txnGenerator                  = txnGenerator, producerCoordinationSettings  = cao, converter                     = converter)
+    val po = new BasicProducerOptions[USERTYPE](transactionTTL = pAsInt(TSF_Dictionary.Producer.Transaction.ttl, Producer_transaction_ttl_default), transactionKeepAliveInterval = pAsInt(TSF_Dictionary.Producer.Transaction.keep_alive, Producer_transaction_keep_alive_default), writePolicy = writePolicy, insertType = SingleElementInsert, txnGenerator = txnGenerator, producerCoordinationSettings = cao, converter = converter)
 
     val producer = new BasicProducer[USERTYPE](
-      name              = name,
-      stream            = stream,
-      producerOptions   = po)
+      name = name,
+      stream = stream,
+      producerOptions = po)
 
     lock.unlock()
     producer
@@ -700,6 +711,7 @@ class TStreamsFactory(envname: String = "T-streams") {
 
   /**
     * returns ready to use consumer object
+    *
     * @param name Consumer name
     * @param txnGenerator
     * @param converter
@@ -707,30 +719,30 @@ class TStreamsFactory(envname: String = "T-streams") {
     * @tparam USERTYPE type to convert data to
     * @return
     */
-  def getConsumer[USERTYPE](name          : String,
-                            txnGenerator  : IUUIDGenerator,
-                            converter     : IConverter[Array[Byte],USERTYPE],
-                            partitions    : List[Int],
-                            offset        : IOffset,
-                            isUseLastOffset : Boolean = true
-                           ): BasicConsumer[Array[Byte],USERTYPE] = {
+  def getConsumer[USERTYPE](name: String,
+                            txnGenerator: IUUIDGenerator,
+                            converter: IConverter[Array[Byte], USERTYPE],
+                            partitions: List[Int],
+                            offset: IOffset,
+                            isUseLastOffset: Boolean = true
+                           ): BasicConsumer[Array[Byte], USERTYPE] = {
 
     lock.lock()
 
-    if(isClosed)
+    if (isClosed)
       throw new IllegalStateException("TStreamsFactory is closed. This is the illegal usage of the object.")
 
-    val ds: IStorage[Array[Byte]]         = getDataStorage()
-    val ms: MetadataStorage               = getMetadataStorage()
-    val stream: BasicStream[Array[Byte]]  = getStream(metadatastorage = ms, datastorage = ds)
-    val consumerOptions = getBasicConsumerOptions(txnGenerator  = txnGenerator,
-                                                  stream        = stream,
-                                                  partitions    = partitions,
-                                                  converter     = converter,
-                                                  offset        = offset,
-                                                  isUseLastOffset = isUseLastOffset)
+    val ds: IStorage[Array[Byte]] = getDataStorage()
+    val ms: MetadataStorage = getMetadataStorage()
+    val stream: BasicStream[Array[Byte]] = getStream(metadatastorage = ms, datastorage = ds)
+    val consumerOptions = getBasicConsumerOptions(txnGenerator = txnGenerator,
+      stream = stream,
+      partitions = partitions,
+      converter = converter,
+      offset = offset,
+      isUseLastOffset = isUseLastOffset)
 
-    val consumer = new BasicConsumer(name, stream, consumerOptions)  // TODO FIX: Stream is not required as argument for BasicConsumer - it's already in options
+    val consumer = new BasicConsumer(name, stream, consumerOptions) // TODO FIX: Stream is not required as argument for BasicConsumer - it's already in options
     lock.unlock()
 
     consumer
@@ -738,6 +750,7 @@ class TStreamsFactory(envname: String = "T-streams") {
 
   /**
     * returns ready to use subscribing consumer object
+    *
     * @param txnGenerator
     * @param converter
     * @param partitions
@@ -745,28 +758,28 @@ class TStreamsFactory(envname: String = "T-streams") {
     * @tparam USERTYPE - type to convert data to
     * @return
     */
-  def getSubscriber[USERTYPE](name          : String,
-                              txnGenerator  : IUUIDGenerator,
-                              converter     : IConverter[Array[Byte],USERTYPE],
-                              partitions    : List[Int],
-                              callback: BasicSubscriberCallback[Array[Byte],USERTYPE],
-                              offset        : IOffset,
-                              isUseLastOffset : Boolean = true
-                             ): BasicSubscribingConsumer[Array[Byte],USERTYPE] = {
+  def getSubscriber[USERTYPE](name: String,
+                              txnGenerator: IUUIDGenerator,
+                              converter: IConverter[Array[Byte], USERTYPE],
+                              partitions: List[Int],
+                              callback: BasicSubscriberCallback[Array[Byte], USERTYPE],
+                              offset: IOffset,
+                              isUseLastOffset: Boolean = true
+                             ): BasicSubscribingConsumer[Array[Byte], USERTYPE] = {
     lock.lock()
-    if(isClosed)
+    if (isClosed)
       throw new IllegalStateException("TStreamsFactory is closed. This is the illegal usage of the object.")
 
-    val ds: IStorage[Array[Byte]]         = getDataStorage()
-    val ms: MetadataStorage               = getMetadataStorage()
-    val stream: BasicStream[Array[Byte]]  = getStream(metadatastorage = ms, datastorage = ds)
+    val ds: IStorage[Array[Byte]] = getDataStorage()
+    val ms: MetadataStorage = getMetadataStorage()
+    val stream: BasicStream[Array[Byte]] = getStream(metadatastorage = ms, datastorage = ds)
 
-    val consumerOptions = getBasicConsumerOptions(txnGenerator  = txnGenerator,
-                                                  stream        = stream,
-                                                  partitions    = partitions,
-                                                  converter     = converter,
-                                                  offset        = offset,
-                                                  isUseLastOffset = isUseLastOffset)
+    val consumerOptions = getBasicConsumerOptions(txnGenerator = txnGenerator,
+      stream = stream,
+      partitions = partitions,
+      converter = converter,
+      offset = offset,
+      isUseLastOffset = isUseLastOffset)
 
     //val consumer = new BasicConsumer(name, stream, consumerOptions)
     val bind_host = pAsString(TSF_Dictionary.Consumer.Subscriber.bind_host)
@@ -789,23 +802,23 @@ class TStreamsFactory(envname: String = "T-streams") {
       Subscriber_thread_pool_min, Subscriber_thread_pool_max)
 
     val coordinationOptions = new SubscriberCoordinationOptions(
-                                                agentAddress  = bind_host + ":" + bind_port,
-                                                zkRootPath    = root,
-                                                zkHosts       = getInetSocketAddressCompatibleHostList(endpoints),
-                                                zkSessionTimeout    = ttl,
-                                                zkConnectionTimeout = conn_timeout,
-                                                threadPoolAmount    = thread_pool)
+      agentAddress = bind_host + ":" + bind_port,
+      zkRootPath = root,
+      zkHosts = getInetSocketAddressCompatibleHostList(endpoints),
+      zkSessionTimeout = ttl,
+      zkConnectionTimeout = conn_timeout,
+      threadPoolAmount = thread_pool)
 
     val queue_path = pAsString(TSF_Dictionary.Consumer.Subscriber.persistent_queue_path)
     assert(queue_path != null)
 
-    val subscriberConsumer = new BasicSubscribingConsumer[Array[Byte],USERTYPE](
-                      name                          = name,
-                      stream                        = stream, // TODO FIX: Stream is not required as argument for BasicSubscribingConsumer - it's already in options
-                      options                       = consumerOptions,
-                      subscriberCoordinationOptions = coordinationOptions,
-                      callBack                      = callback,
-                      persistentQueuePath           = queue_path)
+    val subscriberConsumer = new BasicSubscribingConsumer[Array[Byte], USERTYPE](
+      name = name,
+      stream = stream, // TODO FIX: Stream is not required as argument for BasicSubscribingConsumer - it's already in options
+      options = consumerOptions,
+      subscriberCoordinationOptions = coordinationOptions,
+      callBack = callback,
+      persistentQueuePath = queue_path)
 
     subscriberConsumer.start()
 
@@ -820,7 +833,7 @@ class TStreamsFactory(envname: String = "T-streams") {
   def close(): Unit = {
     lock.lock()
 
-    if(isClosed)
+    if (isClosed)
       throw new IllegalStateException("TStreamsFactory is closed. This is repeatable close operation.")
 
     isClosed = true

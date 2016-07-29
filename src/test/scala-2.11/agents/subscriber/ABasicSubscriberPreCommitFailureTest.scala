@@ -1,25 +1,19 @@
 package agents.subscriber
 
-import java.io.File
 import java.net.InetSocketAddress
 import java.util.UUID
 import java.util.concurrent.locks.ReentrantLock
 
-import com.aerospike.client.Host
-import com.bwsw.tstreams.agents.consumer.{BasicConsumerOptions, SubscriberCoordinationOptions}
 import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
 import com.bwsw.tstreams.agents.consumer.subscriber.{BasicSubscriberCallback, BasicSubscribingConsumer}
+import com.bwsw.tstreams.agents.consumer.{BasicConsumerOptions, SubscriberCoordinationOptions}
 import com.bwsw.tstreams.agents.producer.InsertionType.BatchInsert
 import com.bwsw.tstreams.agents.producer.{BasicProducer, BasicProducerOptions, ProducerCoordinationOptions, ProducerPolicies}
-import com.bwsw.tstreams.converter.{ArrayByteToStringConverter, StringToArrayByteConverter}
 import com.bwsw.tstreams.coordination.transactions.transport.impl.TcpTransport
-import com.bwsw.tstreams.data.aerospike.{AerospikeStorageFactory, AerospikeStorageOptions}
 import com.bwsw.tstreams.debug.GlobalHooks
-import com.bwsw.tstreams.metadata.MetadataStorageFactory
 import com.bwsw.tstreams.streams.BasicStream
-import com.datastax.driver.core.Cluster
-import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers, OneInstancePerTest}
-import testutils.{CassandraHelper, LocalGeneratorCreator, RoundRobinPolicyCreator, TestUtils}
+import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
+import testutils.{LocalGeneratorCreator, RoundRobinPolicyCreator, TestUtils}
 
 //TODO refactoring
 class ABasicSubscriberPreCommitFailureTest extends FlatSpec with Matchers
@@ -67,14 +61,14 @@ class ABasicSubscriberPreCommitFailureTest extends FlatSpec with Matchers
     zkConnectionTimeout = 7)
 
   //producer/consumer options
-  val producerOptions = new BasicProducerOptions[String](transactionTTL = 6, transactionKeepAliveInterval = 2, RoundRobinPolicyCreator.getRoundRobinPolicy(streamForProducer, List(0,1,2)), BatchInsert(5), LocalGeneratorCreator.getGen(), agentSettings, stringToArrayByteConverter)
+  val producerOptions = new BasicProducerOptions[String](transactionTTL = 6, transactionKeepAliveInterval = 2, RoundRobinPolicyCreator.getRoundRobinPolicy(streamForProducer, List(0, 1, 2)), BatchInsert(5), LocalGeneratorCreator.getGen(), agentSettings, stringToArrayByteConverter)
 
   val consumerOptions = new BasicConsumerOptions[Array[Byte], String](
     transactionsPreload = 10,
     dataPreload = 7,
     consumerKeepAliveInterval = 5,
     arrayByteToStringConverter,
-    RoundRobinPolicyCreator.getRoundRobinPolicy(streamForConsumer, List(0,1,2)),
+    RoundRobinPolicyCreator.getRoundRobinPolicy(streamForConsumer, List(0, 1, 2)),
     Oldest,
     LocalGeneratorCreator.getGen(),
     useLastOffset = true)
@@ -84,13 +78,14 @@ class ABasicSubscriberPreCommitFailureTest extends FlatSpec with Matchers
   var acc = 0
   val producer = new BasicProducer("test_producer", streamForProducer, producerOptions)
   val callback = new BasicSubscriberCallback[Array[Byte], String] {
-    override def onEvent(subscriber : BasicSubscribingConsumer[Array[Byte], String], partition: Int, transactionUuid: UUID): Unit = {
+    override def onEvent(subscriber: BasicSubscribingConsumer[Array[Byte], String], partition: Int, transactionUuid: UUID): Unit = {
       lock.lock()
       acc += 1
-      subscriber.setLocalOffset(partition,transactionUuid)
+      subscriber.setLocalOffset(partition, transactionUuid)
       subscriber.checkpoint()
       lock.unlock()
     }
+
     override val pollingFrequency: Int = 100
   }
   val path = randomString
@@ -100,11 +95,11 @@ class ABasicSubscriberPreCommitFailureTest extends FlatSpec with Matchers
     val dataInTxn = 10
     val data = randomString
 
-    var subscribeConsumer = new BasicSubscribingConsumer[Array[Byte],String](
+    var subscribeConsumer = new BasicSubscribingConsumer[Array[Byte], String](
       "test_consumer",
       streamForConsumer,
       consumerOptions,
-      new SubscriberCoordinationOptions("localhost:8588", "/unit", List(new InetSocketAddress("localhost",2181)), 7000, 7000),
+      new SubscriberCoordinationOptions("localhost:8588", "/unit", List(new InetSocketAddress("localhost", 2181)), 7000, 7000),
       callback,
       path)
     subscribeConsumer.start()
@@ -114,7 +109,7 @@ class ABasicSubscriberPreCommitFailureTest extends FlatSpec with Matchers
 
     subscribeConsumer.stop()
 
-    subscribeConsumer = new BasicSubscribingConsumer[Array[Byte],String](
+    subscribeConsumer = new BasicSubscribingConsumer[Array[Byte], String](
       "test_consumer",
       new BasicStream[Array[Byte]](
         name = "test_stream",
@@ -124,7 +119,7 @@ class ABasicSubscriberPreCommitFailureTest extends FlatSpec with Matchers
         ttl = 60 * 10,
         description = "some_description"),
       consumerOptions,
-      new SubscriberCoordinationOptions("localhost:8588", "/unit", List(new InetSocketAddress("localhost",2181)), 7000, 7000),
+      new SubscriberCoordinationOptions("localhost:8588", "/unit", List(new InetSocketAddress("localhost", 2181)), 7000, 7000),
       callback,
       path)
     subscribeConsumer.start()
@@ -136,8 +131,8 @@ class ABasicSubscriberPreCommitFailureTest extends FlatSpec with Matchers
     acc shouldEqual 0
   }
 
-  def sendTxnsAndWait(totalMsg : Int, dataInTxn : Int, data : String) = {
-    (0 until totalMsg) foreach { x=>
+  def sendTxnsAndWait(totalMsg: Int, dataInTxn: Int, data: String) = {
+    (0 until totalMsg) foreach { x =>
       val txn = producer.newTransaction(ProducerPolicies.errorIfOpened)
       (0 until dataInTxn) foreach { _ =>
         txn.send(data)
@@ -145,7 +140,7 @@ class ABasicSubscriberPreCommitFailureTest extends FlatSpec with Matchers
       try {
         txn.checkpoint()
       } catch {
-        case e : RuntimeException =>
+        case e: RuntimeException =>
       }
     }
     Thread.sleep(10000)

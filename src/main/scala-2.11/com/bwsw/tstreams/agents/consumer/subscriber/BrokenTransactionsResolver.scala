@@ -10,10 +10,10 @@ import org.slf4j.LoggerFactory
 
 import scala.collection.mutable
 
-class BrokenTransactionsResolver(subscriber : BasicSubscribingConsumer[_,_]) {
+class BrokenTransactionsResolver(subscriber: BasicSubscribingConsumer[_, _]) {
   private val MAX_RETRIES = 2
   private val UPDATE_INTERVAL = 5000
-  private var updateThread : Thread = null
+  private var updateThread: Thread = null
   private val isRunning = new AtomicBoolean(false)
   private val checkpointEventResolverLock = new ReentrantLock(true)
   private val logger = LoggerFactory.getLogger(this.getClass)
@@ -21,15 +21,15 @@ class BrokenTransactionsResolver(subscriber : BasicSubscribingConsumer[_,_]) {
   private val partitionToTxns = mutable.Map[Int, mutable.Set[UUID]]()
   private val retries = mutable.Map[Int, mutable.Map[UUID, Int]]()
 
-  def bindBuffer(partition : Int, buffer : TransactionsBuffer, lock : ReentrantLock, lastTxn : LastTransactionWrapper) = {
+  def bindBuffer(partition: Int, buffer: TransactionsBuffer, lock: ReentrantLock, lastTxn: LastTransactionWrapper) = {
     checkpointEventResolverLock.lock()
     logger.debug(s"[CHECKPOINT EVENT RESOLVER] start bind buffer on partition:{$partition}")
-    partitionToBuffer(partition) = TransactionBufferUtils(buffer,lock,lastTxn)
+    partitionToBuffer(partition) = TransactionBufferUtils(buffer, lock, lastTxn)
     logger.debug(s"[CHECKPOINT EVENT RESOLVER] finish bind buffer on partition:{$partition}")
     checkpointEventResolverLock.unlock()
   }
 
-  def update(partition : Int, txn : UUID, status : ProducerTransactionStatus) = {
+  def update(partition: Int, txn: UUID, status: ProducerTransactionStatus) = {
     checkpointEventResolverLock.lock()
     logger.debug(s"[CHECKPOINT EVENT RESOLVER] start update CER on partition:{$partition}" +
       s" with txn:{${txn.timestamp()}}")
@@ -61,7 +61,7 @@ class BrokenTransactionsResolver(subscriber : BasicSubscribingConsumer[_,_]) {
     isRunning.set(true)
     updateThread = new Thread(new Runnable {
       override def run(): Unit = {
-        while(isRunning.get()){
+        while (isRunning.get()) {
           checkpointEventResolverLock.lock()
           refresh()
           checkpointEventResolverLock.unlock()
@@ -80,17 +80,17 @@ class BrokenTransactionsResolver(subscriber : BasicSubscribingConsumer[_,_]) {
     retries.clear()
   }
 
-  private def removeTxn(partition : Int, txn : UUID) = {
+  private def removeTxn(partition: Int, txn: UUID) = {
     if (retries.contains(partition) && retries(partition).contains(txn)) {
       retries(partition).remove(txn)
       partitionToTxns(partition).remove(txn)
     }
   }
 
-  private def updateTransactionBuffer(partition : Int,
-                                      txn : UUID,
-                                      status : ProducerTransactionStatus,
-                                      ttl : Int) = {
+  private def updateTransactionBuffer(partition: Int,
+                                      txn: UUID,
+                                      status: ProducerTransactionStatus,
+                                      ttl: Int) = {
     val transactionBufferUtils = partitionToBuffer(partition)
     transactionBufferUtils.lock.lock()
     if (txn.timestamp() > transactionBufferUtils.lastConsumedTxn.get().timestamp())
@@ -111,7 +111,7 @@ class BrokenTransactionsResolver(subscriber : BasicSubscribingConsumer[_,_]) {
           val updatedTransaction = subscriber.updateTransaction(txn, partition)
           updatedTransaction match {
             case Some(transactionSettings) =>
-              if (transactionSettings.totalItems != -1){
+              if (transactionSettings.totalItems != -1) {
                 updateTransactionBuffer(partition, txn, ProducerTransactionStatus.postCheckpoint, -1)
                 removeTxn(partition, txn)
                 logger.debug(s"[CHECKPOINT EVENT RESOLVER] [REFRESH TB UPDATE] CER on" +
@@ -127,7 +127,7 @@ class BrokenTransactionsResolver(subscriber : BasicSubscribingConsumer[_,_]) {
             case None =>
               //the transaction has been deleted by cassandra so we need to remove it from transaction buffer
               updateTransactionBuffer(partition, txn, ProducerTransactionStatus.cancel, -1)
-              removeTxn(partition,txn)
+              removeTxn(partition, txn)
           }
         }
       }
@@ -135,4 +135,4 @@ class BrokenTransactionsResolver(subscriber : BasicSubscribingConsumer[_,_]) {
   }
 }
 
-case class TransactionBufferUtils(buffer : TransactionsBuffer, lock : ReentrantLock, lastConsumedTxn : LastTransactionWrapper)
+case class TransactionBufferUtils(buffer: TransactionsBuffer, lock: ReentrantLock, lastConsumedTxn: LastTransactionWrapper)

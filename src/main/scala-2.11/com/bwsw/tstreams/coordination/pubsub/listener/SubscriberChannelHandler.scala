@@ -13,46 +13,49 @@ import org.slf4j.LoggerFactory
 
 
 /**
- * Incoming connections manager for [[SubscriberListener]]]
- */
+  * Incoming connections manager for [[SubscriberListener]]]
+  */
 @Sharable
 class SubscriberChannelHandler(subscriberManager: SubscriberManager) extends SimpleChannelInboundHandler[ProducerTopicMessage] {
   private val logger = LoggerFactory.getLogger(this.getClass)
 
   /**
-   * Triggered when new connection accept
-   * @param ctx Netty ctx
-   */
-  override def channelActive(ctx: ChannelHandlerContext) : Unit = {
+    * Triggered when new connection accept
+    *
+    * @param ctx Netty ctx
+    */
+  override def channelActive(ctx: ChannelHandlerContext): Unit = {
     subscriberManager.incrementCount()
   }
 
   /**
-   * Triggered when new message [[ProducerTopicMessage]]] received
-   * @param ctx Netty ctx
-   * @param msg [[ProducerTopicMessage]]]
-   */
+    * Triggered when new message [[ProducerTopicMessage]]] received
+    *
+    * @param ctx Netty ctx
+    * @param msg [[ProducerTopicMessage]]]
+    */
   override def channelRead0(ctx: ChannelHandlerContext, msg: ProducerTopicMessage): Unit = {
-    logger.debug(s"[READ PARTITION_${msg.partition}] ts=${msg.txnUuid.timestamp()} ttl=${msg.ttl} status=${msg.status}\n")
+    logger.debug(s"[READ PARTITION_${msg.partition}] ts=${msg.txnUuid.timestamp()} ttl=${msg.ttl} status=${msg.status}")
     subscriberManager.invokeCallbacks(msg)
     ReferenceCountUtil.release(msg)
   }
 
   /**
-   * Triggered on exceptions
-   * @param ctx Netty ctx
-   * @param cause Exception cause
-   */
+    * Triggered on exceptions
+    *
+    * @param ctx   Netty ctx
+    * @param cause Exception cause
+    */
   override def exceptionCaught(ctx: ChannelHandlerContext, cause: Throwable) = {
     println(s"SubscriberListener exception : ${cause.getMessage}")
-//    ctx.close()
+    //    ctx.close()
   }
 }
 
 /**
- * Decoder to convert [[java.lang.String]] to [[ProducerTopicMessage]]]
- */
-class ProducerTopicMessageDecoder extends MessageToMessageDecoder[String]{
+  * Decoder to convert [[java.lang.String]] to [[ProducerTopicMessage]]]
+  */
+class ProducerTopicMessageDecoder extends MessageToMessageDecoder[String] {
   val logger = LoggerFactory.getLogger(this.getClass)
   val serializer = new TStreamsSerializer
 
@@ -62,8 +65,8 @@ class ProducerTopicMessageDecoder extends MessageToMessageDecoder[String]{
         out.add(serializer.deserialize[ProducerTopicMessage](msg))
     }
     catch {
-      case e : TStreamsSerializerException =>
-        logger.warn(s"TStreams Serializer Exception: ${e.getMessage}\n")
+      case e: TStreamsSerializerException =>
+        logger.warn(s"TStreams Serializer Exception: ${e.getMessage}")
     }
   }
 }

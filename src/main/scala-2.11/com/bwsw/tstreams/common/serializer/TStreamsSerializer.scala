@@ -1,4 +1,5 @@
 package com.bwsw.tstreams.common.serializer
+
 import java.util.UUID
 
 import com.bwsw.tstreams.common.serializer.TStreamsSerializer.TStreamsSerializerException
@@ -18,45 +19,45 @@ class TStreamsSerializer {
       case AgentSettings(id, prior, penalty) =>
         s"{AS,$id,$prior,$penalty}"
 
-      case x : DeleteMasterRequest =>
+      case x: DeleteMasterRequest =>
         s"{DMRq,${x.senderID},${x.receiverID},${x.partition},${x.msgID}}"
 
-      case x : DeleteMasterResponse =>
+      case x: DeleteMasterResponse =>
         s"{DMRs,${x.senderID},${x.receiverID},${x.partition},${x.msgID}}"
 
-      case x : EmptyRequest =>
+      case x: EmptyRequest =>
         s"{ERq,${x.senderID},${x.receiverID},${x.partition},${x.msgID}}"
 
-      case x : EmptyResponse =>
+      case x: EmptyResponse =>
         s"{ERs,${x.senderID},${x.receiverID},${x.partition},${x.msgID}}"
 
-      case x : PingRequest =>
+      case x: PingRequest =>
         s"{PiRq,${x.senderID},${x.receiverID},${x.partition},${x.msgID}}"
 
-      case x : PingResponse =>
+      case x: PingResponse =>
         s"{PiRs,${x.senderID},${x.receiverID},${x.partition},${x.msgID}}"
 
-      case x : PublishRequest =>
+      case x: PublishRequest =>
         val serializedMsg = serializeInternal(x.msg)
         s"{PuRq,${x.senderID},${x.receiverID},$serializedMsg,${x.msgID}}"
 
-      case x : PublishResponse =>
+      case x: PublishResponse =>
         val serializedMsg = serializeInternal(x.msg)
         s"{PuRs,${x.senderID},${x.receiverID},$serializedMsg,${x.msgID}}"
 
-      case x : SetMasterRequest =>
+      case x: SetMasterRequest =>
         s"{SMRq,${x.senderID},${x.receiverID},${x.partition},${x.msgID}}"
 
-      case x : SetMasterResponse =>
+      case x: SetMasterResponse =>
         s"{SMRs,${x.senderID},${x.receiverID},${x.partition},${x.msgID}}"
 
-      case x : TransactionRequest =>
+      case x: TransactionRequest =>
         s"{TRq,${x.senderID},${x.receiverID},${x.partition},${x.msgID}}"
 
-      case x : TransactionResponse =>
+      case x: TransactionResponse =>
         s"{TRs,${x.senderID},${x.receiverID},${x.txnUUID.toString},${x.partition},${x.msgID}}"
 
-      case ProducerTopicMessage(txnUuid,ttl,status,partition) =>
+      case ProducerTopicMessage(txnUuid, ttl, status, partition) =>
         val serializedStatus = serializeInternal(status)
         s"{PTM,${txnUuid.toString},$ttl,$serializedStatus,$partition}"
 
@@ -73,7 +74,7 @@ class TStreamsSerializer {
     val tokens = mutable.ListBuffer[Any]()
     var temp = ""
     var i = 1
-    while (i < value.length - 1){
+    while (i < value.length - 1) {
       val char = value(i)
       char match {
         case ',' =>
@@ -88,7 +89,7 @@ class TStreamsSerializer {
             for (j <- i + 1 until value.length - 1) {
               if (value(j) == '{')
                 cntOpen += 1
-              if (cntOpen == 0 && value(j) == '}'){
+              if (cntOpen == 0 && value(j) == '}') {
                 pos = j
                 break()
               }
@@ -97,7 +98,7 @@ class TStreamsSerializer {
             }
           }
           assert(pos != -1)
-          val token = deserializeToAny(value.substring(i, pos+1))
+          val token = deserializeToAny(value.substring(i, pos + 1))
           tokens += token
           temp = ""
           i = pos + 1
@@ -112,12 +113,12 @@ class TStreamsSerializer {
     tokens.head.toString match {
       case "DMRq" =>
         assert(tokens.size == 5)
-        val res = DeleteMasterRequest(tokens(1).toString,tokens(2).toString,tokens(3).toString.toInt)
+        val res = DeleteMasterRequest(tokens(1).toString, tokens(2).toString, tokens(3).toString.toInt)
         res.msgID = tokens(4).toString.toLong
         res
       case "DMRs" =>
         assert(tokens.size == 5)
-        val res = DeleteMasterResponse(tokens(1).toString,tokens(2).toString,tokens(3).toString.toInt)
+        val res = DeleteMasterResponse(tokens(1).toString, tokens(2).toString, tokens(3).toString.toInt)
         res.msgID = tokens(4).toString.toLong
         res
       case "ERq" =>
@@ -196,29 +197,31 @@ class TStreamsSerializer {
     }
   }
 
-  def serialize(value : Any) : String = {
+  def serialize(value: Any): String = {
     try {
       serializeInternal(value)
     }
     catch {
-      case e : Exception =>
+      case e: Exception =>
         throw new TStreamsSerializerException(s"msg : {${e.getMessage}} for value : {$value}")
     }
   }
 
-  def deserialize[T](value : String) : T = {
+  def deserialize[T](value: String): T = {
     try {
       val any = deserializeToAny(value)
       any.asInstanceOf[T]
     }
     catch {
-      case e : Exception =>
+      case e: Exception =>
         throw new TStreamsSerializerException(s"msg : {${e.getMessage}} for value : {$value}")
     }
   }
 }
 
 
-object TStreamsSerializer{
-  class TStreamsSerializerException(msg : String) extends Exception(msg)
+object TStreamsSerializer {
+
+  class TStreamsSerializerException(msg: String) extends Exception(msg)
+
 }

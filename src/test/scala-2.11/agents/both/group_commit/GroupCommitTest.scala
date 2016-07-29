@@ -2,23 +2,18 @@ package agents.both.group_commit
 
 import java.net.InetSocketAddress
 
-import com.aerospike.client.Host
-import com.bwsw.tstreams.agents.consumer.{BasicConsumer, BasicConsumerOptions}
 import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
+import com.bwsw.tstreams.agents.consumer.{BasicConsumer, BasicConsumerOptions}
 import com.bwsw.tstreams.agents.group.CheckpointGroup
-import com.bwsw.tstreams.agents.producer.{BasicProducer, BasicProducerOptions, ProducerCoordinationOptions, ProducerPolicies}
 import com.bwsw.tstreams.agents.producer.InsertionType.SingleElementInsert
-import com.bwsw.tstreams.converter.{ArrayByteToStringConverter, StringToArrayByteConverter}
-import com.bwsw.tstreams.data.aerospike.{AerospikeStorageFactory, AerospikeStorageOptions}
+import com.bwsw.tstreams.agents.producer.{BasicProducer, BasicProducerOptions, ProducerCoordinationOptions, ProducerPolicies}
 import com.bwsw.tstreams.coordination.transactions.transport.impl.TcpTransport
-import com.bwsw.tstreams.metadata.MetadataStorageFactory
 import com.bwsw.tstreams.streams.BasicStream
-import com.datastax.driver.core.Cluster
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import testutils._
 
 
-class GroupCommitTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils{
+class GroupCommitTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
 
   val metadataStorage = metadataStorageFactory.getInstance(
     cassandraHosts = List(new InetSocketAddress("localhost", 9042)),
@@ -51,21 +46,21 @@ class GroupCommitTest extends FlatSpec with Matchers with BeforeAndAfterAll with
     transportTimeout = 5,
     zkConnectionTimeout = 7)
 
-  val producerOptions = new BasicProducerOptions[String](transactionTTL = 6, transactionKeepAliveInterval = 2, RoundRobinPolicyCreator.getRoundRobinPolicy(streamForProducer, List(0,1,2)), SingleElementInsert, LocalGeneratorCreator.getGen(), agentSettings, stringToArrayByteConverter)
+  val producerOptions = new BasicProducerOptions[String](transactionTTL = 6, transactionKeepAliveInterval = 2, RoundRobinPolicyCreator.getRoundRobinPolicy(streamForProducer, List(0, 1, 2)), SingleElementInsert, LocalGeneratorCreator.getGen(), agentSettings, stringToArrayByteConverter)
 
   val consumerOptions = new BasicConsumerOptions[Array[Byte], String](
     transactionsPreload = 10,
     dataPreload = 7,
     consumerKeepAliveInterval = 5,
     arrayByteToStringConverter,
-    RoundRobinPolicyCreator.getRoundRobinPolicy(streamForConsumer, List(0,1,2)),
+    RoundRobinPolicyCreator.getRoundRobinPolicy(streamForConsumer, List(0, 1, 2)),
     Oldest,
     LocalGeneratorCreator.getGen(),
     useLastOffset = true)
 
   val producer = new BasicProducer("test_producer", streamForProducer, producerOptions)
   var consumer = new BasicConsumer("test_consumer", streamForConsumer, consumerOptions)
-  
+
   "Group commit" should "checkpoint all AgentsGroup state" in {
     val group = new CheckpointGroup()
     group.add("producer", producer)
@@ -98,7 +93,6 @@ class GroupCommitTest extends FlatSpec with Matchers with BeforeAndAfterAll with
 
   override def afterAll(): Unit = {
     producer.stop()
-    removeZkMetadata("/unit")
     onAfterAll()
   }
 }

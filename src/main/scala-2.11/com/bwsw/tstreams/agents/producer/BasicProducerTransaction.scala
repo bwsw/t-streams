@@ -10,18 +10,18 @@ import org.slf4j.LoggerFactory
 import scala.collection.mutable.ListBuffer
 
 /**
- * Transaction retrieved by BasicProducer.newTransaction method
- *
- * @param transactionLock Transaction Lock for managing actions which has to do with checkpoints
- * @param partition Concrete partition for saving this transaction
- * @param txnOwner Producer class which was invoked newTransaction method
- * @param transactionUuid UUID for this transaction
- * @tparam USERTYPE User data type
- */
+  * Transaction retrieved by BasicProducer.newTransaction method
+  *
+  * @param transactionLock Transaction Lock for managing actions which has to do with checkpoints
+  * @param partition       Concrete partition for saving this transaction
+  * @param txnOwner        Producer class which was invoked newTransaction method
+  * @param transactionUuid UUID for this transaction
+  * @tparam USERTYPE User data type
+  */
 class BasicProducerTransaction[USERTYPE](transactionLock: ReentrantLock,
-                                         partition        : Int,
-                                         transactionUuid  : UUID,
-                                         txnOwner    : BasicProducer[USERTYPE]){
+                                         partition: Int,
+                                         transactionUuid: UUID,
+                                         txnOwner: BasicProducer[USERTYPE]) {
 
   /**
     * State indicator of the transaction
@@ -31,10 +31,10 @@ class BasicProducerTransaction[USERTYPE](transactionLock: ReentrantLock,
   def isClosed = closed
 
   /**
-   * BasicProducerTransaction logger for logging
-   */
+    * BasicProducerTransaction logger for logging
+    */
   private val logger = LoggerFactory.getLogger(this.getClass)
-  logger.debug(s"Open transaction for stream,partition : {${txnOwner.stream.getName}},{$partition}\n")
+  logger.debug(s"Open transaction for stream,partition : {${txnOwner.stream.getName}},{$partition}")
 
   /**
     *
@@ -43,41 +43,41 @@ class BasicProducerTransaction[USERTYPE](transactionLock: ReentrantLock,
     closed = true
 
   /**
-   * Return transaction partition
-   */
-  def getPartition : Int = partition
+    * Return transaction partition
+    */
+  def getPartition: Int = partition
 
   /**
-   * Return transaction UUID
-   */
+    * Return transaction UUID
+    */
   def getTxnUUID: UUID = transactionUuid
 
   /**
-   * Return current transaction amount of data
-   */
+    * Return current transaction amount of data
+    */
   def getCnt = part
 
   /**
-   * Variable for indicating transaction state
-   */
+    * Variable for indicating transaction state
+    */
   private var closed = false
 
   /**
-   * Transaction part index
-   */
+    * Transaction part index
+    */
   private var part = 0
 
   /**
-   * All inserts (can be async) in storage (must be waited before closing this transaction)
-   */
+    * All inserts (can be async) in storage (must be waited before closing this transaction)
+    */
   private var jobs = ListBuffer[() => Unit]()
 
   /**
-   * Send data to storage
+    * Send data to storage
     *
     * @param obj some user object
-   */
-  def send(obj : USERTYPE) : Unit = {
+    */
+  def send(obj: USERTYPE): Unit = {
     transactionLock.lock()
 
     if (closed)
@@ -88,12 +88,12 @@ class BasicProducerTransaction[USERTYPE](transactionLock: ReentrantLock,
       case InsertionType.BatchInsert(size) =>
 
         txnOwner.stream.dataStorage.putInBuffer(
-                                            txnOwner.stream.getName,
-                                            partition,
-                                            transactionUuid,
-                                            txnOwner.stream.getTTL,
-                                            txnOwner.producerOptions.converter.convert(obj),
-                                            part)
+          txnOwner.stream.getName,
+          partition,
+          transactionUuid,
+          txnOwner.stream.getTTL,
+          txnOwner.producerOptions.converter.convert(obj),
+          part)
 
         if (txnOwner.stream.dataStorage.getBufferSize(transactionUuid) == size) {
 
@@ -106,12 +106,12 @@ class BasicProducerTransaction[USERTYPE](transactionLock: ReentrantLock,
       case InsertionType.SingleElementInsert =>
 
         val job: () => Unit = txnOwner.stream.dataStorage.put(
-                                            txnOwner.stream.getName,
-                                            partition,
-                                            transactionUuid,
-                                            txnOwner.stream.getTTL,
-                                            txnOwner.producerOptions.converter.convert(obj),
-                                            part)
+          txnOwner.stream.getName,
+          partition,
+          transactionUuid,
+          txnOwner.stream.getTTL,
+          txnOwner.producerOptions.converter.convert(obj),
+          part)
         if (job != null) jobs += job
     }
 
@@ -130,9 +130,9 @@ class BasicProducerTransaction[USERTYPE](transactionLock: ReentrantLock,
     }
 
 
-    val msg = ProducerTopicMessage(txnUuid   = transactionUuid,
-      ttl       = -1,
-      status    = ProducerTransactionStatus.cancel,
+    val msg = ProducerTopicMessage(txnUuid = transactionUuid,
+      ttl = -1,
+      status = ProducerTransactionStatus.cancel,
       partition = partition)
 
     txnOwner.masterP2PAgent.publish(msg)
@@ -140,9 +140,10 @@ class BasicProducerTransaction[USERTYPE](transactionLock: ReentrantLock,
 
     transactionLock.unlock()
   }
+
   /**
-   * Canceling current transaction
-   */
+    * Canceling current transaction
+    */
   def cancel() = {
     transactionLock.lock()
 
@@ -151,7 +152,9 @@ class BasicProducerTransaction[USERTYPE](transactionLock: ReentrantLock,
 
     closed = true
 
-    txnOwner.backendActivityService.submit(new Runnable {override def run(): Unit = cancelAsync()})
+    txnOwner.backendActivityService.submit(new Runnable {
+      override def run(): Unit = cancelAsync()
+    })
 
     transactionLock.unlock()
 
@@ -163,7 +166,7 @@ class BasicProducerTransaction[USERTYPE](transactionLock: ReentrantLock,
     } catch {
       //        will be only in debug mode in case of precheckpoint failure test
       //        or postcheckpoint failure test
-      case e : RuntimeException =>
+      case e: RuntimeException =>
         transactionLock.unlock()
     }
   }
@@ -175,9 +178,9 @@ class BasicProducerTransaction[USERTYPE](transactionLock: ReentrantLock,
     GlobalHooks.invoke("AfterCommitFailure")
 
     txnOwner.masterP2PAgent.publish(ProducerTopicMessage(
-      txnUuid   = transactionUuid,
-      ttl       = -1,
-      status    = ProducerTransactionStatus.postCheckpoint,
+      txnUuid = transactionUuid,
+      ttl = -1,
+      status = ProducerTransactionStatus.postCheckpoint,
       partition = partition))
 
     logger.debug(s"[FINAL CHECKPOINT PARTITION_$partition] " +
@@ -190,7 +193,7 @@ class BasicProducerTransaction[USERTYPE](transactionLock: ReentrantLock,
     } catch {
       //        will be only in debug mode in case of precheckpoint failure test
       //        or postcheckpoint failure test
-      case e : RuntimeException =>
+      case e: RuntimeException =>
         transactionLock.unlock()
         throw e
     }
@@ -217,37 +220,37 @@ class BasicProducerTransaction[USERTYPE](transactionLock: ReentrantLock,
         s"ts=${transactionUuid.timestamp()}")
 
       txnOwner.masterP2PAgent.publish(ProducerTopicMessage(
-        txnUuid   = transactionUuid,
-        ttl       = -1,
-        status    = ProducerTransactionStatus.preCheckpoint,
+        txnUuid = transactionUuid,
+        ttl = -1,
+        status = ProducerTransactionStatus.preCheckpoint,
         partition = partition))
 
       //debug purposes only
       GlobalHooks.invoke("PreCommitFailure")
 
       txnOwner.stream.metadataStorage.commitEntity.commitAsync(
-        streamName  = txnOwner.stream.getName,
-        partition   = partition,
+        streamName = txnOwner.stream.getName,
+        partition = partition,
         transaction = transactionUuid,
-        totalCnt    = part,
-        ttl         = txnOwner.stream.getTTL,
-        executor    = txnOwner.backendActivityService,
-        function    = checkpointPostEventPartSafe)
+        totalCnt = part,
+        ttl = txnOwner.stream.getTTL,
+        executor = txnOwner.backendActivityService,
+        function = checkpointPostEventPartSafe)
     }
     else {
       txnOwner.masterP2PAgent.publish(ProducerTopicMessage(
-        txnUuid   = transactionUuid,
-        ttl       = -1,
-        status    = ProducerTransactionStatus.cancel,
+        txnUuid = transactionUuid,
+        ttl = -1,
+        status = ProducerTransactionStatus.cancel,
         partition = partition))
     }
     transactionLock.unlock()
   }
 
   /**
-   * Submit transaction(transaction will be available by consumer only after closing)
-   */
-  def checkpoint() : Unit = {
+    * Submit transaction(transaction will be available by consumer only after closing)
+    */
+  def checkpoint(): Unit = {
     transactionLock.lock()
 
     if (closed)
@@ -255,7 +258,9 @@ class BasicProducerTransaction[USERTYPE](transactionLock: ReentrantLock,
 
     closed = true
 
-    txnOwner.backendActivityService.submit(new Runnable {override def run(): Unit = checkpointAsyncSafe() })
+    txnOwner.backendActivityService.submit(new Runnable {
+      override def run(): Unit = checkpointAsyncSafe()
+    })
 
     transactionLock.unlock()
 
@@ -264,10 +269,10 @@ class BasicProducerTransaction[USERTYPE](transactionLock: ReentrantLock,
   private def doSendUpdateMessage() = {
     //publish that current txn is being updating
     txnOwner.subscriberClient.publish(ProducerTopicMessage(
-                                                      txnUuid   = transactionUuid,
-                                                      ttl       = txnOwner.producerOptions.transactionTTL,
-                                                      status    = ProducerTransactionStatus.update,
-                                                      partition = partition), ()=>())
+      txnUuid = transactionUuid,
+      ttl = txnOwner.producerOptions.transactionTTL,
+      status = ProducerTransactionStatus.update,
+      partition = partition), () => ())
     logger.debug(s"[KEEP_ALIVE THREAD PARTITION_${partition}] ts=${transactionUuid.timestamp()} status=${ProducerTransactionStatus.update}")
 
   }
@@ -276,13 +281,13 @@ class BasicProducerTransaction[USERTYPE](transactionLock: ReentrantLock,
     //-1 here indicate that transaction is started but is not finished yet
     logger.debug(s"Update event for txn ${transactionUuid}, partition: ${partition}")
     val f = txnOwner.stream.metadataStorage.commitEntity.commitAsync(
-                                                        streamName      = txnOwner.stream.getName,
-                                                        partition       = partition,
-                                                        transaction     = transactionUuid,
-                                                        totalCnt        = -1,
-                                                        ttl             = txnOwner.producerOptions.transactionTTL,
-                                                        executor        = txnOwner.backendActivityService,
-                                                        function        = doSendUpdateMessage)
+      streamName = txnOwner.stream.getName,
+      partition = partition,
+      transaction = transactionUuid,
+      totalCnt = -1,
+      ttl = txnOwner.producerOptions.transactionTTL,
+      executor = txnOwner.backendActivityService,
+      function = doSendUpdateMessage)
   }
 
   /**

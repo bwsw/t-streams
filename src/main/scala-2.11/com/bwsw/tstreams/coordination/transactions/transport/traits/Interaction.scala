@@ -5,19 +5,19 @@ import java.util.UUID
 import com.bwsw.tstreams.coordination.transactions.peertopeer.PeerToPeerAgent
 
 /**
- * Trait for producers
- */
+  * Trait for producers
+  */
 trait Interaction {
   /**
-   * Method to implement for concrete producer
-   * Need only if this producer is master
- *
-   * @return UUID
-   */
-  def openTxnLocal(txnUUID : UUID, partition : Int, onComplete: () => Unit) : Unit
+    * Method to implement for concrete producer
+    * Need only if this producer is master
+    *
+    * @return UUID
+    */
+  def openTxnLocal(txnUUID: UUID, partition: Int, onComplete: () => Unit): Unit
 
   /**
-   * Agent for producer to provide producers communication
-   */
-  val masterP2PAgent : PeerToPeerAgent
+    * Agent for producer to provide producers communication
+    */
+  val masterP2PAgent: PeerToPeerAgent
 }

@@ -6,19 +6,16 @@ import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
 import com.bwsw.tstreams.agents.consumer.{BasicConsumer, BasicConsumerOptions}
 import com.bwsw.tstreams.agents.producer.InsertionType.SingleElementInsert
 import com.bwsw.tstreams.agents.producer._
-import com.bwsw.tstreams.converter.{ArrayByteToStringConverter, StringToArrayByteConverter}
-import com.bwsw.tstreams.data.cassandra.{CassandraStorageFactory, CassandraStorageOptions}
 import com.bwsw.tstreams.coordination.transactions.transport.impl.TcpTransport
-import com.bwsw.tstreams.metadata.MetadataStorageFactory
+import com.bwsw.tstreams.data.cassandra.CassandraStorageOptions
 import com.bwsw.tstreams.services.BasicStreamService
-import com.datastax.driver.core.Cluster
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import testutils._
 
 
-class BasicProducerWithManyOpenedTxnsTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils{
+class BasicProducerWithManyOpenedTxnsTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
 
-  val cassandraOptions = new CassandraStorageOptions(List(new InetSocketAddress("localhost",9042)), randomKeyspace)
+  val cassandraOptions = new CassandraStorageOptions(List(new InetSocketAddress("localhost", 9042)), randomKeyspace)
 
   val stream = BasicStreamService.createStream(
     streamName = "test_stream",
@@ -38,7 +35,7 @@ class BasicProducerWithManyOpenedTxnsTest extends FlatSpec with Matchers with Be
     transportTimeout = 5,
     zkConnectionTimeout = 7)
 
-  val producerOptions = new BasicProducerOptions[String](transactionTTL = 10, transactionKeepAliveInterval = 2, RoundRobinPolicyCreator.getRoundRobinPolicy(stream, List(0,1,2)), SingleElementInsert, LocalGeneratorCreator.getGen(), agentSettings, stringToArrayByteConverter)
+  val producerOptions = new BasicProducerOptions[String](transactionTTL = 10, transactionKeepAliveInterval = 2, RoundRobinPolicyCreator.getRoundRobinPolicy(stream, List(0, 1, 2)), SingleElementInsert, LocalGeneratorCreator.getGen(), agentSettings, stringToArrayByteConverter)
 
   val producer = new BasicProducer("test_producer", stream, producerOptions)
 
@@ -58,7 +55,7 @@ class BasicProducerWithManyOpenedTxnsTest extends FlatSpec with Matchers with Be
     dataPreload = 7,
     consumerKeepAliveInterval = 5,
     arrayByteToStringConverter,
-    RoundRobinPolicyCreator.getRoundRobinPolicy(streamForConsumer, List(0,1,2)),
+    RoundRobinPolicyCreator.getRoundRobinPolicy(streamForConsumer, List(0, 1, 2)),
     Oldest,
     LocalGeneratorCreator.getGen(),
     useLastOffset = true)
@@ -72,9 +69,9 @@ class BasicProducerWithManyOpenedTxnsTest extends FlatSpec with Matchers with Be
     val txn1: BasicProducerTransaction[String] = producer.newTransaction(ProducerPolicies.errorIfOpened)
     val txn2: BasicProducerTransaction[String] = producer.newTransaction(ProducerPolicies.errorIfOpened)
     val txn3: BasicProducerTransaction[String] = producer.newTransaction(ProducerPolicies.errorIfOpened)
-    data1.foreach(x=>txn1.send(x))
-    data2.foreach(x=>txn2.send(x))
-    data3.foreach(x=>txn3.send(x))
+    data1.foreach(x => txn1.send(x))
+    data2.foreach(x => txn2.send(x))
+    data3.foreach(x => txn3.send(x))
     txn3.checkpoint()
     txn2.checkpoint()
     txn1.checkpoint()

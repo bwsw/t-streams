@@ -1,6 +1,6 @@
 package com.bwsw.tstreams.coordination.transactions.transport.impl.server
 
-import java.util.concurrent.{TimeUnit, CountDownLatch}
+import java.util.concurrent.{CountDownLatch, TimeUnit}
 
 import com.bwsw.tstreams.coordination.transactions.messages.IMessage
 import io.netty.bootstrap.ServerBootstrap
@@ -13,44 +13,45 @@ import io.netty.handler.codec.{DelimiterBasedFrameDecoder, Delimiters}
 import io.netty.handler.logging.{LogLevel, LoggingHandler}
 
 /**
- * @param port Listener port
- */
-class IMessageListener(port : Int){
+  * @param port Listener port
+  */
+class IMessageListener(port: Int) {
   //socket accept worker
   private val bossGroup = new NioEventLoopGroup(1)
   //channel workers
   private val workerGroup = new NioEventLoopGroup()
   private val MAX_FRAME_LENGTH = 8192
   private val manager = new IMessageListenerManager()
-  private val channelHandler : IMessageServerChannelHandler = new IMessageServerChannelHandler(manager)
-  private var listenerThread : Thread = null
+  private val channelHandler: IMessageServerChannelHandler = new IMessageServerChannelHandler(manager)
+  private var listenerThread: Thread = null
 
   /**
-   * Stop this listener
-   */
-  def stop() : Unit = {
-    workerGroup.shutdownGracefully(0,0,TimeUnit.SECONDS).await()
-    bossGroup.shutdownGracefully(0,0,TimeUnit.SECONDS).await()
+    * Stop this listener
+    */
+  def stop(): Unit = {
+    workerGroup.shutdownGracefully(0, 0, TimeUnit.SECONDS).await()
+    bossGroup.shutdownGracefully(0, 0, TimeUnit.SECONDS).await()
   }
 
   /**
-   * Add callback on incoming [[IMessage]]] events
-   * @param callback Event callback
-   */
-  def addCallback(callback : (IMessage) => Unit) : Unit = {
+    * Add callback on incoming [[IMessage]]] events
+    *
+    * @param callback Event callback
+    */
+  def addCallback(callback: (IMessage) => Unit): Unit = {
     manager.addCallback(callback)
   }
 
   /**
-   * Response with [[IMessage]]]
-   */
-  def response(msg : IMessage) : Unit = {
+    * Response with [[IMessage]]]
+    */
+  def response(msg: IMessage): Unit = {
     manager.response(msg)
   }
 
   /**
-   * Start this listener
-   */
+    * Start this listener
+    */
   def start() = {
     assert(listenerThread == null || !listenerThread.isAlive)
     val syncPoint = new CountDownLatch(1)
@@ -63,7 +64,7 @@ class IMessageListener(port : Int){
             .childHandler(new ChannelInitializer[SocketChannel]() {
               override def initChannel(ch: SocketChannel) {
                 val p = ch.pipeline()
-                p.addLast("framer", new DelimiterBasedFrameDecoder(MAX_FRAME_LENGTH, Delimiters.lineDelimiter():_*))
+                p.addLast("framer", new DelimiterBasedFrameDecoder(MAX_FRAME_LENGTH, Delimiters.lineDelimiter(): _*))
                 p.addLast("decoder", new StringDecoder())
                 p.addLast("deserializer", new IMessageDecoder())
                 p.addLast("encoder", new StringEncoder())
@@ -75,8 +76,8 @@ class IMessageListener(port : Int){
           syncPoint.countDown()
           f.channel().closeFuture().sync()
         } finally {
-          workerGroup.shutdownGracefully(0,0,TimeUnit.SECONDS)
-          bossGroup.shutdownGracefully(0,0,TimeUnit.SECONDS)
+          workerGroup.shutdownGracefully(0, 0, TimeUnit.SECONDS)
+          bossGroup.shutdownGracefully(0, 0, TimeUnit.SECONDS)
         }
       }
     })

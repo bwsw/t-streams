@@ -4,30 +4,30 @@ import java.net.InetSocketAddress
 
 import com.bwsw.tstreams.agents.consumer.Offsets.IOffset
 import com.bwsw.tstreams.converter.IConverter
-import com.bwsw.tstreams.policy.AbstractPolicy
 import com.bwsw.tstreams.generator.IUUIDGenerator
+import com.bwsw.tstreams.policy.AbstractPolicy
 
 /**
- * @param converter User defined or predefined converter which convert storage type into usertype
- * @param offset Offset from which start to read
- * @param useLastOffset Use or not last offset for specific consumer
- *                      if last offset not exist, offset will be used
- * @param transactionsPreload Buffer size of preloaded transactions
- * @param dataPreload Buffer size of preloaded data for each consumed transaction
- * @param readPolicy Strategy how to read from concrete stream
- * @param consumerKeepAliveInterval Concrete consumer update interval
- * @param txnGenerator Generator for generating UUIDs
- * @tparam DATATYPE Storage type
- * @tparam USERTYPE User type
- */
-class BasicConsumerOptions[DATATYPE,USERTYPE](val transactionsPreload : Int,
-                                              val dataPreload : Int,
-                                              val consumerKeepAliveInterval : Int,
-                                              val converter : IConverter[DATATYPE,USERTYPE],
-                                              val readPolicy : AbstractPolicy,
-                                              val offset : IOffset,
-                                              val txnGenerator: IUUIDGenerator,
-                                              val useLastOffset : Boolean = true) {
+  * @param converter                 User defined or predefined converter which convert storage type into usertype
+  * @param offset                    Offset from which start to read
+  * @param useLastOffset             Use or not last offset for specific consumer
+  *                                  if last offset not exist, offset will be used
+  * @param transactionsPreload       Buffer size of preloaded transactions
+  * @param dataPreload               Buffer size of preloaded data for each consumed transaction
+  * @param readPolicy                Strategy how to read from concrete stream
+  * @param consumerKeepAliveInterval Concrete consumer update interval
+  * @param txnGenerator              Generator for generating UUIDs
+  * @tparam DATATYPE Storage type
+  * @tparam USERTYPE User type
+  */
+class BasicConsumerOptions[DATATYPE, USERTYPE](val transactionsPreload: Int,
+                                               val dataPreload: Int,
+                                               val consumerKeepAliveInterval: Int,
+                                               val converter: IConverter[DATATYPE, USERTYPE],
+                                               val readPolicy: AbstractPolicy,
+                                               val offset: IOffset,
+                                               val txnGenerator: IUUIDGenerator,
+                                               val useLastOffset: Boolean = true) {
   if (transactionsPreload < 1)
     throw new IllegalArgumentException("incorrect transactionPreload value, should be greater or equal one")
 
@@ -39,19 +39,19 @@ class BasicConsumerOptions[DATATYPE,USERTYPE](val transactionsPreload : Int,
 }
 
 /**
- *
- * @param agentAddress Subscriber address in network
- * @param zkRootPath Zk root prefix
- * @param zkHosts Zk hosts to connect
- * @param zkSessionTimeout Zk session timeout
- * @param threadPoolAmount Thread pool amount which is used by
- *                         [[com.bwsw.tstreams.agents.consumer.subscriber.BasicSubscribingConsumer]]]
- *                         by default (threads_amount == used_consumer_partitions)
- */
+  *
+  * @param agentAddress     Subscriber address in network
+  * @param zkRootPath       Zk root prefix
+  * @param zkHosts          Zk hosts to connect
+  * @param zkSessionTimeout Zk session timeout
+  * @param threadPoolAmount Thread pool amount which is used by
+  *                         [[com.bwsw.tstreams.agents.consumer.subscriber.BasicSubscribingConsumer]]]
+  *                         by default (threads_amount == used_consumer_partitions)
+  */
 //TODO validate params
-class SubscriberCoordinationOptions (val agentAddress : String,
-                                   val zkRootPath : String,
-                                   val zkHosts : List[InetSocketAddress],
-                                   val zkSessionTimeout : Int,
-                                   val zkConnectionTimeout : Int,
-                                   val threadPoolAmount: Int = -1)
+class SubscriberCoordinationOptions(val agentAddress: String,
+                                    val zkRootPath: String,
+                                    val zkHosts: List[InetSocketAddress],
+                                    val zkSessionTimeout: Int,
+                                    val zkConnectionTimeout: Int,
+                                    val threadPoolAmount: Int = -1)
