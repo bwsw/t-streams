@@ -16,12 +16,14 @@ class MandatoryExecutor {
   private val queue = new LinkedBlockingQueue[Runnable]()
   private var executor : Thread = null
   private val isRunning = new AtomicBoolean(true)
+  private var message : String = null
+  startExecutor()
 
   /**
     *
     */
   private def startExecutor() : Unit = {
-    //TODO somehow rethrow exception from this thread
+    //TODO latch sync
     executor = new Thread(new Runnable {
       override def run(): Unit = startInternal()
     })
@@ -44,7 +46,8 @@ class MandatoryExecutor {
         }
         catch {
           case e: Exception =>
-            throw new MandatoryExecutorException(s"Runnable failure with msg { ${e.getMessage} }")
+            isRunning.set(false)
+            message = e.getMessage
         }
       }
     }
@@ -55,6 +58,9 @@ class MandatoryExecutor {
     * @param task
     */
   def submit(task : Runnable) = {
+    if (executor != null && !executor.isAlive){
+      throw new MandatoryExecutorException(message)
+    }
     queue.add(task)
   }
 
@@ -63,6 +69,9 @@ class MandatoryExecutor {
     * @return
     */
   def await() = {
+    if (executor != null && !executor.isAlive){
+      throw new MandatoryExecutorException(message)
+    }
     awaitSignalVar.await()
   }
 }
