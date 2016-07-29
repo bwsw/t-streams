@@ -16,17 +16,6 @@ import testutils._
 
 class BasicProducerTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils{
 
-  val randomKeyspace = randomString
-  val temporaryCluster = Cluster.builder().addContactPoint("localhost").build()
-  val temporarySession = temporaryCluster.connect()
-  CassandraHelper.createKeyspace(temporarySession, randomKeyspace)
-  CassandraHelper.createMetadataTables(temporarySession, randomKeyspace)
-  CassandraHelper.createDataTable(temporarySession, randomKeyspace)
-
-  val metadataStorageFactory = new MetadataStorageFactory
-  val storageFactory = new CassandraStorageFactory
-
-  val stringToArrayByteConverter = new StringToArrayByteConverter
 
   val cassandraOptions = new CassandraStorageOptions(List(new InetSocketAddress("localhost",9042)), randomKeyspace)
 
@@ -36,7 +25,7 @@ class BasicProducerTest extends FlatSpec with Matchers with BeforeAndAfterAll wi
     ttl = 60 * 10,
     description = "unit_testing",
     metadataStorage = metadataStorageFactory.getInstance(List(new InetSocketAddress("localhost", 9042)), randomKeyspace),
-    dataStorage = storageFactory.getInstance(cassandraOptions))
+    dataStorage = cassandraStorageFactory.getInstance(cassandraOptions))
 
   val agentSettings = new ProducerCoordinationOptions(
     agentAddress = s"localhost:8000",
@@ -82,11 +71,6 @@ class BasicProducerTest extends FlatSpec with Matchers with BeforeAndAfterAll wi
 
   override def afterAll(): Unit = {
     producer.stop()
-    removeZkMetadata("/unit")
-    temporarySession.execute(s"DROP KEYSPACE $randomKeyspace")
-    temporarySession.close()
-    temporaryCluster.close()
-    metadataStorageFactory.closeFactory()
-    storageFactory.closeFactory()
+    onAfterAll()
   }
 }

@@ -7,8 +7,6 @@ import com.bwsw.tstreams.agents.consumer.subscriber.{BasicSubscribingConsumer, B
 import com.bwsw.tstreams.agents.producer.ProducerPolicies
 import com.bwsw.tstreams.converter.{ArrayByteToStringConverter, StringToArrayByteConverter}
 import com.bwsw.tstreams.env.{TSF_Dictionary, TStreamsFactory}
-import com.datastax.driver.core.Cluster
-import org.slf4j.LoggerFactory
 
 /**
   * Created by ivan on 23.07.16.
@@ -19,15 +17,6 @@ import testutils._
 
 class TStreamsFactoryTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
 
-  private val logger = LoggerFactory.getLogger(this.getClass)
-
-  val randomKeyspace = createRandomKeyspace
-
-  val f = new TStreamsFactory()
-  f.setProperty(TSF_Dictionary.Metadata.Cluster.namespace,randomKeyspace).
-    setProperty(TSF_Dictionary.Data.Cluster.namespace,"test").
-    setProperty(TSF_Dictionary.Stream.name, "test-stream")
-
   "UniversalFactory.getProducer" should "return producer object" in {
     val p = f.getProducer[String](
       name          = "test-producer-1",
@@ -37,14 +26,6 @@ class TStreamsFactoryTest extends FlatSpec with Matchers with BeforeAndAfterAll 
       partitions    = List(0) )
 
     p != null shouldEqual true
-
-    val txn = p.newTransaction(
-      policy        = ProducerPolicies.errorIfOpened,
-      nextPartition = 0)
-
-    txn.send("test1")
-    txn.send("test2")
-    txn.checkpoint()
 
     p.stop()
 
@@ -60,11 +41,6 @@ class TStreamsFactoryTest extends FlatSpec with Matchers with BeforeAndAfterAll 
 
     c != null shouldEqual true
 
-    val txn = c.getTransaction.get
-    val data = txn.getAll()
-
-    data.size shouldBe 2
-    c.checkpoint()
   }
 
   "UniversalFactory.getSubscriber" should "return subscriber object" in {

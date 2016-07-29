@@ -46,6 +46,7 @@ class PeerToPeerAgent(agentAddress : String,
   private val localMasters = scala.collection.mutable.Map[Int/*partition*/, String/*master*/]()
   private val lockLocalMasters = new ReentrantLock(true)
   private val lockManagingMaster = new ReentrantLock(true)
+  private val lockExternalAccess = new ReentrantLock(true)
   private val streamName = producer.stream.getName
   private val isRunning = new AtomicBoolean(true)
   private var zkConnectionValidator : Thread = null
@@ -327,12 +328,14 @@ class PeerToPeerAgent(agentAddress : String,
    * @return Transaction UUID
    */
   def getNewTxn(partition : Int) : UUID = {
+    lockExternalAccess.lock()
     lockLocalMasters.lock()
     val condition = localMasters.contains(partition)
     val localMaster = if (condition) localMasters(partition) else null
     lockLocalMasters.unlock()
     logger.debug(s"[GETTXN] Start retrieve txn for agent with address:{$agentAddress}," +
       s"stream:{$streamName},partition:{$partition} from [MASTER:{$localMaster}]\n")
+    val res =
     if (condition){
       val txnResponse = transport.transactionRequest(TransactionRequest(agentAddress, localMaster, partition), transportTimeout)
       txnResponse match {
@@ -355,10 +358,13 @@ class PeerToPeerAgent(agentAddress : String,
       updateMaster(partition, init = false)
       getNewTxn(partition)
     }
+    lockExternalAccess.unlock()
+    res
   }
 
   //TODO remove after complex testing
   def publish(msg : ProducerTopicMessage) : Unit = {
+    lockExternalAccess.lock()
     assert(msg.status != ProducerTransactionStatus.update)
     lockLocalMasters.lock()
     val condition = localMasters.contains(msg.partition)
@@ -387,12 +393,14 @@ class PeerToPeerAgent(agentAddress : String,
       updateMaster(msg.partition, init = false)
       publish(msg)
     }
+    lockExternalAccess.unlock()
   }
 
   /**
    * Stop this agent
    */
   def stop() = {
+    lockExternalAccess.lock()
     isRunning.set(false)
     zkConnectionValidator.join()
     //to avoid infinite polling block
@@ -400,6 +408,7 @@ class PeerToPeerAgent(agentAddress : String,
     messageHandler.join()
     transport.unbindLocalAddress()
     zkService.close()
+    lockExternalAccess.unlock()
   }
 
   /**

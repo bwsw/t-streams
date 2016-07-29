@@ -21,26 +21,8 @@ import scala.util.control.Breaks._
 
 class СBasicProducerAndConsumerSimpleTests extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils{
 
-  //creating keyspace, metadata
-  val randomKeyspace = randomString
-  val cluster = Cluster.builder().addContactPoint("localhost").build()
-  val session = cluster.connect()
-  CassandraHelper.createKeyspace(session, randomKeyspace)
-  CassandraHelper.createMetadataTables(session, randomKeyspace)
-  CassandraHelper.createDataTable(session, randomKeyspace)
-
-  //metadata/data factories
-  val metadataStorageFactory = new MetadataStorageFactory
-  val storageFactory = new CassandraStorageFactory
-
-  //converters to convert usertype->storagetype; storagetype->usertype
-  val arrayByteToStringConverter = new ArrayByteToStringConverter
-  val stringToArrayByteConverter = new StringToArrayByteConverter
-
-  //cassandra storage instances
-  val cassandraStorageOptions = new CassandraStorageOptions(List(new InetSocketAddress("localhost",9042)), randomKeyspace)
-  val cassandraInstForProducer = storageFactory.getInstance(cassandraStorageOptions)
-  val cassandraInstForConsumer = storageFactory.getInstance(cassandraStorageOptions)
+  val cassandraInstForProducer = cassandraStorageFactory.getInstance(cassandraStorageOptions)
+  val cassandraInstForConsumer = cassandraStorageFactory.getInstance(cassandraStorageOptions)
 
   //metadata storage instances
   val metadataStorageInstForProducer = metadataStorageFactory.getInstance(
@@ -102,6 +84,7 @@ class СBasicProducerAndConsumerSimpleTests extends FlatSpec with Matchers with 
       producerTransaction.send(x)
     }
     producerTransaction.checkpoint()
+    Thread.sleep(100)
     val txnOpt = consumer.getTransaction
     val txn = txnOpt.get
 
@@ -109,6 +92,7 @@ class СBasicProducerAndConsumerSimpleTests extends FlatSpec with Matchers with 
 
     //assert that is nothing to read
     (0 until consumer.stream.getPartitions) foreach { _=>
+      Thread.sleep(100)
       checkVal &= consumer.getTransaction.isEmpty
     }
 
@@ -124,6 +108,7 @@ class СBasicProducerAndConsumerSimpleTests extends FlatSpec with Matchers with 
       producerTransaction.send(x)
     }
     producerTransaction.checkpoint()
+    Thread.sleep(100)
     val txnOpt = consumer.getTransaction
     assert(txnOpt.isDefined)
     val txn = txnOpt.get
@@ -134,6 +119,7 @@ class СBasicProducerAndConsumerSimpleTests extends FlatSpec with Matchers with 
 
     var checkVal = true
 
+    Thread.sleep(100)
     //assert that is nothing to read
     (0 until consumer.stream.getPartitions) foreach { _ =>
       checkVal &= consumer.getTransaction.isEmpty
@@ -159,7 +145,7 @@ class СBasicProducerAndConsumerSimpleTests extends FlatSpec with Matchers with 
     }
 
     var checkVal = true
-
+    Thread.sleep(100)
     (0 until totalTxn).foreach { _=>
         val txn = consumer.getTransaction
         checkVal &= txn.nonEmpty
@@ -167,6 +153,7 @@ class СBasicProducerAndConsumerSimpleTests extends FlatSpec with Matchers with 
     }
 
     //assert that is nothing to read
+    Thread.sleep(100)
     (0 until consumer.stream.getPartitions) foreach { _ =>
       checkVal &= consumer.getTransaction.isEmpty
     }
@@ -201,7 +188,7 @@ class СBasicProducerAndConsumerSimpleTests extends FlatSpec with Matchers with 
             checkVal &= consumedTxn.get.getAll().sorted == sendData
             break()
           }
-          Thread.sleep(1000)
+          Thread.sleep(100)
         }}
       }
     })
@@ -214,6 +201,7 @@ class СBasicProducerAndConsumerSimpleTests extends FlatSpec with Matchers with 
     checkVal &= !consumerThread.isAlive
 
     //assert that is nothing to read
+    Thread.sleep(100)
     (0 until consumer.stream.getPartitions) foreach { _ =>
       checkVal &= consumer.getTransaction.isEmpty
     }
@@ -224,10 +212,6 @@ class СBasicProducerAndConsumerSimpleTests extends FlatSpec with Matchers with 
   override def afterAll(): Unit = {
     producer.stop()
     removeZkMetadata("/unit")
-    session.execute(s"DROP KEYSPACE $randomKeyspace")
-    session.close()
-    cluster.close()
-    metadataStorageFactory.closeFactory()
-    storageFactory.closeFactory()
+    onAfterAll()
   }
 }

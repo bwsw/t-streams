@@ -1,5 +1,7 @@
 package com.bwsw.tstreams.coordination.pubsub.publisher
 
+import java.util.concurrent.TimeUnit
+
 import com.bwsw.tstreams.coordination.pubsub.messages.ProducerTopicMessage
 import io.netty.bootstrap.Bootstrap
 import io.netty.channel.ChannelInitializer
@@ -53,6 +55,6 @@ class Broadcaster {
    * Close broadcaster
    */
   def close() : Unit = {
-    group.shutdownGracefully().await()
+    group.shutdownGracefully(0,0,TimeUnit.SECONDS).await()
   }
 }

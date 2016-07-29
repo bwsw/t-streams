@@ -54,7 +54,6 @@ class CheckpointGroup() {
       agent.getCheckpointInfoAndClear()
     }.reduceRight((l1,l2)=>l1 ++ l2)
     publishGlobalPreCheckpointEvent(totalCommitInfo)
-    stopTransactionKeepAliveUpdates(totalCommitInfo)
     //assume all agents use the same metadata entity
     agents.head._2.getMetadataRef().groupCommitEntity.groupCommit(totalCommitInfo)
     publishGlobalFinalCheckpointEvent(totalCommitInfo)
@@ -69,14 +68,6 @@ class CheckpointGroup() {
         agent.publish(preCheckpointEvent)
       case _ =>
     }
-  }
-
-  private def stopTransactionKeepAliveUpdates(info : List[CheckpointInfo]) = {
-//    info foreach {
-//      case ProducerCheckpointInfo(txnRef, _, _, _, _, _, _, _, _) =>
-//        txnRef.stopKeepAlive()
-//      case _ =>
-//    }
   }
 
   private def publishGlobalFinalCheckpointEvent(info : List[CheckpointInfo]) = {

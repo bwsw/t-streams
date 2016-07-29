@@ -2,6 +2,7 @@ package com.bwsw.tstreams.metadata
 
 import java.net.InetSocketAddress
 import java.util.concurrent.locks.ReentrantLock
+import com.bwsw.tstreams.common.CassandraConnectionPool
 import com.bwsw.tstreams.entities._
 import com.datastax.driver.core.Cluster.Builder
 import com.datastax.driver.core._
@@ -57,19 +58,19 @@ class MetadataStorage(cluster: Cluster, session: Session, keyspace: String) {
     logger.info("start removing MetadataStorage tables from cassandra")
 
     logger.debug("dropping stream_commit_last table\n")
-    session.execute("DROP TABLE stream_commit_last")
+    session.execute("DROP TABLE IF EXISTS stream_commit_last")
 
     logger.debug("dropping consumers table")
-    session.execute("DROP TABLE consumers")
+    session.execute("DROP TABLE IF EXISTS consumers")
 
     logger.debug("dropping streams table")
-    session.execute("DROP TABLE streams")
+    session.execute("DROP TABLE IF EXISTS streams")
 
     logger.debug("dropping commit_log table")
-    session.execute("DROP TABLE commit_log")
+    session.execute("DROP TABLE IF EXISTS commit_log")
 
     logger.debug("dropping generators table")
-    session.execute("DROP TABLE generators")
+    session.execute("DROP TABLE IF EXISTS generators")
 
     logger.info("finished removing MetadataStorage tables from cassandra")
   }
@@ -81,14 +82,14 @@ class MetadataStorage(cluster: Cluster, session: Session, keyspace: String) {
     logger.info("start initializing MetadataStorage tables")
 
     logger.debug("start creating stream_commit_last table")
-    session.execute(s"CREATE TABLE stream_commit_last (" +
+    session.execute(s"CREATE TABLE IF NOT EXISTS stream_commit_last (" +
       s"stream text, " +
       s"partition int, " +
       s"transaction timeuuid, " +
       s"PRIMARY KEY (stream, partition))")
 
     logger.debug("start creating consumers table")
-    session.execute(s"CREATE TABLE consumers (" +
+    session.execute(s"CREATE TABLE IF NOT EXISTS consumers (" +
       s"name text, " +
       s"stream text, " +
       s"partition int, " +
@@ -96,13 +97,13 @@ class MetadataStorage(cluster: Cluster, session: Session, keyspace: String) {
       s"PRIMARY KEY (name, stream, partition))")
 
     logger.debug("start creating streams table")
-    session.execute(s"CREATE TABLE streams (" +
+    session.execute(s"CREATE TABLE IF NOT EXISTS streams (" +
       s"stream_name text PRIMARY KEY, " +
       s"partitions int, " +
       s"description text)")
 
     logger.debug("start creating commit log")
-    session.execute(s"CREATE TABLE commit_log (" +
+    session.execute(s"CREATE TABLE IF NOT EXISTS commit_log (" +
       s"stream text, " +
       s"partition int, " +
       s"transaction timeuuid, " +
@@ -110,7 +111,7 @@ class MetadataStorage(cluster: Cluster, session: Session, keyspace: String) {
       s"PRIMARY KEY (stream, partition, transaction))")
 
     logger.debug("start creating generators table")
-    session.execute(s"CREATE TABLE generators (" +
+    session.execute(s"CREATE TABLE IF NOT EXISTS generators (" +
       s"name text, " +
       s"time timeuuid, " +
       s"PRIMARY KEY (name))")
@@ -160,19 +161,13 @@ class MetadataStorageFactory {
   private val logger = LoggerFactory.getLogger(this.getClass)
 
   /**
-   * Map for memorize clusters which are already created
-   */
-  private val clusterMap = scala.collection.mutable.Map[List[InetSocketAddress], Cluster]()
-
-  /**
-   * Map for memorize Storage instances which are already created
-   */
-  private val instancesMap = scala.collection.mutable.Map[(List[InetSocketAddress], String), Session]()
-
+    * stores metadata instances which shareable
+    */
   private val metadataMap = scala.collection.mutable.Map[Session, MetadataStorage]()
 
   /**
     * Fabric method which returns new MetadataStorage
+    *
     * @param cassandraHosts List of hosts to connect in C* cluster
     * @param keyspace Keyspace to use for metadata storage
     * @return Instance of MetadataStorage
@@ -185,43 +180,16 @@ class MetadataStorageFactory {
 
     logger.info("start MetadataStorage instance creation")
 
-    val sortedHosts = cassandraHosts.map(x=>(x,x.hashCode())).sortBy(_._2).map(x=>x._1)
-
-    val cluster = {
-      if (clusterMap.contains(sortedHosts))
-        clusterMap(sortedHosts)
-      else{
-        val builder: Builder = Cluster.builder()
-        if (login != null && password != null)
-          builder.withCredentials(login, password)
-        cassandraHosts.foreach(x => builder.addContactPointsWithPorts(x))
-        val cluster = builder.build()
-        clusterMap(sortedHosts) = cluster
-        cluster
-      }
-    }
-
-    val session = {
-      if (instancesMap.contains((sortedHosts,keyspace)))
-        instancesMap((sortedHosts,keyspace))
-      else {
-        val session: Session = cluster.connect(keyspace)
-        instancesMap((sortedHosts, keyspace)) = session
-        session
-      }
-    }
-
+    val session = CassandraConnectionPool.getSession(cassandraHosts, keyspace, login, password)
     val metadataStorage = {
       if (metadataMap.contains(session))
         metadataMap(session)
       else {
-
-        val m = new MetadataStorage(cluster, session, keyspace)
+        val m = new MetadataStorage(session.getCluster, session, keyspace)
         metadataMap(session) = m
         m
       }
     }
-
     logger.info("finished MetadataStorage instance creation")
     //val inst = new MetadataStorage(cluster,session,keyspace)
     lock.unlock()
@@ -237,14 +205,8 @@ class MetadataStorageFactory {
 
     if(isClosed)
       throw new IllegalStateException("MetadataStorageFactory is closed. This is repeatable close operation.")
-
     isClosed = true
-
     metadataMap.clear()
-    instancesMap.foreach(x => x._2.close()) //close all sessions for each instance
-    clusterMap.foreach(x => x._2.close()) //close all clusters for each instance
-    clusterMap.clear()
-    instancesMap.clear()
     lock.unlock()
   }
 }
