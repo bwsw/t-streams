@@ -2,6 +2,7 @@ package testutils
 
 import com.datastax.driver.core.Session
 
+
 /**
  * Test util for creating C* entities
  */
