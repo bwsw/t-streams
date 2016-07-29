@@ -23,28 +23,6 @@ import testutils._
 //TODO refactoring
 class ABasicSubscriberTotalAmountTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils{
 
-  //creating keyspace, metadata
-  val randomKeyspace = randomString
-  val cluster = Cluster.builder().addContactPoint("localhost").build()
-  val session = cluster.connect()
-  CassandraHelper.createKeyspace(session, randomKeyspace)
-  CassandraHelper.createMetadataTables(session, randomKeyspace)
-
-  //metadata/data factories
-  val metadataStorageFactory = new MetadataStorageFactory
-  val storageFactory = new AerospikeStorageFactory
-
-  //converters to convert usertype->storagetype; storagetype->usertype
-  val arrayByteToStringConverter = new ArrayByteToStringConverter
-  val stringToArrayByteConverter = new StringToArrayByteConverter
-
-  //aerospike storage instances
-  val hosts = List(
-    new Host("localhost",3000),
-    new Host("localhost",3001),
-    new Host("localhost",3002),
-    new Host("localhost",3003))
-  val aerospikeOptions = new AerospikeStorageOptions("test", hosts)
   val aerospikeInstForProducer = storageFactory.getInstance(aerospikeOptions)
   val aerospikeInstForConsumer = storageFactory.getInstance(aerospikeOptions)
 
@@ -166,13 +144,6 @@ class ABasicSubscriberTotalAmountTest extends FlatSpec with Matchers with Before
 
   override def afterAll(): Unit = {
     producer.stop()
-    removeZkMetadata("/unit")
-    session.execute(s"DROP KEYSPACE $randomKeyspace")
-    session.close()
-    cluster.close()
-    metadataStorageFactory.closeFactory()
-    storageFactory.closeFactory()
-    val file = new File(path)
-    remove(file)
+    onAfterAll()
   }
 }

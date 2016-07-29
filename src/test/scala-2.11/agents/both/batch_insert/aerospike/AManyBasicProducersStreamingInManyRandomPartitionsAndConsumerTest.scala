@@ -23,29 +23,6 @@ with Matchers with BeforeAndAfterAll with TestUtils{
 
   var port = 8000
 
-  //creating keyspace, metadata
-  val randomKeyspace = randomString
-  val cluster = Cluster.builder().addContactPoint("localhost").build()
-  val session = cluster.connect()
-  CassandraHelper.createKeyspace(session, randomKeyspace)
-  CassandraHelper.createMetadataTables(session, randomKeyspace)
-
-  //metadata/data factories
-  val metadataStorageFactory = new MetadataStorageFactory
-  val storageFactory = new AerospikeStorageFactory
-
-  //converters to convert usertype->storagetype; storagetype->usertype
-  val arrayByteToStringConverter = new ArrayByteToStringConverter
-  val stringToArrayByteConverter = new StringToArrayByteConverter
-
-  //aerospike storage options
-  val hosts = List(
-    new Host("localhost",3000),
-    new Host("localhost",3001),
-    new Host("localhost",3002),
-    new Host("localhost",3003))
-  val aerospikeOptions = new AerospikeStorageOptions("test", hosts)
-
 
   "Some amount of producers and one consumer" should "producers - send transactions in many partition" +
     " (each producer send each txn in only one random partition) " +
@@ -166,10 +143,6 @@ with Matchers with BeforeAndAfterAll with TestUtils{
 
   override def afterAll(): Unit = {
     removeZkMetadata("/unit")
-    session.execute(s"DROP KEYSPACE $randomKeyspace")
-    session.close()
-    cluster.close()
-    metadataStorageFactory.closeFactory()
-    storageFactory.closeFactory()
+    onAfterAll()
   }
 }

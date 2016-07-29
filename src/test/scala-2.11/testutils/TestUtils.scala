@@ -4,8 +4,16 @@ import java.io.File
 import java.net.InetSocketAddress
 import java.util.UUID
 
+import com.aerospike.client.Host
+import com.bwsw.tstreams.common.CassandraConnectionPool
 import com.bwsw.tstreams.common.zkservice.ZkService
+import com.bwsw.tstreams.converter.{StringToArrayByteConverter, ArrayByteToStringConverter}
+import com.bwsw.tstreams.data.aerospike.{AerospikeStorageOptions, AerospikeStorageFactory}
+import com.bwsw.tstreams.data.cassandra.{CassandraStorageOptions, CassandraStorageFactory}
+import com.bwsw.tstreams.env.{TSF_Dictionary, TStreamsFactory}
+import com.bwsw.tstreams.metadata.MetadataStorageFactory
 import com.datastax.driver.core.Cluster
+import org.slf4j.LoggerFactory
 
 import scala.collection.mutable.ListBuffer
 
@@ -16,26 +24,61 @@ trait TestUtils {
   protected val batchSizeTestVal = 5
 
   /**
-   * Random alpha string generator
-   * @return Alpha string
-   */
-  def randomString =
-    RandomStringCreator.randomAlphaString(10)
+    * Random alpha string generator
+    *
+    * @return Alpha string
+    */
+  def randomString = "ks_23157b9";
+
+  val logger = LoggerFactory.getLogger(this.getClass)
+
+  logger.info("-------------------------------------------------------")
+  logger.info("Test suite " + this.getClass.toString + " started")
+  logger.info("-------------------------------------------------------")
+
+  val cluster = CassandraConnectionPool.getCluster(List(new InetSocketAddress("localhost", 9042)))
+  val session = CassandraConnectionPool.getSession(List(new InetSocketAddress("localhost", 9042)), randomKeyspace)
 
   def createRandomKeyspace(): String = {
     val randomKeyspace = randomString
-    val cluster = Cluster.builder().addContactPoint("localhost").build()
-    val session = cluster.connect()
     CassandraHelper.createKeyspace(session, randomKeyspace)
     CassandraHelper.createMetadataTables(session, randomKeyspace)
-    session.close()
-    cluster.close()
+    CassandraHelper.createDataTable(session, randomKeyspace)
+    CassandraHelper.clearMetadataTables(session, randomKeyspace)
+    CassandraHelper.clearDataTable(session, randomKeyspace)
+
     randomKeyspace
   }
 
+  val randomKeyspace = createRandomKeyspace()
+
+  val f = new TStreamsFactory()
+  f.setProperty(TSF_Dictionary.Metadata.Cluster.namespace,randomKeyspace).
+    setProperty(TSF_Dictionary.Data.Cluster.namespace,"test").
+    setProperty(TSF_Dictionary.Stream.name, "test-stream")
+
+  //metadata/data factories
+  val metadataStorageFactory = new MetadataStorageFactory
+  val storageFactory = new AerospikeStorageFactory
+  val cassandraStorageFactory = new CassandraStorageFactory
+  val cassandraStorageOptions = new CassandraStorageOptions(List(new InetSocketAddress("localhost",9042)), randomKeyspace)
+
+
+
+  //converters to convert usertype->storagetype; storagetype->usertype
+  val arrayByteToStringConverter = new ArrayByteToStringConverter
+  val stringToArrayByteConverter = new StringToArrayByteConverter
+
+  //aerospike storage options
+  val hosts = List(
+    new Host("localhost",3000))
+
+  val aerospikeOptions = new AerospikeStorageOptions("test", hosts)
+  val zkService = new ZkService("", List(new InetSocketAddress("localhost", 2181)), 7, 7)
+
   /**
-   * Sorting checker
-   */
+    * Sorting checker
+    */
   def isSorted(list : ListBuffer[UUID]) : Boolean = {
     if (list.isEmpty)
       return true
@@ -51,23 +94,33 @@ trait TestUtils {
   }
 
   /**
-   * Remove zk metadata from concrete root
-   * @param path Zk root to delete
-   */
+    * Remove zk metadata from concrete root
+    *
+    * @param path Zk root to delete
+    */
   def removeZkMetadata(path : String) = {
-    val zkService = new ZkService("", List(new InetSocketAddress("localhost", 2181)), 7, 7)
-    zkService.deleteRecursive(path)
+    if (zkService.exist(path))
+      zkService.deleteRecursive(path)
   }
 
   /**
-   * Remove directory recursive
-   * @param f Dir to remove
-   */
+    * Remove directory recursive
+    *
+    * @param f Dir to remove
+    */
   def remove(f : File) : Unit = {
     if (f.isDirectory) {
       for (c <- f.listFiles())
         remove(c)
     }
     f.delete()
+  }
+
+  def onAfterAll() = {
+    removeZkMetadata(f.getProperty(TSF_Dictionary.Coordination.root).toString)
+    removeZkMetadata("/unit")
+    metadataStorageFactory.closeFactory()
+    storageFactory.closeFactory()
+    cassandraStorageFactory.closeFactory()
   }
 }

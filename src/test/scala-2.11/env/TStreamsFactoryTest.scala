@@ -17,13 +17,6 @@ import testutils._
 
 class TStreamsFactoryTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
 
-  val randomKeyspace = createRandomKeyspace
-
-  val f = new TStreamsFactory()
-  f.setProperty(TSF_Dictionary.Metadata.Cluster.namespace,randomKeyspace).
-    setProperty(TSF_Dictionary.Data.Cluster.namespace,"test").
-    setProperty(TSF_Dictionary.Stream.name, "test-stream")
-
   "UniversalFactory.getProducer" should "return producer object" in {
     val p = f.getProducer[String](
       name          = "test-producer-1",

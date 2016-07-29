@@ -21,26 +21,8 @@ import scala.util.control.Breaks._
 
 class СBasicProducerAndConsumerSimpleTests extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils{
 
-  //creating keyspace, metadata
-  val randomKeyspace = randomString
-  val cluster = Cluster.builder().addContactPoint("localhost").build()
-  val session = cluster.connect()
-  CassandraHelper.createKeyspace(session, randomKeyspace)
-  CassandraHelper.createMetadataTables(session, randomKeyspace)
-  CassandraHelper.createDataTable(session, randomKeyspace)
-
-  //metadata/data factories
-  val metadataStorageFactory = new MetadataStorageFactory
-  val storageFactory = new CassandraStorageFactory
-
-  //converters to convert usertype->storagetype; storagetype->usertype
-  val arrayByteToStringConverter = new ArrayByteToStringConverter
-  val stringToArrayByteConverter = new StringToArrayByteConverter
-
-  //cassandra storage instances
-  val cassandraStorageOptions = new CassandraStorageOptions(List(new InetSocketAddress("localhost",9042)), randomKeyspace)
-  val cassandraInstForProducer = storageFactory.getInstance(cassandraStorageOptions)
-  val cassandraInstForConsumer = storageFactory.getInstance(cassandraStorageOptions)
+  val cassandraInstForProducer = cassandraStorageFactory.getInstance(cassandraStorageOptions)
+  val cassandraInstForConsumer = cassandraStorageFactory.getInstance(cassandraStorageOptions)
 
   //metadata storage instances
   val metadataStorageInstForProducer = metadataStorageFactory.getInstance(
@@ -230,10 +212,6 @@ class СBasicProducerAndConsumerSimpleTests extends FlatSpec with Matchers with 
   override def afterAll(): Unit = {
     producer.stop()
     removeZkMetadata("/unit")
-    session.execute(s"DROP KEYSPACE $randomKeyspace")
-    session.close()
-    cluster.close()
-    metadataStorageFactory.closeFactory()
-    storageFactory.closeFactory()
+    onAfterAll()
   }
 }
