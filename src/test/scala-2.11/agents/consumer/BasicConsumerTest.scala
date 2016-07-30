@@ -16,7 +16,6 @@ import testutils._
 
 
 class BasicConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
-
   val aerospikeInstForProducer = storageFactory.getInstance(aerospikeOptions)
   val aerospikeInstForConsumer = storageFactory.getInstance(aerospikeOptions)
 

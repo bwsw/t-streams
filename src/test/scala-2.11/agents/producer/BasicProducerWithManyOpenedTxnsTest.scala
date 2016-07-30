@@ -14,7 +14,6 @@ import testutils._
 
 
 class BasicProducerWithManyOpenedTxnsTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
-
   val cassandraOptions = new CassandraStorageOptions(List(new InetSocketAddress("localhost", 9042)), randomKeyspace)
 
   val stream = BasicStreamService.createStream(

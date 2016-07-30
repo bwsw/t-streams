@@ -16,7 +16,6 @@ class CManyBasicProducersStreamingInManyPartitionsAndConsumerWithCheckpointsTest
   with Matchers with BeforeAndAfterAll with TestUtils {
   var port = 8000
 
-
   "Some amount of producers and one consumer" should "producers - send transactions in many partition" +
     " (each producer send each txn in only one partition without intersection " +
     " for ex. producer1 in partition1, producer2 in partition2, producer3 in partition3 etc...) " +
