@@ -121,7 +121,6 @@ class BasicProducerTransaction[USERTYPE](transactionLock: ReentrantLock,
 
 
   private def cancelAsync() = {
-    transactionLock.lock()
     txnOwner.producerOptions.insertType match {
       case InsertionType.SingleElementInsert =>
 
@@ -138,7 +137,6 @@ class BasicProducerTransaction[USERTYPE](transactionLock: ReentrantLock,
     txnOwner.masterP2PAgent.publish(msg)
     logger.debug(s"[CANCEL PARTITION_${msg.partition}] ts=${msg.txnUuid.timestamp()} status=${msg.status}")
 
-    transactionLock.unlock()
   }
 
   /**
@@ -177,7 +175,6 @@ class BasicProducerTransaction[USERTYPE](transactionLock: ReentrantLock,
         return
     }
 
-
     txnOwner.masterP2PAgent.publish(ProducerTopicMessage(
       txnUuid = transactionUuid,
       ttl = -1,
@@ -190,7 +187,6 @@ class BasicProducerTransaction[USERTYPE](transactionLock: ReentrantLock,
 
 
   private def checkpointAsync() : Unit = {
-    transactionLock.lock()
     txnOwner.producerOptions.insertType match {
 
       case InsertionType.SingleElementInsert =>
@@ -226,7 +222,6 @@ class BasicProducerTransaction[USERTYPE](transactionLock: ReentrantLock,
             true
         }
         if (interruptExecution) {
-          transactionLock.unlock()
           return
         }
       }
@@ -247,7 +242,6 @@ class BasicProducerTransaction[USERTYPE](transactionLock: ReentrantLock,
         status = ProducerTransactionStatus.cancel,
         partition = partition))
     }
-    transactionLock.unlock()
   }
 
   /**
