@@ -2,7 +2,7 @@ package com.bwsw.tstreams.common
 
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.locks.ReentrantLock
-import java.util.concurrent.{CountDownLatch, LinkedBlockingQueue}
+import java.util.concurrent.{CountDownLatch, Executor, LinkedBlockingQueue}
 
 import com.bwsw.ResettableCountDownLatch
 import com.bwsw.tstreams.common.MandatoryExecutor.{MandatoryExecutorException, MandatoryExecutorTask}
@@ -11,7 +11,7 @@ import com.bwsw.tstreams.common.MandatoryExecutor.{MandatoryExecutorException, M
   * Executor which provides sequence runnable
   * execution but on any failure exception will be thrown
   */
-class MandatoryExecutor {
+class MandatoryExecutor extends Executor{
   private val awaitSignalVar = new ResettableCountDownLatch(0)
   private val queue = new LinkedBlockingQueue[MandatoryExecutorTask]()
   private val isNotFailed = new AtomicBoolean(true)
@@ -60,9 +60,10 @@ class MandatoryExecutor {
 
   /**
     * Submit new task to execute
+ *
     * @param runnable
     */
-  def submit(runnable : Runnable, lock : Option[ReentrantLock]) = {
+  def submit(runnable : Runnable, lock : Option[ReentrantLock] = None) = {
     if (isShutdown.get()){
       throw new MandatoryExecutorException("executor is been shutdown")
     }
@@ -121,6 +122,20 @@ class MandatoryExecutor {
     */
   def isFailed =
     !isNotFailed.get()
+
+  /**
+    * True if executor shutdown
+    */
+  def isStopped =
+    isShutdown.get()
+
+  /**
+    *
+    * @param command
+    */
+  override def execute(command: Runnable): Unit = {
+    this.submit(command)
+  }
 }
 
 /**
@@ -128,7 +143,7 @@ class MandatoryExecutor {
   */
 object MandatoryExecutor {
   class MandatoryExecutorException(msg : String) extends Exception(msg)
-  case class MandatoryExecutorTask(runnable : Runnable,
+  sealed case class MandatoryExecutorTask(runnable : Runnable,
                                    isIgnorableIfExecutorFailed : Boolean,
                                    lock : Option[ReentrantLock])
 }

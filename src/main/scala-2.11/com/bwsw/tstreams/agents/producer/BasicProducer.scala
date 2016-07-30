@@ -2,11 +2,11 @@ package com.bwsw.tstreams.agents.producer
 
 import java.util.UUID
 import java.util.concurrent.locks.ReentrantLock
-import java.util.concurrent.{CountDownLatch, Executors}
+import java.util.concurrent.CountDownLatch
 
 import com.bwsw.tstreams.agents.group.{Agent, CheckpointInfo, ProducerCheckpointInfo}
 import com.bwsw.tstreams.agents.producer.ProducerPolicies.ProducerPolicy
-import com.bwsw.tstreams.common.ThreadSignalSleepVar
+import com.bwsw.tstreams.common.{MandatoryExecutor, ThreadSignalSleepVar}
 import com.bwsw.tstreams.coordination.pubsub.SubscriberClient
 import com.bwsw.tstreams.coordination.pubsub.messages.{ProducerTopicMessage, ProducerTransactionStatus}
 import com.bwsw.tstreams.coordination.transactions.peertopeer.PeerToPeerAgent
@@ -99,7 +99,7 @@ class BasicProducer[USERTYPE](val name: String,
     */
   private val endKeepAliveThread = new ThreadSignalSleepVar[Boolean](10)
   private val txnKeepAliveThread = getTxnKeepAliveThread
-  val backendActivityService = Executors.newSingleThreadScheduledExecutor()
+  val backendActivityService = new MandatoryExecutor
 
   /**
     *
@@ -328,7 +328,7 @@ class BasicProducer[USERTYPE](val name: String,
     txnKeepAliveThread.join()
 
     // stop executor
-    backendActivityService.shutdown()
+    backendActivityService.shutdownSafe()
 
     // stop function which works with subscribers
     subscriberClient.stop()

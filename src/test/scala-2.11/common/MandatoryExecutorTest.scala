@@ -18,13 +18,13 @@ class MandatoryExecutorTest extends FlatSpec with Matchers with BeforeAndAfterAl
   "Mandatory executor" should "throw exception in case of runnable failure" in {
     val mandatoryExecutor = new MandatoryExecutor
 
-    mandatoryExecutor.submit(runnableWithException, None)
+    mandatoryExecutor.submit(runnableWithException)
     mandatoryExecutor.await()
     val msg: Option[Boolean] =
     try {
       mandatoryExecutor.submit(new Runnable {
         override def run(): Unit = ()
-      }, lock = None)
+      })
       None
     } catch {
       case e : Exception =>
@@ -44,7 +44,7 @@ class MandatoryExecutorTest extends FlatSpec with Matchers with BeforeAndAfterAl
       }
     }
     0 until 1000 foreach { _ =>
-      mandatoryExecutor.submit(updateRunnable, None)
+      mandatoryExecutor.submit(updateRunnable)
     }
     mandatoryExecutor.await()
     cnt shouldBe 1000
@@ -68,7 +68,7 @@ class MandatoryExecutorTest extends FlatSpec with Matchers with BeforeAndAfterAl
       }
     }
     0 until 100 foreach { _ =>
-      mandatoryExecutor.submit(updateRunnable, None)
+      mandatoryExecutor.submit(updateRunnable)
     }
     mandatoryExecutor.await()
     cnt shouldBe 100
@@ -86,10 +86,10 @@ class MandatoryExecutorTest extends FlatSpec with Matchers with BeforeAndAfterAl
     0 until 1000 foreach { x =>
       //submit corrupted task
       if (x === 500)
-        mandatoryExecutor.submit(runnableWithException, None)
+        mandatoryExecutor.submit(runnableWithException)
 
       try {
-        mandatoryExecutor.submit(updateRunnable, None)
+        mandatoryExecutor.submit(updateRunnable)
       }
       catch {
         //just ignore
@@ -121,12 +121,33 @@ class MandatoryExecutorTest extends FlatSpec with Matchers with BeforeAndAfterAl
       }
     }
     0 until 5 foreach { _ =>
-      mandatoryExecutor.submit(updateRunnable, None)
+      mandatoryExecutor.submit(updateRunnable)
     }
-    mandatoryExecutor.submit(runnableWithException, Option(lock))
+    mandatoryExecutor.submit(runnableWithException)
     mandatoryExecutor.await()
     cnt shouldBe 5
     mandatoryExecutor.isFailed shouldBe true
     lock.isLocked shouldBe false
+  }
+
+  "Mandatory executor" should "await all tasks and throw exception on new submit's in case of shutdown" in {
+    val mandatoryExecutor = new MandatoryExecutor
+    var cnt = 0
+    val updateRunnable = new Runnable {
+      override def run(): Unit = {
+        Thread.sleep(1000)
+        cnt += 1
+      }
+    }
+    0 until 5 foreach { _ =>
+      mandatoryExecutor.submit(updateRunnable)
+    }
+    mandatoryExecutor.shutdownSafe()
+    intercept[MandatoryExecutorException] {
+      mandatoryExecutor.submit(new Runnable {
+        override def run(): Unit = ()
+      })
+    }
+    mandatoryExecutor.isStopped shouldBe true
   }
 }

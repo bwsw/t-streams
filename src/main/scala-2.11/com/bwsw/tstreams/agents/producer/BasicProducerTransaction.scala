@@ -160,17 +160,6 @@ class BasicProducerTransaction[USERTYPE](transactionLock: ReentrantLock,
 
   }
 
-  private def checkpointPostEventPartSafe() = {
-    try {
-      checkpointPostEventPart()
-    } catch {
-      //        will be only in debug mode in case of precheckpoint failure test
-      //        or postcheckpoint failure test
-      case e: RuntimeException =>
-        transactionLock.unlock()
-    }
-  }
-
   private def checkpointPostEventPart() = {
     logger.debug(s"[COMMIT PARTITION_$partition] ts=${transactionUuid.timestamp()}")
 
@@ -187,17 +176,6 @@ class BasicProducerTransaction[USERTYPE](transactionLock: ReentrantLock,
       s"ts=${transactionUuid.timestamp()}")
   }
 
-  private def checkpointAsyncSafe() = {
-    try {
-      checkpointAsync()
-    } catch {
-      //        will be only in debug mode in case of precheckpoint failure test
-      //        or postcheckpoint failure test
-      case e: RuntimeException =>
-        transactionLock.unlock()
-        throw e
-    }
-  }
 
   private def checkpointAsync() = {
     transactionLock.lock()
@@ -235,7 +213,7 @@ class BasicProducerTransaction[USERTYPE](transactionLock: ReentrantLock,
         totalCnt = part,
         ttl = txnOwner.stream.getTTL,
         executor = txnOwner.backendActivityService,
-        function = checkpointPostEventPartSafe)
+        function = checkpointPostEventPart)
     }
     else {
       txnOwner.masterP2PAgent.publish(ProducerTopicMessage(
@@ -259,7 +237,7 @@ class BasicProducerTransaction[USERTYPE](transactionLock: ReentrantLock,
     closed = true
 
     txnOwner.backendActivityService.submit(new Runnable {
-      override def run(): Unit = checkpointAsyncSafe()
+      override def run(): Unit = checkpointAsync()
     })
 
     transactionLock.unlock()
