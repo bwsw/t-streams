@@ -1,14 +1,7 @@
 package agents.producer
 
-import java.net.InetSocketAddress
-
-import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
-import com.bwsw.tstreams.agents.producer.InsertionType.SingleElementInsert
 import com.bwsw.tstreams.agents.producer._
-import com.bwsw.tstreams.coordination.transactions.transport.impl.TcpTransport
-import com.bwsw.tstreams.data.cassandra.CassandraStorageOptions
 import com.bwsw.tstreams.env.TSF_Dictionary
-import com.bwsw.tstreams.services.BasicStreamService
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import testutils._
 

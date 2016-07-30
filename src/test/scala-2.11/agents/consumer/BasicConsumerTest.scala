@@ -1,16 +1,11 @@
 package agents.consumer
 
-import java.net.InetSocketAddress
 import java.util.UUID
-
 import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
-import com.bwsw.tstreams.agents.consumer.{BasicConsumer, BasicConsumerOptions, BasicConsumerTransaction}
-import com.bwsw.tstreams.agents.producer.InsertionType.SingleElementInsert
-import com.bwsw.tstreams.agents.producer.{BasicProducer, BasicProducerOptions, ProducerCoordinationOptions, ProducerPolicies}
-import com.bwsw.tstreams.coordination.transactions.transport.impl.TcpTransport
+import com.bwsw.tstreams.agents.consumer.BasicConsumerTransaction
+import com.bwsw.tstreams.agents.producer.ProducerPolicies
 import com.bwsw.tstreams.entities.CommitEntity
 import com.bwsw.tstreams.env.TSF_Dictionary
-import com.bwsw.tstreams.streams.BasicStream
 import com.datastax.driver.core.utils.UUIDs
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import testutils._
