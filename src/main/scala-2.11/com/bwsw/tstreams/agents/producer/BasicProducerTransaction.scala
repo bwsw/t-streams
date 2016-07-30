@@ -236,6 +236,7 @@ class BasicProducerTransaction[USERTYPE](transactionLock: ReentrantLock,
         ttl = txnOwner.stream.getTTL,
         executor = txnOwner.backendActivityService,
         function = checkpointPostEventPartSafe)
+
     }
     else {
       txnOwner.masterP2PAgent.publish(ProducerTopicMessage(
@@ -250,20 +251,90 @@ class BasicProducerTransaction[USERTYPE](transactionLock: ReentrantLock,
   /**
     * Submit transaction(transaction will be available by consumer only after closing)
     */
-  def checkpoint(): Unit = {
-    transactionLock.lock()
-
+  def checkpoint(isSynchronous: Boolean = true): Unit = {
     if (closed)
       throw new IllegalStateException("transaction is already closed")
 
     closed = true
 
-    txnOwner.backendActivityService.submit(new Runnable {
-      override def run(): Unit = checkpointAsyncSafe()
-    })
+    if(isSynchronous == false) {
+      transactionLock.lock()
 
-    transactionLock.unlock()
+      txnOwner.backendActivityService.submit(new Runnable {
+        override def run(): Unit = checkpointAsyncSafe()
+      })
 
+      transactionLock.unlock()
+
+    }
+    else
+    {
+      transactionLock.lock()
+      try {
+        txnOwner.producerOptions.insertType match {
+
+          case InsertionType.SingleElementInsert =>
+
+          case InsertionType.BatchInsert(size) =>
+            if (txnOwner.stream.dataStorage.getBufferSize(transactionUuid) > 0) {
+              val job: () => Unit = txnOwner.stream.dataStorage.saveBuffer(transactionUuid)
+              if (job != null) jobs += job
+              txnOwner.stream.dataStorage.clearBuffer(transactionUuid)
+            }
+        }
+
+        if (part > 0) {
+          jobs.foreach(x => x())
+
+          logger.debug(s"[START PRE CHECKPOINT PARTITION_$partition] " +
+            s"ts=${transactionUuid.timestamp()}")
+
+          txnOwner.masterP2PAgent.publish(ProducerTopicMessage(
+            txnUuid = transactionUuid,
+            ttl = -1,
+            status = ProducerTransactionStatus.preCheckpoint,
+            partition = partition))
+
+          //debug purposes only
+          GlobalHooks.invoke("PreCommitFailure")
+
+          txnOwner.stream.metadataStorage.commitEntity.commit(
+            streamName = txnOwner.stream.getName,
+            partition = partition,
+            transaction = transactionUuid,
+            totalCnt = part,
+            ttl = txnOwner.stream.getTTL)
+
+          logger.debug(s"[COMMIT PARTITION_$partition] ts=${transactionUuid.timestamp()}")
+
+          //debug purposes only
+          GlobalHooks.invoke("AfterCommitFailure")
+
+          txnOwner.masterP2PAgent.publish(ProducerTopicMessage(
+            txnUuid = transactionUuid,
+            ttl = -1,
+            status = ProducerTransactionStatus.postCheckpoint,
+            partition = partition))
+
+          logger.debug(s"[FINAL CHECKPOINT PARTITION_$partition] " +
+            s"ts=${transactionUuid.timestamp()}")
+
+        }
+        else
+        {
+          txnOwner.masterP2PAgent.publish(ProducerTopicMessage(
+            txnUuid = transactionUuid,
+            ttl = -1,
+            status = ProducerTransactionStatus.cancel,
+            partition = partition))
+        }
+      } catch {
+        case e: RuntimeException =>
+          transactionLock.unlock()
+          throw e
+      }
+      transactionLock.unlock()
+    }
   }
 
   private def doSendUpdateMessage() = {

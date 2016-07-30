@@ -9,6 +9,7 @@ import com.bwsw.tstreams.agents.producer.InsertionType.SingleElementInsert
 import com.bwsw.tstreams.agents.producer.{BasicProducer, BasicProducerOptions, ProducerCoordinationOptions, ProducerPolicies}
 import com.bwsw.tstreams.coordination.transactions.transport.impl.TcpTransport
 import com.bwsw.tstreams.entities.CommitEntity
+import com.bwsw.tstreams.env.TSF_Dictionary
 import com.bwsw.tstreams.streams.BasicStream
 import com.datastax.driver.core.utils.UUIDs
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
@@ -19,6 +20,10 @@ class BasicConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll wi
 
   val aerospikeInstForProducer = storageFactory.getInstance(aerospikeOptions)
   val aerospikeInstForConsumer = storageFactory.getInstance(aerospikeOptions)
+
+  f.setProperty(TSF_Dictionary.Stream.name,"test_stream").
+    setProperty(TSF_Dictionary.Stream.partitions,3).
+    setProperty(TSF_Dictionary.Stream.ttl, 60 * 10)
 
   val metadataStorageInstForProducer = metadataStorageFactory.getInstance(
     cassandraHosts = List(new InetSocketAddress("localhost", 9042)),
