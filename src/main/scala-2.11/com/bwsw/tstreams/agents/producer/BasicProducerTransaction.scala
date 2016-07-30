@@ -160,11 +160,22 @@ class BasicProducerTransaction[USERTYPE](transactionLock: ReentrantLock,
 
   }
 
-  private def checkpointPostEventPart() = {
+  private def checkpointPostEventPart() : Unit = {
     logger.debug(s"[COMMIT PARTITION_$partition] ts=${transactionUuid.timestamp()}")
 
     //debug purposes only
-    GlobalHooks.invoke("AfterCommitFailure")
+    {
+      val interruptExecution: Boolean = try {
+        GlobalHooks.invoke("AfterCommitFailure")
+        false
+      } catch {
+        case e: Exception =>
+          logger.warn("AfterCommitFailure in DEBUG mode")
+          true
+      }
+      if (interruptExecution) return
+    }
+
 
     txnOwner.masterP2PAgent.publish(ProducerTopicMessage(
       txnUuid = transactionUuid,
@@ -177,7 +188,7 @@ class BasicProducerTransaction[USERTYPE](transactionLock: ReentrantLock,
   }
 
 
-  private def checkpointAsync() = {
+  private def checkpointAsync() : Unit = {
     transactionLock.lock()
     txnOwner.producerOptions.insertType match {
 
@@ -204,7 +215,18 @@ class BasicProducerTransaction[USERTYPE](transactionLock: ReentrantLock,
         partition = partition))
 
       //debug purposes only
-      GlobalHooks.invoke("PreCommitFailure")
+      {
+        val interruptExecution: Boolean = try {
+          GlobalHooks.invoke("PreCommitFailure")
+          false
+        } catch {
+          case e: Exception =>
+            logger.warn("PreCommitFailure in DEBUG mode")
+            true
+        }
+        if (interruptExecution) return
+      }
+
 
       txnOwner.stream.metadataStorage.commitEntity.commitAsync(
         streamName = txnOwner.stream.getName,
