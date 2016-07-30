@@ -154,7 +154,7 @@ class BasicProducerTransaction[USERTYPE](transactionLock: ReentrantLock,
 
     txnOwner.backendActivityService.submit(new Runnable {
       override def run(): Unit = cancelAsync()
-    })
+    }, Option(transactionLock))
 
     transactionLock.unlock()
 
@@ -238,7 +238,7 @@ class BasicProducerTransaction[USERTYPE](transactionLock: ReentrantLock,
 
     txnOwner.backendActivityService.submit(new Runnable {
       override def run(): Unit = checkpointAsync()
-    })
+    }, Option(transactionLock))
 
     transactionLock.unlock()
 
