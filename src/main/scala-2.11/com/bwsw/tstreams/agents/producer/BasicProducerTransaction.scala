@@ -173,7 +173,8 @@ class BasicProducerTransaction[USERTYPE](transactionLock: ReentrantLock,
           logger.warn("AfterCommitFailure in DEBUG mode")
           true
       }
-      if (interruptExecution) return
+      if (interruptExecution)
+        return
     }
 
 
@@ -224,9 +225,11 @@ class BasicProducerTransaction[USERTYPE](transactionLock: ReentrantLock,
             logger.warn("PreCommitFailure in DEBUG mode")
             true
         }
-        if (interruptExecution) return
+        if (interruptExecution) {
+          transactionLock.unlock()
+          return
+        }
       }
-
 
       txnOwner.stream.metadataStorage.commitEntity.commitAsync(
         streamName = txnOwner.stream.getName,

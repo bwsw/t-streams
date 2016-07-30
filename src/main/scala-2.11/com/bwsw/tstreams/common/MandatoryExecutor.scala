@@ -6,15 +6,18 @@ import java.util.concurrent.{CountDownLatch, Executor, LinkedBlockingQueue}
 
 import com.bwsw.ResettableCountDownLatch
 import com.bwsw.tstreams.common.MandatoryExecutor.{MandatoryExecutorException, MandatoryExecutorTask}
+import org.slf4j.LoggerFactory
 
 /**
   * Executor which provides sequence runnable
   * execution but on any failure exception will be thrown
   */
 class MandatoryExecutor extends Executor{
+  private val logger = LoggerFactory.getLogger(this.getClass)
   private val awaitSignalVar = new ResettableCountDownLatch(0)
   private val queue = new LinkedBlockingQueue[MandatoryExecutorTask]()
   private val isNotFailed = new AtomicBoolean(true)
+  private val isRunning = new AtomicBoolean(true)
   private val isShutdown = new AtomicBoolean(false)
   private var executor : Thread = null
   private var failureMessage : String = null
@@ -28,9 +31,10 @@ class MandatoryExecutor extends Executor{
     executor = new Thread(new Runnable {
       override def run(): Unit = {
         latch.countDown()
+        logger.info("[MANDATORY EXECUTOR] starting Mandatory Executor")
 
         //main task handle cycle
-        while (isNotFailed.get()) {
+        while (isNotFailed.get() && isRunning.get()) {
           val task: MandatoryExecutorTask = queue.take()
           try {
             task.lock.foreach(x=>x.lock())
@@ -39,6 +43,7 @@ class MandatoryExecutor extends Executor{
           }
           catch {
             case e: Exception =>
+              logger.warn("[MANDATORY EXECUTOR] task failure; stop executor")
               task.lock.foreach(x=>x.unlock())
               isNotFailed.set(false)
               failureMessage = e.getMessage
@@ -60,7 +65,7 @@ class MandatoryExecutor extends Executor{
 
   /**
     * Submit new task to execute
- *
+    *
     * @param runnable
     */
   def submit(runnable : Runnable, lock : Option[ReentrantLock] = None) = {
@@ -105,14 +110,27 @@ class MandatoryExecutor extends Executor{
   }
 
   /**
-    * Safe shutdown this executor (wit)
+    * Safe shutdown this executor
     */
   def shutdownSafe() : Unit = {
+    logger.info("[MANDATORY EXECUTOR] Start shutdown mandatory executor")
     if (isShutdown.get()){
       throw new MandatoryExecutorException("executor is already been shutdown")
     }
     isShutdown.set(true)
     this.awaitInternal()
+
+    //stop handler thread
+    isRunning.set(false)
+    //need to skip queue.take() block
+    queue.add(MandatoryExecutorTask(
+      runnable = new Runnable {
+        override def run(): Unit = ()
+      },
+      isIgnorableIfExecutorFailed = true,
+      lock = None))
+    executor.join()
+    logger.info("[MANDATORY EXECUTOR] Finished shutdown mandatory executor")
   }
 
   /**
