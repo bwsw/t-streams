@@ -55,6 +55,49 @@ class BasicProducerWithManyOpenedTxnsTest extends FlatSpec with Matchers with Be
     assert(consumer.getTransaction.isEmpty)
   }
 
+  "BasicProducer.newTransaction()" should "return error if try to open more than 3 txns for 3 partitions if ProducerPolicies.errorIfOpened" in {
+    val txn1: BasicProducerTransaction[String] = producer.newTransaction(ProducerPolicies.errorIfOpened)
+    val txn2: BasicProducerTransaction[String] = producer.newTransaction(ProducerPolicies.errorIfOpened)
+    val txn3: BasicProducerTransaction[String] = producer.newTransaction(ProducerPolicies.errorIfOpened)
+    val r: Boolean = try {
+      val txn4: BasicProducerTransaction[String] = producer.newTransaction(ProducerPolicies.errorIfOpened)
+      false
+    } catch {
+      case e: IllegalStateException => true
+    }
+    r shouldBe true
+    producer.checkpoint()
+  }
+
+  "BasicProducer.newTransaction()" should "return ok if try to open more than 3 txns for 3 partitions if ProducerPolicies.checkpointIfOpened" in {
+    val txn1: BasicProducerTransaction[String] = producer.newTransaction(ProducerPolicies.errorIfOpened)
+    val txn2: BasicProducerTransaction[String] = producer.newTransaction(ProducerPolicies.errorIfOpened)
+    val txn3: BasicProducerTransaction[String] = producer.newTransaction(ProducerPolicies.errorIfOpened)
+    val r: Boolean = try {
+      val txn4: BasicProducerTransaction[String] = producer.newTransaction(ProducerPolicies.checkpointIfOpened)
+      true
+    } catch {
+      case e: IllegalStateException => false
+    }
+    r shouldBe true
+    producer.checkpoint()
+  }
+
+  "BasicProducer.newTransaction()" should "return ok if try to open more than 3 txns for 3 partitions if ProducerPolicies.cancelIfOpened" in {
+    val txn1: BasicProducerTransaction[String] = producer.newTransaction(ProducerPolicies.errorIfOpened)
+    val txn2: BasicProducerTransaction[String] = producer.newTransaction(ProducerPolicies.errorIfOpened)
+    val txn3: BasicProducerTransaction[String] = producer.newTransaction(ProducerPolicies.errorIfOpened)
+    val r: Boolean = try {
+      val txn4: BasicProducerTransaction[String] = producer.newTransaction(ProducerPolicies.cancelIfOpened)
+      true
+    } catch {
+      case e: IllegalStateException => false
+    }
+    r shouldBe true
+    producer.checkpoint()
+  }
+
+
   override def afterAll(): Unit = {
     producer.stop()
     onAfterAll()
