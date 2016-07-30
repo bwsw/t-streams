@@ -12,7 +12,6 @@ import testutils._
 
 
 class BasicConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
-
   f.setProperty(TSF_Dictionary.Stream.name,"test_stream").
     setProperty(TSF_Dictionary.Stream.partitions,3).
     setProperty(TSF_Dictionary.Stream.ttl, 60 * 10).
