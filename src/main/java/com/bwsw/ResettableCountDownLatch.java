@@ -159,6 +159,10 @@ public class ResettableCountDownLatch {
             }
         }
 
+        public void setValue(int value) {
+            setState(value);
+        }
+
         public void reset() {
             setState(startCount);
         }
@@ -211,6 +215,10 @@ public class ResettableCountDownLatch {
 
     public void reset() {
         sync.reset();
+    }
+
+    public void setValue(int value) {
+        sync.setValue(value);
     }
 
     /**
