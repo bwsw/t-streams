@@ -97,7 +97,6 @@ class BasicProducerWithManyOpenedTxnsTest extends FlatSpec with Matchers with Be
     producer.checkpoint()
   }
 
-
   override def afterAll(): Unit = {
     producer.stop()
     onAfterAll()
