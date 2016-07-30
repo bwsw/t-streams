@@ -10,19 +10,19 @@ object GlobalHooks {
   private val logger = LoggerFactory.getLogger(this.getClass)
   private val hooks = scala.collection.mutable.Map[String, () => Unit]()
 
-  def addHook(name : String, event : () => Unit) : Unit = {
+  def addHook(name: String, event: () => Unit): Unit = {
     hooks += (name -> event)
   }
 
-  def invoke(name : String) : Unit = {
-    if (System.getProperty("DEBUG") == "true" && hooks.contains(name)){
+  def invoke(name: String): Unit = {
+    if (System.getProperty("DEBUG") == "true" && hooks.contains(name)) {
       val event = hooks(name)
       logger.debug(s"[GLOBALHOOK] called hook name:{$name}")
       event()
     }
   }
 
-  def clear() : Unit = {
+  def clear(): Unit = {
     hooks.clear()
   }
 }

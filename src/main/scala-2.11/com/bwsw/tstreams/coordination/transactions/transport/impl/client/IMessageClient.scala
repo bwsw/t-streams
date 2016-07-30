@@ -12,24 +12,24 @@ import scala.collection.mutable
 
 
 /**
- * Client for sending [[IMessage]]]
- */
+  * Client for sending [[IMessage]]]
+  */
 class IMessageClient {
   private val addressToConnection = mutable.Map[String, Socket]()
   private val serializer = new TStreamsSerializer
   private val logger = LoggerFactory.getLogger(this.getClass)
 
   /**
-   * @param msg Message to send
-   * @param timeout Timeout for waiting response(null will be returned in case of timeout)
-   * @return Response message
-   */
-  def sendAndWaitResponse(msg : IMessage, timeout : Int) : IMessage = {
+    * @param msg     Message to send
+    * @param timeout Timeout for waiting response(null will be returned in case of timeout)
+    * @return Response message
+    */
+  def sendAndWaitResponse(msg: IMessage, timeout: Int): IMessage = {
     val rcvAddress = msg.receiverID
-    if (addressToConnection.contains(rcvAddress)){
+    if (addressToConnection.contains(rcvAddress)) {
       val sock = addressToConnection(rcvAddress)
       val reader = new BufferedReader(new InputStreamReader(sock.getInputStream))
-      val socketAndReader = SocketAndReader(sock,reader)
+      val socketAndReader = SocketAndReader(sock, reader)
       if (sock.isClosed || !sock.isConnected || sock.isOutputShutdown) {
         addressToConnection.remove(rcvAddress)
         sendAndWaitResponse(msg, timeout)
@@ -44,8 +44,8 @@ class IMessageClient {
         val port = splits(1).toInt
         val sock = new Socket(host, port)
         val reader = new BufferedReader(new InputStreamReader(sock.getInputStream))
-        val socketAndReader = SocketAndReader(sock,reader)
-        sock.setSoTimeout(timeout*1000)
+        val socketAndReader = SocketAndReader(sock, reader)
+        sock.setSoTimeout(timeout * 1000)
         addressToConnection(rcvAddress) = sock
         writeMsgAndWaitResponse(socketAndReader, msg)
       } catch {
@@ -58,10 +58,11 @@ class IMessageClient {
 
   /**
     * Wrap message with line delimiter to separate it on server side
+    *
     * @param msg
     * @return
     */
-  private def wrapMsg(msg : String): String = {
+  private def wrapMsg(msg: String): String = {
     msg + "\n"
   }
 
@@ -70,11 +71,11 @@ class IMessageClient {
     * @param socket
     * @param msg
     */
-  private def closeSocketAndUpdateMap(socket: Socket, msg : IMessage) = {
+  private def closeSocketAndUpdateMap(socket: Socket, msg: IMessage) = {
     try {
       socket.close()
     } catch {
-      case e : IOException =>
+      case e: IOException =>
         logger.warn(s"exception occurred: ${e.getMessage}")
     } finally {
       addressToConnection.remove(msg.receiverID)
@@ -82,12 +83,13 @@ class IMessageClient {
   }
 
   /**
-   * Helper method for [[sendAndWaitResponse]]]
-   * @param socketAndReader Socket and its reader to send msg
-   * @param msg Msg to send
-   * @return Response message
-   */
-  private def writeMsgAndWaitResponse(socketAndReader: SocketAndReader, msg : IMessage) : IMessage = {
+    * Helper method for [[sendAndWaitResponse]]]
+    *
+    * @param socketAndReader Socket and its reader to send msg
+    * @param msg             Msg to send
+    * @return Response message
+    */
+  private def writeMsgAndWaitResponse(socketAndReader: SocketAndReader, msg: IMessage): IMessage = {
     //do request
     val string = wrapMsg(serializer.serialize(msg))
     try {
@@ -96,7 +98,7 @@ class IMessageClient {
       outputStream.flush()
     }
     catch {
-      case e : IOException =>
+      case e: IOException =>
         logger.warn(s"exception occurred: ${e.getMessage}")
         closeSocketAndUpdateMap(socketAndReader.sock, msg)
         return null.asInstanceOf[IMessage]
@@ -113,7 +115,7 @@ class IMessageClient {
         }
       }
       catch {
-        case e @ (_: SocketTimeoutException | _: TStreamsSerializerException | _: IOException) =>
+        case e@(_: SocketTimeoutException | _: TStreamsSerializerException | _: IOException) =>
           logger.warn(s"exception occurred: ${e.getMessage}")
           null.asInstanceOf[IMessage]
       }
@@ -127,10 +129,10 @@ class IMessageClient {
   }
 
   /**
-   * Close client
-   */
+    * Close client
+    */
   def close() = {
-    addressToConnection.foreach{ x=>
+    addressToConnection.foreach { x =>
       try {
         x._2.close()
       } catch {
@@ -142,4 +144,4 @@ class IMessageClient {
   }
 }
 
-case class SocketAndReader(sock : Socket, reader : BufferedReader)
+case class SocketAndReader(sock: Socket, reader: BufferedReader)

@@ -3,24 +3,23 @@ package com.bwsw.tstreams.agents.consumer.subscriber
 import java.util.UUID
 
 import com.bwsw.tstreams.coordination.pubsub.messages.ProducerTransactionStatus
-import ProducerTransactionStatus._
-import com.bwsw.tstreams.coordination.pubsub.messages.ProducerTransactionStatus
+import com.bwsw.tstreams.coordination.pubsub.messages.ProducerTransactionStatus._
 
 /**
- * Buffer for maintaining consumed transactions in memory
- */
+  * Buffer for maintaining consumed transactions in memory
+  */
 class TransactionsBuffer {
-  private val map : SortedExpiringMap[UUID, (ProducerTransactionStatus, Long)] =
+  private val map: SortedExpiringMap[UUID, (ProducerTransactionStatus, Long)] =
     new SortedExpiringMap(new UUIDComparator, new SubscriberExpirationPolicy)
 
   /**
-   * Update transaction buffer
+    * Update transaction buffer
     *
     * @param txnUuid Transaction uuid
-   * @param status Transaction status
-   * @param ttl Transaction ttl(time of expiration)
-   */
-  def update(txnUuid : UUID, status: ProducerTransactionStatus, ttl : Int) : Unit = {
+    * @param status  Transaction status
+    * @param ttl     Transaction ttl(time of expiration)
+    */
+  def update(txnUuid: UUID, status: ProducerTransactionStatus, ttl: Int): Unit = {
 
     //TODO wrap all checks in validate method and log it
     //ignore update events until txn doesn't exist in buffer
@@ -28,11 +27,11 @@ class TransactionsBuffer {
       return
     }
 
-    if (map.exist(txnUuid)){
+    if (map.exist(txnUuid)) {
       map.get(txnUuid)._1 match {
         case ProducerTransactionStatus.preCheckpoint =>
           if (status != ProducerTransactionStatus.postCheckpoint &&
-              status != ProducerTransactionStatus.cancel) {
+            status != ProducerTransactionStatus.cancel) {
             return
           }
 
@@ -62,9 +61,9 @@ class TransactionsBuffer {
   }
 
   /**
-   * Iterator on transaction buffer entry set
+    * Iterator on transaction buffer entry set
     *
     * @return Iterator
-   */
+    */
   def getIterator() = map.entrySetIterator()
 }

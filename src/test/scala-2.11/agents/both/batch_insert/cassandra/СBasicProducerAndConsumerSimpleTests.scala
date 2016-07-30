@@ -3,15 +3,12 @@ package agents.both.batch_insert.cassandra
 import java.net.InetSocketAddress
 
 import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
-import com.bwsw.tstreams.agents.consumer.{BasicConsumer, BasicConsumerOptions, BasicConsumerTransaction, SubscriberCoordinationOptions}
+import com.bwsw.tstreams.agents.consumer.{BasicConsumer, BasicConsumerOptions, BasicConsumerTransaction}
 import com.bwsw.tstreams.agents.producer.InsertionType.BatchInsert
 import com.bwsw.tstreams.agents.producer.{BasicProducer, BasicProducerOptions, ProducerCoordinationOptions, ProducerPolicies}
-import com.bwsw.tstreams.converter.{ArrayByteToStringConverter, StringToArrayByteConverter}
-import com.bwsw.tstreams.data.cassandra.{CassandraStorageFactory, CassandraStorageOptions}
+import com.bwsw.tstreams.common.CassandraHelper
 import com.bwsw.tstreams.coordination.transactions.transport.impl.TcpTransport
-import com.bwsw.tstreams.metadata.MetadataStorageFactory
 import com.bwsw.tstreams.streams.BasicStream
-import com.datastax.driver.core.Cluster
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import testutils._
 
@@ -19,7 +16,7 @@ import scala.collection.mutable.ListBuffer
 import scala.util.control.Breaks._
 
 
-class СBasicProducerAndConsumerSimpleTests extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils{
+class СBasicProducerAndConsumerSimpleTests extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
 
   val cassandraInstForProducer = cassandraStorageFactory.getInstance(cassandraStorageOptions)
   val cassandraInstForConsumer = cassandraStorageFactory.getInstance(cassandraStorageOptions)
@@ -60,14 +57,14 @@ class СBasicProducerAndConsumerSimpleTests extends FlatSpec with Matchers with 
     zkConnectionTimeout = 7)
 
   //producer/consumer options
-  val producerOptions = new BasicProducerOptions[String](transactionTTL = 6, transactionKeepAliveInterval = 2, RoundRobinPolicyCreator.getRoundRobinPolicy(streamForProducer, List(0,1,2)), BatchInsert(batchSizeTestVal), LocalGeneratorCreator.getGen(), agentSettings, stringToArrayByteConverter)
+  val producerOptions = new BasicProducerOptions[String](transactionTTL = 6, transactionKeepAliveInterval = 2, RoundRobinPolicyCreator.getRoundRobinPolicy(streamForProducer, List(0, 1, 2)), BatchInsert(batchSizeTestVal), LocalGeneratorCreator.getGen(), agentSettings, stringToArrayByteConverter)
 
   val consumerOptions = new BasicConsumerOptions[Array[Byte], String](
     transactionsPreload = 10,
     dataPreload = 7,
     consumerKeepAliveInterval = 5,
     arrayByteToStringConverter,
-    RoundRobinPolicyCreator.getRoundRobinPolicy(streamForConsumer, List(0,1,2)),
+    RoundRobinPolicyCreator.getRoundRobinPolicy(streamForConsumer, List(0, 1, 2)),
     Oldest,
     LocalGeneratorCreator.getGen(),
     useLastOffset = true)
@@ -80,7 +77,7 @@ class СBasicProducerAndConsumerSimpleTests extends FlatSpec with Matchers with 
     val totalDataInTxn = 10
     val producerTransaction = producer.newTransaction(ProducerPolicies.errorIfOpened)
     val sendData = (for (part <- 0 until totalDataInTxn) yield "data_part_" + randomString).sorted
-    sendData.foreach{ x=>
+    sendData.foreach { x =>
       producerTransaction.send(x)
     }
     producerTransaction.checkpoint()
@@ -91,7 +88,7 @@ class СBasicProducerAndConsumerSimpleTests extends FlatSpec with Matchers with 
     var checkVal = txn.getAll().sorted == sendData
 
     //assert that is nothing to read
-    (0 until consumer.stream.getPartitions) foreach { _=>
+    (0 until consumer.stream.getPartitions) foreach { _ =>
       Thread.sleep(100)
       checkVal &= consumer.getTransaction.isEmpty
     }
@@ -104,7 +101,7 @@ class СBasicProducerAndConsumerSimpleTests extends FlatSpec with Matchers with 
     val totalDataInTxn = 10
     val producerTransaction = producer.newTransaction(ProducerPolicies.errorIfOpened)
     val sendData = (for (part <- 0 until totalDataInTxn) yield "data_part_" + randomString).sorted
-    sendData.foreach{ x=>
+    sendData.foreach { x =>
       producerTransaction.send(x)
     }
     producerTransaction.checkpoint()
@@ -113,7 +110,7 @@ class СBasicProducerAndConsumerSimpleTests extends FlatSpec with Matchers with 
     assert(txnOpt.isDefined)
     val txn = txnOpt.get
     var dataToAssert = ListBuffer[String]()
-    while(txn.hasNext()){
+    while (txn.hasNext()) {
       dataToAssert += txn.next()
     }
 
@@ -136,20 +133,20 @@ class СBasicProducerAndConsumerSimpleTests extends FlatSpec with Matchers with 
     val totalDataInTxn = 10
     val sendData = (for (part <- 0 until totalDataInTxn) yield "data_part_" + randomString).sorted
 
-    (0 until totalTxn).foreach { _=>
-        val producerTransaction = producer.newTransaction(ProducerPolicies.errorIfOpened)
-        sendData.foreach{ x=>
-          producerTransaction.send(x)
-        }
-        producerTransaction.checkpoint()
+    (0 until totalTxn).foreach { _ =>
+      val producerTransaction = producer.newTransaction(ProducerPolicies.errorIfOpened)
+      sendData.foreach { x =>
+        producerTransaction.send(x)
+      }
+      producerTransaction.checkpoint()
     }
 
     var checkVal = true
     Thread.sleep(100)
-    (0 until totalTxn).foreach { _=>
-        val txn = consumer.getTransaction
-        checkVal &= txn.nonEmpty
-        checkVal &= txn.get.getAll().sorted == sendData
+    (0 until totalTxn).foreach { _ =>
+      val txn = consumer.getTransaction
+      checkVal &= txn.nonEmpty
+      checkVal &= txn.get.getAll().sorted == sendData
     }
 
     //assert that is nothing to read
@@ -170,7 +167,7 @@ class СBasicProducerAndConsumerSimpleTests extends FlatSpec with Matchers with 
     val producerThread = new Thread(new Runnable {
       def run() {
         val txn = producer.newTransaction(ProducerPolicies.errorIfOpened)
-        sendData.foreach{ x=>
+        sendData.foreach { x =>
           txn.send(x)
           Thread.sleep(1000)
         }
@@ -182,21 +179,23 @@ class СBasicProducerAndConsumerSimpleTests extends FlatSpec with Matchers with 
 
     val consumerThread = new Thread(new Runnable {
       def run() {
-        breakable{while(true) {
-          val consumedTxn: Option[BasicConsumerTransaction[Array[Byte], String]] = consumer.getTransaction
-          if (consumedTxn.isDefined) {
-            checkVal &= consumedTxn.get.getAll().sorted == sendData
-            break()
+        breakable {
+          while (true) {
+            val consumedTxn: Option[BasicConsumerTransaction[Array[Byte], String]] = consumer.getTransaction
+            if (consumedTxn.isDefined) {
+              checkVal &= consumedTxn.get.getAll().sorted == sendData
+              break()
+            }
+            Thread.sleep(100)
           }
-          Thread.sleep(100)
-        }}
+        }
       }
     })
 
     producerThread.start()
     consumerThread.start()
-    producerThread.join(timeoutForWaiting*1000)
-    consumerThread.join(timeoutForWaiting*1000)
+    producerThread.join(timeoutForWaiting * 1000)
+    consumerThread.join(timeoutForWaiting * 1000)
     checkVal &= !producerThread.isAlive
     checkVal &= !consumerThread.isAlive
 
@@ -211,7 +210,6 @@ class СBasicProducerAndConsumerSimpleTests extends FlatSpec with Matchers with 
 
   override def afterAll(): Unit = {
     producer.stop()
-    removeZkMetadata("/unit")
     onAfterAll()
   }
 }

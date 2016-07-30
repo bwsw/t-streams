@@ -15,16 +15,16 @@ class IMessageListenerManager() {
   private val callbacks = ListBuffer[(IMessage) => Unit]()
   private val lock = new ReentrantLock(true)
 
-  def addCallback(callback : (IMessage) => Unit) = {
+  def addCallback(callback: (IMessage) => Unit) = {
     lock.lock()
     callbacks += callback
     lock.unlock()
   }
 
-  def response(msg : IMessage) : Unit = {
+  def response(msg: IMessage): Unit = {
     lock.lock()
     val responseAddress = msg.receiverID
-    if (addressToId.contains(responseAddress)){
+    if (addressToId.contains(responseAddress)) {
       val id = addressToId(responseAddress)
       val channel = idToChannel(id)
       channel.writeAndFlush(msg)
@@ -32,16 +32,16 @@ class IMessageListenerManager() {
     lock.unlock()
   }
 
-  def channelRead(address: String, id: ChannelId, channel: Channel, msg : IMessage) = {
+  def channelRead(address: String, id: ChannelId, channel: Channel, msg: IMessage) = {
     lock.lock()
-    if (!idToChannel.contains(id)){
+    if (!idToChannel.contains(id)) {
       idToChannel(id) = channel
       assert(!addressToId.contains(address))
       addressToId(address) = id
       assert(!idToAddress.contains(id))
       idToAddress(id) = address
     }
-    callbacks.foreach(x=>x(msg))
+    callbacks.foreach(x => x(msg))
     lock.unlock()
   }
 

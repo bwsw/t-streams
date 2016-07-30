@@ -1,34 +1,27 @@
 package entities
 
+import com.bwsw.tstreams.common.CassandraHelper
 import com.bwsw.tstreams.entities.CommitEntity
-import com.datastax.driver.core.Cluster
 import com.datastax.driver.core.utils.UUIDs
-import org.scalatest.{BeforeAndAfterAll, Matchers, FlatSpec}
-import testutils.{CassandraHelper, RandomStringCreator}
+import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
+import testutils.{RandomStringCreator, TestUtils}
 
 
-class RefreshEntityTest extends FlatSpec with Matchers with BeforeAndAfterAll{
-  def randomString: String = RandomStringCreator.randomAlphaString(10)
-  val randomKeyspace = randomString
-  val temporaryCluster = Cluster.builder().addContactPoint("localhost").build()
-  val temporarySession = temporaryCluster.connect()
-  CassandraHelper.createKeyspace(temporarySession, randomKeyspace)
-  CassandraHelper.createMetadataTables(temporarySession, randomKeyspace)
-  val connectedSession = temporaryCluster.connect(randomKeyspace)
+class RefreshEntityTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
+  def randomVal: String = RandomStringCreator.randomAlphaString(10)
+
+  val connectedSession = cluster.connect(randomKeyspace)
 
   "After dropping metadata tables and creating them again commit entity" should "work" in {
     val commitEntity = new CommitEntity("commit_log", connectedSession)
-    val stream = randomString
+    val stream = randomVal
     val txn = UUIDs.timeBased()
     val partition = 10
     val totalCnt = 123
     val ttl = 3
 
     commitEntity.commit(stream, partition, txn, totalCnt, ttl)
-
-    //refresh metadata
-    CassandraHelper.dropMetadataTables(connectedSession, randomKeyspace)
-    CassandraHelper.createMetadataTables(temporarySession, randomKeyspace)
+    CassandraHelper.clearMetadataTables(session, randomKeyspace)
     commitEntity.commit(stream, partition, txn, totalCnt, ttl)
   }
 }

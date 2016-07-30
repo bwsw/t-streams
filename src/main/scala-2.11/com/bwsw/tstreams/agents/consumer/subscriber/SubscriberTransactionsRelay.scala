@@ -5,8 +5,8 @@ import java.util.concurrent.ExecutorService
 import java.util.concurrent.locks.ReentrantLock
 
 import com.bwsw.tstreams.coordination.pubsub.SubscriberCoordinator
+import com.bwsw.tstreams.coordination.pubsub.messages.ProducerTransactionStatus._
 import com.bwsw.tstreams.coordination.pubsub.messages.{ProducerTopicMessage, ProducerTransactionStatus}
-import ProducerTransactionStatus._
 import com.bwsw.tstreams.txnqueue.PersistentTransactionQueue
 import org.slf4j.LoggerFactory
 
@@ -14,59 +14,59 @@ import scala.util.control.Breaks._
 
 
 /**
- * Relay for help to consume transactions
- * on concrete partition from concrete offset
+  * Relay for help to consume transactions
+  * on concrete partition from concrete offset
   *
-  * @param subscriber Subscriber instance
- * @param partition Partition from which to consume
- * @param coordinator Coordinator instance for maintaining new transactions updates
- * @param callback Callback on consumed transactions
- * @param queue Queue for maintain consumed transactions
- * @tparam DATATYPE Storage data type
- * @tparam USERTYPE User data type
- */
-class SubscriberTransactionsRelay[DATATYPE,USERTYPE](subscriber : BasicSubscribingConsumer[DATATYPE,USERTYPE],
-                                                     partition : Int,
-                                                     coordinator: SubscriberCoordinator,
-                                                     callback: BasicSubscriberCallback[DATATYPE, USERTYPE],
-                                                     queue : PersistentTransactionQueue,
-                                                     lastConsumedTransaction : LastTransactionWrapper,
-                                                     executor : ExecutorService,
-                                                     checkpointEventsResolver: BrokenTransactionsResolver) {
+  * @param subscriber  Subscriber instance
+  * @param partition   Partition from which to consume
+  * @param coordinator Coordinator instance for maintaining new transactions updates
+  * @param callback    Callback on consumed transactions
+  * @param queue       Queue for maintain consumed transactions
+  * @tparam DATATYPE Storage data type
+  * @tparam USERTYPE User data type
+  */
+class SubscriberTransactionsRelay[DATATYPE, USERTYPE](subscriber: BasicSubscribingConsumer[DATATYPE, USERTYPE],
+                                                      partition: Int,
+                                                      coordinator: SubscriberCoordinator,
+                                                      callback: BasicSubscriberCallback[DATATYPE, USERTYPE],
+                                                      queue: PersistentTransactionQueue,
+                                                      lastConsumedTransaction: LastTransactionWrapper,
+                                                      executor: ExecutorService,
+                                                      checkpointEventsResolver: BrokenTransactionsResolver) {
 
   private val POOLING_INTERVAL_MS = 100
   private val logger = LoggerFactory.getLogger(this.getClass)
-  private val transactionBuffer  = new TransactionsBuffer
+  private val transactionBuffer = new TransactionsBuffer
   private val transactionBufferLock = new ReentrantLock(true)
   private val streamName = subscriber.stream.getName
 
   checkpointEventsResolver.bindBuffer(partition, transactionBuffer, transactionBufferLock, lastConsumedTransaction)
 
   /**
-   * Transaction buffer updater
-   */
-  private val updateCallback = (msg : ProducerTopicMessage) => {
+    * Transaction buffer updater
+    */
+  private val updateCallback = (msg: ProducerTopicMessage) => {
     if (msg.partition == partition) {
       transactionBufferLock.lock()
       logger.debug(s"[UPDATE_CALLBACK PARTITION_$partition] consumed msg with uuid:{${msg.txnUuid.timestamp()}}," +
-        s" status:{${msg.status}}\n")
+        s" status:{${msg.status}}")
       if (msg.txnUuid.timestamp() > lastConsumedTransaction.get().timestamp()) {
         transactionBuffer.update(msg.txnUuid, msg.status, msg.ttl)
       }
       transactionBufferLock.unlock()
 
       if (msg.status == ProducerTransactionStatus.preCheckpoint ||
-        msg.status == ProducerTransactionStatus.postCheckpoint){
+        msg.status == ProducerTransactionStatus.postCheckpoint) {
         logger.debug(s"[UPDATE_CALLBACK CER PARTITION_$partition] consumed msg with uuid:{${msg.txnUuid.timestamp()}}," +
-          s" status:{${msg.status}}\n")
+          s" status:{${msg.status}}")
         checkpointEventsResolver.update(partition, msg.txnUuid, msg.status)
       }
     }
   }
 
   /**
-   * Runnable for consume single txn from persistent queue and callback on it
-   */
+    * Runnable for consume single txn from persistent queue and callback on it
+    */
   private val queueConsumer = new Runnable {
     override def run(): Unit = {
       val txn = queue.get()
@@ -76,11 +76,11 @@ class SubscriberTransactionsRelay[DATATYPE,USERTYPE](subscriber : BasicSubscribi
   }
 
   /**
-   * Consume all transactions in interval (leftBorder ; rightBorder]
-   */
-  def consumeTransactionsLessOrEqualThan(leftBorder : UUID, rightBorder : UUID) = {
+    * Consume all transactions in interval (leftBorder ; rightBorder]
+    */
+  def consumeTransactionsLessOrEqualThan(leftBorder: UUID, rightBorder: UUID) = {
     //TODO remove after complex testing
-    var lastTxn : UUID = leftBorder
+    var lastTxn: UUID = leftBorder
 
     val transactionsIterator = subscriber.stream.metadataStorage.commitEntity.getTransactionsIterator(
       streamName = streamName,
@@ -90,24 +90,24 @@ class SubscriberTransactionsRelay[DATATYPE,USERTYPE](subscriber : BasicSubscribi
 
     while (transactionsIterator.hasNext) {
       val entry = transactionsIterator.next()
-      val (uuid,cnt) = (entry.getUUID("transaction"), entry.getInt("cnt"))
-      logger.debug(s"[BEFORE_OR_EQUAL_LAST PARTITION_$partition] consumed txn with uuid:{${uuid.timestamp()}}\n")
+      val (uuid, cnt) = (entry.getUUID("transaction"), entry.getInt("cnt"))
+      logger.debug(s"[BEFORE_OR_EQUAL_LAST PARTITION_$partition] consumed txn with uuid:{${uuid.timestamp()}}")
       if (cnt == -1) {
         breakable {
-          while(true) {
+          while (true) {
             val updatedTxnOpt = subscriber.
               stream.
               metadataStorage.
               commitEntity.
               getTransactionAmount(streamName, partition, uuid)
-            if (updatedTxnOpt.isDefined){
-              val (amount,_) = updatedTxnOpt.get
-              if (amount != -1){
+            if (updatedTxnOpt.isDefined) {
+              val (amount, _) = updatedTxnOpt.get
+              if (amount != -1) {
                 queue.put(uuid)
                 executor.execute(queueConsumer)
                 assert(uuid.timestamp() > lastTxn.timestamp(),
                   logger.debug(s"[RELAY WRONG ASSERT] ${uuid.timestamp()} " +
-                    s"with lastTxn={${lastTxn.timestamp()}}\n"))
+                    s"with lastTxn={${lastTxn.timestamp()}}"))
                 lastTxn = uuid
                 break()
               }
@@ -122,24 +122,24 @@ class SubscriberTransactionsRelay[DATATYPE,USERTYPE](subscriber : BasicSubscribi
         executor.execute(queueConsumer)
         assert(uuid.timestamp() > lastTxn.timestamp(),
           logger.debug(s"[RELAY WRONG ASSERT] ${uuid.timestamp()} " +
-            s"with lastTxn={${lastTxn.timestamp()}}\n"))
+            s"with lastTxn={${lastTxn.timestamp()}}"))
         lastTxn = uuid
       }
     }
 
     assert(lastTxn.timestamp() == rightBorder.timestamp(),
       logger.debug(s"[RELAY WRONG ASSERT] ${rightBorder.timestamp()} " +
-        s"with lastTxn={${lastTxn.timestamp()}}\n"))
+        s"with lastTxn={${lastTxn.timestamp()}}"))
   }
 
   /**
-   * Consume all transaction in interval (leftBorder ; inf)
+    * Consume all transaction in interval (leftBorder ; inf)
     *
     * @param leftBorder Left interval border
-   */
-  def consumeTransactionsMoreThan(leftBorder : UUID) = {
+    */
+  def consumeTransactionsMoreThan(leftBorder: UUID) = {
     //TODO remove after complex testing
-    var lastTxn : UUID = leftBorder
+    var lastTxn: UUID = leftBorder
     val transactionsGreaterThanLast =
       subscriber.stream.metadataStorage.commitEntity.getTransactions(
         streamName,
@@ -148,7 +148,7 @@ class SubscriberTransactionsRelay[DATATYPE,USERTYPE](subscriber : BasicSubscribi
 
     transactionBufferLock.lock()
     transactionsGreaterThanLast foreach { txn =>
-      logger.debug(s"[MORE_LAST PARTITION_$partition] consumed txn with uuid:{${txn.txnUuid.timestamp()}}\n")
+      logger.debug(s"[MORE_LAST PARTITION_$partition] consumed txn with uuid:{${txn.txnUuid.timestamp()}}")
       if (txn.totalItems == -1) {
         transactionBuffer.update(txn.txnUuid, ProducerTransactionStatus.opened, txn.ttl)
       } else {
@@ -156,18 +156,18 @@ class SubscriberTransactionsRelay[DATATYPE,USERTYPE](subscriber : BasicSubscribi
       }
       assert(txn.txnUuid.timestamp() > lastTxn.timestamp(),
         logger.debug(s"[RELAY WRONG ASSERT] ${txn.txnUuid.timestamp()} " +
-          s"with lastTxn={${lastTxn.timestamp()}}\n"))
+          s"with lastTxn={${lastTxn.timestamp()}}"))
       lastTxn = txn.txnUuid
     }
     transactionBufferLock.unlock()
   }
 
   /**
-   * Notify producers about new subscriber
+    * Notify producers about new subscriber
     *
     * @return Listener ID
-   */
-  def notifyProducersAndStartListen() : Unit = {
+    */
+  def notifyProducersAndStartListen(): Unit = {
     coordinator.addCallback(updateCallback)
     coordinator.registerSubscriber(subscriber.stream.getName, partition)
     coordinator.notifyProducers(subscriber.stream.getName, partition)
@@ -176,9 +176,9 @@ class SubscriberTransactionsRelay[DATATYPE,USERTYPE](subscriber : BasicSubscribi
   }
 
   /**
-   * @return Runnable for updating expiring map for this relay
-   */
-  def getUpdateRunnable() : Runnable = {
+    * @return Runnable for updating expiring map for this relay
+    */
+  def getUpdateRunnable(): Runnable = {
     //TODO remove after complex testing
     var totalAmount = 1
     val runnable = new Runnable {
@@ -198,7 +198,7 @@ class SubscriberTransactionsRelay[DATATYPE,USERTYPE](subscriber : BasicSubscribi
 
               case ProducerTransactionStatus.`postCheckpoint` =>
                 logger.debug(s"[QUEUE_UPDATER PARTITION_$partition] ${key.timestamp()}" +
-                  s" last_consumed=${lastConsumedTransaction.get().timestamp()} curr_amount=$totalAmount\n")
+                  s" last_consumed=${lastConsumedTransaction.get().timestamp()} curr_amount=$totalAmount")
                 totalAmount += 1
                 queue.put(key)
                 executor.execute(queueConsumer)

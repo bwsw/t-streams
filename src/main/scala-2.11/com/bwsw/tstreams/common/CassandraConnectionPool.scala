@@ -4,7 +4,7 @@ import java.net.InetSocketAddress
 import java.util.concurrent.locks.ReentrantLock
 
 import com.datastax.driver.core.Cluster.Builder
-import com.datastax.driver.core.{Session, Cluster}
+import com.datastax.driver.core.{Cluster, Session}
 import org.slf4j.LoggerFactory
 
 /**
@@ -31,27 +31,28 @@ object CassandraConnectionPool {
 
   /**
     * Allows to get Cluster object or create new if no such cluster object was created.
+    *
     * @param cassandraHosts
     * @param login
     * @param password
     * @return
     */
-  def getCluster(cassandraHosts : List[InetSocketAddress], login: String = null, password: String = null): Cluster = {
+  def getCluster(cassandraHosts: List[InetSocketAddress], login: String = null, password: String = null): Cluster = {
     lock.lock()
 
-    if(isClosed) {
+    if (isClosed) {
       lock.unlock()
       throw new IllegalStateException("CassandraPool is closed. This is the illegal usage of the object.")
     }
 
     logger.info("start MetadataStorage instance creation")
 
-    val sortedHosts = cassandraHosts.map(x=>(x,x.hashCode())).sortBy(_._2).map(x=>x._1)
+    val sortedHosts = cassandraHosts.map(x => (x, x.hashCode())).sortBy(_._2).map(x => x._1)
 
     val cluster = {
       if (clusterMap.contains(sortedHosts))
         clusterMap(sortedHosts)
-      else{
+      else {
         val builder: Builder = Cluster.builder()
         if (login != null && password != null)
           builder.withCredentials(login, password)
@@ -68,26 +69,27 @@ object CassandraConnectionPool {
 
   /**
     * Allows to get new or reuse session object for specified C* connection arguments
+    *
     * @param cassandraHosts
     * @param keyspace
     * @param login
     * @param password
     * @return
     */
-  def getSession(cassandraHosts : List[InetSocketAddress], keyspace : String, login: String = null, password: String = null): Session = {
+  def getSession(cassandraHosts: List[InetSocketAddress], keyspace: String, login: String = null, password: String = null): Session = {
     lock.lock()
 
-    if(isClosed) {
+    if (isClosed) {
       lock.unlock()
       throw new IllegalStateException("CassandraPool is closed. This is the illegal usage of the object.")
     }
 
     val cluster = getCluster(cassandraHosts, login, password)
 
-    val sortedHosts = cassandraHosts.map(x => (x,x.hashCode())).sortBy(_._2).map(x=>x._1)
+    val sortedHosts = cassandraHosts.map(x => (x, x.hashCode())).sortBy(_._2).map(x => x._1)
     val session = {
-      if (sessionMap.contains((sortedHosts,keyspace)))
-        sessionMap((sortedHosts,keyspace))
+      if (sessionMap.contains((sortedHosts, keyspace)))
+        sessionMap((sortedHosts, keyspace))
       else {
         val session: Session = cluster.connect(keyspace)
         sessionMap((sortedHosts, keyspace)) = session

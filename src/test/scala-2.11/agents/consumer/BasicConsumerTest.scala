@@ -3,25 +3,19 @@ package agents.consumer
 import java.net.InetSocketAddress
 import java.util.UUID
 
-import com.aerospike.client.Host
-import com.bwsw.tstreams.agents.consumer.{BasicConsumer, BasicConsumerOptions, BasicConsumerTransaction, SubscriberCoordinationOptions}
 import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
-import com.bwsw.tstreams.agents.producer.{BasicProducer, BasicProducerOptions, ProducerCoordinationOptions, ProducerPolicies}
+import com.bwsw.tstreams.agents.consumer.{BasicConsumer, BasicConsumerOptions, BasicConsumerTransaction}
 import com.bwsw.tstreams.agents.producer.InsertionType.SingleElementInsert
-import com.bwsw.tstreams.converter.{ArrayByteToStringConverter, StringToArrayByteConverter}
-import com.bwsw.tstreams.data.aerospike.{AerospikeStorageFactory, AerospikeStorageOptions}
-import com.bwsw.tstreams.entities.CommitEntity
+import com.bwsw.tstreams.agents.producer.{BasicProducer, BasicProducerOptions, ProducerCoordinationOptions, ProducerPolicies}
 import com.bwsw.tstreams.coordination.transactions.transport.impl.TcpTransport
-import com.bwsw.tstreams.common.zkservice.ZkService
-import com.bwsw.tstreams.metadata.MetadataStorageFactory
+import com.bwsw.tstreams.entities.CommitEntity
 import com.bwsw.tstreams.streams.BasicStream
-import com.datastax.driver.core.Cluster
 import com.datastax.driver.core.utils.UUIDs
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import testutils._
 
 
-class BasicConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils{
+class BasicConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
 
   val aerospikeInstForProducer = storageFactory.getInstance(aerospikeOptions)
   val aerospikeInstForConsumer = storageFactory.getInstance(aerospikeOptions)
@@ -59,14 +53,14 @@ class BasicConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll wi
     transportTimeout = 5,
     zkConnectionTimeout = 7)
 
-  val producerOptions = new BasicProducerOptions[String](transactionTTL = 6, transactionKeepAliveInterval = 2, RoundRobinPolicyCreator.getRoundRobinPolicy(streamForProducer, List(0,1,2)), SingleElementInsert, LocalGeneratorCreator.getGen(), agentSettings, stringToArrayByteConverter)
+  val producerOptions = new BasicProducerOptions[String](transactionTTL = 6, transactionKeepAliveInterval = 2, RoundRobinPolicyCreator.getRoundRobinPolicy(streamForProducer, List(0, 1, 2)), SingleElementInsert, LocalGeneratorCreator.getGen(), agentSettings, stringToArrayByteConverter)
 
   val consumerOptions = new BasicConsumerOptions[Array[Byte], String](
     transactionsPreload = 10,
     dataPreload = 7,
     consumerKeepAliveInterval = 5,
     arrayByteToStringConverter,
-    RoundRobinPolicyCreator.getRoundRobinPolicy(streamForConsumer, List(0,1,2)),
+    RoundRobinPolicyCreator.getRoundRobinPolicy(streamForConsumer, List(0, 1, 2)),
     Oldest,
     LocalGeneratorCreator.getGen(),
     useLastOffset = true)
@@ -85,7 +79,7 @@ class BasicConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll wi
     val data = (for (i <- 0 until totalDataInTxn) yield randomString).toList.sorted
     val txn = producer.newTransaction(ProducerPolicies.errorIfOpened, 1)
     val txnUuid = txn.getTxnUUID
-    data.foreach(x=>txn.send(x))
+    data.foreach(x => txn.send(x))
     txn.checkpoint()
     Thread.sleep(2000)
     var checkVal = true
@@ -107,7 +101,7 @@ class BasicConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll wi
     val commitEntity = new CommitEntity("commit_log", connectedSession)
     val txns = for (i <- 0 until 500) yield UUIDs.timeBased()
 
-    val txn : UUID = txns.head
+    val txn: UUID = txns.head
 
     commitEntity.commit("test_stream", 1, txns.head, 1, 120)
 
