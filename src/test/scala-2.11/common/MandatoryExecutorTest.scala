@@ -16,12 +16,13 @@ class MandatoryExecutorTest extends FlatSpec with Matchers with BeforeAndAfterAl
   "Mandatory executor" should "throw exception in case of runnable failure" in {
     val mandatoryExecutor = new MandatoryExecutor
 
-    mandatoryExecutor.submit(runnableWithException)
+    mandatoryExecutor.submit(runnableWithException, None)
+    mandatoryExecutor.await()
     val msg: Option[Boolean] =
     try {
       mandatoryExecutor.submit(new Runnable {
         override def run(): Unit = ()
-      })
+      }, lock = None)
       None
     } catch {
       case e : Exception =>
@@ -41,7 +42,7 @@ class MandatoryExecutorTest extends FlatSpec with Matchers with BeforeAndAfterAl
       }
     }
     0 until 1000 foreach { _ =>
-      mandatoryExecutor.submit(updateRunnable)
+      mandatoryExecutor.submit(updateRunnable, None)
     }
     mandatoryExecutor.await()
     cnt shouldBe 1000
@@ -65,7 +66,7 @@ class MandatoryExecutorTest extends FlatSpec with Matchers with BeforeAndAfterAl
       }
     }
     0 until 100 foreach { _ =>
-      mandatoryExecutor.submit(updateRunnable)
+      mandatoryExecutor.submit(updateRunnable, None)
     }
     mandatoryExecutor.await()
     cnt shouldBe 100
@@ -83,10 +84,10 @@ class MandatoryExecutorTest extends FlatSpec with Matchers with BeforeAndAfterAl
     0 until 1000 foreach { x =>
       //submit corrupted task
       if (x === 500)
-        mandatoryExecutor.submit(runnableWithException)
+        mandatoryExecutor.submit(runnableWithException, None)
 
       try {
-        mandatoryExecutor.submit(updateRunnable)
+        mandatoryExecutor.submit(updateRunnable, None)
       }
       catch {
         //just ignore
@@ -97,3 +98,6 @@ class MandatoryExecutorTest extends FlatSpec with Matchers with BeforeAndAfterAl
     cnt shouldBe 500
   }
 }
+
+
+//check that second cycle ok (release await), check locks

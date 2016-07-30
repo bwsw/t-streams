@@ -69,7 +69,7 @@ class MandatoryExecutor {
     if (runnable == null) {
       throw new MandatoryExecutorException("runnable must be not null")
     }
-    if (executor != null && isNotFailed.get()){
+    if (executor != null && !isNotFailed.get()){
       throw new MandatoryExecutorException(failureMessage)
     }
     queue.add(MandatoryExecutorTask(runnable, isIgnorableIfExecutorFailed = true, lock))
