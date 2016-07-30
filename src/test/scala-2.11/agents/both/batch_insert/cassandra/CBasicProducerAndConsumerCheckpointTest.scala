@@ -13,7 +13,6 @@ import testutils._
 
 
 class CBasicProducerAndConsumerCheckpointTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
-
   val cassandraInstForProducer = cassandraStorageFactory.getInstance(cassandraStorageOptions)
   val cassandraInstForConsumer = cassandraStorageFactory.getInstance(cassandraStorageOptions)
 

@@ -154,28 +154,29 @@ class BasicProducerTransaction[USERTYPE](transactionLock: ReentrantLock,
 
     txnOwner.backendActivityService.submit(new Runnable {
       override def run(): Unit = cancelAsync()
-    })
+    }, Option(transactionLock))
 
     transactionLock.unlock()
 
   }
 
-  private def checkpointPostEventPartSafe() = {
-    try {
-      checkpointPostEventPart()
-    } catch {
-      //        will be only in debug mode in case of precheckpoint failure test
-      //        or postcheckpoint failure test
-      case e: RuntimeException =>
-        transactionLock.unlock()
-    }
-  }
-
-  private def checkpointPostEventPart() = {
+  private def checkpointPostEventPart() : Unit = {
     logger.debug(s"[COMMIT PARTITION_$partition] ts=${transactionUuid.timestamp()}")
 
     //debug purposes only
-    GlobalHooks.invoke("AfterCommitFailure")
+    {
+      val interruptExecution: Boolean = try {
+        GlobalHooks.invoke("AfterCommitFailure")
+        false
+      } catch {
+        case e: Exception =>
+          logger.warn("AfterCommitFailure in DEBUG mode")
+          true
+      }
+      if (interruptExecution)
+        return
+    }
+
 
     txnOwner.masterP2PAgent.publish(ProducerTopicMessage(
       txnUuid = transactionUuid,
@@ -187,19 +188,8 @@ class BasicProducerTransaction[USERTYPE](transactionLock: ReentrantLock,
       s"ts=${transactionUuid.timestamp()}")
   }
 
-  private def checkpointAsyncSafe() = {
-    try {
-      checkpointAsync()
-    } catch {
-      //        will be only in debug mode in case of precheckpoint failure test
-      //        or postcheckpoint failure test
-      case e: RuntimeException =>
-        transactionLock.unlock()
-        throw e
-    }
-  }
 
-  private def checkpointAsync() = {
+  private def checkpointAsync() : Unit = {
     transactionLock.lock()
     txnOwner.producerOptions.insertType match {
 
@@ -226,7 +216,20 @@ class BasicProducerTransaction[USERTYPE](transactionLock: ReentrantLock,
         partition = partition))
 
       //debug purposes only
-      GlobalHooks.invoke("PreCommitFailure")
+      {
+        val interruptExecution: Boolean = try {
+          GlobalHooks.invoke("PreCommitFailure")
+          false
+        } catch {
+          case e: Exception =>
+            logger.warn("PreCommitFailure in DEBUG mode")
+            true
+        }
+        if (interruptExecution) {
+          transactionLock.unlock()
+          return
+        }
+      }
 
       txnOwner.stream.metadataStorage.commitEntity.commitAsync(
         streamName = txnOwner.stream.getName,
@@ -235,8 +238,7 @@ class BasicProducerTransaction[USERTYPE](transactionLock: ReentrantLock,
         totalCnt = part,
         ttl = txnOwner.stream.getTTL,
         executor = txnOwner.backendActivityService,
-        function = checkpointPostEventPartSafe)
-
+        function = checkpointPostEventPart)
     }
     else {
       txnOwner.masterP2PAgent.publish(ProducerTopicMessage(
@@ -261,8 +263,8 @@ class BasicProducerTransaction[USERTYPE](transactionLock: ReentrantLock,
       transactionLock.lock()
 
       txnOwner.backendActivityService.submit(new Runnable {
-        override def run(): Unit = checkpointAsyncSafe()
-      })
+        override def run(): Unit = checkpointAsync()
+      }, Option(transactionLock))
 
       transactionLock.unlock()
 

@@ -18,10 +18,7 @@ import testutils._
 import scala.collection.mutable.ListBuffer
 
 class ALazyProducersAndSubscriberTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
-
   var port = 8000
-
-  //creating keyspace, metadata
   val path = randomString
 
   "Some amount of producers and subscriber" should "producers - send transactions in many partition" +

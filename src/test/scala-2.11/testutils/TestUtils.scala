@@ -27,7 +27,7 @@ trait TestUtils {
     *
     * @return Alpha string
     */
-  def randomString = "ks_23157b9";
+  def randomString = "ks_23157b9"
 
   val logger = LoggerFactory.getLogger(this.getClass)
 
