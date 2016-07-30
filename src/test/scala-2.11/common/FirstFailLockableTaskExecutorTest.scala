@@ -2,12 +2,12 @@ package common
 
 import java.util.concurrent.locks.ReentrantLock
 
-import com.bwsw.tstreams.common.MandatoryExecutor
-import com.bwsw.tstreams.common.MandatoryExecutor.MandatoryExecutorException
+import com.bwsw.tstreams.common.FirstFailLockableTaskExecutor
+import com.bwsw.tstreams.common.FirstFailLockableTaskExecutor.FirstFailLockableExecutorException
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 
 
-class MandatoryExecutorTest extends FlatSpec with Matchers with BeforeAndAfterAll{
+class FirstFailLockableTaskExecutorTest extends FlatSpec with Matchers with BeforeAndAfterAll{
   val errorMsg = java.util.UUID.randomUUID().toString
   val runnableWithException = new Runnable {
     override def run(): Unit = {
@@ -16,7 +16,7 @@ class MandatoryExecutorTest extends FlatSpec with Matchers with BeforeAndAfterAl
   }
 
   "Mandatory executor" should "throw exception in case of runnable failure" in {
-    val mandatoryExecutor = new MandatoryExecutor
+    val mandatoryExecutor = new FirstFailLockableTaskExecutor
 
     mandatoryExecutor.submit(runnableWithException)
     mandatoryExecutor.await()
@@ -35,7 +35,7 @@ class MandatoryExecutorTest extends FlatSpec with Matchers with BeforeAndAfterAl
   }
 
   "Mandatory executor" should "handle all messages and await" in {
-    val mandatoryExecutor = new MandatoryExecutor
+    val mandatoryExecutor = new FirstFailLockableTaskExecutor
 
     var cnt = 0
     val updateRunnable = new Runnable {
@@ -51,14 +51,14 @@ class MandatoryExecutorTest extends FlatSpec with Matchers with BeforeAndAfterAl
   }
 
   "Mandatory executor" should "return instantly after await if there are no runnables to handle" in {
-    val mandatoryExecutor = new MandatoryExecutor
+    val mandatoryExecutor = new FirstFailLockableTaskExecutor
     mandatoryExecutor.await()
     //just check that there is no deadlock
     true shouldBe true
   }
 
   "Mandatory executor" should "handle all messages and await (messages can have long time of execution)" in {
-    val mandatoryExecutor = new MandatoryExecutor
+    val mandatoryExecutor = new FirstFailLockableTaskExecutor
 
     var cnt = 0
     val updateRunnable = new Runnable {
@@ -75,7 +75,7 @@ class MandatoryExecutorTest extends FlatSpec with Matchers with BeforeAndAfterAl
   }
 
   "Mandatory executor" should "prevent execution of new tasks if one of them failed" in {
-    val mandatoryExecutor = new MandatoryExecutor
+    val mandatoryExecutor = new FirstFailLockableTaskExecutor
 
     var cnt = 0
     val updateRunnable = new Runnable {
@@ -93,7 +93,7 @@ class MandatoryExecutorTest extends FlatSpec with Matchers with BeforeAndAfterAl
       }
       catch {
         //just ignore
-        case e : MandatoryExecutorException =>
+        case e : FirstFailLockableExecutorException =>
       }
     }
 
@@ -101,7 +101,7 @@ class MandatoryExecutorTest extends FlatSpec with Matchers with BeforeAndAfterAl
   }
 
   "Mandatory executor" should "release lock of corrupted runnable" in {
-    val mandatoryExecutor = new MandatoryExecutor
+    val mandatoryExecutor = new FirstFailLockableTaskExecutor
     val lock = new ReentrantLock(true)
     mandatoryExecutor.submit(runnableWithException, Option(lock))
     mandatoryExecutor.await()
@@ -110,7 +110,7 @@ class MandatoryExecutorTest extends FlatSpec with Matchers with BeforeAndAfterAl
   }
 
   "Mandatory executor" should "release await in case of failure" in {
-    val mandatoryExecutor = new MandatoryExecutor
+    val mandatoryExecutor = new FirstFailLockableTaskExecutor
     val lock = new ReentrantLock(true)
 
     var cnt = 0
@@ -131,7 +131,7 @@ class MandatoryExecutorTest extends FlatSpec with Matchers with BeforeAndAfterAl
   }
 
   "Mandatory executor" should "await all tasks and throw exception on new submit's in case of shutdown" in {
-    val mandatoryExecutor = new MandatoryExecutor
+    val mandatoryExecutor = new FirstFailLockableTaskExecutor
     var cnt = 0
     val updateRunnable = new Runnable {
       override def run(): Unit = {
@@ -143,7 +143,7 @@ class MandatoryExecutorTest extends FlatSpec with Matchers with BeforeAndAfterAl
       mandatoryExecutor.submit(updateRunnable)
     }
     mandatoryExecutor.shutdownSafe()
-    intercept[MandatoryExecutorException] {
+    intercept[FirstFailLockableExecutorException] {
       mandatoryExecutor.submit(new Runnable {
         override def run(): Unit = ()
       })

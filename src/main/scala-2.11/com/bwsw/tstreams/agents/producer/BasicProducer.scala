@@ -6,7 +6,7 @@ import java.util.concurrent.CountDownLatch
 
 import com.bwsw.tstreams.agents.group.{Agent, CheckpointInfo, ProducerCheckpointInfo}
 import com.bwsw.tstreams.agents.producer.ProducerPolicies.ProducerPolicy
-import com.bwsw.tstreams.common.{MandatoryExecutor, ThreadSignalSleepVar}
+import com.bwsw.tstreams.common.{FirstFailLockableTaskExecutor, ThreadSignalSleepVar}
 import com.bwsw.tstreams.coordination.pubsub.SubscriberClient
 import com.bwsw.tstreams.coordination.pubsub.messages.{ProducerTopicMessage, ProducerTransactionStatus}
 import com.bwsw.tstreams.coordination.transactions.peertopeer.PeerToPeerAgent
@@ -99,7 +99,7 @@ class BasicProducer[USERTYPE](val name: String,
     */
   private val endKeepAliveThread = new ThreadSignalSleepVar[Boolean](10)
   private val txnKeepAliveThread = getTxnKeepAliveThread
-  val backendActivityService = new MandatoryExecutor
+  val backendActivityService = new FirstFailLockableTaskExecutor
 
   /**
     *
@@ -119,7 +119,7 @@ class BasicProducer[USERTYPE](val name: String,
             }
             backendActivityService.submit(new Runnable {
               override def run(): Unit = updateOpenedTxns()
-            })
+            }, Option(threadLock))
           }
         }
       }
@@ -134,11 +134,9 @@ class BasicProducer[USERTYPE](val name: String,
     */
   def updateOpenedTxns() = {
     logger.debug(s"Producer ${name} - scheduled for long lasting transactions")
-    threadLock.lock()
     openTransactionsMap.
       map { case (partition, txn) => txn }.
       foreach { x => if (!x.isClosed) x.updateTxnKeepAliveState() }
-    threadLock.unlock()
   }
 
   /**
@@ -314,14 +312,12 @@ class BasicProducer[USERTYPE](val name: String,
     * Stop this agent
     */
   def stop() = {
+
     threadLock.lock()
     if (isStop)
       throw new IllegalStateException(s"Producer ${this.name} is already stopped. Duplicate action.")
     isStop = true
     threadLock.unlock()
-
-    // stop provide master features to public
-    masterP2PAgent.stop()
 
     // stop update state of all open transactions
     endKeepAliveThread.signal(true)
@@ -329,6 +325,9 @@ class BasicProducer[USERTYPE](val name: String,
 
     // stop executor
     backendActivityService.shutdownSafe()
+
+    // stop provide master features to public
+    masterP2PAgent.stop()
 
     // stop function which works with subscribers
     subscriberClient.stop()
