@@ -83,7 +83,7 @@ class MandatoryExecutor {
     if (isShutdown.get()){
       throw new MandatoryExecutorException("executor is been shutdown")
     }
-    if (executor != null && !executor.isAlive){
+    if (executor != null && !isNotFailed.get()){
       throw new MandatoryExecutorException(failureMessage)
     }
     this.awaitInternal()
@@ -113,6 +113,14 @@ class MandatoryExecutor {
     isShutdown.set(true)
     this.awaitInternal()
   }
+
+  /**
+    * Executor state
+    * true if one of runnable's threw exception
+    * false else
+    */
+  def isFailed =
+    !isNotFailed.get()
 }
 
 /**
@@ -124,8 +132,3 @@ object MandatoryExecutor {
                                    isIgnorableIfExecutorFailed : Boolean,
                                    lock : Option[ReentrantLock])
 }
-
-
-
-
-

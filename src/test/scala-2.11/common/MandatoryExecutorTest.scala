@@ -1,5 +1,7 @@
 package common
 
+import java.util.concurrent.locks.ReentrantLock
+
 import com.bwsw.tstreams.common.MandatoryExecutor
 import com.bwsw.tstreams.common.MandatoryExecutor.MandatoryExecutorException
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
@@ -97,7 +99,34 @@ class MandatoryExecutorTest extends FlatSpec with Matchers with BeforeAndAfterAl
 
     cnt shouldBe 500
   }
+
+  "Mandatory executor" should "release lock of corrupted runnable" in {
+    val mandatoryExecutor = new MandatoryExecutor
+    val lock = new ReentrantLock(true)
+    mandatoryExecutor.submit(runnableWithException, Option(lock))
+    mandatoryExecutor.await()
+    lock.isLocked shouldBe false
+    mandatoryExecutor.isFailed shouldBe true
+  }
+
+  "Mandatory executor" should "release await in case of failure" in {
+    val mandatoryExecutor = new MandatoryExecutor
+    val lock = new ReentrantLock(true)
+
+    var cnt = 0
+    val updateRunnable = new Runnable {
+      override def run(): Unit = {
+        Thread.sleep(1000)
+        cnt += 1
+      }
+    }
+    0 until 5 foreach { _ =>
+      mandatoryExecutor.submit(updateRunnable, None)
+    }
+    mandatoryExecutor.submit(runnableWithException, Option(lock))
+    mandatoryExecutor.await()
+    cnt shouldBe 5
+    mandatoryExecutor.isFailed shouldBe true
+    lock.isLocked shouldBe false
+  }
 }
-
-
-//check that second cycle ok (release await), check locks
