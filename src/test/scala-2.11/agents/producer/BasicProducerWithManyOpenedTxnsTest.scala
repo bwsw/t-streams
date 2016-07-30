@@ -1,66 +1,39 @@
 package agents.producer
 
-import java.net.InetSocketAddress
-
 import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
-import com.bwsw.tstreams.agents.consumer.{BasicConsumer, BasicConsumerOptions}
-import com.bwsw.tstreams.agents.producer.InsertionType.SingleElementInsert
 import com.bwsw.tstreams.agents.producer._
-import com.bwsw.tstreams.coordination.transactions.transport.impl.TcpTransport
-import com.bwsw.tstreams.data.cassandra.CassandraStorageOptions
-import com.bwsw.tstreams.services.BasicStreamService
+import com.bwsw.tstreams.env.TSF_Dictionary
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import testutils._
 
 
 class BasicProducerWithManyOpenedTxnsTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
 
-  val cassandraOptions = new CassandraStorageOptions(List(new InetSocketAddress("localhost", 9042)), randomKeyspace)
+  f.setProperty(TSF_Dictionary.Stream.name,"test_stream").
+    setProperty(TSF_Dictionary.Stream.partitions,3).
+    setProperty(TSF_Dictionary.Stream.ttl, 60 * 10).
+    setProperty(TSF_Dictionary.Coordination.connection_timeout, 7).
+    setProperty(TSF_Dictionary.Coordination.ttl, 7).
+    setProperty(TSF_Dictionary.Producer.master_timeout, 5).
+    setProperty(TSF_Dictionary.Producer.Transaction.ttl, 6).
+    setProperty(TSF_Dictionary.Producer.Transaction.keep_alive, 2).
+    setProperty(TSF_Dictionary.Consumer.transaction_preload, 10).
+    setProperty(TSF_Dictionary.Consumer.data_preload, 10)
 
-  val stream = BasicStreamService.createStream(
-    streamName = "test_stream",
-    partitions = 3,
-    ttl = 60 * 10,
-    description = "unit_testing",
-    metadataStorage = metadataStorageFactory.getInstance(List(new InetSocketAddress("localhost", 9042)), randomKeyspace),
-    dataStorage = cassandraStorageFactory.getInstance(cassandraOptions))
+  val producer = f.getProducer[String](
+    name = "test_producer",
+    txnGenerator = LocalGeneratorCreator.getGen(),
+    converter = stringToArrayByteConverter,
+    partitions = List(0,1,2),
+    isLowPriority = false)
 
-  val agentSettings = new ProducerCoordinationOptions(
-    agentAddress = s"localhost:8000",
-    zkHosts = List(new InetSocketAddress("localhost", 2181)),
-    zkRootPath = "/unit",
-    zkSessionTimeout = 7000,
-    isLowPriorityToBeMaster = false,
-    transport = new TcpTransport,
-    transportTimeout = 5,
-    zkConnectionTimeout = 7)
-
-  val producerOptions = new BasicProducerOptions[String](transactionTTL = 10, transactionKeepAliveInterval = 2, RoundRobinPolicyCreator.getRoundRobinPolicy(stream, List(0, 1, 2)), SingleElementInsert, LocalGeneratorCreator.getGen(), agentSettings, stringToArrayByteConverter)
-
-  val producer = new BasicProducer("test_producer", stream, producerOptions)
-
-  val metadataStorageInstForConsumer = metadataStorageFactory.getInstance(
-    cassandraHosts = List(new InetSocketAddress("localhost", 9042)),
-    keyspace = randomKeyspace)
-
-  val cassandraInstForConsumer = cassandraStorageFactory.getInstance(cassandraOptions)
-
-  val streamForConsumer = BasicStreamService.loadStream[Array[Byte]](
-    streamName = "test_stream",
-    metadataStorage = metadataStorageInstForConsumer,
-    dataStorage = cassandraInstForConsumer)
-
-  val consumerOptions = new BasicConsumerOptions[Array[Byte], String](
-    transactionsPreload = 10,
-    dataPreload = 7,
-    consumerKeepAliveInterval = 5,
-    arrayByteToStringConverter,
-    RoundRobinPolicyCreator.getRoundRobinPolicy(streamForConsumer, List(0, 1, 2)),
-    Oldest,
-    LocalGeneratorCreator.getGen(),
-    useLastOffset = true)
-
-  val consumer = new BasicConsumer("test_consumer", streamForConsumer, consumerOptions)
+  val consumer = f.getConsumer[String](
+    name = "test_consumer",
+    txnGenerator = LocalGeneratorCreator.getGen(),
+    converter = arrayByteToStringConverter,
+    partitions = List(0,1,2),
+    offset = Oldest,
+    isUseLastOffset = true)
 
   "BasicProducer.newTransaction()" should "return BasicProducerTransaction instance" in {
     val data1 = (for (i <- 0 until 10) yield randomString).sorted
@@ -76,13 +49,52 @@ class BasicProducerWithManyOpenedTxnsTest extends FlatSpec with Matchers with Be
     txn2.checkpoint()
     txn1.checkpoint()
 
-    //TODO implement await method
-    Thread.sleep(2000)
-
     assert(consumer.getTransaction.get.getAll().sorted == data1)
     assert(consumer.getTransaction.get.getAll().sorted == data2)
     assert(consumer.getTransaction.get.getAll().sorted == data3)
     assert(consumer.getTransaction.isEmpty)
+  }
+
+  "BasicProducer.newTransaction()" should "return error if try to open more than 3 txns for 3 partitions if ProducerPolicies.errorIfOpened" in {
+    val txn1: BasicProducerTransaction[String] = producer.newTransaction(ProducerPolicies.errorIfOpened)
+    val txn2: BasicProducerTransaction[String] = producer.newTransaction(ProducerPolicies.errorIfOpened)
+    val txn3: BasicProducerTransaction[String] = producer.newTransaction(ProducerPolicies.errorIfOpened)
+    val r: Boolean = try {
+      val txn4: BasicProducerTransaction[String] = producer.newTransaction(ProducerPolicies.errorIfOpened)
+      false
+    } catch {
+      case e: IllegalStateException => true
+    }
+    r shouldBe true
+    producer.checkpoint()
+  }
+
+  "BasicProducer.newTransaction()" should "return ok if try to open more than 3 txns for 3 partitions if ProducerPolicies.checkpointIfOpened" in {
+    val txn1: BasicProducerTransaction[String] = producer.newTransaction(ProducerPolicies.errorIfOpened)
+    val txn2: BasicProducerTransaction[String] = producer.newTransaction(ProducerPolicies.errorIfOpened)
+    val txn3: BasicProducerTransaction[String] = producer.newTransaction(ProducerPolicies.errorIfOpened)
+    val r: Boolean = try {
+      val txn4: BasicProducerTransaction[String] = producer.newTransaction(ProducerPolicies.checkpointIfOpened)
+      true
+    } catch {
+      case e: IllegalStateException => false
+    }
+    r shouldBe true
+    producer.checkpoint()
+  }
+
+  "BasicProducer.newTransaction()" should "return ok if try to open more than 3 txns for 3 partitions if ProducerPolicies.cancelIfOpened" in {
+    val txn1: BasicProducerTransaction[String] = producer.newTransaction(ProducerPolicies.errorIfOpened)
+    val txn2: BasicProducerTransaction[String] = producer.newTransaction(ProducerPolicies.errorIfOpened)
+    val txn3: BasicProducerTransaction[String] = producer.newTransaction(ProducerPolicies.errorIfOpened)
+    val r: Boolean = try {
+      val txn4: BasicProducerTransaction[String] = producer.newTransaction(ProducerPolicies.cancelIfOpened)
+      true
+    } catch {
+      case e: IllegalStateException => false
+    }
+    r shouldBe true
+    producer.checkpoint()
   }
 
   override def afterAll(): Unit = {

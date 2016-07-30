@@ -16,7 +16,6 @@ import scala.collection.mutable.ListBuffer
 
 
 class AManyBasicProducersStreamingInOnePartitionAndConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
-
   var port = 8000
 
   "Some amount of producers and one consumer" should "producers - send transactions in one partition and consumer - retrieve them all" in {

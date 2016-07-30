@@ -13,8 +13,6 @@ import testutils._
 
 
 class ABasicProducerAndConsumerCheckpointTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
-  //creating keyspace, metadata
-
   val aerospikeInstForProducer = storageFactory.getInstance(aerospikeOptions)
   val aerospikeInstForConsumer = storageFactory.getInstance(aerospikeOptions)
 
