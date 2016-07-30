@@ -81,7 +81,7 @@ class MandatoryExecutorTest extends FlatSpec with Matchers with BeforeAndAfterAl
       }
     }
     0 until 1000 foreach { x =>
-      //submit correpted task
+      //submit corrupted task
       if (x === 500)
         mandatoryExecutor.submit(runnableWithException)
 
