@@ -12,7 +12,7 @@ import org.slf4j.LoggerFactory
   * Executor which provides sequence runnable
   * execution but on any failure exception will be thrown
   */
-class FirstFailLockableTaskExecutor extends Executor{
+class FirstFailLockableTaskExecutor extends Executor {
   private val logger = LoggerFactory.getLogger(this.getClass)
   private val awaitSignalVar = new ResettableCountDownLatch(0)
   private val queue = new LinkedBlockingQueue[FirstFailLockableExecutorTask]()
@@ -20,7 +20,7 @@ class FirstFailLockableTaskExecutor extends Executor{
   private val isRunning = new AtomicBoolean(true)
   private val isShutdown = new AtomicBoolean(false)
   private var executor : Thread = null
-  private var failureMessage : String = null
+  private var failureExc : Exception = null
   startExecutor()
 
   /**
@@ -46,7 +46,8 @@ class FirstFailLockableTaskExecutor extends Executor{
               logger.warn("[FIRSTFAILLOCKABLE EXECUTOR] task failure; stop executor")
               task.lock.foreach(x=>x.unlock())
               isNotFailed.set(false)
-              failureMessage = e.getMessage
+              failureExc = e
+              logger.error(failureExc.getMessage)
           }
         }
 
@@ -76,7 +77,7 @@ class FirstFailLockableTaskExecutor extends Executor{
       throw new FirstFailLockableExecutorException("runnable must be not null")
     }
     if (executor != null && !isNotFailed.get()){
-      throw new FirstFailLockableExecutorException(failureMessage)
+      throw new FirstFailLockableExecutorException(failureExc.getMessage)
     }
     queue.add(FirstFailLockableExecutorTask(runnable, isIgnorableIfExecutorFailed = true, lock))
   }
@@ -90,7 +91,7 @@ class FirstFailLockableTaskExecutor extends Executor{
       throw new FirstFailLockableExecutorException("executor is been shutdown")
     }
     if (executor != null && !isNotFailed.get()){
-      throw new FirstFailLockableExecutorException(failureMessage)
+      throw new FirstFailLockableExecutorException(failureExc.getMessage)
     }
     this.awaitInternal()
   }
