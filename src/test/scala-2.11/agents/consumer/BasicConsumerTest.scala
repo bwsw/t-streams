@@ -18,61 +18,31 @@ import testutils._
 
 class BasicConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
 
-  val aerospikeInstForProducer = storageFactory.getInstance(aerospikeOptions)
-  val aerospikeInstForConsumer = storageFactory.getInstance(aerospikeOptions)
-
   f.setProperty(TSF_Dictionary.Stream.name,"test_stream").
     setProperty(TSF_Dictionary.Stream.partitions,3).
-    setProperty(TSF_Dictionary.Stream.ttl, 60 * 10)
+    setProperty(TSF_Dictionary.Stream.ttl, 60 * 10).
+    setProperty(TSF_Dictionary.Coordination.connection_timeout, 7).
+    setProperty(TSF_Dictionary.Coordination.ttl, 7).
+    setProperty(TSF_Dictionary.Producer.master_timeout, 5).
+    setProperty(TSF_Dictionary.Producer.Transaction.ttl, 6).
+    setProperty(TSF_Dictionary.Producer.Transaction.keep_alive, 2).
+    setProperty(TSF_Dictionary.Consumer.transaction_preload, 10).
+    setProperty(TSF_Dictionary.Consumer.data_preload, 10)
 
-  val metadataStorageInstForProducer = metadataStorageFactory.getInstance(
-    cassandraHosts = List(new InetSocketAddress("localhost", 9042)),
-    keyspace = randomKeyspace)
-  val metadataStorageInstForConsumer = metadataStorageFactory.getInstance(
-    cassandraHosts = List(new InetSocketAddress("localhost", 9042)),
-    keyspace = randomKeyspace)
+  val consumer = f.getConsumer[String](
+    name = "test_consumer",
+    txnGenerator = LocalGeneratorCreator.getGen(),
+    converter = arrayByteToStringConverter,
+    partitions = List(0,1,2),
+    offset = Oldest,
+    isUseLastOffset = true)
 
-  val streamForProducer: BasicStream[Array[Byte]] = new BasicStream[Array[Byte]](
-    name = "test_stream",
-    partitions = 3,
-    metadataStorage = metadataStorageInstForProducer,
-    dataStorage = aerospikeInstForProducer,
-    ttl = 60 * 10,
-    description = "some_description")
-
-  val streamForConsumer = new BasicStream[Array[Byte]](
-    name = "test_stream",
-    partitions = 3,
-    metadataStorage = metadataStorageInstForConsumer,
-    dataStorage = aerospikeInstForConsumer,
-    ttl = 60 * 10,
-    description = "some_description")
-
-  val agentSettings = new ProducerCoordinationOptions(
-    agentAddress = s"localhost:8000",
-    zkHosts = List(new InetSocketAddress("localhost", 2181)),
-    zkRootPath = "/unit",
-    zkSessionTimeout = 7000,
-    isLowPriorityToBeMaster = false,
-    transport = new TcpTransport,
-    transportTimeout = 5,
-    zkConnectionTimeout = 7)
-
-  val producerOptions = new BasicProducerOptions[String](transactionTTL = 6, transactionKeepAliveInterval = 2, RoundRobinPolicyCreator.getRoundRobinPolicy(streamForProducer, List(0, 1, 2)), SingleElementInsert, LocalGeneratorCreator.getGen(), agentSettings, stringToArrayByteConverter)
-
-  val consumerOptions = new BasicConsumerOptions[Array[Byte], String](
-    transactionsPreload = 10,
-    dataPreload = 7,
-    consumerKeepAliveInterval = 5,
-    arrayByteToStringConverter,
-    RoundRobinPolicyCreator.getRoundRobinPolicy(streamForConsumer, List(0, 1, 2)),
-    Oldest,
-    LocalGeneratorCreator.getGen(),
-    useLastOffset = true)
-
-  val producer = new BasicProducer("test_producer", streamForProducer, producerOptions)
-  val consumer = new BasicConsumer("test_consumer", streamForConsumer, consumerOptions)
-  val connectedSession = cluster.connect(randomKeyspace)
+  val producer = f.getProducer[String](
+    name = "test_producer",
+    txnGenerator = LocalGeneratorCreator.getGen(),
+    converter = stringToArrayByteConverter,
+    partitions = List(0,1,2),
+    isLowPriority = false)
 
   "consumer.getTransaction" should "return None if nothing was sent" in {
     val txn = consumer.getTransaction
@@ -86,7 +56,6 @@ class BasicConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll wi
     val txnUuid = txn.getTxnUUID
     data.foreach(x => txn.send(x))
     txn.checkpoint()
-    Thread.sleep(2000)
     var checkVal = true
 
     val consumedTxn = consumer.getTransactionById(1, txnUuid).get
@@ -103,17 +72,13 @@ class BasicConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll wi
   }
 
   "consumer.getLastTransaction" should "return last closed transaction" in {
-    val commitEntity = new CommitEntity("commit_log", connectedSession)
+    val commitEntity = new CommitEntity("commit_log", cluster.connect(randomKeyspace))
     val txns = for (i <- 0 until 500) yield UUIDs.timeBased()
-
     val txn: UUID = txns.head
-
     commitEntity.commit("test_stream", 1, txns.head, 1, 120)
-
     txns.drop(1) foreach { x =>
       commitEntity.commit("test_stream", 1, x, -1, 120)
     }
-
     val retrievedTxnOpt: Option[BasicConsumerTransaction[Array[Byte], String]] = consumer.getLastTransaction(partition = 1)
     val retrievedTxn = retrievedTxnOpt.get
     retrievedTxn.getTxnUUID shouldEqual txn
