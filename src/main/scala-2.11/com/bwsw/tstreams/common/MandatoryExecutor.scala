@@ -162,6 +162,6 @@ class MandatoryExecutor extends Executor{
 object MandatoryExecutor {
   class MandatoryExecutorException(msg : String) extends Exception(msg)
   sealed case class MandatoryExecutorTask(runnable : Runnable,
-                                   isIgnorableIfExecutorFailed : Boolean,
-                                   lock : Option[ReentrantLock])
+                                          isIgnorableIfExecutorFailed : Boolean,
+                                          lock : Option[ReentrantLock])
 }
