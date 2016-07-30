@@ -13,9 +13,7 @@ import testutils._
 
 
 class CManyBasicProducersStreamingInManyPartitionsAndConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
-
   var port = 8000
-
 
   "Some amount of producers and one consumer" should "producers - send transactions in many partition" +
     " (each producer send each txn in only one partition without intersection " +

@@ -15,7 +15,6 @@ import scala.util.control.Breaks._
 
 
 class СBasicProducerAndConsumerLazyTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
-
   val cassandraInstForProducer1 = cassandraStorageFactory.getInstance(cassandraStorageOptions)
   val cassandraInstForProducer2 = cassandraStorageFactory.getInstance(cassandraStorageOptions)
   val cassandraInstForConsumer = cassandraStorageFactory.getInstance(cassandraStorageOptions)

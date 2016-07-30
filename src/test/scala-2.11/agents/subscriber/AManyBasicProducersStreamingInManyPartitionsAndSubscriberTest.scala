@@ -18,7 +18,6 @@ import scala.collection.mutable.ListBuffer
 
 
 class AManyBasicProducersStreamingInManyPartitionsAndSubscriberTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
-
   var port = 8000
 
   //creating keyspace, metadata

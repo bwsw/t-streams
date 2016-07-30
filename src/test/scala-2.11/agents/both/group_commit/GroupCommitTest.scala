@@ -14,7 +14,6 @@ import testutils._
 
 
 class GroupCommitTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
-
   val metadataStorage = metadataStorageFactory.getInstance(
     cassandraHosts = List(new InetSocketAddress("localhost", 9042)),
     keyspace = randomKeyspace)

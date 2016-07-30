@@ -2,6 +2,7 @@ package com.bwsw.tstreams.debug
 
 import org.slf4j.LoggerFactory
 
+//TODO reengineering
 /**
   * ONLY FOR DEBUGGING PURPOSES
   * Used for injecting events in runtime
