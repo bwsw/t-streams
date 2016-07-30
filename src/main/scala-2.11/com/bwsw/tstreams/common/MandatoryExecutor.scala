@@ -1,6 +1,7 @@
 package com.bwsw.tstreams.common
 
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.locks.ReentrantLock
 import java.util.concurrent.{CountDownLatch, LinkedBlockingQueue}
 
 import com.bwsw.ResettableCountDownLatch
@@ -13,7 +14,8 @@ import com.bwsw.tstreams.common.MandatoryExecutor.{MandatoryExecutorException, M
 class MandatoryExecutor {
   private val awaitSignalVar = new ResettableCountDownLatch(0)
   private val queue = new LinkedBlockingQueue[MandatoryExecutorTask]()
-  private val isRunning = new AtomicBoolean(true)
+  private val isNotFailed = new AtomicBoolean(true)
+  private val isShutdown = new AtomicBoolean(false)
   private var executor : Thread = null
   private var failureMessage : String = null
   startExecutor()
@@ -28,21 +30,18 @@ class MandatoryExecutor {
         latch.countDown()
 
         //main task handle cycle
-        while (isRunning.get()) {
+        while (isNotFailed.get()) {
           val task: MandatoryExecutorTask = queue.take()
-          if (task == null) {
-            awaitSignalVar.countDown()
-            awaitSignalVar.reset()
+          try {
+            task.lock.foreach(x=>x.lock())
+            task.runnable.run()
+            task.lock.foreach(x=>x.unlock())
           }
-          else {
-            try {
-              task.runnable.run()
-            }
-            catch {
-              case e: Exception =>
-                isRunning.set(false)
-                failureMessage = e.getMessage
-            }
+          catch {
+            case e: Exception =>
+              task.lock.foreach(x=>x.unlock())
+              isNotFailed.set(false)
+              failureMessage = e.getMessage
           }
         }
 
@@ -63,14 +62,17 @@ class MandatoryExecutor {
     * Submit new task to execute
     * @param runnable
     */
-  def submit(runnable : Runnable) = {
+  def submit(runnable : Runnable, lock : Option[ReentrantLock]) = {
+    if (isShutdown.get()){
+      throw new MandatoryExecutorException("executor is been shutdown")
+    }
     if (runnable == null) {
       throw new MandatoryExecutorException("runnable must be not null")
     }
-    if (executor != null && !executor.isAlive){
+    if (executor != null && isNotFailed.get()){
       throw new MandatoryExecutorException(failureMessage)
     }
-    queue.add(MandatoryExecutorTask(runnable, isIgnorableIfExecutorFailed = true))
+    queue.add(MandatoryExecutorTask(runnable, isIgnorableIfExecutorFailed = true, lock))
   }
 
   /**
@@ -78,16 +80,38 @@ class MandatoryExecutor {
     * Warn! this method is not thread safe
     */
   def await() : Unit = {
+    if (isShutdown.get()){
+      throw new MandatoryExecutorException("executor is been shutdown")
+    }
     if (executor != null && !executor.isAlive){
       throw new MandatoryExecutorException(failureMessage)
     }
+    this.awaitInternal()
+  }
+
+  /**
+    * Internal method for [[await]]
+    */
+  private def awaitInternal() : Unit = {
     awaitSignalVar.setValue(1)
-    queue.add(MandatoryExecutorTask(new Runnable {
+    val runnable = new Runnable {
       override def run(): Unit = {
         awaitSignalVar.countDown()
       }
-    }, isIgnorableIfExecutorFailed = false))
+    }
+    queue.add(MandatoryExecutorTask(runnable, isIgnorableIfExecutorFailed = false, lock = None))
     awaitSignalVar.await()
+  }
+
+  /**
+    * Safe shutdown this executor (wit)
+    */
+  def shutdownSafe() : Unit = {
+    if (isShutdown.get()){
+      throw new MandatoryExecutorException("executor is already been shutdown")
+    }
+    isShutdown.set(true)
+    this.awaitInternal()
   }
 }
 
@@ -96,7 +120,9 @@ class MandatoryExecutor {
   */
 object MandatoryExecutor {
   class MandatoryExecutorException(msg : String) extends Exception(msg)
-  case class MandatoryExecutorTask(runnable : Runnable, isIgnorableIfExecutorFailed : Boolean)
+  case class MandatoryExecutorTask(runnable : Runnable,
+                                   isIgnorableIfExecutorFailed : Boolean,
+                                   lock : Option[ReentrantLock])
 }
 
 
