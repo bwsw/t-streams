@@ -279,6 +279,11 @@ object TSF_Dictionary {
         */
       val thread_pool = "consumer.subscriber.thread-pool"
 
+      /**
+        * thread pool size
+        */
+      val polling_frequency_delay = "consumer.subscriber.polling-frequency-delay"
+
     }
 
   }
@@ -391,6 +396,11 @@ class TStreamsFactory(envname: String = "T-streams") {
   val Subscriber_thread_pool_min = 1
   val Subscriber_thread_pool_max = 64
   propertyMap += (TSF_Dictionary.Consumer.Subscriber.thread_pool -> Subscriber_thread_pool_default)
+
+  val Subscriber_polling_frequency_delay_default = 100
+  val Subscriber_polling_frequency_delay_min = 1
+  val Subscriber_polling_frequency_delay_max = 1000
+  propertyMap += (TSF_Dictionary.Consumer.Subscriber.polling_frequency_delay -> Subscriber_polling_frequency_delay_default)
 
 
   //metadata/data factories
@@ -793,6 +803,11 @@ class TStreamsFactory(envname: String = "T-streams") {
     pAssertIntRange(thread_pool,
       Subscriber_thread_pool_min, Subscriber_thread_pool_max)
 
+    val polling_frequency = pAsInt(TSF_Dictionary.Consumer.Subscriber.polling_frequency_delay, Subscriber_polling_frequency_delay_default)
+    pAssertIntRange(polling_frequency,
+      Subscriber_polling_frequency_delay_min, Subscriber_polling_frequency_delay_max)
+
+
     val coordinationOptions = new SubscriberCoordinationOptions(
       agentAddress = bind_host + ":" + bind_port,
       zkRootPath = root,
@@ -810,7 +825,8 @@ class TStreamsFactory(envname: String = "T-streams") {
       options = consumerOptions,
       subscriberCoordinationOptions = coordinationOptions,
       callBack = callback,
-      persistentQueuePath = queue_path)
+      persistentQueuePath = queue_path,
+      pollingFrequencyMaxDelay = polling_frequency)
 
     subscriberConsumer.start()
 

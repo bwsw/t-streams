@@ -51,12 +51,10 @@ class TStreamsFactoryTest extends FlatSpec with Matchers with BeforeAndAfterAll 
       offset = Oldest,
       callback = new BasicSubscriberCallback[String] {
         override def onEvent(subscriber: BasicSubscribingConsumer[String], partition: Int, transactionUuid: UUID): Unit = {}
-
-        override val pollingFrequency: Int = 1
       })
 
     sub != null shouldEqual true
-    Thread.sleep(2000) // TODO: fix it. Bug #31
+    Thread.sleep(1000) // TODO: fix it. Bug #31
     sub.stop()
   }
 

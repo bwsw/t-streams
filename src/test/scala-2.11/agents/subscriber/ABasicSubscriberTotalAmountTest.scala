@@ -72,7 +72,6 @@ class ABasicSubscriberTotalAmountTest extends FlatSpec with Matchers with Before
       lock.unlock()
     }
 
-    override val pollingFrequency: Int = 100
   }
   val path = randomString
 

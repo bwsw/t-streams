@@ -13,12 +13,4 @@ trait BasicSubscriberCallback[USERTYPE] {
     * @param subscriber      Subscriber ref
     */
   def onEvent(subscriber: BasicSubscribingConsumer[USERTYPE], partition: Int, transactionUuid: java.util.UUID): Unit
-
-  /**
-    * Frequency of handling incoming transactions in milliseconds
-    *
-    * If handling thread meet a opened transaction it will sleep [[pollingFrequency]]]
-    * else he will consume all closed transactions
-    */
-  val pollingFrequency: Int
 }
