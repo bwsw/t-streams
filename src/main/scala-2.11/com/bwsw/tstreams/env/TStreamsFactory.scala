@@ -611,15 +611,7 @@ class TStreamsFactory(envname: String = "T-streams") {
     val consumer_data_preload = pAsInt(TSF_Dictionary.Consumer.data_preload, Consumer_data_preload_default)
     pAssertIntRange(consumer_data_preload, Consumer_data_preload_min, Consumer_data_preload_max)
 
-    val consumerOptions = new BasicConsumerOptions[Array[Byte], USERTYPE](
-      transactionsPreload = consumer_transaction_preload,
-      dataPreload = consumer_data_preload,
-      consumerKeepAliveInterval = 5, // TODO: deprecated, unused, to remove
-      converter = converter,
-      readPolicy = RoundRobinPolicyCreator.getRoundRobinPolicy(stream, partitions),
-      offset = offset,
-      txnGenerator = txnGenerator,
-      useLastOffset = isUseLastOffset)
+    val consumerOptions = new BasicConsumerOptions[Array[Byte], USERTYPE](transactionsPreload = consumer_transaction_preload, dataPreload = consumer_data_preload, converter = converter, readPolicy = RoundRobinPolicyCreator.getRoundRobinPolicy(stream, partitions), offset = offset, txnGenerator = txnGenerator, useLastOffset = isUseLastOffset)
 
     consumerOptions
   }

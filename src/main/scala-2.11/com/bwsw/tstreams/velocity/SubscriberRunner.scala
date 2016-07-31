@@ -12,15 +12,7 @@ import com.bwsw.tstreams.agents.consumer.{BasicConsumerOptions, SubscriberCoordi
 object SubscriberRunner {
   def main(args: Array[String]) {
     import Common._
-    val consumerOptions = new BasicConsumerOptions[Array[Byte], String](
-      transactionsPreload = 10,
-      dataPreload = 7,
-      consumerKeepAliveInterval = 5,
-      arrayByteToStringConverter,
-      RoundRobinPolicyCreator.getRoundRobinPolicy(stream, List(0)),
-      Oldest,
-      LocalGeneratorCreator.getGen(),
-      useLastOffset = true)
+    val consumerOptions = new BasicConsumerOptions[Array[Byte], String](transactionsPreload = 10, dataPreload = 7, arrayByteToStringConverter, RoundRobinPolicyCreator.getRoundRobinPolicy(stream, List(0)), Oldest, LocalGeneratorCreator.getGen(), useLastOffset = true)
 
     val lock = new ReentrantLock()
     var cnt = 0

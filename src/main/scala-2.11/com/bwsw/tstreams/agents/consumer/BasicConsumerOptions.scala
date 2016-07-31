@@ -15,27 +15,17 @@ import com.bwsw.tstreams.policy.AbstractPolicy
   * @param transactionsPreload       Buffer size of preloaded transactions
   * @param dataPreload               Buffer size of preloaded data for each consumed transaction
   * @param readPolicy                Strategy how to read from concrete stream
-  * @param consumerKeepAliveInterval Concrete consumer update interval
   * @param txnGenerator              Generator for generating UUIDs
   * @tparam DATATYPE Storage type
   * @tparam USERTYPE User type
   */
-class BasicConsumerOptions[DATATYPE, USERTYPE](val transactionsPreload: Int,
-                                               val dataPreload: Int,
-                                               val consumerKeepAliveInterval: Int,
-                                               val converter: IConverter[DATATYPE, USERTYPE],
-                                               val readPolicy: AbstractPolicy,
-                                               val offset: IOffset,
-                                               val txnGenerator: IUUIDGenerator,
-                                               val useLastOffset: Boolean = true) {
+class BasicConsumerOptions[DATATYPE, USERTYPE](val transactionsPreload: Int, val dataPreload: Int, val converter: IConverter[DATATYPE, USERTYPE], val readPolicy: AbstractPolicy, val offset: IOffset, val txnGenerator: IUUIDGenerator, val useLastOffset: Boolean = true) {
   if (transactionsPreload < 1)
     throw new IllegalArgumentException("incorrect transactionPreload value, should be greater or equal one")
 
   if (dataPreload < 1)
     throw new IllegalArgumentException("incorrect transactionDataPreload value, should be greater or equal one")
 
-  if (consumerKeepAliveInterval < 1)
-    throw new IllegalArgumentException("incorrect consumerKeepAliveInterval value, should be greater or equal one")
 }
 
 /**
