@@ -1,6 +1,7 @@
 package testutils
 
 import java.io.File
+import java.lang.management.ManagementFactory
 import java.net.InetSocketAddress
 import java.util.UUID
 
@@ -30,9 +31,11 @@ trait TestUtils {
   def randomString = "ks_23157b9"
 
   val logger = LoggerFactory.getLogger(this.getClass)
+  val uptime = ManagementFactory.getRuntimeMXBean.getStartTime
 
   logger.info("-------------------------------------------------------")
   logger.info("Test suite " + this.getClass.toString + " started")
+  logger.info("Test Suite uptime is " + (uptime/1000).toString + " seconds")
   logger.info("-------------------------------------------------------")
 
 
