@@ -828,8 +828,6 @@ class TStreamsFactory(envname: String = "T-streams") {
       persistentQueuePath = queue_path,
       pollingFrequencyMaxDelay = polling_frequency)
 
-    subscriberConsumer.start()
-
     lock.unlock()
 
     subscriberConsumer

@@ -58,6 +58,7 @@ class BasicSubscribingConsumer[USERTYPE](name: String,
     subscriberCoordinationOptions.threadPoolAmount
 
   logger.info("Will start " + poolSize + " executors to serve master and asynchronous activity.")
+  logger.info("Will do out of band polling every " + pollingFrequencyMaxDelay + "ms.")
 
   /**
     * Mapping partitions to executors index
