@@ -77,12 +77,12 @@ class BasicSubscribingConsumer[USERTYPE](name: String,
   /**
     * Manager for providing updates on transactions
     */
-  private val updateManager = new UpdateManager
+  private var updateManager: UpdateManager = null
 
   /**
     * Resolver for resolving pre/final commit's
     */
-  private val brokenTransactionsResolver = new BrokenTransactionsResolver(this)
+  private var brokenTransactionsResolver: BrokenTransactionsResolver = null
 
   /**
     * Start subscriber to consume new transactions
@@ -91,6 +91,9 @@ class BasicSubscribingConsumer[USERTYPE](name: String,
     if (isStarted)
       throw new IllegalStateException("subscriber already started")
     isStarted = true
+
+    updateManager = new UpdateManager
+    brokenTransactionsResolver =  new BrokenTransactionsResolver(this)
 
     // TODO: why it can be stopped, why reconstruct?
     if (coordinator.isStoped) {

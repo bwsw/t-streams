@@ -30,8 +30,8 @@ class ABasicSubscriberAfterCommitFailureTest extends FlatSpec with Matchers
     setProperty(TSF_Dictionary.Coordination.connection_timeout, 7).
     setProperty(TSF_Dictionary.Coordination.ttl, 7).
     setProperty(TSF_Dictionary.Producer.master_timeout, 5).
-    setProperty(TSF_Dictionary.Producer.Transaction.ttl, 6).
-    setProperty(TSF_Dictionary.Producer.Transaction.keep_alive, 2).
+    setProperty(TSF_Dictionary.Producer.Transaction.ttl, 3).
+    setProperty(TSF_Dictionary.Producer.Transaction.keep_alive, 1).
     setProperty(TSF_Dictionary.Consumer.transaction_preload, 10).
     setProperty(TSF_Dictionary.Consumer.data_preload, 10)
 
@@ -97,7 +97,6 @@ class ABasicSubscriberAfterCommitFailureTest extends FlatSpec with Matchers
     callback = callback,
     offset = Oldest,
     isUseLastOffset = true)
-
 
   "subscribe consumer" should "retrieve all sent messages" in {
 
