@@ -30,7 +30,7 @@ class BasicSubscribingConsumer[USERTYPE](name: String,
   /**
     * Indicate started or not this subscriber
     */
-  private var isStarted = false
+  //private var isStarted = false
   private val logger = LoggerFactory.getLogger(this.getClass)
 
   /**
@@ -87,10 +87,14 @@ class BasicSubscribingConsumer[USERTYPE](name: String,
   /**
     * Start subscriber to consume new transactions
     */
-  def start() = {
-    if (isStarted)
-      throw new IllegalStateException("subscriber already started")
-    isStarted = true
+  override def start(): Unit = {
+    if (isStarted.get())
+      throw new IllegalStateException("Subscriber already started")
+
+    getThreadLock().lock()
+    super.start()
+    isStarted.set(false)
+    getThreadLock().unlock()
 
     updateManager = new UpdateManager
     brokenTransactionsResolver =  new BrokenTransactionsResolver(this)
@@ -155,8 +159,6 @@ class BasicSubscribingConsumer[USERTYPE](name: String,
         transactionsRelay.consumeTransactionsLessOrEqualThan(
           leftBorder = currentOffsets(partition),
           rightBorder = lastTransactionOpt.get.getTxnUUID)
-      } else {
-        //TODO: what behaviour
       }
 
       transactionsRelay.notifyProducersAndStartListen()
@@ -172,6 +174,7 @@ class BasicSubscribingConsumer[USERTYPE](name: String,
     }
 
     streamLock.unlock()
+    isStarted.set(true)
   }
 
   def resolveLastTxn(partition: Int): Option[BasicConsumerTransaction[USERTYPE]] = {
@@ -188,10 +191,10 @@ class BasicSubscribingConsumer[USERTYPE](name: String,
   /**
     * Stop subscriber
     */
-  def stop() = {
-    if (!isStarted)
-      throw new IllegalStateException("subscriber is not started")
-    isStarted = false
+  override def stop() = {
+    if (!isStarted.get())
+      throw new IllegalStateException("Subscriber is not started")
+    isStarted.set(false)
     updateManager.stopUpdate()
     if (executors != null) {
       executors.foreach(x => x._2.shutdown())

@@ -85,7 +85,7 @@ class СBasicProducerAndConsumerLazyTest extends FlatSpec with Matchers with Bef
   val producer1 = new BasicProducer("test_producer", streamForProducer1, producerOptions1)
   val producer2 = new BasicProducer("test_producer", streamForProducer2, producerOptions2)
   val consumer = new BasicConsumer("test_consumer", streamForConsumer, consumerOptions)
-
+  consumer.start
 
   "two producers, consumer" should "first producer - generate transactions lazily, second producer - generate transactions faster" +
     " than the first one but with pause at the very beginning, consumer - retrieve all transactions which was sent" in {

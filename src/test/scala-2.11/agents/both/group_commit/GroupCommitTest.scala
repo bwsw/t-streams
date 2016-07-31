@@ -51,6 +51,7 @@ class GroupCommitTest extends FlatSpec with Matchers with BeforeAndAfterAll with
 
   val producer = new BasicProducer("test_producer", streamForProducer, producerOptions)
   var consumer = new BasicConsumer("test_consumer", streamForConsumer, consumerOptions)
+  consumer.start
 
   "Group commit" should "checkpoint all AgentsGroup state" in {
     val group = new CheckpointGroup()
@@ -78,6 +79,7 @@ class GroupCommitTest extends FlatSpec with Matchers with BeforeAndAfterAll with
       ttl = 60 * 10,
       description = "some_description")
     consumer = new BasicConsumer("test_consumer", newStreamForConsumer, consumerOptions)
+    consumer.start
     //assert that the second transaction was closed and consumer offsets was moved
     assert(consumer.getTransaction.get.getAll().head == "info2")
   }

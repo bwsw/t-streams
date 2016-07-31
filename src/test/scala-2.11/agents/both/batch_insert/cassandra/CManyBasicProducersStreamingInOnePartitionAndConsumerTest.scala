@@ -45,6 +45,7 @@ class CManyBasicProducersStreamingInOnePartitionAndConsumerTest extends FlatSpec
     var checkVal = true
 
     val consumer = new BasicConsumer("test_consumer", streamInst, consumerOptions)
+    consumer.start
 
     val consumerThread = new Thread(
       new Runnable {
