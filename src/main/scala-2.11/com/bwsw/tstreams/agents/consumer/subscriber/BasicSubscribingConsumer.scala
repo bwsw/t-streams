@@ -17,20 +17,20 @@ import org.slf4j.LoggerFactory
   * @param options             Basic consumer options
   * @param persistentQueuePath Local path for queue which maintain transactions that already exist
   *                            and new incoming transactions
-  * @tparam DATATYPE Storage data type
   * @tparam USERTYPE User data type
   */
-class BasicSubscribingConsumer[DATATYPE, USERTYPE](name: String,
-                                                   stream: BasicStream[DATATYPE],
-                                                   options: BasicConsumerOptions[DATATYPE, USERTYPE],
-                                                   subscriberCoordinationOptions: SubscriberCoordinationOptions,
-                                                   callBack: BasicSubscriberCallback[DATATYPE, USERTYPE],
-                                                   persistentQueuePath: String)
-  extends BasicConsumer[DATATYPE, USERTYPE](name, stream, options) {
+class BasicSubscribingConsumer[USERTYPE](name: String,
+                                         stream: BasicStream[Array[Byte]],
+                                         options: BasicConsumerOptions[USERTYPE],
+                                         subscriberCoordinationOptions: SubscriberCoordinationOptions,
+                                         callBack: BasicSubscriberCallback[USERTYPE],
+                                         persistentQueuePath: String,
+                                         pollingFrequencyMaxDelay: Int = 100)
+  extends BasicConsumer[USERTYPE](name, stream, options) {
   /**
     * Indicate started or not this subscriber
     */
-  private var isStarted = false
+  //private var isStarted = false
   private val logger = LoggerFactory.getLogger(this.getClass)
 
   /**
@@ -58,6 +58,7 @@ class BasicSubscribingConsumer[DATATYPE, USERTYPE](name: String,
     subscriberCoordinationOptions.threadPoolAmount
 
   logger.info("Will start " + poolSize + " executors to serve master and asynchronous activity.")
+  logger.info("Will do out of band polling every " + pollingFrequencyMaxDelay + "ms.")
 
   /**
     * Mapping partitions to executors index
@@ -71,25 +72,30 @@ class BasicSubscribingConsumer[DATATYPE, USERTYPE](name: String,
     * Executors for each partition to handle transactions flow
     */
   private val executors: scala.collection.mutable.Map[Int, ExecutorService] =
-    scala.collection.mutable.Map[Int, ExecutorService]()
+  scala.collection.mutable.Map[Int, ExecutorService]()
 
   /**
     * Manager for providing updates on transactions
     */
-  private val updateManager = new UpdateManager
+  private var updateManager: UpdateManager = null
 
   /**
     * Resolver for resolving pre/final commit's
     */
-  private val brokenTransactionsResolver = new BrokenTransactionsResolver(this)
+  private var brokenTransactionsResolver: BrokenTransactionsResolver = null
 
   /**
     * Start subscriber to consume new transactions
     */
-  def start() = {
-    if (isStarted)
-      throw new IllegalStateException("subscriber already started")
-    isStarted = true
+  override def start(): Unit = {
+    if (isStarted.get())
+      throw new IllegalStateException("Subscriber already started")
+
+    getThreadLock().lock()
+    super.start()
+
+    updateManager = new UpdateManager
+    brokenTransactionsResolver =  new BrokenTransactionsResolver(this)
 
     // TODO: why it can be stopped, why reconstruct?
     if (coordinator.isStoped) {
@@ -112,7 +118,7 @@ class BasicSubscribingConsumer[DATATYPE, USERTYPE](name: String,
 
     coordinator.initSynchronization(stream.getName, usedPartitions)
     coordinator.startListen()
-    updateManager.startUpdate(callBack.pollingFrequency)
+    updateManager.startUpdate(pollingFrequencyMaxDelay)
     val uniquePrefix = UUID.randomUUID()
 
     usedPartitions foreach { partition =>
@@ -151,8 +157,6 @@ class BasicSubscribingConsumer[DATATYPE, USERTYPE](name: String,
         transactionsRelay.consumeTransactionsLessOrEqualThan(
           leftBorder = currentOffsets(partition),
           rightBorder = lastTransactionOpt.get.getTxnUUID)
-      } else {
-        //TODO: what behaviour
       }
 
       transactionsRelay.notifyProducersAndStartListen()
@@ -168,11 +172,13 @@ class BasicSubscribingConsumer[DATATYPE, USERTYPE](name: String,
     }
 
     streamLock.unlock()
+    getThreadLock().unlock()
+    isStarted.set(true)
   }
 
-  def resolveLastTxn(partition: Int): Option[BasicConsumerTransaction[DATATYPE, USERTYPE]] = {
-    val txn: Option[BasicConsumerTransaction[DATATYPE, USERTYPE]] = getLastTransaction(partition)
-    txn.fold[Option[BasicConsumerTransaction[DATATYPE, USERTYPE]]](None) { txn =>
+  def resolveLastTxn(partition: Int): Option[BasicConsumerTransaction[USERTYPE]] = {
+    val txn: Option[BasicConsumerTransaction[USERTYPE]] = getLastTransaction(partition)
+    txn.fold[Option[BasicConsumerTransaction[USERTYPE]]](None) { txn =>
       if (txn.getTxnUUID.timestamp() <= currentOffsets(partition).timestamp()) {
         None
       } else {
@@ -184,10 +190,10 @@ class BasicSubscribingConsumer[DATATYPE, USERTYPE](name: String,
   /**
     * Stop subscriber
     */
-  def stop() = {
-    if (!isStarted)
-      throw new IllegalStateException("subscriber is not started")
-    isStarted = false
+  override def stop() = {
+    if (!isStarted.get())
+      throw new IllegalStateException("Subscriber is not started")
+    isStarted.set(false)
     updateManager.stopUpdate()
     if (executors != null) {
       executors.foreach(x => x._2.shutdown())

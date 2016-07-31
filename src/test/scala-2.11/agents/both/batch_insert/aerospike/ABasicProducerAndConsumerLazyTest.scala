@@ -80,20 +80,12 @@ class ABasicProducerAndConsumerLazyTest extends FlatSpec with Matchers with Befo
 
   val producerOptions2 = new BasicProducerOptions[String](transactionTTL = 6, transactionKeepAliveInterval = 2, RoundRobinPolicyCreator.getRoundRobinPolicy(streamForProducer2, List(0, 1, 2)), BatchInsert(batchSizeTestVal), LocalGeneratorCreator.getGen(), agentSettings2, stringToArrayByteConverter)
 
-  val consumerOptions = new BasicConsumerOptions[Array[Byte], String](
-    transactionsPreload = 10,
-    dataPreload = 7,
-    consumerKeepAliveInterval = 5,
-    arrayByteToStringConverter,
-    RoundRobinPolicyCreator.getRoundRobinPolicy(streamForConsumer, List(0, 1, 2)),
-    Oldest,
-    LocalGeneratorCreator.getGen(),
-    useLastOffset = false)
+  val consumerOptions = new BasicConsumerOptions[String](transactionsPreload = 10, dataPreload = 7, arrayByteToStringConverter, RoundRobinPolicyCreator.getRoundRobinPolicy(streamForConsumer, List(0, 1, 2)), Oldest, LocalGeneratorCreator.getGen(), useLastOffset = false)
 
   val producer1 = new BasicProducer("test_producer", streamForProducer1, producerOptions1)
   val producer2 = new BasicProducer("test_producer", streamForProducer2, producerOptions2)
   val consumer = new BasicConsumer("test_consumer", streamForConsumer, consumerOptions)
-
+  consumer.start()
 
   "two producers, consumer" should "first producer - generate transactions lazily, second producer - generate transactions faster" +
     " than the first one but with pause at the very beginning, consumer - retrieve all transactions which was sent" in {

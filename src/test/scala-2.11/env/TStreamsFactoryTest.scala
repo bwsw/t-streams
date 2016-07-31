@@ -49,14 +49,13 @@ class TStreamsFactoryTest extends FlatSpec with Matchers with BeforeAndAfterAll 
       converter = new ArrayByteToStringConverter,
       partitions = List(0),
       offset = Oldest,
-      callback = new BasicSubscriberCallback[Array[Byte], String] {
-        override def onEvent(subscriber: BasicSubscribingConsumer[Array[Byte], String], partition: Int, transactionUuid: UUID): Unit = {}
-
-        override val pollingFrequency: Int = 1
+      callback = new BasicSubscriberCallback[String] {
+        override def onEvent(subscriber: BasicSubscribingConsumer[String], partition: Int, transactionUuid: UUID): Unit = {}
       })
 
     sub != null shouldEqual true
-    Thread.sleep(2000) // TODO: fix it. Bug #31
+    sub.start()
+    Thread.sleep(1000) // TODO: fix it. Bug #31
     sub.stop()
   }
 

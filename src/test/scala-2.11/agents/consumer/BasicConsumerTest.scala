@@ -39,6 +39,7 @@ class BasicConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll wi
     isLowPriority = false)
 
   "consumer.getTransaction" should "return None if nothing was sent" in {
+    consumer.start
     val txn = consumer.getTransaction
     txn.isEmpty shouldBe true
   }
@@ -73,7 +74,7 @@ class BasicConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll wi
     txns.drop(1) foreach { x =>
       commitEntity.commit("test_stream", 1, x, -1, 120)
     }
-    val retrievedTxnOpt: Option[BasicConsumerTransaction[Array[Byte], String]] = consumer.getLastTransaction(partition = 1)
+    val retrievedTxnOpt: Option[BasicConsumerTransaction[String]] = consumer.getLastTransaction(partition = 1)
     val retrievedTxn = retrievedTxnOpt.get
     retrievedTxn.getTxnUUID shouldEqual txn
   }

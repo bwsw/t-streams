@@ -400,6 +400,7 @@ class PeerToPeerAgent(agentAddress : String,
    * Stop this agent
    */
   def stop() = {
+    externalAccessLock.lock()
     isRunning.set(false)
     zkConnectionValidator.join()
     //to avoid infinite polling block
@@ -407,6 +408,7 @@ class PeerToPeerAgent(agentAddress : String,
     messageHandler.join()
     transport.unbindLocalAddress()
     zkService.close()
+    externalAccessLock.unlock()
   }
 
   /**

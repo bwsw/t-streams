@@ -47,18 +47,11 @@ class GroupCommitTest extends FlatSpec with Matchers with BeforeAndAfterAll with
 
   val producerOptions = new BasicProducerOptions[String](transactionTTL = 6, transactionKeepAliveInterval = 2, RoundRobinPolicyCreator.getRoundRobinPolicy(streamForProducer, List(0, 1, 2)), SingleElementInsert, LocalGeneratorCreator.getGen(), agentSettings, stringToArrayByteConverter)
 
-  val consumerOptions = new BasicConsumerOptions[Array[Byte], String](
-    transactionsPreload = 10,
-    dataPreload = 7,
-    consumerKeepAliveInterval = 5,
-    arrayByteToStringConverter,
-    RoundRobinPolicyCreator.getRoundRobinPolicy(streamForConsumer, List(0, 1, 2)),
-    Oldest,
-    LocalGeneratorCreator.getGen(),
-    useLastOffset = true)
+  val consumerOptions = new BasicConsumerOptions[String](transactionsPreload = 10, dataPreload = 7, arrayByteToStringConverter, RoundRobinPolicyCreator.getRoundRobinPolicy(streamForConsumer, List(0, 1, 2)), Oldest, LocalGeneratorCreator.getGen(), useLastOffset = true)
 
   val producer = new BasicProducer("test_producer", streamForProducer, producerOptions)
   var consumer = new BasicConsumer("test_consumer", streamForConsumer, consumerOptions)
+  consumer.start
 
   "Group commit" should "checkpoint all AgentsGroup state" in {
     val group = new CheckpointGroup()
@@ -86,6 +79,7 @@ class GroupCommitTest extends FlatSpec with Matchers with BeforeAndAfterAll with
       ttl = 60 * 10,
       description = "some_description")
     consumer = new BasicConsumer("test_consumer", newStreamForConsumer, consumerOptions)
+    consumer.start
     //assert that the second transaction was closed and consumer offsets was moved
     assert(consumer.getTransaction.get.getAll().head == "info2")
   }

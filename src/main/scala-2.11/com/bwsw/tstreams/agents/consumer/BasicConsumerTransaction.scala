@@ -12,10 +12,9 @@ import scala.collection.mutable
   * @param consumer    Consumer which this transaction was created by
   * @param partition   Partition for this transaction to consume
   * @param transaction Transaction time and total packets in it
-  * @tparam DATATYPE Storage data type
   * @tparam USERTYPE User data type
   */
-class BasicConsumerTransaction[DATATYPE, USERTYPE](consumer: BasicConsumer[DATATYPE, USERTYPE],
+class BasicConsumerTransaction[USERTYPE](consumer: BasicConsumer[USERTYPE],
                                                    partition: Int,
                                                    transaction: TransactionSettings) {
 
@@ -37,7 +36,7 @@ class BasicConsumerTransaction[DATATYPE, USERTYPE](consumer: BasicConsumer[DATAT
   /**
     * Buffer to preload some amount of current transaction data
     */
-  private var buffer: scala.collection.mutable.Queue[DATATYPE] = null
+  private var buffer: scala.collection.mutable.Queue[Array[Byte]] = null
 
   /**
     * @return Next piece of data from current transaction
@@ -76,7 +75,7 @@ class BasicConsumerTransaction[DATATYPE, USERTYPE](consumer: BasicConsumer[DATAT
     * @return All consumed transaction
     */
   def getAll(): List[USERTYPE] = {
-    val data: mutable.Queue[DATATYPE] = consumer.stream.dataStorage.get(consumer.stream.getName, partition, transaction.txnUuid, cnt, transaction.totalItems - 1)
+    val data: mutable.Queue[Array[Byte]] = consumer.stream.dataStorage.get(consumer.stream.getName, partition, transaction.txnUuid, cnt, transaction.totalItems - 1)
     data.toList.map(x => consumer.options.converter.convert(x))
   }
 

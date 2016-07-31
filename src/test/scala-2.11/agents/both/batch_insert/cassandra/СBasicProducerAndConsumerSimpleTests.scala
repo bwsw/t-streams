@@ -58,18 +58,11 @@ class СBasicProducerAndConsumerSimpleTests extends FlatSpec with Matchers with 
   //producer/consumer options
   val producerOptions = new BasicProducerOptions[String](transactionTTL = 6, transactionKeepAliveInterval = 2, RoundRobinPolicyCreator.getRoundRobinPolicy(streamForProducer, List(0, 1, 2)), BatchInsert(batchSizeTestVal), LocalGeneratorCreator.getGen(), agentSettings, stringToArrayByteConverter)
 
-  val consumerOptions = new BasicConsumerOptions[Array[Byte], String](
-    transactionsPreload = 10,
-    dataPreload = 7,
-    consumerKeepAliveInterval = 5,
-    arrayByteToStringConverter,
-    RoundRobinPolicyCreator.getRoundRobinPolicy(streamForConsumer, List(0, 1, 2)),
-    Oldest,
-    LocalGeneratorCreator.getGen(),
-    useLastOffset = true)
+  val consumerOptions = new BasicConsumerOptions[String](transactionsPreload = 10, dataPreload = 7, arrayByteToStringConverter, RoundRobinPolicyCreator.getRoundRobinPolicy(streamForConsumer, List(0, 1, 2)), Oldest, LocalGeneratorCreator.getGen(), useLastOffset = true)
 
   val producer = new BasicProducer("test_producer", streamForProducer, producerOptions)
   val consumer = new BasicConsumer("test_consumer", streamForConsumer, consumerOptions)
+  consumer.start
 
   "producer, consumer" should "producer - generate one transaction, consumer - retrieve it with getAll method" in {
     CassandraHelper.clearMetadataTables(session, randomKeyspace)
@@ -180,7 +173,7 @@ class СBasicProducerAndConsumerSimpleTests extends FlatSpec with Matchers with 
       def run() {
         breakable {
           while (true) {
-            val consumedTxn: Option[BasicConsumerTransaction[Array[Byte], String]] = consumer.getTransaction
+            val consumedTxn: Option[BasicConsumerTransaction[String]] = consumer.getTransaction
             if (consumedTxn.isDefined) {
               checkVal &= consumedTxn.get.getAll().sorted == sendData
               break()

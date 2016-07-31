@@ -34,6 +34,7 @@ class BasicProducerWithManyOpenedTxnsTest extends FlatSpec with Matchers with Be
     partitions = List(0,1,2),
     offset = Oldest,
     isUseLastOffset = true)
+  consumer.start
 
   "BasicProducer.newTransaction()" should "return BasicProducerTransaction instance" in {
     val data1 = (for (i <- 0 until 10) yield randomString).sorted

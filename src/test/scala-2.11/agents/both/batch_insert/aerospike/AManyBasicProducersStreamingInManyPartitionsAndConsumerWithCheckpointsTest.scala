@@ -48,21 +48,14 @@ class AManyBasicProducersStreamingInManyPartitionsAndConsumerWithCheckpointsTest
 
     val streamInst = getStream(totalPartitions)
 
-    val consumerOptions = new BasicConsumerOptions[Array[Byte], String](
-      transactionsPreload = 10,
-      dataPreload = 7,
-      consumerKeepAliveInterval = 5,
-      arrayByteToStringConverter,
-      RoundRobinPolicyCreator.getRoundRobinPolicy(
-        usedPartitions = (0 until totalPartitions).toList,
-        stream = streamInst),
-      Oldest,
-      LocalGeneratorCreator.getGen(),
-      useLastOffset = true)
+    val consumerOptions = new BasicConsumerOptions[String](transactionsPreload = 10, dataPreload = 7, arrayByteToStringConverter, RoundRobinPolicyCreator.getRoundRobinPolicy(
+            usedPartitions = (0 until totalPartitions).toList,
+            stream = streamInst), Oldest, LocalGeneratorCreator.getGen(), useLastOffset = true)
 
     var checkVal = true
 
     var consumer = new BasicConsumer("test_consumer", streamInst, consumerOptions)
+    consumer.start
 
     val consumerThread = new Thread(
       new Runnable {
@@ -84,6 +77,7 @@ class AManyBasicProducersStreamingInManyPartitionsAndConsumerWithCheckpointsTest
                 description = "some_description")
 
               consumer = new BasicConsumer("test_consumer", newStreamForConsumer, consumerOptions)
+              consumer.start
               Thread.sleep(1000)
             }
 

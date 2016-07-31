@@ -279,6 +279,11 @@ object TSF_Dictionary {
         */
       val thread_pool = "consumer.subscriber.thread-pool"
 
+      /**
+        * thread pool size
+        */
+      val polling_frequency_delay = "consumer.subscriber.polling-frequency-delay"
+
     }
 
   }
@@ -391,6 +396,11 @@ class TStreamsFactory(envname: String = "T-streams") {
   val Subscriber_thread_pool_min = 1
   val Subscriber_thread_pool_max = 64
   propertyMap += (TSF_Dictionary.Consumer.Subscriber.thread_pool -> Subscriber_thread_pool_default)
+
+  val Subscriber_polling_frequency_delay_default = 100
+  val Subscriber_polling_frequency_delay_min = 1
+  val Subscriber_polling_frequency_delay_max = 1000
+  propertyMap += (TSF_Dictionary.Consumer.Subscriber.polling_frequency_delay -> Subscriber_polling_frequency_delay_default)
 
 
   //metadata/data factories
@@ -604,22 +614,14 @@ class TStreamsFactory(envname: String = "T-streams") {
                                                 converter: IConverter[Array[Byte], USERTYPE],
                                                 txnGenerator: IUUIDGenerator,
                                                 offset: IOffset,
-                                                isUseLastOffset: Boolean = true): BasicConsumerOptions[Array[Byte], USERTYPE] = {
+                                                isUseLastOffset: Boolean = true): BasicConsumerOptions[USERTYPE] = {
     val consumer_transaction_preload = pAsInt(TSF_Dictionary.Consumer.transaction_preload, Consumer_transaction_preload_default)
     pAssertIntRange(consumer_transaction_preload, Consumer_transaction_preload_min, Consumer_transaction_preload_max)
 
     val consumer_data_preload = pAsInt(TSF_Dictionary.Consumer.data_preload, Consumer_data_preload_default)
     pAssertIntRange(consumer_data_preload, Consumer_data_preload_min, Consumer_data_preload_max)
 
-    val consumerOptions = new BasicConsumerOptions[Array[Byte], USERTYPE](
-      transactionsPreload = consumer_transaction_preload,
-      dataPreload = consumer_data_preload,
-      consumerKeepAliveInterval = 5, // TODO: deprecated, unused, to remove
-      converter = converter,
-      readPolicy = RoundRobinPolicyCreator.getRoundRobinPolicy(stream, partitions),
-      offset = offset,
-      txnGenerator = txnGenerator,
-      useLastOffset = isUseLastOffset)
+    val consumerOptions = new BasicConsumerOptions[USERTYPE](transactionsPreload = consumer_transaction_preload, dataPreload = consumer_data_preload, converter = converter, readPolicy = RoundRobinPolicyCreator.getRoundRobinPolicy(stream, partitions), offset = offset, txnGenerator = txnGenerator, useLastOffset = isUseLastOffset)
 
     consumerOptions
   }
@@ -725,7 +727,7 @@ class TStreamsFactory(envname: String = "T-streams") {
                             partitions: List[Int],
                             offset: IOffset,
                             isUseLastOffset: Boolean = true
-                           ): BasicConsumer[Array[Byte], USERTYPE] = {
+                           ): BasicConsumer[USERTYPE] = {
 
     lock.lock()
 
@@ -742,7 +744,7 @@ class TStreamsFactory(envname: String = "T-streams") {
       offset = offset,
       isUseLastOffset = isUseLastOffset)
 
-    val consumer = new BasicConsumer(name, stream, consumerOptions) // TODO FIX: Stream is not required as argument for BasicConsumer - it's already in options
+    val consumer = new BasicConsumer(name, stream, consumerOptions)
     lock.unlock()
 
     consumer
@@ -762,10 +764,10 @@ class TStreamsFactory(envname: String = "T-streams") {
                               txnGenerator: IUUIDGenerator,
                               converter: IConverter[Array[Byte], USERTYPE],
                               partitions: List[Int],
-                              callback: BasicSubscriberCallback[Array[Byte], USERTYPE],
+                              callback: BasicSubscriberCallback[USERTYPE],
                               offset: IOffset,
                               isUseLastOffset: Boolean = true
-                             ): BasicSubscribingConsumer[Array[Byte], USERTYPE] = {
+                             ): BasicSubscribingConsumer[USERTYPE] = {
     lock.lock()
     if (isClosed)
       throw new IllegalStateException("TStreamsFactory is closed. This is the illegal usage of the object.")
@@ -801,6 +803,11 @@ class TStreamsFactory(envname: String = "T-streams") {
     pAssertIntRange(thread_pool,
       Subscriber_thread_pool_min, Subscriber_thread_pool_max)
 
+    val polling_frequency = pAsInt(TSF_Dictionary.Consumer.Subscriber.polling_frequency_delay, Subscriber_polling_frequency_delay_default)
+    pAssertIntRange(polling_frequency,
+      Subscriber_polling_frequency_delay_min, Subscriber_polling_frequency_delay_max)
+
+
     val coordinationOptions = new SubscriberCoordinationOptions(
       agentAddress = bind_host + ":" + bind_port,
       zkRootPath = root,
@@ -812,15 +819,14 @@ class TStreamsFactory(envname: String = "T-streams") {
     val queue_path = pAsString(TSF_Dictionary.Consumer.Subscriber.persistent_queue_path)
     assert(queue_path != null)
 
-    val subscriberConsumer = new BasicSubscribingConsumer[Array[Byte], USERTYPE](
+    val subscriberConsumer = new BasicSubscribingConsumer[USERTYPE](
       name = name,
-      stream = stream, // TODO FIX: Stream is not required as argument for BasicSubscribingConsumer - it's already in options
+      stream = stream,
       options = consumerOptions,
       subscriberCoordinationOptions = coordinationOptions,
       callBack = callback,
-      persistentQueuePath = queue_path)
-
-    subscriberConsumer.start()
+      persistentQueuePath = queue_path,
+      pollingFrequencyMaxDelay = polling_frequency)
 
     lock.unlock()
 

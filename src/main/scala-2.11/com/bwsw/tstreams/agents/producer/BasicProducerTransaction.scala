@@ -253,7 +253,7 @@ class BasicProducerTransaction[USERTYPE](transactionLock: ReentrantLock,
 
     closed = true
 
-    if(isSynchronous == false) {
+    if(!isSynchronous) {
       transactionLock.lock()
 
       txnOwner.backendActivityService.submit(new Runnable {

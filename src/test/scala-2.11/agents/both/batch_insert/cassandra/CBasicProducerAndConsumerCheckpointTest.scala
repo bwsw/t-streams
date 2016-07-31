@@ -54,19 +54,11 @@ class CBasicProducerAndConsumerCheckpointTest extends FlatSpec with Matchers wit
   //producer/consumer options
   val producerOptions = new BasicProducerOptions[String](transactionTTL = 6, transactionKeepAliveInterval = 2, RoundRobinPolicyCreator.getRoundRobinPolicy(streamForProducer, List(0, 1, 2)), BatchInsert(batchSizeTestVal), LocalGeneratorCreator.getGen(), agentSettings, stringToArrayByteConverter)
 
-  val consumerOptions = new BasicConsumerOptions[Array[Byte], String](
-    transactionsPreload = 10,
-    dataPreload = 7,
-    consumerKeepAliveInterval = 5,
-    arrayByteToStringConverter,
-    RoundRobinPolicyCreator.getRoundRobinPolicy(streamForConsumer, List(0, 1, 2)),
-    Oldest,
-    LocalGeneratorCreator.getGen(),
-    useLastOffset = true)
+  val consumerOptions = new BasicConsumerOptions[String](transactionsPreload = 10, dataPreload = 7, arrayByteToStringConverter, RoundRobinPolicyCreator.getRoundRobinPolicy(streamForConsumer, List(0, 1, 2)), Oldest, LocalGeneratorCreator.getGen(), useLastOffset = true)
 
   val producer = new BasicProducer("test_producer", streamForProducer, producerOptions)
   var consumer = new BasicConsumer("test_consumer", streamForConsumer, consumerOptions)
-
+  consumer.start
 
   "producer, consumer" should "producer - generate many transactions, consumer - retrieve all of them with reinitialization after some time" in {
     val dataToSend = (for (i <- 0 until 10) yield randomString).sorted
@@ -86,7 +78,7 @@ class CBasicProducerAndConsumerCheckpointTest extends FlatSpec with Matchers wit
     var checkVal = true
 
     (0 until firstPart) foreach { _ =>
-      val txn: BasicConsumerTransaction[Array[Byte], String] = consumer.getTransaction.get
+      val txn: BasicConsumerTransaction[String] = consumer.getTransaction.get
       val data = txn.getAll().sorted
       consumer.checkpoint()
       checkVal &= data == dataToSend
@@ -102,9 +94,10 @@ class CBasicProducerAndConsumerCheckpointTest extends FlatSpec with Matchers wit
 
     //reinitialization (should begin read from the latest checkpoint)
     consumer = new BasicConsumer("test_consumer", newStreamForConsumer, consumerOptions)
+    consumer.start
 
     (0 until secondPart) foreach { _ =>
-      val txn: BasicConsumerTransaction[Array[Byte], String] = consumer.getTransaction.get
+      val txn: BasicConsumerTransaction[String] = consumer.getTransaction.get
       val data = txn.getAll().sorted
       checkVal &= data == dataToSend
     }
