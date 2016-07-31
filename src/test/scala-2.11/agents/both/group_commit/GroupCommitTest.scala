@@ -47,7 +47,7 @@ class GroupCommitTest extends FlatSpec with Matchers with BeforeAndAfterAll with
 
   val producerOptions = new BasicProducerOptions[String](transactionTTL = 6, transactionKeepAliveInterval = 2, RoundRobinPolicyCreator.getRoundRobinPolicy(streamForProducer, List(0, 1, 2)), SingleElementInsert, LocalGeneratorCreator.getGen(), agentSettings, stringToArrayByteConverter)
 
-  val consumerOptions = new BasicConsumerOptions[Array[Byte], String](transactionsPreload = 10, dataPreload = 7, arrayByteToStringConverter, RoundRobinPolicyCreator.getRoundRobinPolicy(streamForConsumer, List(0, 1, 2)), Oldest, LocalGeneratorCreator.getGen(), useLastOffset = true)
+  val consumerOptions = new BasicConsumerOptions[String](transactionsPreload = 10, dataPreload = 7, arrayByteToStringConverter, RoundRobinPolicyCreator.getRoundRobinPolicy(streamForConsumer, List(0, 1, 2)), Oldest, LocalGeneratorCreator.getGen(), useLastOffset = true)
 
   val producer = new BasicProducer("test_producer", streamForProducer, producerOptions)
   var consumer = new BasicConsumer("test_consumer", streamForConsumer, consumerOptions)

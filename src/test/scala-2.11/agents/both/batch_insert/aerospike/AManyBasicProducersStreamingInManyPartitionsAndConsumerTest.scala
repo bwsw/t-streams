@@ -47,7 +47,7 @@ class AManyBasicProducersStreamingInManyPartitionsAndConsumerTest extends FlatSp
 
     val streamInst = getStream(totalPartitions)
 
-    val consumerOptions = new BasicConsumerOptions[Array[Byte], String](transactionsPreload = 10, dataPreload = 7, arrayByteToStringConverter, RoundRobinPolicyCreator.getRoundRobinPolicy(
+    val consumerOptions = new BasicConsumerOptions[String](transactionsPreload = 10, dataPreload = 7, arrayByteToStringConverter, RoundRobinPolicyCreator.getRoundRobinPolicy(
             usedPartitions = (0 until totalPartitions).toList,
             stream = streamInst), Oldest, LocalGeneratorCreator.getGen(), useLastOffset = false)
 

@@ -16,12 +16,11 @@ import org.slf4j.LoggerFactory
   * @param name    Name of consumer
   * @param stream  Stream from which to consume transactions
   * @param options Basic consumer options
-  * @tparam DATATYPE Storage data type
   * @tparam USERTYPE User data type
   */
-class BasicConsumer[DATATYPE, USERTYPE](val name: String,
-                                        val stream: BasicStream[DATATYPE],
-                                        val options: BasicConsumerOptions[DATATYPE, USERTYPE]) extends Agent {
+class BasicConsumer[USERTYPE](val name: String,
+                                        val stream: BasicStream[Array[Byte]],
+                                        val options: BasicConsumerOptions[USERTYPE]) extends Agent {
 
   stream.dataStorage.bind()
 
@@ -111,7 +110,7 @@ class BasicConsumer[DATATYPE, USERTYPE](val name: String,
     *
     * @return BasicConsumerTransaction or None
     */
-  private def getTxnOpt: Option[BasicConsumerTransaction[DATATYPE, USERTYPE]] = {
+  private def getTxnOpt: Option[BasicConsumerTransaction[USERTYPE]] = {
     if (options.readPolicy.isRoundFinished())
       return None
 
@@ -134,7 +133,7 @@ class BasicConsumer[DATATYPE, USERTYPE](val name: String,
       offsetsForCheckpoint(curPartition) = txn.txnUuid
       currentOffsets(curPartition) = txn.txnUuid
       transactionBuffer(curPartition).dequeue()
-      return Some(new BasicConsumerTransaction[DATATYPE, USERTYPE](this, curPartition, txn))
+      return Some(new BasicConsumerTransaction[USERTYPE](this, curPartition, txn))
     }
 
     val updatedTxnOpt: Option[TransactionSettings] = updateTransaction(txn.txnUuid, curPartition)
@@ -146,7 +145,7 @@ class BasicConsumer[DATATYPE, USERTYPE](val name: String,
         offsetsForCheckpoint(curPartition) = txn.txnUuid
         currentOffsets(curPartition) = txn.txnUuid
         transactionBuffer(curPartition).dequeue()
-        return Some(new BasicConsumerTransaction[DATATYPE, USERTYPE](this, curPartition, updatedTxn))
+        return Some(new BasicConsumerTransaction[USERTYPE](this, curPartition, updatedTxn))
       }
     }
     else
@@ -158,12 +157,12 @@ class BasicConsumer[DATATYPE, USERTYPE](val name: String,
   /**
     * @return Consumed transaction or None if nothing to consume
     */
-  def getTransaction: Option[BasicConsumerTransaction[DATATYPE, USERTYPE]] = {
+  def getTransaction: Option[BasicConsumerTransaction[USERTYPE]] = {
     consumerLock.lock()
     logger.debug(s"Start new transaction for consumer with name : $name, streamName : ${stream.getName}, streamPartitions : ${stream.getPartitions}")
 
     options.readPolicy.startNewRound()
-    val txn: Option[BasicConsumerTransaction[DATATYPE, USERTYPE]] = getTxnOpt
+    val txn: Option[BasicConsumerTransaction[USERTYPE]] = getTxnOpt
     consumerLock.unlock()
     txn
   }
@@ -174,7 +173,7 @@ class BasicConsumer[DATATYPE, USERTYPE](val name: String,
     * @param partition Partition to get last transaction
     * @return Last txn
     */
-  def getLastTransaction(partition: Int): Option[BasicConsumerTransaction[DATATYPE, USERTYPE]] = {
+  def getLastTransaction(partition: Int): Option[BasicConsumerTransaction[USERTYPE]] = {
     var curUuid = options.txnGenerator.getTimeUUID()
     var isFinished = false
     while (!isFinished) {
@@ -188,7 +187,7 @@ class BasicConsumer[DATATYPE, USERTYPE](val name: String,
         while (queue.nonEmpty) {
           val txn = queue.dequeue()
           if (txn.totalItems != -1)
-            return Some(new BasicConsumerTransaction[DATATYPE, USERTYPE](this, partition, txn))
+            return Some(new BasicConsumerTransaction[USERTYPE](this, partition, txn))
           curUuid = txn.txnUuid
         }
       }
@@ -203,14 +202,14 @@ class BasicConsumer[DATATYPE, USERTYPE](val name: String,
     * @param uuid      Uuid for this transaction
     * @return BasicConsumerTransaction
     */
-  def getTransactionById(partition: Int, uuid: UUID): Option[BasicConsumerTransaction[DATATYPE, USERTYPE]] = {
+  def getTransactionById(partition: Int, uuid: UUID): Option[BasicConsumerTransaction[USERTYPE]] = {
     logger.debug(s"Start retrieving new historic transaction for consumer with" +
       s" name : $name, streamName : ${stream.getName}, streamPartitions : ${stream.getPartitions}")
     val txnOpt = updateTransaction(uuid, partition)
     if (txnOpt.isDefined) {
       val txn = txnOpt.get
       if (txn.totalItems != -1)
-        Some(new BasicConsumerTransaction[DATATYPE, USERTYPE](this, partition, txn))
+        Some(new BasicConsumerTransaction[USERTYPE](this, partition, txn))
       else
         None
     }

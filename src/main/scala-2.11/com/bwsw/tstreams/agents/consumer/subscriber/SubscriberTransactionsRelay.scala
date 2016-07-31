@@ -22,13 +22,12 @@ import scala.util.control.Breaks._
   * @param coordinator Coordinator instance for maintaining new transactions updates
   * @param callback    Callback on consumed transactions
   * @param queue       Queue for maintain consumed transactions
-  * @tparam DATATYPE Storage data type
   * @tparam USERTYPE User data type
   */
-class SubscriberTransactionsRelay[DATATYPE, USERTYPE](subscriber: BasicSubscribingConsumer[DATATYPE, USERTYPE],
+class SubscriberTransactionsRelay[USERTYPE](subscriber: BasicSubscribingConsumer[USERTYPE],
                                                       partition: Int,
                                                       coordinator: SubscriberCoordinator,
-                                                      callback: BasicSubscriberCallback[DATATYPE, USERTYPE],
+                                                      callback: BasicSubscriberCallback[USERTYPE],
                                                       queue: PersistentTransactionQueue,
                                                       lastConsumedTransaction: LastTransactionWrapper,
                                                       executor: ExecutorService,

@@ -63,14 +63,14 @@ class ABasicSubscriberAfterCommitFailureTest extends FlatSpec with Matchers
   //producer/consumer options
   val producerOptions = new BasicProducerOptions[String](transactionTTL = 6, transactionKeepAliveInterval = 2, RoundRobinPolicyCreator.getRoundRobinPolicy(streamForProducer, List(0, 1, 2)), BatchInsert(5), LocalGeneratorCreator.getGen(), agentSettings, stringToArrayByteConverter)
 
-  val consumerOptions = new BasicConsumerOptions[Array[Byte], String](transactionsPreload = 10, dataPreload = 7, arrayByteToStringConverter, RoundRobinPolicyCreator.getRoundRobinPolicy(streamForConsumer, List(0, 1, 2)), Oldest, LocalGeneratorCreator.getGen(), useLastOffset = true)
+  val consumerOptions = new BasicConsumerOptions[String](transactionsPreload = 10, dataPreload = 7, arrayByteToStringConverter, RoundRobinPolicyCreator.getRoundRobinPolicy(streamForConsumer, List(0, 1, 2)), Oldest, LocalGeneratorCreator.getGen(), useLastOffset = true)
 
 
   val lock = new ReentrantLock()
   var acc = 0
   val producer = new BasicProducer("test_producer", streamForProducer, producerOptions)
-  val callback = new BasicSubscriberCallback[Array[Byte], String] {
-    override def onEvent(subscriber: BasicSubscribingConsumer[Array[Byte], String], partition: Int, transactionUuid: UUID): Unit = {
+  val callback = new BasicSubscriberCallback[String] {
+    override def onEvent(subscriber: BasicSubscribingConsumer[String], partition: Int, transactionUuid: UUID): Unit = {
       lock.lock()
       acc += 1
       subscriber.setLocalOffset(partition, transactionUuid)
@@ -87,7 +87,7 @@ class ABasicSubscriberAfterCommitFailureTest extends FlatSpec with Matchers
     val dataInTxn = 10
     val data = randomString
 
-    var subscribeConsumer = new BasicSubscribingConsumer[Array[Byte], String](
+    var subscribeConsumer = new BasicSubscribingConsumer[String](
       "test_consumer",
       streamForConsumer,
       consumerOptions,
@@ -101,7 +101,7 @@ class ABasicSubscriberAfterCommitFailureTest extends FlatSpec with Matchers
 
     subscribeConsumer.stop()
 
-    subscribeConsumer = new BasicSubscribingConsumer[Array[Byte], String](
+    subscribeConsumer = new BasicSubscribingConsumer[String](
       "test_consumer",
       new BasicStream[Array[Byte]](
         name = "test_stream",
