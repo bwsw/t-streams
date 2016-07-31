@@ -93,8 +93,6 @@ class BasicSubscribingConsumer[USERTYPE](name: String,
 
     getThreadLock().lock()
     super.start()
-    isStarted.set(false)
-    getThreadLock().unlock()
 
     updateManager = new UpdateManager
     brokenTransactionsResolver =  new BrokenTransactionsResolver(this)
@@ -174,6 +172,7 @@ class BasicSubscribingConsumer[USERTYPE](name: String,
     }
 
     streamLock.unlock()
+    getThreadLock().unlock()
     isStarted.set(true)
   }
 
