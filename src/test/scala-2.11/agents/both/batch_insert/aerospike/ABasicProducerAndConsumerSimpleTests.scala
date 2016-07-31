@@ -63,6 +63,7 @@ class ABasicProducerAndConsumerSimpleTests extends FlatSpec with Matchers with B
 
   val producer = new BasicProducer("test_producer", streamForProducer, producerOptions)
   var consumer = new BasicConsumer("test_consumer", streamForConsumer, consumerOptions)
+  consumer.start
 
   "producer, consumer" should "producer - generate one transaction, consumer - retrieve it with getAll method" in {
     CassandraHelper.clearMetadataTables(session, randomKeyspace)

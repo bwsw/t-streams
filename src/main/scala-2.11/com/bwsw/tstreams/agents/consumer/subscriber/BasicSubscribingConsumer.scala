@@ -30,7 +30,7 @@ class BasicSubscribingConsumer[USERTYPE](name: String,
   /**
     * Indicate started or not this subscriber
     */
-  private var isStarted = false
+  //private var isStarted = false
   private val logger = LoggerFactory.getLogger(this.getClass)
 
   /**
@@ -58,6 +58,7 @@ class BasicSubscribingConsumer[USERTYPE](name: String,
     subscriberCoordinationOptions.threadPoolAmount
 
   logger.info("Will start " + poolSize + " executors to serve master and asynchronous activity.")
+  logger.info("Will do out of band polling every " + pollingFrequencyMaxDelay + "ms.")
 
   /**
     * Mapping partitions to executors index
@@ -76,20 +77,25 @@ class BasicSubscribingConsumer[USERTYPE](name: String,
   /**
     * Manager for providing updates on transactions
     */
-  private val updateManager = new UpdateManager
+  private var updateManager: UpdateManager = null
 
   /**
     * Resolver for resolving pre/final commit's
     */
-  private val brokenTransactionsResolver = new BrokenTransactionsResolver(this)
+  private var brokenTransactionsResolver: BrokenTransactionsResolver = null
 
   /**
     * Start subscriber to consume new transactions
     */
-  def start() = {
-    if (isStarted)
-      throw new IllegalStateException("subscriber already started")
-    isStarted = true
+  override def start(): Unit = {
+    if (isStarted.get())
+      throw new IllegalStateException("Subscriber already started")
+
+    getThreadLock().lock()
+    super.start()
+
+    updateManager = new UpdateManager
+    brokenTransactionsResolver =  new BrokenTransactionsResolver(this)
 
     // TODO: why it can be stopped, why reconstruct?
     if (coordinator.isStoped) {
@@ -151,8 +157,6 @@ class BasicSubscribingConsumer[USERTYPE](name: String,
         transactionsRelay.consumeTransactionsLessOrEqualThan(
           leftBorder = currentOffsets(partition),
           rightBorder = lastTransactionOpt.get.getTxnUUID)
-      } else {
-        //TODO: what behaviour
       }
 
       transactionsRelay.notifyProducersAndStartListen()
@@ -168,6 +172,8 @@ class BasicSubscribingConsumer[USERTYPE](name: String,
     }
 
     streamLock.unlock()
+    getThreadLock().unlock()
+    isStarted.set(true)
   }
 
   def resolveLastTxn(partition: Int): Option[BasicConsumerTransaction[USERTYPE]] = {
@@ -184,10 +190,10 @@ class BasicSubscribingConsumer[USERTYPE](name: String,
   /**
     * Stop subscriber
     */
-  def stop() = {
-    if (!isStarted)
-      throw new IllegalStateException("subscriber is not started")
-    isStarted = false
+  override def stop() = {
+    if (!isStarted.get())
+      throw new IllegalStateException("Subscriber is not started")
+    isStarted.set(false)
     updateManager.stopUpdate()
     if (executors != null) {
       executors.foreach(x => x._2.shutdown())

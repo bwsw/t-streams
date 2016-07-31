@@ -47,6 +47,8 @@ class AManyBasicProducersStreamingInOnePartitionAndConsumerTest extends FlatSpec
 
     var checkVal = true
     val consumer = new BasicConsumer("test_consumer", streamInst, consumerOptions)
+    consumer.start
+
     val uuids = new ListBuffer[UUID]()
 
     val consumerThread = new Thread(

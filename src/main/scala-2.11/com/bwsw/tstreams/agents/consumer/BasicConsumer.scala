@@ -1,6 +1,7 @@
 package com.bwsw.tstreams.agents.consumer
 
 import java.util.UUID
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.locks.ReentrantLock
 
 import com.bwsw.tstreams.agents.group.{Agent, CheckpointInfo, ConsumerCheckpointInfo}
@@ -51,59 +52,69 @@ class BasicConsumer[USERTYPE](val name: String,
     */
   private var isSetOffsets = false
 
+  val isStarted = new AtomicBoolean(false)
 
   logger.info(s"Start new Basic consumer with name : $name, streamName : ${stream.getName}, streamPartitions : ${stream.getPartitions}")
 
-  //set consumer offsets
-  if (!stream.metadataStorage.consumerEntity.exist(name) || !options.useLastOffset) {
-    isSetOffsets = true
+  def start(): Unit = {
+    consumerLock.lock()
+    //set consumer offsets
+    if (!stream.metadataStorage.consumerEntity.exist(name) || !options.useLastOffset) {
+      isSetOffsets = true
 
-    options.offset match {
-      case Offsets.Oldest =>
-        for (i <- 0 until stream.getPartitions) {
-          currentOffsets(i) = options.txnGenerator.getTimeUUID(0)
-          offsetsForCheckpoint(i) = options.txnGenerator.getTimeUUID(0)
+      options.offset match {
+        case Offsets.Oldest =>
+          for (i <- 0 until stream.getPartitions) {
+            currentOffsets(i) = options.txnGenerator.getTimeUUID(0)
+            offsetsForCheckpoint(i) = options.txnGenerator.getTimeUUID(0)
+          }
+
+        case Offsets.Newest =>
+          val newestUuid = options.txnGenerator.getTimeUUID()
+          for (i <- 0 until stream.getPartitions) {
+            currentOffsets(i) = newestUuid
+            offsetsForCheckpoint(i) = newestUuid
+          }
+
+        case dateTime: Offsets.DateTime =>
+          for (i <- 0 until stream.getPartitions) {
+            currentOffsets(i) = options.txnGenerator.getTimeUUID(dateTime.startTime.getTime)
+            offsetsForCheckpoint(i) = options.txnGenerator.getTimeUUID(dateTime.startTime.getTime)
+          }
+
+        case offset: Offsets.CustomUUID =>
+          for (i <- 0 until stream.getPartitions) {
+            currentOffsets(i) = offset.startUUID
+            offsetsForCheckpoint(i) = offset.startUUID
+          }
+
+        case _ => {
+          consumerLock.unlock()
+          throw new IllegalStateException("offset cannot be resolved")
         }
+      }
 
-      case Offsets.Newest =>
-        val newestUuid = options.txnGenerator.getTimeUUID()
-        for (i <- 0 until stream.getPartitions) {
-          currentOffsets(i) = newestUuid
-          offsetsForCheckpoint(i) = newestUuid
-        }
-
-      case dateTime: Offsets.DateTime =>
-        for (i <- 0 until stream.getPartitions) {
-          currentOffsets(i) = options.txnGenerator.getTimeUUID(dateTime.startTime.getTime)
-          offsetsForCheckpoint(i) = options.txnGenerator.getTimeUUID(dateTime.startTime.getTime)
-        }
-
-      case offset: Offsets.CustomUUID =>
-        for (i <- 0 until stream.getPartitions) {
-          currentOffsets(i) = offset.startUUID
-          offsetsForCheckpoint(i) = offset.startUUID
-        }
-
-      case _ => throw new IllegalStateException("offset cannot be resolved")
     }
 
-  }
-
-  if (!isSetOffsets) {
-    for (i <- 0 until stream.getPartitions) {
-      val offset = stream.metadataStorage.consumerEntity.getOffset(name, stream.getName, i)
-      offsetsForCheckpoint(i) = offset
-      currentOffsets(i) = offset
+    if (!isSetOffsets) {
+      for (i <- 0 until stream.getPartitions) {
+        val offset = stream.metadataStorage.consumerEntity.getOffset(name, stream.getName, i)
+        offsetsForCheckpoint(i) = offset
+        currentOffsets(i) = offset
+      }
     }
-  }
 
-  //fill transaction buffer using current offsets
-  for (i <- 0 until stream.getPartitions)
-    transactionBuffer(i) = stream.metadataStorage.commitEntity.getTransactions(
-      streamName = stream.getName,
-      partition = i,
-      lastTransaction = currentOffsets(i),
-      cnt = options.transactionsPreload)
+    //fill transaction buffer using current offsets
+    for (i <- 0 until stream.getPartitions)
+      transactionBuffer(i) = stream.metadataStorage.commitEntity.getTransactions(
+        streamName = stream.getName,
+        partition = i,
+        lastTransaction = currentOffsets(i),
+        cnt = options.transactionsPreload)
+
+    isStarted.set(true)
+    consumerLock.unlock()
+  }
 
   /**
     * Helper function for getTransaction() method
@@ -111,8 +122,16 @@ class BasicConsumer[USERTYPE](val name: String,
     * @return BasicConsumerTransaction or None
     */
   private def getTxnOpt: Option[BasicConsumerTransaction[USERTYPE]] = {
-    if (options.readPolicy.isRoundFinished())
+
+    if(!isStarted.get())
+      throw new IllegalStateException("Start consumer first.")
+
+    consumerLock.lock()
+
+    if (options.readPolicy.isRoundFinished()) {
+      consumerLock.unlock()
       return None
+    }
 
     val curPartition = options.readPolicy.getNextPartition
 
@@ -124,8 +143,10 @@ class BasicConsumer[USERTYPE](val name: String,
         cnt = options.transactionsPreload)
     }
 
-    if (transactionBuffer(curPartition).isEmpty)
+    if (transactionBuffer(curPartition).isEmpty) {
+      consumerLock.unlock()
       return getTxnOpt
+    }
 
     val txn: TransactionSettings = transactionBuffer(curPartition).front
 
@@ -133,6 +154,7 @@ class BasicConsumer[USERTYPE](val name: String,
       offsetsForCheckpoint(curPartition) = txn.txnUuid
       currentOffsets(curPartition) = txn.txnUuid
       transactionBuffer(curPartition).dequeue()
+      consumerLock.unlock()
       return Some(new BasicConsumerTransaction[USERTYPE](this, curPartition, txn))
     }
 
@@ -145,12 +167,14 @@ class BasicConsumer[USERTYPE](val name: String,
         offsetsForCheckpoint(curPartition) = txn.txnUuid
         currentOffsets(curPartition) = txn.txnUuid
         transactionBuffer(curPartition).dequeue()
+        consumerLock.unlock()
         return Some(new BasicConsumerTransaction[USERTYPE](this, curPartition, updatedTxn))
       }
     }
     else
       transactionBuffer(curPartition).dequeue()
 
+    consumerLock.unlock()
     getTxnOpt
   }
 
@@ -158,6 +182,9 @@ class BasicConsumer[USERTYPE](val name: String,
     * @return Consumed transaction or None if nothing to consume
     */
   def getTransaction: Option[BasicConsumerTransaction[USERTYPE]] = {
+    if(!isStarted.get())
+      throw new IllegalStateException("Start consumer first.")
+
     consumerLock.lock()
     logger.debug(s"Start new transaction for consumer with name : $name, streamName : ${stream.getName}, streamPartitions : ${stream.getPartitions}")
 
@@ -174,6 +201,10 @@ class BasicConsumer[USERTYPE](val name: String,
     * @return Last txn
     */
   def getLastTransaction(partition: Int): Option[BasicConsumerTransaction[USERTYPE]] = {
+    if(!isStarted.get())
+      throw new IllegalStateException("Start consumer first.")
+
+    consumerLock.lock()
     var curUuid = options.txnGenerator.getTimeUUID()
     var isFinished = false
     while (!isFinished) {
@@ -186,13 +217,15 @@ class BasicConsumer[USERTYPE](val name: String,
       else {
         while (queue.nonEmpty) {
           val txn = queue.dequeue()
-          if (txn.totalItems != -1)
+          if (txn.totalItems != -1) {
+            consumerLock.unlock()
             return Some(new BasicConsumerTransaction[USERTYPE](this, partition, txn))
+          }
           curUuid = txn.txnUuid
         }
       }
     }
-
+    consumerLock.unlock()
     None
   }
 
@@ -203,18 +236,27 @@ class BasicConsumer[USERTYPE](val name: String,
     * @return BasicConsumerTransaction
     */
   def getTransactionById(partition: Int, uuid: UUID): Option[BasicConsumerTransaction[USERTYPE]] = {
+    if(!isStarted.get())
+      throw new IllegalStateException("Start consumer first.")
+
+    consumerLock.lock()
+
     logger.debug(s"Start retrieving new historic transaction for consumer with" +
       s" name : $name, streamName : ${stream.getName}, streamPartitions : ${stream.getPartitions}")
     val txnOpt = updateTransaction(uuid, partition)
-    if (txnOpt.isDefined) {
-      val txn = txnOpt.get
-      if (txn.totalItems != -1)
-        Some(new BasicConsumerTransaction[USERTYPE](this, partition, txn))
-      else
+    val res =
+      if (txnOpt.isDefined) {
+        val txn = txnOpt.get
+        if (txn.totalItems != -1)
+          Some(new BasicConsumerTransaction[USERTYPE](this, partition, txn))
+        else
+          None
+      }
+      else {
         None
-    }
-    else
-      None
+      }
+    consumerLock.unlock()
+    res
   }
 
   /**
@@ -224,6 +266,9 @@ class BasicConsumer[USERTYPE](val name: String,
     * @param uuid      offset value
     */
   def setLocalOffset(partition: Int, uuid: UUID): Unit = {
+    if(!isStarted.get())
+      throw new IllegalStateException("Start consumer first.")
+
     consumerLock.lock()
     offsetsForCheckpoint(partition) = uuid
     currentOffsets(partition) = uuid
@@ -242,10 +287,15 @@ class BasicConsumer[USERTYPE](val name: String,
     * @return Updated transaction
     */
   def updateTransaction(txn: UUID, partition: Int): Option[TransactionSettings] = {
+    if(!isStarted.get())
+      throw new IllegalStateException("Start consumer first.")
+
+    consumerLock.lock()
     val amount: Option[(Int, Int)] = stream.metadataStorage.commitEntity.getTransactionAmount(
       stream.getName,
       partition,
       txn)
+    consumerLock.unlock()
     if (amount.isDefined) {
       val (cnt, ttl) = amount.get
       Some(TransactionSettings(txn, cnt, ttl))
@@ -259,6 +309,9 @@ class BasicConsumer[USERTYPE](val name: String,
     * to read later from them (in case of system stop/failure)
     */
   def checkpoint(): Unit = {
+    if(!isStarted.get())
+      throw new IllegalStateException("Start consumer first.")
+
     consumerLock.lock()
     logger.info(s"Start saving checkpoints for " +
       s"consumer with name : $name, streamName : ${stream.getName}, streamPartitions : ${stream.getPartitions}")
@@ -272,10 +325,15 @@ class BasicConsumer[USERTYPE](val name: String,
     * Info to commit
     */
   override def getCheckpointInfoAndClear(): List[CheckpointInfo] = {
+    if(!isStarted.get())
+      throw new IllegalStateException("Start consumer first.")
+
+    consumerLock.lock()
     val checkpointData = offsetsForCheckpoint.map { case (partition, lastTxn) =>
       ConsumerCheckpointInfo(name, stream.getName, partition, lastTxn)
     }.toList
     offsetsForCheckpoint.clear()
+    consumerLock.unlock()
     checkpointData
   }
 
@@ -289,4 +347,10 @@ class BasicConsumer[USERTYPE](val name: String,
     * Agent lock on any actions which has to do with checkpoint
     */
   override def getThreadLock(): ReentrantLock = consumerLock
+
+  def stop() = {
+    if (!isStarted.get())
+      throw new IllegalStateException("Consumer is not started")
+    isStarted.set(false)
+  }
 }

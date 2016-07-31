@@ -55,6 +55,7 @@ class CManyBasicProducersStreamingInManyPartitionsAndConsumerWithCheckpointsTest
     var checkVal = true
 
     var consumer = new BasicConsumer("test_consumer", streamInst, consumerOptions)
+    consumer.start
 
     val consumerThread = new Thread(
       new Runnable {
@@ -75,6 +76,7 @@ class CManyBasicProducersStreamingInManyPartitionsAndConsumerWithCheckpointsTest
                 description = "some_description")
 
               consumer = new BasicConsumer("test_consumer", newStreamForConsumer, consumerOptions)
+              consumer.start
               Thread.sleep(1000)
             }
 

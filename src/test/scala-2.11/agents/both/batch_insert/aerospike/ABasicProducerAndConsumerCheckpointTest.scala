@@ -58,6 +58,7 @@ class ABasicProducerAndConsumerCheckpointTest extends FlatSpec with Matchers wit
 
   val producer = new BasicProducer("test_producer", streamForProducer, producerOptions)
   var consumer = new BasicConsumer("test_consumer", streamForConsumer, consumerOptions)
+  consumer.start()
 
 
   "producer, consumer" should "producer - generate many transactions, consumer - retrieve all of them with reinitialization after some time" in {
@@ -93,6 +94,7 @@ class ABasicProducerAndConsumerCheckpointTest extends FlatSpec with Matchers wit
 
     //reinitialization (should begin read from the latest checkpoint)
     consumer = new BasicConsumer("test_consumer", newStreamForConsumer, consumerOptions)
+    consumer.start()
 
     (0 until secondPart) foreach { _ =>
       val txn: BasicConsumerTransaction[String] = consumer.getTransaction.get

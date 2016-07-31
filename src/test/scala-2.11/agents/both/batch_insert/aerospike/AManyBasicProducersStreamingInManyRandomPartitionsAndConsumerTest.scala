@@ -54,6 +54,7 @@ class AManyBasicProducersStreamingInManyRandomPartitionsAndConsumerTest extends 
     var checkVal = true
 
     val consumer = new BasicConsumer("test_consumer", streamInst, consumerOptions)
+    consumer.start
 
     val consumerThread = new Thread(
       new Runnable {

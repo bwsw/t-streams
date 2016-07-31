@@ -39,6 +39,7 @@ class BasicConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll wi
     isLowPriority = false)
 
   "consumer.getTransaction" should "return None if nothing was sent" in {
+    consumer.start
     val txn = consumer.getTransaction
     txn.isEmpty shouldBe true
   }

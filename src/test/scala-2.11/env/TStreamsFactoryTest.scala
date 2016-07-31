@@ -54,6 +54,7 @@ class TStreamsFactoryTest extends FlatSpec with Matchers with BeforeAndAfterAll 
       })
 
     sub != null shouldEqual true
+    sub.start()
     Thread.sleep(1000) // TODO: fix it. Bug #31
     sub.stop()
   }
