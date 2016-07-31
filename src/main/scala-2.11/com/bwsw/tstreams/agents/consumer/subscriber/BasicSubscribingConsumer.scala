@@ -17,16 +17,15 @@ import org.slf4j.LoggerFactory
   * @param options             Basic consumer options
   * @param persistentQueuePath Local path for queue which maintain transactions that already exist
   *                            and new incoming transactions
-  * @tparam DATATYPE Storage data type
   * @tparam USERTYPE User data type
   */
-class BasicSubscribingConsumer[DATATYPE, USERTYPE](name: String,
-                                                   stream: BasicStream[DATATYPE],
-                                                   options: BasicConsumerOptions[DATATYPE, USERTYPE],
+class BasicSubscribingConsumer[USERTYPE](name: String,
+                                                   stream: BasicStream[Array[Byte]],
+                                                   options: BasicConsumerOptions[USERTYPE],
                                                    subscriberCoordinationOptions: SubscriberCoordinationOptions,
-                                                   callBack: BasicSubscriberCallback[DATATYPE, USERTYPE],
+                                                   callBack: BasicSubscriberCallback[USERTYPE],
                                                    persistentQueuePath: String)
-  extends BasicConsumer[DATATYPE, USERTYPE](name, stream, options) {
+  extends BasicConsumer[USERTYPE](name, stream, options) {
   /**
     * Indicate started or not this subscriber
     */
@@ -170,9 +169,9 @@ class BasicSubscribingConsumer[DATATYPE, USERTYPE](name: String,
     streamLock.unlock()
   }
 
-  def resolveLastTxn(partition: Int): Option[BasicConsumerTransaction[DATATYPE, USERTYPE]] = {
-    val txn: Option[BasicConsumerTransaction[DATATYPE, USERTYPE]] = getLastTransaction(partition)
-    txn.fold[Option[BasicConsumerTransaction[DATATYPE, USERTYPE]]](None) { txn =>
+  def resolveLastTxn(partition: Int): Option[BasicConsumerTransaction[USERTYPE]] = {
+    val txn: Option[BasicConsumerTransaction[USERTYPE]] = getLastTransaction(partition)
+    txn.fold[Option[BasicConsumerTransaction[USERTYPE]]](None) { txn =>
       if (txn.getTxnUUID.timestamp() <= currentOffsets(partition).timestamp()) {
         None
       } else {

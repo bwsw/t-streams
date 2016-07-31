@@ -54,7 +54,7 @@ class ABasicProducerAndConsumerCheckpointTest extends FlatSpec with Matchers wit
 
   val producerOptions = new BasicProducerOptions[String](transactionTTL = 6, transactionKeepAliveInterval = 2, RoundRobinPolicyCreator.getRoundRobinPolicy(streamForProducer, List(0, 1, 2)), BatchInsert(batchSizeTestVal), LocalGeneratorCreator.getGen(), agentSettings, stringToArrayByteConverter)
 
-  val consumerOptions = new BasicConsumerOptions[Array[Byte], String](transactionsPreload = 10, dataPreload = 7, arrayByteToStringConverter, RoundRobinPolicyCreator.getRoundRobinPolicy(streamForConsumer, List(0, 1, 2)), Oldest, LocalGeneratorCreator.getGen(), useLastOffset = true)
+  val consumerOptions = new BasicConsumerOptions[String](transactionsPreload = 10, dataPreload = 7, arrayByteToStringConverter, RoundRobinPolicyCreator.getRoundRobinPolicy(streamForConsumer, List(0, 1, 2)), Oldest, LocalGeneratorCreator.getGen(), useLastOffset = true)
 
   val producer = new BasicProducer("test_producer", streamForProducer, producerOptions)
   var consumer = new BasicConsumer("test_consumer", streamForConsumer, consumerOptions)
@@ -77,7 +77,7 @@ class ABasicProducerAndConsumerCheckpointTest extends FlatSpec with Matchers wit
     var checkVal = true
 
     (0 until firstPart) foreach { _ =>
-      val txn: BasicConsumerTransaction[Array[Byte], String] = consumer.getTransaction.get
+      val txn: BasicConsumerTransaction[String] = consumer.getTransaction.get
       val data = txn.getAll().sorted
       consumer.checkpoint()
       checkVal &= data == dataToSend
@@ -95,7 +95,7 @@ class ABasicProducerAndConsumerCheckpointTest extends FlatSpec with Matchers wit
     consumer = new BasicConsumer("test_consumer", newStreamForConsumer, consumerOptions)
 
     (0 until secondPart) foreach { _ =>
-      val txn: BasicConsumerTransaction[Array[Byte], String] = consumer.getTransaction.get
+      val txn: BasicConsumerTransaction[String] = consumer.getTransaction.get
       val data = txn.getAll().sorted
       checkVal &= data == dataToSend
     }

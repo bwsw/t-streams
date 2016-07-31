@@ -38,7 +38,7 @@ class CManyBasicProducersStreamingInOnePartitionAndConsumerTest extends FlatSpec
 
     val streamInst = getStream
 
-    val consumerOptions = new BasicConsumerOptions[Array[Byte], String](transactionsPreload = 10, dataPreload = 7, arrayByteToStringConverter, RoundRobinPolicyCreator.getRoundRobinPolicy(
+    val consumerOptions = new BasicConsumerOptions[String](transactionsPreload = 10, dataPreload = 7, arrayByteToStringConverter, RoundRobinPolicyCreator.getRoundRobinPolicy(
             usedPartitions = List(0),
             stream = streamInst), Oldest, LocalGeneratorCreator.getGen(), useLastOffset = false)
 

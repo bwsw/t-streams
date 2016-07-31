@@ -54,7 +54,7 @@ class ALazyProducersAndSubscriberTest extends FlatSpec with Matchers with Before
 
     val streamInst = getStream(totalPartitions)
 
-    val consumerOptions = new BasicConsumerOptions[Array[Byte], String](transactionsPreload = 10, dataPreload = 7, arrayByteToStringConverter, RoundRobinPolicyCreator.getRoundRobinPolicy(
+    val consumerOptions = new BasicConsumerOptions[String](transactionsPreload = 10, dataPreload = 7, arrayByteToStringConverter, RoundRobinPolicyCreator.getRoundRobinPolicy(
             usedPartitions = (0 until totalPartitions).toList,
             stream = streamInst), Oldest, LocalGeneratorCreator.getGen(), useLastOffset = false)
 
@@ -66,8 +66,8 @@ class ALazyProducersAndSubscriberTest extends FlatSpec with Matchers with Before
 
     var cnt = 0
 
-    val callback = new BasicSubscriberCallback[Array[Byte], String] {
-      override def onEvent(subscriber: BasicSubscribingConsumer[Array[Byte], String], partition: Int, transactionUuid: UUID): Unit = {
+    val callback = new BasicSubscriberCallback[String] {
+      override def onEvent(subscriber: BasicSubscribingConsumer[String], partition: Int, transactionUuid: UUID): Unit = {
         lock.lock()
         cnt += 1
         map(partition) += transactionUuid
