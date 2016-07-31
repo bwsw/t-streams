@@ -734,7 +734,7 @@ class TStreamsFactory(envname: String = "T-streams") {
       offset = offset,
       isUseLastOffset = isUseLastOffset)
 
-    val consumer = new BasicConsumer(name, stream, consumerOptions) // TODO FIX: Stream is not required as argument for BasicConsumer - it's already in options
+    val consumer = new BasicConsumer(name, stream, consumerOptions)
     lock.unlock()
 
     consumer
@@ -806,7 +806,7 @@ class TStreamsFactory(envname: String = "T-streams") {
 
     val subscriberConsumer = new BasicSubscribingConsumer[USERTYPE](
       name = name,
-      stream = stream, // TODO FIX: Stream is not required as argument for BasicSubscribingConsumer - it's already in options
+      stream = stream,
       options = consumerOptions,
       subscriberCoordinationOptions = coordinationOptions,
       callBack = callback,
