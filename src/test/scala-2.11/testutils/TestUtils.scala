@@ -35,7 +35,7 @@ trait TestUtils {
 
   logger.info("-------------------------------------------------------")
   logger.info("Test suite " + this.getClass.toString + " started")
-  logger.info("Test Suite uptime is " + (uptime/1000).toString + " seconds")
+  logger.info("Test Suite uptime is " + ((System.currentTimeMillis - uptime)/1000L).toString + " seconds")
   logger.info("-------------------------------------------------------")
 
 
