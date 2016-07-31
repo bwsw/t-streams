@@ -20,11 +20,12 @@ import org.slf4j.LoggerFactory
   * @tparam USERTYPE User data type
   */
 class BasicSubscribingConsumer[USERTYPE](name: String,
-                                                   stream: BasicStream[Array[Byte]],
-                                                   options: BasicConsumerOptions[USERTYPE],
-                                                   subscriberCoordinationOptions: SubscriberCoordinationOptions,
-                                                   callBack: BasicSubscriberCallback[USERTYPE],
-                                                   persistentQueuePath: String)
+                                         stream: BasicStream[Array[Byte]],
+                                         options: BasicConsumerOptions[USERTYPE],
+                                         subscriberCoordinationOptions: SubscriberCoordinationOptions,
+                                         callBack: BasicSubscriberCallback[USERTYPE],
+                                         persistentQueuePath: String,
+                                         pollingFrequencyMaxDelay: Int = 100)
   extends BasicConsumer[USERTYPE](name, stream, options) {
   /**
     * Indicate started or not this subscriber
@@ -70,7 +71,7 @@ class BasicSubscribingConsumer[USERTYPE](name: String,
     * Executors for each partition to handle transactions flow
     */
   private val executors: scala.collection.mutable.Map[Int, ExecutorService] =
-    scala.collection.mutable.Map[Int, ExecutorService]()
+  scala.collection.mutable.Map[Int, ExecutorService]()
 
   /**
     * Manager for providing updates on transactions
@@ -111,7 +112,7 @@ class BasicSubscribingConsumer[USERTYPE](name: String,
 
     coordinator.initSynchronization(stream.getName, usedPartitions)
     coordinator.startListen()
-    updateManager.startUpdate(callBack.pollingFrequency)
+    updateManager.startUpdate(pollingFrequencyMaxDelay)
     val uniquePrefix = UUID.randomUUID()
 
     usedPartitions foreach { partition =>

@@ -77,8 +77,6 @@ class ABasicSubscriberPreCommitFailureTest extends FlatSpec with Matchers
       subscriber.checkpoint()
       lock.unlock()
     }
-
-    override val pollingFrequency: Int = 100
   }
   val path = randomString
 

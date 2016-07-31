@@ -29,8 +29,6 @@ object SubscriberRunner {
         cnt += 1
         lock.unlock()
       }
-
-      override val pollingFrequency: Int = 100
     }
 
     val subscribeConsumer = new BasicSubscribingConsumer[String](

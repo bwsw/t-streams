@@ -74,7 +74,6 @@ class ALazyProducersAndSubscriberTest extends FlatSpec with Matchers with Before
         lock.unlock()
       }
 
-      override val pollingFrequency: Int = 100
     }
     val subscriber = new BasicSubscribingConsumer(name = "test_consumer",
       stream = streamInst,

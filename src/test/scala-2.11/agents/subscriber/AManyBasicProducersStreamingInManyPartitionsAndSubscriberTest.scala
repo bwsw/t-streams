@@ -74,7 +74,6 @@ class AManyBasicProducersStreamingInManyPartitionsAndSubscriberTest extends Flat
         lock.unlock()
       }
 
-      override val pollingFrequency: Int = 100
     }
     val subscriber = new BasicSubscribingConsumer(name = "test_consumer",
       stream = streamInst,
