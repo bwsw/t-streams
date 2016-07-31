@@ -80,15 +80,7 @@ class СBasicProducerAndConsumerLazyTest extends FlatSpec with Matchers with Bef
 
   val producerOptions2 = new BasicProducerOptions[String](transactionTTL = 6, transactionKeepAliveInterval = 2, RoundRobinPolicyCreator.getRoundRobinPolicy(streamForProducer2, List(0, 1, 2)), BatchInsert(batchSizeTestVal), LocalGeneratorCreator.getGen(), agentSettings2, stringToArrayByteConverter)
 
-  val consumerOptions = new BasicConsumerOptions[Array[Byte], String](
-    transactionsPreload = 10,
-    dataPreload = 7,
-    consumerKeepAliveInterval = 5,
-    arrayByteToStringConverter,
-    RoundRobinPolicyCreator.getRoundRobinPolicy(streamForConsumer, List(0, 1, 2)),
-    Oldest,
-    LocalGeneratorCreator.getGen(),
-    useLastOffset = false)
+  val consumerOptions = new BasicConsumerOptions[Array[Byte], String](transactionsPreload = 10, dataPreload = 7, arrayByteToStringConverter, RoundRobinPolicyCreator.getRoundRobinPolicy(streamForConsumer, List(0, 1, 2)), Oldest, LocalGeneratorCreator.getGen(), useLastOffset = false)
 
   val producer1 = new BasicProducer("test_producer", streamForProducer1, producerOptions1)
   val producer2 = new BasicProducer("test_producer", streamForProducer2, producerOptions2)
