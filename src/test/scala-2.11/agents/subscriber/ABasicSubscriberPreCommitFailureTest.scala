@@ -1,23 +1,16 @@
 package agents.subscriber
 
-import java.net.InetSocketAddress
 import java.util.UUID
-import java.util.concurrent.{CountDownLatch, TimeUnit}
 import java.util.concurrent.locks.ReentrantLock
 
 import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
 import com.bwsw.tstreams.agents.consumer.subscriber.{BasicSubscriberCallback, BasicSubscribingConsumer}
-import com.bwsw.tstreams.agents.consumer.{BasicConsumerOptions, SubscriberCoordinationOptions}
-import com.bwsw.tstreams.agents.producer.InsertionType.BatchInsert
-import com.bwsw.tstreams.agents.producer.{BasicProducer, BasicProducerOptions, ProducerCoordinationOptions, ProducerPolicies}
-import com.bwsw.tstreams.coordination.transactions.transport.impl.TcpTransport
+import com.bwsw.tstreams.agents.producer.ProducerPolicies
 import com.bwsw.tstreams.debug.GlobalHooks
 import com.bwsw.tstreams.env.TSF_Dictionary
-import com.bwsw.tstreams.streams.BasicStream
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
-import testutils.{LocalGeneratorCreator, RoundRobinPolicyCreator, TestUtils}
+import testutils.{LocalGeneratorCreator, TestUtils}
 
-//TODO refactoring
 class ABasicSubscriberPreCommitFailureTest extends FlatSpec with Matchers
   with BeforeAndAfterAll with TestUtils {
 
@@ -40,10 +33,6 @@ class ABasicSubscriberPreCommitFailureTest extends FlatSpec with Matchers
   val totalTxns = 30
   val dataInTxn = 10
   val data = randomString
-  val l1 = new CountDownLatch(1)
-  val l2 = new CountDownLatch(1)
-  val l3 = new CountDownLatch(1)
-
 
   val producer = f.getProducer[String](
     name = "test_producer",
@@ -91,12 +80,10 @@ class ABasicSubscriberPreCommitFailureTest extends FlatSpec with Matchers
 
     s1.start()
     sendTxnsAndWait(totalTxns, dataInTxn, data)
-    // TODO FIX incorrect shutdown #31
     s1.stop()
 
     s2.start()
     sendTxnsAndWait(totalTxns, dataInTxn, data)
-    // TODO FIX incorrect shutdown #31
     s2.stop()
 
     acc shouldEqual 0

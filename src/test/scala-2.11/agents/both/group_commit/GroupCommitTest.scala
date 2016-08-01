@@ -8,49 +8,40 @@ import com.bwsw.tstreams.agents.group.CheckpointGroup
 import com.bwsw.tstreams.agents.producer.InsertionType.SingleElementInsert
 import com.bwsw.tstreams.agents.producer.{BasicProducer, BasicProducerOptions, ProducerCoordinationOptions, ProducerPolicies}
 import com.bwsw.tstreams.coordination.transactions.transport.impl.TcpTransport
+import com.bwsw.tstreams.env.TSF_Dictionary
 import com.bwsw.tstreams.streams.BasicStream
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import testutils._
 
 
 class GroupCommitTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
-  val metadataStorage = metadataStorageFactory.getInstance(
-    cassandraHosts = List(new InetSocketAddress("localhost", 9042)),
-    keyspace = randomKeyspace)
 
+  f.setProperty(TSF_Dictionary.Stream.name,"test_stream").
+    setProperty(TSF_Dictionary.Stream.partitions,3).
+    setProperty(TSF_Dictionary.Stream.ttl, 60 * 10).
+    setProperty(TSF_Dictionary.Coordination.connection_timeout, 7).
+    setProperty(TSF_Dictionary.Coordination.ttl, 7).
+    setProperty(TSF_Dictionary.Producer.master_timeout, 5).
+    setProperty(TSF_Dictionary.Producer.Transaction.ttl, 6).
+    setProperty(TSF_Dictionary.Producer.Transaction.keep_alive, 2).
+    setProperty(TSF_Dictionary.Consumer.transaction_preload, 10).
+    setProperty(TSF_Dictionary.Consumer.data_preload, 10)
 
-  val streamForProducer: BasicStream[Array[Byte]] = new BasicStream[Array[Byte]](
-    name = "test_stream",
-    partitions = 3,
-    metadataStorage = metadataStorage,
-    dataStorage = storageFactory.getInstance(aerospikeOptions),
-    ttl = 60 * 10,
-    description = "some_description")
+  val producer = f.getProducer[String](
+    name = "test_producer",
+    txnGenerator = LocalGeneratorCreator.getGen(),
+    converter = stringToArrayByteConverter,
+    partitions = List(0,1,2),
+    isLowPriority = false)
 
-  val streamForConsumer = new BasicStream[Array[Byte]](
-    name = "test_stream",
-    partitions = 3,
-    metadataStorage = metadataStorage,
-    dataStorage = storageFactory.getInstance(aerospikeOptions),
-    ttl = 60 * 10,
-    description = "some_description")
+  val consumer = f.getConsumer[String](
+    name = "test_consumer",
+    txnGenerator = LocalGeneratorCreator.getGen(),
+    converter = arrayByteToStringConverter,
+    partitions = List(0,1,2),
+    offset = Oldest,
+    isUseLastOffset = true)
 
-  val agentSettings = new ProducerCoordinationOptions(
-    agentAddress = s"localhost:8000",
-    zkHosts = List(new InetSocketAddress("localhost", 2181)),
-    zkRootPath = "/unit",
-    zkSessionTimeout = 7000,
-    isLowPriorityToBeMaster = false,
-    transport = new TcpTransport,
-    transportTimeout = 5,
-    zkConnectionTimeout = 7)
-
-  val producerOptions = new BasicProducerOptions[String](transactionTTL = 6, transactionKeepAliveInterval = 2, RoundRobinPolicyCreator.getRoundRobinPolicy(streamForProducer, List(0, 1, 2)), SingleElementInsert, LocalGeneratorCreator.getGen(), agentSettings, stringToArrayByteConverter)
-
-  val consumerOptions = new BasicConsumerOptions[String](transactionsPreload = 10, dataPreload = 7, arrayByteToStringConverter, RoundRobinPolicyCreator.getRoundRobinPolicy(streamForConsumer, List(0, 1, 2)), Oldest, LocalGeneratorCreator.getGen(), useLastOffset = true)
-
-  val producer = new BasicProducer("test_producer", streamForProducer, producerOptions)
-  var consumer = new BasicConsumer("test_consumer", streamForConsumer, consumerOptions)
   consumer.start
 
   "Group commit" should "checkpoint all AgentsGroup state" in {
@@ -71,17 +62,16 @@ class GroupCommitTest extends FlatSpec with Matchers with BeforeAndAfterAll with
 
     group.commit()
 
-    val newStreamForConsumer = new BasicStream[Array[Byte]](
-      name = "test_stream",
-      partitions = 3,
-      metadataStorage = metadataStorage,
-      dataStorage = storageFactory.getInstance(aerospikeOptions),
-      ttl = 60 * 10,
-      description = "some_description")
-    consumer = new BasicConsumer("test_consumer", newStreamForConsumer, consumerOptions)
-    consumer.start
+    val consumer2 = f.getConsumer[String](
+      name = "test_consumer",
+      txnGenerator = LocalGeneratorCreator.getGen(),
+      converter = arrayByteToStringConverter,
+      partitions = List(0,1,2),
+      offset = Oldest,
+      isUseLastOffset = true)
+    consumer2.start
     //assert that the second transaction was closed and consumer offsets was moved
-    assert(consumer.getTransaction.get.getAll().head == "info2")
+    assert(consumer2.getTransaction.get.getAll().head == "info2")
   }
 
   override def afterAll(): Unit = {

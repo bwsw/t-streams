@@ -1,64 +1,49 @@
 package agents.both.batch_insert.aerospike
 
-import java.net.InetSocketAddress
-
 import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
-import com.bwsw.tstreams.agents.consumer.{BasicConsumer, BasicConsumerOptions, BasicConsumerTransaction}
-import com.bwsw.tstreams.agents.producer.InsertionType.BatchInsert
-import com.bwsw.tstreams.agents.producer.{BasicProducer, BasicProducerOptions, ProducerCoordinationOptions, ProducerPolicies}
-import com.bwsw.tstreams.coordination.transactions.transport.impl.TcpTransport
+import com.bwsw.tstreams.agents.consumer.{BasicConsumer, BasicConsumerTransaction}
+import com.bwsw.tstreams.agents.producer.ProducerPolicies
+import com.bwsw.tstreams.env.TSF_Dictionary
 import com.bwsw.tstreams.streams.BasicStream
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import testutils._
 
 
 class ABasicProducerAndConsumerCheckpointTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
-  val aerospikeInstForProducer = storageFactory.getInstance(aerospikeOptions)
-  val aerospikeInstForConsumer = storageFactory.getInstance(aerospikeOptions)
 
-  //metadata storage instances
-  val metadataStorageInstForProducer = metadataStorageFactory.getInstance(
-    cassandraHosts = List(new InetSocketAddress("localhost", 9042)),
-    keyspace = randomKeyspace)
-  val metadataStorageInstForConsumer = metadataStorageFactory.getInstance(
-    cassandraHosts = List(new InetSocketAddress("localhost", 9042)),
-    keyspace = randomKeyspace)
+  f.setProperty(TSF_Dictionary.Stream.name,"test_stream").
+    setProperty(TSF_Dictionary.Stream.partitions,3).
+    setProperty(TSF_Dictionary.Stream.ttl, 60 * 10).
+    setProperty(TSF_Dictionary.Coordination.connection_timeout, 7).
+    setProperty(TSF_Dictionary.Coordination.ttl, 7).
+    setProperty(TSF_Dictionary.Producer.master_timeout, 5).
+    setProperty(TSF_Dictionary.Producer.Transaction.ttl, 6).
+    setProperty(TSF_Dictionary.Producer.Transaction.keep_alive, 2).
+    setProperty(TSF_Dictionary.Consumer.transaction_preload, 10).
+    setProperty(TSF_Dictionary.Consumer.data_preload, 10)
 
-  //stream instances for producer/consumer
-  val streamForProducer: BasicStream[Array[Byte]] = new BasicStream[Array[Byte]](
-    name = "test_stream",
-    partitions = 3,
-    metadataStorage = metadataStorageInstForProducer,
-    dataStorage = aerospikeInstForProducer,
-    ttl = 60 * 10,
-    description = "some_description")
+  val producer = f.getProducer[String](
+    name = "test_producer",
+    txnGenerator = LocalGeneratorCreator.getGen(),
+    converter = stringToArrayByteConverter,
+    partitions = List(0,1,2),
+    isLowPriority = false)
 
-  val streamForConsumer = new BasicStream[Array[Byte]](
-    name = "test_stream",
-    partitions = 3,
-    metadataStorage = metadataStorageInstForConsumer,
-    dataStorage = aerospikeInstForConsumer,
-    ttl = 60 * 10,
-    description = "some_description")
+  val consumer = f.getConsumer[String](
+    name = "test_consumer",
+    txnGenerator = LocalGeneratorCreator.getGen(),
+    converter = arrayByteToStringConverter,
+    partitions = List(0,1,2),
+    offset = Oldest,
+    isUseLastOffset = true)
 
-  //producer/consumer options
-  val agentSettings = new ProducerCoordinationOptions(
-    agentAddress = "localhost:8888",
-    zkHosts = List(new InetSocketAddress("localhost", 2181)),
-    zkRootPath = "/unit",
-    zkSessionTimeout = 7000,
-    isLowPriorityToBeMaster = false,
-    transport = new TcpTransport,
-    transportTimeout = 5,
-    zkConnectionTimeout = 7)
-
-  val producerOptions = new BasicProducerOptions[String](transactionTTL = 6, transactionKeepAliveInterval = 2, RoundRobinPolicyCreator.getRoundRobinPolicy(streamForProducer, List(0, 1, 2)), BatchInsert(batchSizeTestVal), LocalGeneratorCreator.getGen(), agentSettings, stringToArrayByteConverter)
-
-  val consumerOptions = new BasicConsumerOptions[String](transactionsPreload = 10, dataPreload = 7, arrayByteToStringConverter, RoundRobinPolicyCreator.getRoundRobinPolicy(streamForConsumer, List(0, 1, 2)), Oldest, LocalGeneratorCreator.getGen(), useLastOffset = true)
-
-  val producer = new BasicProducer("test_producer", streamForProducer, producerOptions)
-  var consumer = new BasicConsumer("test_consumer", streamForConsumer, consumerOptions)
-  consumer.start()
+  val consumer2 = f.getConsumer[String](
+    name = "test_consumer",
+    txnGenerator = LocalGeneratorCreator.getGen(),
+    converter = arrayByteToStringConverter,
+    partitions = List(0,1,2),
+    offset = Oldest,
+    isUseLastOffset = true)
 
 
   "producer, consumer" should "producer - generate many transactions, consumer - retrieve all of them with reinitialization after some time" in {
@@ -77,6 +62,7 @@ class ABasicProducerAndConsumerCheckpointTest extends FlatSpec with Matchers wit
 
     var checkVal = true
 
+    consumer.start
     (0 until firstPart) foreach { _ =>
       val txn: BasicConsumerTransaction[String] = consumer.getTransaction.get
       val data = txn.getAll().sorted
@@ -84,27 +70,16 @@ class ABasicProducerAndConsumerCheckpointTest extends FlatSpec with Matchers wit
       checkVal &= data == dataToSend
     }
 
-    val newStreamForConsumer = new BasicStream[Array[Byte]](
-      name = "test_stream",
-      partitions = 3,
-      metadataStorage = metadataStorageInstForConsumer,
-      dataStorage = storageFactory.getInstance(aerospikeOptions),
-      ttl = 60 * 10,
-      description = "some_description")
-
-    //reinitialization (should begin read from the latest checkpoint)
-    consumer = new BasicConsumer("test_consumer", newStreamForConsumer, consumerOptions)
-    consumer.start()
-
+    consumer2.start
     (0 until secondPart) foreach { _ =>
-      val txn: BasicConsumerTransaction[String] = consumer.getTransaction.get
+      val txn: BasicConsumerTransaction[String] = consumer2.getTransaction.get
       val data = txn.getAll().sorted
       checkVal &= data == dataToSend
     }
 
     //assert that is nothing to read
-    (0 until newStreamForConsumer.getPartitions) foreach { _ =>
-      checkVal &= consumer.getTransaction.isEmpty
+    (0 until Integer.parseInt(f.getProperty(TSF_Dictionary.Stream.partitions).toString)) foreach { _ =>
+      checkVal &= consumer2.getTransaction.isEmpty
     }
 
     checkVal shouldBe true

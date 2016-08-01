@@ -4,6 +4,7 @@ import java.io.File
 import java.lang.management.ManagementFactory
 import java.net.InetSocketAddress
 import java.util.UUID
+import java.util.concurrent.atomic.AtomicInteger
 
 import com.aerospike.client.Host
 import com.bwsw.tstreams.common.zkservice.ZkService
@@ -28,7 +29,9 @@ trait TestUtils {
     *
     * @return Alpha string
     */
-  def randomString = "ks_23157b9"
+  val id = TestUtils.moveId()
+  val randomString = TestUtils.getKeyspace(id)
+  val coordinationRoot = TestUtils.getCoordinationRoot(id)
 
   val logger = LoggerFactory.getLogger(this.getClass)
   val uptime = ManagementFactory.getRuntimeMXBean.getStartTime
@@ -58,6 +61,10 @@ trait TestUtils {
   val f = new TStreamsFactory()
   f.setProperty(TSF_Dictionary.Metadata.Cluster.namespace, randomKeyspace).
     setProperty(TSF_Dictionary.Data.Cluster.namespace, "test").
+    setProperty(TSF_Dictionary.Coordination.root, coordinationRoot).
+    setProperty(TSF_Dictionary.Producer.master_bind_port, TestUtils.getPort).
+    setProperty(TSF_Dictionary.Consumer.Subscriber.bind_port, TestUtils.getPort).
+    setProperty(TSF_Dictionary.Consumer.Subscriber.persistent_queue_path, "/tmp/" + randomKeyspace).
     setProperty(TSF_Dictionary.Stream.name, "test-stream")
 
   //metadata/data factories
@@ -77,6 +84,9 @@ trait TestUtils {
 
   val aerospikeOptions = new AerospikeStorageOptions("test", hosts)
   val zkService = new ZkService("", List(new InetSocketAddress("localhost", 2181)), 7, 7)
+
+  removeZkMetadata(f.getProperty(TSF_Dictionary.Coordination.root).toString)
+
 
   /**
     * Sorting checker
@@ -125,4 +135,26 @@ trait TestUtils {
     storageFactory.closeFactory()
     cassandraStorageFactory.closeFactory()
   }
+}
+
+object TestUtils {
+
+  private val id: AtomicInteger = new AtomicInteger(0)
+  private val port = new AtomicInteger(8000)
+
+  def moveId(): Int = {
+    val rid = id.incrementAndGet()
+    rid
+  }
+
+  def getKeyspace(id: Int): String = "tk_" + id.toString
+
+  def getCoordinationRoot(id: Int): String = "/" + getKeyspace(id)
+
+
+  def getPort(): Int = {
+    val rport = port.incrementAndGet()
+    rport
+  }
+
 }
