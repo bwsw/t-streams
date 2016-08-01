@@ -1,6 +1,7 @@
 package agents.subscriber
 
 import java.util.UUID
+import java.util.concurrent.{TimeUnit, CountDownLatch}
 import java.util.concurrent.locks.ReentrantLock
 
 import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
@@ -21,6 +22,7 @@ class AManyBasicProducersStreamingInManyPartitionsAndSubscriberTest extends Flat
   val producersAmount = 10
   val dataToSend = (for (part <- 0 until totalElementsInTxn) yield randomString).sorted
   val lock = new ReentrantLock()
+  val l = new CountDownLatch(1)
   val map = scala.collection.mutable.Map[Int, ListBuffer[UUID]]()
   (0 until totalPartitions) foreach { partition =>
     map(partition) = ListBuffer.empty[UUID]
@@ -32,6 +34,8 @@ class AManyBasicProducersStreamingInManyPartitionsAndSubscriberTest extends Flat
       lock.lock()
       map(partition) += transactionUuid
       cnt += 1
+      if(totalTxn * producersAmount == cnt)
+        l.countDown()
       lock.unlock()
     }
 
@@ -73,7 +77,6 @@ class AManyBasicProducersStreamingInManyPartitionsAndSubscriberTest extends Flat
         def run() {
           var i = 0
           while (i < totalTxn) {
-            Thread.sleep(2000)
             val txn = p.newTransaction(ProducerPolicies.errorIfOpened)
             dataToSend.foreach(x => txn.send(x))
             txn.checkpoint()
@@ -86,11 +89,12 @@ class AManyBasicProducersStreamingInManyPartitionsAndSubscriberTest extends Flat
     subscriber.start()
     producersThreads.foreach(x => x.start())
     producersThreads.foreach(x => x.join(timeoutForWaiting * 1000L))
-    Thread.sleep(20 * 1000)
-
     producers.foreach(_.stop())
-    subscriber.stop()
 
+    val r = l.await(100000, TimeUnit.MILLISECONDS)
+    r shouldBe true
+
+    subscriber.stop()
     assert(map.values.map(x => x.size).sum == totalTxn * producersAmount)
     map foreach { case (_, list) =>
       list.map(x => (x, x.timestamp())).sortBy(_._2).map(x => x._1) shouldEqual list
