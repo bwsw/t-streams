@@ -20,7 +20,6 @@ import testutils._
 import scala.collection.mutable.ListBuffer
 
 class ALazyProducersAndSubscriberTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
-  var port = 8000
   val timeoutForWaiting = 60
   val totalPartitions = 4
   val totalTxn = 10
@@ -113,7 +112,7 @@ class ALazyProducersAndSubscriberTest extends FlatSpec with Matchers with Before
   }
 
   def getProducer(usedPartitions: List[Int], totalPartitions: Int): BasicProducer[String] = {
-    port += 1
+    val port = TestUtils.getPort
     f.setProperty(TSF_Dictionary.Producer.master_bind_port, port)
     f.getProducer[String](
       name = "test_producer",
