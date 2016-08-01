@@ -9,7 +9,6 @@ import testutils._
 
 
 class AManyBasicProducersStreamingInManyPartitionsAndConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
-  var port = 8000
   val timeoutForWaiting = 60 * 5
   val totalPartitions = 4
   val totalTxn = 10
@@ -102,32 +101,6 @@ class AManyBasicProducersStreamingInManyPartitionsAndConsumerTest extends FlatSp
   }
 
   def getProducer(usedPartitions: List[Int], totalPartitions: Int): BasicProducer[String] = {
-//    val stream = getStream(totalPartitions)
-//
-//    val agentSettings = new ProducerCoordinationOptions(
-//      agentAddress = s"localhost:$port",
-//      zkHosts = List(new InetSocketAddress("localhost", 2181)),
-//      zkRootPath = "/unit",
-//      zkSessionTimeout = 7000,
-//      isLowPriorityToBeMaster = false,
-//      transport = new TcpTransport,
-//      transportTimeout = 5,
-//      zkConnectionTimeout = 7)
-//
-//    port += 1
-//
-//    val producerOptions = new BasicProducerOptions[String](
-//      transactionTTL = 6,
-//      transactionKeepAliveInterval = 2,
-//      writePolicy = RoundRobinPolicyCreator.getRoundRobinPolicy(stream, usedPartitions),
-//      BatchInsert(batchSizeTestVal),
-//      LocalGeneratorCreator.getGen(),
-//      agentSettings,
-//      converter = stringToArrayByteConverter)
-//
-//    val producer = new BasicProducer("test_producer1", stream, producerOptions)
-//    producer
-
     val port = TestUtils.getPort
     f.setProperty(TSF_Dictionary.Producer.master_bind_port, port)
     f.getProducer[String](
