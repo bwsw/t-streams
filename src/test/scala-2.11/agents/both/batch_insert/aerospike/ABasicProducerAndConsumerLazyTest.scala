@@ -1,13 +1,8 @@
 package agents.both.batch_insert.aerospike
 
-import java.net.InetSocketAddress
-
 import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
-import com.bwsw.tstreams.agents.consumer.{BasicConsumer, BasicConsumerOptions}
-import com.bwsw.tstreams.agents.producer.InsertionType.BatchInsert
-import com.bwsw.tstreams.agents.producer.{BasicProducer, BasicProducerOptions, ProducerCoordinationOptions, ProducerPolicies}
-import com.bwsw.tstreams.coordination.transactions.transport.impl.TcpTransport
-import com.bwsw.tstreams.streams.BasicStream
+import com.bwsw.tstreams.agents.producer.ProducerPolicies
+import com.bwsw.tstreams.env.TSF_Dictionary
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import testutils._
 
@@ -15,76 +10,41 @@ import scala.util.control.Breaks._
 
 
 class ABasicProducerAndConsumerLazyTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
-  val aerospikeInstForProducer1 = storageFactory.getInstance(aerospikeOptions)
-  val aerospikeInstForProducer2 = storageFactory.getInstance(aerospikeOptions)
-  val aerospikeInstForConsumer = storageFactory.getInstance(aerospikeOptions)
 
-  //metadata storage instances
-  val metadataStorageInstForProducer1 = metadataStorageFactory.getInstance(
-    cassandraHosts = List(new InetSocketAddress("localhost", 9042)),
-    keyspace = randomKeyspace)
-  val metadataStorageInstForProducer2 = metadataStorageFactory.getInstance(
-    cassandraHosts = List(new InetSocketAddress("localhost", 9042)),
-    keyspace = randomKeyspace)
-  val metadataStorageInstForConsumer = metadataStorageFactory.getInstance(
-    cassandraHosts = List(new InetSocketAddress("localhost", 9042)),
-    keyspace = randomKeyspace)
+  f.setProperty(TSF_Dictionary.Stream.name,"test_stream").
+    setProperty(TSF_Dictionary.Stream.partitions,3).
+    setProperty(TSF_Dictionary.Stream.ttl, 60 * 10).
+    setProperty(TSF_Dictionary.Coordination.connection_timeout, 7).
+    setProperty(TSF_Dictionary.Coordination.ttl, 7).
+    setProperty(TSF_Dictionary.Producer.master_timeout, 5).
+    setProperty(TSF_Dictionary.Producer.Transaction.ttl, 6).
+    setProperty(TSF_Dictionary.Producer.Transaction.keep_alive, 2).
+    setProperty(TSF_Dictionary.Consumer.transaction_preload, 10).
+    setProperty(TSF_Dictionary.Consumer.data_preload, 10)
 
-  //streams for producers/consumer
-  val streamForProducer1: BasicStream[Array[Byte]] = new BasicStream[Array[Byte]](
-    name = "test_stream",
-    partitions = 3,
-    metadataStorage = metadataStorageInstForProducer1,
-    dataStorage = aerospikeInstForProducer1,
-    ttl = 60 * 10,
-    description = "some_description")
+  val producer1 = f.getProducer[String](
+    name = "test_producer",
+    txnGenerator = LocalGeneratorCreator.getGen(),
+    converter = stringToArrayByteConverter,
+    partitions = List(0,1,2),
+    isLowPriority = false)
 
-  val streamForProducer2: BasicStream[Array[Byte]] = new BasicStream[Array[Byte]](
-    name = "test_stream",
-    partitions = 3,
-    metadataStorage = metadataStorageInstForProducer2,
-    dataStorage = aerospikeInstForProducer2,
-    ttl = 60 * 10,
-    description = "some_description")
+  f.setProperty(TSF_Dictionary.Producer.master_bind_port, TestUtils.getPort)
+  val producer2 = f.getProducer[String](
+    name = "test_producer",
+    txnGenerator = LocalGeneratorCreator.getGen(),
+    converter = stringToArrayByteConverter,
+    partitions = List(0,1,2),
+    isLowPriority = false)
 
-  val streamForConsumer: BasicStream[Array[Byte]] = new BasicStream[Array[Byte]](
-    name = "test_stream",
-    partitions = 3,
-    metadataStorage = metadataStorageInstForConsumer,
-    dataStorage = aerospikeInstForConsumer,
-    ttl = 60 * 10,
-    description = "some_description")
+  val consumer = f.getConsumer[String](
+    name = "test_consumer",
+    txnGenerator = LocalGeneratorCreator.getGen(),
+    converter = arrayByteToStringConverter,
+    partitions = List(0,1,2),
+    offset = Oldest,
+    isUseLastOffset = true)
 
-  val agentSettings1 = new ProducerCoordinationOptions(
-    agentAddress = "localhost:8888",
-    zkHosts = List(new InetSocketAddress("localhost", 2181)),
-    zkRootPath = "/unit",
-    zkSessionTimeout = 7000,
-    isLowPriorityToBeMaster = false,
-    transport = new TcpTransport,
-    transportTimeout = 5,
-    zkConnectionTimeout = 7)
-
-  val agentSettings2 = new ProducerCoordinationOptions(
-    agentAddress = "localhost:8889",
-    zkHosts = List(new InetSocketAddress("localhost", 2181)),
-    zkRootPath = "/unit",
-    zkSessionTimeout = 7000,
-    isLowPriorityToBeMaster = false,
-    transport = new TcpTransport,
-    transportTimeout = 5,
-    zkConnectionTimeout = 7)
-
-  //options for producers/consumer
-  val producerOptions1 = new BasicProducerOptions[String](transactionTTL = 6, transactionKeepAliveInterval = 2, RoundRobinPolicyCreator.getRoundRobinPolicy(streamForProducer1, List(0, 1, 2)), BatchInsert(batchSizeTestVal), LocalGeneratorCreator.getGen(), agentSettings1, stringToArrayByteConverter)
-
-  val producerOptions2 = new BasicProducerOptions[String](transactionTTL = 6, transactionKeepAliveInterval = 2, RoundRobinPolicyCreator.getRoundRobinPolicy(streamForProducer2, List(0, 1, 2)), BatchInsert(batchSizeTestVal), LocalGeneratorCreator.getGen(), agentSettings2, stringToArrayByteConverter)
-
-  val consumerOptions = new BasicConsumerOptions[String](transactionsPreload = 10, dataPreload = 7, arrayByteToStringConverter, RoundRobinPolicyCreator.getRoundRobinPolicy(streamForConsumer, List(0, 1, 2)), Oldest, LocalGeneratorCreator.getGen(), useLastOffset = false)
-
-  val producer1 = new BasicProducer("test_producer", streamForProducer1, producerOptions1)
-  val producer2 = new BasicProducer("test_producer", streamForProducer2, producerOptions2)
-  val consumer = new BasicConsumer("test_consumer", streamForConsumer, consumerOptions)
   consumer.start()
 
   "two producers, consumer" should "first producer - generate transactions lazily, second producer - generate transactions faster" +
