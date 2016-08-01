@@ -40,10 +40,6 @@ class ABasicSubscriberPreCommitFailureTest extends FlatSpec with Matchers
   val totalTxns = 30
   val dataInTxn = 10
   val data = randomString
-  val l1 = new CountDownLatch(1)
-  val l2 = new CountDownLatch(1)
-  val l3 = new CountDownLatch(1)
-
 
   val producer = f.getProducer[String](
     name = "test_producer",
@@ -91,12 +87,10 @@ class ABasicSubscriberPreCommitFailureTest extends FlatSpec with Matchers
 
     s1.start()
     sendTxnsAndWait(totalTxns, dataInTxn, data)
-    // TODO FIX incorrect shutdown #31
     s1.stop()
 
     s2.start()
     sendTxnsAndWait(totalTxns, dataInTxn, data)
-    // TODO FIX incorrect shutdown #31
     s2.stop()
 
     acc shouldEqual 0
