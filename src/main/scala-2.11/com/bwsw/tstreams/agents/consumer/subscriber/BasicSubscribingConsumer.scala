@@ -193,7 +193,6 @@ class BasicSubscribingConsumer[USERTYPE](name: String,
   override def stop() = {
     if (!isStarted.get())
       throw new IllegalStateException("Subscriber is not started")
-    isStarted.set(false)
     updateManager.stopUpdate()
     if (executors != null) {
       executors.foreach(x => x._2.shutdown())
@@ -201,5 +200,6 @@ class BasicSubscribingConsumer[USERTYPE](name: String,
     }
     coordinator.stop()
     brokenTransactionsResolver.stop()
+    isStarted.set(false)
   }
 }
