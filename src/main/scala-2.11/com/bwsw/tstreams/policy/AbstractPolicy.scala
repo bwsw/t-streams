@@ -12,11 +12,11 @@ abstract class AbstractPolicy(stream: BasicStream[_], usedPartitions: List[Int])
     * Partitions validation
     */
   if (usedPartitions.isEmpty)
-    throw new IllegalArgumentException("usedPartitions can't be empty")
+    throw new IllegalArgumentException("UsedPartitions can't be empty")
 
   usedPartitions.foreach { x =>
     if (x < 0 || x >= stream.getPartitions)
-      throw new IllegalArgumentException(s"invalid partition:{$x} in usedPartitions")
+      throw new IllegalArgumentException(s"Invalid partition:{$x} in usedPartitions")
   }
 
 
