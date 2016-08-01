@@ -64,7 +64,7 @@ trait TestUtils {
     setProperty(TSF_Dictionary.Coordination.root, coordinationRoot).
     setProperty(TSF_Dictionary.Producer.master_bind_port, TestUtils.getPort).
     setProperty(TSF_Dictionary.Consumer.Subscriber.bind_port, TestUtils.getPort).
-    setProperty(TSF_Dictionary.Consumer.Subscriber.persistent_queue_path, randomKeyspace).
+    setProperty(TSF_Dictionary.Consumer.Subscriber.persistent_queue_path, "/tmp/" + randomKeyspace).
     setProperty(TSF_Dictionary.Stream.name, "test-stream")
 
   //metadata/data factories
@@ -84,6 +84,9 @@ trait TestUtils {
 
   val aerospikeOptions = new AerospikeStorageOptions("test", hosts)
   val zkService = new ZkService("", List(new InetSocketAddress("localhost", 2181)), 7, 7)
+
+  removeZkMetadata(f.getProperty(TSF_Dictionary.Coordination.root).toString)
+
 
   /**
     * Sorting checker
