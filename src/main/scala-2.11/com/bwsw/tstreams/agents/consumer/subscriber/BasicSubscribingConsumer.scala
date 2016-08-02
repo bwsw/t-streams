@@ -27,6 +27,12 @@ class BasicSubscribingConsumer[USERTYPE](name: String,
                                          persistentQueuePath: String,
                                          pollingFrequencyMaxDelay: Int = 100)
   extends BasicConsumer[USERTYPE](name, stream, options) {
+
+  /**
+    * agent name
+    */
+  override def getAgentName = name
+
   /**
     * Indicate started or not this subscriber
     */

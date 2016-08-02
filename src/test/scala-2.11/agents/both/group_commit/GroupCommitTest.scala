@@ -46,8 +46,8 @@ class GroupCommitTest extends FlatSpec with Matchers with BeforeAndAfterAll with
 
   "Group commit" should "checkpoint all AgentsGroup state" in {
     val group = new CheckpointGroup()
-    group.add("producer", producer)
-    group.add("consumer", consumer)
+    group.add(producer)
+    group.add(consumer)
 
     val txn = producer.newTransaction(ProducerPolicies.errorIfOpened)
     txn.send("info1")
@@ -60,7 +60,7 @@ class GroupCommitTest extends FlatSpec with Matchers with BeforeAndAfterAll with
     //open transaction without close
     producer.newTransaction(ProducerPolicies.errorIfOpened).send("info2")
 
-    group.commit()
+    group.checkpoint()
 
     val consumer2 = f.getConsumer[String](
       name = "test_consumer",

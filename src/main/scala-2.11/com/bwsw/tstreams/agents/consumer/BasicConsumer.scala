@@ -28,6 +28,11 @@ class BasicConsumer[USERTYPE](val name: String,
   private val logger = LoggerFactory.getLogger(this.getClass)
 
   /**
+    * agent name
+    */
+  override def getAgentName = name
+
+  /**
     * Lock for managing transactions
     */
   private val consumerLock = new ReentrantLock(true)

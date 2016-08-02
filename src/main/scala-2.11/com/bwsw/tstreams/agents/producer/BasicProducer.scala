@@ -30,6 +30,11 @@ class BasicProducer[USERTYPE](val name: String,
                               val producerOptions: BasicProducerOptions[USERTYPE])
   extends Agent with Interaction {
 
+  /**
+    * agent name
+    */
+  override def getAgentName = name
+
   // shortkey
   val pcs = producerOptions.producerCoordinationSettings
 
