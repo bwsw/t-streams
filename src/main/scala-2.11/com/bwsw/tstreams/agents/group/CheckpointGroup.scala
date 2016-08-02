@@ -102,7 +102,7 @@ class CheckpointGroup(val executors: Int = 1) {
 
     LockUtil.lockOrDie(lock, lockTimeout, Some(logger))
     agents.foreach { case (name, agent) =>
-      agent.getThreadLock().lock()
+      LockUtil.lockOrDie(agent.getThreadLock(), lockTimeout, Some(logger))
     }
 
     var exc: Exception = null

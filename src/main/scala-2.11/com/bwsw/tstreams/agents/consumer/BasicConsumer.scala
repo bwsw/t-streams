@@ -164,7 +164,7 @@ class BasicConsumer[USERTYPE](val name: String,
       return Some(new BasicConsumerTransaction[USERTYPE](this, curPartition, txn))
     }
 
-    val updatedTxnOpt: Option[TransactionSettings] = updateTransaction(txn.txnUuid, curPartition)
+    val updatedTxnOpt: Option[TransactionSettings] = updateTransactionInfoFromDB(txn.txnUuid, curPartition)
 
     if (updatedTxnOpt.isDefined) {
       val updatedTxn = updatedTxnOpt.get
@@ -249,7 +249,7 @@ class BasicConsumer[USERTYPE](val name: String,
 
     logger.debug(s"Start retrieving new historic transaction for consumer with" +
       s" name : $name, streamName : ${stream.getName}, streamPartitions : ${stream.getPartitions}")
-    val txnOpt = updateTransaction(uuid, partition)
+    val txnOpt = updateTransactionInfoFromDB(uuid, partition)
     val res =
       if (txnOpt.isDefined) {
         val txn = txnOpt.get
@@ -292,18 +292,18 @@ class BasicConsumer[USERTYPE](val name: String,
     * @param txn Transaction to update
     * @return Updated transaction
     */
-  def updateTransaction(txn: UUID, partition: Int): Option[TransactionSettings] = {
+  def updateTransactionInfoFromDB(txn: UUID, partition: Int): Option[TransactionSettings] = {
     if(!isStarted.get())
       throw new IllegalStateException("Start consumer first.")
 
     LockUtil.lockOrDie(consumerLock, (100, TimeUnit.SECONDS), Some(logger))
-    val amount: Option[(Int, Int)] = stream.metadataStorage.commitEntity.getTransactionAmount(
+    val data: Option[(Int, Int)] = stream.metadataStorage.commitEntity.getTransactionItemCountAndTTL(
       stream.getName,
       partition,
       txn)
     consumerLock.unlock()
-    if (amount.isDefined) {
-      val (cnt, ttl) = amount.get
+    if (data.isDefined) {
+      val (cnt, ttl) = data.get
       Some(TransactionSettings(txn, cnt, ttl))
     }
     else

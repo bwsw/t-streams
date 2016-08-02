@@ -98,7 +98,7 @@ class SubscriberTransactionsRelay[USERTYPE](subscriber: BasicSubscribingConsumer
               stream.
               metadataStorage.
               commitEntity.
-              getTransactionAmount(streamName, partition, uuid)
+              getTransactionItemCountAndTTL(streamName, partition, uuid)
             if (updatedTxnOpt.isDefined) {
               val (amount, _) = updatedTxnOpt.get
               if (amount != -1) {
