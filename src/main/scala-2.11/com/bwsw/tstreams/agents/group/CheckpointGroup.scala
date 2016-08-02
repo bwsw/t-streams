@@ -1,9 +1,9 @@
 package com.bwsw.tstreams.agents.group
 
-import java.util.concurrent.TimeUnit
+import java.util.concurrent.{CountDownLatch, TimeUnit}
 import java.util.concurrent.locks.ReentrantLock
 
-import com.bwsw.tstreams.common.LockUtil
+import com.bwsw.tstreams.common.{FirstFailLockableTaskExecutorPool, LockUtil}
 import org.slf4j.LoggerFactory
 
 /**
@@ -16,6 +16,7 @@ class CheckpointGroup(val executors: Int = 1) {
   private var agents = scala.collection.mutable.Map[String, Agent]()
   private val lock = new ReentrantLock()
   private val lockTimeout = (20, TimeUnit.SECONDS)
+  private val executorPool = new FirstFailLockableTaskExecutorPool(executors)
 
   /**
     * MetadataStorage logger for logging
@@ -125,21 +126,35 @@ class CheckpointGroup(val executors: Int = 1) {
     if (null != exc) throw exc
   }
 
-  private def publishPreCheckpointEventForAllProducers(info: List[CheckpointInfo]) = {
-    // TODO improve performance
-    info foreach {
-      case ProducerCheckpointInfo(_, agent, preCheckpointEvent, _, _, _, _, _, _) =>
-        agent.publish(preCheckpointEvent)
+  private def publishPreCheckpointEventForAllProducers(producers: List[CheckpointInfo]) = {
+    val l = new CountDownLatch(producers.size)
+    producers foreach {
+      case ProducerCheckpointInfo(txn, agent, preCheckpointEvent, _, _, _, _, _, _) =>
+        executorPool.execute(new Runnable {
+          override def run(): Unit = {
+            agent.publish(preCheckpointEvent)
+            logger.info("PRE event sent for " + txn.getTxnUUID.toString)
+            l.countDown()
+          }
+        })
+      case _ => l.countDown()
+    }
+    l.await()
+  }
+
+  private def publishPostCheckpointEventForAllProducers(producers: List[CheckpointInfo]) = {
+    producers foreach {
+      case ProducerCheckpointInfo(_, agent, _, finalCheckpointEvent, _, _, _, _, _) =>
+        executorPool.execute(new Runnable {
+          override def run(): Unit = agent.publish(finalCheckpointEvent)
+        })
       case _ =>
     }
   }
 
-  private def publishPostCheckpointEventForAllProducers(info: List[CheckpointInfo]) = {
-    // TODO improve performance
-    info foreach {
-      case ProducerCheckpointInfo(_, agent, _, finalCheckpointEvent, _, _, _, _, _) =>
-        agent.publish(finalCheckpointEvent)
-      case _ =>
-    }
+  def stop(): Unit = {
+    executorPool.shutdownSafe()
+    clear()
   }
+
 }

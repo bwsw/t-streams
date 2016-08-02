@@ -16,6 +16,9 @@ import testutils._
 
 class GroupCheckpointTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
 
+  //System.setProperty("DEBUG", "true")
+  //System.setProperty(org.slf4j.impl.SimpleLogger.DEFAULT_LOG_LEVEL_KEY, "DEBUG");
+
   f.setProperty(TSF_Dictionary.Stream.name,"test_stream").
     setProperty(TSF_Dictionary.Stream.partitions,3).
     setProperty(TSF_Dictionary.Stream.ttl, 60 * 10).
@@ -49,16 +52,18 @@ class GroupCheckpointTest extends FlatSpec with Matchers with BeforeAndAfterAll 
     group.add(producer)
     group.add(consumer)
 
-    val txn = producer.newTransaction(ProducerPolicies.errorIfOpened)
-    txn.send("info1")
-    txn.checkpoint()
-    Thread.sleep(2000)
+    val txn1 = producer.newTransaction(ProducerPolicies.errorIfOpened)
+    logger.info("TXN1 is " + txn1.getTxnUUID.toString)
+    txn1.send("info1")
+    txn1.checkpoint()
 
     //move consumer offsets
     consumer.getTransaction.get
 
     //open transaction without close
-    producer.newTransaction(ProducerPolicies.errorIfOpened).send("info2")
+    val txn2 = producer.newTransaction(ProducerPolicies.errorIfOpened)
+    logger.info("TXN2 is " + txn2.getTxnUUID.toString)
+    txn2.send("info2")
 
     group.checkpoint()
 
