@@ -126,6 +126,7 @@ class CheckpointGroup() {
   }
 
   private def publishPreCheckpointEventForAllProducers(info: List[CheckpointInfo]) = {
+    // TODO improve performance
     info foreach {
       case ProducerCheckpointInfo(_, agent, preCheckpointEvent, _, _, _, _, _, _) =>
         agent.publish(preCheckpointEvent)
@@ -134,6 +135,7 @@ class CheckpointGroup() {
   }
 
   private def publishPostCheckpointEventForAllProducers(info: List[CheckpointInfo]) = {
+    // TODO improve performance
     info foreach {
       case ProducerCheckpointInfo(_, agent, _, finalCheckpointEvent, _, _, _, _, _) =>
         agent.publish(finalCheckpointEvent)
