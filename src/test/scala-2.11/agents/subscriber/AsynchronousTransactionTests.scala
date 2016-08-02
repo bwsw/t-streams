@@ -1,15 +1,12 @@
 package agents.subscriber
 
-import java.util.UUID
 import java.util.concurrent.CountDownLatch
-import java.util.concurrent.locks.ReentrantLock
 
 import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
-import com.bwsw.tstreams.agents.consumer.subscriber.{BasicSubscribingConsumer, BasicSubscriberCallback}
 import com.bwsw.tstreams.agents.producer.ProducerPolicies
 import com.bwsw.tstreams.debug.GlobalHooks
 import com.bwsw.tstreams.env.TSF_Dictionary
-import org.scalatest.{BeforeAndAfterAll, Matchers, FlatSpec}
+import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import testutils.{LocalGeneratorCreator, TestUtils}
 
 /**
@@ -119,6 +116,7 @@ class AsynchronousTransactionTests  extends FlatSpec with Matchers
   }
 
   override def afterAll() = {
+    producer.stop()
     System.setProperty("DEBUG", "false")
     onAfterAll()
   }
