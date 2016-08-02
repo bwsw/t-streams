@@ -9,7 +9,7 @@ import org.slf4j.LoggerFactory
 /**
   * Base class to creating agent group
   */
-class CheckpointGroup() {
+class CheckpointGroup(val executors: Int = 1) {
   /**
     * Group of agents (producers/consumer)
     */

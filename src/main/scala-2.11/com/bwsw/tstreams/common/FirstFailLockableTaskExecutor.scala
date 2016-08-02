@@ -1,26 +1,30 @@
 package com.bwsw.tstreams.common
 
-import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.{AtomicBoolean, AtomicInteger}
 import java.util.concurrent.locks.ReentrantLock
-import java.util.concurrent.{CountDownLatch, Executor, LinkedBlockingQueue}
+import java.util.concurrent.{TimeUnit, CountDownLatch, Executor, LinkedBlockingQueue}
 
 import com.bwsw.ResettableCountDownLatch
 import com.bwsw.tstreams.common.FirstFailLockableTaskExecutor.{FirstFailLockableExecutorException, FirstFailLockableExecutorTask}
 import org.slf4j.LoggerFactory
 
 /**
-  * Executor which provides sequence runnable
-  * execution but on any failure exception will be thrown
+  * Executor which provides sequential runnable
+  * execution but stops after the first exception
   */
+
 class FirstFailLockableTaskExecutor extends Executor {
+
+  val isRunning = new AtomicBoolean(true)
+
   private val logger = LoggerFactory.getLogger(this.getClass)
   private val awaitSignalVar = new ResettableCountDownLatch(0)
   private val queue = new LinkedBlockingQueue[FirstFailLockableExecutorTask]()
   private val isNotFailed = new AtomicBoolean(true)
-  private val isRunning = new AtomicBoolean(true)
   private val isShutdown = new AtomicBoolean(false)
   private var executor : Thread = null
   private var failureExc : Exception = null
+  private val lock: ReentrantLock = new ReentrantLock()
   startExecutor()
 
   /**
@@ -96,17 +100,21 @@ class FirstFailLockableTaskExecutor extends Executor {
     this.awaitInternal()
   }
 
+  private def getRunnable: Runnable =
+    new Runnable {
+      override def run(): Unit = {
+        awaitSignalVar.countDown()
+      }
+    }
+
+
   /**
     * Internal method for [[await]]
     */
   private def awaitInternal() : Unit = {
     awaitSignalVar.setValue(1)
-    val runnable = new Runnable {
-      override def run(): Unit = {
-        awaitSignalVar.countDown()
-      }
-    }
-    queue.add(FirstFailLockableExecutorTask(runnable, isIgnorableIfExecutorFailed = false, lock = None))
+    queue.add(FirstFailLockableExecutorTask(getRunnable, isIgnorableIfExecutorFailed = false, lock = None))
+    logger.info("before await")
     awaitSignalVar.await()
   }
 
@@ -155,6 +163,49 @@ class FirstFailLockableTaskExecutor extends Executor {
   override def execute(command: Runnable): Unit = {
     this.submit(command)
   }
+}
+
+/**
+  * Implements pool of executors
+  */
+class FirstFailLockableTaskExecutorPool(val size: Int = 4) extends Executor {
+
+  private val pool = new Array[FirstFailLockableTaskExecutor](size)
+  private var next: Int = 0
+  private val lock = new ReentrantLock()
+  private val logger = LoggerFactory.getLogger(this.getClass)
+
+  /**
+    * send runnable for queueud execution
+    * @param command
+    */
+  override def execute(command: Runnable): Unit = {
+    LockUtil.lockOrDie(lock, (100, TimeUnit.SECONDS), Some(logger))
+    pool(next).submit(command)
+    next += 1
+    next = next % size
+    lock.unlock()
+  }
+
+  /**
+    * await for all tasks on all executors will be completed
+    */
+  def await(): Unit = {
+    LockUtil.lockOrDie(lock, (100, TimeUnit.SECONDS), Some(logger))
+    (0 until size).foreach(x => pool(x).await)
+    lock.unlock()
+  }
+
+  /**
+    * shutdown pool correctly
+    */
+  def shutdownSafe(): Unit = {
+    LockUtil.lockOrDie(lock, (100, TimeUnit.SECONDS), Some(logger))
+    (0 until size).foreach(x => pool(x).isRunning.set(false))
+    (0 until size).foreach(x => pool(x).shutdownSafe)
+    lock.unlock()
+  }
+
 }
 
 /**
