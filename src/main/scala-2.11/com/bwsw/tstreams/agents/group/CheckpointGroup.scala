@@ -1,5 +1,6 @@
 package com.bwsw.tstreams.agents.group
 
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.{CountDownLatch, TimeUnit}
 import java.util.concurrent.locks.ReentrantLock
 
@@ -17,6 +18,7 @@ class CheckpointGroup(val executors: Int = 1) {
   private val lock = new ReentrantLock()
   private val lockTimeout = (20, TimeUnit.SECONDS)
   private val executorPool = new FirstFailLockableTaskExecutorPool(executors)
+  private val isStopped = new AtomicBoolean(false)
 
   /**
     * MetadataStorage logger for logging
@@ -39,6 +41,8 @@ class CheckpointGroup(val executors: Int = 1) {
     * @param agent Agent ref
     */
   def add(agent: Agent): Unit = {
+    if(isStopped.get)
+      throw new IllegalStateException("Group is stopped. No longer operations are possible.")
     LockUtil.lockOrDie(lock, lockTimeout, Some(logger))
     if (agents.contains(agent.getAgentName)) {
       lock.unlock()
@@ -53,6 +57,8 @@ class CheckpointGroup(val executors: Int = 1) {
     * clears group
     */
   def clear(): Unit = {
+    if(isStopped.get)
+      throw new IllegalStateException("Group is stopped. No longer operations are possible.")
     LockUtil.lockOrDie(lock, lockTimeout, Some(logger))
     agents.clear()
     lock.unlock()
@@ -64,6 +70,8 @@ class CheckpointGroup(val executors: Int = 1) {
     * @param name Agent name
     */
   def remove(name: String): Unit = {
+    if(isStopped.get)
+      throw new IllegalStateException("Group is stopped. No longer operations are possible.")
     LockUtil.lockOrDie(lock, lockTimeout, Some(logger))
     if (!agents.contains(name)) {
       lock.unlock()
@@ -77,6 +85,8 @@ class CheckpointGroup(val executors: Int = 1) {
     * Checks if an agent with the name is already inside
     */
   def exists(name: String): Boolean = {
+    if(isStopped.get)
+      throw new IllegalStateException("Group is stopped. No longer operations are possible.")
     LockUtil.lockOrDie(lock, lockTimeout, Some(logger))
     val r = agents.contains(name)
     lock.unlock()
@@ -87,6 +97,8 @@ class CheckpointGroup(val executors: Int = 1) {
     * Commit all agents state
     */
   def checkpoint(): Unit = {
+    if(isStopped.get)
+      throw new IllegalStateException("Group is stopped. No longer operations are possible.")
     // lock from race
     LockUtil.lockOrDie(lock, lockTimeout, Some(logger))
 
@@ -144,15 +156,20 @@ class CheckpointGroup(val executors: Int = 1) {
 
   private def publishPostCheckpointEventForAllProducers(producers: List[CheckpointInfo]) = {
     producers foreach {
-      case ProducerCheckpointInfo(_, agent, _, finalCheckpointEvent, _, _, _, _, _) =>
+      case ProducerCheckpointInfo(_, agent, _, postCheckpointEvent, _, _, _, _, _) =>
         executorPool.execute(new Runnable {
-          override def run(): Unit = agent.publish(finalCheckpointEvent)
+          override def run(): Unit = agent.publish(postCheckpointEvent)
         })
       case _ =>
     }
   }
 
+  /**
+    * Stop group when it's no longer required
+    */
   def stop(): Unit = {
+    if(isStopped.getAndSet(true))
+      throw new IllegalStateException("Group is stopped. No longer operations are possible.")
     executorPool.shutdownSafe()
     clear()
   }
