@@ -14,7 +14,10 @@ import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import testutils._
 
 
-class GroupCommitTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
+class GroupCheckpointTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
+
+  //System.setProperty("DEBUG", "true")
+  //System.setProperty(org.slf4j.impl.SimpleLogger.DEFAULT_LOG_LEVEL_KEY, "DEBUG");
 
   f.setProperty(TSF_Dictionary.Stream.name,"test_stream").
     setProperty(TSF_Dictionary.Stream.partitions,3).
@@ -46,21 +49,23 @@ class GroupCommitTest extends FlatSpec with Matchers with BeforeAndAfterAll with
 
   "Group commit" should "checkpoint all AgentsGroup state" in {
     val group = new CheckpointGroup()
-    group.add("producer", producer)
-    group.add("consumer", consumer)
+    group.add(producer)
+    group.add(consumer)
 
-    val txn = producer.newTransaction(ProducerPolicies.errorIfOpened)
-    txn.send("info1")
-    txn.checkpoint()
-    Thread.sleep(2000)
+    val txn1 = producer.newTransaction(ProducerPolicies.errorIfOpened)
+    logger.info("TXN1 is " + txn1.getTxnUUID.toString)
+    txn1.send("info1")
+    txn1.checkpoint()
 
     //move consumer offsets
     consumer.getTransaction.get
 
     //open transaction without close
-    producer.newTransaction(ProducerPolicies.errorIfOpened).send("info2")
+    val txn2 = producer.newTransaction(ProducerPolicies.errorIfOpened)
+    logger.info("TXN2 is " + txn2.getTxnUUID.toString)
+    txn2.send("info2")
 
-    group.commit()
+    group.checkpoint()
 
     val consumer2 = f.getConsumer[String](
       name = "test_consumer",

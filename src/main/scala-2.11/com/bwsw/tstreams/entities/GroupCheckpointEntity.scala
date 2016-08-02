@@ -11,17 +11,17 @@ import com.datastax.driver.core.{BatchStatement, Session}
   * @param producerEntityName Producer metadata table name
   * @param session            C* session
   */
-class GroupCommitEntity(consumerEntityName: String, producerEntityName: String, session: Session) {
+class GroupCheckpointEntity(consumerEntityName: String, producerEntityName: String, session: Session) {
   /**
     * Statement for saving consumer single offset
     */
-  private val consumerCommitStatement = session
+  private val consumerCheckpointStatement = session
     .prepare(s"insert into $consumerEntityName (name,stream,partition,last_transaction) values(?,?,?,?)")
 
   /**
     * Statement using for saving producer offsets
     */
-  private val producerCommitStatement = session
+  private val producerCheckpointStatement = session
     .prepare(s"insert into $producerEntityName (stream,partition,transaction,cnt) values(?,?,?,?) USING TTL ?")
 
   /**
@@ -30,13 +30,13 @@ class GroupCommitEntity(consumerEntityName: String, producerEntityName: String, 
     * @param info Info to commit
     *             (used only for consumers now; producers is not atomic)
     */
-  def groupCommit(info: List[CheckpointInfo]): Unit = {
+  def groupCheckpoint(info: List[CheckpointInfo]): Unit = {
     val batchStatement = new BatchStatement()
     info foreach {
       case ConsumerCheckpointInfo(name, stream, partition, offset) =>
-        batchStatement.add(consumerCommitStatement.bind(name, stream, new Integer(partition), offset))
+        batchStatement.add(consumerCheckpointStatement.bind(name, stream, new Integer(partition), offset))
       case ProducerCheckpointInfo(_, _, _, _, streamName, partition, transaction, totalCnt, ttl) =>
-        batchStatement.add(producerCommitStatement.bind(streamName, new Integer(partition), transaction, new Integer(totalCnt), new Integer(ttl)))
+        batchStatement.add(producerCheckpointStatement.bind(streamName, new Integer(partition), transaction, new Integer(totalCnt), new Integer(ttl)))
     }
     session.execute(batchStatement)
   }
