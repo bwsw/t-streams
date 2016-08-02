@@ -162,14 +162,14 @@ class CommitEntity(commitLog: String, session: Session) {
 
 
   /**
-    * Retrieving only one concrete transaction amount and ttl
+    * Retrieving only one concrete transaction item count and ttl
     *
     * @param streamName  Name of concrete stream
     * @param partition   Number of partition
     * @param transaction Concrete transaction time
     * @return Amount of data in concrete transaction and ttl
     */
-  def getTransactionAmount(streamName: String, partition: Int, transaction: UUID): Option[(Int, Int)] = {
+  def getTransactionItemCountAndTTL(streamName: String, partition: Int, transaction: UUID): Option[(Int, Int)] = {
     val values: List[AnyRef] = List(streamName, new Integer(partition), transaction)
     val statementWithBindings = selectTransactionAmountStatement.bind(values: _*)
 

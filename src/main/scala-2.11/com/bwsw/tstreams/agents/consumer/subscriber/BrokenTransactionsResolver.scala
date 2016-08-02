@@ -108,7 +108,7 @@ class BrokenTransactionsResolver(subscriber: BasicSubscribingConsumer[_]) {
             s" partition:{$partition}" +
             s" with txn:{${txn.timestamp()}}")
         } else {
-          val updatedTransaction = subscriber.updateTransaction(txn, partition)
+          val updatedTransaction = subscriber.updateTransactionInfoFromDB(txn, partition)
           updatedTransaction match {
             case Some(transactionSettings) =>
               if (transactionSettings.totalItems != -1) {

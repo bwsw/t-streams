@@ -56,5 +56,5 @@ abstract class AbstractPolicy(stream: BasicStream[_], usedPartitions: List[Int])
     *
     * @return Used partitions
     */
-  def getUsedPartition(): List[Int] = usedPartitions
+  def getUsedPartitions(): List[Int] = usedPartitions
 }

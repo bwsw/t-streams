@@ -53,7 +53,7 @@ class BasicSubscribingConsumer[USERTYPE](name: String,
   /**
     * Subscriber used partitions
     */
-  private val usedPartitions = options.readPolicy.getUsedPartition()
+  private val usedPartitions = options.readPolicy.getUsedPartitions()
 
   /**
     * Thread pool size (default is equal to [[usedPartitions.size]]])
