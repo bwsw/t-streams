@@ -10,8 +10,8 @@ import org.scalatest.{BeforeAndAfterAll, Matchers, FlatSpec}
   */
 class FirstFailLockableTaskExecutorPoolTest extends FlatSpec with Matchers with BeforeAndAfterAll {
 
-  System.setProperty("DEBUG", "true")
-  System.setProperty(org.slf4j.impl.SimpleLogger.DEFAULT_LOG_LEVEL_KEY, "DEBUG");
+  //System.setProperty("DEBUG", "true")
+  //System.setProperty(org.slf4j.impl.SimpleLogger.DEFAULT_LOG_LEVEL_KEY, "DEBUG");
 
   "Constructor" should "create pool" in {
     val p = new FirstFailLockableTaskExecutorPool()
