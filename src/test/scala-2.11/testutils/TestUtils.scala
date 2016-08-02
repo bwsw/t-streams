@@ -12,6 +12,7 @@ import com.bwsw.tstreams.common.{CassandraConnectionPool, CassandraHelper}
 import com.bwsw.tstreams.converter.{ArrayByteToStringConverter, StringToArrayByteConverter}
 import com.bwsw.tstreams.data.aerospike.{AerospikeStorageFactory, AerospikeStorageOptions}
 import com.bwsw.tstreams.data.cassandra.{CassandraStorageFactory, CassandraStorageOptions}
+import com.bwsw.tstreams.debug.GlobalHooks
 import com.bwsw.tstreams.env.{TSF_Dictionary, TStreamsFactory}
 import com.bwsw.tstreams.metadata.MetadataStorageFactory
 import org.slf4j.LoggerFactory
@@ -129,6 +130,9 @@ trait TestUtils {
   }
 
   def onAfterAll() = {
+    System.setProperty("DEBUG", "false")
+    GlobalHooks.addHook(GlobalHooks.preCommitFailure, () => ())
+    GlobalHooks.addHook(GlobalHooks.afterCommitFailure, () => ())
     removeZkMetadata(f.getProperty(TSF_Dictionary.Coordination.root).toString)
     removeZkMetadata("/unit")
     metadataStorageFactory.closeFactory()

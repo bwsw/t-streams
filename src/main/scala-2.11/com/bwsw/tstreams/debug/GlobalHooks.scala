@@ -26,4 +26,7 @@ object GlobalHooks {
   def clear(): Unit = {
     hooks.clear()
   }
+
+  def preCommitFailure = "PreCommitFailure"
+  def afterCommitFailure = "AfterCommitFailure"
 }

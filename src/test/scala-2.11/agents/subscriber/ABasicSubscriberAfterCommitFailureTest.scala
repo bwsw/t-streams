@@ -17,7 +17,7 @@ class ABasicSubscriberAfterCommitFailureTest extends FlatSpec with Matchers
   with BeforeAndAfterAll with TestUtils {
 
   System.setProperty("DEBUG", "true")
-  GlobalHooks.addHook("AfterCommitFailure", () => throw new RuntimeException)
+  GlobalHooks.addHook(GlobalHooks.afterCommitFailure, () => throw new RuntimeException)
 
   f.setProperty(TSF_Dictionary.Stream.name,"test_stream").
     setProperty(TSF_Dictionary.Stream.partitions,3).
