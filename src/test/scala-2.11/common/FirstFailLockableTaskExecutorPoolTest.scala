@@ -1,7 +1,10 @@
 package common
 
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.locks.ReentrantLock
 
+import com.bwsw.tstreams.common.FirstFailLockableTaskExecutor.FirstFailLockableExecutorException
 import com.bwsw.tstreams.common.FirstFailLockableTaskExecutorPool
 import org.scalatest.{BeforeAndAfterAll, Matchers, FlatSpec}
 
@@ -45,6 +48,29 @@ class FirstFailLockableTaskExecutorPoolTest extends FlatSpec with Matchers with 
     p.shutdownSafe()
   }
 
+  "If send task which raises exception" should "result to exception when awaitCurrentTasksWillComplete" in {
+    val p = new FirstFailLockableTaskExecutorPool(4)
+    val l = new CountDownLatch(1)
+
+    try {
+      // this must pass ok
+      p.execute(new Runnable {
+        override def run(): Unit = {
+          l.countDown()
+          throw new IllegalArgumentException("expected")
+        }
+      })
+      l.await()
+      p.awaitCurrentTasksWillComplete()
+    } catch {
+      case e: FirstFailLockableExecutorException =>
+        e.getMessage shouldBe "expected"
+      case e: Exception =>
+        throw e
+    }
+    p.shutdownSafe()
+  }
+
   "If send task which raises exception" should "result to exception when next task is sent" in {
 
     val p = new FirstFailLockableTaskExecutorPool(4)
@@ -65,5 +91,6 @@ class FirstFailLockableTaskExecutorPoolTest extends FlatSpec with Matchers with 
     }
     p.shutdownSafe()
   }
+
 
 }
