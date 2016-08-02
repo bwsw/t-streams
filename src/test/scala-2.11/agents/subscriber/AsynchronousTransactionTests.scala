@@ -91,7 +91,7 @@ class AsynchronousTransactionTests  extends FlatSpec with Matchers
   }
 
 
-  "Fire async checkpoint by producer (with delay) and wait when complete" should "consumer not get transaction from DB" in {
+  "Fire async checkpoint by producer (with pre delay) and wait when complete" should "consumer not get transaction from DB" in {
     val l = new CountDownLatch(1)
     GlobalHooks.addHook(GlobalHooks.preCommitFailure, () => {
       l.await()
