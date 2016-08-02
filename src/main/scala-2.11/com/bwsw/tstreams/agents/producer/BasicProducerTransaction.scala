@@ -164,7 +164,7 @@ class BasicProducerTransaction[USERTYPE](transactionLock: ReentrantLock,
     //debug purposes only
     {
       val interruptExecution: Boolean = try {
-        GlobalHooks.invoke("AfterCommitFailure")
+        GlobalHooks.invoke(GlobalHooks.afterCommitFailure)
         false
       } catch {
         case e: Exception =>
@@ -214,7 +214,7 @@ class BasicProducerTransaction[USERTYPE](transactionLock: ReentrantLock,
       //debug purposes only
       {
         val interruptExecution: Boolean = try {
-          GlobalHooks.invoke("PreCommitFailure")
+          GlobalHooks.invoke(GlobalHooks.preCommitFailure)
           false
         } catch {
           case e: Exception =>
@@ -292,7 +292,7 @@ class BasicProducerTransaction[USERTYPE](transactionLock: ReentrantLock,
             partition = partition))
 
           //debug purposes only
-          GlobalHooks.invoke("PreCommitFailure")
+          GlobalHooks.invoke(GlobalHooks.preCommitFailure)
 
           txnOwner.stream.metadataStorage.commitEntity.commit(
             streamName = txnOwner.stream.getName,
@@ -304,7 +304,7 @@ class BasicProducerTransaction[USERTYPE](transactionLock: ReentrantLock,
           logger.debug(s"[COMMIT PARTITION_$partition] ts=${transactionUuid.timestamp()}")
 
           //debug purposes only
-          GlobalHooks.invoke("AfterCommitFailure")
+          GlobalHooks.invoke(GlobalHooks.afterCommitFailure)
 
           txnOwner.masterP2PAgent.publish(ProducerTopicMessage(
             txnUuid = transactionUuid,

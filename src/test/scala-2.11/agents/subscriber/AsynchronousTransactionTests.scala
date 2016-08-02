@@ -43,7 +43,7 @@ class AsynchronousTransactionTests  extends FlatSpec with Matchers
 
   "Fire async checkpoint by producer and wait when complete" should "consumer get transaction from DB" in {
     val l = new CountDownLatch(1)
-    GlobalHooks.addHook("AfterCommitFailure", () => {
+    GlobalHooks.addHook(GlobalHooks.afterCommitFailure, () => {
       l.countDown()
     })
 
@@ -70,7 +70,7 @@ class AsynchronousTransactionTests  extends FlatSpec with Matchers
 
   "Fire async checkpoint by producer (with exception) and wait when complete" should "consumer not get transaction from DB" in {
     val l = new CountDownLatch(1)
-    GlobalHooks.addHook("PreCommitFailure", () => {
+    GlobalHooks.addHook(GlobalHooks.preCommitFailure, () => {
       l.countDown()
       throw new Exception("expected")
     })
@@ -96,7 +96,7 @@ class AsynchronousTransactionTests  extends FlatSpec with Matchers
 
   "Fire async checkpoint by producer (with delay) and wait when complete" should "consumer not get transaction from DB" in {
     val l = new CountDownLatch(1)
-    GlobalHooks.addHook("PreCommitFailure", () => {
+    GlobalHooks.addHook(GlobalHooks.preCommitFailure, () => {
       l.await()
       throw new Exception("expected")
     })
@@ -118,4 +118,8 @@ class AsynchronousTransactionTests  extends FlatSpec with Matchers
     ctxn.isDefined shouldBe false
   }
 
+  override def afterAll() = {
+    System.setProperty("DEBUG", "false")
+    onAfterAll()
+  }
 }
