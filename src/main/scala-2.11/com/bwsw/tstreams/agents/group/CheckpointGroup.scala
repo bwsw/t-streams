@@ -1,13 +1,29 @@
 package com.bwsw.tstreams.agents.group
 
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.{CountDownLatch, TimeUnit}
+import java.util.concurrent.locks.ReentrantLock
+
+import com.bwsw.tstreams.common.{FirstFailLockableTaskExecutorPool, LockUtil}
+import org.slf4j.LoggerFactory
+
 /**
   * Base class to creating agent group
   */
-class CheckpointGroup() {
+class CheckpointGroup(val executors: Int = 1) {
   /**
     * Group of agents (producers/consumer)
     */
   private var agents = scala.collection.mutable.Map[String, Agent]()
+  private val lock = new ReentrantLock()
+  private val lockTimeout = (20, TimeUnit.SECONDS)
+  private val executorPool = new FirstFailLockableTaskExecutorPool(executors)
+  private val isStopped = new AtomicBoolean(false)
+
+  /**
+    * MetadataStorage logger for logging
+    */
+  private val logger = LoggerFactory.getLogger(this.getClass)
 
   /**
     * Validate that all agents has the same metadata storage
@@ -16,20 +32,36 @@ class CheckpointGroup() {
     var set = Set[String]()
     agents.map(x => x._2.getMetadataRef().id).foreach(id => set += id)
     if (set.size != 1)
-      throw new IllegalStateException("agents must use only one common metadata storage")
+      throw new IllegalStateException("All agents in a group must use the same metadata storage.")
   }
 
   /**
     * Add new agent in group
     *
     * @param agent Agent ref
-    * @param name  Agent name
     */
-  def add(name: String, agent: Agent): Unit = {
-    if (agents.contains(name))
-      throw new IllegalArgumentException("agents with such name already exist")
-    agents += ((name, agent))
+  def add(agent: Agent): Unit = {
+    if(isStopped.get)
+      throw new IllegalStateException("Group is stopped. No longer operations are possible.")
+    LockUtil.lockOrDie(lock, lockTimeout, Some(logger))
+    if (agents.contains(agent.getAgentName)) {
+      lock.unlock()
+      throw new IllegalArgumentException(s"Agent with specified name ${agent.getAgentName} is already in the group. Names of added agents must be unique.")
+    }
+    agents += ((agent.getAgentName, agent))
     validateAgents()
+    lock.unlock()
+  }
+
+  /**
+    * clears group
+    */
+  def clear(): Unit = {
+    if(isStopped.get)
+      throw new IllegalStateException("Group is stopped. No longer operations are possible.")
+    LockUtil.lockOrDie(lock, lockTimeout, Some(logger))
+    agents.clear()
+    lock.unlock()
   }
 
   /**
@@ -38,43 +70,108 @@ class CheckpointGroup() {
     * @param name Agent name
     */
   def remove(name: String): Unit = {
-    if (!agents.contains(name))
-      throw new IllegalArgumentException("agents with such name does not exist")
+    if(isStopped.get)
+      throw new IllegalStateException("Group is stopped. No longer operations are possible.")
+    LockUtil.lockOrDie(lock, lockTimeout, Some(logger))
+    if (!agents.contains(name)) {
+      lock.unlock()
+      throw new IllegalArgumentException(s"Agent with specified name ${name} is not in the group.")
+    }
     agents.remove(name)
+    lock.unlock()
+  }
+
+  /**
+    * Checks if an agent with the name is already inside
+    */
+  def exists(name: String): Boolean = {
+    if(isStopped.get)
+      throw new IllegalStateException("Group is stopped. No longer operations are possible.")
+    LockUtil.lockOrDie(lock, lockTimeout, Some(logger))
+    val r = agents.contains(name)
+    lock.unlock()
+    r
   }
 
   /**
     * Commit all agents state
     */
-  def commit(): Unit = {
+  def checkpoint(): Unit = {
+    if(isStopped.get)
+      throw new IllegalStateException("Group is stopped. No longer operations are possible.")
+    // lock from race
+    LockUtil.lockOrDie(lock, lockTimeout, Some(logger))
+
+    // lock all agents
     agents.foreach { case (name, agent) =>
       agent.getThreadLock().lock()
     }
-    val totalCommitInfo: List[CheckpointInfo] = agents.map { case (name, agent) =>
-      agent.getCheckpointInfoAndClear()
-    }.reduceRight((l1, l2) => l1 ++ l2)
-    publishGlobalPreCheckpointEvent(totalCommitInfo)
-    //assume all agents use the same metadata entity
-    agents.head._2.getMetadataRef().groupCommitEntity.groupCommit(totalCommitInfo)
-    publishGlobalFinalCheckpointEvent(totalCommitInfo)
+
+    var exc: Exception = null
+
+    try {
+
+      // receive from all agents their checkpoint information
+      val checkpointStateInfo: List[CheckpointInfo] = agents.map { case (name, agent) =>
+        agent.getCheckpointInfoAndClear()
+      }.reduceRight((l1, l2) => l1 ++ l2)
+
+      // do publish pre events for all producers
+      publishPreCheckpointEventForAllProducers(checkpointStateInfo)
+
+      //assume all agents use the same metadata entity
+      agents.head._2.getMetadataRef().groupCheckpointEntity.groupCheckpoint(checkpointStateInfo)
+
+      // do publish post events for all producers
+      publishPostCheckpointEventForAllProducers(checkpointStateInfo)
+
+    }
+    catch {
+      case e: Exception =>
+        exc = e
+    }
+    // unlock all agents
     agents.foreach { case (name, agent) =>
       agent.getThreadLock().unlock()
     }
+    lock.unlock()
+    if (null != exc) throw exc
   }
 
-  private def publishGlobalPreCheckpointEvent(info: List[CheckpointInfo]) = {
-    info foreach {
-      case ProducerCheckpointInfo(_, agent, preCheckpointEvent, _, _, _, _, _, _) =>
-        agent.publish(preCheckpointEvent)
+  private def publishPreCheckpointEventForAllProducers(producers: List[CheckpointInfo]) = {
+    val l = new CountDownLatch(producers.size)
+    producers foreach {
+      case ProducerCheckpointInfo(txn, agent, preCheckpointEvent, _, _, _, _, _, _) =>
+        executorPool.execute(new Runnable {
+          override def run(): Unit = {
+            agent.publish(preCheckpointEvent)
+            logger.info("PRE event sent for " + txn.getTxnUUID.toString)
+            l.countDown()
+          }
+        })
+      case _ => l.countDown()
+    }
+    l.await()
+  }
+
+  private def publishPostCheckpointEventForAllProducers(producers: List[CheckpointInfo]) = {
+    producers foreach {
+      case ProducerCheckpointInfo(_, agent, _, postCheckpointEvent, _, _, _, _, _) =>
+        executorPool.execute(new Runnable {
+          override def run(): Unit = agent.publish(postCheckpointEvent)
+        })
       case _ =>
     }
   }
 
-  private def publishGlobalFinalCheckpointEvent(info: List[CheckpointInfo]) = {
-    info foreach {
-      case ProducerCheckpointInfo(_, agent, _, finalCheckpointEvent, _, _, _, _, _) =>
-        agent.publish(finalCheckpointEvent)
-      case _ =>
-    }
+  /**
+    * Stop group when it's no longer required
+    */
+  def stop(): Unit = {
+    if(isStopped.getAndSet(true))
+      throw new IllegalStateException("Group is stopped. No longer operations are possible.")
+    executorPool.shutdownSafe()
+    clear()
   }
+
 }

@@ -30,6 +30,11 @@ class BasicProducer[USERTYPE](val name: String,
                               val producerOptions: BasicProducerOptions[USERTYPE])
   extends Agent with Interaction {
 
+  /**
+    * agent name
+    */
+  override def getAgentName = name
+
   // shortkey
   val pcs = producerOptions.producerCoordinationSettings
 
@@ -229,7 +234,7 @@ class BasicProducer[USERTYPE](val name: String,
     * Info to commit
     */
   override def getCheckpointInfoAndClear(): List[CheckpointInfo] = {
-    val checkpointData = openTransactionsMap.map {
+    val checkpointData = openTransactionsMap.filter(k => !k._2.isClosed).map {
       case (partition, txn) =>
 
         txn.getTransactionLock.lock

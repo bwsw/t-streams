@@ -44,7 +44,7 @@ class MetadataStorage(cluster: Cluster, session: Session, keyspace: String) {
   /**
     * Group commit entity instance
     */
-  lazy val groupCommitEntity = new GroupCommitEntity("consumers", "commit_log", session)
+  lazy val groupCheckpointEntity = new GroupCheckpointEntity("consumers", "commit_log", session)
 
   /**
     * @return Closed this storage or not

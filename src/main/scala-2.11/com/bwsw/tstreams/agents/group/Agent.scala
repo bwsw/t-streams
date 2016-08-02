@@ -9,6 +9,7 @@ import com.bwsw.tstreams.metadata.MetadataStorage
   */
 trait Agent {
 
+  def getAgentName(): String
   /**
     * Agent lock on any actions which has to do with checkpoint
     */
