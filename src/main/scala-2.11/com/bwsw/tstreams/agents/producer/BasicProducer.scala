@@ -48,7 +48,7 @@ class BasicProducer[USERTYPE](val name: String,
   // amount of threads which will handle partitions in masters, etc
   val threadPoolSize: Int = {
     if (pcs.threadPoolAmount == -1)
-      producerOptions.writePolicy.getUsedPartition().size
+      producerOptions.writePolicy.getUsedPartitions().size
     else
       pcs.threadPoolAmount
   }
@@ -67,7 +67,7 @@ class BasicProducer[USERTYPE](val name: String,
   val subscriberClient = new SubscriberClient(
     prefix = pcs.zkRootPath,
     streamName = stream.getName,
-    usedPartitions = producerOptions.writePolicy.getUsedPartition(),
+    usedPartitions = producerOptions.writePolicy.getUsedPartitions(),
     zkHosts = pcs.zkHosts,
     zkSessionTimeout = pcs.zkSessionTimeout,
     zkConnectionTimeout = pcs.zkConnectionTimeout)
@@ -83,7 +83,7 @@ class BasicProducer[USERTYPE](val name: String,
     zkSessionTimeout = pcs.zkSessionTimeout,
     zkConnectionTimeout = pcs.zkConnectionTimeout,
     producer = this,
-    usedPartitions = producerOptions.writePolicy.getUsedPartition(),
+    usedPartitions = producerOptions.writePolicy.getUsedPartitions(),
     isLowPriorityToBeMaster = pcs.isLowPriorityToBeMaster,
     transport = pcs.transport,
     transportTimeout = pcs.transportTimeout,
