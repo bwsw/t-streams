@@ -28,7 +28,7 @@ class CheckpointGroup(val executors: Int = 1) {
   /**
     * Validate that all agents has the same metadata storage
     */
-  private def validateAgents() = {
+  private def checkIfAgentsUseSameMetadataStorage() = {
     var set = Set[String]()
     agents.map(x => x._2.getMetadataRef().id).foreach(id => set += id)
     if (set.size != 1)
@@ -49,7 +49,7 @@ class CheckpointGroup(val executors: Int = 1) {
       throw new IllegalArgumentException(s"Agent with specified name ${agent.getAgentName} is already in the group. Names of added agents must be unique.")
     }
     agents += ((agent.getAgentName, agent))
-    validateAgents()
+    checkIfAgentsUseSameMetadataStorage()
     lock.unlock()
   }
 
@@ -99,10 +99,8 @@ class CheckpointGroup(val executors: Int = 1) {
   def checkpoint(): Unit = {
     if(isStopped.get)
       throw new IllegalStateException("Group is stopped. No longer operations are possible.")
-    // lock from race
-    LockUtil.lockOrDie(lock, lockTimeout, Some(logger))
 
-    // lock all agents
+    LockUtil.lockOrDie(lock, lockTimeout, Some(logger))
     agents.foreach { case (name, agent) =>
       agent.getThreadLock().lock()
     }
