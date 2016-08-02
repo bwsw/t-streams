@@ -122,7 +122,7 @@ class CheckpointGroup() {
       agent.getThreadLock().unlock()
     }
     lock.unlock()
-    throw exc
+    if (null != exc) throw exc
   }
 
   private def publishPreCheckpointEventForAllProducers(info: List[CheckpointInfo]) = {
