@@ -9,13 +9,13 @@ object DataInsertType {
   /**
     * Basic trait for insertion type
     */
-  trait InsertType
+  trait AbstractInsertType
 
   /**
     * With this statement elements will be sent
     * every producer.send(obj : T) invoke
     */
-  case object SingleElementInsert extends InsertType
+  case object SingleElementInsert extends AbstractInsertType
 
   /**
     * With this statement elements will be sent only after
@@ -23,6 +23,6 @@ object DataInsertType {
     *
     * @param batchSize Size of batch to put in storage
     */
-  case class BatchInsert(batchSize: Int) extends InsertType
+  case class BatchInsert(batchSize: Int) extends AbstractInsertType
 
 }

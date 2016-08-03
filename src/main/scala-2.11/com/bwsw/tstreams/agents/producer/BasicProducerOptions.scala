@@ -2,7 +2,7 @@ package com.bwsw.tstreams.agents.producer
 
 import java.net.InetSocketAddress
 
-import com.bwsw.tstreams.agents.producer.DataInsertType.InsertType
+import com.bwsw.tstreams.agents.producer.DataInsertType.AbstractInsertType
 import com.bwsw.tstreams.converter.IConverter
 import com.bwsw.tstreams.coordination.transactions.peertopeer.PeerToPeerAgent
 import com.bwsw.tstreams.coordination.transactions.transport.traits.ITransport
@@ -20,7 +20,7 @@ import scala.language.existentials
   * @param txnGenerator                 Generator for generating UUIDs
   * @tparam USERTYPE User object type
   */
-class BasicProducerOptions[USERTYPE](val transactionTTL: Int, val transactionKeepAliveInterval: Int, val writePolicy: AbstractPolicy, val insertType: InsertType, val txnGenerator: IUUIDGenerator, val producerCoordinationSettings: ProducerCoordinationOptions, val converter: IConverter[USERTYPE, Array[Byte]]) {
+class BasicProducerOptions[USERTYPE](val transactionTTL: Int, val transactionKeepAliveInterval: Int, val writePolicy: AbstractPolicy, val insertType: AbstractInsertType, val txnGenerator: IUUIDGenerator, val producerCoordinationSettings: ProducerCoordinationOptions, val converter: IConverter[USERTYPE, Array[Byte]]) {
 
   /**
     * Transaction minimum ttl time
