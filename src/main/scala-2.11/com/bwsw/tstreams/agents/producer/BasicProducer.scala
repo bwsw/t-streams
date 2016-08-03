@@ -150,7 +150,6 @@ class BasicProducer[USERTYPE](val name: String,
     * @return BasicProducerTransaction instance
     */
   def newTransaction(policy: ProducerPolicy, nextPartition: Int = -1): BasicProducerTransaction[USERTYPE] = {
-    //threadLock.lock()
     LockUtil.withLockOrDieDo[BasicProducerTransaction[USERTYPE]] (threadLock, (100, TimeUnit.SECONDS), Some(logger), () => {
       if (isStop)
         throw new IllegalStateException(s"Producer ${this.name} is already stopped. Unable to get new transaction.")
@@ -228,12 +227,14 @@ class BasicProducer[USERTYPE](val name: String,
     val checkpointData = openTransactionsMap.filter(k => !k._2.isClosed).map {
       case (partition, txn) =>
 
-        txn.getTransactionLock.lock
-        val txnUuid = txn.getTxnUUID
-        val txnCnt = txn.getCnt
-        val txnPartition = txn.getPartition
-        txn.setAsClosed()
-        txn.getTransactionLock.unlock
+        val (txnUuid, txnCnt, txnPartition) =
+          LockUtil.withLockOrDieDo[(UUID,Int,Int)](txn.getTransactionLock, (100, TimeUnit.SECONDS), Some(logger), () => {
+          val txnUuid = txn.getTxnUUID
+          val txnCnt = txn.getCnt
+          val txnPartition = txn.getPartition
+          txn.setAsClosed()
+          (txnUuid, txnCnt, txnPartition)
+        })
 
         assert(partition == txnPartition)
 
