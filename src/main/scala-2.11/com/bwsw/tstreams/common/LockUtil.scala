@@ -30,7 +30,7 @@ object LockUtil {
       val rv = lambda()
       l.unlock()
       if (logger.isDefined)
-        logger.get.error(s"Unlocked ${l.toString} in ${lt._1} ${lt._2.toString}.")
+        logger.get.debug(s"Unlocked ${l.toString} in ${lt._1} ${lt._2.toString}.")
       return rv
     } catch {
       case e: Exception =>
