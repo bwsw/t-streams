@@ -1,7 +1,7 @@
 package common
 
 import java.util.UUID
-import com.bwsw.tstreams.common.TStreamsProtocolMessageSerializer$
+import com.bwsw.tstreams.common.ProtocolMessageSerializer
 import com.bwsw.tstreams.coordination.pubsub.messages.{ProducerTopicMessage, ProducerTransactionStatus}
 import com.bwsw.tstreams.coordination.transactions.messages._
 import com.bwsw.tstreams.coordination.transactions.peertopeer.AgentSettings
@@ -10,7 +10,7 @@ import testutils.TestUtils
 
 
 class ProtocolMessageSerializerTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
-  val serializer = new TStreamsProtocolMessageSerializer
+  val serializer = new ProtocolMessageSerializer
 
   "TStreams serializer" should "serialize and deserialize DeleteMasterRequest" in {
     val clazz = DeleteMasterRequest("snd", "rcv", 0)

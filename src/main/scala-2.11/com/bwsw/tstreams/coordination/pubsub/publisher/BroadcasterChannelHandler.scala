@@ -1,7 +1,7 @@
 package com.bwsw.tstreams.coordination.pubsub.publisher
 
 import java.util
-import com.bwsw.tstreams.common.TStreamsProtocolMessageSerializer$
+import com.bwsw.tstreams.common.ProtocolMessageSerializer
 import com.bwsw.tstreams.coordination.pubsub.messages.ProducerTopicMessage
 import io.netty.channel._
 import io.netty.channel.group.{ChannelGroupFuture, ChannelGroupFutureListener, DefaultChannelGroup}
@@ -74,7 +74,7 @@ class BroadcasterChannelHandler(connectionManager: BroadcasterConnectionManager)
   * Encoder [[ProducerTopicMessage]]] to [[java.lang.String]]]
   */
 class ProducerTopicMessageEncoder extends MessageToMessageEncoder[ProducerTopicMessage] {
-  val serializer = new TStreamsProtocolMessageSerializer
+  val serializer = new ProtocolMessageSerializer
 
   override def encode(ctx: ChannelHandlerContext, msg: ProducerTopicMessage, out: util.List[AnyRef]): Unit = {
     out.add(serializer.serialize(msg) + "\n")
