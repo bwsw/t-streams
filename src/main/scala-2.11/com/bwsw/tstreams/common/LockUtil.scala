@@ -35,15 +35,15 @@ object LockUtil {
 
       if (logger.isDefined) {
         val fEndTime = System.currentTimeMillis()
-        logger.get.debug(s"Function inside of withLockOrDieDo took ${fEndTime - fStartTime} ms to run.")
+        logger.get.debug(s"Lock ${l.toString} / Function inside of withLockOrDieDo took ${fEndTime - fStartTime} ms to run.")
       }
 
       l.unlock()
 
       if (logger.isDefined) {
         val lEndTime = System.currentTimeMillis()
-        logger.get.debug(s"Section of withLockOrDieDo took ${lEndTime - lStartTime} ms to run.")
-        logger.get.debug(s"Unlocked ${l.toString} in ${lt._1} ${lt._2.toString}.")
+        logger.get.debug(s"Lock ${l.toString} / Section of withLockOrDieDo took ${lEndTime - lStartTime} ms to run.")
+        logger.get.debug(s"Lock ${l.toString} / Unlocked ${l.toString} in ${lt._1} ${lt._2.toString}.")
       }
 
       return rv
@@ -53,9 +53,9 @@ object LockUtil {
         if (logger.isDefined) {
           val fEndTime = System.currentTimeMillis();
           val lEndTime = System.currentTimeMillis()
-          logger.get.debug(s"Function inside of withLockOrDieDo took ${fEndTime - fStartTime} ms to run. Resulted to exception.")
-          logger.get.debug(s"Section of withLockOrDieDo took ${lEndTime - lStartTime} ms to run. Resulted to exception.")
-          logger.get.error(s"Exception is: ${e.toString}")
+          logger.get.debug(s"Lock ${l.toString} / Function inside of withLockOrDieDo took ${fEndTime - fStartTime} ms to run. Resulted to exception.")
+          logger.get.debug(s"Lock ${l.toString} / Section of withLockOrDieDo took ${lEndTime - lStartTime} ms to run. Resulted to exception.")
+          logger.get.error(s"Lock ${l.toString} / Exception is: ${e.toString}")
         }
 
         throw e
