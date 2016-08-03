@@ -4,8 +4,8 @@ import java.net.InetSocketAddress
 
 import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
 import com.bwsw.tstreams.agents.consumer.{BasicConsumer, BasicConsumerOptions}
-import com.bwsw.tstreams.agents.producer.InsertionType.BatchInsert
-import com.bwsw.tstreams.agents.producer.{BasicProducer, BasicProducerOptions, ProducerCoordinationOptions, ProducerPolicies}
+import com.bwsw.tstreams.agents.producer.DataInsertType.BatchInsert
+import com.bwsw.tstreams.agents.producer.{BasicProducer, BasicProducerOptions, ProducerCoordinationOptions, NewTransactionProducerPolicy}
 import com.bwsw.tstreams.coordination.transactions.transport.impl.TcpTransport
 import com.bwsw.tstreams.env.TSF_Dictionary
 import com.bwsw.tstreams.streams.BasicStream
@@ -49,7 +49,7 @@ class AManyBasicProducersStreamingInManyRandomPartitionsAndConsumerTest extends 
         def run() {
           var i = 0
           while (i < totalTxn) {
-            val txn = p.newTransaction(ProducerPolicies.errorIfOpened)
+            val txn = p.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
             dataToSend.foreach(x => txn.send(x))
             txn.checkpoint()
             i += 1

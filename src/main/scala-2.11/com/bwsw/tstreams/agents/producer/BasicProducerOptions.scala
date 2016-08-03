@@ -2,7 +2,7 @@ package com.bwsw.tstreams.agents.producer
 
 import java.net.InetSocketAddress
 
-import com.bwsw.tstreams.agents.producer.InsertionType.InsertType
+import com.bwsw.tstreams.agents.producer.DataInsertType.AbstractInsertType
 import com.bwsw.tstreams.converter.IConverter
 import com.bwsw.tstreams.coordination.transactions.peertopeer.PeerToPeerAgent
 import com.bwsw.tstreams.coordination.transactions.transport.traits.ITransport
@@ -20,7 +20,7 @@ import scala.language.existentials
   * @param txnGenerator                 Generator for generating UUIDs
   * @tparam USERTYPE User object type
   */
-class BasicProducerOptions[USERTYPE](val transactionTTL: Int, val transactionKeepAliveInterval: Int, val writePolicy: AbstractPolicy, val insertType: InsertType, val txnGenerator: IUUIDGenerator, val producerCoordinationSettings: ProducerCoordinationOptions, val converter: IConverter[USERTYPE, Array[Byte]]) {
+class BasicProducerOptions[USERTYPE](val transactionTTL: Int, val transactionKeepAliveInterval: Int, val writePolicy: AbstractPolicy, val insertType: AbstractInsertType, val txnGenerator: IUUIDGenerator, val producerCoordinationSettings: ProducerCoordinationOptions, val converter: IConverter[USERTYPE, Array[Byte]]) {
 
   /**
     * Transaction minimum ttl time
@@ -31,20 +31,20 @@ class BasicProducerOptions[USERTYPE](val transactionTTL: Int, val transactionKee
     * Options validating
     */
   if (transactionTTL < minTxnTTL)
-    throw new IllegalArgumentException(s"transactionTTL should be greater or equal than $minTxnTTL")
+    throw new IllegalArgumentException(s"Option transactionTTL must be greater or equal than $minTxnTTL")
 
   if (transactionKeepAliveInterval < 1)
-    throw new IllegalArgumentException(s"transactionKeepAliveInterval should be greater or equal than 1")
+    throw new IllegalArgumentException(s"Option transactionKeepAliveInterval must be greater or equal than 1")
 
   if (transactionKeepAliveInterval.toDouble > transactionTTL.toDouble / 3.0)
-    throw new IllegalArgumentException("transactionTTL should be three times greater than transaction")
+    throw new IllegalArgumentException("Option transactionTTL must be at least three times greater or equal than transaction")
 
   insertType match {
-    case InsertionType.SingleElementInsert =>
+    case DataInsertType.SingleElementInsert =>
 
-    case InsertionType.BatchInsert(size) =>
+    case DataInsertType.BatchInsert(size) =>
       if (size <= 0)
-        throw new IllegalArgumentException("batch size must be greater or equal 1")
+        throw new IllegalArgumentException("Batch size must be greater or equal 1")
 
     case _ =>
       throw new IllegalArgumentException("Insert type can't be resolved")

@@ -1,7 +1,7 @@
 package agents.both.batch_insert.aerospike
 
 import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
-import com.bwsw.tstreams.agents.producer.ProducerPolicies
+import com.bwsw.tstreams.agents.producer.NewTransactionProducerPolicy
 import com.bwsw.tstreams.env.TSF_Dictionary
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import testutils._
@@ -56,7 +56,7 @@ class ABasicProducerAndConsumerLazyTest extends FlatSpec with Matchers with Befo
 
     val producer1Thread = new Thread(new Runnable {
       def run() {
-        val txn = producer1.newTransaction(ProducerPolicies.errorIfOpened)
+        val txn = producer1.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
         dataToSend1.foreach { x =>
           txn.send(x)
           Thread.sleep(2000)
@@ -68,7 +68,7 @@ class ABasicProducerAndConsumerLazyTest extends FlatSpec with Matchers with Befo
     val producer2Thread = new Thread(new Runnable {
       def run() {
         Thread.sleep(2000)
-        val txn = producer2.newTransaction(ProducerPolicies.errorIfOpened)
+        val txn = producer2.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
         dataToSend2.foreach { x =>
           txn.send(x)
         }
