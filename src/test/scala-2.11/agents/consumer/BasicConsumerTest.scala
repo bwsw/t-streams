@@ -3,7 +3,7 @@ package agents.consumer
 import java.util.UUID
 import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
 import com.bwsw.tstreams.agents.consumer.BasicConsumerTransaction
-import com.bwsw.tstreams.agents.producer.ProducerPolicies
+import com.bwsw.tstreams.agents.producer.NewTransactionProducerPolicy
 import com.bwsw.tstreams.entities.CommitEntity
 import com.bwsw.tstreams.env.TSF_Dictionary
 import com.datastax.driver.core.utils.UUIDs
@@ -47,7 +47,7 @@ class BasicConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll wi
   "consumer.getTransactionById" should "return sent transaction" in {
     val totalDataInTxn = 10
     val data = (for (i <- 0 until totalDataInTxn) yield randomString).toList.sorted
-    val txn = producer.newTransaction(ProducerPolicies.errorIfOpened, 1)
+    val txn = producer.newTransaction(NewTransactionProducerPolicy.errorIfOpened, 1)
     val txnUuid = txn.getTxnUUID
     data.foreach(x => txn.send(x))
     txn.checkpoint()

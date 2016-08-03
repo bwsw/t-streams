@@ -3,7 +3,7 @@ package com.bwsw.tstreams.velocity
 import java.net.InetSocketAddress
 
 import com.bwsw.tstreams.agents.producer.DataInsertType.BatchInsert
-import com.bwsw.tstreams.agents.producer.{BasicProducer, BasicProducerOptions, ProducerCoordinationOptions, ProducerPolicies}
+import com.bwsw.tstreams.agents.producer.{BasicProducer, BasicProducerOptions, ProducerCoordinationOptions, NewTransactionProducerPolicy}
 import com.bwsw.tstreams.coordination.transactions.transport.impl.TcpTransport
 
 object ProducerRunner {
@@ -31,7 +31,7 @@ object ProducerRunner {
 
     while (true) {
       var t1 = System.currentTimeMillis()
-      val txn = producer.newTransaction(ProducerPolicies.errorIfOpened)
+      val txn = producer.newTransaction(NewTransactionProducerPolicy.errorIfOpened)
       accNewTxn += (System.currentTimeMillis() - t1)
 
       t1 = System.currentTimeMillis()

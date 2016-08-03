@@ -5,7 +5,7 @@ import java.util.concurrent.locks.ReentrantLock
 import java.util.concurrent.{TimeUnit, CountDownLatch}
 
 import com.bwsw.tstreams.agents.group.{Agent, CheckpointInfo, ProducerCheckpointInfo}
-import com.bwsw.tstreams.agents.producer.ProducerPolicies.ProducerPolicy
+import com.bwsw.tstreams.agents.producer.NewTransactionProducerPolicy.ProducerPolicy
 import com.bwsw.tstreams.common.{LockUtil, FirstFailLockableTaskExecutor, ThreadSignalSleepVar}
 import com.bwsw.tstreams.coordination.pubsub.ProducerToSubscriberNotifier
 import com.bwsw.tstreams.coordination.pubsub.messages.{ProducerTopicMessage, ProducerTransactionStatus}
@@ -170,13 +170,13 @@ class BasicProducer[USERTYPE](val name: String,
           val prevTxn = openTransactionsMap(partition)
           if (!prevTxn.isClosed) {
             policy match {
-              case ProducerPolicies.`checkpointIfOpened` =>
+              case NewTransactionProducerPolicy.`checkpointIfOpened` =>
                 prevTxn.checkpoint()
 
-              case ProducerPolicies.`cancelIfOpened` =>
+              case NewTransactionProducerPolicy.`cancelIfOpened` =>
                 prevTxn.cancel()
 
-              case ProducerPolicies.`errorIfOpened` =>
+              case NewTransactionProducerPolicy.`errorIfOpened` =>
                 throw new IllegalStateException(s"Producer ${name} - previous transaction was not closed")
             }
           }

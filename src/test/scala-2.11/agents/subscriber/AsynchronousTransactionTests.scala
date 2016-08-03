@@ -3,7 +3,7 @@ package agents.subscriber
 import java.util.concurrent.CountDownLatch
 
 import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
-import com.bwsw.tstreams.agents.producer.ProducerPolicies
+import com.bwsw.tstreams.agents.producer.NewTransactionProducerPolicy
 import com.bwsw.tstreams.debug.GlobalHooks
 import com.bwsw.tstreams.env.TSF_Dictionary
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
@@ -52,7 +52,7 @@ class AsynchronousTransactionTests  extends FlatSpec with Matchers
       offset = Oldest,
       isUseLastOffset = true)
 
-    val ptxn = producer.newTransaction(policy = ProducerPolicies.errorIfOpened)
+    val ptxn = producer.newTransaction(policy = NewTransactionProducerPolicy.errorIfOpened)
     ptxn.send("test")
     ptxn.checkpoint(isSynchronous = false)
     l.await()
@@ -80,7 +80,7 @@ class AsynchronousTransactionTests  extends FlatSpec with Matchers
       offset = Oldest,
       isUseLastOffset = true)
 
-    val ptxn = producer.newTransaction(policy = ProducerPolicies.errorIfOpened)
+    val ptxn = producer.newTransaction(policy = NewTransactionProducerPolicy.errorIfOpened)
     ptxn.send("test")
     ptxn.checkpoint(isSynchronous = false)
     l.await()
@@ -106,7 +106,7 @@ class AsynchronousTransactionTests  extends FlatSpec with Matchers
       offset = Oldest,
       isUseLastOffset = true)
 
-    val ptxn = producer.newTransaction(policy = ProducerPolicies.errorIfOpened)
+    val ptxn = producer.newTransaction(policy = NewTransactionProducerPolicy.errorIfOpened)
     ptxn.send("test")
     ptxn.checkpoint(isSynchronous = false)
     c.start()

@@ -5,7 +5,7 @@ import java.util.concurrent.locks.ReentrantLock
 
 import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
 import com.bwsw.tstreams.agents.consumer.subscriber.{BasicSubscriberCallback, BasicSubscribingConsumer}
-import com.bwsw.tstreams.agents.producer.ProducerPolicies
+import com.bwsw.tstreams.agents.producer.NewTransactionProducerPolicy
 import com.bwsw.tstreams.debug.GlobalHooks
 import com.bwsw.tstreams.env.TSF_Dictionary
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
@@ -91,7 +91,7 @@ class ABasicSubscriberPreCommitFailureTest extends FlatSpec with Matchers
 
   def sendTxnsAndWait(totalTxns: Int, dataInTxn: Int, data: String) = {
     (0 until totalTxns) foreach { x =>
-      val txn = producer.newTransaction(ProducerPolicies.errorIfOpened)
+      val txn = producer.newTransaction(NewTransactionProducerPolicy.errorIfOpened)
       (0 until dataInTxn) foreach { _ =>
         txn.send(data)
       }

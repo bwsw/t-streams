@@ -6,7 +6,7 @@ import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
 import com.bwsw.tstreams.agents.consumer.{BasicConsumer, BasicConsumerOptions}
 import com.bwsw.tstreams.agents.group.CheckpointGroup
 import com.bwsw.tstreams.agents.producer.DataInsertType.SingleElementInsert
-import com.bwsw.tstreams.agents.producer.{BasicProducer, BasicProducerOptions, ProducerCoordinationOptions, ProducerPolicies}
+import com.bwsw.tstreams.agents.producer.{BasicProducer, BasicProducerOptions, ProducerCoordinationOptions, NewTransactionProducerPolicy}
 import com.bwsw.tstreams.coordination.transactions.transport.impl.TcpTransport
 import com.bwsw.tstreams.env.TSF_Dictionary
 import com.bwsw.tstreams.streams.BasicStream
@@ -52,7 +52,7 @@ class GroupCheckpointTest extends FlatSpec with Matchers with BeforeAndAfterAll 
     group.add(producer)
     group.add(consumer)
 
-    val txn1 = producer.newTransaction(ProducerPolicies.errorIfOpened)
+    val txn1 = producer.newTransaction(NewTransactionProducerPolicy.errorIfOpened)
     logger.info("TXN1 is " + txn1.getTxnUUID.toString)
     txn1.send("info1")
     txn1.checkpoint()
@@ -61,7 +61,7 @@ class GroupCheckpointTest extends FlatSpec with Matchers with BeforeAndAfterAll 
     consumer.getTransaction.get
 
     //open transaction without close
-    val txn2 = producer.newTransaction(ProducerPolicies.errorIfOpened)
+    val txn2 = producer.newTransaction(NewTransactionProducerPolicy.errorIfOpened)
     logger.info("TXN2 is " + txn2.getTxnUUID.toString)
     txn2.send("info2")
 
