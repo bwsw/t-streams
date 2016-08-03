@@ -14,7 +14,7 @@ import scala.collection.mutable
 /**
   * Client for sending [[IMessage]]]
   */
-class IMessageClient {
+class TransactionStateUpdateClient {
   private val addressToConnection = mutable.Map[String, Socket]()
   private val serializer = new TStreamsSerializer
   private val logger = LoggerFactory.getLogger(this.getClass)
