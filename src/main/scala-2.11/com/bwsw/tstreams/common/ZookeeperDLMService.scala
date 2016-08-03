@@ -22,7 +22,7 @@ class ZookeeperDLMService(prefix: String, zkHosts: List[InetSocketAddress], zkSe
   private val st = Amount.of(new Integer(zkSessionTimeout), com.twitter.common.quantity.Time.SECONDS)
   private val ct = Amount.of(connectionTimeout, com.twitter.common.quantity.Time.SECONDS)
   private val hosts = zkHosts.asJava
-  private val twitterZkClient: ZooKeeperClient = new ZooKeeperClient(st, hosts)
+  private val twitterZkClient = new ZooKeeperClient(st, hosts)
   private val zkClient = twitterZkClient.get(ct)
   private val serializer = new JsonSerializer
   private val map = scala.collection.mutable.Map[String, DistributedLockImpl]()
