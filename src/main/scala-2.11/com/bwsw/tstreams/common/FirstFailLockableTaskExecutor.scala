@@ -104,8 +104,8 @@ class FirstFailLockableTaskExecutor extends Executor {
       if (executor != null && !isNotFailed.get()) {
         throw new FirstFailLockableExecutorException(failureExc.getMessage)
       }
-      this.awaitInternal()
     })
+    this.awaitInternal()
   }
 
   private def getRunnable: Runnable = new Runnable {
@@ -123,8 +123,8 @@ class FirstFailLockableTaskExecutor extends Executor {
       awaitSignalVar.setValue(1)
       queue.add(FirstFailLockableExecutorTask(getRunnable, isIgnorableIfExecutorFailed = false, lock = None))
       logger.debug("[FIRSTFAILLOCKABLE EXECUTOR] Before await signal var to be triggered.")
-      awaitSignalVar.await()
     })
+    awaitSignalVar.await()
   }
 
   /**
@@ -191,7 +191,6 @@ class FirstFailLockableTaskExecutorPool(val size: Int = 4) extends Executor {
   private var next: Int = 0
   private val lock = new ReentrantLock()
   private val logger = LoggerFactory.getLogger(this.getClass)
-  private val isNotFailed = new AtomicBoolean(true)
   private val isShutdown = new AtomicBoolean(false)
 
 
