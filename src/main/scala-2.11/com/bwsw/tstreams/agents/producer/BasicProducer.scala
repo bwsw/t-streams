@@ -7,7 +7,7 @@ import java.util.concurrent.CountDownLatch
 import com.bwsw.tstreams.agents.group.{Agent, CheckpointInfo, ProducerCheckpointInfo}
 import com.bwsw.tstreams.agents.producer.ProducerPolicies.ProducerPolicy
 import com.bwsw.tstreams.common.{FirstFailLockableTaskExecutor, ThreadSignalSleepVar}
-import com.bwsw.tstreams.coordination.pubsub.SubscriberClient
+import com.bwsw.tstreams.coordination.pubsub.ProducerToSubscriberNotifier
 import com.bwsw.tstreams.coordination.pubsub.messages.{ProducerTopicMessage, ProducerTransactionStatus}
 import com.bwsw.tstreams.coordination.transactions.peertopeer.PeerToPeerAgent
 import com.bwsw.tstreams.coordination.transactions.transport.traits.Interaction
@@ -64,7 +64,7 @@ class BasicProducer[USERTYPE](val name: String,
   logger.info(s"Start new Basic producer with name : $name, streamName : ${stream.getName}, streamPartitions : ${stream.getPartitions}")
 
   // this client is used to find new subscribers
-  val subscriberClient = new SubscriberClient(
+  val subscriberNotifier = new ProducerToSubscriberNotifier(
     prefix = pcs.zkRootPath,
     streamName = stream.getName,
     usedPartitions = producerOptions.writePolicy.getUsedPartitions(),
@@ -92,9 +92,9 @@ class BasicProducer[USERTYPE](val name: String,
   //used for managing new agents on stream
 
   {
-    val zkStreamLock = subscriberClient.getStreamLock(stream.getName)
+    val zkStreamLock = subscriberNotifier.getStreamLock(stream.getName)
     zkStreamLock.lock()
-    subscriberClient.init()
+    subscriberNotifier.init()
     zkStreamLock.unlock()
   }
 
@@ -309,7 +309,7 @@ class BasicProducer[USERTYPE](val name: String,
       partition = partition)
 
     logger.debug(s"Producer ${name} - [GET_LOCAL_TXN PRODUCER] update with msg partition=$partition uuid=${txnUUID.timestamp()} opened")
-    subscriberClient.publish(msg, onComplete)
+    subscriberNotifier.publish(msg, onComplete)
   }
 
 
@@ -335,7 +335,7 @@ class BasicProducer[USERTYPE](val name: String,
     masterP2PAgent.stop()
 
     // stop function which works with subscribers
-    subscriberClient.stop()
+    subscriberNotifier.stop()
   }
 
   /**

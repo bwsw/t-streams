@@ -17,12 +17,12 @@ import org.apache.zookeeper.{WatchedEvent, Watcher}
   * @param zkHosts          Zookeeper hosts to connect
   * @param zkSessionTimeout Zookeeper connect timeout
   */
-class SubscriberClient(prefix: String,
-                       streamName: String,
-                       usedPartitions: List[Int],
-                       zkHosts: List[InetSocketAddress],
-                       zkSessionTimeout: Int,
-                       zkConnectionTimeout: Int) {
+class ProducerToSubscriberNotifier(prefix: String,
+                                   streamName: String,
+                                   usedPartitions: List[Int],
+                                   zkHosts: List[InetSocketAddress],
+                                   zkSessionTimeout: Int,
+                                   zkConnectionTimeout: Int) {
 
   private val zkService = new ZkService(prefix, zkHosts, zkSessionTimeout, zkConnectionTimeout)
   private val broadcaster = new Broadcaster
