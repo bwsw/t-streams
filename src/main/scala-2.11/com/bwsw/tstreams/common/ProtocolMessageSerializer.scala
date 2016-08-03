@@ -2,7 +2,7 @@ package com.bwsw.tstreams.common
 
 import java.util.UUID
 
-import TStreamsSerializer.TStreamsSerializerException
+import ProtocolMessageSerializer.ProtocolMessageSerializerException
 import com.bwsw.tstreams.coordination.pubsub.messages.{ProducerTopicMessage, ProducerTransactionStatus}
 import com.bwsw.tstreams.coordination.transactions.messages._
 import com.bwsw.tstreams.coordination.transactions.peertopeer.AgentSettings
@@ -13,7 +13,7 @@ import scala.util.control.Breaks._
 /**
   * TStreams object serializer
   */
-class TStreamsSerializer {
+class ProtocolMessageSerializer {
   private def serializeInternal(value: Any): String = {
     value match {
       case AgentSettings(id, prior, penalty) =>
@@ -203,7 +203,7 @@ class TStreamsSerializer {
     }
     catch {
       case e: Exception =>
-        throw new TStreamsSerializerException(s"msg : {${e.getMessage}} for value : {$value}")
+        throw new ProtocolMessageSerializerException(s"msg : {${e.getMessage}} for value : {$value}")
     }
   }
 
@@ -214,14 +214,14 @@ class TStreamsSerializer {
     }
     catch {
       case e: Exception =>
-        throw new TStreamsSerializerException(s"msg : {${e.getMessage}} for value : {$value}")
+        throw new ProtocolMessageSerializerException(s"msg : {${e.getMessage}} for value : {$value}")
     }
   }
 }
 
 
-object TStreamsSerializer {
+object ProtocolMessageSerializer {
 
-  class TStreamsSerializerException(msg: String) extends Exception(msg)
+  class ProtocolMessageSerializerException(msg: String) extends Exception(msg)
 
 }

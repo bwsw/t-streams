@@ -2,8 +2,8 @@ package com.bwsw.tstreams.coordination.transactions.transport.impl.client
 
 import java.io.{BufferedReader, IOException, InputStreamReader}
 import java.net.{Socket, SocketTimeoutException}
-import com.bwsw.tstreams.common.TStreamsSerializer
-import TStreamsSerializer.TStreamsSerializerException
+import com.bwsw.tstreams.common.TStreamsProtocolMessageSerializer$
+import TStreamsProtocolMessageSerializer.TStreamsSerializerException
 import com.bwsw.tstreams.coordination.transactions.messages.IMessage
 import org.slf4j.LoggerFactory
 
@@ -15,7 +15,7 @@ import scala.collection.mutable
   */
 class TransactionStateUpdateClient {
   private val addressToConnection = mutable.Map[String, Socket]()
-  private val serializer = new TStreamsSerializer
+  private val serializer = new TStreamsProtocolMessageSerializer
   private val logger = LoggerFactory.getLogger(this.getClass)
 
   /**

@@ -1,8 +1,8 @@
 package com.bwsw.tstreams.coordination.transactions.transport.impl.server
 
 import java.util
-import com.bwsw.tstreams.common.TStreamsSerializer
-import TStreamsSerializer.TStreamsSerializerException
+import com.bwsw.tstreams.common.TStreamsProtocolMessageSerializer$
+import TStreamsProtocolMessageSerializer.TStreamsSerializerException
 import com.bwsw.tstreams.coordination.transactions.messages.IMessage
 import io.netty.channel._
 import io.netty.handler.codec.{MessageToMessageDecoder, MessageToMessageEncoder}
@@ -55,7 +55,7 @@ class TransactionStateMessageServerChannelHandler(manager: TransactionStateMessa
   * Decoder [[java.lang.String]]] to [[IMessage]]]
   */
 class TransactionStateMessageDecoder extends MessageToMessageDecoder[String] {
-  val serializer = new TStreamsSerializer
+  val serializer = new TStreamsProtocolMessageSerializer
   private val logger = LoggerFactory.getLogger(this.getClass)
 
   override def decode(ctx: ChannelHandlerContext, msg: String, out: util.List[AnyRef]): Unit = {
@@ -74,7 +74,7 @@ class TransactionStateMessageDecoder extends MessageToMessageDecoder[String] {
   * Encoder [[IMessage]]] to [[java.lang.String]]]
   */
 class TransactionStateMessageEncoder extends MessageToMessageEncoder[IMessage] {
-  val serializer = new TStreamsSerializer
+  val serializer = new TStreamsProtocolMessageSerializer
 
   override def encode(ctx: ChannelHandlerContext, msg: IMessage, out: util.List[AnyRef]): Unit = {
     out.add(serializer.serialize(msg) + "\n")
