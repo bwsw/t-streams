@@ -69,7 +69,7 @@ object LockUtil {
           val lEndTime = System.currentTimeMillis()
           logger.get.debug(s"Token ${token} /Lock ${l.toString} / Function inside of withLockOrDieDo took ${fEndTime - fStartTime} ms to run. Resulted to exception.")
           logger.get.debug(s"Token ${token} /Lock ${l.toString} / Section of withLockOrDieDo took ${lEndTime - lStartTime} ms to run. Resulted to exception.")
-          logger.get.error(s"Token ${token} /Lock ${l.toString} / Exception is: ${e.toString}")
+          logger.get.error(s"Lock ${l.toString} / Exception is: ${e.toString}")
         }
 
         throw e
