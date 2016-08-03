@@ -59,13 +59,13 @@ trait TestUtils {
   val randomKeyspace = createRandomKeyspace()
 
   val f = new TStreamsFactory()
-  f.setProperty(TSF_Dictionary.Metadata.Cluster.namespace, randomKeyspace).
-    setProperty(TSF_Dictionary.Data.Cluster.namespace, "test").
-    setProperty(TSF_Dictionary.Coordination.root, coordinationRoot).
-    setProperty(TSF_Dictionary.Producer.master_bind_port, TestUtils.getPort).
-    setProperty(TSF_Dictionary.Consumer.Subscriber.bind_port, TestUtils.getPort).
-    setProperty(TSF_Dictionary.Consumer.Subscriber.persistent_queue_path, "/tmp/" + randomKeyspace).
-    setProperty(TSF_Dictionary.Stream.name, "test-stream")
+  f.setProperty(TSF_Dictionary.Metadata.Cluster.NAMESPACE, randomKeyspace).
+    setProperty(TSF_Dictionary.Data.Cluster.NAMESPACE, "test").
+    setProperty(TSF_Dictionary.Coordination.ROOT, coordinationRoot).
+    setProperty(TSF_Dictionary.Producer.BIND_HOST, TestUtils.getPort).
+    setProperty(TSF_Dictionary.Consumer.Subscriber.BIND_PORT, TestUtils.getPort).
+    setProperty(TSF_Dictionary.Consumer.Subscriber.PERSISTENT_QUEUE_PATH, "/tmp/" + randomKeyspace).
+    setProperty(TSF_Dictionary.Stream.NAME, "test-stream")
 
   //metadata/data factories
   val metadataStorageFactory = new MetadataStorageFactory
@@ -85,7 +85,7 @@ trait TestUtils {
   val aerospikeOptions = new AerospikeStorageOptions("test", hosts)
   val zkService = new ZookeeperDLMService("", List(new InetSocketAddress("localhost", 2181)), 7, 7)
 
-  removeZkMetadata(f.getProperty(TSF_Dictionary.Coordination.root).toString)
+  removeZkMetadata(f.getProperty(TSF_Dictionary.Coordination.ROOT).toString)
 
 
   /**
@@ -132,7 +132,7 @@ trait TestUtils {
     System.setProperty("DEBUG", "false")
     GlobalHooks.addHook(GlobalHooks.preCommitFailure, () => ())
     GlobalHooks.addHook(GlobalHooks.afterCommitFailure, () => ())
-    removeZkMetadata(f.getProperty(TSF_Dictionary.Coordination.root).toString)
+    removeZkMetadata(f.getProperty(TSF_Dictionary.Coordination.ROOT).toString)
     removeZkMetadata("/unit")
     metadataStorageFactory.closeFactory()
     storageFactory.closeFactory()
