@@ -1,8 +1,7 @@
 package com.bwsw.tstreams.coordination.pubsub.publisher
 
 import java.util
-
-import com.bwsw.tstreams.common.serializer.TStreamsSerializer
+import com.bwsw.tstreams.common.TStreamsSerializer
 import com.bwsw.tstreams.coordination.pubsub.messages.ProducerTopicMessage
 import io.netty.channel._
 import io.netty.channel.group.{ChannelGroupFuture, ChannelGroupFutureListener, DefaultChannelGroup}

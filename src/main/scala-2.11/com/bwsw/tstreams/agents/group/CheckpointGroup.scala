@@ -41,27 +41,25 @@ class CheckpointGroup(val executors: Int = 1) {
     * @param agent Agent ref
     */
   def add(agent: Agent): Unit = {
-    if(isStopped.get)
-      throw new IllegalStateException("Group is stopped. No longer operations are possible.")
-    LockUtil.lockOrDie(lock, lockTimeout, Some(logger))
-    if (agents.contains(agent.getAgentName)) {
-      lock.unlock()
-      throw new IllegalArgumentException(s"Agent with specified name ${agent.getAgentName} is already in the group. Names of added agents must be unique.")
-    }
-    agents += ((agent.getAgentName, agent))
-    checkIfAgentsUseSameMetadataStorage()
-    lock.unlock()
+    LockUtil.withLockOrDieDo[Unit](lock, lockTimeout, Some(logger), () => {
+      if(isStopped.get)
+        throw new IllegalStateException("Group is stopped. No longer operations are possible.")
+      if (agents.contains(agent.getAgentName)) {
+        throw new IllegalArgumentException(s"Agent with specified name ${agent.getAgentName} is already in the group. Names of added agents must be unique.")
+      }
+      agents += ((agent.getAgentName, agent))
+      checkIfAgentsUseSameMetadataStorage()
+    })
   }
 
   /**
     * clears group
     */
   def clear(): Unit = {
-    if(isStopped.get)
-      throw new IllegalStateException("Group is stopped. No longer operations are possible.")
-    LockUtil.lockOrDie(lock, lockTimeout, Some(logger))
-    agents.clear()
-    lock.unlock()
+    LockUtil.withLockOrDieDo[Unit](lock, lockTimeout, Some(logger), () => {
+      if(isStopped.get)
+        throw new IllegalStateException("Group is stopped. No longer operations are possible.")
+      agents.clear()})
   }
 
   /**
@@ -70,27 +68,23 @@ class CheckpointGroup(val executors: Int = 1) {
     * @param name Agent name
     */
   def remove(name: String): Unit = {
-    if(isStopped.get)
-      throw new IllegalStateException("Group is stopped. No longer operations are possible.")
-    LockUtil.lockOrDie(lock, lockTimeout, Some(logger))
-    if (!agents.contains(name)) {
-      lock.unlock()
-      throw new IllegalArgumentException(s"Agent with specified name ${name} is not in the group.")
-    }
-    agents.remove(name)
-    lock.unlock()
+    LockUtil.withLockOrDieDo[Unit](lock, lockTimeout, Some(logger), () => {
+      if(isStopped.get)
+        throw new IllegalStateException("Group is stopped. No longer operations are possible.")
+      if (!agents.contains(name)) {
+        throw new IllegalArgumentException(s"Agent with specified name ${name} is not in the group.")
+      }
+      agents.remove(name) })
   }
 
   /**
     * Checks if an agent with the name is already inside
     */
   def exists(name: String): Boolean = {
-    if(isStopped.get)
-      throw new IllegalStateException("Group is stopped. No longer operations are possible.")
-    LockUtil.lockOrDie(lock, lockTimeout, Some(logger))
-    val r = agents.contains(name)
-    lock.unlock()
-    r
+    LockUtil.withLockOrDieDo[Boolean](lock, lockTimeout, Some(logger), () => {
+      if(isStopped.get)
+        throw new IllegalStateException("Group is stopped. No longer operations are possible.")
+      agents.contains(name) })
   }
 
   /**
@@ -101,6 +95,7 @@ class CheckpointGroup(val executors: Int = 1) {
       throw new IllegalStateException("Group is stopped. No longer operations are possible.")
 
     LockUtil.lockOrDie(lock, lockTimeout, Some(logger))
+
     agents.foreach { case (name, agent) =>
       LockUtil.lockOrDie(agent.getThreadLock(), lockTimeout, Some(logger))
     }
@@ -128,10 +123,12 @@ class CheckpointGroup(val executors: Int = 1) {
       case e: Exception =>
         exc = e
     }
+
     // unlock all agents
     agents.foreach { case (name, agent) =>
       agent.getThreadLock().unlock()
     }
+
     lock.unlock()
     if (null != exc) throw exc
   }

@@ -1,8 +1,7 @@
 package common
 
 import java.util.UUID
-
-import com.bwsw.tstreams.common.serializer.TStreamsSerializer
+import com.bwsw.tstreams.common.TStreamsSerializer
 import com.bwsw.tstreams.coordination.pubsub.messages.{ProducerTopicMessage, ProducerTransactionStatus}
 import com.bwsw.tstreams.coordination.transactions.messages._
 import com.bwsw.tstreams.coordination.transactions.peertopeer.AgentSettings

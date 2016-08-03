@@ -8,7 +8,7 @@ import io.netty.channel.{Channel, ChannelId}
 import scala.collection.mutable.ListBuffer
 
 
-class IMessageListenerManager() {
+class TransactionStateMessageListenerManager() {
   private val idToChannel = scala.collection.mutable.Map[ChannelId, Channel]()
   private val addressToId = scala.collection.mutable.Map[String, ChannelId]()
   private val idToAddress = scala.collection.mutable.Map[ChannelId, String]()

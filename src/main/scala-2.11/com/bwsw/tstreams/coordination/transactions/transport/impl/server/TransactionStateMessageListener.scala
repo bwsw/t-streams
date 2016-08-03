@@ -15,14 +15,14 @@ import io.netty.handler.logging.{LogLevel, LoggingHandler}
 /**
   * @param port Listener port
   */
-class IMessageListener(port: Int) {
+class TransactionStateMessageListener(port: Int) {
   //socket accept worker
   private val bossGroup = new NioEventLoopGroup(1)
   //channel workers
   private val workerGroup = new NioEventLoopGroup()
   private val MAX_FRAME_LENGTH = 8192
-  private val manager = new IMessageListenerManager()
-  private val channelHandler: IMessageServerChannelHandler = new IMessageServerChannelHandler(manager)
+  private val manager = new TransactionStateMessageListenerManager()
+  private val channelHandler: TransactionStateMessageServerChannelHandler = new TransactionStateMessageServerChannelHandler(manager)
   private var listenerThread: Thread = null
 
   /**
@@ -66,9 +66,9 @@ class IMessageListener(port: Int) {
                 val p = ch.pipeline()
                 p.addLast("framer", new DelimiterBasedFrameDecoder(MAX_FRAME_LENGTH, Delimiters.lineDelimiter(): _*))
                 p.addLast("decoder", new StringDecoder())
-                p.addLast("deserializer", new IMessageDecoder())
+                p.addLast("deserializer", new TransactionStateMessageDecoder())
                 p.addLast("encoder", new StringEncoder())
-                p.addLast("serializer", new IMessageEncoder())
+                p.addLast("serializer", new TransactionStateMessageEncoder())
                 p.addLast("handler", channelHandler)
               }
             })

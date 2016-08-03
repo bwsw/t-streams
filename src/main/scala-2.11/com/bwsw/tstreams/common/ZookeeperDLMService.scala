@@ -1,8 +1,6 @@
-package com.bwsw.tstreams.common.zkservice
+package com.bwsw.tstreams.common
 
 import java.net.InetSocketAddress
-
-import com.bwsw.tstreams.common.serializer.JsonSerializer
 import com.twitter.common.quantity.Amount
 import com.twitter.common.zookeeper.{DistributedLockImpl, ZooKeeperClient}
 import org.apache.zookeeper.ZooDefs.Ids
@@ -18,18 +16,19 @@ import scala.collection.JavaConverters._
   * @param zkHosts          Zk hosts to connect
   * @param zkSessionTimeout Zk session timeout to connect
   */
-class ZkService(prefix: String, zkHosts: List[InetSocketAddress], zkSessionTimeout: Int, connectionTimeout: Long) {
+class ZookeeperDLMService(prefix: String, zkHosts: List[InetSocketAddress], zkSessionTimeout: Int, connectionTimeout: Long) {
   private val logger = LoggerFactory.getLogger(this.getClass)
   // TODO: check sessionTimeout correctness
   private val st = Amount.of(new Integer(zkSessionTimeout), com.twitter.common.quantity.Time.SECONDS)
   private val ct = Amount.of(connectionTimeout, com.twitter.common.quantity.Time.SECONDS)
-  logger.info("Zookeeper session timeout is set to " + st)
-  logger.info("Zookeeper connection timeout is set to " + ct)
   private val hosts = zkHosts.asJava
   private val twitterZkClient: ZooKeeperClient = new ZooKeeperClient(st, hosts)
   private val zkClient = twitterZkClient.get(ct)
   private val serializer = new JsonSerializer
   private val map = scala.collection.mutable.Map[String, DistributedLockImpl]()
+
+  logger.debug("Zookeeper session timeout is set to " + st)
+  logger.debug("Zookeeper connection timeout is set to " + ct)
 
   def getLock(path: String): DistributedLockImpl = {
     if (map.contains(prefix + path))

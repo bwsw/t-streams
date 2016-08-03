@@ -1,9 +1,8 @@
 package com.bwsw.tstreams.coordination.pubsub.listener
 
 import java.util
-
-import com.bwsw.tstreams.common.serializer.TStreamsSerializer
-import com.bwsw.tstreams.common.serializer.TStreamsSerializer.TStreamsSerializerException
+import com.bwsw.tstreams.common.TStreamsSerializer
+import TStreamsSerializer.TStreamsSerializerException
 import com.bwsw.tstreams.coordination.pubsub.messages.ProducerTopicMessage
 import io.netty.channel.ChannelHandler.Sharable
 import io.netty.channel.{ChannelHandlerContext, SimpleChannelInboundHandler}

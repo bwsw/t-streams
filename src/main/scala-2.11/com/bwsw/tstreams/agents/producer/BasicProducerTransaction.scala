@@ -335,7 +335,7 @@ class BasicProducerTransaction[USERTYPE](transactionLock: ReentrantLock,
 
   private def doSendUpdateMessage() = {
     //publish that current txn is being updating
-    txnOwner.subscriberClient.publish(ProducerTopicMessage(
+    txnOwner.subscriberNotifier.publish(ProducerTopicMessage(
       txnUuid = transactionUuid,
       ttl = txnOwner.producerOptions.transactionTTL,
       status = ProducerTransactionStatus.update,
