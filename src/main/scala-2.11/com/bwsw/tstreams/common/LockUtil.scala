@@ -25,16 +25,39 @@ object LockUtil {
                         lt: (Int, TimeUnit),
                         logger: Option[Logger] = None,
                         lambda: () => RTYPE): RTYPE = {
+    val lStartTime = System.currentTimeMillis()
     LockUtil.lockOrDie(l, lt, logger)
+    val fStartTime = System.currentTimeMillis()
     try {
+      // function
       val rv = lambda()
+      // end function
+
+      if (logger.isDefined) {
+        val fEndTime = System.currentTimeMillis()
+        logger.get.debug(s"Function inside of withLockOrDieDo took ${fEndTime - fStartTime} ms to run.")
+      }
+
       l.unlock()
-      if (logger.isDefined)
+
+      if (logger.isDefined) {
+        val lEndTime = System.currentTimeMillis()
+        logger.get.debug(s"Section of withLockOrDieDo took ${lEndTime - lStartTime} ms to run.")
         logger.get.debug(s"Unlocked ${l.toString} in ${lt._1} ${lt._2.toString}.")
+      }
+
       return rv
     } catch {
       case e: Exception =>
         l.unlock()
+        if (logger.isDefined) {
+          val fEndTime = System.currentTimeMillis();
+          val lEndTime = System.currentTimeMillis()
+          logger.get.debug(s"Function inside of withLockOrDieDo took ${fEndTime - fStartTime} ms to run. Resulted to exception.")
+          logger.get.debug(s"Section of withLockOrDieDo took ${lEndTime - lStartTime} ms to run. Resulted to exception.")
+          logger.get.error(s"Exception is: ${e.toString}")
+        }
+
         throw e
     }
   }
