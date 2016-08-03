@@ -31,20 +31,20 @@ class BasicProducerOptions[USERTYPE](val transactionTTL: Int, val transactionKee
     * Options validating
     */
   if (transactionTTL < minTxnTTL)
-    throw new IllegalArgumentException(s"transactionTTL should be greater or equal than $minTxnTTL")
+    throw new IllegalArgumentException(s"Option transactionTTL must be greater or equal than $minTxnTTL")
 
   if (transactionKeepAliveInterval < 1)
-    throw new IllegalArgumentException(s"transactionKeepAliveInterval should be greater or equal than 1")
+    throw new IllegalArgumentException(s"Option transactionKeepAliveInterval must be greater or equal than 1")
 
   if (transactionKeepAliveInterval.toDouble > transactionTTL.toDouble / 3.0)
-    throw new IllegalArgumentException("transactionTTL should be three times greater than transaction")
+    throw new IllegalArgumentException("Option transactionTTL must be at least three times greater or equal than transaction")
 
   insertType match {
     case InsertionType.SingleElementInsert =>
 
     case InsertionType.BatchInsert(size) =>
       if (size <= 0)
-        throw new IllegalArgumentException("batch size must be greater or equal 1")
+        throw new IllegalArgumentException("Batch size must be greater or equal 1")
 
     case _ =>
       throw new IllegalArgumentException("Insert type can't be resolved")
