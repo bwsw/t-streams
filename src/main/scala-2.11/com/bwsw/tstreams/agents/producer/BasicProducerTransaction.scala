@@ -1,8 +1,10 @@
 package com.bwsw.tstreams.agents.producer
 
 import java.util.UUID
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantLock
 
+import com.bwsw.tstreams.common.LockUtil
 import com.bwsw.tstreams.coordination.pubsub.messages.{ProducerTopicMessage, ProducerTransactionStatus}
 import com.bwsw.tstreams.debug.GlobalHooks
 import org.slf4j.LoggerFactory
@@ -78,53 +80,51 @@ class BasicProducerTransaction[USERTYPE](transactionLock: ReentrantLock,
     * @param obj some user object
     */
   def send(obj: USERTYPE): Unit = {
-    transactionLock.lock()
+    LockUtil.withLockOrDieDo[Unit](transactionLock, (100, TimeUnit.SECONDS), Some(logger), () => {
+      if (closed)
+        throw new IllegalStateException("transaction is closed")
 
-    if (closed)
-      throw new IllegalStateException("transaction is closed")
+      txnOwner.producerOptions.insertType match {
 
-    txnOwner.producerOptions.insertType match {
+        case DataInsertType.BatchInsert(size) =>
 
-      case InsertionType.BatchInsert(size) =>
+          txnOwner.stream.dataStorage.putInBuffer(
+            txnOwner.stream.getName,
+            partition,
+            transactionUuid,
+            txnOwner.stream.getTTL,
+            txnOwner.producerOptions.converter.convert(obj),
+            part)
 
-        txnOwner.stream.dataStorage.putInBuffer(
-          txnOwner.stream.getName,
-          partition,
-          transactionUuid,
-          txnOwner.stream.getTTL,
-          txnOwner.producerOptions.converter.convert(obj),
-          part)
+          if (txnOwner.stream.dataStorage.getBufferSize(transactionUuid) == size) {
 
-        if (txnOwner.stream.dataStorage.getBufferSize(transactionUuid) == size) {
+            val job: () => Unit = txnOwner.stream.dataStorage.saveBuffer(transactionUuid)
+            if (job != null) jobs += job
+            txnOwner.stream.dataStorage.clearBuffer(transactionUuid)
 
-          val job: () => Unit = txnOwner.stream.dataStorage.saveBuffer(transactionUuid)
+          }
+
+        case DataInsertType.SingleElementInsert =>
+
+          val job: () => Unit = txnOwner.stream.dataStorage.put(
+            txnOwner.stream.getName,
+            partition,
+            transactionUuid,
+            txnOwner.stream.getTTL,
+            txnOwner.producerOptions.converter.convert(obj),
+            part)
           if (job != null) jobs += job
-          txnOwner.stream.dataStorage.clearBuffer(transactionUuid)
+      }
 
-        }
-
-      case InsertionType.SingleElementInsert =>
-
-        val job: () => Unit = txnOwner.stream.dataStorage.put(
-          txnOwner.stream.getName,
-          partition,
-          transactionUuid,
-          txnOwner.stream.getTTL,
-          txnOwner.producerOptions.converter.convert(obj),
-          part)
-        if (job != null) jobs += job
-    }
-
-    part += 1
-    transactionLock.unlock()
+      part += 1 })
   }
 
 
   private def cancelAsync() = {
     txnOwner.producerOptions.insertType match {
-      case InsertionType.SingleElementInsert =>
+      case DataInsertType.SingleElementInsert =>
 
-      case InsertionType.BatchInsert(_) =>
+      case DataInsertType.BatchInsert(_) =>
         txnOwner.stream.dataStorage.clearBuffer(transactionUuid)
     }
 
@@ -143,19 +143,14 @@ class BasicProducerTransaction[USERTYPE](transactionLock: ReentrantLock,
     * Canceling current transaction
     */
   def cancel() = {
-    transactionLock.lock()
-
-    if (closed)
-      throw new IllegalStateException("transaction is already closed")
-
-    closed = true
-
-    txnOwner.backendActivityService.submit(new Runnable {
-      override def run(): Unit = cancelAsync()
-    }, Option(transactionLock))
-
-    transactionLock.unlock()
-
+    LockUtil.withLockOrDieDo[Unit](transactionLock, (100, TimeUnit.SECONDS), Some(logger), () => {
+      if (closed)
+        throw new IllegalStateException("transaction is already closed")
+      closed = true
+      txnOwner.backendActivityService.submit(new Runnable {
+        override def run(): Unit = cancelAsync()
+      }, Option(transactionLock))
+    })
   }
 
   private def checkpointPostEventPart() : Unit = {
@@ -189,9 +184,9 @@ class BasicProducerTransaction[USERTYPE](transactionLock: ReentrantLock,
   private def checkpointAsync() : Unit = {
     txnOwner.producerOptions.insertType match {
 
-      case InsertionType.SingleElementInsert =>
+      case DataInsertType.SingleElementInsert =>
 
-      case InsertionType.BatchInsert(size) =>
+      case DataInsertType.BatchInsert(size) =>
         if (txnOwner.stream.dataStorage.getBufferSize(transactionUuid) > 0) {
           val job: () => Unit = txnOwner.stream.dataStorage.saveBuffer(transactionUuid)
           if (job != null) jobs += job
@@ -248,30 +243,22 @@ class BasicProducerTransaction[USERTYPE](transactionLock: ReentrantLock,
     * Submit transaction(transaction will be available by consumer only after closing)
     */
   def checkpoint(isSynchronous: Boolean = true): Unit = {
-    if (closed)
-      throw new IllegalStateException("transaction is already closed")
+    LockUtil.withLockOrDieDo[Unit](transactionLock, (100, TimeUnit.SECONDS), Some(logger), () => {
 
-    closed = true
-
-    if(!isSynchronous) {
-      transactionLock.lock()
-
-      txnOwner.backendActivityService.submit(new Runnable {
-        override def run(): Unit = checkpointAsync()
-      }, Option(transactionLock))
-
-      transactionLock.unlock()
-
-    }
-    else
-    {
-      transactionLock.lock()
-      try {
+      if (closed)
+        throw new IllegalStateException("transaction is already closed")
+      closed = true
+      if (!isSynchronous) {
+        txnOwner.backendActivityService.submit(new Runnable {
+          override def run(): Unit = checkpointAsync()
+        }, Option(transactionLock))
+      }
+      else {
         txnOwner.producerOptions.insertType match {
 
-          case InsertionType.SingleElementInsert =>
+          case DataInsertType.SingleElementInsert =>
 
-          case InsertionType.BatchInsert(size) =>
+          case DataInsertType.BatchInsert(size) =>
             if (txnOwner.stream.dataStorage.getBufferSize(transactionUuid) > 0) {
               val job: () => Unit = txnOwner.stream.dataStorage.saveBuffer(transactionUuid)
               if (job != null) jobs += job
@@ -316,26 +303,20 @@ class BasicProducerTransaction[USERTYPE](transactionLock: ReentrantLock,
             s"ts=${transactionUuid.timestamp()}")
 
         }
-        else
-        {
+        else {
           txnOwner.masterP2PAgent.publish(ProducerTopicMessage(
             txnUuid = transactionUuid,
             ttl = -1,
             status = ProducerTransactionStatus.cancel,
             partition = partition))
         }
-      } catch {
-        case e: RuntimeException =>
-          transactionLock.unlock()
-          throw e
       }
-      transactionLock.unlock()
-    }
+    })
   }
 
   private def doSendUpdateMessage() = {
     //publish that current txn is being updating
-    txnOwner.subscriberClient.publish(ProducerTopicMessage(
+    txnOwner.subscriberNotifier.publish(ProducerTopicMessage(
       txnUuid = transactionUuid,
       ttl = txnOwner.producerOptions.transactionTTL,
       status = ProducerTransactionStatus.update,

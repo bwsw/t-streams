@@ -3,16 +3,16 @@ package com.bwsw.tstreams.coordination.transactions.transport.impl
 import java.util.concurrent.LinkedBlockingQueue
 
 import com.bwsw.tstreams.coordination.transactions.messages._
-import com.bwsw.tstreams.coordination.transactions.transport.impl.client.IMessageClient
-import com.bwsw.tstreams.coordination.transactions.transport.impl.server.IMessageListener
+import com.bwsw.tstreams.coordination.transactions.transport.impl.client.TransactionStateUpdateClient
+import com.bwsw.tstreams.coordination.transactions.transport.impl.server.TransactionStateMessageListener
 import com.bwsw.tstreams.coordination.transactions.transport.traits.ITransport
 
 /**
   * [[ITransport]] implementation
   */
 class TcpTransport extends ITransport {
-  private var listener: IMessageListener = null
-  private val sender: IMessageClient = new IMessageClient
+  private var listener: TransactionStateMessageListener = null
+  private val sender: TransactionStateUpdateClient = new TransactionStateUpdateClient
   private val msgQueue = new LinkedBlockingQueue[IMessage]()
 
   /**
@@ -95,7 +95,7 @@ class TcpTransport extends ITransport {
     val splits = address.split(":")
     assert(splits.size == 2)
     val port = splits(1).toInt
-    listener = new IMessageListener(port)
+    listener = new TransactionStateMessageListener(port)
     listener.addCallback((msg: IMessage) => {
       msgQueue.add(msg)
     })

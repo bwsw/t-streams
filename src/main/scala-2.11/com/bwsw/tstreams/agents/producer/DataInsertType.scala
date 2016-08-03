@@ -2,20 +2,20 @@ package com.bwsw.tstreams.agents.producer
 
 
 /**
-  * Possible insertion types for producer
+  * Available insert types for producer
   */
-object InsertionType {
+object DataInsertType {
 
   /**
     * Basic trait for insertion type
     */
-  trait InsertType
+  trait AbstractInsertType
 
   /**
     * With this statement elements will be sent
     * every producer.send(obj : T) invoke
     */
-  case object SingleElementInsert extends InsertType
+  case object SingleElementInsert extends AbstractInsertType
 
   /**
     * With this statement elements will be sent only after
@@ -23,6 +23,6 @@ object InsertionType {
     *
     * @param batchSize Size of batch to put in storage
     */
-  case class BatchInsert(batchSize: Int) extends InsertType
+  case class BatchInsert(batchSize: Int) extends AbstractInsertType
 
 }

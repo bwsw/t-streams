@@ -1,9 +1,8 @@
 package com.bwsw.tstreams.coordination.transactions.transport.impl.server
 
 import java.util
-
-import com.bwsw.tstreams.common.serializer.TStreamsSerializer
-import com.bwsw.tstreams.common.serializer.TStreamsSerializer.TStreamsSerializerException
+import com.bwsw.tstreams.common.TStreamsSerializer
+import TStreamsSerializer.TStreamsSerializerException
 import com.bwsw.tstreams.coordination.transactions.messages.IMessage
 import io.netty.channel._
 import io.netty.handler.codec.{MessageToMessageDecoder, MessageToMessageEncoder}
@@ -11,10 +10,10 @@ import io.netty.util.ReferenceCountUtil
 import org.slf4j.LoggerFactory
 
 /**
-  * Handler for managing new connections for [[IMessageListener]]]
+  * Handler for managing new connections for [[TransactionStateMessageListener]]]
   */
 @ChannelHandler.Sharable
-class IMessageServerChannelHandler(manager: IMessageListenerManager) extends SimpleChannelInboundHandler[IMessage] {
+class TransactionStateMessageServerChannelHandler(manager: TransactionStateMessageListenerManager) extends SimpleChannelInboundHandler[IMessage] {
 
   /**
     * Triggered on new [[IMessage]]]
@@ -55,7 +54,7 @@ class IMessageServerChannelHandler(manager: IMessageListenerManager) extends Sim
 /**
   * Decoder [[java.lang.String]]] to [[IMessage]]]
   */
-class IMessageDecoder extends MessageToMessageDecoder[String] {
+class TransactionStateMessageDecoder extends MessageToMessageDecoder[String] {
   val serializer = new TStreamsSerializer
   private val logger = LoggerFactory.getLogger(this.getClass)
 
@@ -74,7 +73,7 @@ class IMessageDecoder extends MessageToMessageDecoder[String] {
 /**
   * Encoder [[IMessage]]] to [[java.lang.String]]]
   */
-class IMessageEncoder extends MessageToMessageEncoder[IMessage] {
+class TransactionStateMessageEncoder extends MessageToMessageEncoder[IMessage] {
   val serializer = new TStreamsSerializer
 
   override def encode(ctx: ChannelHandlerContext, msg: IMessage, out: util.List[AnyRef]): Unit = {

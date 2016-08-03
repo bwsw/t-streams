@@ -1,7 +1,7 @@
 package agents.both.batch_insert.aerospike
 
 import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
-import com.bwsw.tstreams.agents.producer.{BasicProducer, ProducerPolicies}
+import com.bwsw.tstreams.agents.producer.{BasicProducer, NewTransactionProducerPolicy}
 import com.bwsw.tstreams.env.TSF_Dictionary
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import testutils._
@@ -39,7 +39,7 @@ class AManyBasicProducersStreamingInManyPartitionsAndConsumerTest extends FlatSp
         var i = 0
         while (i < totalTxn) {
           //Thread.sleep(2000)
-          val txn = p.newTransaction(ProducerPolicies.errorIfOpened)
+          val txn = p.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
           dataToSend.foreach(x => txn.send(x))
           txn.checkpoint()
           i += 1

@@ -6,7 +6,7 @@ import java.util.concurrent.locks.ReentrantLock
 
 import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
 import com.bwsw.tstreams.agents.consumer.subscriber.{BasicSubscriberCallback, BasicSubscribingConsumer}
-import com.bwsw.tstreams.agents.producer.{BasicProducer, ProducerPolicies}
+import com.bwsw.tstreams.agents.producer.{BasicProducer, NewTransactionProducerPolicy}
 import com.bwsw.tstreams.env.TSF_Dictionary
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import testutils._
@@ -77,7 +77,7 @@ class AManyBasicProducersStreamingInManyPartitionsAndSubscriberTest extends Flat
         def run() {
           var i = 0
           while (i < totalTxn) {
-            val txn = p.newTransaction(ProducerPolicies.errorIfOpened)
+            val txn = p.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
             dataToSend.foreach(x => txn.send(x))
             txn.checkpoint()
             i += 1

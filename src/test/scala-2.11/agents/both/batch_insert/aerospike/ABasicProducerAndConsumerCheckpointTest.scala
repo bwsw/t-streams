@@ -2,7 +2,7 @@ package agents.both.batch_insert.aerospike
 
 import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
 import com.bwsw.tstreams.agents.consumer.{BasicConsumer, BasicConsumerTransaction}
-import com.bwsw.tstreams.agents.producer.ProducerPolicies
+import com.bwsw.tstreams.agents.producer.NewTransactionProducerPolicy
 import com.bwsw.tstreams.env.TSF_Dictionary
 import com.bwsw.tstreams.streams.BasicStream
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
@@ -51,7 +51,7 @@ class ABasicProducerAndConsumerCheckpointTest extends FlatSpec with Matchers wit
     val txnNum = 20
 
     (0 until txnNum) foreach { _ =>
-      val txn = producer.newTransaction(ProducerPolicies.errorIfOpened)
+      val txn = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
       dataToSend foreach { part =>
         txn.send(part)
       }

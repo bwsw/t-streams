@@ -5,9 +5,11 @@ import java.util.concurrent.locks.ReentrantLock
 import com.bwsw.tstreams.common.FirstFailLockableTaskExecutor
 import com.bwsw.tstreams.common.FirstFailLockableTaskExecutor.FirstFailLockableExecutorException
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
+import org.slf4j.LoggerFactory
 
 
 class FirstFailLockableTaskExecutorTest extends FlatSpec with Matchers with BeforeAndAfterAll{
+
   val errorMsg = java.util.UUID.randomUUID().toString
   val runnableWithException = new Runnable {
     override def run(): Unit = {
@@ -15,19 +17,24 @@ class FirstFailLockableTaskExecutorTest extends FlatSpec with Matchers with Befo
     }
   }
 
-  "FirstFailLockableTaskExecutor" should "throw exception in case of runnable failure" in {
-    val mandatoryExecutor = new FirstFailLockableTaskExecutor
+  "If send runnable with exception" should "throw exception in case of runnable failure" in {
+    val executor = new FirstFailLockableTaskExecutor
+    val logger = LoggerFactory.getLogger(this.getClass)
 
-    mandatoryExecutor.submit(runnableWithException)
+    logger.info("before submit")
+    executor.submit(runnableWithException)
+    logger.info("after submit")
     try {
-      mandatoryExecutor.awaitCurrentTasksWillComplete()
+      logger.info("before await")
+      executor.awaitCurrentTasksWillComplete()
+      logger.info("after await")
     }
     catch {
       case e: Exception =>
     }
     val msg: Option[Boolean] =
     try {
-      mandatoryExecutor.submit(new Runnable {
+      executor.submit(new Runnable {
         override def run(): Unit = ()
       })
       None
