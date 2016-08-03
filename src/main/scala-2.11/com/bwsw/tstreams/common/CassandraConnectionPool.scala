@@ -1,6 +1,7 @@
 package com.bwsw.tstreams.common
 
 import java.net.InetSocketAddress
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantLock
 
 import com.datastax.driver.core.Cluster.Builder
@@ -38,33 +39,30 @@ object CassandraConnectionPool {
     * @return
     */
   def getCluster(cassandraHosts: List[InetSocketAddress], login: String = null, password: String = null): Cluster = {
-    lock.lock()
-
-    if (isClosed) {
-      lock.unlock()
-      throw new IllegalStateException("CassandraPool is closed. This is the illegal usage of the object.")
-    }
-
-    logger.info("start MetadataStorage instance creation")
-
-    val sortedHosts = cassandraHosts.map(x => (x, x.hashCode())).sortBy(_._2).map(x => x._1)
-
-    val cluster = {
-      if (clusterMap.contains(sortedHosts))
-        clusterMap(sortedHosts)
-      else {
-        val builder: Builder = Cluster.builder()
-        if (login != null && password != null)
-          builder.withCredentials(login, password)
-        cassandraHosts.foreach(x => builder.addContactPointsWithPorts(x))
-        val cluster = builder.build()
-        clusterMap(sortedHosts) = cluster
-        cluster
+    LockUtil.withLockOrDieDo[Cluster](lock, (10, TimeUnit.SECONDS), Some(logger), () => {
+      if (isClosed) {
+        throw new IllegalStateException("CassandraPool is closed. This is the illegal usage of the object.")
       }
-    }
 
-    lock.unlock()
-    cluster
+      logger.info("start MetadataStorage instance creation")
+
+      val sortedHosts = cassandraHosts.map(x => (x, x.hashCode())).sortBy(_._2).map(x => x._1)
+
+      val cluster = {
+        if (clusterMap.contains(sortedHosts))
+          clusterMap(sortedHosts)
+        else {
+          val builder: Builder = Cluster.builder()
+          if (login != null && password != null)
+            builder.withCredentials(login, password)
+          cassandraHosts.foreach(x => builder.addContactPointsWithPorts(x))
+          val cluster = builder.build()
+          clusterMap(sortedHosts) = cluster
+          cluster
+        }
+      }
+      cluster
+    })
   }
 
   /**
@@ -77,38 +75,33 @@ object CassandraConnectionPool {
     * @return
     */
   def getSession(cassandraHosts: List[InetSocketAddress], keyspace: String, login: String = null, password: String = null): Session = {
-    lock.lock()
-
-    if (isClosed) {
-      lock.unlock()
-      throw new IllegalStateException("CassandraPool is closed. This is the illegal usage of the object.")
-    }
-
-    val cluster = getCluster(cassandraHosts, login, password)
-
-    val sortedHosts = cassandraHosts.map(x => (x, x.hashCode())).sortBy(_._2).map(x => x._1)
-    val session = {
-      if (sessionMap.contains((sortedHosts, keyspace)))
-        sessionMap((sortedHosts, keyspace))
-      else {
-        val session: Session = cluster.connect(keyspace)
-        sessionMap((sortedHosts, keyspace)) = session
-        session
+    LockUtil.withLockOrDieDo[Session](lock, (10, TimeUnit.SECONDS), Some(logger), () => {
+      if (isClosed) {
+        throw new IllegalStateException("CassandraPool is closed. This is the illegal usage of the object.")
       }
-    }
-    lock.unlock()
-    session
+      val sortedHosts = cassandraHosts.map(x => (x, x.hashCode())).sortBy(_._2).map(x => x._1)
+      val session = {
+        if (sessionMap.contains((sortedHosts, keyspace)))
+          sessionMap((sortedHosts, keyspace))
+        else {
+          val session: Session = getCluster(cassandraHosts, login, password).connect(keyspace)
+          sessionMap((sortedHosts, keyspace)) = session
+          session
+        }
+      }
+      session
+    })
   }
 
   /**
     * finally stop work with Pool
     */
   def close() = {
-    lock.lock()
-    isClosed = true
-    sessionMap.foreach(x => x._2.close())
-    clusterMap.foreach(x => x._2.close()) //close all clusters for each instance
-    clusterMap.clear()
-    lock.unlock()
+    LockUtil.withLockOrDieDo[Unit](lock, (10, TimeUnit.SECONDS), Some(logger), () => {
+      isClosed = true
+      sessionMap.foreach(x => x._2.close())
+      clusterMap.foreach(x => x._2.close()) //close all clusters for each instance
+      clusterMap.clear()
+    })
   }
 }

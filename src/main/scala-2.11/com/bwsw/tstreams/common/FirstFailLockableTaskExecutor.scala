@@ -39,32 +39,32 @@ class FirstFailLockableTaskExecutor extends Executor {
         //main task handle cycle
         while (isNotFailed.get() && isRunning.get()) {
           val task: FirstFailLockableExecutorTask = queue.take()
-          LockUtil.lockOrDie(lock, (100, TimeUnit.SECONDS), Some(logger))
-          try {
-            task.lock.foreach(x=>x.lock())
-            task.runnable.run()
-            task.lock.foreach(x=>x.unlock())
-          }
-          catch {
-            case e: Exception =>
-              logger.warn("[FIRSTFAILLOCKABLE EXECUTOR] task failure; stop executor")
-              task.lock.foreach(x=>x.unlock())
-              isNotFailed.set(false)
-              failureExc = e
-              logger.error(failureExc.getMessage)
-          }
-          lock.unlock()
+          LockUtil.withLockOrDieDo[Unit](lock, (100, TimeUnit.SECONDS), Some(logger), () => {
+            try {
+              task.lock.foreach(x => x.lock())
+              task.runnable.run()
+              task.lock.foreach(x => x.unlock())
+            }
+            catch {
+              case e: Exception =>
+                logger.warn("[FIRSTFAILLOCKABLE EXECUTOR] task failure; stop executor")
+                task.lock.foreach(x => x.unlock())
+                isNotFailed.set(false)
+                failureExc = e
+                logger.error(failureExc.getMessage)
+            }
+          })
         }
 
         //release await in case of executor failure
-        LockUtil.lockOrDie(lock, (100, TimeUnit.SECONDS), Some(logger))
-        while (queue.size() > 0){
-          val task = queue.take()
-          if (!task.isIgnorableIfExecutorFailed){
-            task.runnable.run()
+        LockUtil.withLockOrDieDo[Unit](lock, (100, TimeUnit.SECONDS), Some(logger), () => {
+          while (queue.size() > 0) {
+            val task = queue.take()
+            if (!task.isIgnorableIfExecutorFailed) {
+              task.runnable.run()
+            }
           }
-        }
-        lock.unlock()
+        })
         logger.debug("[FIRSTFAILLOCKABLE EXECUTOR] thread end")
       }
     })
@@ -78,21 +78,18 @@ class FirstFailLockableTaskExecutor extends Executor {
     * @param runnable
     */
   def submit(runnable : Runnable, l : Option[ReentrantLock] = None) = {
-    LockUtil.lockOrDie(lock, (100, TimeUnit.SECONDS), Some(logger))
-    if (isShutdown.get()){
-      lock.unlock()
-      throw new FirstFailLockableExecutorException("executor is been shutdown")
-    }
-    if (runnable == null) {
-      lock.unlock()
-      throw new FirstFailLockableExecutorException("runnable must be not null")
-    }
-    if (executor != null && !isNotFailed.get()){
-      lock.unlock()
-      throw new FirstFailLockableExecutorException(failureExc.getMessage)
-    }
-    queue.add(FirstFailLockableExecutorTask(runnable, isIgnorableIfExecutorFailed = true, l))
-    lock.unlock()
+    LockUtil.withLockOrDieDo[Unit](lock, (100, TimeUnit.SECONDS), Some(logger), () => {
+      if (isShutdown.get()){
+        throw new FirstFailLockableExecutorException("executor is been shutdown")
+      }
+      if (runnable == null) {
+        throw new FirstFailLockableExecutorException("runnable must be not null")
+      }
+      if (executor != null && !isNotFailed.get()){
+        throw new FirstFailLockableExecutorException(failureExc.getMessage)
+      }
+      queue.add(FirstFailLockableExecutorTask(runnable, isIgnorableIfExecutorFailed = true, l))
+    })
   }
 
   /**
@@ -100,17 +97,15 @@ class FirstFailLockableTaskExecutor extends Executor {
     * Warn! this method is not thread safe
     */
   def awaitCurrentTasksWillComplete() : Unit = {
-    LockUtil.lockOrDie(lock, (100, TimeUnit.SECONDS), Some(logger))
-    if (isShutdown.get()){
-      lock.unlock()
-      throw new FirstFailLockableExecutorException("executor is been shutdown")
-    }
-    if (executor != null && !isNotFailed.get()){
-      lock.unlock()
-      throw new FirstFailLockableExecutorException(failureExc.getMessage)
-    }
-    lock.unlock()
-    this.awaitInternal()
+    LockUtil.withLockOrDieDo[Unit](lock, (100, TimeUnit.SECONDS), Some(logger), () => {
+      if (isShutdown.get()) {
+        throw new FirstFailLockableExecutorException("executor is been shutdown")
+      }
+      if (executor != null && !isNotFailed.get()) {
+        throw new FirstFailLockableExecutorException(failureExc.getMessage)
+      }
+      this.awaitInternal()
+    })
   }
 
   private def getRunnable: Runnable = new Runnable {
@@ -121,16 +116,15 @@ class FirstFailLockableTaskExecutor extends Executor {
     * Internal method for [[awaitCurrentTasksWillComplete]]
     */
   private def awaitInternal() : Unit = {
-    LockUtil.lockOrDie(lock, (100, TimeUnit.SECONDS), Some(logger))
-    if (isFailed) {
-      lock.unlock()
-      return
-    }
-    awaitSignalVar.setValue(1)
-    queue.add(FirstFailLockableExecutorTask(getRunnable, isIgnorableIfExecutorFailed = false, lock = None))
-    lock.unlock()
-    logger.debug("[FIRSTFAILLOCKABLE EXECUTOR] Before await signal var to be triggered.")
-    awaitSignalVar.await()
+    LockUtil.withLockOrDieDo[Unit](lock, (100, TimeUnit.SECONDS), Some(logger), () => {
+      if (isFailed) {
+        return
+      }
+      awaitSignalVar.setValue(1)
+      queue.add(FirstFailLockableExecutorTask(getRunnable, isIgnorableIfExecutorFailed = false, lock = None))
+      logger.debug("[FIRSTFAILLOCKABLE EXECUTOR] Before await signal var to be triggered.")
+      awaitSignalVar.await()
+    })
   }
 
   /**
@@ -145,19 +139,19 @@ class FirstFailLockableTaskExecutor extends Executor {
     this.awaitInternal()
     logger.debug("[FIRSTFAILLOCKABLE EXECUTOR] After awaiting current tasks will be terminated")
 
-    LockUtil.lockOrDie(lock, (100, TimeUnit.SECONDS), Some(logger))
-    isShutdown.set(true)
-    //stop handler thread
-    isRunning.set(false)
+    LockUtil.withLockOrDieDo[Unit](lock, (100, TimeUnit.SECONDS), Some(logger), () => {
+      isShutdown.set(true)
+      //stop handler thread
+      isRunning.set(false)
 
-    //need to skip queue.take() block
-    queue.add(FirstFailLockableExecutorTask(
-      runnable = new Runnable {
-        override def run(): Unit = ()
-      },
-      isIgnorableIfExecutorFailed = true,
-      lock = None))
-    lock.unlock()
+      //need to skip queue.take() block
+      queue.add(FirstFailLockableExecutorTask(
+        runnable = new Runnable {
+          override def run(): Unit = ()
+        },
+        isIgnorableIfExecutorFailed = true,
+        lock = None))
+    })
     executor.join()
     logger.debug("[FIRSTFAILLOCKABLE EXECUTOR] Finished shutting down the executor")
   }
@@ -209,25 +203,24 @@ class FirstFailLockableTaskExecutorPool(val size: Int = 4) extends Executor {
   override def execute(command: Runnable): Unit = {
     if(isShutdown.get())
       throw new FirstFailLockableExecutorException("ExecutorPool is already been shutdown")
-    LockUtil.lockOrDie(lock, (100, TimeUnit.SECONDS), Some(logger))
-    logger.debug("Try to add task for execution")
-    var isFailed = false
+    LockUtil.withLockOrDieDo[Unit](lock, (100, TimeUnit.SECONDS), Some(logger), () => {
+      logger.debug("Try to add task for execution")
+      var isFailed = false
 
-    (0 until size).foreach(x => {
-      if(pool(x).isFailed) {
-        logger.debug("Task execution is denied because previous execution failed")
-        lock.unlock()
-        if(pool(x).getException.isDefined)
-          throw pool(x).getException.get
-        else
-          throw new IllegalStateException(s"Thread-${x} in the pool meet failed task. The pool state is failed, but task exception is unknown.")
-      }
+      (0 until size).foreach(x => {
+        if (pool(x).isFailed) {
+          logger.debug("Task execution is denied because previous execution failed")
+          if (pool(x).getException.isDefined)
+            throw pool(x).getException.get
+          else
+            throw new IllegalStateException(s"Thread-${x} in the pool meet failed task. The pool state is failed, but task exception is unknown.")
+        }
+      })
+      pool(next).submit(command)
+      next += 1
+      next = next % size
+      logger.debug("Task is scheduled for execution")
     })
-    pool(next).submit(command)
-    next += 1
-    next = next % size
-    logger.debug("Task is scheduled for execution")
-    lock.unlock()
   }
 
   /**
@@ -236,9 +229,9 @@ class FirstFailLockableTaskExecutorPool(val size: Int = 4) extends Executor {
   def awaitCurrentTasksWillComplete(): Unit = {
     if(isShutdown.get())
       throw new FirstFailLockableExecutorException("ExecutorPool is already been shutdown")
-    LockUtil.lockOrDie(lock, (100, TimeUnit.SECONDS), Some(logger))
-    (0 until size).foreach(x => pool(x).awaitCurrentTasksWillComplete)
-    lock.unlock()
+    LockUtil.withLockOrDieDo[Unit](lock, (100, TimeUnit.SECONDS), Some(logger), () => {
+      (0 until size).foreach(x => pool(x).awaitCurrentTasksWillComplete)
+    })
   }
 
   /**
@@ -247,12 +240,12 @@ class FirstFailLockableTaskExecutorPool(val size: Int = 4) extends Executor {
   def shutdownSafe(): Unit = {
     if(isShutdown.get())
       throw new FirstFailLockableExecutorException("ExecutorPool is already been shutdown")
-    LockUtil.lockOrDie(lock, (100, TimeUnit.SECONDS), Some(logger))
-    logger.debug("Pool started to shut down")
-    isShutdown.set(true)
-    (0 until size).foreach(x => pool(x).shutdownSafe)
-    logger.debug("Pool is shut down")
-    lock.unlock()
+    LockUtil.withLockOrDieDo[Unit](lock, (100, TimeUnit.SECONDS), Some(logger), () => {
+      logger.debug("Pool started to shut down")
+      isShutdown.set(true)
+      (0 until size).foreach(x => pool(x).shutdownSafe)
+      logger.debug("Pool is shut down")
+    })
   }
 
 }
