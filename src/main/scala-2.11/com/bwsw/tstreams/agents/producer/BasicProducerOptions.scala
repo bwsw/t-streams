@@ -2,7 +2,7 @@ package com.bwsw.tstreams.agents.producer
 
 import java.net.InetSocketAddress
 
-import com.bwsw.tstreams.agents.producer.InsertionType.InsertType
+import com.bwsw.tstreams.agents.producer.DataInsertType.InsertType
 import com.bwsw.tstreams.converter.IConverter
 import com.bwsw.tstreams.coordination.transactions.peertopeer.PeerToPeerAgent
 import com.bwsw.tstreams.coordination.transactions.transport.traits.ITransport
@@ -40,9 +40,9 @@ class BasicProducerOptions[USERTYPE](val transactionTTL: Int, val transactionKee
     throw new IllegalArgumentException("Option transactionTTL must be at least three times greater or equal than transaction")
 
   insertType match {
-    case InsertionType.SingleElementInsert =>
+    case DataInsertType.SingleElementInsert =>
 
-    case InsertionType.BatchInsert(size) =>
+    case DataInsertType.BatchInsert(size) =>
       if (size <= 0)
         throw new IllegalArgumentException("Batch size must be greater or equal 1")
 

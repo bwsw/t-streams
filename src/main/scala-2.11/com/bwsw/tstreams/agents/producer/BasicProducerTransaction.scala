@@ -86,7 +86,7 @@ class BasicProducerTransaction[USERTYPE](transactionLock: ReentrantLock,
 
       txnOwner.producerOptions.insertType match {
 
-        case InsertionType.BatchInsert(size) =>
+        case DataInsertType.BatchInsert(size) =>
 
           txnOwner.stream.dataStorage.putInBuffer(
             txnOwner.stream.getName,
@@ -104,7 +104,7 @@ class BasicProducerTransaction[USERTYPE](transactionLock: ReentrantLock,
 
           }
 
-        case InsertionType.SingleElementInsert =>
+        case DataInsertType.SingleElementInsert =>
 
           val job: () => Unit = txnOwner.stream.dataStorage.put(
             txnOwner.stream.getName,
@@ -122,9 +122,9 @@ class BasicProducerTransaction[USERTYPE](transactionLock: ReentrantLock,
 
   private def cancelAsync() = {
     txnOwner.producerOptions.insertType match {
-      case InsertionType.SingleElementInsert =>
+      case DataInsertType.SingleElementInsert =>
 
-      case InsertionType.BatchInsert(_) =>
+      case DataInsertType.BatchInsert(_) =>
         txnOwner.stream.dataStorage.clearBuffer(transactionUuid)
     }
 
@@ -184,9 +184,9 @@ class BasicProducerTransaction[USERTYPE](transactionLock: ReentrantLock,
   private def checkpointAsync() : Unit = {
     txnOwner.producerOptions.insertType match {
 
-      case InsertionType.SingleElementInsert =>
+      case DataInsertType.SingleElementInsert =>
 
-      case InsertionType.BatchInsert(size) =>
+      case DataInsertType.BatchInsert(size) =>
         if (txnOwner.stream.dataStorage.getBufferSize(transactionUuid) > 0) {
           val job: () => Unit = txnOwner.stream.dataStorage.saveBuffer(transactionUuid)
           if (job != null) jobs += job
@@ -256,9 +256,9 @@ class BasicProducerTransaction[USERTYPE](transactionLock: ReentrantLock,
       else {
         txnOwner.producerOptions.insertType match {
 
-          case InsertionType.SingleElementInsert =>
+          case DataInsertType.SingleElementInsert =>
 
-          case InsertionType.BatchInsert(size) =>
+          case DataInsertType.BatchInsert(size) =>
             if (txnOwner.stream.dataStorage.getBufferSize(transactionUuid) > 0) {
               val job: () => Unit = txnOwner.stream.dataStorage.saveBuffer(transactionUuid)
               if (job != null) jobs += job

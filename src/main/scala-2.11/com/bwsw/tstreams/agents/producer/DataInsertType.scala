@@ -2,9 +2,9 @@ package com.bwsw.tstreams.agents.producer
 
 
 /**
-  * Possible insertion types for producer
+  * Available insert types for producer
   */
-object InsertionType {
+object DataInsertType {
 
   /**
     * Basic trait for insertion type
