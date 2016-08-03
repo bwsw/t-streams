@@ -7,7 +7,7 @@ import java.util.concurrent.locks.ReentrantLock
 import java.util.concurrent.{CountDownLatch, ExecutorService, Executors}
 
 import com.bwsw.tstreams.agents.producer.BasicProducer
-import com.bwsw.tstreams.common.zkservice.ZkService
+import com.bwsw.tstreams.common.ZookeeperDLMService
 import com.bwsw.tstreams.coordination.pubsub.messages.{ProducerTopicMessage, ProducerTransactionStatus}
 import com.bwsw.tstreams.coordination.transactions.messages._
 import com.bwsw.tstreams.coordination.transactions.transport.traits.ITransport
@@ -43,7 +43,7 @@ class PeerToPeerAgent(agentAddress : String,
   private val logger = LoggerFactory.getLogger(this.getClass)
   private val zkRetriesAmount = 60
   private val externalAccessLock = new ReentrantLock(true)
-  private val zkService = new ZkService(zkRootPath, zkHosts, zkSessionTimeout, zkConnectionTimeout)
+  private val zkService = new ZookeeperDLMService(zkRootPath, zkHosts, zkSessionTimeout, zkConnectionTimeout)
   private val localMasters = scala.collection.mutable.Map[Int/*partition*/, String/*master*/]()
   private val lockLocalMasters = new ReentrantLock(true)
   private val lockManagingMaster = new ReentrantLock(true)

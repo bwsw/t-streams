@@ -4,7 +4,7 @@ import java.io.File
 import java.net.InetSocketAddress
 import java.util.UUID
 
-import com.bwsw.tstreams.common.zkservice.ZkService
+import com.bwsw.tstreams.common.ZookeeperDLMService
 
 import scala.collection.mutable.ListBuffer
 
@@ -12,7 +12,7 @@ import scala.collection.mutable.ListBuffer
   * Test help utils
   */
 trait TestUtils {
-  private val zkService = new ZkService("", List(new InetSocketAddress("localhost", 2181)), 7000, 7000)
+  private val zkService = new ZookeeperDLMService("", List(new InetSocketAddress("localhost", 2181)), 7000, 7000)
   protected val batchSizeTestVal = 5
 
   /**

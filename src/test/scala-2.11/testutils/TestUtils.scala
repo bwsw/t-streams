@@ -7,8 +7,7 @@ import java.util.UUID
 import java.util.concurrent.atomic.AtomicInteger
 
 import com.aerospike.client.Host
-import com.bwsw.tstreams.common.zkservice.ZkService
-import com.bwsw.tstreams.common.{CassandraConnectionPool, CassandraHelper}
+import com.bwsw.tstreams.common.{ZookeeperDLMService, CassandraConnectionPool, CassandraHelper}
 import com.bwsw.tstreams.converter.{ArrayByteToStringConverter, StringToArrayByteConverter}
 import com.bwsw.tstreams.data.aerospike.{AerospikeStorageFactory, AerospikeStorageOptions}
 import com.bwsw.tstreams.data.cassandra.{CassandraStorageFactory, CassandraStorageOptions}
@@ -84,7 +83,7 @@ trait TestUtils {
     new Host("localhost", 3000))
 
   val aerospikeOptions = new AerospikeStorageOptions("test", hosts)
-  val zkService = new ZkService("", List(new InetSocketAddress("localhost", 2181)), 7, 7)
+  val zkService = new ZookeeperDLMService("", List(new InetSocketAddress("localhost", 2181)), 7, 7)
 
   removeZkMetadata(f.getProperty(TSF_Dictionary.Coordination.root).toString)
 

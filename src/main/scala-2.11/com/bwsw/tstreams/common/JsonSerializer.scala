@@ -1,4 +1,4 @@
-package com.bwsw.tstreams.common.serializer
+package com.bwsw.tstreams.common
 
 import java.lang.reflect.{ParameterizedType, Type}
 
