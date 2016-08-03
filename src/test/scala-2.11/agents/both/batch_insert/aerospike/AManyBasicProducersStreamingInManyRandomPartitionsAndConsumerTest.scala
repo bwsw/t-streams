@@ -49,7 +49,7 @@ class AManyBasicProducersStreamingInManyRandomPartitionsAndConsumerTest extends 
         def run() {
           var i = 0
           while (i < totalTxn) {
-            val txn = p.newTransaction(NewTransactionProducerPolicy.errorIfOpened)
+            val txn = p.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
             dataToSend.foreach(x => txn.send(x))
             txn.checkpoint()
             i += 1

@@ -91,7 +91,7 @@ class ABasicSubscriberPreCommitFailureTest extends FlatSpec with Matchers
 
   def sendTxnsAndWait(totalTxns: Int, dataInTxn: Int, data: String) = {
     (0 until totalTxns) foreach { x =>
-      val txn = producer.newTransaction(NewTransactionProducerPolicy.errorIfOpened)
+      val txn = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
       (0 until dataInTxn) foreach { _ =>
         txn.send(data)
       }

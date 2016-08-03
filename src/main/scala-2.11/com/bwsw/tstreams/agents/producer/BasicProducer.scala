@@ -170,13 +170,13 @@ class BasicProducer[USERTYPE](val name: String,
           val prevTxn = openTransactionsMap(partition)
           if (!prevTxn.isClosed) {
             policy match {
-              case NewTransactionProducerPolicy.`checkpointIfOpened` =>
+              case NewTransactionProducerPolicy.CheckpointIfOpened =>
                 prevTxn.checkpoint()
 
-              case NewTransactionProducerPolicy.`cancelIfOpened` =>
+              case NewTransactionProducerPolicy.CancelIfOpened =>
                 prevTxn.cancel()
 
-              case NewTransactionProducerPolicy.`errorIfOpened` =>
+              case NewTransactionProducerPolicy.ErrorIfOpened =>
                 throw new IllegalStateException(s"Producer ${name} - previous transaction was not closed")
             }
           }

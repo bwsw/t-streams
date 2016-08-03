@@ -39,7 +39,7 @@ class AManyBasicProducersStreamingInManyPartitionsAndConsumerTest extends FlatSp
         var i = 0
         while (i < totalTxn) {
           //Thread.sleep(2000)
-          val txn = p.newTransaction(NewTransactionProducerPolicy.errorIfOpened)
+          val txn = p.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
           dataToSend.foreach(x => txn.send(x))
           txn.checkpoint()
           i += 1

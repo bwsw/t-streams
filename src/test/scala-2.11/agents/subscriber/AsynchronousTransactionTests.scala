@@ -52,7 +52,7 @@ class AsynchronousTransactionTests  extends FlatSpec with Matchers
       offset = Oldest,
       isUseLastOffset = true)
 
-    val ptxn = producer.newTransaction(policy = NewTransactionProducerPolicy.errorIfOpened)
+    val ptxn = producer.newTransaction(policy = NewTransactionProducerPolicy.ErrorIfOpened)
     ptxn.send("test")
     ptxn.checkpoint(isSynchronous = false)
     l.await()
@@ -80,7 +80,7 @@ class AsynchronousTransactionTests  extends FlatSpec with Matchers
       offset = Oldest,
       isUseLastOffset = true)
 
-    val ptxn = producer.newTransaction(policy = NewTransactionProducerPolicy.errorIfOpened)
+    val ptxn = producer.newTransaction(policy = NewTransactionProducerPolicy.ErrorIfOpened)
     ptxn.send("test")
     ptxn.checkpoint(isSynchronous = false)
     l.await()
@@ -106,7 +106,7 @@ class AsynchronousTransactionTests  extends FlatSpec with Matchers
       offset = Oldest,
       isUseLastOffset = true)
 
-    val ptxn = producer.newTransaction(policy = NewTransactionProducerPolicy.errorIfOpened)
+    val ptxn = producer.newTransaction(policy = NewTransactionProducerPolicy.ErrorIfOpened)
     ptxn.send("test")
     ptxn.checkpoint(isSynchronous = false)
     c.start()

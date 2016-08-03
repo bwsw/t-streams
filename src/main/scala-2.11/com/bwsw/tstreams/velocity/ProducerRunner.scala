@@ -31,7 +31,7 @@ object ProducerRunner {
 
     while (true) {
       var t1 = System.currentTimeMillis()
-      val txn = producer.newTransaction(NewTransactionProducerPolicy.errorIfOpened)
+      val txn = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
       accNewTxn += (System.currentTimeMillis() - t1)
 
       t1 = System.currentTimeMillis()

@@ -51,7 +51,7 @@ class ABasicProducerAndConsumerCheckpointTest extends FlatSpec with Matchers wit
     val txnNum = 20
 
     (0 until txnNum) foreach { _ =>
-      val txn = producer.newTransaction(NewTransactionProducerPolicy.errorIfOpened)
+      val txn = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
       dataToSend foreach { part =>
         txn.send(part)
       }
