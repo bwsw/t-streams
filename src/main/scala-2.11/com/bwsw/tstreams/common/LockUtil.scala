@@ -20,4 +20,22 @@ object LockUtil {
         logger.get.debug(s"Lock object ${l.toString} received.")
     }
   }
+
+  def withLockOrDieDo[RTYPE](l: ReentrantLock,
+                        lt: (Int, TimeUnit),
+                        logger: Option[Logger] = None,
+                        lambda: () => RTYPE): RTYPE = {
+    LockUtil.lockOrDie(l, lt, logger)
+    try {
+      val rv = lambda()
+      l.unlock()
+      if (logger.isDefined)
+        logger.get.error(s"Unlocked ${l.toString} in ${lt._1} ${lt._2.toString}.")
+      return rv
+    } catch {
+      case e: Exception =>
+        l.unlock()
+        throw e
+    }
+  }
 }
