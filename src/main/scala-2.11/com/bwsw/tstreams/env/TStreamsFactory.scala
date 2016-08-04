@@ -11,6 +11,7 @@ import com.bwsw.tstreams.agents.consumer.subscriber.{BasicSubscriberCallback, Ba
 import com.bwsw.tstreams.agents.consumer.{BasicConsumer, BasicConsumerOptions, SubscriberCoordinationOptions}
 import com.bwsw.tstreams.agents.producer.DataInsertType.{BatchInsert, AbstractInsertType, SingleElementInsert}
 import com.bwsw.tstreams.agents.producer.{BasicProducer, BasicProducerOptions, ProducerCoordinationOptions}
+import com.bwsw.tstreams.common.NetworkUtil
 import com.bwsw.tstreams.converter.IConverter
 import com.bwsw.tstreams.coordination.transactions.transport.impl.TcpTransport
 import com.bwsw.tstreams.data.IStorage
@@ -469,24 +470,6 @@ class TStreamsFactory(envname: String = "T-streams") {
     value
   }
 
-  /**
-    * transforms host:port,host:port to list(Host, Host) for Aerospike
-    *
-    * @param h
-    * @return
-    */
-  private def getAerospikeCompatibleHostList(h: String): List[Host] =
-    h.split(',').map((sh: String) => new Host(sh.split(':').head, Integer.parseInt(sh.split(':').tail.head))).toList
-
-  /**
-    * transforms host:port,host:port to list(InetSocketAddr, InetSocketAddr) for C*
-    *
-    * @param h
-    * @return
-    */
-  private def getInetSocketAddressCompatibleHostList(h: String): List[InetSocketAddress] =
-    h.split(',').map((sh: String) => new InetSocketAddress(sh.split(':').head, Integer.parseInt(sh.split(':').tail.head))).toList
-
 
   /**
     * common routine allows getting ready to use data store object
@@ -528,7 +511,7 @@ class TStreamsFactory(envname: String = "T-streams") {
 
       val opts = new AerospikeStorageOptions(
         namespace = namespace,
-        hosts = getAerospikeCompatibleHostList(data_cluster_endpoints),
+        hosts = NetworkUtil.getAerospikeCompatibleHostList(data_cluster_endpoints),
         clientPolicy = cp,
         writePolicy = wp,
         readPolicy = rp)
@@ -548,7 +531,7 @@ class TStreamsFactory(envname: String = "T-streams") {
 
       val opts = new CassandraStorageOptions(
         keyspace = pAsString(TSF_Dictionary.Data.Cluster.NAMESPACE),
-        cassandraHosts = getInetSocketAddressCompatibleHostList(pAsString(TSF_Dictionary.Data.Cluster.ENDPOINTS)),
+        cassandraHosts = NetworkUtil.getInetSocketAddressCompatibleHostList(pAsString(TSF_Dictionary.Data.Cluster.ENDPOINTS)),
         login = login,
         password = password
       )
@@ -578,7 +561,7 @@ class TStreamsFactory(envname: String = "T-streams") {
     // construct metadata storage
     return msFactory.getInstance(
       keyspace = pAsString(TSF_Dictionary.Metadata.Cluster.NAMESPACE),
-      cassandraHosts = getInetSocketAddressCompatibleHostList(pAsString(TSF_Dictionary.Metadata.Cluster.ENDPOINTS)),
+      cassandraHosts = NetworkUtil.getInetSocketAddressCompatibleHostList(pAsString(TSF_Dictionary.Metadata.Cluster.ENDPOINTS)),
       login = login,
       password = password)
   }
@@ -666,7 +649,7 @@ class TStreamsFactory(envname: String = "T-streams") {
     // construct coordination agent options
     val cao = new ProducerCoordinationOptions(
       agentAddress = pAsString(TSF_Dictionary.Producer.BIND_PORT) + ":" + pAsString(TSF_Dictionary.Producer.BIND_HOST),
-      zkHosts = getInetSocketAddressCompatibleHostList(pAsString(TSF_Dictionary.Coordination.ENDPOINTS)),
+      zkHosts = NetworkUtil.getInetSocketAddressCompatibleHostList(pAsString(TSF_Dictionary.Coordination.ENDPOINTS)),
       zkRootPath = pAsString(TSF_Dictionary.Coordination.ROOT),
       zkSessionTimeout = pAsInt(TSF_Dictionary.Coordination.TTL, Coordination_ttl_default),
       isLowPriorityToBeMaster = isLowPriority,
@@ -811,7 +794,7 @@ class TStreamsFactory(envname: String = "T-streams") {
     val coordinationOptions = new SubscriberCoordinationOptions(
       agentAddress = bind_host + ":" + bind_port,
       zkRootPath = root,
-      zkHosts = getInetSocketAddressCompatibleHostList(endpoints),
+      zkHosts = NetworkUtil.getInetSocketAddressCompatibleHostList(endpoints),
       zkSessionTimeout = ttl,
       zkConnectionTimeout = conn_timeout,
       threadPoolAmount = thread_pool)
