@@ -5,20 +5,20 @@ import java.util.UUID
 import java.util.concurrent.locks.ReentrantLock
 
 import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
-import com.bwsw.tstreams.agents.consumer.subscriber.{BasicSubscriberCallback, BasicSubscribingConsumer}
-import com.bwsw.tstreams.agents.consumer.{BasicConsumerOptions, SubscriberCoordinationOptions}
+import com.bwsw.tstreams.agents.consumer.subscriber.{Callback, SubscribingConsumer}
+import com.bwsw.tstreams.agents.consumer.{ConsumerOptions, SubscriberCoordinationOptions}
 
 
 object SubscriberRunner {
   def main(args: Array[String]) {
     import Common._
-    val consumerOptions = new BasicConsumerOptions[String](transactionsPreload = 10, dataPreload = 7, arrayByteToStringConverter, RoundRobinPolicyCreator.getRoundRobinPolicy(stream, List(0)), Oldest, LocalGeneratorCreator.getGen(), useLastOffset = true)
+    val consumerOptions = new ConsumerOptions[String](transactionsPreload = 10, dataPreload = 7, arrayByteToStringConverter, RoundRobinPolicyCreator.getRoundRobinPolicy(stream, List(0)), Oldest, LocalGeneratorCreator.getGen(), useLastOffset = true)
 
     val lock = new ReentrantLock()
     var cnt = 0
     var timeNow = System.currentTimeMillis()
-    val callback = new BasicSubscriberCallback[String] {
-      override def onEvent(subscriber: BasicSubscribingConsumer[String], partition: Int, transactionUuid: UUID): Unit = {
+    val callback = new Callback[String] {
+      override def onEvent(subscriber: SubscribingConsumer[String], partition: Int, transactionUuid: UUID): Unit = {
         lock.lock()
         if (cnt % 1000 == 0) {
           val time = System.currentTimeMillis()
@@ -31,7 +31,7 @@ object SubscriberRunner {
       }
     }
 
-    val subscribeConsumer = new BasicSubscribingConsumer[String](
+    val subscribeConsumer = new SubscribingConsumer[String](
       name = "test_consumer",
       stream = stream,
       options = consumerOptions,

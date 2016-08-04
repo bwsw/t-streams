@@ -7,10 +7,10 @@ import java.util.concurrent.locks.ReentrantLock
 import com.aerospike.client.Host
 import com.aerospike.client.policy.{ClientPolicy, Policy, WritePolicy}
 import com.bwsw.tstreams.agents.consumer.Offsets.IOffset
-import com.bwsw.tstreams.agents.consumer.subscriber.{BasicSubscriberCallback, BasicSubscribingConsumer}
-import com.bwsw.tstreams.agents.consumer.{BasicConsumer, BasicConsumerOptions, SubscriberCoordinationOptions}
+import com.bwsw.tstreams.agents.consumer.subscriber.{Callback, SubscribingConsumer}
+import com.bwsw.tstreams.agents.consumer.{Consumer, ConsumerOptions, SubscriberCoordinationOptions}
 import com.bwsw.tstreams.agents.producer.DataInsertType.{BatchInsert, AbstractInsertType, SingleElementInsert}
-import com.bwsw.tstreams.agents.producer.{BasicProducer, BasicProducerOptions, ProducerCoordinationOptions}
+import com.bwsw.tstreams.agents.producer.{Producer, ProducerOptions, ProducerCoordinationOptions}
 import com.bwsw.tstreams.common.NetworkUtil
 import com.bwsw.tstreams.converter.IConverter
 import com.bwsw.tstreams.coordination.transactions.transport.impl.TcpTransport
@@ -20,7 +20,7 @@ import com.bwsw.tstreams.data.cassandra.{CassandraStorageFactory, CassandraStora
 import com.bwsw.tstreams.generator.IUUIDGenerator
 import com.bwsw.tstreams.metadata.{MetadataStorage, MetadataStorageFactory}
 import com.bwsw.tstreams.policy.AbstractPolicy
-import com.bwsw.tstreams.streams.BasicStream
+import com.bwsw.tstreams.streams.TStream
 import com.bwsw.tstreams.velocity.RoundRobinPolicyCreator
 import org.slf4j.LoggerFactory
 
@@ -573,13 +573,13 @@ class TStreamsFactory(envname: String = "T-streams") {
     * @param datastorage
     * @return
     */
-  private def getStream(metadatastorage: MetadataStorage, datastorage: IStorage[Array[Byte]]): BasicStream[Array[Byte]] = {
+  private def getStreamObject(metadatastorage: MetadataStorage, datastorage: IStorage[Array[Byte]]): TStream[Array[Byte]] = {
     assert(pAsString(TSF_Dictionary.Stream.NAME) != null)
     pAssertIntRange(pAsInt(TSF_Dictionary.Stream.PARTITIONS, Stream_partitions_default), Stream_partitions_min, Stream_partitions_max)
     pAssertIntRange(pAsInt(TSF_Dictionary.Stream.TTL, Stream_ttl_default), Stream_ttl_min, Stream_ttl_max)
 
     // construct stream
-    val stream = new BasicStream[Array[Byte]](
+    val stream = new TStream[Array[Byte]](
       name = pAsString(TSF_Dictionary.Stream.NAME),
       partitions = pAsInt(TSF_Dictionary.Stream.PARTITIONS, Stream_partitions_default),
       metadataStorage = metadatastorage,
@@ -592,21 +592,31 @@ class TStreamsFactory(envname: String = "T-streams") {
   /**
     * reusable method which returns consumer options object
     */
-  private def getBasicConsumerOptions[USERTYPE](stream: BasicStream[Array[Byte]],
+  private def getBasicConsumerOptions[USERTYPE](stream: TStream[Array[Byte]],
                                                 partitions: List[Int],
                                                 converter: IConverter[Array[Byte], USERTYPE],
                                                 txnGenerator: IUUIDGenerator,
                                                 offset: IOffset,
-                                                isUseLastOffset: Boolean = true): BasicConsumerOptions[USERTYPE] = {
+                                                isUseLastOffset: Boolean = true): ConsumerOptions[USERTYPE] = {
     val consumer_transaction_preload = pAsInt(TSF_Dictionary.Consumer.TRANSACTION_PRELOAD, Consumer_transaction_preload_default)
     pAssertIntRange(consumer_transaction_preload, Consumer_transaction_preload_min, Consumer_transaction_preload_max)
 
     val consumer_data_preload = pAsInt(TSF_Dictionary.Consumer.DATA_PRELOAD, Consumer_data_preload_default)
     pAssertIntRange(consumer_data_preload, Consumer_data_preload_min, Consumer_data_preload_max)
 
-    val consumerOptions = new BasicConsumerOptions[USERTYPE](transactionsPreload = consumer_transaction_preload, dataPreload = consumer_data_preload, converter = converter, readPolicy = RoundRobinPolicyCreator.getRoundRobinPolicy(stream, partitions), offset = offset, txnGenerator = txnGenerator, useLastOffset = isUseLastOffset)
+    val consumerOptions = new ConsumerOptions[USERTYPE](transactionsPreload = consumer_transaction_preload, dataPreload = consumer_data_preload, converter = converter, readPolicy = RoundRobinPolicyCreator.getRoundRobinPolicy(stream, partitions), offset = offset, txnGenerator = txnGenerator, useLastOffset = isUseLastOffset)
 
     consumerOptions
+  }
+
+  /**
+    * return returns basic scream object
+    */
+  def getStream(): TStream[Array[Byte]] = {
+    val ds: IStorage[Array[Byte]] = getDataStorage()
+    val ms: MetadataStorage = getMetadataStorage()
+    val stream: TStream[Array[Byte]] = getStreamObject(metadatastorage = ms, datastorage = ds)
+    stream
   }
 
   /**
@@ -625,7 +635,7 @@ class TStreamsFactory(envname: String = "T-streams") {
                             txnGenerator: IUUIDGenerator,
                             converter: IConverter[USERTYPE, Array[Byte]],
                             partitions: List[Int]
-                           ): BasicProducer[USERTYPE] = {
+                           ): Producer[USERTYPE] = {
 
     lock.lock()
 
@@ -634,7 +644,7 @@ class TStreamsFactory(envname: String = "T-streams") {
 
     val ds: IStorage[Array[Byte]] = getDataStorage()
     val ms: MetadataStorage = getMetadataStorage()
-    val stream: BasicStream[Array[Byte]] = getStream(metadatastorage = ms, datastorage = ds)
+    val stream: TStream[Array[Byte]] = getStreamObject(metadatastorage = ms, datastorage = ds)
 
     assert(pAsString(TSF_Dictionary.Producer.BIND_PORT) != null)
     assert(pAsString(TSF_Dictionary.Producer.BIND_HOST) != null)
@@ -683,9 +693,9 @@ class TStreamsFactory(envname: String = "T-streams") {
     if (insertCnt > 1)
       insertType = BatchInsert(insertCnt)
 
-    val po = new BasicProducerOptions[USERTYPE](transactionTTL = pAsInt(TSF_Dictionary.Producer.Transaction.TTL, Producer_transaction_ttl_default), transactionKeepAliveInterval = pAsInt(TSF_Dictionary.Producer.Transaction.KEEP_ALIVE, Producer_transaction_keep_alive_default), writePolicy = writePolicy, insertType = SingleElementInsert, txnGenerator = txnGenerator, producerCoordinationSettings = cao, converter = converter)
+    val po = new ProducerOptions[USERTYPE](transactionTTL = pAsInt(TSF_Dictionary.Producer.Transaction.TTL, Producer_transaction_ttl_default), transactionKeepAliveInterval = pAsInt(TSF_Dictionary.Producer.Transaction.KEEP_ALIVE, Producer_transaction_keep_alive_default), writePolicy = writePolicy, insertType = SingleElementInsert, txnGenerator = txnGenerator, producerCoordinationSettings = cao, converter = converter)
 
-    val producer = new BasicProducer[USERTYPE](
+    val producer = new Producer[USERTYPE](
       name = name,
       stream = stream,
       producerOptions = po)
@@ -710,7 +720,7 @@ class TStreamsFactory(envname: String = "T-streams") {
                             partitions: List[Int],
                             offset: IOffset,
                             isUseLastOffset: Boolean = true
-                           ): BasicConsumer[USERTYPE] = {
+                           ): Consumer[USERTYPE] = {
 
     lock.lock()
 
@@ -719,7 +729,7 @@ class TStreamsFactory(envname: String = "T-streams") {
 
     val ds: IStorage[Array[Byte]] = getDataStorage()
     val ms: MetadataStorage = getMetadataStorage()
-    val stream: BasicStream[Array[Byte]] = getStream(metadatastorage = ms, datastorage = ds)
+    val stream: TStream[Array[Byte]] = getStreamObject(metadatastorage = ms, datastorage = ds)
     val consumerOptions = getBasicConsumerOptions(txnGenerator = txnGenerator,
       stream = stream,
       partitions = partitions,
@@ -727,7 +737,7 @@ class TStreamsFactory(envname: String = "T-streams") {
       offset = offset,
       isUseLastOffset = isUseLastOffset)
 
-    val consumer = new BasicConsumer(name, stream, consumerOptions)
+    val consumer = new Consumer(name, stream, consumerOptions)
     lock.unlock()
 
     consumer
@@ -747,17 +757,17 @@ class TStreamsFactory(envname: String = "T-streams") {
                               txnGenerator: IUUIDGenerator,
                               converter: IConverter[Array[Byte], USERTYPE],
                               partitions: List[Int],
-                              callback: BasicSubscriberCallback[USERTYPE],
+                              callback: Callback[USERTYPE],
                               offset: IOffset,
                               isUseLastOffset: Boolean = true
-                             ): BasicSubscribingConsumer[USERTYPE] = {
+                             ): SubscribingConsumer[USERTYPE] = {
     lock.lock()
     if (isClosed)
       throw new IllegalStateException("TStreamsFactory is closed. This is the illegal usage of the object.")
 
     val ds: IStorage[Array[Byte]] = getDataStorage()
     val ms: MetadataStorage = getMetadataStorage()
-    val stream: BasicStream[Array[Byte]] = getStream(metadatastorage = ms, datastorage = ds)
+    val stream: TStream[Array[Byte]] = getStreamObject(metadatastorage = ms, datastorage = ds)
 
     val consumerOptions = getBasicConsumerOptions(txnGenerator = txnGenerator,
       stream = stream,
@@ -802,7 +812,7 @@ class TStreamsFactory(envname: String = "T-streams") {
     val queue_path = pAsString(TSF_Dictionary.Consumer.Subscriber.PERSISTENT_QUEUE_PATH)
     assert(queue_path != null)
 
-    val subscriberConsumer = new BasicSubscribingConsumer[USERTYPE](
+    val subscriberConsumer = new SubscribingConsumer[USERTYPE](
       name = name,
       stream = stream,
       options = consumerOptions,

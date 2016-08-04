@@ -63,7 +63,7 @@ class SubscriberCoordinator(agentAddress: String,
   def isStoped = isFinished
 
   /**
-    * Start listen of all [[com.bwsw.tstreams.agents.producer.BasicProducer]]] updates
+    * Start listen of all [[com.bwsw.tstreams.agents.producer.Producer]]] updates
     */
   def startListen() = {
     listener.start()
@@ -100,7 +100,7 @@ class SubscriberCoordinator(agentAddress: String,
   }
 
   /**
-    * Notify all [[com.bwsw.tstreams.agents.producer.BasicProducer]]]
+    * Notify all [[com.bwsw.tstreams.agents.producer.Producer]]]
     * about new subscriber
     * on stream/partition
     */
@@ -126,7 +126,7 @@ class SubscriberCoordinator(agentAddress: String,
   }
 
   /**
-    * Synchronize subscriber with all [[com.bwsw.tstreams.agents.producer.BasicProducer]]]
+    * Synchronize subscriber with all [[com.bwsw.tstreams.agents.producer.Producer]]]
     * just wait when all producers will connect to subscriber
     * because of stream lock it is continuous number
     * on stream/partition

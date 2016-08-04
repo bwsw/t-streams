@@ -6,8 +6,8 @@ import java.util.concurrent.locks.ReentrantLock
 import java.util.concurrent.{CountDownLatch, TimeUnit}
 
 import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
-import com.bwsw.tstreams.agents.consumer.subscriber.{BasicSubscriberCallback, BasicSubscribingConsumer}
-import com.bwsw.tstreams.agents.producer.{BasicProducer, NewTransactionProducerPolicy}
+import com.bwsw.tstreams.agents.consumer.subscriber.{Callback, SubscribingConsumer}
+import com.bwsw.tstreams.agents.producer.{Producer, NewTransactionProducerPolicy}
 import com.bwsw.tstreams.env.TSF_Dictionary
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import testutils._
@@ -43,7 +43,7 @@ class ALazyProducersAndSubscriberTest extends FlatSpec with Matchers with Before
 
   var cnt = 0
 
-  val producers: List[BasicProducer[String]] =
+  val producers: List[Producer[String]] =
     (0 until producersAmount)
       .toList
       .map(x => getProducer(List(x % totalPartitions), totalPartitions))
@@ -64,8 +64,8 @@ class ALazyProducersAndSubscriberTest extends FlatSpec with Matchers with Before
       }
     }))
 
-  val callback = new BasicSubscriberCallback[String] {
-    override def onEvent(subscriber: BasicSubscribingConsumer[String], partition: Int, transactionUuid: UUID): Unit = {
+  val callback = new Callback[String] {
+    override def onEvent(subscriber: SubscribingConsumer[String], partition: Int, transactionUuid: UUID): Unit = {
       lock.lock()
       cnt += 1
       map(partition) += transactionUuid
@@ -106,7 +106,7 @@ class ALazyProducersAndSubscriberTest extends FlatSpec with Matchers with Before
 
   }
 
-  def getProducer(usedPartitions: List[Int], totalPartitions: Int): BasicProducer[String] = {
+  def getProducer(usedPartitions: List[Int], totalPartitions: Int): Producer[String] = {
     val port = TestUtils.getPort
     f.setProperty(TSF_Dictionary.Producer.BIND_HOST, port)
     f.getProducer[String](

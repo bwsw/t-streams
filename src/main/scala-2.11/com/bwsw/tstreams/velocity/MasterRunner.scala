@@ -3,7 +3,7 @@ package com.bwsw.tstreams.velocity
 import java.net.InetSocketAddress
 
 import com.bwsw.tstreams.agents.producer.DataInsertType.BatchInsert
-import com.bwsw.tstreams.agents.producer.{BasicProducer, BasicProducerOptions, ProducerCoordinationOptions}
+import com.bwsw.tstreams.agents.producer.{Producer, ProducerOptions, ProducerCoordinationOptions}
 import com.bwsw.tstreams.coordination.transactions.transport.impl.TcpTransport
 
 object MasterRunner {
@@ -22,8 +22,8 @@ object MasterRunner {
       transportTimeout = 5,
       zkConnectionTimeout = 7)
 
-    val producerOptions = new BasicProducerOptions[String](transactionTTL = 6, transactionKeepAliveInterval = 2, RoundRobinPolicyCreator.getRoundRobinPolicy(stream, List(0)), BatchInsert(10), LocalGeneratorCreator.getGen(), agentSettings, stringToArrayByteConverter)
+    val producerOptions = new ProducerOptions[String](transactionTTL = 6, transactionKeepAliveInterval = 2, RoundRobinPolicyCreator.getRoundRobinPolicy(stream, List(0)), BatchInsert(10), LocalGeneratorCreator.getGen(), agentSettings, stringToArrayByteConverter)
 
-    new BasicProducer[String]("master", stream, producerOptions)
+    new Producer[String]("master", stream, producerOptions)
   }
 }

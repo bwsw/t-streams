@@ -24,14 +24,14 @@ import scala.util.control.Breaks._
   * @param queue       Queue for maintain consumed transactions
   * @tparam USERTYPE User data type
   */
-class SubscriberTransactionsRelay[USERTYPE](subscriber: BasicSubscribingConsumer[USERTYPE],
-                                                      partition: Int,
-                                                      coordinator: SubscriberCoordinator,
-                                                      callback: BasicSubscriberCallback[USERTYPE],
-                                                      queue: PersistentTransactionQueue,
-                                                      lastConsumedTransaction: LastTransactionWrapper,
-                                                      executor: ExecutorService,
-                                                      checkpointEventsResolver: BrokenTransactionsResolver) {
+class SubscriberTransactionsRelay[USERTYPE](subscriber: SubscribingConsumer[USERTYPE],
+                                            partition: Int,
+                                            coordinator: SubscriberCoordinator,
+                                            callback: Callback[USERTYPE],
+                                            queue: PersistentTransactionQueue,
+                                            lastConsumedTransaction: LastTransactionWrapper,
+                                            executor: ExecutorService,
+                                            checkpointEventsResolver: BrokenTransactionsResolver) {
 
   private val POOLING_INTERVAL_MS = 100
   private val logger = LoggerFactory.getLogger(this.getClass)

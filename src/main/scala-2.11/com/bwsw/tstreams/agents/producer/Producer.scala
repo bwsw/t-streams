@@ -12,7 +12,7 @@ import com.bwsw.tstreams.coordination.pubsub.messages.{ProducerTopicMessage, Pro
 import com.bwsw.tstreams.coordination.transactions.peertopeer.PeerToPeerAgent
 import com.bwsw.tstreams.coordination.transactions.transport.traits.Interaction
 import com.bwsw.tstreams.metadata.MetadataStorage
-import com.bwsw.tstreams.streams.BasicStream
+import com.bwsw.tstreams.streams.TStream
 import org.slf4j.LoggerFactory
 
 import scala.util.control.Breaks._
@@ -25,9 +25,9 @@ import scala.util.control.Breaks._
   * @param producerOptions This producer options
   * @tparam USERTYPE User data type
   */
-class BasicProducer[USERTYPE](val name: String,
-                              val stream: BasicStream[Array[Byte]],
-                              val producerOptions: BasicProducerOptions[USERTYPE])
+class Producer[USERTYPE](val name: String,
+                         val stream: TStream[Array[Byte]],
+                         val producerOptions: ProducerOptions[USERTYPE])
   extends Agent with Interaction {
 
   /**
@@ -41,7 +41,7 @@ class BasicProducer[USERTYPE](val name: String,
   var isStop = false
 
   // stores currently opened transactions per partition
-  private val openTransactionsMap = scala.collection.mutable.Map[Int, BasicProducerTransaction[USERTYPE]]()
+  private val openTransactionsMap = scala.collection.mutable.Map[Int, ProducerTransaction[USERTYPE]]()
   private val logger = LoggerFactory.getLogger(this.getClass)
   private val threadLock = new ReentrantLock(true)
 
@@ -149,8 +149,8 @@ class BasicProducer[USERTYPE](val name: String,
     * @param nextPartition Next partition to use for transaction (default -1 which mean that write policy will be used)
     * @return BasicProducerTransaction instance
     */
-  def newTransaction(policy: ProducerPolicy, nextPartition: Int = -1): BasicProducerTransaction[USERTYPE] = {
-    LockUtil.withLockOrDieDo[BasicProducerTransaction[USERTYPE]] (threadLock, (100, TimeUnit.SECONDS), Some(logger), () => {
+  def newTransaction(policy: ProducerPolicy, nextPartition: Int = -1): ProducerTransaction[USERTYPE] = {
+    LockUtil.withLockOrDieDo[ProducerTransaction[USERTYPE]] (threadLock, (100, TimeUnit.SECONDS), Some(logger), () => {
       if (isStop)
         throw new IllegalStateException(s"Producer ${this.name} is already stopped. Unable to get new transaction.")
       val partition = {
@@ -181,7 +181,7 @@ class BasicProducer[USERTYPE](val name: String,
             }
           }
         }
-        val txn = new BasicProducerTransaction[USERTYPE](txnLocks(partition % threadPoolSize), partition, txnUUID, this)
+        val txn = new ProducerTransaction[USERTYPE](txnLocks(partition % threadPoolSize), partition, txnUUID, this)
         openTransactionsMap(partition) = txn
         txn
       }
@@ -194,8 +194,8 @@ class BasicProducer[USERTYPE](val name: String,
     * @param partition Partition from which transaction will be retrieved
     * @return Transaction reference if it exist or not closed
     */
-  def getOpenTransactionForPartition(partition: Int): Option[BasicProducerTransaction[USERTYPE]] = {
-    LockUtil.withLockOrDieDo[Option[BasicProducerTransaction[USERTYPE]]](threadLock, (100, TimeUnit.SECONDS), Some(logger), () => {
+  def getOpenTransactionForPartition(partition: Int): Option[ProducerTransaction[USERTYPE]] = {
+    LockUtil.withLockOrDieDo[Option[ProducerTransaction[USERTYPE]]](threadLock, (100, TimeUnit.SECONDS), Some(logger), () => {
       if (!(partition >= 0 && partition < stream.getPartitions))
         throw new IllegalArgumentException(s"Producer ${name} - invalid partition")
 

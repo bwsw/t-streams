@@ -10,7 +10,7 @@ import org.slf4j.LoggerFactory
 
 import scala.collection.mutable
 
-class BrokenTransactionsResolver(subscriber: BasicSubscribingConsumer[_]) {
+class BrokenTransactionsResolver(subscriber: SubscribingConsumer[_]) {
   private val MAX_RETRIES = 2
   private val UPDATE_INTERVAL = 5000
   private var updateThread: Thread = null

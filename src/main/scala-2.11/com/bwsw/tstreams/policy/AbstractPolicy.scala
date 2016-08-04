@@ -1,12 +1,12 @@
 package com.bwsw.tstreams.policy
 
-import com.bwsw.tstreams.streams.BasicStream
+import com.bwsw.tstreams.streams.TStream
 
 /**
   * Basic interface for policies
   * Class is not thread safe. User must create separate instance for every producer/consumer
   */
-abstract class AbstractPolicy(stream: BasicStream[_], usedPartitions: List[Int]) {
+abstract class AbstractPolicy(stream: TStream[_], usedPartitions: List[Int]) {
 
   /**
     * Partitions validation

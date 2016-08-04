@@ -3,13 +3,13 @@ package agents.both.batch_insert.aerospike
 import java.net.InetSocketAddress
 
 import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
-import com.bwsw.tstreams.agents.consumer.{BasicConsumer, BasicConsumerOptions, BasicConsumerTransaction}
+import com.bwsw.tstreams.agents.consumer.{Consumer, ConsumerOptions, ConsumerTransaction}
 import com.bwsw.tstreams.agents.producer.DataInsertType.BatchInsert
-import com.bwsw.tstreams.agents.producer.{BasicProducer, BasicProducerOptions, ProducerCoordinationOptions, NewTransactionProducerPolicy}
+import com.bwsw.tstreams.agents.producer.{Producer, ProducerOptions, ProducerCoordinationOptions, NewTransactionProducerPolicy}
 import com.bwsw.tstreams.common.CassandraHelper
 import com.bwsw.tstreams.coordination.transactions.transport.impl.TcpTransport
 import com.bwsw.tstreams.env.TSF_Dictionary
-import com.bwsw.tstreams.streams.BasicStream
+import com.bwsw.tstreams.streams.TStream
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import testutils._
 
@@ -153,7 +153,7 @@ class ABasicProducerAndConsumerSimpleTests extends FlatSpec with Matchers with B
       def run() {
         breakable {
           while (true) {
-            val consumedTxn: Option[BasicConsumerTransaction[String]] = consumer.getTransaction
+            val consumedTxn: Option[ConsumerTransaction[String]] = consumer.getTransaction
             if (consumedTxn.isDefined) {
               checkVal &= consumedTxn.get.getAll().sorted == sendData
               break()
