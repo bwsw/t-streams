@@ -16,16 +16,16 @@ class AManyBasicProducersStreamingInManyPartitionsAndConsumerTest extends FlatSp
   val producersAmount = 10
   val dataToSend = (for (part <- 0 until totalElementsInTxn) yield randomString).sorted
 
-  f.setProperty(TSF_Dictionary.Stream.name, "test_stream").
-    setProperty(TSF_Dictionary.Stream.partitions, totalPartitions).
-    setProperty(TSF_Dictionary.Stream.ttl, 60 * 10).
-    setProperty(TSF_Dictionary.Coordination.connection_timeout, 7).
-    setProperty(TSF_Dictionary.Coordination.ttl, 7).
-    setProperty(TSF_Dictionary.Producer.master_timeout, 5).
-    setProperty(TSF_Dictionary.Producer.Transaction.ttl, 6).
-    setProperty(TSF_Dictionary.Producer.Transaction.keep_alive, 2).
-    setProperty(TSF_Dictionary.Consumer.transaction_preload, 10).
-    setProperty(TSF_Dictionary.Consumer.data_preload, 10)
+  f.setProperty(TSF_Dictionary.Stream.NAME, "test_stream").
+    setProperty(TSF_Dictionary.Stream.PARTITIONS, totalPartitions).
+    setProperty(TSF_Dictionary.Stream.TTL, 60 * 10).
+    setProperty(TSF_Dictionary.Coordination.CONNECTION_TIMEOUT, 7).
+    setProperty(TSF_Dictionary.Coordination.TTL, 7).
+    setProperty(TSF_Dictionary.Producer.MASTER_TIMEOUT, 5).
+    setProperty(TSF_Dictionary.Producer.Transaction.TTL, 6).
+    setProperty(TSF_Dictionary.Producer.Transaction.KEEP_ALIVE, 2).
+    setProperty(TSF_Dictionary.Consumer.TRANSACTION_PRELOAD, 10).
+    setProperty(TSF_Dictionary.Consumer.DATA_PRELOAD, 10)
 
   val producers: List[BasicProducer[String]] =
     (0 until producersAmount)
@@ -102,7 +102,7 @@ class AManyBasicProducersStreamingInManyPartitionsAndConsumerTest extends FlatSp
 
   def getProducer(usedPartitions: List[Int], totalPartitions: Int): BasicProducer[String] = {
     val port = TestUtils.getPort
-    f.setProperty(TSF_Dictionary.Producer.master_bind_port, port)
+    f.setProperty(TSF_Dictionary.Producer.BIND_HOST, port)
     f.getProducer[String](
       name = "test_producer",
       txnGenerator = LocalGeneratorCreator.getGen(),

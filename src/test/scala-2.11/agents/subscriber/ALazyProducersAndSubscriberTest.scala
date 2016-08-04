@@ -26,16 +26,16 @@ class ALazyProducersAndSubscriberTest extends FlatSpec with Matchers with Before
   val l1 = new CountDownLatch(1)
   val l2 = new CountDownLatch(1)
 
-  f.setProperty(TSF_Dictionary.Stream.name,"test_stream").
-    setProperty(TSF_Dictionary.Stream.partitions, 4).
-    setProperty(TSF_Dictionary.Stream.ttl, 60 * 10).
-    setProperty(TSF_Dictionary.Coordination.connection_timeout, 7).
-    setProperty(TSF_Dictionary.Coordination.ttl, 7).
-    setProperty(TSF_Dictionary.Producer.master_timeout, 5).
-    setProperty(TSF_Dictionary.Producer.Transaction.ttl, 3).
-    setProperty(TSF_Dictionary.Producer.Transaction.keep_alive, 1).
-    setProperty(TSF_Dictionary.Consumer.transaction_preload, 10).
-    setProperty(TSF_Dictionary.Consumer.data_preload, 10)
+  f.setProperty(TSF_Dictionary.Stream.NAME,"test_stream").
+    setProperty(TSF_Dictionary.Stream.PARTITIONS, 4).
+    setProperty(TSF_Dictionary.Stream.TTL, 60 * 10).
+    setProperty(TSF_Dictionary.Coordination.CONNECTION_TIMEOUT, 7).
+    setProperty(TSF_Dictionary.Coordination.TTL, 7).
+    setProperty(TSF_Dictionary.Producer.MASTER_TIMEOUT, 5).
+    setProperty(TSF_Dictionary.Producer.Transaction.TTL, 3).
+    setProperty(TSF_Dictionary.Producer.Transaction.KEEP_ALIVE, 1).
+    setProperty(TSF_Dictionary.Consumer.TRANSACTION_PRELOAD, 10).
+    setProperty(TSF_Dictionary.Consumer.DATA_PRELOAD, 10)
 
   (0 until totalPartitions) foreach { partition =>
     map(partition) = ListBuffer.empty[UUID]
@@ -108,7 +108,7 @@ class ALazyProducersAndSubscriberTest extends FlatSpec with Matchers with Before
 
   def getProducer(usedPartitions: List[Int], totalPartitions: Int): BasicProducer[String] = {
     val port = TestUtils.getPort
-    f.setProperty(TSF_Dictionary.Producer.master_bind_port, port)
+    f.setProperty(TSF_Dictionary.Producer.BIND_HOST, port)
     f.getProducer[String](
       name = "test_producer",
       txnGenerator = LocalGeneratorCreator.getGen(),
