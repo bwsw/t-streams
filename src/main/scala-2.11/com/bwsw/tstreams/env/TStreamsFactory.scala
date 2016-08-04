@@ -631,10 +631,10 @@ class TStreamsFactory(envname: String = "T-streams") {
     * @return
     */
   def getProducer[USERTYPE](name: String,
-                            isLowPriority: Boolean = false,
                             txnGenerator: IUUIDGenerator,
                             converter: IConverter[USERTYPE, Array[Byte]],
-                            partitions: List[Int]
+                            partitions: List[Int],
+                            isLowPriority: Boolean = false
                            ): Producer[USERTYPE] = {
 
     lock.lock()
