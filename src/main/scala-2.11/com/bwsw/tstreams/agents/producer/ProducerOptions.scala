@@ -20,7 +20,7 @@ import scala.language.existentials
   * @param txnGenerator                 Generator for generating UUIDs
   * @tparam USERTYPE User object type
   */
-class BasicProducerOptions[USERTYPE](val transactionTTL: Int, val transactionKeepAliveInterval: Int, val writePolicy: AbstractPolicy, val insertType: AbstractInsertType, val txnGenerator: IUUIDGenerator, val producerCoordinationSettings: ProducerCoordinationOptions, val converter: IConverter[USERTYPE, Array[Byte]]) {
+class ProducerOptions[USERTYPE](val transactionTTL: Int, val transactionKeepAliveInterval: Int, val writePolicy: AbstractPolicy, val insertType: AbstractInsertType, val txnGenerator: IUUIDGenerator, val producerCoordinationSettings: ProducerCoordinationOptions, val converter: IConverter[USERTYPE, Array[Byte]]) {
 
   /**
     * Transaction minimum ttl time

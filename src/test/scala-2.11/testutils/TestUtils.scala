@@ -143,7 +143,7 @@ trait TestUtils {
 object TestUtils {
 
   private val id: AtomicInteger = new AtomicInteger(0)
-  private val port = new AtomicInteger(8000)
+  private val port = new AtomicInteger(28000)
 
   def moveId(): Int = {
     val rid = id.incrementAndGet()

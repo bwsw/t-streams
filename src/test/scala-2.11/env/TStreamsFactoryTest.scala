@@ -3,7 +3,7 @@ package env
 import java.util.UUID
 
 import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
-import com.bwsw.tstreams.agents.consumer.subscriber.{BasicSubscriberCallback, BasicSubscribingConsumer}
+import com.bwsw.tstreams.agents.consumer.subscriber.{Callback, SubscribingConsumer}
 import com.bwsw.tstreams.converter.{ArrayByteToStringConverter, StringToArrayByteConverter}
 import com.bwsw.tstreams.velocity.LocalGeneratorCreator
 
@@ -49,8 +49,8 @@ class TStreamsFactoryTest extends FlatSpec with Matchers with BeforeAndAfterAll 
       converter = new ArrayByteToStringConverter,
       partitions = List(0),
       offset = Oldest,
-      callback = new BasicSubscriberCallback[String] {
-        override def onEvent(subscriber: BasicSubscribingConsumer[String], partition: Int, transactionUuid: UUID): Unit = {}
+      callback = new Callback[String] {
+        override def onEvent(subscriber: SubscribingConsumer[String], partition: Int, transactionUuid: UUID): Unit = {}
       })
 
     sub != null shouldEqual true

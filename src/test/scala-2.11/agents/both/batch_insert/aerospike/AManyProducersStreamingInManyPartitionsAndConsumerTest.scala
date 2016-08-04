@@ -1,14 +1,14 @@
 package agents.both.batch_insert.aerospike
 
 import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
-import com.bwsw.tstreams.agents.producer.{BasicProducer, NewTransactionProducerPolicy}
+import com.bwsw.tstreams.agents.producer.{Producer, NewTransactionProducerPolicy}
 import com.bwsw.tstreams.env.TSF_Dictionary
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import testutils._
 
 
 
-class AManyBasicProducersStreamingInManyPartitionsAndConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
+class AManyProducersStreamingInManyPartitionsAndConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
   val timeoutForWaiting = 60 * 5
   val totalPartitions = 4
   val totalTxn = 10
@@ -27,7 +27,7 @@ class AManyBasicProducersStreamingInManyPartitionsAndConsumerTest extends FlatSp
     setProperty(TSF_Dictionary.Consumer.TRANSACTION_PRELOAD, 10).
     setProperty(TSF_Dictionary.Consumer.DATA_PRELOAD, 10)
 
-  val producers: List[BasicProducer[String]] =
+  val producers: List[Producer[String]] =
     (0 until producersAmount)
       .toList
       .map(x => getProducer(List(x % totalPartitions), totalPartitions))
@@ -100,7 +100,7 @@ class AManyBasicProducersStreamingInManyPartitionsAndConsumerTest extends FlatSp
     checkVal shouldEqual true
   }
 
-  def getProducer(usedPartitions: List[Int], totalPartitions: Int): BasicProducer[String] = {
+  def getProducer(usedPartitions: List[Int], totalPartitions: Int): Producer[String] = {
     val port = TestUtils.getPort
     f.setProperty(TSF_Dictionary.Producer.BIND_HOST, port)
     f.getProducer[String](

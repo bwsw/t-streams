@@ -1,22 +1,15 @@
 package agents.both.batch_insert.aerospike
 
-import java.net.InetSocketAddress
-
 import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
-import com.bwsw.tstreams.agents.consumer.{BasicConsumer, BasicConsumerOptions}
-import com.bwsw.tstreams.agents.producer.DataInsertType.BatchInsert
-import com.bwsw.tstreams.agents.producer.{BasicProducer, BasicProducerOptions, ProducerCoordinationOptions, NewTransactionProducerPolicy}
-import com.bwsw.tstreams.coordination.transactions.transport.impl.TcpTransport
+import com.bwsw.tstreams.agents.producer.{Producer, NewTransactionProducerPolicy}
 import com.bwsw.tstreams.env.TSF_Dictionary
-import com.bwsw.tstreams.streams.BasicStream
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import testutils._
 
 
-class AManyBasicProducersStreamingInManyRandomPartitionsAndConsumerTest extends FlatSpec
+class AManyProducersStreamingInManyPartitionsAndConsumerWithCheckpointsTest extends FlatSpec
   with Matchers with BeforeAndAfterAll with TestUtils {
 
-  val timeoutForWaiting = 60 * 5
   val totalPartitions = 4
   val totalTxn = 10
   val totalElementsInTxn = 3
@@ -36,13 +29,14 @@ class AManyBasicProducersStreamingInManyRandomPartitionsAndConsumerTest extends 
 
 
   "Some amount of producers and one consumer" should "producers - send transactions in many partition" +
-    " (each producer send each txn in only one random partition) " +
-    " consumer - retrieve them all" in {
+    " (each producer send each txn in only one partition without intersection " +
+    " for ex. producer1 in partition1, producer2 in partition2, producer3 in partition3 etc...) " +
+    " consumer - retrieve them all with reinitialization every 30 transactions" in {
 
-    val producers: List[BasicProducer[String]] =
+    val producers: List[Producer[String]] =
       (0 until producersAmount)
         .toList
-        .map(_ => getProducer(List(scala.util.Random.nextInt(totalPartitions)), totalPartitions))
+        .map(x => getProducer(List(x % totalPartitions), totalPartitions))
 
     val producersThreads = producers.map(p =>
       new Thread(new Runnable {
@@ -67,7 +61,15 @@ class AManyBasicProducersStreamingInManyRandomPartitionsAndConsumerTest extends 
       offset = Oldest,
       isUseLastOffset = true)
 
-    consumer.start
+    val consumer2 = f.getConsumer[String](
+      name = "test_consumer",
+      txnGenerator = LocalGeneratorCreator.getGen(),
+      converter = arrayByteToStringConverter,
+      partitions = (0 until totalPartitions).toList,
+      offset = Oldest,
+      isUseLastOffset = true)
+
+    consumer.start()
 
     val consumerThread = new Thread(
       new Runnable {
@@ -75,7 +77,14 @@ class AManyBasicProducersStreamingInManyRandomPartitionsAndConsumerTest extends 
         def run() = {
           var i = 0
           while (i < totalTxn * producersAmount) {
-            val txn = consumer.getTransaction
+
+            if (i % 30 == 0) {
+              consumer.checkpoint()
+              consumer2.start
+            }
+
+            val txn = consumer2.getTransaction
+
             if (txn.isDefined) {
               txn.get.getAll().sorted shouldBe dataToSend
               i += 1
@@ -86,19 +95,18 @@ class AManyBasicProducersStreamingInManyRandomPartitionsAndConsumerTest extends 
 
     producersThreads.foreach(x => x.start())
     consumerThread.start()
-    consumerThread.join(timeoutForWaiting * 1000)
-    producersThreads.foreach(x => x.join(timeoutForWaiting * 1000))
+    consumerThread.join()
+    producersThreads.foreach(x => x.join())
 
     //assert that is nothing to read
     (0 until totalPartitions) foreach { _ =>
-      checkVal &= consumer.getTransaction.isEmpty
+      checkVal &= consumer2.getTransaction.isEmpty
     }
 
     producers.foreach(_.stop())
-
   }
 
-  def getProducer(usedPartitions: List[Int], totalPartitions: Int): BasicProducer[String] = {
+  def getProducer(usedPartitions: List[Int], totalPartitions: Int): Producer[String] = {
     val port = TestUtils.getPort
     f.setProperty(TSF_Dictionary.Producer.BIND_HOST, port)
     f.getProducer[String](

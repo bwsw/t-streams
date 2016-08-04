@@ -5,8 +5,8 @@ import java.util.concurrent.{TimeUnit, CountDownLatch}
 import java.util.concurrent.locks.ReentrantLock
 
 import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
-import com.bwsw.tstreams.agents.consumer.subscriber.{BasicSubscriberCallback, BasicSubscribingConsumer}
-import com.bwsw.tstreams.agents.producer.{BasicProducer, NewTransactionProducerPolicy}
+import com.bwsw.tstreams.agents.consumer.subscriber.{Callback, SubscribingConsumer}
+import com.bwsw.tstreams.agents.producer.{Producer, NewTransactionProducerPolicy}
 import com.bwsw.tstreams.env.TSF_Dictionary
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import testutils._
@@ -14,7 +14,7 @@ import testutils._
 import scala.collection.mutable.ListBuffer
 
 
-class AManyBasicProducersStreamingInManyPartitionsAndSubscriberTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
+class AManyProducersStreamingInManyPartitionsAndSubscriberTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
   val timeoutForWaiting = 60
   val totalPartitions = 4
   val totalTxn = 10
@@ -29,8 +29,8 @@ class AManyBasicProducersStreamingInManyPartitionsAndSubscriberTest extends Flat
   }
   var cnt = 0
 
-  val callback = new BasicSubscriberCallback[String] {
-    override def onEvent(subscriber: BasicSubscribingConsumer[String], partition: Int, transactionUuid: UUID): Unit = {
+  val callback = new Callback[String] {
+    override def onEvent(subscriber: SubscribingConsumer[String], partition: Int, transactionUuid: UUID): Unit = {
       lock.lock()
       map(partition) += transactionUuid
       cnt += 1
@@ -67,7 +67,7 @@ class AManyBasicProducersStreamingInManyPartitionsAndSubscriberTest extends Flat
     " for ex. producer1 in partition1, producer2 in partition2, producer3 in partition3 etc...)," +
     " subscriber - retrieve them all(with callback) in sorted order" in {
 
-    val producers: List[BasicProducer[String]] =
+    val producers: List[Producer[String]] =
       (0 until producersAmount)
         .toList
         .map(x => getProducer(List(x % totalPartitions), totalPartitions))
@@ -101,7 +101,7 @@ class AManyBasicProducersStreamingInManyPartitionsAndSubscriberTest extends Flat
     }
   }
 
-  def getProducer(usedPartitions: List[Int], totalPartitions: Int): BasicProducer[String] = {
+  def getProducer(usedPartitions: List[Int], totalPartitions: Int): Producer[String] = {
     val port = TestUtils.getPort
     f.setProperty(TSF_Dictionary.Producer.BIND_HOST, port)
     f.getProducer[String](

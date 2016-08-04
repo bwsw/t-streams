@@ -2,7 +2,7 @@ package agents.consumer
 
 import java.util.UUID
 import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
-import com.bwsw.tstreams.agents.consumer.BasicConsumerTransaction
+import com.bwsw.tstreams.agents.consumer.ConsumerTransaction
 import com.bwsw.tstreams.agents.producer.NewTransactionProducerPolicy
 import com.bwsw.tstreams.entities.CommitEntity
 import com.bwsw.tstreams.env.TSF_Dictionary
@@ -11,7 +11,7 @@ import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import testutils._
 
 
-class BasicConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
+class ConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
   f.setProperty(TSF_Dictionary.Stream.NAME,"test_stream").
     setProperty(TSF_Dictionary.Stream.PARTITIONS,3).
     setProperty(TSF_Dictionary.Stream.TTL, 60 * 10).
@@ -74,7 +74,7 @@ class BasicConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll wi
     txns.drop(1) foreach { x =>
       commitEntity.commit("test_stream", 1, x, -1, 120)
     }
-    val retrievedTxnOpt: Option[BasicConsumerTransaction[String]] = consumer.getLastTransaction(partition = 1)
+    val retrievedTxnOpt: Option[ConsumerTransaction[String]] = consumer.getLastTransaction(partition = 1)
     val retrievedTxn = retrievedTxnOpt.get
     retrievedTxn.getTxnUUID shouldEqual txn
   }

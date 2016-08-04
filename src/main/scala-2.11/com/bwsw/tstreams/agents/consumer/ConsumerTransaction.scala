@@ -14,9 +14,9 @@ import scala.collection.mutable
   * @param transaction Transaction time and total packets in it
   * @tparam USERTYPE User data type
   */
-class BasicConsumerTransaction[USERTYPE](consumer: BasicConsumer[USERTYPE],
-                                                   partition: Int,
-                                                   transaction: TransactionSettings) {
+class ConsumerTransaction[USERTYPE](consumer: Consumer[USERTYPE],
+                                    partition: Int,
+                                    transaction: TransactionSettings) {
 
   /**
     * Return transaction UUID

@@ -3,9 +3,9 @@ package com.bwsw.tstreams.agents.consumer.subscriber
 import java.util.UUID
 import java.util.concurrent.{ExecutorService, Executors}
 
-import com.bwsw.tstreams.agents.consumer.{BasicConsumer, BasicConsumerOptions, BasicConsumerTransaction, SubscriberCoordinationOptions}
+import com.bwsw.tstreams.agents.consumer.{Consumer, ConsumerOptions, ConsumerTransaction, SubscriberCoordinationOptions}
 import com.bwsw.tstreams.coordination.pubsub.SubscriberCoordinator
-import com.bwsw.tstreams.streams.BasicStream
+import com.bwsw.tstreams.streams.TStream
 import com.bwsw.tstreams.txnqueue.PersistentTransactionQueue
 import org.slf4j.LoggerFactory
 
@@ -19,14 +19,14 @@ import org.slf4j.LoggerFactory
   *                            and new incoming transactions
   * @tparam USERTYPE User data type
   */
-class BasicSubscribingConsumer[USERTYPE](name: String,
-                                         stream: BasicStream[Array[Byte]],
-                                         options: BasicConsumerOptions[USERTYPE],
-                                         subscriberCoordinationOptions: SubscriberCoordinationOptions,
-                                         callBack: BasicSubscriberCallback[USERTYPE],
-                                         persistentQueuePath: String,
-                                         pollingFrequencyMaxDelay: Int = 100)
-  extends BasicConsumer[USERTYPE](name, stream, options) {
+class SubscribingConsumer[USERTYPE](name: String,
+                                    stream: TStream[Array[Byte]],
+                                    options: ConsumerOptions[USERTYPE],
+                                    subscriberCoordinationOptions: SubscriberCoordinationOptions,
+                                    callBack: Callback[USERTYPE],
+                                    persistentQueuePath: String,
+                                    pollingFrequencyMaxDelay: Int = 100)
+  extends Consumer[USERTYPE](name, stream, options) {
 
   /**
     * agent name
@@ -182,9 +182,9 @@ class BasicSubscribingConsumer[USERTYPE](name: String,
     isStarted.set(true)
   }
 
-  def resolveLastTxn(partition: Int): Option[BasicConsumerTransaction[USERTYPE]] = {
-    val txn: Option[BasicConsumerTransaction[USERTYPE]] = getLastTransaction(partition)
-    txn.fold[Option[BasicConsumerTransaction[USERTYPE]]](None) { txn =>
+  def resolveLastTxn(partition: Int): Option[ConsumerTransaction[USERTYPE]] = {
+    val txn: Option[ConsumerTransaction[USERTYPE]] = getLastTransaction(partition)
+    txn.fold[Option[ConsumerTransaction[USERTYPE]]](None) { txn =>
       if (txn.getTxnUUID.timestamp() <= currentOffsets(partition).timestamp()) {
         None
       } else {

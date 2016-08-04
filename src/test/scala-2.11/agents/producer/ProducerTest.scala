@@ -6,7 +6,7 @@ import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import testutils._
 
 
-class BasicProducerTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
+class ProducerTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
 
   f.setProperty(TSF_Dictionary.Stream.NAME,"test_stream").
     setProperty(TSF_Dictionary.Stream.PARTITIONS,3).
@@ -27,13 +27,13 @@ class BasicProducerTest extends FlatSpec with Matchers with BeforeAndAfterAll wi
     isLowPriority = false)
 
   "BasicProducer.newTransaction()" should "return BasicProducerTransaction instance" in {
-    val txn: BasicProducerTransaction[String] = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
+    val txn: ProducerTransaction[String] = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
     txn.checkpoint()
-    txn.isInstanceOf[BasicProducerTransaction[_]] shouldEqual true
+    txn.isInstanceOf[ProducerTransaction[_]] shouldEqual true
   }
 
   "BasicProducer.newTransaction(ProducerPolicies.errorIfOpen)" should "throw exception if previous transaction was not closed" in {
-    val txn1: BasicProducerTransaction[String] = producer.newTransaction(NewTransactionProducerPolicy.CheckpointIfOpened, 2)
+    val txn1: ProducerTransaction[String] = producer.newTransaction(NewTransactionProducerPolicy.CheckpointIfOpened, 2)
     intercept[IllegalStateException] {
       producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened, 2)
     }

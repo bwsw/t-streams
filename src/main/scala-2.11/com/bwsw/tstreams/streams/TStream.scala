@@ -13,12 +13,12 @@ import com.bwsw.tstreams.metadata.MetadataStorage
   * @param description     Some additional info about stream
   * @tparam T Storage data type
   */
-class BasicStream[T](val name: String,
-                     private var partitions: Int,
-                     val metadataStorage: MetadataStorage,
-                     val dataStorage: IStorage[T],
-                     private var ttl: Int,
-                     private var description: String) {
+class TStream[T](val name: String,
+                 private var partitions: Int,
+                 val metadataStorage: MetadataStorage,
+                 val dataStorage: IStorage[T],
+                 private var ttl: Int,
+                 private var description: String) {
   /**
     * Transaction minimum ttl time
     */

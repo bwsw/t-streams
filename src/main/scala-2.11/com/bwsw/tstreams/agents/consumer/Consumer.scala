@@ -9,7 +9,7 @@ import com.bwsw.tstreams.agents.group.{Agent, CheckpointInfo, ConsumerCheckpoint
 import com.bwsw.tstreams.common.LockUtil
 import com.bwsw.tstreams.entities.TransactionSettings
 import com.bwsw.tstreams.metadata.MetadataStorage
-import com.bwsw.tstreams.streams.BasicStream
+import com.bwsw.tstreams.streams.TStream
 import org.slf4j.LoggerFactory
 
 
@@ -21,9 +21,9 @@ import org.slf4j.LoggerFactory
   * @param options Basic consumer options
   * @tparam USERTYPE User data type
   */
-class BasicConsumer[USERTYPE](val name: String,
-                                        val stream: BasicStream[Array[Byte]],
-                                        val options: BasicConsumerOptions[USERTYPE]) extends Agent {
+class Consumer[USERTYPE](val name: String,
+                         val stream: TStream[Array[Byte]],
+                         val options: ConsumerOptions[USERTYPE]) extends Agent {
 
   stream.dataStorage.bind()
 
@@ -127,7 +127,7 @@ class BasicConsumer[USERTYPE](val name: String,
     *
     * @return BasicConsumerTransaction or None
     */
-  private def getTxnOpt: Option[BasicConsumerTransaction[USERTYPE]] = {
+  private def getTxnOpt: Option[ConsumerTransaction[USERTYPE]] = {
 
     if(!isStarted.get())
       throw new IllegalStateException("Start consumer first.")
@@ -161,7 +161,7 @@ class BasicConsumer[USERTYPE](val name: String,
       currentOffsets(curPartition) = txn.txnUuid
       transactionBuffer(curPartition).dequeue()
       consumerLock.unlock()
-      return Some(new BasicConsumerTransaction[USERTYPE](this, curPartition, txn))
+      return Some(new ConsumerTransaction[USERTYPE](this, curPartition, txn))
     }
 
     val updatedTxnOpt: Option[TransactionSettings] = updateTransactionInfoFromDB(txn.txnUuid, curPartition)
@@ -174,7 +174,7 @@ class BasicConsumer[USERTYPE](val name: String,
         currentOffsets(curPartition) = txn.txnUuid
         transactionBuffer(curPartition).dequeue()
         consumerLock.unlock()
-        return Some(new BasicConsumerTransaction[USERTYPE](this, curPartition, updatedTxn))
+        return Some(new ConsumerTransaction[USERTYPE](this, curPartition, updatedTxn))
       }
     }
     else
@@ -187,7 +187,7 @@ class BasicConsumer[USERTYPE](val name: String,
   /**
     * @return Consumed transaction or None if nothing to consume
     */
-  def getTransaction: Option[BasicConsumerTransaction[USERTYPE]] = {
+  def getTransaction: Option[ConsumerTransaction[USERTYPE]] = {
     if(!isStarted.get())
       throw new IllegalStateException("Start consumer first.")
 
@@ -195,7 +195,7 @@ class BasicConsumer[USERTYPE](val name: String,
     logger.debug(s"Start new transaction for consumer with name : $name, streamName : ${stream.getName}, streamPartitions : ${stream.getPartitions}")
 
     options.readPolicy.startNewRound()
-    val txn: Option[BasicConsumerTransaction[USERTYPE]] = getTxnOpt
+    val txn: Option[ConsumerTransaction[USERTYPE]] = getTxnOpt
     consumerLock.unlock()
     txn
   }
@@ -206,7 +206,7 @@ class BasicConsumer[USERTYPE](val name: String,
     * @param partition Partition to get last transaction
     * @return Last txn
     */
-  def getLastTransaction(partition: Int): Option[BasicConsumerTransaction[USERTYPE]] = {
+  def getLastTransaction(partition: Int): Option[ConsumerTransaction[USERTYPE]] = {
     if(!isStarted.get())
       throw new IllegalStateException("Start consumer first.")
 
@@ -225,7 +225,7 @@ class BasicConsumer[USERTYPE](val name: String,
           val txn = queue.dequeue()
           if (txn.totalItems != -1) {
             consumerLock.unlock()
-            return Some(new BasicConsumerTransaction[USERTYPE](this, partition, txn))
+            return Some(new ConsumerTransaction[USERTYPE](this, partition, txn))
           }
           curUuid = txn.txnUuid
         }
@@ -241,7 +241,7 @@ class BasicConsumer[USERTYPE](val name: String,
     * @param uuid      Uuid for this transaction
     * @return BasicConsumerTransaction
     */
-  def getTransactionById(partition: Int, uuid: UUID): Option[BasicConsumerTransaction[USERTYPE]] = {
+  def getTransactionById(partition: Int, uuid: UUID): Option[ConsumerTransaction[USERTYPE]] = {
     if(!isStarted.get())
       throw new IllegalStateException("Start consumer first.")
 
@@ -254,7 +254,7 @@ class BasicConsumer[USERTYPE](val name: String,
       if (txnOpt.isDefined) {
         val txn = txnOpt.get
         if (txn.totalItems != -1)
-          Some(new BasicConsumerTransaction[USERTYPE](this, partition, txn))
+          Some(new ConsumerTransaction[USERTYPE](this, partition, txn))
         else
           None
       }

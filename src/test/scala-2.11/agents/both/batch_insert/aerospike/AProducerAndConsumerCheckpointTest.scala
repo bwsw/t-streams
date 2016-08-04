@@ -1,15 +1,15 @@
 package agents.both.batch_insert.aerospike
 
 import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
-import com.bwsw.tstreams.agents.consumer.{BasicConsumer, BasicConsumerTransaction}
+import com.bwsw.tstreams.agents.consumer.{Consumer, ConsumerTransaction}
 import com.bwsw.tstreams.agents.producer.NewTransactionProducerPolicy
 import com.bwsw.tstreams.env.TSF_Dictionary
-import com.bwsw.tstreams.streams.BasicStream
+import com.bwsw.tstreams.streams.TStream
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import testutils._
 
 
-class ABasicProducerAndConsumerCheckpointTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
+class AProducerAndConsumerCheckpointTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
 
   f.setProperty(TSF_Dictionary.Stream.NAME,"test_stream").
     setProperty(TSF_Dictionary.Stream.PARTITIONS,3).
@@ -64,7 +64,7 @@ class ABasicProducerAndConsumerCheckpointTest extends FlatSpec with Matchers wit
 
     consumer.start
     (0 until firstPart) foreach { _ =>
-      val txn: BasicConsumerTransaction[String] = consumer.getTransaction.get
+      val txn: ConsumerTransaction[String] = consumer.getTransaction.get
       val data = txn.getAll().sorted
       consumer.checkpoint()
       checkVal &= data == dataToSend
@@ -72,7 +72,7 @@ class ABasicProducerAndConsumerCheckpointTest extends FlatSpec with Matchers wit
 
     consumer2.start
     (0 until secondPart) foreach { _ =>
-      val txn: BasicConsumerTransaction[String] = consumer2.getTransaction.get
+      val txn: ConsumerTransaction[String] = consumer2.getTransaction.get
       val data = txn.getAll().sorted
       checkVal &= data == dataToSend
     }
