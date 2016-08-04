@@ -1,6 +1,6 @@
 # T-streams
 
-T-streams are scalable, transactional persistent queues for exactly-once, batch messaging.
+T-streams is scalable, transactional persistent queues for exactly-once, batch messaging.
 
 # Introduction
 
