@@ -20,10 +20,10 @@ import scala.collection.mutable.ListBuffer
   * @param transactionUuid UUID for this transaction
   * @tparam USERTYPE User data type
   */
-class BasicProducerTransaction[USERTYPE](transactionLock: ReentrantLock,
-                                         partition: Int,
-                                         transactionUuid: UUID,
-                                         txnOwner: BasicProducer[USERTYPE]) {
+class ProducerTransaction[USERTYPE](transactionLock: ReentrantLock,
+                                    partition: Int,
+                                    transactionUuid: UUID,
+                                    txnOwner: Producer[USERTYPE]) {
 
   /**
     * State indicator of the transaction

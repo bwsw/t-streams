@@ -5,7 +5,7 @@ import java.util.concurrent.locks.ReentrantLock
 import java.util.concurrent.{CountDownLatch, TimeUnit}
 
 import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
-import com.bwsw.tstreams.agents.consumer.subscriber.{BasicSubscriberCallback, BasicSubscribingConsumer}
+import com.bwsw.tstreams.agents.consumer.subscriber.{Callback, SubscribingConsumer}
 import com.bwsw.tstreams.agents.producer.NewTransactionProducerPolicy
 import com.bwsw.tstreams.env.TSF_Dictionary
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
@@ -40,9 +40,9 @@ class ABasicSubscriberTotalAmountTest extends FlatSpec with Matchers with Before
     partitions = List(0,1,2),
     isLowPriority = false)
 
-  val callback = new BasicSubscriberCallback[String] {
+  val callback = new Callback[String] {
     override def onEvent(
-                          subscriber: BasicSubscribingConsumer[String],
+                          subscriber: SubscribingConsumer[String],
                           partition: Int,
                           transactionUuid: UUID): Unit = {
       lock.lock()

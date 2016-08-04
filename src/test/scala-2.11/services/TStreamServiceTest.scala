@@ -3,12 +3,12 @@ package services
 import java.net.InetSocketAddress
 
 import com.bwsw.tstreams.services.BasicStreamService
-import com.bwsw.tstreams.streams.BasicStream
+import com.bwsw.tstreams.streams.TStream
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import testutils.{RandomStringCreator, TestUtils}
 
 
-class BasicStreamServiceTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
+class TStreamServiceTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
 
   val storageInst = storageFactory.getInstance(aerospikeOptions)
   val metadataStorageInst = metadataStorageFactory.getInstance(
@@ -21,7 +21,7 @@ class BasicStreamServiceTest extends FlatSpec with Matchers with BeforeAndAfterA
   "BasicStreamService.createStream()" should "create stream" in {
     val name = randomVal
 
-    val stream: BasicStream[_] = BasicStreamService.createStream(
+    val stream: TStream[_] = BasicStreamService.createStream(
       streamName = name,
       partitions = 3,
       ttl = 100,
@@ -29,7 +29,7 @@ class BasicStreamServiceTest extends FlatSpec with Matchers with BeforeAndAfterA
       metadataStorage = metadataStorageInst,
       dataStorage = storageInst)
 
-    val checkVal = stream.isInstanceOf[BasicStream[_]]
+    val checkVal = stream.isInstanceOf[TStream[_]]
 
     checkVal shouldBe true
   }
@@ -67,8 +67,8 @@ class BasicStreamServiceTest extends FlatSpec with Matchers with BeforeAndAfterA
       metadataStorage = metadataStorageInst,
       dataStorage = storageInst)
 
-    val stream: BasicStream[_] = BasicStreamService.loadStream(name, metadataStorageInst, storageInst)
-    val checkVal = stream.isInstanceOf[BasicStream[_]]
+    val stream: TStream[_] = BasicStreamService.loadStream(name, metadataStorageInst, storageInst)
+    val checkVal = stream.isInstanceOf[TStream[_]]
     checkVal shouldBe true
   }
 

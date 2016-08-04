@@ -18,7 +18,7 @@ import com.bwsw.tstreams.policy.AbstractPolicy
   * @param txnGenerator              Generator for generating UUIDs
   * @tparam USERTYPE User type
   */
-class BasicConsumerOptions[USERTYPE](val transactionsPreload: Int, val dataPreload: Int, val converter: IConverter[Array[Byte], USERTYPE], val readPolicy: AbstractPolicy, val offset: IOffset, val txnGenerator: IUUIDGenerator, val useLastOffset: Boolean = true) {
+class ConsumerOptions[USERTYPE](val transactionsPreload: Int, val dataPreload: Int, val converter: IConverter[Array[Byte], USERTYPE], val readPolicy: AbstractPolicy, val offset: IOffset, val txnGenerator: IUUIDGenerator, val useLastOffset: Boolean = true) {
   if (transactionsPreload < 1)
     throw new IllegalArgumentException("incorrect transactionPreload value, should be greater or equal one")
 
@@ -34,7 +34,7 @@ class BasicConsumerOptions[USERTYPE](val transactionsPreload: Int, val dataPrelo
   * @param zkHosts          Zk hosts to connect
   * @param zkSessionTimeout Zk session timeout
   * @param threadPoolAmount Thread pool amount which is used by
-  *                         [[com.bwsw.tstreams.agents.consumer.subscriber.BasicSubscribingConsumer]]]
+  *                         [[com.bwsw.tstreams.agents.consumer.subscriber.SubscribingConsumer]]]
   *                         by default (threads_amount == used_consumer_partitions)
   */
 //TODO validate params

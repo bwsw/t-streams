@@ -6,7 +6,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.locks.ReentrantLock
 import java.util.concurrent.{CountDownLatch, ExecutorService, Executors}
 
-import com.bwsw.tstreams.agents.producer.BasicProducer
+import com.bwsw.tstreams.agents.producer.Producer
 import com.bwsw.tstreams.common.ZookeeperDLMService
 import com.bwsw.tstreams.coordination.pubsub.messages.{ProducerTopicMessage, ProducerTransactionStatus}
 import com.bwsw.tstreams.coordination.transactions.messages._
@@ -16,7 +16,7 @@ import org.slf4j.LoggerFactory
 
 
 /**
- * Agent for providing peer to peer interaction between [[BasicProducer]]]
+ * Agent for providing peer to peer interaction between [[Producer]]]
  *
  * @param agentAddress Concrete agent address
  * @param zkHosts ZkHosts to connect
@@ -33,7 +33,7 @@ class PeerToPeerAgent(agentAddress : String,
                       zkRootPath : String,
                       zkSessionTimeout: Int,
                       zkConnectionTimeout : Int,
-                      producer : BasicProducer[_],
+                      producer : Producer[_],
                       usedPartitions : List[Int],
                       isLowPriorityToBeMaster : Boolean,
                       transport: ITransport,

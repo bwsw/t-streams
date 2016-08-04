@@ -6,7 +6,7 @@ import com.aerospike.client.Host
 import com.bwsw.tstreams.converter.{ArrayByteToStringConverter, StringToArrayByteConverter}
 import com.bwsw.tstreams.data.aerospike.{AerospikeStorageFactory, AerospikeStorageOptions}
 import com.bwsw.tstreams.metadata.MetadataStorageFactory
-import com.bwsw.tstreams.streams.BasicStream
+import com.bwsw.tstreams.streams.TStream
 
 object Common {
   val zkHost = "176.120.27.82"
@@ -35,7 +35,7 @@ object Common {
     keyspace = keyspace)
 
   //stream instances for producer/consumer
-  lazy val stream: BasicStream[Array[Byte]] = new BasicStream[Array[Byte]](
+  lazy val stream: TStream[Array[Byte]] = new TStream[Array[Byte]](
     name = "test_stream",
     partitions = 1,
     metadataStorage = metadataStorageInst,

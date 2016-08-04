@@ -11,8 +11,8 @@ import io.netty.channel.socket.nio.NioSocketChannel
 import io.netty.handler.codec.string.{StringDecoder, StringEncoder}
 
 /**
-  * Broadcaster for [[com.bwsw.tstreams.agents.producer.BasicProducer]]]
-  * to broadcast messages for all [[com.bwsw.tstreams.agents.consumer.subscriber.BasicSubscribingConsumer]]]
+  * Broadcaster for [[com.bwsw.tstreams.agents.producer.Producer]]]
+  * to broadcast messages for all [[com.bwsw.tstreams.agents.consumer.subscriber.SubscribingConsumer]]]
   */
 class Broadcaster {
   private val group = new NioEventLoopGroup()
