@@ -40,9 +40,9 @@ class ProducerWithManyOpenedTxnsTest extends FlatSpec with Matchers with BeforeA
     val data1 = (for (i <- 0 until 10) yield randomString).sorted
     val data2 = (for (i <- 0 until 10) yield randomString).sorted
     val data3 = (for (i <- 0 until 10) yield randomString).sorted
-    val txn1: ProducerTransaction[String] = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
-    val txn2: ProducerTransaction[String] = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
-    val txn3: ProducerTransaction[String] = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
+    val txn1: Transaction[String] = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
+    val txn2: Transaction[String] = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
+    val txn3: Transaction[String] = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
     data1.foreach(x => txn1.send(x))
     data2.foreach(x => txn2.send(x))
     data3.foreach(x => txn3.send(x))
@@ -57,11 +57,11 @@ class ProducerWithManyOpenedTxnsTest extends FlatSpec with Matchers with BeforeA
   }
 
   "BasicProducer.newTransaction()" should "return error if try to open more than 3 txns for 3 partitions if ProducerPolicies.errorIfOpened" in {
-    val txn1: ProducerTransaction[String] = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
-    val txn2: ProducerTransaction[String] = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
-    val txn3: ProducerTransaction[String] = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
+    val txn1: Transaction[String] = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
+    val txn2: Transaction[String] = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
+    val txn3: Transaction[String] = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
     val r: Boolean = try {
-      val txn4: ProducerTransaction[String] = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
+      val txn4: Transaction[String] = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
       false
     } catch {
       case e: IllegalStateException => true
@@ -71,11 +71,11 @@ class ProducerWithManyOpenedTxnsTest extends FlatSpec with Matchers with BeforeA
   }
 
   "BasicProducer.newTransaction()" should "return ok if try to open more than 3 txns for 3 partitions if ProducerPolicies.checkpointIfOpened" in {
-    val txn1: ProducerTransaction[String] = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
-    val txn2: ProducerTransaction[String] = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
-    val txn3: ProducerTransaction[String] = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
+    val txn1: Transaction[String] = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
+    val txn2: Transaction[String] = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
+    val txn3: Transaction[String] = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
     val r: Boolean = try {
-      val txn4: ProducerTransaction[String] = producer.newTransaction(NewTransactionProducerPolicy.CheckpointIfOpened)
+      val txn4: Transaction[String] = producer.newTransaction(NewTransactionProducerPolicy.CheckpointIfOpened)
       true
     } catch {
       case e: IllegalStateException => false
@@ -85,11 +85,11 @@ class ProducerWithManyOpenedTxnsTest extends FlatSpec with Matchers with BeforeA
   }
 
   "BasicProducer.newTransaction()" should "return ok if try to open more than 3 txns for 3 partitions if ProducerPolicies.cancelIfOpened" in {
-    val txn1: ProducerTransaction[String] = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
-    val txn2: ProducerTransaction[String] = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
-    val txn3: ProducerTransaction[String] = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
+    val txn1: Transaction[String] = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
+    val txn2: Transaction[String] = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
+    val txn3: Transaction[String] = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
     val r: Boolean = try {
-      val txn4: ProducerTransaction[String] = producer.newTransaction(NewTransactionProducerPolicy.CancelIfOpened)
+      val txn4: Transaction[String] = producer.newTransaction(NewTransactionProducerPolicy.CancelIfOpened)
       true
     } catch {
       case e: IllegalStateException => false

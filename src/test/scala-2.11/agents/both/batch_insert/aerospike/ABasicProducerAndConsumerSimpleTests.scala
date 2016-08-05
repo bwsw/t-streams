@@ -5,7 +5,7 @@ import java.net.InetSocketAddress
 import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
 import com.bwsw.tstreams.agents.consumer.{Consumer, ConsumerOptions, ConsumerTransaction}
 import com.bwsw.tstreams.agents.producer.DataInsertType.BatchInsert
-import com.bwsw.tstreams.agents.producer.{Producer, ProducerOptions, ProducerCoordinationOptions, NewTransactionProducerPolicy}
+import com.bwsw.tstreams.agents.producer.{Producer, Options, CoordinationOptions, NewTransactionProducerPolicy}
 import com.bwsw.tstreams.common.CassandraHelper
 import com.bwsw.tstreams.coordination.transactions.transport.impl.TcpTransport
 import com.bwsw.tstreams.env.TSF_Dictionary

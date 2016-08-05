@@ -20,7 +20,7 @@ import scala.language.existentials
   * @param txnGenerator                 Generator for generating UUIDs
   * @tparam USERTYPE User object type
   */
-class ProducerOptions[USERTYPE](val transactionTTL: Int, val transactionKeepAliveInterval: Int, val writePolicy: AbstractPolicy, val insertType: AbstractInsertType, val txnGenerator: IUUIDGenerator, val producerCoordinationSettings: ProducerCoordinationOptions, val converter: IConverter[USERTYPE, Array[Byte]]) {
+class Options[USERTYPE](val transactionTTL: Int, val transactionKeepAliveInterval: Int, val writePolicy: AbstractPolicy, val insertType: AbstractInsertType, val txnGenerator: IUUIDGenerator, val producerCoordinationSettings: CoordinationOptions, val converter: IConverter[USERTYPE, Array[Byte]]) {
 
   /**
     * Transaction minimum ttl time
@@ -65,12 +65,12 @@ class ProducerOptions[USERTYPE](val transactionTTL: Int, val transactionKeepAliv
   *                                [[PeerToPeerAgent]]]
   *                                by default (threads_amount == used_producer_partitions)
   */
-class ProducerCoordinationOptions(val agentAddress: String,
-                                  val zkHosts: List[InetSocketAddress],
-                                  val zkRootPath: String,
-                                  val zkSessionTimeout: Int,
-                                  val zkConnectionTimeout: Int,
-                                  val isLowPriorityToBeMaster: Boolean,
-                                  val transport: ITransport,
-                                  val transportTimeout: Int,
-                                  val threadPoolAmount: Int = -1)
+class CoordinationOptions(val agentAddress: String,
+                          val zkHosts: List[InetSocketAddress],
+                          val zkRootPath: String,
+                          val zkSessionTimeout: Int,
+                          val zkConnectionTimeout: Int,
+                          val isLowPriorityToBeMaster: Boolean,
+                          val transport: ITransport,
+                          val transportTimeout: Int,
+                          val threadPoolAmount: Int = -1)
