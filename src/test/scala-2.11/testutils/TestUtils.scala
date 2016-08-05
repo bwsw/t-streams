@@ -64,7 +64,7 @@ trait TestUtils {
     setProperty(TSF_Dictionary.Coordination.ROOT, coordinationRoot).
     setProperty(TSF_Dictionary.Producer.BIND_HOST, TestUtils.getPort).
     setProperty(TSF_Dictionary.Consumer.Subscriber.BIND_PORT, TestUtils.getPort).
-    setProperty(TSF_Dictionary.Consumer.Subscriber.PERSISTENT_QUEUE_PATH, "/tmp/" + randomKeyspace).
+    setProperty(TSF_Dictionary.Consumer.Subscriber.PERSISTENT_QUEUE_PATH, randomKeyspace).
     setProperty(TSF_Dictionary.Stream.NAME, "test-stream")
 
   //metadata/data factories
