@@ -48,7 +48,7 @@ class TransactionState {
     * await while transaction updates
     * @return
     */
-  def awaitUpdateComplete = updateSignalVar.await(10, TimeUnit.SECONDS)
+  def awaitUpdateComplete: Boolean = updateSignalVar.await(10, TimeUnit.SECONDS)
 
   /**
     * make transaction closed
