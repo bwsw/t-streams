@@ -1,7 +1,7 @@
 package com.bwsw.tstreams.agents.producer
 
 import java.util.UUID
-import java.util.concurrent.TimeUnit
+import java.util.concurrent.{CountDownLatch, TimeUnit}
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.locks.ReentrantLock
 
@@ -26,6 +26,23 @@ class ProducerTransaction[USERTYPE](transactionLock: ReentrantLock,
                                     partition: Int,
                                     transactionUuid: UUID,
                                     txnOwner: Producer[USERTYPE]) {
+
+  /**
+    * This value is used to optimize New Transaction with latch
+    */
+  val startTime = System.currentTimeMillis()
+
+  /**
+    * This latch is used to await when master will materialize the Transaction.
+    * Before materialization complete checkpoints, updates, cancels are not permitted.
+    */
+  val materialize = new CountDownLatch(1)
+
+  /**
+    * This atomic used to make update exit if Transaction is not materialized
+    */
+  val isMaterialized = new AtomicBoolean(false)
+
 
   /**
     * State indicator of the transaction
