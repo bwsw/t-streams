@@ -153,7 +153,7 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
     * Canceling current transaction
     */
   def cancel() = {
-    if(state.awaitUpdateComplete)
+    if(!state.awaitUpdateComplete)
       throw new IllegalStateException("Update takes too long (> 10 seconds). Probably failure.")
 
     if (state.close)
