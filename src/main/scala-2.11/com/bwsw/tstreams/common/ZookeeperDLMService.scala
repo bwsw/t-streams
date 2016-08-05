@@ -151,6 +151,5 @@ class ZookeeperDLMService(prefix: String, zkHosts: List[InetSocketAddress], zkSe
 
   def close() = {
     twitterZkClient.close()
-    zkClient.close()
   }
 }
