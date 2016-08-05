@@ -1,14 +1,31 @@
 name := "t-streams"
 
-val tstreams_version = "1.0"
+val tstreamsVersion = "1.0-SNAPSHOT"
 
-version := tstreams_version
+version := tstreamsVersion
+organization := "com.bwsw"
 
 scalaVersion := "2.11.8"
 
 scalacOptions += "-feature"
 scalacOptions += "-deprecation"
 
+publishMavenStyle := true
+
+licenses := Seq("Apache 2" -> url("http://www.apache.org/licenses/LICENSE-2.0"))
+homepage := Some(url("http://t-streams.com/"))
+
+pomIncludeRepository := { _ => false }
+
+publishTo := {
+  val nexus = "https://oss.sonatype.org/"
+  if (isSnapshot.value)
+    Some("snapshots" at nexus + "content/repositories/snapshots")
+  else
+    Some("releases"  at nexus + "service/local/staging/deploy/maven2")
+}
+
+publishArtifact in Test := false
 
 //COMMON
 libraryDependencies ++= Seq(
@@ -46,9 +63,8 @@ libraryDependencies += ("com.twitter.common.zookeeper" % "lock" % "0.0.38")
   .exclude("org.slf4j", "slf4j-log4j12")
   .exclude("org.apache.zookeeper", "zookeeper")
 
-
 //ASSEMBLY STRATEGY
-assemblyJarName in assembly := "t-streams-" + tstreams_version + ".jar"
+assemblyJarName in assembly := "t-streams-" + tstreamsVersion + ".jar"
 
 assemblyMergeStrategy in assembly := {
   case PathList("org", "slf4j", "impl", xs@_*) => MergeStrategy.discard
@@ -65,7 +81,6 @@ assemblyMergeStrategy in assembly := {
       val oldStrategy = (assemblyMergeStrategy in assembly).value
       oldStrategy(x)
 }
-
 
 //TESTS
 parallelExecution in ThisBuild := false
