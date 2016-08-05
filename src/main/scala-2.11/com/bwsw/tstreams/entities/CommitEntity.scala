@@ -27,6 +27,10 @@ class CommitEntity(commitLog: String, session: Session) {
   private val commitStatement = session
     .prepare(s"insert into $commitLog (stream,partition,transaction,cnt) values(?,?,?,?) USING TTL ?")
 
+  private val deleteStatement = session
+    .prepare(s"delete from $commitLog where stream = ? and partition = ? and transaction = ?")
+
+
   private val selectTransactionsMoreThanStatement = session
     .prepare(s"select transaction,cnt,TTL(cnt) from $commitLog where stream=? AND partition=? AND transaction>? LIMIT ?")
 
@@ -87,6 +91,34 @@ class CommitEntity(commitLog: String, session: Session) {
       }
     }, executor)
   }
+
+  /**
+    * Does asynchronous delete to C*
+    *
+    * @param streamName  name of stream
+    * @param partition
+    * @param transaction UUID
+    * @return
+    */
+  def deleteAsync(streamName: String,
+                  partition: Int,
+                  transaction: UUID,
+                  executor: Executor,
+                  function: () => Unit): Unit = {
+    val values = List(streamName, new Integer(partition), transaction)
+    val statementWithBindings = deleteStatement.bind(values: _*)
+    val f = session.executeAsync(statementWithBindings)
+    Futures.addCallback(f, new FutureCallback[ResultSet]() {
+      override def onSuccess(r: ResultSet) = {
+        function()
+      }
+
+      override def onFailure(r: Throwable) = {
+        throw new IllegalStateException("Delete Callback execution failed! Wrong state!")
+      }
+    }, executor)
+  }
+
 
   /**
     * Retrieving some set of transactions more than last transaction (if cnt is default will be no limit to retrieve)
