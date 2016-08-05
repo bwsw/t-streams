@@ -22,34 +22,26 @@ import scala.collection.mutable.ListBuffer
   * @param transactionUuid UUID for this transaction
   * @tparam USERTYPE User data type
   */
-class ProducerTransaction[USERTYPE](transactionLock: ReentrantLock,
-                                    partition: Int,
-                                    transactionUuid: UUID,
-                                    txnOwner: Producer[USERTYPE]) {
+class Transaction[USERTYPE](transactionLock: ReentrantLock,
+                            partition: Int,
+                            transactionUuid: UUID,
+                            txnOwner: Producer[USERTYPE]) {
 
   /**
     * This value is used to optimize New Transaction with latch
     */
-  val startTime = System.currentTimeMillis()
+  private val startTime = System.currentTimeMillis()
 
   /**
-    * This latch is used to await when master will materialize the Transaction.
-    * Before materialization complete checkpoints, updates, cancels are not permitted.
+    * state of transaction
     */
-  val materialize = new CountDownLatch(1)
-
-  /**
-    * This atomic used to make update exit if Transaction is not materialized
-    */
-  val isMaterialized = new AtomicBoolean(false)
-
-
+  private val state = new TransactionState
   /**
     * State indicator of the transaction
     *
     * @return Closed transaction or not
     */
-  def isClosed = closed.get
+  def isClosed = state.isClosed
 
   /**
     * BasicProducerTransaction logger for logging
@@ -60,8 +52,7 @@ class ProducerTransaction[USERTYPE](transactionLock: ReentrantLock,
   /**
     *
     */
-  def setAsClosed() =
-    closed.set(true)
+  def setAsClosed() = state.close
 
   /**
     * Return transaction partition
@@ -79,11 +70,6 @@ class ProducerTransaction[USERTYPE](transactionLock: ReentrantLock,
   def getCnt = part
 
   /**
-    * Variable for indicating transaction state
-    */
-  private val closed = new AtomicBoolean(false)
-
-  /**
     * Transaction part index
     */
   private var part = 0
@@ -93,15 +79,6 @@ class ProducerTransaction[USERTYPE](transactionLock: ReentrantLock,
     */
   private var jobs = ListBuffer[() => Unit]()
 
-  /**
-    * This special trigger is used to avoid a very specific race, which could happen if
-    * checkpoint/cancel will be called same time when update will do update. So, we actully
-    * must protect from this situation, that's why during update, latch must be set to make
-    * cancel/checkpoint wait until update will complete
-    * We also need special test for it.
-    */
-  private val updateSignalVar = new ResettableCountDownLatch(0)
-
 
   /**
     * Send data to storage
@@ -109,7 +86,7 @@ class ProducerTransaction[USERTYPE](transactionLock: ReentrantLock,
     * @param obj some user object
     */
   def send(obj: USERTYPE): Unit = {
-    if (closed.get)
+    if (state.isClosed)
       throw new IllegalStateException("transaction is closed")
 
     LockUtil.withLockOrDieDo[Unit](transactionLock, (100, TimeUnit.SECONDS), Some(logger), () => {
@@ -176,10 +153,10 @@ class ProducerTransaction[USERTYPE](transactionLock: ReentrantLock,
     * Canceling current transaction
     */
   def cancel() = {
-    if(!updateSignalVar.await(10, TimeUnit.SECONDS))
+    if(state.awaitUpdateComplete)
       throw new IllegalStateException("Update takes too long (> 10 seconds). Probably failure.")
 
-    if (closed.getAndSet(true))
+    if (state.close)
       throw new IllegalStateException("transaction is already closed")
 
     LockUtil.withLockOrDieDo[Unit](transactionLock, (100, TimeUnit.SECONDS), Some(logger), () => {
@@ -279,10 +256,10 @@ class ProducerTransaction[USERTYPE](transactionLock: ReentrantLock,
     * Submit transaction(transaction will be available by consumer only after closing)
     */
   def checkpoint(isSynchronous: Boolean = true): Unit = {
-    if(!updateSignalVar.await(10, TimeUnit.SECONDS))
+    if(!state.awaitUpdateComplete)
       throw new IllegalStateException("Update takes too long (> 10 seconds). Probably failure.")
 
-    if (closed.getAndSet(true))
+    if (state.close)
       throw new IllegalStateException("Transaction is closed already")
 
     LockUtil.withLockOrDieDo[Unit](transactionLock, (100, TimeUnit.SECONDS), Some(logger), () => {
@@ -359,7 +336,7 @@ class ProducerTransaction[USERTYPE](transactionLock: ReentrantLock,
       GlobalHooks.invoke(GlobalHooks.transactionUpdateTaskEnd)
     }
 
-    updateSignalVar.countDown()
+    state.setUpdateFinished
     txnOwner.subscriberNotifier.publish(ProducerTopicMessage(
       txnUuid = transactionUuid,
       ttl = txnOwner.producerOptions.transactionTTL,
@@ -369,9 +346,9 @@ class ProducerTransaction[USERTYPE](transactionLock: ReentrantLock,
   }
 
   def updateTxnKeepAliveState(): Unit = {
-    if(closed.get)
+    if(state.isClosed)
       return
-    updateSignalVar.setValue(1)
+    state.setUpdateInProgress
 
     {
       GlobalHooks.invoke(GlobalHooks.transactionUpdateTaskBegin)

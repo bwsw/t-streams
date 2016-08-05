@@ -3,14 +3,14 @@ package com.bwsw.tstreams.velocity
 import java.net.InetSocketAddress
 
 import com.bwsw.tstreams.agents.producer.DataInsertType.BatchInsert
-import com.bwsw.tstreams.agents.producer.{Producer, ProducerOptions, ProducerCoordinationOptions, NewTransactionProducerPolicy}
+import com.bwsw.tstreams.agents.producer.{Producer, Options, CoordinationOptions, NewTransactionProducerPolicy}
 import com.bwsw.tstreams.coordination.transactions.transport.impl.TcpTransport
 
 object ProducerRunner {
   def main(args: Array[String]) {
     import Common._
     //producer/consumer options
-    val agentSettings = new ProducerCoordinationOptions(
+    val agentSettings = new CoordinationOptions(
       agentAddress = "t-streams-2.z1.netpoint-dc.com:8888",
       zkHosts = List(new InetSocketAddress(zkHost, 2181)),
       zkRootPath = "/velocity",
@@ -20,7 +20,7 @@ object ProducerRunner {
       transportTimeout = 5,
       zkConnectionTimeout = 7)
 
-    val producerOptions = new ProducerOptions[String](transactionTTL = 6, transactionKeepAliveInterval = 2, RoundRobinPolicyCreator.getRoundRobinPolicy(stream, List(0)), BatchInsert(10), LocalGeneratorCreator.getGen(), agentSettings, stringToArrayByteConverter)
+    val producerOptions = new Options[String](transactionTTL = 6, transactionKeepAliveInterval = 2, RoundRobinPolicyCreator.getRoundRobinPolicy(stream, List(0)), BatchInsert(10), LocalGeneratorCreator.getGen(), agentSettings, stringToArrayByteConverter)
 
     val producer = new Producer[String]("producer", stream, producerOptions)
     var cnt = 0

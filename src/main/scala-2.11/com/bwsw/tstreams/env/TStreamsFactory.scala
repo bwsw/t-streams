@@ -12,7 +12,7 @@ import com.bwsw.tstreams.agents.consumer.Offsets.IOffset
 import com.bwsw.tstreams.agents.consumer.subscriber.{Callback, SubscribingConsumer}
 import com.bwsw.tstreams.agents.consumer.{Consumer, ConsumerOptions, SubscriberCoordinationOptions}
 import com.bwsw.tstreams.agents.producer.DataInsertType.{AbstractInsertType, BatchInsert, SingleElementInsert}
-import com.bwsw.tstreams.agents.producer.{Producer, ProducerCoordinationOptions, ProducerOptions}
+import com.bwsw.tstreams.agents.producer.{Producer, CoordinationOptions, Options}
 import com.bwsw.tstreams.common.{LockUtil, NetworkUtil}
 import com.bwsw.tstreams.converter.IConverter
 import com.bwsw.tstreams.coordination.transactions.transport.impl.TcpTransport
@@ -696,7 +696,7 @@ class TStreamsFactory(envname: String = "T-streams") {
       pAssertIntRange(pAsInt(TSF_Dictionary.Coordination.CONNECTION_TIMEOUT, Coordination_connection_timeout_default),
         Coordination_connection_timeout_min, Coordination_connection_timeout_max)
 
-      val cao = new ProducerCoordinationOptions(
+      val cao = new CoordinationOptions(
         agentAddress = pAsString(TSF_Dictionary.Producer.BIND_PORT) + ":" + pAsString(TSF_Dictionary.Producer.BIND_HOST),
         zkHosts = NetworkUtil.getInetSocketAddressCompatibleHostList(pAsString(TSF_Dictionary.Coordination.ENDPOINTS)),
         zkRootPath = pAsString(TSF_Dictionary.Coordination.ROOT),
@@ -732,7 +732,7 @@ class TStreamsFactory(envname: String = "T-streams") {
       if (insertCnt > 1)
         insertType = BatchInsert(insertCnt)
 
-      val po = new ProducerOptions[USERTYPE](transactionTTL = pAsInt(TSF_Dictionary.Producer.Transaction.TTL, Producer_transaction_ttl_default), transactionKeepAliveInterval = pAsInt(TSF_Dictionary.Producer.Transaction.KEEP_ALIVE, Producer_transaction_keep_alive_default), writePolicy = writePolicy, insertType = SingleElementInsert, txnGenerator = txnGenerator, producerCoordinationSettings = cao, converter = converter)
+      val po = new Options[USERTYPE](transactionTTL = pAsInt(TSF_Dictionary.Producer.Transaction.TTL, Producer_transaction_ttl_default), transactionKeepAliveInterval = pAsInt(TSF_Dictionary.Producer.Transaction.KEEP_ALIVE, Producer_transaction_keep_alive_default), writePolicy = writePolicy, insertType = SingleElementInsert, txnGenerator = txnGenerator, producerCoordinationSettings = cao, converter = converter)
 
       new Producer[USERTYPE](name = name, stream = stream, producerOptions = po)
     })

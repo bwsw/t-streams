@@ -27,7 +27,7 @@ import scala.util.control.Breaks._
   */
 class Producer[USERTYPE](val name: String,
                          val stream: TStream[Array[Byte]],
-                         val producerOptions: ProducerOptions[USERTYPE])
+                         val producerOptions: Options[USERTYPE])
   extends Agent with Interaction {
 
   /**
@@ -41,7 +41,7 @@ class Producer[USERTYPE](val name: String,
   var isStop = false
 
   // stores currently opened transactions per partition
-  private val openTransactionsMap = scala.collection.mutable.Map[Int, ProducerTransaction[USERTYPE]]()
+  private val openTransactionsMap = scala.collection.mutable.Map[Int, Transaction[USERTYPE]]()
   private val logger = LoggerFactory.getLogger(this.getClass)
   private val threadLock = new ReentrantLock(true)
 
@@ -149,8 +149,8 @@ class Producer[USERTYPE](val name: String,
     * @param nextPartition Next partition to use for transaction (default -1 which mean that write policy will be used)
     * @return BasicProducerTransaction instance
     */
-  def newTransaction(policy: ProducerPolicy, nextPartition: Int = -1): ProducerTransaction[USERTYPE] = {
-    LockUtil.withLockOrDieDo[ProducerTransaction[USERTYPE]] (threadLock, (100, TimeUnit.SECONDS), Some(logger), () => {
+  def newTransaction(policy: ProducerPolicy, nextPartition: Int = -1): Transaction[USERTYPE] = {
+    LockUtil.withLockOrDieDo[Transaction[USERTYPE]] (threadLock, (100, TimeUnit.SECONDS), Some(logger), () => {
       if (isStop)
         throw new IllegalStateException(s"Producer ${this.name} is already stopped. Unable to get new transaction.")
       val partition = {
@@ -181,7 +181,7 @@ class Producer[USERTYPE](val name: String,
             }
           }
         }
-        val txn = new ProducerTransaction[USERTYPE](txnLocks(partition % threadPoolSize), partition, txnUUID, this)
+        val txn = new Transaction[USERTYPE](txnLocks(partition % threadPoolSize), partition, txnUUID, this)
         openTransactionsMap(partition) = txn
         txn
       }
@@ -194,8 +194,8 @@ class Producer[USERTYPE](val name: String,
     * @param partition Partition from which transaction will be retrieved
     * @return Transaction reference if it exist or not closed
     */
-  def getOpenTransactionForPartition(partition: Int): Option[ProducerTransaction[USERTYPE]] = {
-    LockUtil.withLockOrDieDo[Option[ProducerTransaction[USERTYPE]]](threadLock, (100, TimeUnit.SECONDS), Some(logger), () => {
+  def getOpenTransactionForPartition(partition: Int): Option[Transaction[USERTYPE]] = {
+    LockUtil.withLockOrDieDo[Option[Transaction[USERTYPE]]](threadLock, (100, TimeUnit.SECONDS), Some(logger), () => {
       if (!(partition >= 0 && partition < stream.getPartitions))
         throw new IllegalArgumentException(s"Producer ${name} - invalid partition")
 
