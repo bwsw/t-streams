@@ -27,13 +27,13 @@ class ProducerTest extends FlatSpec with Matchers with BeforeAndAfterAll with Te
     isLowPriority = false)
 
   "BasicProducer.newTransaction()" should "return BasicProducerTransaction instance" in {
-    val txn: ProducerTransaction[String] = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
+    val txn: Transaction[String] = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
     txn.checkpoint()
-    txn.isInstanceOf[ProducerTransaction[_]] shouldEqual true
+    txn.isInstanceOf[Transaction[_]] shouldEqual true
   }
 
   "BasicProducer.newTransaction(ProducerPolicies.errorIfOpen)" should "throw exception if previous transaction was not closed" in {
-    val txn1: ProducerTransaction[String] = producer.newTransaction(NewTransactionProducerPolicy.CheckpointIfOpened, 2)
+    val txn1: Transaction[String] = producer.newTransaction(NewTransactionProducerPolicy.CheckpointIfOpened, 2)
     intercept[IllegalStateException] {
       producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened, 2)
     }

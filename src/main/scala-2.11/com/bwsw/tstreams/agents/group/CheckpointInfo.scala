@@ -2,7 +2,7 @@ package com.bwsw.tstreams.agents.group
 
 import java.util.UUID
 
-import com.bwsw.tstreams.agents.producer.ProducerTransaction
+import com.bwsw.tstreams.agents.producer.Transaction
 import com.bwsw.tstreams.coordination.pubsub.messages.ProducerTopicMessage
 import com.bwsw.tstreams.coordination.transactions.peertopeer.PeerToPeerAgent
 
@@ -31,7 +31,7 @@ sealed trait CheckpointInfo
   * @param totalCnt       Total info in transaction
   * @param ttl            Transaction time to live in seconds
   */
-case class ProducerCheckpointInfo(transactionRef: ProducerTransaction[_],
+case class ProducerCheckpointInfo(transactionRef: Transaction[_],
                                   agent: PeerToPeerAgent,
                                   preCheckpointEvent: ProducerTopicMessage,
                                   finalCheckpointEvent: ProducerTopicMessage,
