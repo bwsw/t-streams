@@ -413,7 +413,7 @@ class TStreamsFactory(envname: String = "T-streams") {
   val cassandraStorageFactory = new CassandraStorageFactory
 
   /**
-    * locks factory
+    * locks factory, after lock setProperty leads to exception.
     */
   def lock():Unit = isLocked.set(true)
 
@@ -426,7 +426,7 @@ class TStreamsFactory(envname: String = "T-streams") {
 
     LockUtil.withLockOrDieDo[TStreamsFactory](lck, (100, TimeUnit.SECONDS), Some(logger), () => {
       val f = new TStreamsFactory()
-
+      propertyMap.foreach((kv) => f.setProperty(kv._1,kv._2))
       f
     })
   }
