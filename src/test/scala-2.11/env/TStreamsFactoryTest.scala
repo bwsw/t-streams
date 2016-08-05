@@ -5,6 +5,7 @@ import java.util.UUID
 import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
 import com.bwsw.tstreams.agents.consumer.subscriber.{Callback, SubscribingConsumer}
 import com.bwsw.tstreams.converter.{ArrayByteToStringConverter, StringToArrayByteConverter}
+import com.bwsw.tstreams.env.TSF_Dictionary
 import com.bwsw.tstreams.velocity.LocalGeneratorCreator
 
 /**
@@ -15,6 +16,25 @@ import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import testutils.TestUtils
 
 class TStreamsFactoryTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
+
+  "If copied" should "contain same data" in {
+    val n1 = f.copy()
+    n1.setProperty(TSF_Dictionary.Stream.NAME, "cloned-stream")
+    val n2 = n1.copy()
+    n2.getProperty(TSF_Dictionary.Stream.NAME) shouldBe "cloned-stream"
+  }
+
+  "If locked" should "raise IllegalStateException exception" in {
+    val n1 = f.copy()
+    n1.lock()
+    try {
+      n1.setProperty(TSF_Dictionary.Stream.NAME, "cloned-stream")
+      false shouldBe true
+    } catch {
+      case e: IllegalStateException =>
+      true shouldBe true
+    }
+  }
 
   "UniversalFactory.getProducer" should "return producer object" in {
     val p = f.getProducer[String](
