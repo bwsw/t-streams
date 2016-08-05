@@ -1,14 +1,31 @@
 name := "t-streams"
 
-val tstreams_version = "1.0"
+val tstreams_version = "1.0-SNAPSHOT"
 
 version := tstreams_version
+organization := "com.bwsw"
 
 scalaVersion := "2.11.8"
 
 scalacOptions += "-feature"
 scalacOptions += "-deprecation"
 
+publishMavenStyle := true
+
+licenses := Seq("Apache 2" -> url("http://www.apache.org/licenses/LICENSE-2.0"))
+homepage := Some(url("http://t-streams.com/"))
+
+pomIncludeRepository := { _ => false }
+
+publishTo := {
+  val nexus = "https://oss.sonatype.org/"
+  if (isSnapshot.value)
+    Some("snapshots" at nexus + "content/repositories/snapshots")
+  else
+    Some("releases"  at nexus + "service/local/staging/deploy/maven2")
+}
+
+publishArtifact in Test := false
 
 //COMMON
 libraryDependencies ++= Seq(
