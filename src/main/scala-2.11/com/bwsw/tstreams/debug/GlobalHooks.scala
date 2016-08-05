@@ -29,4 +29,6 @@ object GlobalHooks {
 
   def preCommitFailure = "PreCommitFailure"
   def afterCommitFailure = "AfterCommitFailure"
+  def transactionUpdateTaskBegin = "TransactionUpdateTaskBegin"
+  def transactionUpdateTaskEnd = "TransactionUpdateTaskEnd"
 }

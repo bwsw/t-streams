@@ -83,7 +83,7 @@ trait TestUtils {
     new Host("localhost", 3000))
 
   val aerospikeOptions = new AerospikeStorageOptions("test", hosts)
-  val zkService = new ZookeeperDLMService("", List(new InetSocketAddress("localhost", 2181)), 7, 7)
+  val zkService = new ZookeeperDLMService("", List(new InetSocketAddress("127.0.0.1", 2181)), 7, 7)
 
   removeZkMetadata(f.getProperty(TSF_Dictionary.Coordination.ROOT).toString)
 

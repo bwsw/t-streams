@@ -2,8 +2,10 @@ package com.bwsw.tstreams.agents.producer
 
 import java.util.UUID
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.locks.ReentrantLock
 
+import com.bwsw.ResettableCountDownLatch
 import com.bwsw.tstreams.common.LockUtil
 import com.bwsw.tstreams.coordination.pubsub.messages.{ProducerTopicMessage, ProducerTransactionStatus}
 import com.bwsw.tstreams.debug.GlobalHooks
@@ -30,7 +32,7 @@ class ProducerTransaction[USERTYPE](transactionLock: ReentrantLock,
     *
     * @return Closed transaction or not
     */
-  def isClosed = closed
+  def isClosed = closed.get
 
   /**
     * BasicProducerTransaction logger for logging
@@ -42,7 +44,7 @@ class ProducerTransaction[USERTYPE](transactionLock: ReentrantLock,
     *
     */
   def setAsClosed() =
-    closed = true
+    closed.set(true)
 
   /**
     * Return transaction partition
@@ -62,7 +64,7 @@ class ProducerTransaction[USERTYPE](transactionLock: ReentrantLock,
   /**
     * Variable for indicating transaction state
     */
-  private var closed = false
+  private val closed = new AtomicBoolean(false)
 
   /**
     * Transaction part index
@@ -75,15 +77,25 @@ class ProducerTransaction[USERTYPE](transactionLock: ReentrantLock,
   private var jobs = ListBuffer[() => Unit]()
 
   /**
+    * This special trigger is used to avoid a very specific race, which could happen if
+    * checkpoint/cancel will be called same time when update will do update. So, we actully
+    * must protect from this situation, that's why during update, latch must be set to make
+    * cancel/checkpoint wait until update will complete
+    * We also need special test for it.
+    */
+  private val updateSignalVar = new ResettableCountDownLatch(0)
+
+
+  /**
     * Send data to storage
     *
     * @param obj some user object
     */
   def send(obj: USERTYPE): Unit = {
-    LockUtil.withLockOrDieDo[Unit](transactionLock, (100, TimeUnit.SECONDS), Some(logger), () => {
-      if (closed)
-        throw new IllegalStateException("transaction is closed")
+    if (closed.get)
+      throw new IllegalStateException("transaction is closed")
 
+    LockUtil.withLockOrDieDo[Unit](transactionLock, (100, TimeUnit.SECONDS), Some(logger), () => {
       txnOwner.producerOptions.insertType match {
 
         case DataInsertType.BatchInsert(size) =>
@@ -128,25 +140,32 @@ class ProducerTransaction[USERTYPE](transactionLock: ReentrantLock,
         txnOwner.stream.dataStorage.clearBuffer(transactionUuid)
     }
 
-
-    val msg = ProducerTopicMessage(txnUuid = transactionUuid,
-      ttl = -1,
-      status = ProducerTransactionStatus.cancel,
-      partition = partition)
-
-    txnOwner.masterP2PAgent.publish(msg)
-    logger.debug(s"[CANCEL PARTITION_${msg.partition}] ts=${msg.txnUuid.timestamp()} status=${msg.status}")
-
+    txnOwner.stream.metadataStorage.commitEntity.deleteAsync(
+      streamName  = txnOwner.stream.getName,
+      partition   = partition,
+      transaction = transactionUuid,
+      executor    = txnOwner.backendActivityService,
+      function    = () => {
+        val msg = ProducerTopicMessage(txnUuid = transactionUuid,
+          ttl = -1,
+          status = ProducerTransactionStatus.cancel,
+          partition = partition)
+        txnOwner.masterP2PAgent.publish(msg)
+        logger.debug(s"[CANCEL PARTITION_${msg.partition}] ts=${msg.txnUuid.timestamp()} status=${msg.status}")
+      })
   }
 
   /**
     * Canceling current transaction
     */
   def cancel() = {
+    if(!updateSignalVar.await(10, TimeUnit.SECONDS))
+      throw new IllegalStateException("Update takes too long (> 10 seconds). Probably failure.")
+
+    if (closed.getAndSet(true))
+      throw new IllegalStateException("transaction is already closed")
+
     LockUtil.withLockOrDieDo[Unit](transactionLock, (100, TimeUnit.SECONDS), Some(logger), () => {
-      if (closed)
-        throw new IllegalStateException("transaction is already closed")
-      closed = true
       txnOwner.backendActivityService.submit(new Runnable {
         override def run(): Unit = cancelAsync()
       }, Option(transactionLock))
@@ -243,11 +262,13 @@ class ProducerTransaction[USERTYPE](transactionLock: ReentrantLock,
     * Submit transaction(transaction will be available by consumer only after closing)
     */
   def checkpoint(isSynchronous: Boolean = true): Unit = {
-    LockUtil.withLockOrDieDo[Unit](transactionLock, (100, TimeUnit.SECONDS), Some(logger), () => {
+    if(!updateSignalVar.await(10, TimeUnit.SECONDS))
+      throw new IllegalStateException("Update takes too long (> 10 seconds). Probably failure.")
 
-      if (closed)
-        throw new IllegalStateException("transaction is already closed")
-      closed = true
+    if (closed.getAndSet(true))
+      throw new IllegalStateException("Transaction is closed already")
+
+    LockUtil.withLockOrDieDo[Unit](transactionLock, (100, TimeUnit.SECONDS), Some(logger), () => {
       if (!isSynchronous) {
         txnOwner.backendActivityService.submit(new Runnable {
           override def run(): Unit = checkpointAsync()
@@ -316,26 +337,39 @@ class ProducerTransaction[USERTYPE](transactionLock: ReentrantLock,
 
   private def doSendUpdateMessage() = {
     //publish that current txn is being updating
+
+    {
+      GlobalHooks.invoke(GlobalHooks.transactionUpdateTaskEnd)
+    }
+
+    updateSignalVar.countDown()
     txnOwner.subscriberNotifier.publish(ProducerTopicMessage(
       txnUuid = transactionUuid,
       ttl = txnOwner.producerOptions.transactionTTL,
       status = ProducerTransactionStatus.update,
       partition = partition), () => ())
     logger.debug(s"[KEEP_ALIVE THREAD PARTITION_${partition}] ts=${transactionUuid.timestamp()} status=${ProducerTransactionStatus.update}")
-
   }
 
-  def updateTxnKeepAliveState() = {
+  def updateTxnKeepAliveState(): Unit = {
+    if(closed.get)
+      return
+    updateSignalVar.setValue(1)
+
+    {
+      GlobalHooks.invoke(GlobalHooks.transactionUpdateTaskBegin)
+    }
+
     //-1 here indicate that transaction is started but is not finished yet
     logger.debug(s"Update event for txn ${transactionUuid}, partition: ${partition}")
     val f = txnOwner.stream.metadataStorage.commitEntity.commitAsync(
-      streamName = txnOwner.stream.getName,
-      partition = partition,
-      transaction = transactionUuid,
-      totalCnt = -1,
-      ttl = txnOwner.producerOptions.transactionTTL,
-      executor = txnOwner.backendActivityService,
-      function = doSendUpdateMessage)
+    streamName = txnOwner.stream.getName,
+    partition = partition,
+    transaction = transactionUuid,
+    totalCnt = -1,
+    ttl = txnOwner.producerOptions.transactionTTL,
+    executor = txnOwner.backendActivityService,
+    function = doSendUpdateMessage)
   }
 
   /**
