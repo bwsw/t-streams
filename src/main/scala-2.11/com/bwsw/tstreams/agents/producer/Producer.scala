@@ -36,7 +36,7 @@ class Producer[USERTYPE](val name: String,
   override def getAgentName = name
 
   // shortkey
-  val pcs = producerOptions.producerCoordinationSettings
+  val pcs = producerOptions.coordinationOptions
 
   var isStop = false
 

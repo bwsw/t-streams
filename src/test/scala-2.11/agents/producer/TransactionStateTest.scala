@@ -67,4 +67,29 @@ class TransactionStateTest  extends FlatSpec with Matchers {
     }
     f shouldBe true
   }
+
+  "Transaction state materialization" should "work in ordered way" in {
+    val s = new TransactionState
+    val v = new Array[Int](2)
+    v.foreach(i => v(i) = -1)
+    var idx = 0
+    val l = new CountDownLatch(1)
+
+    val t = new Thread(new Runnable {
+      override def run(): Unit = {
+        l.countDown()
+        v(idx) = 1
+        idx += 1
+        s.makeMaterialized
+      }
+    })
+    t.run()
+    l.await()
+    s.awaitMaterialization(5)
+    v(idx) = 2
+
+    v(0) shouldBe 1
+    v(1) shouldBe 2
+  }
+
 }
