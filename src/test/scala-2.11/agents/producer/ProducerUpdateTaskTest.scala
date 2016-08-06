@@ -1,7 +1,5 @@
 package agents.producer
 
-import java.util.concurrent.CountDownLatch
-
 import com.bwsw.ResettableCountDownLatch
 import com.bwsw.tstreams.agents.producer.NewTransactionProducerPolicy
 import com.bwsw.tstreams.debug.GlobalHooks
@@ -12,7 +10,7 @@ import testutils.{LocalGeneratorCreator, TestUtils}
 /**
   * Created by ivan on 05.08.16.
   */
-class ProducerUpdateTask  extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils  {
+class ProducerUpdateTaskTest  extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils  {
 
   val blockCheckpoint1 = new ResettableCountDownLatch(1)
   val blockCheckpoint2 = new ResettableCountDownLatch(1)

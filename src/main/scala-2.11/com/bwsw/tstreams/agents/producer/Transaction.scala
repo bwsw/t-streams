@@ -27,10 +27,7 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
                             transactionUuid: UUID,
                             txnOwner: Producer[USERTYPE]) {
 
-  /**
-    * This value is used to optimize New Transaction with latch
-    */
-  private val startTime = System.currentTimeMillis()
+
 
   /**
     * state of transaction
@@ -52,7 +49,7 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
   /**
     *
     */
-  def setAsClosed() = state.close
+  def setAsClosed() = state.closeOrDie
 
   /**
     * Return transaction partition
@@ -86,8 +83,7 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
     * @param obj some user object
     */
   def send(obj: USERTYPE): Unit = {
-    if (state.isClosed)
-      throw new IllegalStateException("transaction is closed")
+    state.isOpenedOrDie
 
     LockUtil.withLockOrDieDo[Unit](transactionLock, (100, TimeUnit.SECONDS), Some(logger), () => {
       txnOwner.producerOptions.insertType match {
@@ -153,13 +149,9 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
     * Canceling current transaction
     */
   def cancel() = {
-    if(!state.awaitUpdateComplete)
-      throw new IllegalStateException("Update takes too long (> 10 seconds). Probably failure.")
-
-    if (state.close)
-      throw new IllegalStateException("transaction is already closed")
-
     LockUtil.withLockOrDieDo[Unit](transactionLock, (100, TimeUnit.SECONDS), Some(logger), () => {
+      state.awaitUpdateComplete
+      state.closeOrDie
       txnOwner.backendActivityService.submit(new Runnable {
         override def run(): Unit = cancelAsync()
       }, Option(transactionLock))
@@ -256,13 +248,9 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
     * Submit transaction(transaction will be available by consumer only after closing)
     */
   def checkpoint(isSynchronous: Boolean = true): Unit = {
-    if(!state.awaitUpdateComplete)
-      throw new IllegalStateException("Update takes too long (> 10 seconds). Probably failure.")
-
-    if (state.close)
-      throw new IllegalStateException("Transaction is closed already")
-
     LockUtil.withLockOrDieDo[Unit](transactionLock, (100, TimeUnit.SECONDS), Some(logger), () => {
+      state.awaitUpdateComplete
+      state.closeOrDie
       if (!isSynchronous) {
         txnOwner.backendActivityService.submit(new Runnable {
           override def run(): Unit = checkpointAsync()
@@ -346,9 +334,17 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
   }
 
   def updateTxnKeepAliveState(): Unit = {
-    if(state.isClosed)
+    // atomically check state and launch update process
+    val stateOnUpdateClosed =
+      LockUtil.withLockOrDieDo[Boolean](transactionLock, (100, TimeUnit.SECONDS), Some(logger), () => {
+        val s = state.isClosed
+        if (!s) state.setUpdateInProgress
+        s })
+
+    // if atomic state was closed then update process should be aborted
+    // immediately
+    if(stateOnUpdateClosed)
       return
-    state.setUpdateInProgress
 
     {
       GlobalHooks.invoke(GlobalHooks.transactionUpdateTaskBegin)

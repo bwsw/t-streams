@@ -10,6 +10,11 @@ import com.bwsw.ResettableCountDownLatch
   */
 class TransactionState {
   /**
+    * Start time is when State object (Transaction object) was created.
+    * This value is used to do delayed transaction materialization.
+    */
+  private val startTime = System.currentTimeMillis()
+  /**
     * This latch is used to await when master will materialize the Transaction.
     * Before materialization complete checkpoints, updates, cancels are not permitted.
     */
@@ -40,20 +45,34 @@ class TransactionState {
   def setUpdateInProgress = updateSignalVar.setValue(1)
 
   /**
-    * changed transaction state to finished updating
+    * changes transaction state to finished updating
     */
   def setUpdateFinished = updateSignalVar.countDown()
 
   /**
-    * await while transaction updates
+    * awaits while transaction updates
     * @return
     */
-  def awaitUpdateComplete: Boolean = updateSignalVar.await(10, TimeUnit.SECONDS)
+  def awaitUpdateComplete: Unit = {
+    if(!updateSignalVar.await(10, TimeUnit.SECONDS))
+      throw new IllegalStateException("Update takes too long (> 10 seconds). Probably failure.")
+  }
 
   /**
-    * make transaction closed
+    * Makes transaction closed
     */
-  def close = closed.getAndSet(true)
+  def closeOrDie: Unit = {
+    if (closed.getAndSet(true))
+      throw new IllegalStateException("Transaction state is already closed. Wrong operation. Double close.")
+  }
+
+  /**
+    * Ensures that transaction is still open
+    */
+  def isOpenedOrDie: Unit = {
+    if (closed.get)
+      throw new IllegalStateException("Transaction state is already closed. Wrong operation.")
+  }
 
   /**
     * get transaction closed state
