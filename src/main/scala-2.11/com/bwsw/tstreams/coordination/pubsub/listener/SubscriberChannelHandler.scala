@@ -1,9 +1,11 @@
 package com.bwsw.tstreams.coordination.pubsub.listener
 
 import java.util
+
 import com.bwsw.tstreams.common.ProtocolMessageSerializer
 import com.bwsw.tstreams.common.ProtocolMessageSerializer.ProtocolMessageSerializerException
 import com.bwsw.tstreams.coordination.pubsub.messages.ProducerTopicMessage
+import com.bwsw.tstreams.coordination.pubsub.subscriber.{ProducerEventReceiverTcpServer, CallbackManager}
 import io.netty.channel.ChannelHandler.Sharable
 import io.netty.channel.{ChannelHandlerContext, SimpleChannelInboundHandler}
 import io.netty.handler.codec.MessageToMessageDecoder
@@ -12,10 +14,10 @@ import org.slf4j.LoggerFactory
 
 
 /**
-  * Incoming connections manager for [[SubscriberListener]]]
+  * Incoming connections manager for [[ProducerEventReceiverTcpServer]]]
   */
 @Sharable
-class SubscriberChannelHandler(subscriberManager: SubscriberManager) extends SimpleChannelInboundHandler[ProducerTopicMessage] {
+class SubscriberChannelHandler(subscriberManager: CallbackManager) extends SimpleChannelInboundHandler[ProducerTopicMessage] {
   private val logger = LoggerFactory.getLogger(this.getClass)
 
   /**

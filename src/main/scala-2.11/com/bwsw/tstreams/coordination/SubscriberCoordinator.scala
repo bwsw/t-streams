@@ -4,8 +4,8 @@ import java.net.InetSocketAddress
 import java.util.concurrent.atomic.AtomicBoolean
 
 import com.bwsw.tstreams.common.ZookeeperDLMService
-import com.bwsw.tstreams.coordination.pubsub.listener.SubscriberListener
 import com.bwsw.tstreams.coordination.pubsub.messages.ProducerTopicMessage
+import com.bwsw.tstreams.coordination.pubsub.subscriber.ProducerEventReceiverTcpServer
 import org.apache.zookeeper.{CreateMode, KeeperException}
 import org.slf4j.LoggerFactory
 
@@ -25,8 +25,8 @@ class SubscriberCoordinator(agentAddress: String,
   private val logger = LoggerFactory.getLogger(this.getClass)
   private val SYNCHRONIZE_LIMIT = 60
   private val zkService = new ZookeeperDLMService(zkRootPrefix, zkHosts, zkSessionTimeout, zkConnectionTimeout)
-  private val (_, port) = getHostPort(agentAddress)
-  private val listener: SubscriberListener = new SubscriberListener(port)
+  private val (host, port) = getHostPort(agentAddress)
+  private val listener: ProducerEventReceiverTcpServer = new ProducerEventReceiverTcpServer(host, port)
   private val stopped = new AtomicBoolean(false)
   private val partitionToUniqueAgentsAmount = scala.collection.mutable.Map[Int, Int]()
 
