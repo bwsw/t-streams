@@ -4,7 +4,7 @@ import java.util.UUID
 import java.util.concurrent.{ExecutorService, Executors}
 
 import com.bwsw.tstreams.agents.consumer.{Consumer, ConsumerOptions, ConsumerTransaction, SubscriberCoordinationOptions}
-import com.bwsw.tstreams.coordination.pubsub.SubscriberCoordinator
+import com.bwsw.tstreams.coordination.SubscriberCoordinator
 import com.bwsw.tstreams.streams.TStream
 import com.bwsw.tstreams.txnqueue.PersistentTransactionQueue
 import org.slf4j.LoggerFactory

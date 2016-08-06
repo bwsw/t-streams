@@ -1,9 +1,11 @@
-package com.bwsw.tstreams.coordination.pubsub
+package com.bwsw.tstreams.coordination
 
 import java.net.InetSocketAddress
+import java.util.concurrent.atomic.AtomicBoolean
+
 import com.bwsw.tstreams.common.ZookeeperDLMService
-import com.bwsw.tstreams.coordination.pubsub.listener.SubscriberListener
 import com.bwsw.tstreams.coordination.pubsub.messages.ProducerTopicMessage
+import com.bwsw.tstreams.coordination.pubsub.subscriber.ProducerEventReceiverTcpServer
 import org.apache.zookeeper.{CreateMode, KeeperException}
 import org.slf4j.LoggerFactory
 
@@ -23,9 +25,9 @@ class SubscriberCoordinator(agentAddress: String,
   private val logger = LoggerFactory.getLogger(this.getClass)
   private val SYNCHRONIZE_LIMIT = 60
   private val zkService = new ZookeeperDLMService(zkRootPrefix, zkHosts, zkSessionTimeout, zkConnectionTimeout)
-  private val (_, port) = getHostPort(agentAddress)
-  private val listener: SubscriberListener = new SubscriberListener(port)
-  private var isFinished = false
+  private val (host, port) = getHostPort(agentAddress)
+  private val listener: ProducerEventReceiverTcpServer = new ProducerEventReceiverTcpServer(host, port)
+  private val stopped = new AtomicBoolean(false)
   private val partitionToUniqueAgentsAmount = scala.collection.mutable.Map[Int, Int]()
 
   /**
@@ -45,6 +47,9 @@ class SubscriberCoordinator(agentAddress: String,
     * @param callback Event callback
     */
   def addCallback(callback: (ProducerTopicMessage) => Unit) = {
+    if(stopped.get)
+      throw new IllegalStateException("Subscriber coordinator is closed already.")
+
     listener.addCallbackToChannelHandler(callback)
   }
 
@@ -52,20 +57,24 @@ class SubscriberCoordinator(agentAddress: String,
     * Stop this coordinator
     */
   def stop() = {
+    if(stopped.getAndSet(true))
+      throw new IllegalStateException("Subscriber coordinator is closed already. Double close situation detected.")
     listener.stop()
     zkService.close()
-    isFinished = true
   }
 
   /**
     * @return Coordinator state
     */
-  def isStoped = isFinished
+  def isStoped: Boolean = stopped.get()
 
   /**
     * Start listen of all [[com.bwsw.tstreams.agents.producer.Producer]]] updates
     */
   def startListen() = {
+    if(stopped.get)
+      throw new IllegalStateException("Subscriber coordinator is closed already.")
+
     listener.start()
   }
 
@@ -76,6 +85,9 @@ class SubscriberCoordinator(agentAddress: String,
     * @param partition
     */
   private def tryClean(streamName: String, partition: Int): Unit = {
+    if(stopped.get)
+      throw new IllegalStateException("Subscriber coordinator is closed already.")
+
     val agentsOpt = zkService.getAllSubPath(s"/subscribers/agents/$streamName/$partition")
     if (agentsOpt.isEmpty)
       return
@@ -95,6 +107,9 @@ class SubscriberCoordinator(agentAddress: String,
     * on stream/partition
     */
   def registerSubscriber(streamName: String, partition: Int): Unit = {
+    if(stopped.get)
+      throw new IllegalStateException("Subscriber coordinator is closed already.")
+
     tryClean(streamName, partition)
     zkService.create(s"/subscribers/agents/$streamName/$partition/subscriber_${agentAddress}_", agentAddress, CreateMode.EPHEMERAL_SEQUENTIAL)
   }
@@ -105,6 +120,9 @@ class SubscriberCoordinator(agentAddress: String,
     * on stream/partition
     */
   def notifyProducers(streamName: String, partition: Int): Unit = {
+    if(stopped.get)
+      throw new IllegalStateException("Subscriber coordinator is closed already.")
+
     listener.resetConnectionsAmount()
     zkService.notify(s"/subscribers/event/$streamName/$partition")
   }
@@ -114,6 +132,9 @@ class SubscriberCoordinator(agentAddress: String,
     * (if agent was on previous partitions it will not be counted)
     */
   def initSynchronization(streamName: String, partitions: List[Int]): Unit = {
+    if(stopped.get)
+      throw new IllegalStateException("Subscriber coordinator is closed already.")
+
     partitionToUniqueAgentsAmount.clear()
     var alreadyExist = Set[String]()
     partitions foreach { p =>
@@ -132,6 +153,9 @@ class SubscriberCoordinator(agentAddress: String,
     * on stream/partition
     */
   def synchronize(streamName: String, partition: Int) = {
+    if(stopped.get)
+      throw new IllegalStateException("Subscriber coordinator is closed already.")
+
     var timer = 0
     val amount = partitionToUniqueAgentsAmount(partition)
 
@@ -156,6 +180,9 @@ class SubscriberCoordinator(agentAddress: String,
     * @return [[com.twitter.common.zookeeper.DistributedLockImpl]]]
     */
   def getStreamLock(streamName: String) = {
+    if(stopped.get)
+      throw new IllegalStateException("Subscriber coordinator is closed already.")
+
     val lock = zkService.getLock(s"/global/stream/$streamName")
     lock
   }

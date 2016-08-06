@@ -4,7 +4,7 @@ import java.util.UUID
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.locks.ReentrantLock
 
-import com.bwsw.tstreams.coordination.pubsub.SubscriberCoordinator
+import com.bwsw.tstreams.coordination.SubscriberCoordinator
 import com.bwsw.tstreams.coordination.pubsub.messages.ProducerTransactionStatus._
 import com.bwsw.tstreams.coordination.pubsub.messages.{ProducerTopicMessage, ProducerTransactionStatus}
 import com.bwsw.tstreams.txnqueue.PersistentTransactionQueue
