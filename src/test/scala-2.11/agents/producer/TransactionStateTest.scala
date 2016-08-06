@@ -10,7 +10,7 @@ import org.scalatest.{FlatSpec, Matchers}
   */
 class TransactionStateTest  extends FlatSpec with Matchers {
   "Proper state update process" should "return ordered results" in {
-    val s = new TransactionState[String](null)
+    val s = new TransactionState
     val v = new Array[Int](3)
     v.foreach(i => v(i) = -1)
     var idx = 0
@@ -37,7 +37,7 @@ class TransactionStateTest  extends FlatSpec with Matchers {
   }
 
   "Call closeOrDie twice" should "return ok first time, exception second time" in {
-    val s = new TransactionState[String](null)
+    val s = new TransactionState
     s.closeOrDie
     var f = false
     try {
@@ -50,12 +50,12 @@ class TransactionStateTest  extends FlatSpec with Matchers {
   }
 
   "Call isClosed on fresh object" should "return false" in {
-    val s = new TransactionState[String](null)
+    val s = new TransactionState
     s.isClosed shouldBe false
   }
 
   "Call isOpenedOrDie" should "return ok before close, exception second time" in {
-    val s = new TransactionState[String](null)
+    val s = new TransactionState
     s.isOpenedOrDie
     s.closeOrDie
     var f = false
@@ -66,6 +66,30 @@ class TransactionStateTest  extends FlatSpec with Matchers {
         f = true
     }
     f shouldBe true
+  }
+
+  "Transaction state materialization" should "work in ordered way" in {
+    val s = new TransactionState
+    val v = new Array[Int](2)
+    v.foreach(i => v(i) = -1)
+    var idx = 0
+    val l = new CountDownLatch(1)
+
+    val t = new Thread(new Runnable {
+      override def run(): Unit = {
+        l.countDown()
+        v(idx) = 1
+        idx += 1
+        s.makeMaterialized
+      }
+    })
+    t.run()
+    l.await()
+    s.awaitMaterialization(5)
+    v(idx) = 2
+
+    v(0) shouldBe 1
+    v(1) shouldBe 2
   }
 
 }

@@ -32,7 +32,9 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
   /**
     * state of transaction
     */
-  private val state = new TransactionState[USERTYPE](this)
+  private val state = new TransactionState
+  //TODO remove it!
+  state.makeMaterialized
   /**
     * State indicator of the transaction
     *
@@ -149,6 +151,7 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
     * Canceling current transaction
     */
   def cancel() = {
+    state.awaitMaterialization(txnOwner.producerOptions.coordinationOptions.transportTimeout)
     LockUtil.withLockOrDieDo[Unit](transactionLock, (100, TimeUnit.SECONDS), Some(logger), () => {
       state.awaitUpdateComplete
       state.closeOrDie
@@ -248,6 +251,7 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
     * Submit transaction(transaction will be available by consumer only after closing)
     */
   def checkpoint(isSynchronous: Boolean = true): Unit = {
+    state.awaitMaterialization(txnOwner.producerOptions.coordinationOptions.transportTimeout)
     LockUtil.withLockOrDieDo[Unit](transactionLock, (100, TimeUnit.SECONDS), Some(logger), () => {
       state.awaitUpdateComplete
       state.closeOrDie
@@ -334,6 +338,8 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
   }
 
   def updateTxnKeepAliveState(): Unit = {
+    if(!state.isMaterialized)
+      return
     // atomically check state and launch update process
     val stateOnUpdateClosed =
       LockUtil.withLockOrDieDo[Boolean](transactionLock, (100, TimeUnit.SECONDS), Some(logger), () => {

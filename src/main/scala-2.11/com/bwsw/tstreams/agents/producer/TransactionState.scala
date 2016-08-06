@@ -8,7 +8,7 @@ import com.bwsw.ResettableCountDownLatch
 /**
   * Stores state of transaction
   */
-class TransactionState[T](txn: Transaction[T]) {
+class TransactionState {
   /**
     * Start time is when State object (Transaction object) was created.
     * This value is used to do delayed transaction materialization.
@@ -43,9 +43,9 @@ class TransactionState[T](txn: Transaction[T]) {
     * waits until the transaction will be materialized (blocker for checkpoint, cancel)
     * or
     */
-  def waitMaterialized(masterTimeout: Int) = {
+  def awaitMaterialization(masterTimeout: Int) = {
 
-    def throwExc = throw new IllegalStateException(s"Master didn't materialized the transaction ${txn.getTxnUUID.toString} during ${masterTimeout}.")
+    def throwExc = throw new IllegalStateException(s"Master didn't materialized the transaction during ${masterTimeout}.")
 
     val mtMsecs = masterTimeout * 1000
     val mt = this.synchronized {
