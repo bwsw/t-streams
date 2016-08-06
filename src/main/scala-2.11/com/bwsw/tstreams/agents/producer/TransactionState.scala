@@ -8,12 +8,14 @@ import com.bwsw.ResettableCountDownLatch
 /**
   * Stores state of transaction
   */
-class TransactionState {
+class TransactionState[T](txn: Transaction[T]) {
   /**
     * Start time is when State object (Transaction object) was created.
     * This value is used to do delayed transaction materialization.
     */
   private val startTime = System.currentTimeMillis()
+  private var materializationTime: Long = 0
+
   /**
     * This latch is used to await when master will materialize the Transaction.
     * Before materialization complete checkpoints, updates, cancels are not permitted.
@@ -23,7 +25,49 @@ class TransactionState {
   /**
     * This atomic used to make update exit if Transaction is not materialized
     */
-  val isMaterialized = new AtomicBoolean(false)
+  val materialized = new AtomicBoolean(false)
+
+  /**
+    * Makes transaction materialized (whiche means that
+    */
+  def makeMaterialized = {
+    if(materialized.getAndSet(true))
+      throw new IllegalStateException("State is materialized already. Wrong operation")
+    materialize.countDown()
+    this.synchronized {
+      materializationTime = System.currentTimeMillis()
+    }
+  }
+
+  /**
+    * waits until the transaction will be materialized (blocker for checkpoint, cancel)
+    * or
+    */
+  def waitMaterialized(masterTimeout: Int) = {
+
+    def throwExc = throw new IllegalStateException(s"Master didn't materialized the transaction ${txn.getTxnUUID.toString} during ${masterTimeout}.")
+
+    val mtMsecs = masterTimeout * 1000
+    val mt = this.synchronized {
+      if(0 == materializationTime)
+        System.currentTimeMillis()
+      else
+        materializationTime
+    }
+
+    val materializationSpent = mt - startTime
+
+    if (mtMsecs <= materializationSpent)
+      throwExc
+
+    if(!materialize.await(mtMsecs - materializationSpent, TimeUnit.MILLISECONDS))
+      throwExc
+  }
+
+  /**
+    * check if the transaction is materialized
+    */
+  def isMaterialized: Boolean = materialized.get
 
   /**
     * Variable for indicating transaction state

@@ -32,7 +32,7 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
   /**
     * state of transaction
     */
-  private val state = new TransactionState
+  private val state = new TransactionState[USERTYPE](this)
   /**
     * State indicator of the transaction
     *

@@ -10,7 +10,7 @@ import org.scalatest.{FlatSpec, Matchers}
   */
 class TransactionStateTest  extends FlatSpec with Matchers {
   "Proper state update process" should "return ordered results" in {
-    val s = new TransactionState
+    val s = new TransactionState[String](null)
     val v = new Array[Int](3)
     v.foreach(i => v(i) = -1)
     var idx = 0
@@ -37,7 +37,7 @@ class TransactionStateTest  extends FlatSpec with Matchers {
   }
 
   "Call closeOrDie twice" should "return ok first time, exception second time" in {
-    val s = new TransactionState
+    val s = new TransactionState[String](null)
     s.closeOrDie
     var f = false
     try {
@@ -50,12 +50,12 @@ class TransactionStateTest  extends FlatSpec with Matchers {
   }
 
   "Call isClosed on fresh object" should "return false" in {
-    val s = new TransactionState
+    val s = new TransactionState[String](null)
     s.isClosed shouldBe false
   }
 
   "Call isOpenedOrDie" should "return ok before close, exception second time" in {
-    val s = new TransactionState
+    val s = new TransactionState[String](null)
     s.isOpenedOrDie
     s.closeOrDie
     var f = false
@@ -67,4 +67,5 @@ class TransactionStateTest  extends FlatSpec with Matchers {
     }
     f shouldBe true
   }
+
 }
