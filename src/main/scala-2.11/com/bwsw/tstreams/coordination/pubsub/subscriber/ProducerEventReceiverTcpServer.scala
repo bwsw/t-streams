@@ -1,7 +1,8 @@
-package com.bwsw.tstreams.coordination.pubsub.listener
+package com.bwsw.tstreams.coordination.pubsub.subscriber
 
 import java.util.concurrent.{CountDownLatch, TimeUnit}
 
+import com.bwsw.tstreams.coordination.pubsub.listener.{ProducerTopicMessageDecoder, SubscriberChannelHandler}
 import com.bwsw.tstreams.coordination.pubsub.messages.ProducerTopicMessage
 import io.netty.bootstrap.ServerBootstrap
 import io.netty.channel.ChannelInitializer
@@ -17,11 +18,11 @@ import io.netty.handler.logging.{LogLevel, LoggingHandler}
   *
   * @param port Listener port
   */
-class SubscriberListener(port: Int) {
+class ProducerEventReceiverTcpServer(host: String, port: Int) {
   private val bossGroup = new NioEventLoopGroup(1)
   private val workerGroup = new NioEventLoopGroup()
   private val MAX_FRAME_LENGTH = 8192
-  private val subscriberManager = new SubscriberManager()
+  private val subscriberManager = new CallbackManager()
   private val channelHandler: SubscriberChannelHandler = new SubscriberChannelHandler(subscriberManager)
   private var listenerThread: Thread = null
 
@@ -75,7 +76,7 @@ class SubscriberListener(port: Int) {
                 p.addLast("handler", channelHandler)
               }
             })
-          val f = b.bind(port).sync()
+          val f = b.bind(host, port).sync()
           syncPoint.countDown()
           f.channel().closeFuture().sync()
         } finally {
