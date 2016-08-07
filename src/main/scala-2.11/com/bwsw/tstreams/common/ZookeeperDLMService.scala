@@ -1,6 +1,8 @@
 package com.bwsw.tstreams.common
 
 import java.net.InetSocketAddress
+import java.util.concurrent.TimeUnit
+
 import com.twitter.common.quantity.Amount
 import com.twitter.common.zookeeper.{DistributedLockImpl, ZooKeeperClient}
 import org.apache.zookeeper.ZooDefs.Ids
@@ -46,11 +48,9 @@ class ZookeeperDLMService(prefix: String, zkHosts: List[InetSocketAddress], zkSe
     if (initPath.isEmpty)
       initPath = "/"
     if (zkClient.exists(initPath, null) == null) {
-      val lock = getLock("/locks/create_path_lock")
-      lock.lock()
-      if (zkClient.exists(initPath, null) == null)
-        createPathRecursive(initPath, CreateMode.PERSISTENT)
-      lock.unlock()
+      LockUtil.withZkLockOrDieDo[Unit](getLock(s"/locks/create_path_lock"), (100, TimeUnit.SECONDS), Some(logger), () => {
+        if (zkClient.exists(initPath, null) == null)
+          createPathRecursive(initPath, CreateMode.PERSISTENT) })
     }
     if (zkClient.exists(prefix + path, null) == null)
       zkClient.create(prefix + path, serialized.getBytes, Ids.OPEN_ACL_UNSAFE, createMode)
@@ -61,11 +61,9 @@ class ZookeeperDLMService(prefix: String, zkHosts: List[InetSocketAddress], zkSe
 
   def setWatcher(path: String, watcher: Watcher): Unit = {
     if (zkClient.exists(prefix + path, null) == null) {
-      val lock = getLock("/locks/watcher_path_lock")
-      lock.lock()
-      if (zkClient.exists(prefix + path, null) == null)
-        createPathRecursive(prefix + path, CreateMode.PERSISTENT)
-      lock.unlock()
+      LockUtil.withZkLockOrDieDo[Unit](getLock(s"/locks/watcher_path_lock"), (100, TimeUnit.SECONDS), Some(logger), () => {
+        if (zkClient.exists(prefix + path, null) == null)
+          createPathRecursive(prefix + path, CreateMode.PERSISTENT) })
     }
     zkClient.getData(prefix + path, watcher, null)
   }

@@ -2,7 +2,7 @@ package com.bwsw.tstreams.coordination.producer.p2p
 
 import java.net.InetSocketAddress
 import java.util.UUID
-import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.{AtomicBoolean, AtomicLong}
 import java.util.concurrent.locks.ReentrantLock
 import java.util.concurrent.{CountDownLatch, ExecutorService, Executors, TimeUnit}
 
@@ -51,30 +51,54 @@ class PeerToPeerAgent(agentAddress : String,
   private val isRunning = new AtomicBoolean(true)
   private var zkConnectionValidator : Thread = null
   private var messageHandler : Thread = null
+  /**
+    * this ID is used to track sequential transactions from the same master
+    */
+  private val randomId = scala.util.Random.nextInt()
 
-  logger.debug(s"[INIT] Start initialize agent with address:{$agentAddress}," +
-    s"stream:{$streamName},partitions:{${usedPartitions.mkString(",")}}\n")
-  usedPartitions foreach {p =>
-    tryCleanThisAgent(p)
-  }
+  /**
+    * this ID map is used to track sequential transactions on subscribers
+    */
+  private val sequentialIds = scala.collection.mutable.Map[Int, AtomicLong]()
+
+  /**
+    * For making low priority masters
+    * @return
+    */
+  private def LOWPRI_PENALTY = 1000 * 1000
+
+  logger.debug(s"[INIT] Start initialize agent with address: {$agentAddress}")
+  logger.debug(s"[INIT] Stream: {$streamName}, partitions: [${usedPartitions.mkString(",")}]")
+  logger.debug(s"[INIT] Master Unique random ID: ${randomId}")
+
+  usedPartitions foreach {p => tryCleanThisAgent(p) }
+
   transport.bindLocalAddress(agentAddress)
+
   startSessionKeepAliveThread()
   startHandleMessages()
-  usedPartitions foreach {p =>
-    val penalty = if (isLowPriorityToBeMaster) 1000*1000 else 0
+
+  usedPartitions foreach { p =>
+    // fill initial sequential counters
+    sequentialIds + (p -> new AtomicLong(0))
+    // save initial records to zk
+    val penalty = if (isLowPriorityToBeMaster) LOWPRI_PENALTY else 0
+
     zkService.create[AgentSettings](s"/producers/agents/$streamName/$p/agent_${agentAddress}_",
        AgentSettings(agentAddress, priority = 0, penalty),
        CreateMode.EPHEMERAL_SEQUENTIAL)
   }
+
   usedPartitions foreach { p =>
     updateMaster(p, init = true)
   }
+
   logger.debug(s"[INIT] Finish initialize agent with address:{$agentAddress}," +
     s"stream:{$streamName},partitions:{${usedPartitions.mkString(",")}\n")
 
   /**
    * Validate that agent with [[agentAddress]]] not exist and delete in opposite
- *
+   *
    * @param partition Partition to check
    */
   private def tryCleanThisAgent(partition : Int) : Unit = {
@@ -205,9 +229,8 @@ class PeerToPeerAgent(agentAddress : String,
             val newMaster = startVoting(partition)
             logger.debug(s"[UPDATER] Finish updating master with init:{$init} on agent:{$agentAddress}" +
               s" on stream:{$streamName},partition:{$partition} with retry=$retries; revoted master:{$newMaster}\n")
-            lockLocalMasters.lock()
-            localMasters(partition) = newMaster
-            lockLocalMasters.unlock()
+            LockUtil.withLockOrDieDo[Unit](lockLocalMasters, (100, TimeUnit.SECONDS), Some(logger), () => {
+            localMasters(partition) = newMaster })
         }
       } else {
         transport.pingRequest(PingRequest(agentAddress, master, partition), transportTimeout) match {
@@ -227,9 +250,8 @@ class PeerToPeerAgent(agentAddress : String,
             assert(p == partition)
             logger.debug(s"[UPDATER] Finish updating master with init:{$init} on agent:{$agentAddress}" +
               s" on stream:{$streamName},partition:{$partition} with retry=$retries; old master:{$master} is alive now\n")
-            lockLocalMasters.lock()
-            localMasters(partition) = master
-            lockLocalMasters.unlock()
+            LockUtil.withLockOrDieDo[Unit](lockLocalMasters, (100, TimeUnit.SECONDS), Some(logger), () => {
+              localMasters(partition) = master })
         }
       }
     }
@@ -399,17 +421,16 @@ class PeerToPeerAgent(agentAddress : String,
   /**
    * Stop this agent
    */
-  def stop() = {
-    externalAccessLock.lock()
-    isRunning.set(false)
-    zkConnectionValidator.join()
-    //to avoid infinite polling block
-    transport.stopRequest(EmptyRequest(agentAddress, agentAddress, usedPartitions.head))
-    messageHandler.join()
-    transport.unbindLocalAddress()
-    zkService.close()
-    externalAccessLock.unlock()
-  }
+  def stop() =
+    LockUtil.withLockOrDieDo[Unit](externalAccessLock, (100, TimeUnit.SECONDS), Some(logger), () => {
+      isRunning.set(false)
+      zkConnectionValidator.join()
+      //to avoid infinite polling block
+      transport.stopRequest(EmptyRequest(agentAddress, agentAddress, usedPartitions.head))
+      messageHandler.join()
+      transport.unbindLocalAddress()
+      zkService.close()
+    })
 
   /**
    * Start handling incoming messages for this agent
@@ -431,7 +452,7 @@ class PeerToPeerAgent(agentAddress : String,
         while (isRunning.get()) {
           val request: IMessage = transport.waitRequest()
           logger.debug(s"[HANDLER] Start handle msg:{$request} on agent:{$agentAddress}")
-          val task : Runnable = createTask(request)
+          val task : Runnable = doLaunchRequestProcessTask(request)
 
           assert(partitionsToExecutors.contains(request.partition))
           val execNum = partitionsToExecutors(request.partition)
@@ -450,103 +471,94 @@ class PeerToPeerAgent(agentAddress : String,
  *
    * @param request Requested message
    */
-  private def createTask(request : IMessage): Runnable = {
+  private def doLaunchRequestProcessTask(request : IMessage): Runnable = {
     new Runnable {
       override def run(): Unit = {
-        request match {
-          case PingRequest(snd, rcv, partition) =>
-            lockLocalMasters.lock()
-            assert(rcv == agentAddress)
-            val response = {
-              if (localMasters.contains(partition) && localMasters(partition) == agentAddress)
-                PingResponse(rcv, snd, partition)
-              else
-                EmptyResponse(rcv, snd, partition)
-            }
-            lockLocalMasters.unlock()
-            response.msgID = request.msgID
-            transport.response(response)
-
-          case SetMasterRequest(snd, rcv, partition) =>
-            lockLocalMasters.lock()
-            assert(rcv == agentAddress)
-            val response = {
-              if (localMasters.contains(partition) && localMasters(partition) == agentAddress)
-                EmptyResponse(rcv,snd,partition)
-              else {
-                localMasters(partition) = agentAddress
-                setThisAgentAsMaster(partition)
-                usedPartitions foreach { partition =>
-                  updateThisAgentPriority(partition, value = -1)
-                }
-                SetMasterResponse(rcv, snd, partition)
+        LockUtil.withLockOrDieDo[Unit](lockLocalMasters, (100, TimeUnit.SECONDS), Some(logger), () => {
+          request match {
+            case PingRequest(snd, rcv, partition) =>
+              assert(rcv == agentAddress)
+              val response = {
+                if (localMasters.contains(partition) && localMasters(partition) == agentAddress)
+                  PingResponse(rcv, snd, partition)
+                else
+                  EmptyResponse(rcv, snd, partition)
               }
-            }
-            lockLocalMasters.unlock()
-            response.msgID = request.msgID
-            transport.response(response)
+              response.msgID = request.msgID
+              transport.response(response)
 
-          case DeleteMasterRequest(snd, rcv, partition) =>
-            lockLocalMasters.lock()
-            assert(rcv == agentAddress)
-            val response = {
-              if (localMasters.contains(partition) && localMasters(partition) == agentAddress) {
-                localMasters.remove(partition)
-                deleteThisAgentFromMasters(partition)
-                usedPartitions foreach { partition =>
-                  updateThisAgentPriority(partition, value = 1)
+            case SetMasterRequest(snd, rcv, partition) =>
+              assert(rcv == agentAddress)
+              val response = {
+                if (localMasters.contains(partition) && localMasters(partition) == agentAddress)
+                  EmptyResponse(rcv, snd, partition)
+                else {
+                  localMasters(partition) = agentAddress
+                  setThisAgentAsMaster(partition)
+                  usedPartitions foreach { partition =>
+                    updateThisAgentPriority(partition, value = -1)
+                  }
+                  SetMasterResponse(rcv, snd, partition)
                 }
-                DeleteMasterResponse(rcv, snd, partition)
-              } else
-                EmptyResponse(rcv, snd, partition)
-            }
-            lockLocalMasters.unlock()
-            response.msgID = request.msgID
-            transport.response(response)
-
-          case TransactionRequest(snd, rcv, partition) =>
-            lockLocalMasters.lock()
-            assert(rcv == agentAddress)
-            if (localMasters.contains(partition) && localMasters(partition) == agentAddress) {
-              val txnUUID: UUID = producer.getNewTxnUUIDLocal()
-              producer.openTxnLocal(txnUUID, partition,
-                onComplete = () => {
-                  val response = TransactionResponse(rcv, snd, txnUUID, partition)
-                  response.msgID = request.msgID
-                  transport.response(response)
-                })
-            } else {
-              val response = EmptyResponse(rcv, snd, partition)
+              }
               response.msgID = request.msgID
               transport.response(response)
-            }
-            lockLocalMasters.unlock()
 
-          case PublishRequest(snd, rcv, msg) =>
-            lockLocalMasters.lock()
-            assert(rcv == agentAddress)
-            if (localMasters.contains(msg.partition) && localMasters(msg.partition) == agentAddress) {
-              producer.subscriberNotifier.publish(msg,
-                onComplete = () => {
-                  val response = PublishResponse(
-                    senderID = rcv,
-                    receiverID = snd,
-                    msg = Message(UUID.randomUUID(), 0, TransactionStatus.opened, msg.partition))
-                  response.msgID = request.msgID
-                  transport.response(response)
-                })
-            } else {
-              val response = EmptyResponse(rcv, snd, msg.partition)
+            case DeleteMasterRequest(snd, rcv, partition) =>
+              assert(rcv == agentAddress)
+              val response = {
+                if (localMasters.contains(partition) && localMasters(partition) == agentAddress) {
+                  localMasters.remove(partition)
+                  deleteThisAgentFromMasters(partition)
+                  usedPartitions foreach { partition =>
+                    updateThisAgentPriority(partition, value = 1)
+                  }
+                  DeleteMasterResponse(rcv, snd, partition)
+                } else
+                  EmptyResponse(rcv, snd, partition)
+              }
               response.msgID = request.msgID
               transport.response(response)
-            }
-            lockLocalMasters.unlock()
 
-          case EmptyRequest(snd,rcv,p) =>
-            val response = EmptyResponse(rcv,snd,p)
-            response.msgID = request.msgID
-            transport.response(response)
-        }
+            case TransactionRequest(snd, rcv, partition) =>
+              assert(rcv == agentAddress)
+              if (localMasters.contains(partition) && localMasters(partition) == agentAddress) {
+                val txnUUID: UUID = producer.getNewTxnUUIDLocal()
+                producer.openTxnLocal(txnUUID, partition,
+                  onComplete = () => {
+                    val response = TransactionResponse(rcv, snd, txnUUID, partition)
+                    response.msgID = request.msgID
+                    transport.response(response)
+                  })
+              } else {
+                val response = EmptyResponse(rcv, snd, partition)
+                response.msgID = request.msgID
+                transport.response(response)
+              }
+
+            case PublishRequest(snd, rcv, msg) =>
+              assert(rcv == agentAddress)
+              if (localMasters.contains(msg.partition) && localMasters(msg.partition) == agentAddress) {
+                producer.subscriberNotifier.publish(msg,
+                  onComplete = () => {
+                    val response = PublishResponse(
+                      senderID = rcv,
+                      receiverID = snd,
+                      msg = Message(UUID.randomUUID(), 0, TransactionStatus.opened, msg.partition))
+                    response.msgID = request.msgID
+                    transport.response(response)
+                  })
+              } else {
+                val response = EmptyResponse(rcv, snd, msg.partition)
+                response.msgID = request.msgID
+                transport.response(response)
+              }
+            case EmptyRequest(snd, rcv, p) =>
+              val response = EmptyResponse(rcv, snd, p)
+              response.msgID = request.msgID
+              transport.response(response)
+          }
+        })
       }
     }
   }
