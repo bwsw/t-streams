@@ -4,9 +4,9 @@ import java.util.UUID
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.locks.ReentrantLock
 
-import com.bwsw.tstreams.coordination.SubscriberCoordinator
-import com.bwsw.tstreams.coordination.pubsub.messages.ProducerTransactionStatus._
-import com.bwsw.tstreams.coordination.pubsub.messages.{ProducerTopicMessage, ProducerTransactionStatus}
+import com.bwsw.tstreams.coordination.messages.state.TransactionStatus._
+import com.bwsw.tstreams.coordination.messages.state.{Message, TransactionStatus}
+import com.bwsw.tstreams.coordination.subscriber.Coordinator
 import com.bwsw.tstreams.txnqueue.PersistentTransactionQueue
 import org.slf4j.LoggerFactory
 
@@ -26,7 +26,7 @@ import scala.util.control.Breaks._
   */
 class SubscriberTransactionsRelay[USERTYPE](subscriber: SubscribingConsumer[USERTYPE],
                                             partition: Int,
-                                            coordinator: SubscriberCoordinator,
+                                            coordinator: Coordinator,
                                             callback: Callback[USERTYPE],
                                             queue: PersistentTransactionQueue,
                                             lastConsumedTransaction: LastTransactionWrapper,
@@ -44,7 +44,7 @@ class SubscriberTransactionsRelay[USERTYPE](subscriber: SubscribingConsumer[USER
   /**
     * Transaction buffer updater
     */
-  private val updateCallback = (msg: ProducerTopicMessage) => {
+  private val updateCallback = (msg: Message) => {
     if (msg.partition == partition) {
       transactionBufferLock.lock()
       logger.debug(s"[UPDATE_CALLBACK PARTITION_$partition] consumed msg with uuid:{${msg.txnUuid.timestamp()}}," +
@@ -54,8 +54,8 @@ class SubscriberTransactionsRelay[USERTYPE](subscriber: SubscribingConsumer[USER
       }
       transactionBufferLock.unlock()
 
-      if (msg.status == ProducerTransactionStatus.preCheckpoint ||
-        msg.status == ProducerTransactionStatus.postCheckpoint) {
+      if (msg.status == TransactionStatus.preCheckpoint ||
+        msg.status == TransactionStatus.postCheckpoint) {
         logger.debug(s"[UPDATE_CALLBACK CER PARTITION_$partition] consumed msg with uuid:{${msg.txnUuid.timestamp()}}," +
           s" status:{${msg.status}}")
         checkpointEventsResolver.update(partition, msg.txnUuid, msg.status)
@@ -149,9 +149,9 @@ class SubscriberTransactionsRelay[USERTYPE](subscriber: SubscribingConsumer[USER
     transactionsGreaterThanLast foreach { txn =>
       logger.debug(s"[MORE_LAST PARTITION_$partition] consumed txn with uuid:{${txn.txnUuid.timestamp()}}")
       if (txn.totalItems == -1) {
-        transactionBuffer.update(txn.txnUuid, ProducerTransactionStatus.opened, txn.ttl)
+        transactionBuffer.update(txn.txnUuid, TransactionStatus.opened, txn.ttl)
       } else {
-        transactionBuffer.update(txn.txnUuid, ProducerTransactionStatus.postCheckpoint, -1)
+        transactionBuffer.update(txn.txnUuid, TransactionStatus.postCheckpoint, -1)
       }
       assert(txn.txnUuid.timestamp() > lastTxn.timestamp(),
         logger.debug(s"[RELAY WRONG ASSERT] ${txn.txnUuid.timestamp()} " +
@@ -190,12 +190,12 @@ class SubscriberTransactionsRelay[USERTYPE](subscriber: SubscribingConsumer[USER
             val key: UUID = entry.getKey
             val (status: ProducerTransactionStatus, _) = entry.getValue
             status match {
-              case ProducerTransactionStatus.opened |
-                   ProducerTransactionStatus.`update` |
-                   ProducerTransactionStatus.preCheckpoint =>
+              case TransactionStatus.opened |
+                   TransactionStatus.`update` |
+                   TransactionStatus.preCheckpoint =>
                 break()
 
-              case ProducerTransactionStatus.`postCheckpoint` =>
+              case TransactionStatus.`postCheckpoint` =>
                 logger.debug(s"[QUEUE_UPDATER PARTITION_$partition] ${key.timestamp()}" +
                   s" last_consumed=${lastConsumedTransaction.get().timestamp()} curr_amount=$totalAmount")
                 totalAmount += 1

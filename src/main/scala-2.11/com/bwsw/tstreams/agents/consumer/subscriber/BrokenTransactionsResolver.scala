@@ -4,8 +4,8 @@ import java.util.UUID
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.locks.ReentrantLock
 
-import com.bwsw.tstreams.coordination.pubsub.messages.ProducerTransactionStatus
-import com.bwsw.tstreams.coordination.pubsub.messages.ProducerTransactionStatus._
+import com.bwsw.tstreams.coordination.messages.state.TransactionStatus._
+import com.bwsw.tstreams.coordination.messages.state.TransactionStatus
 import org.slf4j.LoggerFactory
 
 import scala.collection.mutable
@@ -34,7 +34,7 @@ class BrokenTransactionsResolver(subscriber: SubscribingConsumer[_]) {
     logger.debug(s"[CHECKPOINT EVENT RESOLVER] start update CER on partition:{$partition}" +
       s" with txn:{${txn.timestamp()}}")
     status match {
-      case ProducerTransactionStatus.preCheckpoint =>
+      case TransactionStatus.preCheckpoint =>
         if (partitionToTxns.contains(partition)) {
           assert(retries.contains(partition))
           retries(partition)(txn) = MAX_RETRIES
@@ -48,7 +48,7 @@ class BrokenTransactionsResolver(subscriber: SubscribingConsumer[_]) {
           s"partition:{$partition}" +
           s" with txn:{${txn.timestamp()}}")
 
-      case ProducerTransactionStatus.`postCheckpoint` =>
+      case TransactionStatus.`postCheckpoint` =>
         removeTxn(partition, txn)
         logger.debug(s"[CHECKPOINT EVENT RESOLVER] [UPDATE FINALCHECKPOINT] CER on " +
           s"partition:{$partition}" +
@@ -102,7 +102,7 @@ class BrokenTransactionsResolver(subscriber: SubscribingConsumer[_]) {
     partitionToTxns foreach { case (partition, transactions) =>
       transactions foreach { txn =>
         if (retries(partition)(txn) == 0) {
-          updateTransactionBuffer(partition, txn, ProducerTransactionStatus.cancel, -1)
+          updateTransactionBuffer(partition, txn, TransactionStatus.cancel, -1)
           removeTxn(partition, txn)
           logger.debug(s"[CHECKPOINT EVENT RESOLVER] [REFRESH ZERO RETRY] CER on" +
             s" partition:{$partition}" +
@@ -112,7 +112,7 @@ class BrokenTransactionsResolver(subscriber: SubscribingConsumer[_]) {
           updatedTransaction match {
             case Some(transactionSettings) =>
               if (transactionSettings.totalItems != -1) {
-                updateTransactionBuffer(partition, txn, ProducerTransactionStatus.postCheckpoint, -1)
+                updateTransactionBuffer(partition, txn, TransactionStatus.postCheckpoint, -1)
                 removeTxn(partition, txn)
                 logger.debug(s"[CHECKPOINT EVENT RESOLVER] [REFRESH TB UPDATE] CER on" +
                   s" partition:{$partition}" +
@@ -126,7 +126,7 @@ class BrokenTransactionsResolver(subscriber: SubscribingConsumer[_]) {
 
             case None =>
               //the transaction has been deleted by cassandra so we need to remove it from transaction buffer
-              updateTransactionBuffer(partition, txn, ProducerTransactionStatus.cancel, -1)
+              updateTransactionBuffer(partition, txn, TransactionStatus.cancel, -1)
               removeTxn(partition, txn)
           }
         }

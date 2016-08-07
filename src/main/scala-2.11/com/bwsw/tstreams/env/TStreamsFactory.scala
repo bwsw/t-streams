@@ -15,7 +15,7 @@ import com.bwsw.tstreams.agents.producer.DataInsertType.{AbstractInsertType, Bat
 import com.bwsw.tstreams.agents.producer.{Producer, CoordinationOptions, Options}
 import com.bwsw.tstreams.common.{LockUtil, NetworkUtil}
 import com.bwsw.tstreams.converter.IConverter
-import com.bwsw.tstreams.coordination.transactions.transport.impl.TcpTransport
+import com.bwsw.tstreams.coordination.producer.transport.impl.TcpTransport
 import com.bwsw.tstreams.data.IStorage
 import com.bwsw.tstreams.data.aerospike.{AerospikeStorageFactory, AerospikeStorageOptions}
 import com.bwsw.tstreams.data.cassandra.{CassandraStorageFactory, CassandraStorageOptions}
