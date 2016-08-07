@@ -5,7 +5,6 @@ import java.util.concurrent.{CountDownLatch, TimeUnit}
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.locks.ReentrantLock
 
-import com.bwsw.ResettableCountDownLatch
 import com.bwsw.tstreams.common.LockUtil
 import com.bwsw.tstreams.coordination.messages.state.{Message, TransactionStatus}
 import com.bwsw.tstreams.debug.GlobalHooks
