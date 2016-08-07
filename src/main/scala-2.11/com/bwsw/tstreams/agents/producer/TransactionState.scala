@@ -3,7 +3,7 @@ package com.bwsw.tstreams.agents.producer
 import java.util.concurrent.{CountDownLatch, TimeUnit}
 import java.util.concurrent.atomic.AtomicBoolean
 
-import com.bwsw.ResettableCountDownLatch
+import com.bwsw.tstreams.common.ResettableCountDownLatch
 
 /**
   * Stores state of transaction
@@ -91,7 +91,7 @@ class TransactionState {
   /**
     * changes transaction state to finished updating
     */
-  def setUpdateFinished = updateSignalVar.countDown()
+  def setUpdateFinished = updateSignalVar.countDown
 
   /**
     * awaits while transaction updates
