@@ -330,7 +330,7 @@ class PeerToPeerAgent(agentAddress : String,
   def generateNewTransaction(partition : Int) : UUID = {
     LockUtil.withLockOrDieDo[UUID](externalAccessLock, (100, TimeUnit.SECONDS), Some(logger), () => {
 
-      val (isMasterKnown, master) = LockUtil.withLockOrDieDo[Unit](lockLocalMasters, (100, TimeUnit.SECONDS), Some(logger), () => {
+      val (isMasterKnown, master) = LockUtil.withLockOrDieDo[(Boolean, String)](lockLocalMasters, (100, TimeUnit.SECONDS), Some(logger), () => {
         val isMasterKnown = localMasters.contains(partition)
         val master = if (isMasterKnown) localMasters(partition) else null
         (isMasterKnown, master)
