@@ -48,8 +48,7 @@ class SubscriberChannelHandler(subscriberManager: CallbackManager) extends Simpl
     * @param cause Exception cause
     */
   override def exceptionCaught(ctx: ChannelHandlerContext, cause: Throwable) = {
-    println(s"SubscriberListener exception : ${cause.getMessage}")
-    //    ctx.close()
+    logger.error(s"SubscriberListener exception : ${cause.getMessage}")
   }
 }
 
