@@ -1,9 +1,11 @@
 package com.bwsw.tstreams.coordination.pubsub.subscriber
 
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.{CountDownLatch, TimeUnit}
 
 import com.bwsw.tstreams.coordination.pubsub.listener.{ProducerTopicMessageDecoder, SubscriberChannelHandler}
 import com.bwsw.tstreams.coordination.pubsub.messages.ProducerTopicMessage
+import com.fasterxml.jackson.databind.ser.std.StdJdkSerializers.AtomicBooleanSerializer
 import io.netty.bootstrap.ServerBootstrap
 import io.netty.channel.ChannelInitializer
 import io.netty.channel.nio.NioEventLoopGroup
@@ -22,14 +24,18 @@ class ProducerEventReceiverTcpServer(host: String, port: Int) {
   private val bossGroup = new NioEventLoopGroup(1)
   private val workerGroup = new NioEventLoopGroup()
   private val MAX_FRAME_LENGTH = 8192
-  private val subscriberManager = new CallbackManager()
-  private val channelHandler: SubscriberChannelHandler = new SubscriberChannelHandler(subscriberManager)
+  private val callbackManager = new CallbackManager()
+  private val channelHandler: SubscriberChannelHandler = new SubscriberChannelHandler(callbackManager)
   private var listenerThread: Thread = null
+  private val isStopped = new AtomicBoolean(false)
 
   /**
     * Stop to listen [[ProducerTopicMessage]]]
     */
   def stop(): Unit = {
+    if(isStopped.getAndSet(true))
+      throw new IllegalStateException("ProducerEventReceiver is stopped already. Second try to stop.")
+
     workerGroup.shutdownGracefully(0, 0, TimeUnit.SECONDS).await()
     bossGroup.shutdownGracefully(0, 0, TimeUnit.SECONDS).await()
   }
@@ -40,7 +46,9 @@ class ProducerEventReceiverTcpServer(host: String, port: Int) {
     * @param callback Event callback
     */
   def addCallbackToChannelHandler(callback: (ProducerTopicMessage) => Unit): Unit = {
-    subscriberManager.addCallback(callback)
+    if(isStopped.get)
+      throw new IllegalStateException("ProducerEventReceiver is stopped already.")
+    callbackManager.addCallback(callback)
   }
 
   /**
@@ -48,18 +56,24 @@ class ProducerEventReceiverTcpServer(host: String, port: Int) {
     * connection managed by [[channelHandler]]]
     */
   def getConnectionsAmount(): Int = {
-    subscriberManager.getCount()
+    if(isStopped.get)
+      throw new IllegalStateException("ProducerEventReceiver is stopped already.")
+    callbackManager.getCount()
   }
 
   def resetConnectionsAmount(): Unit = {
-    subscriberManager.resetCount()
+    if(isStopped.get)
+      throw new IllegalStateException("ProducerEventReceiver is stopped already.")
+    callbackManager.resetCount()
   }
 
   /**
     * Start this listener
     */
   def start(): Unit = {
-    assert(listenerThread == null || !listenerThread.isAlive)
+    if(isStopped.get)
+      throw new IllegalStateException("ProducerEventReceiver is stopped already.")
+
     val syncPoint = new CountDownLatch(1)
     listenerThread = new Thread(new Runnable {
       override def run(): Unit = {
