@@ -1,10 +1,10 @@
 package agents.producer
 
-import com.bwsw.ResettableCountDownLatch
 import com.bwsw.tstreams.agents.producer.NewTransactionProducerPolicy
+import com.bwsw.tstreams.common.ResettableCountDownLatch
 import com.bwsw.tstreams.debug.GlobalHooks
 import com.bwsw.tstreams.env.TSF_Dictionary
-import org.scalatest.{BeforeAndAfterAll, Matchers, FlatSpec}
+import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import testutils.{LocalGeneratorCreator, TestUtils}
 
 /**
@@ -19,12 +19,12 @@ class ProducerUpdateTaskTest  extends FlatSpec with Matchers with BeforeAndAfter
   System.setProperty("DEBUG", "true")
   GlobalHooks.addHook(GlobalHooks.transactionUpdateTaskBegin, () =>{
     flag = 2
-    blockCheckpoint1.countDown()
+    blockCheckpoint1.countDown
   })
 
   GlobalHooks.addHook(GlobalHooks.transactionUpdateTaskEnd, () =>{
     flag = 3
-    blockCheckpoint2.countDown()
+    blockCheckpoint2.countDown
   })
 
 

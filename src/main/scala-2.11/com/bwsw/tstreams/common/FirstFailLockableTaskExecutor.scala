@@ -4,7 +4,6 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.locks.ReentrantLock
 import java.util.concurrent.{TimeUnit, CountDownLatch, Executor, LinkedBlockingQueue}
 
-import com.bwsw.ResettableCountDownLatch
 import com.bwsw.tstreams.common.FirstFailLockableTaskExecutor.{FirstFailLockableExecutorException, FirstFailLockableExecutorTask}
 import org.slf4j.LoggerFactory
 
@@ -109,7 +108,7 @@ class FirstFailLockableTaskExecutor extends Executor {
   }
 
   private def getRunnable: Runnable = new Runnable {
-    override def run(): Unit = awaitSignalVar.countDown()
+    override def run(): Unit = awaitSignalVar.countDown
   }
 
   /**
