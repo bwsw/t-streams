@@ -12,7 +12,7 @@ import com.bwsw.tstreams.agents.consumer.Offsets.IOffset
 import com.bwsw.tstreams.agents.consumer.subscriber.{Callback, SubscribingConsumer}
 import com.bwsw.tstreams.agents.consumer.{Consumer, ConsumerOptions, SubscriberCoordinationOptions}
 import com.bwsw.tstreams.agents.producer.DataInsertType.{AbstractInsertType, BatchInsert, SingleElementInsert}
-import com.bwsw.tstreams.agents.producer.{Producer, CoordinationOptions, Options}
+import com.bwsw.tstreams.agents.producer.{CoordinationOptions, Options, Producer}
 import com.bwsw.tstreams.common.{LockUtil, NetworkUtil}
 import com.bwsw.tstreams.converter.IConverter
 import com.bwsw.tstreams.coordination.producer.transport.impl.TcpTransport
@@ -21,9 +21,8 @@ import com.bwsw.tstreams.data.aerospike.{AerospikeStorageFactory, AerospikeStora
 import com.bwsw.tstreams.data.cassandra.{CassandraStorageFactory, CassandraStorageOptions}
 import com.bwsw.tstreams.generator.IUUIDGenerator
 import com.bwsw.tstreams.metadata.{MetadataStorage, MetadataStorageFactory}
-import com.bwsw.tstreams.policy.AbstractPolicy
+import com.bwsw.tstreams.policy.{AbstractPolicy, RoundRobinPolicy}
 import com.bwsw.tstreams.streams.TStream
-import com.bwsw.tstreams.velocity.RoundRobinPolicyCreator
 import org.slf4j.LoggerFactory
 
 import scala.collection.mutable.HashMap
@@ -638,7 +637,7 @@ class TStreamsFactory(envname: String = "T-streams") {
     val consumer_data_preload = pAsInt(TSF_Dictionary.Consumer.DATA_PRELOAD, Consumer_data_preload_default)
     pAssertIntRange(consumer_data_preload, Consumer_data_preload_min, Consumer_data_preload_max)
 
-    val consumerOptions = new ConsumerOptions[USERTYPE](transactionsPreload = consumer_transaction_preload, dataPreload = consumer_data_preload, converter = converter, readPolicy = RoundRobinPolicyCreator.getRoundRobinPolicy(stream, partitions), offset = offset, txnGenerator = txnGenerator, useLastOffset = isUseLastOffset)
+    val consumerOptions = new ConsumerOptions[USERTYPE](transactionsPreload = consumer_transaction_preload, dataPreload = consumer_data_preload, converter = converter, readPolicy = new RoundRobinPolicy(stream, partitions), offset = offset, txnGenerator = txnGenerator, useLastOffset = isUseLastOffset)
 
     consumerOptions
   }
@@ -711,7 +710,7 @@ class TStreamsFactory(envname: String = "T-streams") {
 
       if (pAsString(TSF_Dictionary.Producer.Transaction.DISTRIBUTION_POLICY) ==
         TSF_Dictionary.Producer.Transaction.Consts.DISTRIBUTION_POLICY_RR) {
-        writePolicy = RoundRobinPolicyCreator.getRoundRobinPolicy(stream, partitions)
+        writePolicy = new RoundRobinPolicy(stream, partitions)
       }
       else {
         throw new InvalidParameterException("Only UF_Dictionary.Producer.Transaction.Consts.DISTRIBUTION_POLICY_RR policy " +
