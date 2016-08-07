@@ -7,7 +7,7 @@ import java.util.concurrent.locks.ReentrantLock
 
 import com.bwsw.ResettableCountDownLatch
 import com.bwsw.tstreams.common.LockUtil
-import com.bwsw.tstreams.coordination.pubsub.messages.{ProducerTopicMessage, ProducerTransactionStatus}
+import com.bwsw.tstreams.coordination.messages.state.{Message, TransactionStatus}
 import com.bwsw.tstreams.debug.GlobalHooks
 import org.slf4j.LoggerFactory
 
@@ -138,9 +138,9 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
       transaction = transactionUuid,
       executor    = txnOwner.backendActivityService,
       function    = () => {
-        val msg = ProducerTopicMessage(txnUuid = transactionUuid,
+        val msg = Message(txnUuid = transactionUuid,
           ttl = -1,
-          status = ProducerTransactionStatus.cancel,
+          status = TransactionStatus.cancel,
           partition = partition)
         txnOwner.masterP2PAgent.publish(msg)
         logger.debug(s"[CANCEL PARTITION_${msg.partition}] ts=${msg.txnUuid.timestamp()} status=${msg.status}")
@@ -178,10 +178,10 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
         return
     }
 
-    txnOwner.masterP2PAgent.publish(ProducerTopicMessage(
+    txnOwner.masterP2PAgent.publish(Message(
       txnUuid = transactionUuid,
       ttl = -1,
-      status = ProducerTransactionStatus.postCheckpoint,
+      status = TransactionStatus.postCheckpoint,
       partition = partition))
 
     logger.debug(s"[FINAL CHECKPOINT PARTITION_$partition] " +
@@ -208,10 +208,10 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
       logger.debug(s"[START PRE CHECKPOINT PARTITION_$partition] " +
         s"ts=${transactionUuid.timestamp()}")
 
-      txnOwner.masterP2PAgent.publish(ProducerTopicMessage(
+      txnOwner.masterP2PAgent.publish(Message(
         txnUuid = transactionUuid,
         ttl = -1,
-        status = ProducerTransactionStatus.preCheckpoint,
+        status = TransactionStatus.preCheckpoint,
         partition = partition))
 
       //debug purposes only
@@ -239,10 +239,10 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
         function = checkpointPostEventPart)
     }
     else {
-      txnOwner.masterP2PAgent.publish(ProducerTopicMessage(
+      txnOwner.masterP2PAgent.publish(Message(
         txnUuid = transactionUuid,
         ttl = -1,
-        status = ProducerTransactionStatus.cancel,
+        status = TransactionStatus.cancel,
         partition = partition))
     }
   }
@@ -279,10 +279,10 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
           logger.debug(s"[START PRE CHECKPOINT PARTITION_$partition] " +
             s"ts=${transactionUuid.timestamp()}")
 
-          txnOwner.masterP2PAgent.publish(ProducerTopicMessage(
+          txnOwner.masterP2PAgent.publish(Message(
             txnUuid = transactionUuid,
             ttl = -1,
-            status = ProducerTransactionStatus.preCheckpoint,
+            status = TransactionStatus.preCheckpoint,
             partition = partition))
 
           //debug purposes only
@@ -300,10 +300,10 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
           //debug purposes only
           GlobalHooks.invoke(GlobalHooks.afterCommitFailure)
 
-          txnOwner.masterP2PAgent.publish(ProducerTopicMessage(
+          txnOwner.masterP2PAgent.publish(Message(
             txnUuid = transactionUuid,
             ttl = -1,
-            status = ProducerTransactionStatus.postCheckpoint,
+            status = TransactionStatus.postCheckpoint,
             partition = partition))
 
           logger.debug(s"[FINAL CHECKPOINT PARTITION_$partition] " +
@@ -311,10 +311,10 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
 
         }
         else {
-          txnOwner.masterP2PAgent.publish(ProducerTopicMessage(
+          txnOwner.masterP2PAgent.publish(Message(
             txnUuid = transactionUuid,
             ttl = -1,
-            status = ProducerTransactionStatus.cancel,
+            status = TransactionStatus.cancel,
             partition = partition))
         }
       }
@@ -329,12 +329,12 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
     }
 
     state.setUpdateFinished
-    txnOwner.subscriberNotifier.publish(ProducerTopicMessage(
+    txnOwner.subscriberNotifier.publish(Message(
       txnUuid = transactionUuid,
       ttl = txnOwner.producerOptions.transactionTTL,
-      status = ProducerTransactionStatus.update,
+      status = TransactionStatus.update,
       partition = partition), () => ())
-    logger.debug(s"[KEEP_ALIVE THREAD PARTITION_${partition}] ts=${transactionUuid.timestamp()} status=${ProducerTransactionStatus.update}")
+    logger.debug(s"[KEEP_ALIVE THREAD PARTITION_${partition}] ts=${transactionUuid.timestamp()} status=${TransactionStatus.update}")
   }
 
   def updateTxnKeepAliveState(): Unit = {

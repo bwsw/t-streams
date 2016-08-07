@@ -1,7 +1,7 @@
 package agents.subscriber
 
-import com.bwsw.tstreams.coordination.pubsub.messages.ProducerTopicMessage
-import com.bwsw.tstreams.coordination.pubsub.subscriber.ProducerEventReceiverTcpServer
+import com.bwsw.tstreams.coordination.messages.state.Message
+import com.bwsw.tstreams.coordination.subscriber.ProducerEventReceiverTcpServer
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 
 /**
@@ -12,7 +12,7 @@ class ProducerEventReceiverTcpServerTests  extends FlatSpec with Matchers with B
   "Normal lifecycle flow" should "be finished without errors" in {
     val s = new ProducerEventReceiverTcpServer("0.0.0.0",8000)
     var cnt: Int = 0
-    val mf = (m: ProducerTopicMessage) => { cnt +=1 }
+    val mf = (m: Message) => { cnt +=1 }
     s.addCallbackToChannelHandler(mf)
     s.getConnectionsAmount() shouldBe 0
     s.start()

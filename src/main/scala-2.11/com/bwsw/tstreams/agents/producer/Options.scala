@@ -4,8 +4,8 @@ import java.net.InetSocketAddress
 
 import com.bwsw.tstreams.agents.producer.DataInsertType.AbstractInsertType
 import com.bwsw.tstreams.converter.IConverter
-import com.bwsw.tstreams.coordination.transactions.peertopeer.PeerToPeerAgent
-import com.bwsw.tstreams.coordination.transactions.transport.traits.ITransport
+import com.bwsw.tstreams.coordination.producer.p2p.PeerToPeerAgent
+import com.bwsw.tstreams.coordination.producer.transport.traits.ITransport
 import com.bwsw.tstreams.generator.IUUIDGenerator
 import com.bwsw.tstreams.policy.AbstractPolicy
 

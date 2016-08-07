@@ -4,7 +4,7 @@ import java.net.InetSocketAddress
 
 import com.bwsw.tstreams.agents.producer.DataInsertType.BatchInsert
 import com.bwsw.tstreams.agents.producer.{Producer, Options, CoordinationOptions}
-import com.bwsw.tstreams.coordination.transactions.transport.impl.TcpTransport
+import com.bwsw.tstreams.coordination.producer.transport.impl.TcpTransport
 
 object MasterRunner {
 

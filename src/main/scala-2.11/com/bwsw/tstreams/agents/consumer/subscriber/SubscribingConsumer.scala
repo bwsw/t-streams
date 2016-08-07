@@ -4,7 +4,7 @@ import java.util.UUID
 import java.util.concurrent.{ExecutorService, Executors}
 
 import com.bwsw.tstreams.agents.consumer.{Consumer, ConsumerOptions, ConsumerTransaction, SubscriberCoordinationOptions}
-import com.bwsw.tstreams.coordination.SubscriberCoordinator
+import com.bwsw.tstreams.coordination.subscriber.Coordinator
 import com.bwsw.tstreams.streams.TStream
 import com.bwsw.tstreams.txnqueue.PersistentTransactionQueue
 import org.slf4j.LoggerFactory
@@ -43,7 +43,7 @@ class SubscribingConsumer[USERTYPE](name: String,
     * Coordinator for providing updates to this subscriber from producers
     * and establishing stream locks
     */
-  private var coordinator = new SubscriberCoordinator(
+  private var coordinator = new Coordinator(
     subscriberCoordinationOptions.agentAddress,
     subscriberCoordinationOptions.zkRootPath,
     subscriberCoordinationOptions.zkHosts,
@@ -105,7 +105,7 @@ class SubscribingConsumer[USERTYPE](name: String,
 
     // TODO: why it can be stopped, why reconstruct?
     if (coordinator.isStoped) {
-      coordinator = new SubscriberCoordinator(
+      coordinator = new Coordinator(
         subscriberCoordinationOptions.agentAddress,
         subscriberCoordinationOptions.zkRootPath,
         subscriberCoordinationOptions.zkHosts,

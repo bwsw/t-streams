@@ -3,9 +3,9 @@ package com.bwsw.tstreams.common
 import java.util.UUID
 
 import ProtocolMessageSerializer.ProtocolMessageSerializerException
-import com.bwsw.tstreams.coordination.pubsub.messages.{ProducerTopicMessage, ProducerTransactionStatus}
-import com.bwsw.tstreams.coordination.transactions.messages._
-import com.bwsw.tstreams.coordination.transactions.peertopeer.AgentSettings
+import com.bwsw.tstreams.coordination.messages.master._
+import com.bwsw.tstreams.coordination.messages.state.{Message, TransactionStatus}
+import com.bwsw.tstreams.coordination.producer.p2p.AgentSettings
 
 import scala.collection.mutable
 import scala.util.control.Breaks._
@@ -57,15 +57,15 @@ class ProtocolMessageSerializer {
       case x: TransactionResponse =>
         s"{TRs,${x.senderID},${x.receiverID},${x.txnUUID.toString},${x.partition},${x.msgID}}"
 
-      case ProducerTopicMessage(txnUuid, ttl, status, partition) =>
+      case Message(txnUuid, ttl, status, partition) =>
         val serializedStatus = serializeInternal(status)
         s"{PTM,${txnUuid.toString},$ttl,$serializedStatus,$partition}"
 
-      case ProducerTransactionStatus.preCheckpoint => s"{P}"
-      case ProducerTransactionStatus.`postCheckpoint` => "{F}"
-      case ProducerTransactionStatus.`update` => "{U}"
-      case ProducerTransactionStatus.`cancel` => "{C}"
-      case ProducerTransactionStatus.opened => "{O}"
+      case TransactionStatus.preCheckpoint => s"{P}"
+      case TransactionStatus.`postCheckpoint` => "{F}"
+      case TransactionStatus.`update` => "{U}"
+      case TransactionStatus.`cancel` => "{C}"
+      case TransactionStatus.opened => "{O}"
     }
   }
 
@@ -143,12 +143,12 @@ class ProtocolMessageSerializer {
         res
       case "PuRq" =>
         assert(tokens.size == 5)
-        val res = PublishRequest(tokens(1).toString, tokens(2).toString, tokens(3).asInstanceOf[ProducerTopicMessage])
+        val res = PublishRequest(tokens(1).toString, tokens(2).toString, tokens(3).asInstanceOf[Message])
         res.msgID = tokens(4).toString.toLong
         res
       case "PuRs" =>
         assert(tokens.size == 5)
-        val res = PublishResponse(tokens(1).toString, tokens(2).toString, tokens(3).asInstanceOf[ProducerTopicMessage])
+        val res = PublishResponse(tokens(1).toString, tokens(2).toString, tokens(3).asInstanceOf[Message])
         res.msgID = tokens(4).toString.toLong
         res
       case "SMRq" =>
@@ -174,26 +174,26 @@ class ProtocolMessageSerializer {
         res
       case "PTM" =>
         assert(tokens.size == 5)
-        ProducerTopicMessage(UUID.fromString(tokens(1).toString), tokens(2).toString.toInt,
-          tokens(3).asInstanceOf[ProducerTransactionStatus.ProducerTransactionStatus], tokens(4).toString.toInt)
+        Message(UUID.fromString(tokens(1).toString), tokens(2).toString.toInt,
+          tokens(3).asInstanceOf[TransactionStatus.ProducerTransactionStatus], tokens(4).toString.toInt)
       case "AS" =>
         assert(tokens.size == 4)
         AgentSettings(tokens(1).toString, tokens(2).toString.toInt, tokens(3).toString.toInt)
       case "P" =>
         assert(tokens.size == 1)
-        ProducerTransactionStatus.preCheckpoint
+        TransactionStatus.preCheckpoint
       case "F" =>
         assert(tokens.size == 1)
-        ProducerTransactionStatus.postCheckpoint
+        TransactionStatus.postCheckpoint
       case "U" =>
         assert(tokens.size == 1)
-        ProducerTransactionStatus.update
+        TransactionStatus.update
       case "C" =>
         assert(tokens.size == 1)
-        ProducerTransactionStatus.cancel
+        TransactionStatus.cancel
       case "O" =>
         assert(tokens.size == 1)
-        ProducerTransactionStatus.opened
+        TransactionStatus.opened
     }
   }
 

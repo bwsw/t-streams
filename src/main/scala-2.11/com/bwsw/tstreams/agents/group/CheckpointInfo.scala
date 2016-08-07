@@ -3,8 +3,8 @@ package com.bwsw.tstreams.agents.group
 import java.util.UUID
 
 import com.bwsw.tstreams.agents.producer.Transaction
-import com.bwsw.tstreams.coordination.pubsub.messages.ProducerTopicMessage
-import com.bwsw.tstreams.coordination.transactions.peertopeer.PeerToPeerAgent
+import com.bwsw.tstreams.coordination.messages.state.Message
+import com.bwsw.tstreams.coordination.producer.p2p.PeerToPeerAgent
 
 import scala.language.existentials
 
@@ -33,8 +33,8 @@ sealed trait CheckpointInfo
   */
 case class ProducerCheckpointInfo(transactionRef: Transaction[_],
                                   agent: PeerToPeerAgent,
-                                  preCheckpointEvent: ProducerTopicMessage,
-                                  finalCheckpointEvent: ProducerTopicMessage,
+                                  preCheckpointEvent: Message,
+                                  finalCheckpointEvent: Message,
                                   streamName: String,
                                   partition: Int,
                                   transaction: UUID,
