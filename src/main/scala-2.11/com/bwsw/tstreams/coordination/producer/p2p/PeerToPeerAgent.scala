@@ -4,10 +4,10 @@ import java.net.InetSocketAddress
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.locks.ReentrantLock
-import java.util.concurrent.{CountDownLatch, ExecutorService, Executors}
+import java.util.concurrent.{CountDownLatch, ExecutorService, Executors, TimeUnit}
 
 import com.bwsw.tstreams.agents.producer.Producer
-import com.bwsw.tstreams.common.ZookeeperDLMService
+import com.bwsw.tstreams.common.{LockUtil, ZookeeperDLMService}
 import com.bwsw.tstreams.coordination.messages.master._
 import com.bwsw.tstreams.coordination.messages.state.{Message, TransactionStatus}
 import com.bwsw.tstreams.coordination.producer.transport.traits.ITransport
@@ -327,39 +327,43 @@ class PeerToPeerAgent(agentAddress : String,
    * @param partition Transaction partition
    * @return Transaction UUID
    */
-  def getNewTxn(partition : Int) : UUID = {
-    externalAccessLock.lock()
-    lockLocalMasters.lock()
-    val condition = localMasters.contains(partition)
-    val localMaster = if (condition) localMasters(partition) else null
-    lockLocalMasters.unlock()
-    logger.debug(s"[GETTXN] Start retrieve txn for agent with address:{$agentAddress}," +
-      s"stream:{$streamName},partition:{$partition} from [MASTER:{$localMaster}]\n")
-    val res =
-    if (condition){
-      val txnResponse = transport.transactionRequest(TransactionRequest(agentAddress, localMaster, partition), transportTimeout)
-      txnResponse match {
-        case null =>
-          updateMaster(partition, init = false)
-          getNewTxn(partition)
+  def generateNewTransaction(partition : Int) : UUID = {
+    LockUtil.withLockOrDieDo[UUID](externalAccessLock, (100, TimeUnit.SECONDS), Some(logger), () => {
 
-        case EmptyResponse(snd,rcv,p) =>
-          assert(p == partition)
-          updateMaster(partition, init = false)
-          getNewTxn(partition)
+      val (isMasterKnown, master) = LockUtil.withLockOrDieDo[Unit](lockLocalMasters, (100, TimeUnit.SECONDS), Some(logger), () => {
+        val isMasterKnown = localMasters.contains(partition)
+        val master = if (isMasterKnown) localMasters(partition) else null
+        (isMasterKnown, master)
+      })
 
-        case TransactionResponse(snd, rcv, uuid, p) =>
-          assert(p == partition)
-          logger.debug(s"[GETTXN] Finish retrieve txn for agent with address:{$agentAddress}," +
-            s"stream:{$streamName},partition:{$partition} with timeuuid:{${uuid.timestamp()}} from [MASTER:{$localMaster}]\n")
-          uuid
-      }
-    } else {
-      updateMaster(partition, init = false)
-      getNewTxn(partition)
-    }
-    externalAccessLock.unlock()
-    res
+      logger.debug(s"[GETTXN] Start retrieve txn for agent with address:{$agentAddress}," +
+        s"stream:{$streamName},partition:{$partition} from [MASTER:{$master}]\n")
+
+      val res =
+        if (isMasterKnown) {
+          val txnResponse = transport.transactionRequest(TransactionRequest(agentAddress, master, partition), transportTimeout)
+          txnResponse match {
+            case null =>
+              updateMaster(partition, init = false)
+              generateNewTransaction(partition)
+
+            case EmptyResponse(snd, rcv, p) =>
+              assert(p == partition)
+              updateMaster(partition, init = false)
+              generateNewTransaction(partition)
+
+            case TransactionResponse(snd, rcv, uuid, p) =>
+              assert(p == partition)
+              logger.debug(s"[GETTXN] Finish retrieve txn for agent with address:{$agentAddress}," +
+                s"stream:{$streamName},partition:{$partition} with timeuuid:{${uuid.timestamp()}} from [MASTER:{$master}]\n")
+              uuid
+          }
+        } else {
+          updateMaster(partition, init = false)
+          generateNewTransaction(partition)
+        }
+      res
+    })
   }
 
   //TODO remove after complex testing
