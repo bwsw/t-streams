@@ -553,6 +553,7 @@ class PeerToPeerAgent(agentAddress : String,
                 response.msgID = request.msgID
                 transport.response(response)
               }
+
             case EmptyRequest(snd, rcv, p) =>
               val response = EmptyResponse(rcv, snd, p)
               response.msgID = request.msgID
