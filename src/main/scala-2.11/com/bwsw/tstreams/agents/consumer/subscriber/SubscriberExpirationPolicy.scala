@@ -2,7 +2,7 @@ package com.bwsw.tstreams.agents.consumer.subscriber
 
 import java.util.UUID
 
-import com.bwsw.tstreams.coordination.pubsub.messages.ProducerTransactionStatus._
+import com.bwsw.tstreams.coordination.messages.state.TransactionStatus._
 import org.apache.commons.collections4.map.PassiveExpiringMap
 
 /**

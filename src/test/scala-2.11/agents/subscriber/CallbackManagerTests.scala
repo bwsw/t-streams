@@ -1,7 +1,7 @@
 package agents.subscriber
 
-import com.bwsw.tstreams.coordination.pubsub.messages.{ProducerTopicMessage, ProducerTransactionStatus}
-import com.bwsw.tstreams.coordination.pubsub.subscriber.CallbackManager
+import com.bwsw.tstreams.coordination.messages.state.{Message, TransactionStatus}
+import com.bwsw.tstreams.coordination.subscriber.CallbackManager
 import com.datastax.driver.core.utils.UUIDs
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import org.scalamock.scalatest.MockFactory
@@ -17,9 +17,9 @@ class CallbackManagerTests  extends FlatSpec with Matchers with MockFactory {
   }
 
   "Ensure callback" should "added" in {
-    val m = ProducerTopicMessage(txnUuid = UUIDs.timeBased(), ttl = 10, status = ProducerTransactionStatus.update, partition = 1)
+    val m = Message(txnUuid = UUIDs.timeBased(), ttl = 10, status = TransactionStatus.update, partition = 1)
     var cnt = 0
-    val mf = (m: ProducerTopicMessage) => { cnt +=1 }
+    val mf = (m: Message) => { cnt +=1 }
     cm.addCallback(mf)
     cm.invokeCallbacks(m)
     cnt shouldBe 1

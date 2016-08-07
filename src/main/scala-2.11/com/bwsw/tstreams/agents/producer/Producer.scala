@@ -2,15 +2,15 @@ package com.bwsw.tstreams.agents.producer
 
 import java.util.UUID
 import java.util.concurrent.locks.ReentrantLock
-import java.util.concurrent.{TimeUnit, CountDownLatch}
+import java.util.concurrent.{CountDownLatch, TimeUnit}
 
 import com.bwsw.tstreams.agents.group.{Agent, CheckpointInfo, ProducerCheckpointInfo}
 import com.bwsw.tstreams.agents.producer.NewTransactionProducerPolicy.ProducerPolicy
-import com.bwsw.tstreams.common.{LockUtil, FirstFailLockableTaskExecutor, ThreadSignalSleepVar}
-import com.bwsw.tstreams.coordination.pubsub.ProducerToSubscriberNotifier
-import com.bwsw.tstreams.coordination.pubsub.messages.{ProducerTopicMessage, ProducerTransactionStatus}
-import com.bwsw.tstreams.coordination.transactions.peertopeer.PeerToPeerAgent
-import com.bwsw.tstreams.coordination.transactions.transport.traits.Interaction
+import com.bwsw.tstreams.common.{FirstFailLockableTaskExecutor, LockUtil, ThreadSignalSleepVar}
+import com.bwsw.tstreams.coordination.clients.ProducerToSubscriberNotifier
+import com.bwsw.tstreams.coordination.messages.state.{Message, TransactionStatus}
+import com.bwsw.tstreams.coordination.producer.p2p.PeerToPeerAgent
+import com.bwsw.tstreams.coordination.producer.transport.traits.Interaction
 import com.bwsw.tstreams.metadata.MetadataStorage
 import com.bwsw.tstreams.streams.TStream
 import org.slf4j.LoggerFactory
@@ -238,16 +238,16 @@ class Producer[USERTYPE](val name: String,
 
         assert(partition == txnPartition)
 
-        val preCheckpoint = ProducerTopicMessage(
+        val preCheckpoint = Message(
           txnUuid = txnUuid,
           ttl = -1,
-          status = ProducerTransactionStatus.preCheckpoint,
+          status = TransactionStatus.preCheckpoint,
           partition = partition)
 
-        val finalCheckpoint = ProducerTopicMessage(
+        val finalCheckpoint = Message(
           txnUuid = txnUuid,
           ttl = -1,
-          status = ProducerTransactionStatus.postCheckpoint,
+          status = TransactionStatus.postCheckpoint,
           partition = partition)
 
         ProducerCheckpointInfo(transactionRef = txn,
@@ -294,10 +294,10 @@ class Producer[USERTYPE](val name: String,
       totalCnt = -1,
       ttl = producerOptions.transactionTTL)
 
-    val msg = ProducerTopicMessage(
+    val msg = Message(
       txnUuid = txnUUID,
       ttl = producerOptions.transactionTTL,
-      status = ProducerTransactionStatus.opened,
+      status = TransactionStatus.opened,
       partition = partition)
 
     logger.debug(s"Producer ${name} - [GET_LOCAL_TXN PRODUCER] update with msg partition=$partition uuid=${txnUUID.timestamp()} opened")
