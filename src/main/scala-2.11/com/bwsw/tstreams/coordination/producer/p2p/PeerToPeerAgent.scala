@@ -58,7 +58,7 @@ class PeerToPeerAgent(agentAddress : String,
     tryCleanThisAgent(p)
   }
   transport.bindLocalAddress(agentAddress)
-  startValidator()
+  startSessionKeepAliveThread()
   startHandleMessages()
   usedPartitions foreach {p =>
     val penalty = if (isLowPriorityToBeMaster) 1000*1000 else 0
@@ -168,13 +168,9 @@ class PeerToPeerAgent(agentAddress : String,
    * @param partition Partition to vote new master
    * @return New master Address
    */
-  private def startVoting(partition : Int) : String = {
-    val lock = zkService.getLock(s"/producers/lock_voting/$streamName/$partition")
-    lock.lock()
-    val newMaster = startVotingInternal(partition)
-    lock.unlock()
-    newMaster
-  }
+  private def startVoting(partition : Int) : String =
+    LockUtil.withZkLockOrDieDo[String](zkService.getLock(s"/producers/lock_voting/$streamName/$partition"), (100, TimeUnit.SECONDS), Some(logger), () => {
+      startVotingInternal(partition) })
 
   /**
    * Updating master on concrete partition
@@ -248,35 +244,29 @@ class PeerToPeerAgent(agentAddress : String,
    * @param partition Partition to set
    * @return Master address
    */
-  private def getMaster(partition : Int) : Option[String] = {
-    lockManagingMaster.lock()
-    val lock = zkService.getLock(s"/producers/lock_master/$streamName/$partition")
-    lock.lock()
-    val masterOpt = zkService.get[String](s"/producers/master/$streamName/$partition")
-    lock.unlock()
-    lockManagingMaster.unlock()
-    logger.debug(s"[GET MASTER]Agent:{${masterOpt.getOrElse("None")}} is current master on" +
-      s" stream:{$streamName},partition:{$partition}\n")
-    masterOpt
-  }
+  private def getMaster(partition : Int) : Option[String] =
+    LockUtil.withLockOrDieDo[Option[String]](lockManagingMaster, (100, TimeUnit.SECONDS), Some(logger), () => {
+      LockUtil.withZkLockOrDieDo[Option[String]](zkService.getLock(s"/producers/lock_master/$streamName/$partition"), (100, TimeUnit.SECONDS), Some(logger), () => {
+        val masterOpt = zkService.get[String](s"/producers/master/$streamName/$partition")
+        logger.debug(s"[GET MASTER]Agent:{${masterOpt.getOrElse("None")}} is current master on" +
+          s" stream:{$streamName},partition:{$partition}\n")
+        masterOpt })
+    })
 
   /**
    * Set this agent as new master on concrete partition
- *
+   *
    * @param partition Partition to set
    */
-  private def setThisAgentAsMaster(partition : Int) : Unit = {
-    lockManagingMaster.lock()
-    val lock = zkService.getLock(s"/producers/lock_master/$streamName/$partition")
-    lock.lock()
-    //TODO remove after debug
-    assert(!zkService.exist(s"/producers/master/$streamName/$partition"))
-    zkService.create(s"/producers/master/$streamName/$partition", agentAddress, CreateMode.EPHEMERAL)
-    lock.unlock()
-    lockManagingMaster.unlock()
-    logger.debug(s"[SET MASTER]Agent:{$agentAddress} in master now on" +
-      s" stream:{$streamName},partition:{$partition}\n")
-  }
+  private def setThisAgentAsMaster(partition : Int) =
+    LockUtil.withLockOrDieDo[Unit](lockManagingMaster, (100, TimeUnit.SECONDS), Some(logger), () => {
+      LockUtil.withZkLockOrDieDo[Unit](zkService.getLock(s"/producers/lock_master/$streamName/$partition"), (100, TimeUnit.SECONDS), Some(logger), () => {
+        assert(!zkService.exist(s"/producers/master/$streamName/$partition"))
+        zkService.create(s"/producers/master/$streamName/$partition", agentAddress, CreateMode.EPHEMERAL)
+        logger.debug(s"[SET MASTER]Agent:{$agentAddress} in master now on" +
+          s" stream:{$streamName},partition:{$partition}\n") })
+    })
+
 
   /**
    * Unset this agent as master on concrete partition
@@ -286,15 +276,16 @@ class PeerToPeerAgent(agentAddress : String,
   private def deleteThisAgentFromMasters(partition : Int) =
     LockUtil.withLockOrDieDo[Unit](lockManagingMaster, (100, TimeUnit.SECONDS), Some(logger), () => {
       LockUtil.withZkLockOrDieDo[Unit](zkService.getLock(s"/producers/lock_master/$streamName/$partition"), (100, TimeUnit.SECONDS), Some(logger), () => {
-        zkService.delete(s"/producers/master/$streamName/$partition") })
-      logger.debug(s"[DELETE MASTER]Agent:{$agentAddress} in NOT master now on" +
-        s" stream:{$streamName},partition:{$partition}\n")
+        zkService.delete(s"/producers/master/$streamName/$partition")
+        logger.debug(s"[DELETE MASTER]Agent:{$agentAddress} in NOT master now on" +
+          s" stream:{$streamName},partition:{$partition}\n") })
     })
 
   /**
    * Starting validate zk connection (if it will be down, exception will be thrown)
+   * Probably may be removed
    */
-  private def startValidator() = {
+  private def startSessionKeepAliveThread() = {
     val latch = new CountDownLatch(1)
     zkConnectionValidator = new Thread(new Runnable {
       override def run(): Unit = {
@@ -369,36 +360,40 @@ class PeerToPeerAgent(agentAddress : String,
 
   //TODO remove after complex testing
   def publish(msg : Message) : Unit = {
-    externalAccessLock.lock()
-    assert(msg.status != TransactionStatus.update)
-    lockLocalMasters.lock()
-    val condition = localMasters.contains(msg.partition)
-    val localMaster = if (condition) localMasters(msg.partition) else null
-    lockLocalMasters.unlock()
-    logger.debug(s"[PUBLISH] SEND PTM:{$msg} to [MASTER:{$localMaster}] from agent:{$agentAddress}," +
-      s"stream:{$streamName}\n")
-    if (condition){
-      val txnResponse = transport.publishRequest(PublishRequest(agentAddress, localMaster, msg), transportTimeout)
-      txnResponse match {
-        case null =>
-          updateMaster(msg.partition, init = false)
-          publish(msg)
+    LockUtil.withLockOrDieDo[Unit](externalAccessLock, (100, TimeUnit.SECONDS), Some(logger), () => {
+      assert(msg.status != TransactionStatus.update)
 
-        case EmptyResponse(snd,rcv,p) =>
-          assert(p == msg.partition)
-          updateMaster(msg.partition, init = false)
-          publish(msg)
+      val (condition, localMaster) = LockUtil.withLockOrDieDo[(Boolean, String)](lockLocalMasters, (100, TimeUnit.SECONDS), Some(logger), () => {
+        val isMasterKnown = localMasters.contains(msg.partition)
+        val master = if (isMasterKnown) localMasters(msg.partition) else null
+        (isMasterKnown, master)
+      })
 
-        case PublishResponse(snd, rcv, m) =>
-          assert(msg.partition == m.partition)
-          logger.debug(s"[PUBLISH] PUBLISHED PTM:{$msg} to [MASTER:{$localMaster}] from agent:{$agentAddress}," +
-            s"stream:{$streamName}\n")
+      logger.debug(s"[PUBLISH] SEND PTM:{$msg} to [MASTER:{$localMaster}] from agent:{$agentAddress}," +
+        s"stream:{$streamName}\n")
+
+      if (condition) {
+        val txnResponse = transport.publishRequest(PublishRequest(agentAddress, localMaster, msg), transportTimeout)
+        txnResponse match {
+          case null =>
+            updateMaster(msg.partition, init = false)
+            publish(msg)
+
+          case EmptyResponse(snd, rcv, p) =>
+            assert(p == msg.partition)
+            updateMaster(msg.partition, init = false)
+            publish(msg)
+
+          case PublishResponse(snd, rcv, m) =>
+            assert(msg.partition == m.partition)
+            logger.debug(s"[PUBLISH] PUBLISHED PTM:{$msg} to [MASTER:{$localMaster}] from agent:{$agentAddress}," +
+              s"stream:{$streamName}\n")
+        }
+      } else {
+        updateMaster(msg.partition, init = false)
+        publish(msg)
       }
-    } else {
-      updateMaster(msg.partition, init = false)
-      publish(msg)
-    }
-    externalAccessLock.unlock()
+    })
   }
 
   /**
