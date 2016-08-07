@@ -283,16 +283,13 @@ class PeerToPeerAgent(agentAddress : String,
  *
    * @param partition Partition to set
    */
-  private def deleteThisAgentFromMasters(partition : Int) : Unit = {
-    lockManagingMaster.lock()
-    val lock = zkService.getLock(s"/producers/lock_master/$streamName/$partition")
-    lock.lock()
-    zkService.delete(s"/producers/master/$streamName/$partition")
-    lock.unlock()
-    lockManagingMaster.unlock()
-    logger.debug(s"[DELETE MASTER]Agent:{$agentAddress} in NOT master now on" +
-      s" stream:{$streamName},partition:{$partition}\n")
-  }
+  private def deleteThisAgentFromMasters(partition : Int) =
+    LockUtil.withLockOrDieDo[Unit](lockManagingMaster, (100, TimeUnit.SECONDS), Some(logger), () => {
+      LockUtil.withZkLockOrDieDo[Unit](zkService.getLock(s"/producers/lock_master/$streamName/$partition"), (100, TimeUnit.SECONDS), Some(logger), () => {
+        zkService.delete(s"/producers/master/$streamName/$partition") })
+      logger.debug(s"[DELETE MASTER]Agent:{$agentAddress} in NOT master now on" +
+        s" stream:{$streamName},partition:{$partition}\n")
+    })
 
   /**
    * Starting validate zk connection (if it will be down, exception will be thrown)
@@ -341,6 +338,10 @@ class PeerToPeerAgent(agentAddress : String,
 
       val res =
         if (isMasterKnown) {
+          if (agentAddress == master)
+          {
+            // request must be processed locally
+          }
           val txnResponse = transport.transactionRequest(TransactionRequest(agentAddress, master, partition), transportTimeout)
           txnResponse match {
             case null =>
