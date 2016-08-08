@@ -20,7 +20,6 @@ import scala.collection.JavaConverters._
   */
 class ZookeeperDLMService(prefix: String, zkHosts: List[InetSocketAddress], zkSessionTimeout: Int, connectionTimeout: Long) {
   private val logger = LoggerFactory.getLogger(this.getClass)
-  // TODO: check sessionTimeout correctness
   private val st = Amount.of(new Integer(zkSessionTimeout), com.twitter.common.quantity.Time.SECONDS)
   private val ct = Amount.of(connectionTimeout, com.twitter.common.quantity.Time.SECONDS)
   private val hosts = zkHosts.asJava

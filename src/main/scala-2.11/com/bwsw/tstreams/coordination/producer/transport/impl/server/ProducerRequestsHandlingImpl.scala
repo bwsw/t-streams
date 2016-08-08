@@ -14,6 +14,7 @@ import org.slf4j.LoggerFactory
   */
 @ChannelHandler.Sharable
 class ProducerRequestsChannelHandler(manager: ProducerRequestsMessageManager) extends SimpleChannelInboundHandler[IMessage] {
+  private val logger = LoggerFactory.getLogger(this.getClass)
 
   /**
     * Triggered on new [[IMessage]]]
@@ -46,8 +47,7 @@ class ProducerRequestsChannelHandler(manager: ProducerRequestsMessageManager) ex
     * @param cause Cause of exception
     */
   override def exceptionCaught(ctx: ChannelHandlerContext, cause: Throwable) = {
-    println(s"IMessageServer exception : ${cause.getMessage}")
-    //    ctx.close()
+    logger.error(s"IMessageServer exception : ${cause.getMessage}")
   }
 }
 
