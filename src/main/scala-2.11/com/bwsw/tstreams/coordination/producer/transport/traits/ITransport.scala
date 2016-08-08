@@ -56,7 +56,7 @@ trait ITransport {
     *
     * @param msg IMessage
     */
-  def response(msg: IMessage): Unit
+  def respond(msg: IMessage): Unit
 
   /**
     * Send empty request

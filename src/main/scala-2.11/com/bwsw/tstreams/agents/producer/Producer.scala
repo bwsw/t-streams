@@ -9,7 +9,7 @@ import com.bwsw.tstreams.agents.producer.NewTransactionProducerPolicy.ProducerPo
 import com.bwsw.tstreams.common.{FirstFailLockableTaskExecutor, LockUtil, ThreadSignalSleepVar}
 import com.bwsw.tstreams.coordination.clients.ProducerToSubscriberNotifier
 import com.bwsw.tstreams.coordination.messages.state.{Message, TransactionStatus}
-import com.bwsw.tstreams.coordination.producer.p2p.PeerToPeerAgent
+import com.bwsw.tstreams.coordination.producer.p2p.PeerAgent
 import com.bwsw.tstreams.coordination.producer.transport.traits.Interaction
 import com.bwsw.tstreams.metadata.MetadataStorage
 import com.bwsw.tstreams.streams.TStream
@@ -76,7 +76,7 @@ class Producer[USERTYPE](val name: String,
     * P2P Agent for producers interaction
     * (getNewTxn uuid; publish openTxn event; publish closeTxn event)
     */
-  override val p2pAgent: PeerToPeerAgent = new PeerToPeerAgent(
+  override val p2pAgent: PeerAgent = new PeerAgent(
     agentAddress = pcs.agentAddress,
     zkHosts = pcs.zkHosts,
     zkRootPath = pcs.zkRootPath,
@@ -292,7 +292,7 @@ class Producer[USERTYPE](val name: String,
   }
 
   /**
-    * Method to implement for concrete producer [[PeerToPeerAgent]] method
+    * Method to implement for concrete producer [[PeerAgent]] method
     * Need only if this producer is master
     *
     * @return UUID

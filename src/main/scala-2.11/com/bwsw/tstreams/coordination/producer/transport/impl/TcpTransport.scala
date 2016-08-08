@@ -4,15 +4,15 @@ import java.util.concurrent.LinkedBlockingQueue
 
 import com.bwsw.tstreams.coordination.messages.master._
 import com.bwsw.tstreams.coordination.producer.transport.impl.client.TransactionStateUpdateClient
-import com.bwsw.tstreams.coordination.producer.transport.impl.server.TransactionStateMessageListener
+import com.bwsw.tstreams.coordination.producer.transport.impl.server.ProducerRequestsTcpServer
 import com.bwsw.tstreams.coordination.producer.transport.traits.ITransport
 
 /**
   * [[ITransport]] implementation
   */
 class TcpTransport extends ITransport {
-  private var listener: TransactionStateMessageListener = null
-  private val sender: TransactionStateUpdateClient = new TransactionStateUpdateClient
+  private var server: ProducerRequestsTcpServer = null
+  private val client: TransactionStateUpdateClient = new TransactionStateUpdateClient
   private val msgQueue = new LinkedBlockingQueue[IMessage]()
 
   /**
@@ -23,7 +23,7 @@ class TcpTransport extends ITransport {
     * @return DeleteMasterResponse or null
     */
   override def deleteMasterRequest(msg: DeleteMasterRequest, timeout: Int): IMessage = {
-    val response = sender.sendAndWaitResponse(msg, timeout)
+    val response = client.sendAndWaitResponse(msg, timeout)
     response
   }
 
@@ -34,7 +34,7 @@ class TcpTransport extends ITransport {
     * @return PingResponse or null
     */
   override def pingRequest(msg: PingRequest, timeout: Int): IMessage = {
-    val response = sender.sendAndWaitResponse(msg, timeout)
+    val response = client.sendAndWaitResponse(msg, timeout)
     response
   }
 
@@ -52,7 +52,7 @@ class TcpTransport extends ITransport {
     * @param msg EmptyRequest
     */
   override def stopRequest(msg: EmptyRequest): Unit = {
-    sender.sendAndWaitResponse(msg, 3)
+    client.sendAndWaitResponse(msg, 3)
   }
 
   /**
@@ -63,7 +63,7 @@ class TcpTransport extends ITransport {
     * @return SetMasterResponse or null
     */
   override def setMasterRequest(msg: SetMasterRequest, timeout: Int): IMessage = {
-    val response: IMessage = sender.sendAndWaitResponse(msg, timeout)
+    val response: IMessage = client.sendAndWaitResponse(msg, timeout)
     response
   }
 
@@ -75,7 +75,7 @@ class TcpTransport extends ITransport {
     * @return TransactionResponse or null
     */
   override def transactionRequest(msg: TransactionRequest, timeout: Int): IMessage = {
-    val response: IMessage = sender.sendAndWaitResponse(msg, timeout)
+    val response: IMessage = client.sendAndWaitResponse(msg, timeout)
     response
   }
 
@@ -84,8 +84,8 @@ class TcpTransport extends ITransport {
     *
     * @param msg IMessage
     */
-  override def response(msg: IMessage): Unit = {
-    listener.response(msg)
+  override def respond(msg: IMessage): Unit = {
+    server.respond(msg)
   }
 
   /**
@@ -95,19 +95,19 @@ class TcpTransport extends ITransport {
     val splits = address.split(":")
     assert(splits.size == 2)
     val port = splits(1).toInt
-    listener = new TransactionStateMessageListener(port)
-    listener.addCallback((msg: IMessage) => {
+    server = new ProducerRequestsTcpServer(port)
+    server.addCallback((msg: IMessage) => {
       msgQueue.add(msg)
     })
-    listener.start()
+    server.start()
   }
 
   /**
     * Stop transport listen incoming messages
     */
   override def unbindLocalAddress(): Unit = {
-    sender.close()
-    listener.stop()
+    client.close()
+    server.stop()
   }
 
   /**
@@ -117,7 +117,7 @@ class TcpTransport extends ITransport {
     * @param timeout Timeout to wait master
     */
   override def publishRequest(msg: PublishRequest, timeout: Int): IMessage = {
-    val response: IMessage = sender.sendAndWaitResponse(msg, timeout)
+    val response: IMessage = client.sendAndWaitResponse(msg, timeout)
     response
   }
 }

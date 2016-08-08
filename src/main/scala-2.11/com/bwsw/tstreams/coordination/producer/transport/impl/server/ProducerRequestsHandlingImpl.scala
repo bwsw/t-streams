@@ -10,10 +10,10 @@ import io.netty.util.ReferenceCountUtil
 import org.slf4j.LoggerFactory
 
 /**
-  * Handler for managing new connections for [[TransactionStateMessageListener]]]
+  * Handler for managing new connections for [[ProducerRequestsTcpServer]]]
   */
 @ChannelHandler.Sharable
-class TransactionStateMessageServerChannelHandler(manager: TransactionStateMessageListenerManager) extends SimpleChannelInboundHandler[IMessage] {
+class ProducerRequestsChannelHandler(manager: ProducerRequestsMessageManager) extends SimpleChannelInboundHandler[IMessage] {
 
   /**
     * Triggered on new [[IMessage]]]
@@ -54,7 +54,7 @@ class TransactionStateMessageServerChannelHandler(manager: TransactionStateMessa
 /**
   * Decoder [[java.lang.String]]] to [[IMessage]]]
   */
-class TransactionStateMessageDecoder extends MessageToMessageDecoder[String] {
+class ProducerRequestsMessageDecoder extends MessageToMessageDecoder[String] {
   val serializer = new ProtocolMessageSerializer
   private val logger = LoggerFactory.getLogger(this.getClass)
 
@@ -73,7 +73,7 @@ class TransactionStateMessageDecoder extends MessageToMessageDecoder[String] {
 /**
   * Encoder [[IMessage]]] to [[java.lang.String]]]
   */
-class TransactionStateMessageEncoder extends MessageToMessageEncoder[IMessage] {
+class ProducerRequestsMessageEncoder extends MessageToMessageEncoder[IMessage] {
   val serializer = new ProtocolMessageSerializer
 
   override def encode(ctx: ChannelHandlerContext, msg: IMessage, out: util.List[AnyRef]): Unit = {
