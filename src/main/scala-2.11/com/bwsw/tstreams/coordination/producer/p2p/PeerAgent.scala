@@ -40,12 +40,13 @@ class PeerAgent(agentAddress : String,
                 transportTimeout : Int,
                 poolSize : Int) {
 
-  private val logger = LoggerFactory.getLogger(this.getClass)
   private val zkRetriesAmount = 60
   private val externalAccessLock = new ReentrantLock(true)
   private val zkService = new ZookeeperDLMService(zkRootPath, zkHosts, zkSessionTimeout, zkConnectionTimeout)
+
   val localMasters = scala.collection.mutable.Map[Int/*partition*/, String/*master*/]()
   val lockLocalMasters = new ReentrantLock(true)
+  val logger = LoggerFactory.getLogger(this.getClass)
 
   private val lockManagingMaster = new ReentrantLock(true)
   private val streamName = producer.stream.getName
@@ -481,9 +482,9 @@ class PeerAgent(agentAddress : String,
   private def doLaunchRequestProcessTask(request : IMessage): Runnable = {
     val agent = this
     new Runnable {
-      override def run(): Unit =
-        LockUtil.withLockOrDieDo[Unit](lockLocalMasters, (100, TimeUnit.SECONDS), Some(logger), () =>
-          request.handleP2PRequest(agent))
+      override def run(): Unit = request.handleP2PRequest(agent)
+        //LockUtil.withLockOrDieDo[Unit](lockLocalMasters, (100, TimeUnit.SECONDS), Some(logger), () =>
+        //  request.handleP2PRequest(agent))
     }
   }
 }
