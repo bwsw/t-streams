@@ -29,7 +29,7 @@ class AProducerAndConsumerLazyTest extends FlatSpec with Matchers with BeforeAnd
     partitions = List(0,1,2),
     isLowPriority = false)
 
-  f.setProperty(TSF_Dictionary.Producer.BIND_HOST, TestUtils.getPort)
+  f.setProperty(TSF_Dictionary.Producer.BIND_PORT, TestUtils.getPort)
   val producer2 = f.getProducer[String](
     name = "test_producer",
     txnGenerator = LocalGeneratorCreator.getGen(),

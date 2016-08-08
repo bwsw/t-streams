@@ -2,7 +2,7 @@ package com.bwsw.tstreams.agents.producer
 
 import java.util.UUID
 import java.util.concurrent.{CountDownLatch, TimeUnit}
-import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.{AtomicBoolean, AtomicInteger}
 import java.util.concurrent.locks.ReentrantLock
 
 import com.bwsw.tstreams.common.LockUtil
@@ -50,7 +50,7 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
   /**
     *
     */
-  def setAsClosed() = state.closeOrDie
+  def markAsClosed() = state.closeOrDie
 
   /**
     * Return transaction partition
@@ -65,12 +65,12 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
   /**
     * Return current transaction amount of data
     */
-  def getCnt = part
+  def getCnt = part.get
 
   /**
     * Transaction part index
     */
-  private var part = 0
+  private var part = new AtomicInteger(0)
 
   /**
     * All inserts (can be async) in storage (must be waited before closing this transaction)
@@ -97,7 +97,7 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
             transactionUuid,
             txnOwner.stream.getTTL,
             txnOwner.producerOptions.converter.convert(obj),
-            part)
+            part.get)
 
           if (txnOwner.stream.dataStorage.getBufferSize(transactionUuid) == size) {
 
@@ -115,11 +115,11 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
             transactionUuid,
             txnOwner.stream.getTTL,
             txnOwner.producerOptions.converter.convert(obj),
-            part)
+            part.get)
           if (job != null) jobs += job
       }
 
-      part += 1 })
+      part.incrementAndGet() })
   }
 
 
@@ -141,7 +141,7 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
           ttl = -1,
           status = TransactionStatus.cancel,
           partition = partition)
-        txnOwner.masterP2PAgent.publish(msg)
+        txnOwner.p2pAgent.publish(msg)
         logger.debug(s"[CANCEL PARTITION_${msg.partition}] ts=${msg.txnUuid.timestamp()} status=${msg.status}")
       })
   }
@@ -177,7 +177,7 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
         return
     }
 
-    txnOwner.masterP2PAgent.publish(Message(
+    txnOwner.p2pAgent.publish(Message(
       txnUuid = transactionUuid,
       ttl = -1,
       status = TransactionStatus.postCheckpoint,
@@ -201,13 +201,13 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
         }
     }
     //close transaction using stream ttl
-    if (part > 0) {
+    if (part.get() > 0) {
       jobs.foreach(x => x())
 
       logger.debug(s"[START PRE CHECKPOINT PARTITION_$partition] " +
         s"ts=${transactionUuid.timestamp()}")
 
-      txnOwner.masterP2PAgent.publish(Message(
+      txnOwner.p2pAgent.publish(Message(
         txnUuid = transactionUuid,
         ttl = -1,
         status = TransactionStatus.preCheckpoint,
@@ -232,13 +232,13 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
         streamName = txnOwner.stream.getName,
         partition = partition,
         transaction = transactionUuid,
-        totalCnt = part,
+        totalCnt = part.get(),
         ttl = txnOwner.stream.getTTL,
         executor = txnOwner.backendActivityService,
         function = checkpointPostEventPart)
     }
     else {
-      txnOwner.masterP2PAgent.publish(Message(
+      txnOwner.p2pAgent.publish(Message(
         txnUuid = transactionUuid,
         ttl = -1,
         status = TransactionStatus.cancel,
@@ -272,13 +272,13 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
             }
         }
 
-        if (part > 0) {
+        if (part.get() > 0) {
           jobs.foreach(x => x())
 
           logger.debug(s"[START PRE CHECKPOINT PARTITION_$partition] " +
             s"ts=${transactionUuid.timestamp()}")
 
-          txnOwner.masterP2PAgent.publish(Message(
+          txnOwner.p2pAgent.publish(Message(
             txnUuid = transactionUuid,
             ttl = -1,
             status = TransactionStatus.preCheckpoint,
@@ -291,7 +291,7 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
             streamName = txnOwner.stream.getName,
             partition = partition,
             transaction = transactionUuid,
-            totalCnt = part,
+            totalCnt = part.get(),
             ttl = txnOwner.stream.getTTL)
 
           logger.debug(s"[COMMIT PARTITION_$partition] ts=${transactionUuid.timestamp()}")
@@ -299,7 +299,7 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
           //debug purposes only
           GlobalHooks.invoke(GlobalHooks.afterCommitFailure)
 
-          txnOwner.masterP2PAgent.publish(Message(
+          txnOwner.p2pAgent.publish(Message(
             txnUuid = transactionUuid,
             ttl = -1,
             status = TransactionStatus.postCheckpoint,
@@ -310,7 +310,7 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
 
         }
         else {
-          txnOwner.masterP2PAgent.publish(Message(
+          txnOwner.p2pAgent.publish(Message(
             txnUuid = transactionUuid,
             ttl = -1,
             status = TransactionStatus.cancel,

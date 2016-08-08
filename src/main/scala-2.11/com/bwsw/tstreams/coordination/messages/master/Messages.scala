@@ -29,7 +29,8 @@ case class SetMasterRequest(senderID: String, receiverID: String, partition: Int
 
 case class SetMasterResponse(senderID: String, receiverID: String, partition: Int) extends IMessage
 
-case class PingRequest(senderID: String, receiverID: String, partition: Int) extends IMessage
+case class PingRequest(senderID: String, receiverID: String, partition: Int) extends IMessage {
+}
 
 case class PingResponse(senderID: String, receiverID: String, partition: Int) extends IMessage
 

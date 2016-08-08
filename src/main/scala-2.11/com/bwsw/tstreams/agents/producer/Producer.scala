@@ -76,7 +76,7 @@ class Producer[USERTYPE](val name: String,
     * P2P Agent for producers interaction
     * (getNewTxn uuid; publish openTxn event; publish closeTxn event)
     */
-  override val masterP2PAgent: PeerToPeerAgent = new PeerToPeerAgent(
+  override val p2pAgent: PeerToPeerAgent = new PeerToPeerAgent(
     agentAddress = pcs.agentAddress,
     zkHosts = pcs.zkHosts,
     zkRootPath = pcs.zkRootPath,
@@ -102,7 +102,7 @@ class Producer[USERTYPE](val name: String,
   /**
     * Queue to figure out moment when transaction is going to close
     */
-  private val shutdownKeepAliveThread = new ThreadSignalSleepVar[Boolean](10)
+  private val shutdownKeepAliveThread = new ThreadSignalSleepVar[Boolean](1)
   private val txnKeepAliveThread = getTxnKeepAliveThread
   val backendActivityService = new FirstFailLockableTaskExecutor
 
@@ -135,9 +135,9 @@ class Producer[USERTYPE](val name: String,
   }
 
   /**
-    *
+    * Used to send update event to all opened transactions
     */
-  def updateOpenedTransactions() = {
+  private def updateOpenedTransactions() = {
     logger.debug(s"Producer ${name} - scheduled for long lasting transactions")
     openTransactionsMap.
       map { case (partition, txn) => txn }.
@@ -153,6 +153,7 @@ class Producer[USERTYPE](val name: String,
     LockUtil.withLockOrDieDo[Transaction[USERTYPE]] (threadLock, (100, TimeUnit.SECONDS), Some(logger), () => {
       if (isStop)
         throw new IllegalStateException(s"Producer ${this.name} is already stopped. Unable to get new transaction.")
+
       val partition = {
         if (nextPartition == -1)
           producerOptions.writePolicy.getNextPartition
@@ -164,8 +165,6 @@ class Producer[USERTYPE](val name: String,
         throw new IllegalArgumentException(s"Producer ${name} - invalid partition")
 
       val transaction = {
-        val txnUUID = masterP2PAgent.getNewTxn(partition)
-        logger.debug(s"[NEW_TRANSACTION PARTITION_$partition] uuid=${txnUUID.timestamp()}")
         if (openTransactionsMap.contains(partition)) {
           val prevTxn = openTransactionsMap(partition)
           if (!prevTxn.isClosed) {
@@ -181,6 +180,10 @@ class Producer[USERTYPE](val name: String,
             }
           }
         }
+
+        val txnUUID = p2pAgent.generateNewTransaction(partition)
+        logger.debug(s"[NEW_TRANSACTION PARTITION_$partition] uuid=${txnUUID.timestamp()}")
+
         val txn = new Transaction[USERTYPE](txnLocks(partition % threadPoolSize), partition, txnUUID, this)
         openTransactionsMap(partition) = txn
         txn
@@ -189,12 +192,12 @@ class Producer[USERTYPE](val name: String,
   }
 
   /**
-    * Return reference on transaction from concrete partition
+    * Return transaction for specific partition if there is opened one.
     *
     * @param partition Partition from which transaction will be retrieved
-    * @return Transaction reference if it exist or not closed
+    * @return Transaction reference if it exist and is opened
     */
-  def getOpenTransactionForPartition(partition: Int): Option[Transaction[USERTYPE]] = {
+  def getOpenedTransactionForPartition(partition: Int): Option[Transaction[USERTYPE]] = {
     LockUtil.withLockOrDieDo[Option[Transaction[USERTYPE]]](threadLock, (100, TimeUnit.SECONDS), Some(logger), () => {
       if (!(partition >= 0 && partition < stream.getPartitions))
         throw new IllegalArgumentException(s"Producer ${name} - invalid partition")
@@ -211,7 +214,7 @@ class Producer[USERTYPE](val name: String,
   }
 
   /**
-    * Close all opened transactions
+    * Checkpoint all opened transactions (not atomic). For atomic use CheckpointGroup.
     */
   def checkpoint(): Unit = {
     LockUtil.withLockOrDieDo[Unit](threadLock, (100, TimeUnit.SECONDS), Some(logger), () => {
@@ -219,6 +222,17 @@ class Producer[USERTYPE](val name: String,
         map { case (partition, txn) => txn }.
         foreach { x => if (!x.isClosed) x.checkpoint() }})
   }
+
+  /**
+    * Cancel all opened transactions (not atomic). For atomic use CheckpointGroup.
+    */
+  def cancel(): Unit = {
+    LockUtil.withLockOrDieDo[Unit](threadLock, (100, TimeUnit.SECONDS), Some(logger), () => {
+      openTransactionsMap.
+        map { case (partition, txn) => txn }.
+        foreach { x => if (!x.isClosed) x.cancel() }})
+  }
+
 
   /**
     * Info to commit
@@ -229,11 +243,8 @@ class Producer[USERTYPE](val name: String,
 
         val (txnUuid, txnCnt, txnPartition) =
           LockUtil.withLockOrDieDo[(UUID,Int,Int)](txn.getTransactionLock, (100, TimeUnit.SECONDS), Some(logger), () => {
-          val txnUuid = txn.getTxnUUID
-          val txnCnt = txn.getCnt
-          val txnPartition = txn.getPartition
-          txn.setAsClosed()
-          (txnUuid, txnCnt, txnPartition)
+           txn.markAsClosed()
+          (txn.getTxnUUID, txn.getCnt, txn.getPartition)
         })
 
         assert(partition == txnPartition)
@@ -251,7 +262,7 @@ class Producer[USERTYPE](val name: String,
           partition = partition)
 
         ProducerCheckpointInfo(transactionRef = txn,
-          agent = masterP2PAgent,
+          agent = p2pAgent,
           preCheckpointEvent = preCheckpoint,
           finalCheckpointEvent = finalCheckpoint,
           streamName = stream.getName,
@@ -321,7 +332,7 @@ class Producer[USERTYPE](val name: String,
     // stop executor
     backendActivityService.shutdownSafe()
     // stop provide master features to public
-    masterP2PAgent.stop()
+    p2pAgent.stop()
     // stop function which works with subscribers
     subscriberNotifier.stop()
   }

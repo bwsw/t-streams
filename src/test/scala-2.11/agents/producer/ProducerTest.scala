@@ -48,7 +48,7 @@ class ProducerTest extends FlatSpec with Matchers with BeforeAndAfterAll with Te
 
   "BasicProducer.getTransaction()" should "return transaction reference if it was created or None" in {
     val txn = producer.newTransaction(NewTransactionProducerPolicy.CheckpointIfOpened, 1)
-    val txnRef = producer.getOpenTransactionForPartition(1)
+    val txnRef = producer.getOpenedTransactionForPartition(1)
     txn.checkpoint()
     val checkVal = txnRef.get == txn
     checkVal shouldEqual true
