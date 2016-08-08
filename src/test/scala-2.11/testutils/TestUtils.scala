@@ -62,7 +62,6 @@ trait TestUtils {
   f.setProperty(TSF_Dictionary.Metadata.Cluster.NAMESPACE, randomKeyspace).
     setProperty(TSF_Dictionary.Data.Cluster.NAMESPACE, "test").
     setProperty(TSF_Dictionary.Coordination.ROOT, coordinationRoot).
-    setProperty(TSF_Dictionary.Producer.BIND_HOST, TestUtils.getPort).
     setProperty(TSF_Dictionary.Consumer.Subscriber.BIND_PORT, TestUtils.getPort).
     setProperty(TSF_Dictionary.Consumer.Subscriber.PERSISTENT_QUEUE_PATH, randomKeyspace).
     setProperty(TSF_Dictionary.Stream.NAME, "test-stream")
