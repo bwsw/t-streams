@@ -1,6 +1,6 @@
 # T-streams
 
-T-streams is a scala library scalable, transactional persistent queues for exactly-once, batch message exchange in PUB-SUB mode.
+T-streams library implements scalable, transactional persistent queues for exactly-once, batch message exchange in PUB-SUB mode.
 
 ## Introduction
 
