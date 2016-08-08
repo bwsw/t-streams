@@ -103,7 +103,7 @@ class AManyProducersStreamingInManyPartitionsAndSubscriberTest extends FlatSpec 
 
   def getProducer(usedPartitions: List[Int], totalPartitions: Int): Producer[String] = {
     val port = TestUtils.getPort
-    f.setProperty(TSF_Dictionary.Producer.BIND_HOST, port)
+    f.setProperty(TSF_Dictionary.Producer.BIND_PORT, port)
     f.getProducer[String](
       name = "test_producer",
       txnGenerator = LocalGeneratorCreator.getGen(),

@@ -188,11 +188,11 @@ object TSF_Dictionary {
     /**
       * hostname or ip of producer master listener
       */
-    val BIND_PORT = "producer.bind-host"
+    val BIND_HOST = "producer.bind-host"
     /**
       * port of producer master listener
       */
-    val BIND_HOST = "producer.bind-port"
+    val BIND_PORT = "producer.bind-port"
     /**
       * Transport timeout is maximum time to wait for master to respond
       */
@@ -349,8 +349,8 @@ class TStreamsFactory(envname: String = "T-streams") {
   propertyMap += (TSF_Dictionary.Stream.DESCRIPTION -> "Test stream")
 
   // producer scope
-  propertyMap += (TSF_Dictionary.Producer.BIND_PORT -> "localhost")
-  propertyMap += (TSF_Dictionary.Producer.BIND_HOST -> 18000)
+  propertyMap += (TSF_Dictionary.Producer.BIND_HOST -> "localhost")
+  propertyMap += (TSF_Dictionary.Producer.BIND_PORT -> 18000)
   val Producer_master_timeout_default = 5
   val Producer_master_timeout_min = 1
   val Producer_master_timeout_max = 10
@@ -696,7 +696,7 @@ class TStreamsFactory(envname: String = "T-streams") {
         Coordination_connection_timeout_min, Coordination_connection_timeout_max)
 
       val cao = new CoordinationOptions(
-        agentAddress = pAsString(TSF_Dictionary.Producer.BIND_PORT) + ":" + pAsString(TSF_Dictionary.Producer.BIND_HOST),
+        agentAddress = pAsString(TSF_Dictionary.Producer.BIND_HOST) + ":" + pAsString(TSF_Dictionary.Producer.BIND_PORT),
         zkHosts = NetworkUtil.getInetSocketAddressCompatibleHostList(pAsString(TSF_Dictionary.Coordination.ENDPOINTS)),
         zkRootPath = pAsString(TSF_Dictionary.Coordination.ROOT),
         zkSessionTimeout = pAsInt(TSF_Dictionary.Coordination.TTL, Coordination_ttl_default),

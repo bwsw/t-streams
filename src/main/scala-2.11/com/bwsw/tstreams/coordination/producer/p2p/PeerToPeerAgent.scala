@@ -44,8 +44,9 @@ class PeerToPeerAgent(agentAddress : String,
   private val zkRetriesAmount = 60
   private val externalAccessLock = new ReentrantLock(true)
   private val zkService = new ZookeeperDLMService(zkRootPath, zkHosts, zkSessionTimeout, zkConnectionTimeout)
-  private val localMasters = scala.collection.mutable.Map[Int/*partition*/, String/*master*/]()
-  private val lockLocalMasters = new ReentrantLock(true)
+  val localMasters = scala.collection.mutable.Map[Int/*partition*/, String/*master*/]()
+  val lockLocalMasters = new ReentrantLock(true)
+  val bindAddress = agentAddress
   private val lockManagingMaster = new ReentrantLock(true)
   private val streamName = producer.stream.getName
   private val isRunning = new AtomicBoolean(true)
@@ -67,9 +68,9 @@ class PeerToPeerAgent(agentAddress : String,
     */
   private def LOWPRI_PENALTY = 1000 * 1000
 
-  logger.debug(s"[INIT] Start initialize agent with address: {$agentAddress}")
-  logger.debug(s"[INIT] Stream: {$streamName}, partitions: [${usedPartitions.mkString(",")}]")
-  logger.debug(s"[INIT] Master Unique random ID: ${randomId}")
+  logger.info(s"[INIT] Start initialize agent with address: {$agentAddress}")
+  logger.info(s"[INIT] Stream: {$streamName}, partitions: [${usedPartitions.mkString(",")}]")
+  logger.info(s"[INIT] Master Unique random ID: ${randomId}")
 
   usedPartitions foreach {p => tryCleanThisAgent(p) }
 
