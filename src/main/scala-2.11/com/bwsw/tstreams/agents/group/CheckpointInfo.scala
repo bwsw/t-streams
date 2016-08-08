@@ -4,7 +4,7 @@ import java.util.UUID
 
 import com.bwsw.tstreams.agents.producer.Transaction
 import com.bwsw.tstreams.coordination.messages.state.Message
-import com.bwsw.tstreams.coordination.producer.p2p.PeerToPeerAgent
+import com.bwsw.tstreams.coordination.producer.p2p.PeerAgent
 
 import scala.language.existentials
 
@@ -32,7 +32,7 @@ sealed trait CheckpointInfo
   * @param ttl            Transaction time to live in seconds
   */
 case class ProducerCheckpointInfo(transactionRef: Transaction[_],
-                                  agent: PeerToPeerAgent,
+                                  agent: PeerAgent,
                                   preCheckpointEvent: Message,
                                   finalCheckpointEvent: Message,
                                   streamName: String,
