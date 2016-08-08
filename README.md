@@ -1,10 +1,20 @@
 # T-streams
 
-T-streams is scalable, transactional persistent queues for exactly-once, batch messaging.
+T-streams library implements transactional persistent queues for exactly-once, batch message exchange in PUB-SUB mode.
 
-# Introduction
+## Introduction
 
-T-streams (transactional streams) is a Scala library which implements transactional messaging for Producers and Consumers, which is important for CEP (complex event processing) systems that must handle an event exactly-once, at-least-once or at-most-once. T-streams implementation is inspired by Apache Kafka.
+T-streams is an embeddable library for JVM designed for messaging between distributed agents via transactions in PUB-SUB mode. T-streams is designed for reliable message delivery with queue persistence and replay support. T-streams has unique features as compared to the Kafka broker and may be used to replace it in message sequences where exactly-once processing is required. T-streams is the transport kernel of another product of ours, Juggler.
+
+For implementing messaging within data streams we often use such messaging systems as Kafka, 0MQ, RabbitMQ and others, depending on the objectives to be solved. When it comes to processing data streams for BigData, Kafka is the default industry standard supporting many processing systems, such as Apache Spark, Flink, Samza. Kafka is an excellent product that we admire and happily use where it provides sufficient functionality. However, various problems exist that Kafka (unfortunately) cannot tackle. The main one (in our opinion) is the inability to implement exactly-once processing with Kafka, if events are fed from multiple Kafka topics and then transformed and relayed to other Kafka topics.
+
+The inability to do this transaction-wise has led us to the idea and urge to create a solution that would dispense with the above flaw and provide for the solution to the problem. This is how the T-streams library came about. T-streams is implemented on Scala v2.11 and operates based on Apache Cassandra, Zookeeper and Aerospike.
+
+The T-streams library is available under Apache License v2. You can learn more about T-streams on the product web site.
+
+T-streams implements messaging for Producers and Consumers which is critical for CEP (complex event processing) systems. When creating T-streams, we were inspired by Apache Kafka. We took the drawbacks of Kafka and fixed them in T-streams. T-streams libraries are suited to store millions and billions of queues. T-streams allows developers to do exactly-once and at-least-once processing when T-streams is both the queue's source and its destination. Our libraries are also good for batch processing where each batch includes multiple items (messages, events, etc.). The system is scalable both horizontally (Aerospike clustering, Cassandra clustering) and in relation to the number of queues. In addition to this, the T-streams library allows the Consumer to read starting from the most recent change /from any change /from the very first change. Apart from that, the system has Kafka-like functionality. For example, it allows data to be read from multiple Producers and Consumers on the same queue. It also allows for using streams from one or multiple partitions.
+
+Web-site: http://t-streams.com/
 
 T-streams library uses next data management systems for operation:
 
@@ -14,19 +24,7 @@ T-streams library uses next data management systems for operation:
 
 Data backends are pluggable and can be developed for other key-value storages, e.g. Redis or even Ceph, AWS S3, etc.
 
-# T-streams features
-
-Usually developers choose Apache Kafka for storing data in data processing systems – it is robust, it scales well and fits in many cases.
-
-We started T-streams as a replacement for Apache Kafka, which is perfect but has lack of  features which exist in T-streams. Kafka is widely used but doesn’t fit well for CEP systems where processing chain can be complex and involve kafka-to-kafka processing.
-
-Kafka allows to place somewhere (usually Zookeeper) an offset from which consumer read data, but it doesn’t provide any mechanism for producers, as a result exactly-once processing is impossible with Kafka when it’s used in kafka-to-kafka processing.
-
-Also, with Kafka it is impossible to start consuming from point of time natively because Kafka’s offset doesn’t match to time.
-
-Another problem which exists in Kafka begins from the way it stores queues, it doesn’t fit well for storing millions or even billions of queues because queues are matched to separate files.
-
-# T-streams library fits good if…
+## T-streams library fits good if…
 
 T-streams library is designed to solve the problems, mentioned before and provides following features:
 
