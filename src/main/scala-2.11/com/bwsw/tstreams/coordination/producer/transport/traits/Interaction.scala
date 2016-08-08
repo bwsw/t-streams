@@ -2,7 +2,7 @@ package com.bwsw.tstreams.coordination.producer.transport.traits
 
 import java.util.UUID
 
-import com.bwsw.tstreams.coordination.producer.p2p.PeerToPeerAgent
+import com.bwsw.tstreams.coordination.producer.p2p.PeerAgent
 
 /**
   * Trait for producers
@@ -19,5 +19,5 @@ trait Interaction {
   /**
     * Agent for producer to provide producers communication
     */
-  val p2pAgent: PeerToPeerAgent
+  val p2pAgent: PeerAgent
 }

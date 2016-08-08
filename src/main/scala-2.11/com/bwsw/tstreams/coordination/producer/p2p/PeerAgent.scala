@@ -28,17 +28,17 @@ import org.slf4j.LoggerFactory
  * @param transport Transport to provide interaction
  * @param transportTimeout Timeout for waiting response
  */
-class PeerToPeerAgent(agentAddress : String,
-                      zkHosts : List[InetSocketAddress],
-                      zkRootPath : String,
-                      zkSessionTimeout: Int,
-                      zkConnectionTimeout : Int,
-                      producer : Producer[_],
-                      usedPartitions : List[Int],
-                      isLowPriorityToBeMaster : Boolean,
-                      transport: ITransport,
-                      transportTimeout : Int,
-                      poolSize : Int) {
+class PeerAgent(agentAddress : String,
+                zkHosts : List[InetSocketAddress],
+                zkRootPath : String,
+                zkSessionTimeout: Int,
+                zkConnectionTimeout : Int,
+                producer : Producer[_],
+                usedPartitions : List[Int],
+                isLowPriorityToBeMaster : Boolean,
+                transport: ITransport,
+                transportTimeout : Int,
+                poolSize : Int) {
 
   private val logger = LoggerFactory.getLogger(this.getClass)
   private val zkRetriesAmount = 60
@@ -46,12 +46,18 @@ class PeerToPeerAgent(agentAddress : String,
   private val zkService = new ZookeeperDLMService(zkRootPath, zkHosts, zkSessionTimeout, zkConnectionTimeout)
   val localMasters = scala.collection.mutable.Map[Int/*partition*/, String/*master*/]()
   val lockLocalMasters = new ReentrantLock(true)
-  val bindAddress = agentAddress
+
   private val lockManagingMaster = new ReentrantLock(true)
   private val streamName = producer.stream.getName
   private val isRunning = new AtomicBoolean(true)
   private var zkConnectionValidator : Thread = null
   private var messageHandler : Thread = null
+
+  def getAgentAddress = agentAddress
+  def getTransport = transport
+  def getUsedPartitions = usedPartitions
+  def getProducer = producer
+
   /**
     * this ID is used to track sequential transactions from the same master
     */
@@ -77,7 +83,7 @@ class PeerToPeerAgent(agentAddress : String,
   transport.bindLocalAddress(agentAddress)
 
   startSessionKeepAliveThread()
-  startHandleMessages()
+  beginHandleMessages()
 
   usedPartitions foreach { p =>
     // fill initial sequential counters
@@ -127,7 +133,7 @@ class PeerToPeerAgent(agentAddress : String,
    * @param partition Partition to update priority
    * @param value Value which will be added to current priority
    */
-  private def updateThisAgentPriority(partition : Int, value : Int) = {
+  def updateThisAgentPriority(partition : Int, value : Int) = {
     logger.debug(s"[PRIOR] Start amend agent priority with value:{$value} with address:{$agentAddress}" +
       s" on stream:{$streamName},partition:{$partition}\n")
     val agentsOpt = zkService.getAllSubPath(s"/producers/agents/$streamName/$partition")
@@ -281,7 +287,7 @@ class PeerToPeerAgent(agentAddress : String,
    *
    * @param partition Partition to set
    */
-  private def setThisAgentAsMaster(partition : Int) =
+  def setThisAgentAsMaster(partition : Int) =
     LockUtil.withLockOrDieDo[Unit](lockManagingMaster, (100, TimeUnit.SECONDS), Some(logger), () => {
       LockUtil.withZkLockOrDieDo[Unit](zkService.getLock(s"/producers/lock_master/$streamName/$partition"), (100, TimeUnit.SECONDS), Some(logger), () => {
         assert(!zkService.exist(s"/producers/master/$streamName/$partition"))
@@ -296,7 +302,7 @@ class PeerToPeerAgent(agentAddress : String,
  *
    * @param partition Partition to set
    */
-  private def deleteThisAgentFromMasters(partition : Int) =
+  def deleteThisAgentFromMasters(partition : Int) =
     LockUtil.withLockOrDieDo[Unit](lockManagingMaster, (100, TimeUnit.SECONDS), Some(logger), () => {
       LockUtil.withZkLockOrDieDo[Unit](zkService.getLock(s"/producers/lock_master/$streamName/$partition"), (100, TimeUnit.SECONDS), Some(logger), () => {
         zkService.delete(s"/producers/master/$streamName/$partition")
@@ -386,7 +392,7 @@ class PeerToPeerAgent(agentAddress : String,
     LockUtil.withLockOrDieDo[Unit](externalAccessLock, (100, TimeUnit.SECONDS), Some(logger), () => {
       assert(msg.status != TransactionStatus.update)
 
-      val (condition, localMaster) = LockUtil.withLockOrDieDo[(Boolean, String)](lockLocalMasters, (100, TimeUnit.SECONDS), Some(logger), () => {
+      val (isMasterKnown, localMaster) = LockUtil.withLockOrDieDo[(Boolean, String)](lockLocalMasters, (100, TimeUnit.SECONDS), Some(logger), () => {
         val isMasterKnown = localMasters.contains(msg.partition)
         val master = if (isMasterKnown) localMasters(msg.partition) else null
         (isMasterKnown, master)
@@ -395,7 +401,7 @@ class PeerToPeerAgent(agentAddress : String,
       logger.debug(s"[PUBLISH] SEND PTM:{$msg} to [MASTER:{$localMaster}] from agent:{$agentAddress}," +
         s"stream:{$streamName}\n")
 
-      if (condition) {
+      if (isMasterKnown) {
         val txnResponse = transport.publishRequest(PublishRequest(agentAddress, localMaster, msg), transportTimeout)
         txnResponse match {
           case null =>
@@ -436,7 +442,7 @@ class PeerToPeerAgent(agentAddress : String,
   /**
    * Start handling incoming messages for this agent
    */
-  private def startHandleMessages() = {
+  private def beginHandleMessages() = {
     val latch = new CountDownLatch(1)
     messageHandler = new Thread(new Runnable {
       override def run(): Unit = {
@@ -473,95 +479,11 @@ class PeerToPeerAgent(agentAddress : String,
    * @param request Requested message
    */
   private def doLaunchRequestProcessTask(request : IMessage): Runnable = {
+    val agent = this
     new Runnable {
-      override def run(): Unit = {
-        LockUtil.withLockOrDieDo[Unit](lockLocalMasters, (100, TimeUnit.SECONDS), Some(logger), () => {
-          request match {
-            case PingRequest(snd, rcv, partition) =>
-              assert(rcv == agentAddress)
-              val response = {
-                if (localMasters.contains(partition) && localMasters(partition) == agentAddress)
-                  PingResponse(rcv, snd, partition)
-                else
-                  EmptyResponse(rcv, snd, partition)
-              }
-              response.msgID = request.msgID
-              transport.response(response)
-
-            case SetMasterRequest(snd, rcv, partition) =>
-              assert(rcv == agentAddress)
-              val response = {
-                if (localMasters.contains(partition) && localMasters(partition) == agentAddress)
-                  EmptyResponse(rcv, snd, partition)
-                else {
-                  localMasters(partition) = agentAddress
-                  setThisAgentAsMaster(partition)
-                  usedPartitions foreach { partition =>
-                    updateThisAgentPriority(partition, value = -1)
-                  }
-                  SetMasterResponse(rcv, snd, partition)
-                }
-              }
-              response.msgID = request.msgID
-              transport.response(response)
-
-            case DeleteMasterRequest(snd, rcv, partition) =>
-              assert(rcv == agentAddress)
-              val response = {
-                if (localMasters.contains(partition) && localMasters(partition) == agentAddress) {
-                  localMasters.remove(partition)
-                  deleteThisAgentFromMasters(partition)
-                  usedPartitions foreach { partition =>
-                    updateThisAgentPriority(partition, value = 1)
-                  }
-                  DeleteMasterResponse(rcv, snd, partition)
-                } else
-                  EmptyResponse(rcv, snd, partition)
-              }
-              response.msgID = request.msgID
-              transport.response(response)
-
-            case TransactionRequest(snd, rcv, partition) =>
-              assert(rcv == agentAddress)
-              if (localMasters.contains(partition) && localMasters(partition) == agentAddress) {
-                val txnUUID: UUID = producer.getNewTxnUUIDLocal()
-                producer.openTxnLocal(txnUUID, partition,
-                  onComplete = () => {
-                    val response = TransactionResponse(rcv, snd, txnUUID, partition)
-                    response.msgID = request.msgID
-                    transport.response(response)
-                  })
-              } else {
-                val response = EmptyResponse(rcv, snd, partition)
-                response.msgID = request.msgID
-                transport.response(response)
-              }
-
-            case PublishRequest(snd, rcv, msg) =>
-              assert(rcv == agentAddress)
-              if (localMasters.contains(msg.partition) && localMasters(msg.partition) == agentAddress) {
-                producer.subscriberNotifier.publish(msg,
-                  onComplete = () => {
-                    val response = PublishResponse(
-                      senderID = rcv,
-                      receiverID = snd,
-                      msg = Message(UUID.randomUUID(), 0, TransactionStatus.opened, msg.partition))
-                    response.msgID = request.msgID
-                    transport.response(response)
-                  })
-              } else {
-                val response = EmptyResponse(rcv, snd, msg.partition)
-                response.msgID = request.msgID
-                transport.response(response)
-              }
-
-            case EmptyRequest(snd, rcv, p) =>
-              val response = EmptyResponse(rcv, snd, p)
-              response.msgID = request.msgID
-              transport.response(response)
-          }
-        })
-      }
+      override def run(): Unit =
+        LockUtil.withLockOrDieDo[Unit](lockLocalMasters, (100, TimeUnit.SECONDS), Some(logger), () =>
+          request.handleP2PRequest(agent))
     }
   }
 }

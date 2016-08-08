@@ -15,14 +15,14 @@ import io.netty.handler.logging.{LogLevel, LoggingHandler}
 /**
   * @param port Listener port
   */
-class TransactionStateMessageListener(port: Int) {
+class ProducerRequestsTcpServer(port: Int) {
   //socket accept worker
   private val bossGroup = new NioEventLoopGroup(1)
   //channel workers
   private val workerGroup = new NioEventLoopGroup()
   private val MAX_FRAME_LENGTH = 8192
-  private val manager = new TransactionStateMessageListenerManager()
-  private val channelHandler: TransactionStateMessageServerChannelHandler = new TransactionStateMessageServerChannelHandler(manager)
+  private val manager = new ProducerRequestsMessageManager()
+  private val channelHandler: ProducerRequestsChannelHandler = new ProducerRequestsChannelHandler(manager)
   private var listenerThread: Thread = null
 
   /**
@@ -45,8 +45,8 @@ class TransactionStateMessageListener(port: Int) {
   /**
     * Response with [[IMessage]]]
     */
-  def response(msg: IMessage): Unit = {
-    manager.response(msg)
+  def respond(msg: IMessage): Unit = {
+    manager.respond(msg)
   }
 
   /**
@@ -66,9 +66,9 @@ class TransactionStateMessageListener(port: Int) {
                 val p = ch.pipeline()
                 p.addLast("framer", new DelimiterBasedFrameDecoder(MAX_FRAME_LENGTH, Delimiters.lineDelimiter(): _*))
                 p.addLast("decoder", new StringDecoder())
-                p.addLast("deserializer", new TransactionStateMessageDecoder())
+                p.addLast("deserializer", new ProducerRequestsMessageDecoder())
                 p.addLast("encoder", new StringEncoder())
-                p.addLast("serializer", new TransactionStateMessageEncoder())
+                p.addLast("serializer", new ProducerRequestsMessageEncoder())
                 p.addLast("handler", channelHandler)
               }
             })

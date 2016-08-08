@@ -4,7 +4,7 @@ import java.net.InetSocketAddress
 
 import com.bwsw.tstreams.agents.producer.DataInsertType.AbstractInsertType
 import com.bwsw.tstreams.converter.IConverter
-import com.bwsw.tstreams.coordination.producer.p2p.PeerToPeerAgent
+import com.bwsw.tstreams.coordination.producer.p2p.PeerAgent
 import com.bwsw.tstreams.coordination.producer.transport.traits.ITransport
 import com.bwsw.tstreams.generator.IUUIDGenerator
 import com.bwsw.tstreams.policy.AbstractPolicy
@@ -62,7 +62,7 @@ class Options[USERTYPE](val transactionTTL: Int, val transactionKeepAliveInterva
   * @param transport               Transport providing interaction between agents
   * @param transportTimeout        Transport timeout in seconds
   * @param threadPoolAmount        Thread pool amount which is used by
-  *                                [[PeerToPeerAgent]]]
+  *                                [[PeerAgent]]]
   *                                by default (threads_amount == used_producer_partitions)
   */
 class CoordinationOptions(val agentAddress: String,
