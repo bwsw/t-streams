@@ -1,9 +1,7 @@
 package com.bwsw.tstreams.coordination.messages.master
 
 import java.util.UUID
-import java.util.concurrent.TimeUnit
 
-import com.bwsw.tstreams.common.LockUtil
 import com.bwsw.tstreams.coordination.messages.state.{TransactionStatus, Message}
 import com.bwsw.tstreams.coordination.producer.p2p.PeerAgent
 
@@ -23,8 +21,7 @@ trait IMessage {
     * Called by PeerAgent if message is received
     * @param agent
     */
-  def handleP2PRequest(agent: PeerAgent) = {
-  }
+  def handleP2PRequest(agent: PeerAgent) = {}
 }
 
 /**
