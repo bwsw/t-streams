@@ -4,7 +4,7 @@ import java.net.InetSocketAddress
 import java.util.UUID
 import java.util.concurrent.atomic.{AtomicBoolean, AtomicLong}
 import java.util.concurrent.locks.ReentrantLock
-import java.util.concurrent.{CountDownLatch, ExecutorService, Executors, TimeUnit}
+import java.util.concurrent.{CountDownLatch, ExecutorService, Executors, TimeUnit, ConcurrentHashMap}
 
 import com.bwsw.tstreams.agents.producer.Producer
 import com.bwsw.tstreams.common.{LockUtil, ZookeeperDLMService}
@@ -44,8 +44,7 @@ class PeerAgent(agentAddress : String,
   private val externalAccessLock = new ReentrantLock(true)
   private val zkService = new ZookeeperDLMService(zkRootPath, zkHosts, zkSessionTimeout, zkConnectionTimeout)
 
-  val localMasters = scala.collection.mutable.Map[Int/*partition*/, String/*master*/]()
-  val lockLocalMasters = new ReentrantLock(true)
+  val localMasters = new java.util.concurrent.ConcurrentHashMap[Int/*partition*/, String/*master address*/]()
   val logger = LoggerFactory.getLogger(this.getClass)
 
   private val lockManagingMaster = new ReentrantLock(true)
@@ -237,8 +236,7 @@ class PeerAgent(agentAddress : String,
             val newMaster = startVoting(partition)
             logger.debug(s"[UPDATER] Finish updating master with init:{$init} on agent:{$agentAddress}" +
               s" on stream:{$streamName},partition:{$partition} with retry=$retries; revoted master:{$newMaster}\n")
-            LockUtil.withLockOrDieDo[Unit](lockLocalMasters, (100, TimeUnit.SECONDS), Some(logger), () => {
-            localMasters(partition) = newMaster })
+            localMasters.put(partition, newMaster)
         }
       } else {
         transport.pingRequest(PingRequest(agentAddress, master, partition), transportTimeout) match {
@@ -258,8 +256,7 @@ class PeerAgent(agentAddress : String,
             assert(p == partition)
             logger.debug(s"[UPDATER] Finish updating master with init:{$init} on agent:{$agentAddress}" +
               s" on stream:{$streamName},partition:{$partition} with retry=$retries; old master:{$master} is alive now\n")
-            LockUtil.withLockOrDieDo[Unit](lockLocalMasters, (100, TimeUnit.SECONDS), Some(logger), () => {
-              localMasters(partition) = master })
+            localMasters.put(partition, master)
         }
       }
     }
@@ -347,18 +344,12 @@ class PeerAgent(agentAddress : String,
    */
   def generateNewTransaction(partition : Int) : UUID = {
     LockUtil.withLockOrDieDo[UUID](externalAccessLock, (100, TimeUnit.SECONDS), Some(logger), () => {
-
-      val (isMasterKnown, master) = LockUtil.withLockOrDieDo[(Boolean, String)](lockLocalMasters, (100, TimeUnit.SECONDS), Some(logger), () => {
-        val isMasterKnown = localMasters.contains(partition)
-        val master = if (isMasterKnown) localMasters(partition) else null
-        (isMasterKnown, master)
-      })
-
+      val master = localMasters.getOrDefault(partition, null)
       logger.debug(s"[GETTXN] Start retrieve txn for agent with address:{$agentAddress}," +
         s"stream:{$streamName},partition:{$partition} from [MASTER:{$master}]\n")
 
       val res =
-        if (isMasterKnown) {
+        if (master != null) {
           if (agentAddress == master)
           {
             // request must be processed locally
@@ -377,7 +368,7 @@ class PeerAgent(agentAddress : String,
             case TransactionResponse(snd, rcv, uuid, p) =>
               assert(p == partition)
               logger.debug(s"[GETTXN] Finish retrieve txn for agent with address:{$agentAddress}," +
-                s"stream:{$streamName},partition:{$partition} with timeuuid:{${uuid.timestamp()}} from [MASTER:{$master}]\n")
+                s"stream:{$streamName},partition:{$partition} with timeuuid:{${uuid.timestamp()}} from [MASTER:{$master}]s")
               uuid
           }
         } else {
@@ -392,18 +383,12 @@ class PeerAgent(agentAddress : String,
   def publish(msg : Message) : Unit = {
     LockUtil.withLockOrDieDo[Unit](externalAccessLock, (100, TimeUnit.SECONDS), Some(logger), () => {
       assert(msg.status != TransactionStatus.update)
-
-      val (isMasterKnown, localMaster) = LockUtil.withLockOrDieDo[(Boolean, String)](lockLocalMasters, (100, TimeUnit.SECONDS), Some(logger), () => {
-        val isMasterKnown = localMasters.contains(msg.partition)
-        val master = if (isMasterKnown) localMasters(msg.partition) else null
-        (isMasterKnown, master)
-      })
-
-      logger.debug(s"[PUBLISH] SEND PTM:{$msg} to [MASTER:{$localMaster}] from agent:{$agentAddress}," +
+      val master = localMasters.getOrDefault(msg.partition, null)
+      logger.debug(s"[PUBLISH] SEND PTM:{$msg} to [MASTER:{$master}] from agent:{$agentAddress}," +
         s"stream:{$streamName}\n")
 
-      if (isMasterKnown) {
-        val txnResponse = transport.publishRequest(PublishRequest(agentAddress, localMaster, msg), transportTimeout)
+      if (master != null) {
+        val txnResponse = transport.publishRequest(PublishRequest(agentAddress, master, msg), transportTimeout)
         txnResponse match {
           case null =>
             updateMaster(msg.partition, init = false)
@@ -416,7 +401,7 @@ class PeerAgent(agentAddress : String,
 
           case PublishResponse(snd, rcv, m) =>
             assert(msg.partition == m.partition)
-            logger.debug(s"[PUBLISH] PUBLISHED PTM:{$msg} to [MASTER:{$localMaster}] from agent:{$agentAddress}," +
+            logger.debug(s"[PUBLISH] PUBLISHED PTM:{$msg} to [MASTER:{$master}] from agent:{$agentAddress}," +
               s"stream:{$streamName}\n")
         }
       } else {
@@ -483,8 +468,6 @@ class PeerAgent(agentAddress : String,
     val agent = this
     new Runnable {
       override def run(): Unit = request.handleP2PRequest(agent)
-        //LockUtil.withLockOrDieDo[Unit](lockLocalMasters, (100, TimeUnit.SECONDS), Some(logger), () =>
-        //  request.handleP2PRequest(agent))
     }
   }
 }
