@@ -2,6 +2,7 @@ package metadata
 
 import java.net.InetSocketAddress
 
+import com.bwsw.tstreams.common.CassandraConnectorConf
 import com.bwsw.tstreams.metadata.{MetadataStorage, MetadataStorageFactory}
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import testutils.TestUtils
@@ -11,7 +12,7 @@ class MetadataStorageFactoryTest extends FlatSpec with Matchers with BeforeAndAf
 
   "MetadataStorageFactory.getInstance()" should "return MetadataStorage instance" in {
     val factory = new MetadataStorageFactory
-    val instance = factory.getInstance(List(new InetSocketAddress("localhost", 9042)), randomKeyspace)
+    val instance = factory.getInstance(CassandraConnectorConf(Set(new InetSocketAddress("localhost", 9042))), randomKeyspace)
     val checkVal = instance.isInstanceOf[MetadataStorage]
     checkVal shouldEqual true
   }

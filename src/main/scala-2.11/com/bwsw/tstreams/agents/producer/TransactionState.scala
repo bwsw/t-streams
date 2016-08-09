@@ -27,10 +27,11 @@ class TransactionState {
     */
   val materialized = new AtomicBoolean(false)
 
+  //TODO clarify comment
   /**
-    * Makes transaction materialized (whiche means that
+    * Makes transaction materialized (which means that
     */
-  def makeMaterialized = {
+  def makeMaterialized() = {
     if(materialized.getAndSet(true))
       throw new IllegalStateException("State is materialized already. Wrong operation")
     materialize.countDown()

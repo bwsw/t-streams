@@ -22,11 +22,11 @@ class CassandraStorageServiceTest extends FlatSpec with Matchers with BeforeAndA
 
     val cluster: Cluster = Cluster.builder().addContactPoint("localhost").build()
 
-    CassandraStorageService.createKeyspace(List("localhost"),
+    CassandraStorageService.createKeyspace(Set("localhost"),
       randomKeyspace,
       CassandraStrategies.SimpleStrategy)
 
-    CassandraStorageService.dropKeyspace(List("localhost"),
+    CassandraStorageService.dropKeyspace(Set("localhost"),
       randomKeyspace)
 
     val maybeNull = cluster.getMetadata.getKeyspace(randomKeyspace)
@@ -45,7 +45,7 @@ class CassandraStorageServiceTest extends FlatSpec with Matchers with BeforeAndA
     val session = cluster.connect()
 
     //testing method
-    CassandraStorageService.createKeyspace(List("localhost"),
+    CassandraStorageService.createKeyspace(Set("localhost"),
       randomKeyspace,
       CassandraStrategies.SimpleStrategy)
 
@@ -70,7 +70,7 @@ class CassandraStorageServiceTest extends FlatSpec with Matchers with BeforeAndA
     CassandraHelper.createKeyspace(session, randomKeyspace)
 
     //testing method
-    CassandraStorageService.dropKeyspace(List("localhost"),
+    CassandraStorageService.dropKeyspace(Set("localhost"),
       randomKeyspace)
 
     val maybeNull = cluster.getMetadata.getKeyspace(randomKeyspace)

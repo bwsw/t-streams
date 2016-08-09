@@ -51,8 +51,7 @@ class SubscriberBroadcastNotifierChannelHandler(connectionManager: SubscriberBro
     * @param cause Cause of exception
     */
   override def exceptionCaught(ctx: ChannelHandlerContext, cause: Throwable) = {
-    println(s"Broadcaster exception : ${cause.getMessage}")
-    //    ctx.close()
+    logger.error(s"Broadcaster exception : ${cause.getMessage}")
   }
 
   /**

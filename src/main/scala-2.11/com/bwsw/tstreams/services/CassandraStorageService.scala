@@ -24,7 +24,7 @@ object CassandraStorageService {
     * @param replicationStrategy One of supported C* strategies (enum CassandraStrategies.CassandraStrategies)
     * @param replicationFactor   How to replicate data. Default = 1
     */
-  def createKeyspace(cassandraHosts: List[String],
+  def createKeyspace(cassandraHosts: Set[String],
                      keyspace: String,
                      replicationStrategy: CassandraStrategies.CassandraStrategies,
                      replicationFactor: Int = 1) = {
@@ -51,7 +51,7 @@ object CassandraStorageService {
     * @param hosts Hosts connect to
     * @return Cluster connected to hosts
     */
-  private def getCluster(hosts: List[String]): Cluster = {
+  private def getCluster(hosts: Set[String]): Cluster = {
     logger.info(s"Start create cluster for hosts : {${hosts.mkString(",")}")
     val builder: Builder = Cluster.builder()
     hosts.foreach(x => builder.addContactPoint(x))
@@ -66,7 +66,7 @@ object CassandraStorageService {
     * @param cassandraHosts Ring hosts to join
     * @param keyspace       Keyspace to drop
     */
-  def dropKeyspace(cassandraHosts: List[String],
+  def dropKeyspace(cassandraHosts: Set[String],
                    keyspace: String) = {
 
     val cluster = getCluster(cassandraHosts)
