@@ -3,11 +3,10 @@ package com.bwsw.tstreams.metadata
 import java.net.InetSocketAddress
 import java.util.concurrent.locks.ReentrantLock
 
-import com.bwsw.tstreams.common.CassandraConnectionPool
+import com.bwsw.tstreams.common.{CassandraConnectorConf, MetadataConnectionPool, CassandraHelper}
 import com.bwsw.tstreams.entities._
 import com.datastax.driver.core._
 import org.slf4j.LoggerFactory
-import com.bwsw.tstreams.common.CassandraHelper
 
 /**
   * @param cluster  Cluster instance for metadata storage
@@ -97,11 +96,11 @@ class MetadataStorageFactory {
   /**
     * Fabric method which returns new MetadataStorage
     *
-    * @param cassandraHosts List of hosts to connect in C* cluster
+    * @param conf List of hosts to connect in C* cluster
     * @param keyspace       Keyspace to use for metadata storage
     * @return Instance of MetadataStorage
     */
-  def getInstance(cassandraHosts: List[InetSocketAddress], keyspace: String, login: String = null, password: String = null): MetadataStorage = {
+  def getInstance(conf: CassandraConnectorConf, keyspace: String): MetadataStorage = {
     lock.lock()
 
     if (isClosed)
@@ -109,7 +108,7 @@ class MetadataStorageFactory {
 
     logger.info("start MetadataStorage instance creation")
 
-    val session = CassandraConnectionPool.getSession(cassandraHosts, keyspace, login, password)
+    val session = MetadataConnectionPool.getSession(conf, keyspace)
     val metadataStorage = {
       if (metadataMap.contains(session))
         metadataMap(session)

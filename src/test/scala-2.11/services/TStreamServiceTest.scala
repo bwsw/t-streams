@@ -2,6 +2,7 @@ package services
 
 import java.net.InetSocketAddress
 
+import com.bwsw.tstreams.common.CassandraConnectorConf
 import com.bwsw.tstreams.services.BasicStreamService
 import com.bwsw.tstreams.streams.TStream
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
@@ -12,7 +13,7 @@ class TStreamServiceTest extends FlatSpec with Matchers with BeforeAndAfterAll w
 
   val storageInst = storageFactory.getInstance(aerospikeOptions)
   val metadataStorageInst = metadataStorageFactory.getInstance(
-    cassandraHosts = List(new InetSocketAddress("localhost", 9042)),
+    CassandraConnectorConf(Set(new InetSocketAddress("localhost", 9042))),
     keyspace = randomKeyspace)
 
   def randomVal: String = RandomStringCreator.randomAlphaString(10)

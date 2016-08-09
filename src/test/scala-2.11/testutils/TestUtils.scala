@@ -7,7 +7,7 @@ import java.util.UUID
 import java.util.concurrent.atomic.AtomicInteger
 
 import com.aerospike.client.Host
-import com.bwsw.tstreams.common.{ZookeeperDLMService, CassandraConnectionPool, CassandraHelper}
+import com.bwsw.tstreams.common.{CassandraConnectorConf, ZookeeperDLMService, MetadataConnectionPool, CassandraHelper}
 import com.bwsw.tstreams.converter.{ArrayByteToStringConverter, StringToArrayByteConverter}
 import com.bwsw.tstreams.data.aerospike.{AerospikeStorageFactory, AerospikeStorageOptions}
 import com.bwsw.tstreams.data.cassandra.{CassandraStorageFactory, CassandraStorageOptions}
@@ -42,8 +42,8 @@ trait TestUtils {
   logger.info("-------------------------------------------------------")
 
 
-  val cluster = CassandraConnectionPool.getCluster(List(new InetSocketAddress("localhost", 9042)))
-  val session = CassandraConnectionPool.getSession(List(new InetSocketAddress("localhost", 9042)), null)
+  val cluster = MetadataConnectionPool.getCluster(CassandraConnectorConf(Set(new InetSocketAddress("localhost", 9042))))
+  val session = MetadataConnectionPool.getSession(CassandraConnectorConf(Set(new InetSocketAddress("localhost", 9042))), null)
 
   def createRandomKeyspace(): String = {
     val randomKeyspace = randomString
@@ -70,7 +70,7 @@ trait TestUtils {
   val metadataStorageFactory = new MetadataStorageFactory
   val storageFactory = new AerospikeStorageFactory
   val cassandraStorageFactory = new CassandraStorageFactory
-  val cassandraStorageOptions = new CassandraStorageOptions(List(new InetSocketAddress("localhost", 9042)), randomKeyspace)
+  //val cassandraStorageOptions = new CassandraStorageOptions(List(new InetSocketAddress("localhost", 9042)), randomKeyspace)
 
 
   //converters to convert usertype->storagetype; storagetype->usertype
@@ -135,7 +135,6 @@ trait TestUtils {
     removeZkMetadata("/unit")
     metadataStorageFactory.closeFactory()
     storageFactory.closeFactory()
-    cassandraStorageFactory.closeFactory()
   }
 }
 

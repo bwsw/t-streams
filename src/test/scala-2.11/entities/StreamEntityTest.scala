@@ -1,8 +1,6 @@
 package entities
 
-import com.bwsw.tstreams.common.CassandraHelper
 import com.bwsw.tstreams.entities.StreamEntity
-import com.datastax.driver.core.Cluster
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import testutils.{RandomStringCreator, TestUtils}
 
@@ -10,7 +8,7 @@ import testutils.{RandomStringCreator, TestUtils}
 class StreamEntityTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
   def randomVal: String = RandomStringCreator.randomAlphaString(10)
 
-    val connectedSession = cluster.connect(randomKeyspace)
+  val connectedSession = cluster.connect(randomKeyspace)
 
   "StreamEntity.createStream() StreamEntity.getStream()" should "create and retrieve created stream from metadata tables" in {
     val streamEntity = new StreamEntity("streams", connectedSession)
