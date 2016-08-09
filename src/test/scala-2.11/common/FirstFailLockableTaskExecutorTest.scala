@@ -18,7 +18,7 @@ class FirstFailLockableTaskExecutorTest extends FlatSpec with Matchers with Befo
   }
 
   "If send runnable with exception" should "throw exception in case of runnable failure" in {
-    val executor = new FirstFailLockableTaskExecutor
+    val executor = new FirstFailLockableTaskExecutor("test")
     val logger = LoggerFactory.getLogger(this.getClass)
 
     logger.info("before submit")
@@ -47,7 +47,7 @@ class FirstFailLockableTaskExecutorTest extends FlatSpec with Matchers with Befo
   }
 
   "FirstFailLockableTaskExecutor" should "handle all messages and await" in {
-    val mandatoryExecutor = new FirstFailLockableTaskExecutor
+    val mandatoryExecutor = new FirstFailLockableTaskExecutor("test")
 
     var cnt = 0
     val updateRunnable = new Runnable {
@@ -70,7 +70,7 @@ class FirstFailLockableTaskExecutorTest extends FlatSpec with Matchers with Befo
   }
 
   "FirstFailLockableTaskExecutor" should "return instantly after await if there are no runnables to handle" in {
-    val mandatoryExecutor = new FirstFailLockableTaskExecutor
+    val mandatoryExecutor = new FirstFailLockableTaskExecutor("test")
     try {
       mandatoryExecutor.awaitCurrentTasksWillComplete()
     }
@@ -82,7 +82,7 @@ class FirstFailLockableTaskExecutorTest extends FlatSpec with Matchers with Befo
   }
 
   "FirstFailLockableTaskExecutor" should "handle all messages and await (messages can have long time of execution)" in {
-    val mandatoryExecutor = new FirstFailLockableTaskExecutor
+    val mandatoryExecutor = new FirstFailLockableTaskExecutor("test")
 
     var cnt = 0
     val updateRunnable = new Runnable {
@@ -104,7 +104,7 @@ class FirstFailLockableTaskExecutorTest extends FlatSpec with Matchers with Befo
   }
 
   "FirstFailLockableTaskExecutor" should "prevent execution of new tasks if one of them failed" in {
-    val mandatoryExecutor = new FirstFailLockableTaskExecutor
+    val mandatoryExecutor = new FirstFailLockableTaskExecutor("test")
 
     var cnt = 0
     val updateRunnable = new Runnable {
@@ -136,7 +136,7 @@ class FirstFailLockableTaskExecutorTest extends FlatSpec with Matchers with Befo
   }
 
   "FirstFailLockableTaskExecutor" should "release lock of corrupted runnable" in {
-    val mandatoryExecutor = new FirstFailLockableTaskExecutor
+    val mandatoryExecutor = new FirstFailLockableTaskExecutor("test")
     val lock = new ReentrantLock(true)
     mandatoryExecutor.submit(runnableWithException, Option(lock))
     try {
@@ -150,7 +150,7 @@ class FirstFailLockableTaskExecutorTest extends FlatSpec with Matchers with Befo
   }
 
   "FirstFailLockableTaskExecutor" should "release await in case of failure" in {
-    val mandatoryExecutor = new FirstFailLockableTaskExecutor
+    val mandatoryExecutor = new FirstFailLockableTaskExecutor("test")
     val lock = new ReentrantLock(true)
 
     var cnt = 0
@@ -175,7 +175,7 @@ class FirstFailLockableTaskExecutorTest extends FlatSpec with Matchers with Befo
   }
 
   "FirstFailLockableTaskExecutor" should "await all tasks and throw exception on new submit's in case of shutdown" in {
-    val mandatoryExecutor = new FirstFailLockableTaskExecutor
+    val mandatoryExecutor = new FirstFailLockableTaskExecutor("test")
     var cnt = 0
     val updateRunnable = new Runnable {
       override def run(): Unit = {

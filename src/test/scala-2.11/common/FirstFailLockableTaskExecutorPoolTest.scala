@@ -17,13 +17,13 @@ class FirstFailLockableTaskExecutorPoolTest extends FlatSpec with Matchers with 
   //System.setProperty(org.slf4j.impl.SimpleLogger.DEFAULT_LOG_LEVEL_KEY, "DEBUG");
 
   "Constructor" should "create pool" in {
-    val p = new FirstFailLockableTaskExecutorPool()
+    val p = new FirstFailLockableTaskExecutorPool("test-group")
     p != null shouldBe true
     p.shutdownSafe()
   }
 
   "awaitCurrentTasksWillComplete" should "wait for task to complete" in {
-    val p = new FirstFailLockableTaskExecutorPool()
+    val p = new FirstFailLockableTaskExecutorPool("test-group")
     val v = new AtomicBoolean(false)
     p.execute(new Runnable {
       override def run(): Unit = v.set(true)
@@ -35,7 +35,7 @@ class FirstFailLockableTaskExecutorPoolTest extends FlatSpec with Matchers with 
 
   "If send more than 4 tasks" should "result to required number of executors (4)" in {
     val s = collection.mutable.Set[Thread]()
-    val p = new FirstFailLockableTaskExecutorPool(4)
+    val p = new FirstFailLockableTaskExecutorPool("test-group",4)
     (0 until 8).foreach(_ => {
       p.execute(new Runnable {
         override def run(): Unit = s += Thread.currentThread()
@@ -49,7 +49,7 @@ class FirstFailLockableTaskExecutorPoolTest extends FlatSpec with Matchers with 
   }
 
   "If send task which raises exception" should "result to exception when awaitCurrentTasksWillComplete" in {
-    val p = new FirstFailLockableTaskExecutorPool(4)
+    val p = new FirstFailLockableTaskExecutorPool("test-group",4)
     val l = new CountDownLatch(1)
 
     try {
@@ -73,7 +73,7 @@ class FirstFailLockableTaskExecutorPoolTest extends FlatSpec with Matchers with 
 
   "If send task which raises exception" should "result to exception when next task is sent" in {
 
-    val p = new FirstFailLockableTaskExecutorPool(4)
+    val p = new FirstFailLockableTaskExecutorPool("test-group",4)
     try {
       // this must pass ok
       p.execute(new Runnable {

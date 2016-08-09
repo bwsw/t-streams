@@ -17,7 +17,7 @@ class CheckpointGroup(val executors: Int = 1) {
   private var agents = scala.collection.mutable.Map[String, Agent]()
   private val lock = new ReentrantLock()
   private val lockTimeout = (20, TimeUnit.SECONDS)
-  private val executorPool = new FirstFailLockableTaskExecutorPool(executors)
+  private val executorPool = new FirstFailLockableTaskExecutorPool("CheckpointGroup-Workers", executors)
   private val isStopped = new AtomicBoolean(false)
 
   /**

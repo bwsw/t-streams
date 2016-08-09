@@ -12,7 +12,7 @@ import org.slf4j.LoggerFactory
   * execution but stops after the first exception
   */
 
-class FirstFailLockableTaskExecutor extends Executor {
+class FirstFailLockableTaskExecutor(name: String) extends Executor {
 
   private val isRunning = new AtomicBoolean(true)
   private val logger = LoggerFactory.getLogger(this.getClass)
@@ -32,6 +32,7 @@ class FirstFailLockableTaskExecutor extends Executor {
     val latch = new CountDownLatch(1)
     executor = new Thread(new Runnable {
       override def run(): Unit = {
+        Thread.currentThread().setName(name)
         latch.countDown()
         logger.debug("[FIRSTFAILLOCKABLE EXECUTOR] starting")
 
@@ -183,10 +184,10 @@ class FirstFailLockableTaskExecutor extends Executor {
 /**
   * Implements pool of executors
   */
-class FirstFailLockableTaskExecutorPool(val size: Int = 4) extends Executor {
+class FirstFailLockableTaskExecutorPool(val name: String, val size: Int = 4) extends Executor {
 
   private val pool = new Array[FirstFailLockableTaskExecutor](size)
-  (0 until size).foreach(i => pool(i) = new FirstFailLockableTaskExecutor)
+  (0 until size).foreach(i => pool(i) = new FirstFailLockableTaskExecutor(s"${name}-pool-${i}"))
   private var next: Int = 0
   private val lock = new ReentrantLock()
   private val logger = LoggerFactory.getLogger(this.getClass)

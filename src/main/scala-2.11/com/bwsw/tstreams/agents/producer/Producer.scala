@@ -104,7 +104,7 @@ class Producer[USERTYPE](val name: String,
     */
   private val shutdownKeepAliveThread = new ThreadSignalSleepVar[Boolean](1)
   private val txnKeepAliveThread = getTxnKeepAliveThread
-  val backendActivityService = new FirstFailLockableTaskExecutor
+  val backendActivityService = new FirstFailLockableTaskExecutor(s"Producer-worker-${name}")
 
   /**
     *
@@ -113,6 +113,7 @@ class Producer[USERTYPE](val name: String,
     val latch = new CountDownLatch(1)
     val txnKeepAliveThread = new Thread(new Runnable {
       override def run(): Unit = {
+        Thread.currentThread().setName(s"Producer-${name}-KeepAlive")
         latch.countDown()
         logger.info(s"Producer ${name} - object is started, launched open transaction update thread")
         breakable {
