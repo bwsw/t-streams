@@ -49,8 +49,6 @@ class ABasicSubscriberTotalAmountTest extends FlatSpec with Matchers with Before
 
       acc += 1
 
-      logger.info("TXN is: " + transactionUuid.toString)
-
       subscriber.setLocalOffset(partition, transactionUuid)
       subscriber.checkpoint()
 
