@@ -50,6 +50,7 @@ class TransactionStateUpdateClient {
       } catch {
         case e: IOException =>
           logger.warn(s"exception occurred: ${e.getMessage}")
+          logger.warn(msg.toString())
           null.asInstanceOf[IMessage]
       }
     }
@@ -76,6 +77,7 @@ class TransactionStateUpdateClient {
     } catch {
       case e: IOException =>
         logger.warn(s"exception occurred: ${e.getMessage}")
+        logger.warn(msg.toString())
     } finally {
       addressToConnection.remove(msg.receiverID)
     }
@@ -99,6 +101,7 @@ class TransactionStateUpdateClient {
     catch {
       case e: IOException =>
         logger.warn(s"exception occurred: ${e.getMessage}")
+        logger.warn(msg.toString())
         closeSocketAndUpdateMap(socketAndReader.sock, msg)
         return null.asInstanceOf[IMessage]
     }
@@ -116,6 +119,7 @@ class TransactionStateUpdateClient {
       catch {
         case e@(_: SocketTimeoutException | _: ProtocolMessageSerializerException | _: IOException) =>
           logger.warn(s"exception occurred: ${e.getMessage}")
+          logger.warn(msg.toString())
           null.asInstanceOf[IMessage]
       }
     }
@@ -137,6 +141,7 @@ class TransactionStateUpdateClient {
       } catch {
         case e: IOException =>
           logger.warn(s"exception occurred: ${e.getMessage}")
+          throw e
       }
     }
     addressToConnection.clear()

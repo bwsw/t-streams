@@ -74,7 +74,7 @@ class TcpTransport extends ITransport {
     * @param timeout Timeout to wait master
     * @return TransactionResponse or null
     */
-  override def transactionRequest(msg: TransactionRequest, timeout: Int): IMessage = {
+  override def transactionRequest(msg: NewTransactionRequest, timeout: Int): IMessage = {
     val response: IMessage = client.sendAndWaitResponse(msg, timeout)
     response
   }

@@ -46,6 +46,7 @@ class PeerAgent(agentAddress : String,
   private val zkRetriesAmount = 60
   private val externalAccessLock = new ReentrantLock(true)
   private val zkService = new ZookeeperDLMService(zkRootPath, zkHosts, zkSessionTimeout, zkConnectionTimeout)
+  private val executors = mutable.Map[Int, FirstFailLockableTaskExecutor]()
 
   val localMasters = new java.util.concurrent.ConcurrentHashMap[Int /*partition*/ , String /*master address*/ ]()
   val logger = LoggerFactory.getLogger(this.getClass)
@@ -63,6 +64,7 @@ class PeerAgent(agentAddress : String,
   def getUsedPartitions = usedPartitions
 
   def getProducer = producer
+
 
   /**
     * this ID is used to track sequential transactions from the same master
@@ -89,6 +91,16 @@ class PeerAgent(agentAddress : String,
   transport.bindLocalAddress(agentAddress)
 
   startSessionKeepAliveThread()
+
+  (0 until poolSize) foreach { x =>
+    executors(x) = new FirstFailLockableTaskExecutor(s"PeerAgent-PartitionWorker-${producer.name}")
+  }
+
+  private val partitionsToExecutors = usedPartitions
+    .zipWithIndex
+    .map { case (partition, execNum) => (partition, execNum % poolSize) }
+    .toMap
+
   beginHandleMessages()
 
   usedPartitions foreach { p =>
@@ -362,7 +374,7 @@ class PeerAgent(agentAddress : String,
 
       val res =
         if (master != null) {
-          val txnResponse = transport.transactionRequest(TransactionRequest(agentAddress, master, partition), transportTimeout)
+          val txnResponse = transport.transactionRequest(NewTransactionRequest(agentAddress, master, partition), transportTimeout)
           txnResponse match {
             case null =>
               updateMaster(partition, init = false)
@@ -441,15 +453,6 @@ class PeerAgent(agentAddress : String,
     val agent = this
     messageHandler = new Thread(new Runnable {
       override def run(): Unit = {
-        val executors = mutable.Map[Int, FirstFailLockableTaskExecutor]()
-        (0 until poolSize) foreach { x =>
-          executors(x) = new FirstFailLockableTaskExecutor(s"PeerAgent-PartitionWorker-${producer.name}")
-        }
-        val partitionsToExecutors = usedPartitions
-          .zipWithIndex
-          .map { case (partition, execNum) => (partition, execNum % poolSize) }
-          .toMap
-
         latch.countDown()
 
         while (isRunning.get()) {
@@ -470,5 +473,16 @@ class PeerAgent(agentAddress : String,
     messageHandler.start()
     latch.await()
   }
+
+  /**
+    * public method which allows to submit delayed task for execution
+    * @param task
+    * @param partition
+    */
+  def submitPipelinedTask(task: Runnable, partition: Int) = {
+    val execNum = partitionsToExecutors(partition)
+    executors(execNum).execute(task)
+  }
+
 
 }

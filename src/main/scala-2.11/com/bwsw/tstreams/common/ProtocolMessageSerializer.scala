@@ -51,7 +51,7 @@ class ProtocolMessageSerializer {
       case x: SetMasterResponse =>
         s"{SMRs,${x.senderID},${x.receiverID},${x.partition},${x.msgID}}"
 
-      case x: TransactionRequest =>
+      case x: NewTransactionRequest =>
         s"{TRq,${x.senderID},${x.receiverID},${x.partition},${x.msgID}}"
 
       case x: TransactionResponse =>
@@ -163,7 +163,7 @@ class ProtocolMessageSerializer {
         res
       case "TRq" =>
         assert(tokens.size == 5)
-        val res = TransactionRequest(tokens(1).toString, tokens(2).toString, tokens(3).toString.toInt)
+        val res = NewTransactionRequest(tokens(1).toString, tokens(2).toString, tokens(3).toString.toInt)
         res.msgID = tokens(4).toString.toLong
         res
       case "TRs" =>

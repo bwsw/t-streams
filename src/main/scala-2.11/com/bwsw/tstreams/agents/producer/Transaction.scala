@@ -328,11 +328,11 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
     }
 
     state.setUpdateFinished
-    txnOwner.subscriberNotifier.publish(Message(
+    txnOwner.p2pAgent.publish(Message(
       txnUuid = transactionUuid,
       ttl = txnOwner.producerOptions.transactionTTL,
       status = TransactionStatus.update,
-      partition = partition), () => ())
+      partition = partition))
     logger.debug(s"[KEEP_ALIVE THREAD PARTITION_${partition}] ts=${transactionUuid.timestamp()} status=${TransactionStatus.update}")
   }
 
