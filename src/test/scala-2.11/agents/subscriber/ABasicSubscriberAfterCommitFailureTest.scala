@@ -55,8 +55,6 @@ class ABasicSubscriberAfterCommitFailureTest extends FlatSpec with Matchers
 
       acc += 1
 
-      logger.info("TXN is: " + transactionUuid.toString)
-
       subscriber.setLocalOffset(partition, transactionUuid)
       subscriber.checkpoint()
 
@@ -67,7 +65,6 @@ class ABasicSubscriberAfterCommitFailureTest extends FlatSpec with Matchers
         l2.countDown()
 
       if (acc == totalTxns * 3) {
-        logger.info("L3")
         l3.countDown()
       }
 

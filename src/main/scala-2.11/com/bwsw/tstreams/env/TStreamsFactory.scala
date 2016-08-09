@@ -13,7 +13,7 @@ import com.bwsw.tstreams.agents.consumer.subscriber.{Callback, SubscribingConsum
 import com.bwsw.tstreams.agents.consumer.{Consumer, ConsumerOptions, SubscriberCoordinationOptions}
 import com.bwsw.tstreams.agents.producer.DataInsertType.{AbstractInsertType, BatchInsert, SingleElementInsert}
 import com.bwsw.tstreams.agents.producer.{CoordinationOptions, Options, Producer}
-import com.bwsw.tstreams.common.{LockUtil, NetworkUtil}
+import com.bwsw.tstreams.common.{CassandraConnectorConf, LockUtil, NetworkUtil}
 import com.bwsw.tstreams.converter.IConverter
 import com.bwsw.tstreams.coordination.producer.transport.impl.TcpTransport
 import com.bwsw.tstreams.data.IStorage
@@ -59,6 +59,42 @@ object TSF_Dictionary {
         * password of the user which can access to the metadata store
         */
       val PASSWORD = "metadata.cluster.password"
+
+      /**
+        * Local DC
+        */
+      val LOCAL_DC = "metadata.cluster.local-dc"
+
+      /**
+        * Connection keep alive in MS
+        */
+      val KEEP_ALIVE_MS = "metadata.cluster.keep-alive-ms"
+
+      /**
+        * Minimal reconnection delay
+        */
+      val MIN_RECONNECTION_DELAY_MS = "metadata.cluster.min-reconnection-delay-ms"
+
+      /**
+        * Maximal reconnection delay
+        */
+      val MAX_RECONNECTION_DELAY_MS = "metadata.cluster.max-reconnection-delay-ms"
+
+      /**
+        * Query retry count
+        */
+      val QUERY_RETRY_COUNT = "metadata.cluster.query-retry-count"
+
+      /**
+        * Connection timeout
+        */
+      val CONNECTION_TIMEOUT_MS = "metadata.cluster.connection-timeout-ms"
+
+      /**
+        * Read timeout
+        */
+      val READ_TIMEOUT_MS = "metadata.cluster.read-timeout-ms"
+
     }
 
   }
@@ -124,6 +160,43 @@ object TSF_Dictionary {
           */
         val CLIENT_POLICY = "data.cluster.aerospike.client-policy"
 
+      }
+
+      object Cassandra {
+        /**
+          * Local DC
+          */
+        val LOCAL_DC = "data.cluster.casandra.local-dc"
+
+        /**
+          * Connection keep alive in MS
+          */
+        val KEEP_ALIVE_MS = "data.cluster.casandra.keep-alive-ms"
+
+        /**
+          * Minimal reconnection delay
+          */
+        val MIN_RECONNECTION_DELAY_MS = "data.cluster.casandra.min-reconnection-delay-ms"
+
+        /**
+          * Maximal reconnection delay
+          */
+        val MAX_RECONNECTION_DELAY_MS = "data.cluster.casandra.max-reconnection-delay-ms"
+
+        /**
+          * Query retry count
+          */
+        val QUERY_RETRY_COUNT = "data.cluster.casandra.query-retry-count"
+
+        /**
+          * Connection timeout
+          */
+        val CONNECTION_TIMEOUT_MS = "data.cluster.casandra.connection-timeout-ms"
+
+        /**
+          * Read timeout
+          */
+        val READ_TIMEOUT_MS = "data.cluster.casandra.read-timeout-ms"
       }
 
     }
@@ -318,6 +391,41 @@ class TStreamsFactory(envname: String = "T-streams") {
   propertyMap += (TSF_Dictionary.Data.Cluster.Aerospike.WRITE_POLICY -> null)
   propertyMap += (TSF_Dictionary.Data.Cluster.Aerospike.READ_POLICY -> null)
   propertyMap += (TSF_Dictionary.Data.Cluster.Aerospike.CLIENT_POLICY -> null)
+  val Cluster_cassandra_keep_alive_ms_default = 5000
+  val Cluster_cassandra_keep_alive_ms_min = 1000
+  val Cluster_cassandra_keep_alive_ms_max = 10000
+  val Cluster_cassandra_min_reconnection_delay_ms_default = 1000
+  val Cluster_cassandra_min_reconnection_delay_ms_min = 500
+  val Cluster_cassandra_min_reconnection_delay_ms_max = 5000
+  val Cluster_cassandra_max_reconnection_delay_ms_default = 60000
+  val Cluster_cassandra_max_reconnection_delay_ms_min = 5000
+  val Cluster_cassandra_max_reconnection_delay_ms_max = 60000
+  val Cluster_cassandra_query_retry_count_default = 10
+  val Cluster_cassandra_query_retry_count_min = 1
+  val Cluster_cassandra_query_retry_count_max = 20
+  val Cluster_cassandra_connection_timeout_ms_default = 5000
+  val Cluster_cassandra_connection_timeout_ms_min = 1000
+  val Cluster_cassandra_connection_timeout_ms_max = 60000
+  val Cluster_cassandra_read_timeout_ms_default = 120000
+  val Cluster_cassandra_read_timeout_ms_min = 10000
+  val Cluster_cassandra_read_timeout_ms_max = 600000
+
+  propertyMap += (TSF_Dictionary.Metadata.Cluster.LOCAL_DC                        -> null)
+  propertyMap += (TSF_Dictionary.Metadata.Cluster.KEEP_ALIVE_MS                   -> Cluster_cassandra_keep_alive_ms_default)
+  propertyMap += (TSF_Dictionary.Metadata.Cluster.MIN_RECONNECTION_DELAY_MS       -> Cluster_cassandra_min_reconnection_delay_ms_default)
+  propertyMap += (TSF_Dictionary.Metadata.Cluster.MAX_RECONNECTION_DELAY_MS       -> Cluster_cassandra_max_reconnection_delay_ms_default)
+  propertyMap += (TSF_Dictionary.Metadata.Cluster.QUERY_RETRY_COUNT               -> Cluster_cassandra_query_retry_count_default)
+  propertyMap += (TSF_Dictionary.Metadata.Cluster.CONNECTION_TIMEOUT_MS           -> Cluster_cassandra_connection_timeout_ms_default)
+  propertyMap += (TSF_Dictionary.Metadata.Cluster.READ_TIMEOUT_MS                 -> Cluster_cassandra_read_timeout_ms_default)
+
+  propertyMap += (TSF_Dictionary.Data.Cluster.Cassandra.LOCAL_DC                  -> null)
+  propertyMap += (TSF_Dictionary.Data.Cluster.Cassandra.KEEP_ALIVE_MS             -> Cluster_cassandra_keep_alive_ms_default)
+  propertyMap += (TSF_Dictionary.Data.Cluster.Cassandra.MIN_RECONNECTION_DELAY_MS -> Cluster_cassandra_min_reconnection_delay_ms_default)
+  propertyMap += (TSF_Dictionary.Data.Cluster.Cassandra.MAX_RECONNECTION_DELAY_MS -> Cluster_cassandra_max_reconnection_delay_ms_default)
+  propertyMap += (TSF_Dictionary.Data.Cluster.Cassandra.QUERY_RETRY_COUNT         -> Cluster_cassandra_query_retry_count_default)
+  propertyMap += (TSF_Dictionary.Data.Cluster.Cassandra.CONNECTION_TIMEOUT_MS     -> Cluster_cassandra_connection_timeout_ms_default)
+  propertyMap += (TSF_Dictionary.Data.Cluster.Cassandra.READ_TIMEOUT_MS           -> Cluster_cassandra_read_timeout_ms_default)
+
 
 
   // coordination scope
@@ -509,7 +617,7 @@ class TStreamsFactory(envname: String = "T-streams") {
     *
     * @return
     */
-  private def getDataStorage(): IStorage[Array[Byte]] = {
+  def getDataStorage(): IStorage[Array[Byte]] = {
     if (pAsString(TSF_Dictionary.Data.Cluster.DRIVER) == TSF_Dictionary.Data.Cluster.Consts.DATA_DRIVER_AEROSPIKE) {
       val dsf = aerospikeStorageFactory
 
@@ -562,14 +670,20 @@ class TStreamsFactory(envname: String = "T-streams") {
       assert(pAsString(TSF_Dictionary.Data.Cluster.NAMESPACE) != null)
       assert(pAsString(TSF_Dictionary.Data.Cluster.ENDPOINTS) != null)
 
-      val opts = new CassandraStorageOptions(
-        keyspace = pAsString(TSF_Dictionary.Data.Cluster.NAMESPACE),
-        cassandraHosts = NetworkUtil.getInetSocketAddressCompatibleHostList(pAsString(TSF_Dictionary.Data.Cluster.ENDPOINTS)),
-        login = login,
-        password = password
+      val opts = new CassandraConnectorConf(
+        hosts     = scala.Predef.Set.empty[InetSocketAddress] ++ NetworkUtil.getInetSocketAddressCompatibleHostList(pAsString(TSF_Dictionary.Data.Cluster.ENDPOINTS)),
+        login     = login,
+        password  = password,
+        localDC   = Option(pAsString(TSF_Dictionary.Data.Cluster.Cassandra.LOCAL_DC, null)),
+        keepAliveMillis             = pAsInt(TSF_Dictionary.Data.Cluster.Cassandra.KEEP_ALIVE_MS, Cluster_cassandra_keep_alive_ms_default),
+        minReconnectionDelayMillis  = pAsInt(TSF_Dictionary.Data.Cluster.Cassandra.MIN_RECONNECTION_DELAY_MS, Cluster_cassandra_min_reconnection_delay_ms_default),
+        maxReconnectionDelayMillis  = pAsInt(TSF_Dictionary.Data.Cluster.Cassandra.MAX_RECONNECTION_DELAY_MS, Cluster_cassandra_max_reconnection_delay_ms_default),
+        queryRetryCount             = pAsInt(TSF_Dictionary.Data.Cluster.Cassandra.QUERY_RETRY_COUNT, Cluster_cassandra_query_retry_count_default),
+        connectTimeoutMillis        = pAsInt(TSF_Dictionary.Data.Cluster.Cassandra.CONNECTION_TIMEOUT_MS, Cluster_cassandra_connection_timeout_ms_default),
+        readTimeoutMillis           = pAsInt(TSF_Dictionary.Data.Cluster.Cassandra.READ_TIMEOUT_MS, Cluster_cassandra_read_timeout_ms_default)
       )
 
-      return dsf.getInstance(opts)
+      return dsf.getInstance(opts, pAsString(TSF_Dictionary.Data.Cluster.NAMESPACE))
     }
     else {
       throw new InvalidParameterException("Only UF_Dictionary.Data.Cluster.Consts.DATA_DRIVER_CASSANDRA and " +
@@ -584,19 +698,28 @@ class TStreamsFactory(envname: String = "T-streams") {
     *
     * @return
     */
-  private def getMetadataStorage(): MetadataStorage = {
+  def getMetadataStorage(): MetadataStorage = {
     val login = pAsString(TSF_Dictionary.Metadata.Cluster.LOGIN, null)
     val password = pAsString(TSF_Dictionary.Metadata.Cluster.PASSWORD, null)
 
     assert(pAsString(TSF_Dictionary.Metadata.Cluster.NAMESPACE) != null)
     assert(pAsString(TSF_Dictionary.Metadata.Cluster.ENDPOINTS) != null)
 
+    val opts = new CassandraConnectorConf(
+      hosts     = scala.Predef.Set.empty[InetSocketAddress] ++ NetworkUtil.getInetSocketAddressCompatibleHostList(pAsString(TSF_Dictionary.Metadata.Cluster.ENDPOINTS)),
+      login     = login,
+      password  = password,
+      localDC   = Option(pAsString(TSF_Dictionary.Metadata.Cluster.LOCAL_DC, null)),
+      keepAliveMillis             = pAsInt(TSF_Dictionary.Metadata.Cluster.KEEP_ALIVE_MS, Cluster_cassandra_keep_alive_ms_default),
+      minReconnectionDelayMillis  = pAsInt(TSF_Dictionary.Metadata.Cluster.MIN_RECONNECTION_DELAY_MS, Cluster_cassandra_min_reconnection_delay_ms_default),
+      maxReconnectionDelayMillis  = pAsInt(TSF_Dictionary.Metadata.Cluster.MAX_RECONNECTION_DELAY_MS, Cluster_cassandra_max_reconnection_delay_ms_default),
+      queryRetryCount             = pAsInt(TSF_Dictionary.Metadata.Cluster.QUERY_RETRY_COUNT, Cluster_cassandra_query_retry_count_default),
+      connectTimeoutMillis        = pAsInt(TSF_Dictionary.Metadata.Cluster.CONNECTION_TIMEOUT_MS, Cluster_cassandra_connection_timeout_ms_default),
+      readTimeoutMillis           = pAsInt(TSF_Dictionary.Metadata.Cluster.READ_TIMEOUT_MS, Cluster_cassandra_read_timeout_ms_default)
+    )
+
     // construct metadata storage
-    return msFactory.getInstance(
-      keyspace = pAsString(TSF_Dictionary.Metadata.Cluster.NAMESPACE),
-      cassandraHosts = NetworkUtil.getInetSocketAddressCompatibleHostList(pAsString(TSF_Dictionary.Metadata.Cluster.ENDPOINTS)),
-      login = login,
-      password = password)
+    return msFactory.getInstance(opts,pAsString(TSF_Dictionary.Metadata.Cluster.NAMESPACE))
   }
 
   /**
@@ -864,7 +987,6 @@ class TStreamsFactory(envname: String = "T-streams") {
       throw new IllegalStateException("TStreamsFactory is closed. This is repeatable close operation.")
 
     msFactory.closeFactory()
-    cassandraStorageFactory.closeFactory()
     aerospikeStorageFactory.closeFactory()
   }
 
