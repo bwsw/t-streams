@@ -32,8 +32,7 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
     * state of transaction
     */
   private val state = new TransactionState
-  //TODO remove it!
-  state.makeMaterialized
+
   /**
     * State indicator of the transaction
     *
@@ -56,6 +55,11 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
     * Return transaction partition
     */
   def getPartition: Int = partition
+
+  /**
+    * makes transaction materialized
+    */
+  def makeMaterialized(): Unit = state.makeMaterialized()
 
   /**
     * Return transaction UUID

@@ -57,6 +57,41 @@ class TransactionStateUpdateClient {
   }
 
   /**
+    * @param msg     Message to send
+    * @return Response message
+    */
+  def sendAndNoWaitResponse(msg: IMessage):Unit = {
+    val rcvAddress = msg.receiverID
+    if (addressToConnection.contains(rcvAddress)) {
+      val sock = addressToConnection(rcvAddress)
+      val reader = new BufferedReader(new InputStreamReader(sock.getInputStream))
+      val socketAndReader = SocketAndReader(sock, reader)
+      if (sock.isClosed || !sock.isConnected || sock.isOutputShutdown) {
+        addressToConnection.remove(rcvAddress)
+        sendAndNoWaitResponse(msg)
+      }
+      else
+        writeMsgAndNoWaitResponse(socketAndReader, msg)
+    } else {
+      try {
+        val splits = rcvAddress.split(":")
+        assert(splits.size == 2)
+        val host = splits(0)
+        val port = splits(1).toInt
+        val sock = new Socket(host, port)
+        val socketAndReader = SocketAndReader(sock, null)
+        addressToConnection(rcvAddress) = sock
+        writeMsgAndNoWaitResponse(socketAndReader, msg)
+      } catch {
+        case e: IOException =>
+          logger.warn(s"exception occurred: ${e.getMessage}")
+          logger.warn(msg.toString())
+          null.asInstanceOf[IMessage]
+      }
+    }
+  }
+
+  /**
     * Wrap message with line delimiter to separate it on server side
     *
     * @param msg
@@ -129,6 +164,29 @@ class TransactionStateUpdateClient {
     }
 
     answer
+  }
+
+  /**
+    * Helper method for [[sendAndNoWaitResponse]]]
+    *
+    * @param socketAndReader Socket and its reader to send msg
+    * @param msg             Msg to send
+    * @return Response message
+    */
+  private def writeMsgAndNoWaitResponse(socketAndReader: SocketAndReader, msg: IMessage) = {
+    //do request
+    val string = wrapMsg(serializer.serialize(msg))
+    try {
+      val outputStream = socketAndReader.sock.getOutputStream
+      outputStream.write(string.getBytes)
+      outputStream.flush()
+    }
+    catch {
+      case e: IOException =>
+        logger.warn(s"exception occurred: ${e.getMessage}")
+        logger.warn(msg.toString())
+        closeSocketAndUpdateMap(socketAndReader.sock, msg)
+    }
   }
 
   /**

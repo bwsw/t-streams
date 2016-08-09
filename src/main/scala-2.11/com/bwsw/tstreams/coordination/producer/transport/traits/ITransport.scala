@@ -40,6 +40,14 @@ trait ITransport {
   def publishRequest(msg: PublishRequest, timeout: Int): IMessage
 
   /**
+    * Request to materialize event about Txn
+    *
+    * @param msg     Message
+    */
+  def materializeRequest(msg: MaterializeRequest): Unit
+
+
+  /**
     * Request to figure out state of receiver
     *
     * @param msg Message

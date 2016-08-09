@@ -120,4 +120,13 @@ class TcpTransport extends ITransport {
     val response: IMessage = client.sendAndWaitResponse(msg, timeout)
     response
   }
+
+  /**
+    * Request to publish event about Txn
+    *
+    * @param msg     Message
+    */
+  override def materializeRequest(msg: MaterializeRequest): Unit = {
+    client.sendAndNoWaitResponse(msg)
+  }
 }

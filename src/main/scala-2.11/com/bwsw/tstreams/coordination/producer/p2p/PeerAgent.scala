@@ -65,6 +65,7 @@ class PeerAgent(agentAddress : String,
 
   def getProducer = producer
 
+  def getTransportTimeout = transportTimeout
 
   /**
     * this ID is used to track sequential transactions from the same master
@@ -397,6 +398,12 @@ class PeerAgent(agentAddress : String,
         }
       res
     })
+  }
+
+  def notifyMaterialize(msg: Message, to: String): Unit = {
+    logger.debug(s"[MATERIALIZE] Send materialize request address\nMe: {$agentAddress}\n" +
+      s"TXN owner: ${to}\nStream:${streamName}\npartition:${msg.partition}\nTXN: ${msg.txnUuid}")
+    transport.materializeRequest(MaterializeRequest(agentAddress, to , msg))
   }
 
   //TODO remove after complex testing

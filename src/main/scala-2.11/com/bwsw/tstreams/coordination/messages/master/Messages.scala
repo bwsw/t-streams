@@ -2,6 +2,7 @@ package com.bwsw.tstreams.coordination.messages.master
 
 import java.util.UUID
 
+import com.bwsw.tstreams.coordination.messages.state.TransactionStatus._
 import com.bwsw.tstreams.coordination.messages.state.{TransactionStatus, Message}
 import com.bwsw.tstreams.coordination.producer.p2p.PeerAgent
 
@@ -47,7 +48,12 @@ case class NewTransactionRequest(senderID: String, receiverID: String, partition
       response.msgID = msgID
       agent.getTransport.respond(response)
       agent.submitPipelinedTask(new Runnable {
-          def run(): Unit = agent.getProducer.openTxnLocal(txnUUID, partition, onComplete = () => {})
+          def run(): Unit = agent.getProducer.openTxnLocal(txnUUID, partition,
+              onComplete = () => {
+                  // TODO Fix here!!! Implement materialization.
+                  agent.notifyMaterialize(
+                      Message(txnUUID, -1, TransactionStatus.materialize, partition), senderID)
+          })
         }, partition)
     } else {
       val response = EmptyResponse(receiverID, senderID, partition)
@@ -238,3 +244,19 @@ case class EmptyRequest(senderID: String, receiverID: String, partition: Int) ex
   */
 case class EmptyResponse(senderID: String, receiverID: String, partition: Int) extends IMessage
 
+/**
+  * Just empty dump request
+  *
+  * @param senderID
+  * @param receiverID
+  * @param msg
+  */
+case class MaterializeRequest(senderID: String, receiverID: String, msg: Message) extends IMessage {
+  override val partition: Int = msg.partition
+  override def handleP2PRequest(agent: PeerAgent) = {
+    assert(agent.getProducer.getOpenedTransactionForPartition(partition).isDefined)
+    assert(agent.getProducer.getOpenedTransactionForPartition(partition).get.getTxnUUID == msg.txnUuid)
+    assert(msg.status == TransactionStatus.materialize)
+    agent.getProducer.getOpenedTransactionForPartition(partition).get.makeMaterialized()
+  }
+}
