@@ -191,20 +191,9 @@ case class PublishRequest(senderID: String, receiverID: String, msg: Message) ex
     assert(receiverID == agent.getAgentAddress)
     val master = agent.localMasters.getOrDefault(partition, "")
     if(master == agent.getAgentAddress) {
-      val response = PublishResponse(
-                                    senderID    = receiverID,
-                                    receiverID  = senderID,
-                                    msg         = Message(msg.txnUuid, 0, msg.status, msg.partition))
-      response.msgID = msgID
-      agent.getTransport.respond(response)
-      // respond to client that request is received and then send it to delayed execution
       agent.submitPipelinedTask(new Runnable {
         override def run(): Unit = agent.getProducer.subscriberNotifier.publish(msg, onComplete = () => {})
       }, partition)
-    } else {
-      val response = EmptyResponse(receiverID, senderID, msg.partition)
-      response.msgID = msgID
-      agent.getTransport.respond(response)
     }
   }
 }

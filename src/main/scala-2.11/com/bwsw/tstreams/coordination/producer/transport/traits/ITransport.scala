@@ -35,9 +35,8 @@ trait ITransport {
     * Request to publish event about Txn
     *
     * @param msg     Message
-    * @param timeout Timeout to wait master
     */
-  def publishRequest(msg: PublishRequest, timeout: Int): IMessage
+  def publishRequest(msg: PublishRequest): Unit
 
   /**
     * Request to materialize event about Txn

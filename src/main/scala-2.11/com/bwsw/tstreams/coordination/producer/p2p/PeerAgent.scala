@@ -413,24 +413,8 @@ class PeerAgent(agentAddress : String,
       val master = localMasters.getOrDefault(msg.partition, null)
       logger.debug(s"[PUBLISH] SEND PTM:{$msg} to [MASTER:{$master}] from agent:{$agentAddress}," +
         s"stream:{$streamName}\n")
-
       if (master != null) {
-        val txnResponse = transport.publishRequest(PublishRequest(agentAddress, master, msg), transportTimeout)
-        txnResponse match {
-          case null =>
-            updateMaster(msg.partition, init = false)
-            publish(msg)
-
-          case EmptyResponse(snd, rcv, p) =>
-            assert(p == msg.partition)
-            updateMaster(msg.partition, init = false)
-            publish(msg)
-
-          case PublishResponse(snd, rcv, m) =>
-            assert(msg.partition == m.partition)
-            logger.debug(s"[PUBLISH] PUBLISHED PTM:{$msg} to [MASTER:{$master}] from agent:{$agentAddress}," +
-              s"stream:{$streamName}\n")
-        }
+        transport.publishRequest(PublishRequest(agentAddress, master, msg))
       } else {
         updateMaster(msg.partition, init = false)
         publish(msg)

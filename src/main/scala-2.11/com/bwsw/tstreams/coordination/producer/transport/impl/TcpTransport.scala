@@ -114,11 +114,9 @@ class TcpTransport extends ITransport {
     * Request to publish event about Txn
     *
     * @param msg     Message
-    * @param timeout Timeout to wait master
     */
-  override def publishRequest(msg: PublishRequest, timeout: Int): IMessage = {
-    val response: IMessage = client.sendAndWaitResponse(msg, timeout)
-    response
+  override def publishRequest(msg: PublishRequest): Unit = {
+    client.sendAndNoWaitResponse(msg)
   }
 
   /**
