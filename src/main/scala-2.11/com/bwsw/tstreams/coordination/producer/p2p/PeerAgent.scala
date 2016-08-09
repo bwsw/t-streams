@@ -474,6 +474,4 @@ class PeerAgent(agentAddress : String,
     val execNum = partitionsToExecutors(partition)
     executors(execNum).execute(task)
   }
-
-
 }
