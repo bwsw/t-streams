@@ -443,7 +443,7 @@ class PeerAgent(agentAddress : String,
       override def run(): Unit = {
         val executors = mutable.Map[Int, FirstFailLockableTaskExecutor]()
         (0 until poolSize) foreach { x =>
-          executors(x) = new FirstFailLockableTaskExecutor
+          executors(x) = new FirstFailLockableTaskExecutor(s"PeerAgent-PartitionWorker-${producer.name}")
         }
         val partitionsToExecutors = usedPartitions
           .zipWithIndex
