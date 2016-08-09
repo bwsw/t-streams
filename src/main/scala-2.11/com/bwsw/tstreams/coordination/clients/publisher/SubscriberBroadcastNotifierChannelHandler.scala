@@ -51,7 +51,7 @@ class SubscriberBroadcastNotifierChannelHandler(connectionManager: SubscriberBro
     * @param cause Cause of exception
     */
   override def exceptionCaught(ctx: ChannelHandlerContext, cause: Throwable) = {
-    logger.error(s"Broadcaster exception : ${cause.getMessage}")
+    logger.info(s"Broadcaster found that peer ${ctx.channel().remoteAddress()} is no longer available.")
   }
 
   /**
