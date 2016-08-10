@@ -52,7 +52,6 @@ class FirstFailLockableTaskExecutor(name: String) extends Executor {
                 isNotFailed.set(false)
                 failureExc = e
                 throw e
-                logger.error(failureExc.getStackTrace.toString)
             }
           })
         }

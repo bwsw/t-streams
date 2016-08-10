@@ -252,19 +252,16 @@ class Producer[USERTYPE](val name: String,
     * Info to commit
     */
   override def getCheckpointInfoAndClear(): List[CheckpointInfo] = {
-    LockUtil.withLockOrDieDo[List[CheckpointInfo]](threadLock, (100, TimeUnit.SECONDS), Some(logger), () => {
-      val keys = openTransactionsMap.keys()
-      val keyIterator = Iterator.continually((keys, keys.nextElement)).takeWhile(_._1.hasMoreElements).map(_._2)
+    var checkpointInfo = List[CheckpointInfo]()
 
-      var checkpointInfo = List[CheckpointInfo]()
-
-      keyIterator.map(part =>
-        Option(openTransactionsMap.getOrDefault(part, null)).map(t =>
-          if (!t.isClosed) checkpointInfo = t.getTransactionInfo() :: checkpointInfo))
-
-      openTransactionsMap.clear()
-      checkpointInfo
-    })
+    val keys = openTransactionsMap.keys()
+    for(k <- keys) {
+      val v = openTransactionsMap.getOrDefault(k, null)
+      if(!v.isClosed)
+        checkpointInfo = v.getTransactionInfo() :: checkpointInfo
+    }
+    openTransactionsMap.clear()
+    checkpointInfo
   }
 
   /**

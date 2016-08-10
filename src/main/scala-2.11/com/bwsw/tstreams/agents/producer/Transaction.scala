@@ -390,6 +390,8 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
 
 
   def getTransactionInfo(): ProducerCheckpointInfo = {
+    state.awaitMaterialization(txnOwner.producerOptions.coordinationOptions.transport.getTimeout())
+
     val preCheckpoint = Message(
       txnUuid = getTxnUUID,
       ttl = -1,
