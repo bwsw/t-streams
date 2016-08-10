@@ -51,7 +51,8 @@ class FirstFailLockableTaskExecutor(name: String) extends Executor {
                 task.lock.foreach(x => x.unlock())
                 isNotFailed.set(false)
                 failureExc = e
-                throw e
+                if(System.getProperty("DEBUG","false") == "true")
+                  throw e
             }
           })
         }
