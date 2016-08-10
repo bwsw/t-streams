@@ -551,7 +551,7 @@ class TStreamsFactory(envname: String = "T-streams") {
       throw new IllegalStateException("TStreamsFactory is locked. Use clone() to set properties.")
 
     LockUtil.withLockOrDieDo[TStreamsFactory](lck, (100, TimeUnit.SECONDS), Some(logger), () => {
-      logger.info("set property " + key + " = " + value)
+      logger.debug("set property " + key + " = " + value)
       if (propertyMap contains key)
         propertyMap += (key -> value)
       else
@@ -571,7 +571,7 @@ class TStreamsFactory(envname: String = "T-streams") {
 
     LockUtil.withLockOrDieDo[Any](lck, (100, TimeUnit.SECONDS), Some(logger), () => {
       val v = propertyMap get key
-      logger.info("get property " + key + " = " + v.getOrElse(null))
+      logger.debug("get property " + key + " = " + v.getOrElse(null))
       v.getOrElse(null)
     })
   }
