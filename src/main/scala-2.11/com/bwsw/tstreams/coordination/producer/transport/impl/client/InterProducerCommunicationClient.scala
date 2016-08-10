@@ -10,6 +10,9 @@ import org.slf4j.LoggerFactory
 
 import scala.collection.mutable
 
+object InterProducerCommunicationClient {
+ val logger = LoggerFactory.getLogger(this.getClass)
+}
 
 /**
   * Client for sending [[IMessage]]]
@@ -17,23 +20,22 @@ import scala.collection.mutable
 class InterProducerCommunicationClient(timeoutMs: Int) {
   private val peerMap = mutable.Map[String, Socket]()
   private val serializer = new ProtocolMessageSerializer
-  private val logger = LoggerFactory.getLogger(this.getClass)
   private val isClosed = new AtomicBoolean(false)
 
   private def openSocket(msg: IMessage): Socket = {
     try {
-      logger.info(s"Start opening socket from peer ${msg.senderID} to peer ${msg.receiverID}.")
+      InterProducerCommunicationClient.logger.info(s"Start opening socket from peer ${msg.senderID} to peer ${msg.receiverID}.")
       val splits = msg.receiverID.split(":")
       assert(splits.size == 2)
       val host = splits(0)
       val port = splits(1).toInt
       val sock = new Socket(host, port)
-      logger.info(s"Opened socket from peer ${msg.senderID} to peer ${msg.receiverID}.")
+      InterProducerCommunicationClient.logger.info(s"Opened socket from peer ${msg.senderID} to peer ${msg.receiverID}.")
       sock
     } catch {
       case e: IOException =>
-        logger.warn(s"exception occurred: ${e.getMessage}")
-        logger.warn(msg.toString())
+        InterProducerCommunicationClient.logger.warn(s"exception occurred: ${e.getMessage}")
+        InterProducerCommunicationClient.logger.warn(msg.toString())
         throw e
     }
   }
@@ -42,16 +44,17 @@ class InterProducerCommunicationClient(timeoutMs: Int) {
     var socket: Socket = null
     this.synchronized {
       if (peerMap.contains(msg.receiverID)) {
-        logger.debug(s"Socket from peer ${msg.senderID} to peer ${msg.receiverID} is already known.")
+        if (InterProducerCommunicationClient.logger.isDebugEnabled)
+          InterProducerCommunicationClient.logger.debug(s"Socket from peer ${msg.senderID} to peer ${msg.receiverID} is already known.")
         socket = peerMap(msg.receiverID)
         if (socket.isClosed || !socket.isConnected || socket.isOutputShutdown) {
-          logger.info(s"Socket from peer ${msg.senderID} to peer ${msg.receiverID} is in wrong state.")
+          InterProducerCommunicationClient.logger.info(s"Socket from peer ${msg.senderID} to peer ${msg.receiverID} is in wrong state.")
           socket = openSocket(msg)
           socket.setSoTimeout(timeoutMs)
           peerMap(msg.receiverID) = socket
         }
       } else {
-        logger.info(s"Socket from peer ${msg.senderID} to peer ${msg.receiverID} is not known.")
+        InterProducerCommunicationClient.logger.info(s"Socket from peer ${msg.senderID} to peer ${msg.receiverID} is not known.")
         socket = openSocket(msg)
         socket.setSoTimeout(timeoutMs)
         peerMap(msg.receiverID) = socket
@@ -99,13 +102,13 @@ class InterProducerCommunicationClient(timeoutMs: Int) {
     */
   private def closeSocketAndCleanPeerMap(socket: Socket, msg: IMessage) = {
     try {
-      logger.info(s"Socket from peer ${msg.senderID} to peer ${msg.receiverID} is to be closed.")
+      InterProducerCommunicationClient.logger.info(s"Socket from peer ${msg.senderID} to peer ${msg.receiverID} is to be closed.")
       socket.close()
-      logger.info(s"Socket from peer ${msg.senderID} to peer ${msg.receiverID} is closed.")
+      InterProducerCommunicationClient.logger.info(s"Socket from peer ${msg.senderID} to peer ${msg.receiverID} is closed.")
     } catch {
       case e: IOException =>
-        logger.warn(s"exception occurred: ${e.getMessage}")
-        logger.warn(msg.toString())
+        InterProducerCommunicationClient.logger.warn(s"exception occurred: ${e.getMessage}")
+        InterProducerCommunicationClient.logger.warn(msg.toString())
     } finally {
       this.synchronized {
         peerMap.remove(msg.receiverID)
@@ -124,37 +127,41 @@ class InterProducerCommunicationClient(timeoutMs: Int) {
     //do request
     val reqString = wrapMsg(serializer.serialize(msg))
     try {
-      logger.debug(s"To send message ${reqString} from peer ${msg.senderID} to peer ${msg.receiverID}.")
+      if (InterProducerCommunicationClient.logger.isDebugEnabled)
+        InterProducerCommunicationClient.logger.debug(s"To send message ${reqString} from peer ${msg.senderID} to peer ${msg.receiverID}.")
       val outputStream = sock.getOutputStream
       outputStream.write(reqString.getBytes)
       outputStream.flush()
-      logger.debug(s"Sent message ${reqString} from peer ${msg.senderID} to peer ${msg.receiverID}.")
+      if (InterProducerCommunicationClient.logger.isDebugEnabled)
+        InterProducerCommunicationClient.logger.debug(s"Sent message ${reqString} from peer ${msg.senderID} to peer ${msg.receiverID}.")
     }
     catch {
       case e: IOException =>
-        logger.warn(s"exception occurred: ${e.getMessage}")
-        logger.warn(msg.toString())
+        InterProducerCommunicationClient.logger.warn(s"exception occurred: ${e.getMessage}")
+        InterProducerCommunicationClient.logger.warn(msg.toString())
         closeSocketAndCleanPeerMap(sock, msg)
         return null.asInstanceOf[IMessage]
     }
     //wait response with timeout
     var answer = {
       try {
-        logger.debug(s"To receive response message on ${reqString}sent from peer ${msg.senderID} to peer ${msg.receiverID}.")
+        if (InterProducerCommunicationClient.logger.isDebugEnabled)
+          InterProducerCommunicationClient.logger.debug(s"To receive response message on ${reqString}sent from peer ${msg.senderID} to peer ${msg.receiverID}.")
         val reader = new BufferedReader(new InputStreamReader(sock.getInputStream))
         val string = reader.readLine()
         if (string == null)
           null.asInstanceOf[IMessage]
         else {
           val response = serializer.deserialize[IMessage](string)
-          logger.debug(s"Received response message ${response} on ${reqString}sent from peer ${msg.senderID} to peer ${msg.receiverID}.")
+          if (InterProducerCommunicationClient.logger.isDebugEnabled)
+            InterProducerCommunicationClient.logger.debug(s"Received response message ${response} on ${reqString}sent from peer ${msg.senderID} to peer ${msg.receiverID}.")
           response
         }
       }
       catch {
         case e@(_: SocketTimeoutException | _: ProtocolMessageSerializerException | _: IOException) =>
-          logger.warn(s"exception occurred: ${e.getMessage}")
-          logger.warn(msg.toString())
+          InterProducerCommunicationClient.logger.warn(s"exception occurred: ${e.getMessage}")
+          InterProducerCommunicationClient.logger.warn(msg.toString())
           null.asInstanceOf[IMessage]
       }
     }
@@ -176,16 +183,18 @@ class InterProducerCommunicationClient(timeoutMs: Int) {
     //do request
     val string = wrapMsg(serializer.serialize(msg))
     try {
-      logger.debug(s"To send message ${string} from peer ${msg.senderID} to peer ${msg.receiverID}.")
+      if (InterProducerCommunicationClient.logger.isDebugEnabled)
+        InterProducerCommunicationClient.logger.debug(s"To send message ${string} from peer ${msg.senderID} to peer ${msg.receiverID}.")
       val outputStream = sock.getOutputStream
       outputStream.write(string.getBytes)
       outputStream.flush()
-      logger.debug(s"Sent message ${string} from peer ${msg.senderID} to peer ${msg.receiverID}.")
+      if (InterProducerCommunicationClient.logger.isDebugEnabled)
+        InterProducerCommunicationClient.logger.debug(s"Sent message ${string} from peer ${msg.senderID} to peer ${msg.receiverID}.")
     }
     catch {
       case e: IOException =>
-        logger.warn(s"exception occurred: ${e.getMessage}")
-        logger.warn(msg.toString())
+        InterProducerCommunicationClient.logger.warn(s"exception occurred: ${e.getMessage}")
+        InterProducerCommunicationClient.logger.warn(msg.toString())
         closeSocketAndCleanPeerMap(sock, msg)
     }
   }
@@ -201,7 +210,7 @@ class InterProducerCommunicationClient(timeoutMs: Int) {
         x._2.close()
       } catch {
         case e: IOException =>
-          logger.warn(s"exception occurred: ${e.getMessage}")
+          InterProducerCommunicationClient.logger.warn(s"exception occurred: ${e.getMessage}")
           throw e
       }
     }
