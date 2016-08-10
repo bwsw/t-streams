@@ -45,7 +45,7 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
     * BasicProducerTransaction logger for logging
     */
   private val logger = LoggerFactory.getLogger(this.getClass)
-  logger.info(s"\nOpen transaction ${getTxnUUID} for\nstream, partition: {${txnOwner.stream.getName}}, {$partition}")
+  logger.debug(s"\nOpen transaction ${getTxnUUID} for\nstream, partition: {${txnOwner.stream.getName}}, {$partition}")
 
   /**
     *
@@ -61,14 +61,14 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
     * makes transaction materialized
     */
   def makeMaterialized(): Unit = {
-    logger.info(s"Materialize transaction ${getTxnUUID} for\nstream,partition : {${txnOwner.stream.getName}},{$partition}")
+    logger.debug(s"Materialize transaction ${getTxnUUID} for\nstream,partition : {${txnOwner.stream.getName}},{$partition}")
     state.makeMaterialized()
   }
 
   def awaitMaterialized(): Unit = {
-    logger.info(s"Await for transaction ${getTxnUUID} to be materialized\nfor stream,partition : {${txnOwner.stream.getName}},{$partition}")
+    logger.debug(s"Await for transaction ${getTxnUUID} to be materialized\nfor stream,partition : {${txnOwner.stream.getName}},{$partition}")
     state.awaitMaterialization(txnOwner.producerOptions.coordinationOptions.transport.getTimeout())
-    logger.info(s"Transaction ${getTxnUUID} is materialized\nfor stream,partition : {${txnOwner.stream.getName}},{$partition}")
+    logger.debug(s"Transaction ${getTxnUUID} is materialized\nfor stream,partition : {${txnOwner.stream.getName}},{$partition}")
   }
 
   /**
