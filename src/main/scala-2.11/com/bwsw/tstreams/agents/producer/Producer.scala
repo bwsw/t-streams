@@ -16,6 +16,7 @@ import com.bwsw.tstreams.streams.TStream
 import org.slf4j.LoggerFactory
 
 import scala.util.control.Breaks._
+import collection.JavaConversions._
 
 /**
   * Basic producer class
@@ -133,11 +134,14 @@ class Producer[USERTYPE](val name: String,
     */
   private def updateOpenedTransactions() = {
     logger.debug(s"Producer ${name} - scheduled for long lasting transactions")
-    val keys = openTransactionsMap.keys()
-    val keyIterator = Iterator.continually((keys, keys.nextElement)).takeWhile(_._1.hasMoreElements).map(_._2)
-    keyIterator.foreach(k =>
-      Option(openTransactionsMap.getOrDefault(k, null)).map(t =>
-        if(!t.isClosed) t.updateTxnKeepAliveState()))
+    LockUtil.withLockOrDieDo[Unit](threadLock, (100, TimeUnit.SECONDS), Some(logger), () => {
+      val keys = openTransactionsMap.keys()
+      for(k <- keys) {
+        val v = openTransactionsMap.getOrDefault(k, null)
+        if(!v.isClosed)
+          v.updateTxnKeepAliveState()
+      }
+    })
   }
 
   /**
@@ -183,9 +187,13 @@ class Producer[USERTYPE](val name: String,
     val txnUUID = p2pAgent.generateNewTransaction(partition)
     logger.debug(s"[NEW_TRANSACTION PARTITION_$partition] uuid=${txnUUID.timestamp()}")
     val txn = new Transaction[USERTYPE](txnLocks(partition % threadPoolSize), partition, txnUUID, this)
-    openTransactionsMap.put(partition, txn)
+    LockUtil.withLockOrDieDo[Unit](threadLock, (100, TimeUnit.SECONDS), Some(logger), () => {
+      openTransactionsMap.put(partition, txn)
+    })
     transactionReadynessMap.get(partition).countDown
-    if(action != null) action()
+    if(action != null)
+      backendActivityService.submit(new Runnable {
+        override def run(): Unit = action() })
     txn
   }
 
@@ -215,22 +223,28 @@ class Producer[USERTYPE](val name: String,
     * Checkpoint all opened transactions (not atomic). For atomic use CheckpointGroup.
     */
   def checkpoint(isAsynchronous: Boolean = false): Unit = {
-    val keys = openTransactionsMap.keys()
-    val keyIterator = Iterator.continually((keys, keys.nextElement)).takeWhile(_._1.hasMoreElements).map(_._2)
-    keyIterator.foreach(k =>
-      Option(openTransactionsMap.getOrDefault(k, null)).map(t =>
-        if(!t.isClosed) t.checkpoint(isAsynchronous)))
+    LockUtil.withLockOrDieDo[Unit](threadLock, (100, TimeUnit.SECONDS), Some(logger), () => {
+      val keys = openTransactionsMap.keys()
+      for(k <- keys) {
+        val v = openTransactionsMap.getOrDefault(k, null)
+        if(!v.isClosed)
+          v.checkpoint(isAsynchronous)
+      }
+    })
   }
 
   /**
     * Cancel all opened transactions (not atomic). For atomic use CheckpointGroup.
     */
   def cancel(): Unit = {
-    val keys = openTransactionsMap.keys()
-    val keyIterator = Iterator.continually((keys, keys.nextElement)).takeWhile(_._1.hasMoreElements).map(_._2)
-    keyIterator.foreach(k =>
-      Option(openTransactionsMap.getOrDefault(k, null)).map(t =>
-        if(!t.isClosed) t.cancel()))
+    LockUtil.withLockOrDieDo[Unit](threadLock, (100, TimeUnit.SECONDS), Some(logger), () => {
+      val keys = openTransactionsMap.keys()
+      for(k <- keys) {
+        val v = openTransactionsMap.getOrDefault(k, null)
+        if(!v.isClosed)
+          v.cancel()
+      }
+    })
   }
 
 
@@ -323,11 +337,12 @@ class Producer[USERTYPE](val name: String,
   def materialize(msg: Message) = {
     logger.debug(s"Start handling MaterializeRequest at partition: ${msg.partition}")
     transactionReadynessMap.get(msg.partition).await()
-    assert(getOpenedTransactionForPartition(msg.partition).isDefined)
-    logger.debug(s"In Map TXN: ${getOpenedTransactionForPartition(msg.partition).get.getTxnUUID.toString}\nIn Request TXN: ${msg.txnUuid}")
-    assert(getOpenedTransactionForPartition(msg.partition).get.getTxnUUID == msg.txnUuid)
+    val opt = getOpenedTransactionForPartition(msg.partition)
+    assert(opt.isDefined)
+    logger.debug(s"In Map TXN: ${opt.get.getTxnUUID.toString}\nIn Request TXN: ${msg.txnUuid}")
+    assert(opt.get.getTxnUUID == msg.txnUuid)
     assert(msg.status == TransactionStatus.materialize)
-    getOpenedTransactionForPartition(msg.partition).get.makeMaterialized()
+    opt.get.makeMaterialized()
     logger.debug("End handling MaterializeRequest")
   }
 }
