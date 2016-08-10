@@ -71,7 +71,6 @@ class AManyProducersStreamingInManyPartitionsAndConsumerTest extends FlatSpec wi
         def run() = {
           var i = 0
           while (i < totalTxn * producersAmount) {
-            logger.info(s"I: ${i} / Total is: ${ totalTxn * producersAmount }")
             val txn = consumer.getTransaction
             if (txn.isDefined) {
               checkVal &= txn.get.getAll().sorted == dataToSend
