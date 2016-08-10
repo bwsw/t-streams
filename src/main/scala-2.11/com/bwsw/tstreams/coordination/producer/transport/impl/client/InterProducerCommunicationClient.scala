@@ -14,7 +14,7 @@ import scala.collection.mutable
 /**
   * Client for sending [[IMessage]]]
   */
-class MasterCommunicationClient (timeoutMs: Int) {
+class InterProducerCommunicationClient(timeoutMs: Int) {
   private val peerMap = mutable.Map[String, Socket]()
   private val serializer = new ProtocolMessageSerializer
   private val logger = LoggerFactory.getLogger(this.getClass)
@@ -22,13 +22,13 @@ class MasterCommunicationClient (timeoutMs: Int) {
 
   private def openSocket(msg: IMessage): Socket = {
     try {
-      logger.debug(s"Start opening socket from peer ${msg.senderID} to peer ${msg.receiverID}.")
+      logger.info(s"Start opening socket from peer ${msg.senderID} to peer ${msg.receiverID}.")
       val splits = msg.receiverID.split(":")
       assert(splits.size == 2)
       val host = splits(0)
       val port = splits(1).toInt
       val sock = new Socket(host, port)
-      logger.debug(s"Opened socket from peer ${msg.senderID} to peer ${msg.receiverID}.")
+      logger.info(s"Opened socket from peer ${msg.senderID} to peer ${msg.receiverID}.")
       sock
     } catch {
       case e: IOException =>
@@ -45,13 +45,13 @@ class MasterCommunicationClient (timeoutMs: Int) {
         logger.debug(s"Socket from peer ${msg.senderID} to peer ${msg.receiverID} is already known.")
         socket = peerMap(msg.receiverID)
         if (socket.isClosed || !socket.isConnected || socket.isOutputShutdown) {
-          logger.debug(s"Socket from peer ${msg.senderID} to peer ${msg.receiverID} is in wrong state.")
+          logger.info(s"Socket from peer ${msg.senderID} to peer ${msg.receiverID} is in wrong state.")
           socket = openSocket(msg)
           socket.setSoTimeout(timeoutMs)
           peerMap(msg.receiverID) = socket
         }
       } else {
-        logger.debug(s"Socket from peer ${msg.senderID} to peer ${msg.receiverID} is not known.")
+        logger.info(s"Socket from peer ${msg.senderID} to peer ${msg.receiverID} is not known.")
         socket = openSocket(msg)
         socket.setSoTimeout(timeoutMs)
         peerMap(msg.receiverID) = socket
@@ -99,9 +99,9 @@ class MasterCommunicationClient (timeoutMs: Int) {
     */
   private def closeSocketAndCleanPeerMap(socket: Socket, msg: IMessage) = {
     try {
-      logger.debug(s"Socket from peer ${msg.senderID} to peer ${msg.receiverID} is to be closed.")
+      logger.info(s"Socket from peer ${msg.senderID} to peer ${msg.receiverID} is to be closed.")
       socket.close()
-      logger.debug(s"Socket from peer ${msg.senderID} to peer ${msg.receiverID} is closed.")
+      logger.info(s"Socket from peer ${msg.senderID} to peer ${msg.receiverID} is closed.")
     } catch {
       case e: IOException =>
         logger.warn(s"exception occurred: ${e.getMessage}")
@@ -140,14 +140,14 @@ class MasterCommunicationClient (timeoutMs: Int) {
     //wait response with timeout
     var answer = {
       try {
-        logger.debug(s"To receive response message on ${reqString} request\nsent from peer ${msg.senderID} to peer ${msg.receiverID}.")
+        logger.debug(s"To receive response message on ${reqString}sent from peer ${msg.senderID} to peer ${msg.receiverID}.")
         val reader = new BufferedReader(new InputStreamReader(sock.getInputStream))
         val string = reader.readLine()
         if (string == null)
           null.asInstanceOf[IMessage]
         else {
           val response = serializer.deserialize[IMessage](string)
-          logger.debug(s"Received response message ${response} on ${reqString} request\nsent from peer ${msg.senderID} to peer ${msg.receiverID}.")
+          logger.debug(s"Received response message ${response} on ${reqString}sent from peer ${msg.senderID} to peer ${msg.receiverID}.")
           response
         }
       }

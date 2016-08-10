@@ -2,7 +2,7 @@ package com.bwsw.tstreams.agents.producer
 
 import java.util.UUID
 import java.util.concurrent.locks.ReentrantLock
-import java.util.concurrent.{CountDownLatch, TimeUnit}
+import java.util.concurrent.{ConcurrentHashMap, CountDownLatch, TimeUnit}
 
 import com.bwsw.tstreams.agents.group.{Agent, CheckpointInfo, ProducerCheckpointInfo}
 import com.bwsw.tstreams.agents.producer.NewTransactionProducerPolicy.ProducerPolicy
@@ -41,7 +41,7 @@ class Producer[USERTYPE](val name: String,
   var isStop = false
 
   // stores currently opened transactions per partition
-  private val openTransactionsMap = scala.collection.mutable.Map[Int, Transaction[USERTYPE]]()
+  private val openTransactionsMap = new ConcurrentHashMap[Int, Transaction[USERTYPE]]()
   private val logger = LoggerFactory.getLogger(this.getClass)
   private val threadLock = new ReentrantLock(true)
 
@@ -129,9 +129,11 @@ class Producer[USERTYPE](val name: String,
     */
   private def updateOpenedTransactions() = {
     logger.debug(s"Producer ${name} - scheduled for long lasting transactions")
-    openTransactionsMap.
-      map { case (partition, txn) => txn }.
-      foreach { x => if (!x.isClosed) x.updateTxnKeepAliveState() }
+    val keys = openTransactionsMap.keys()
+    val keyIterator = Iterator.continually((keys, keys.nextElement)).takeWhile(_._1.hasMoreElements).map(_._2)
+    keyIterator.foreach(k =>
+      Option(openTransactionsMap.getOrDefault(k, null)).map(t =>
+        if(!t.isClosed) t.updateTxnKeepAliveState()))
   }
 
   /**
@@ -140,45 +142,49 @@ class Producer[USERTYPE](val name: String,
     * @return BasicProducerTransaction instance
     */
   def newTransaction(policy: ProducerPolicy, nextPartition: Int = -1): Transaction[USERTYPE] = {
-    LockUtil.withLockOrDieDo[Transaction[USERTYPE]] (threadLock, (100, TimeUnit.SECONDS), Some(logger), () => {
-      if (isStop)
-        throw new IllegalStateException(s"Producer ${this.name} is already stopped. Unable to get new transaction.")
+    if (isStop)
+      throw new IllegalStateException(s"Producer ${this.name} is already stopped. Unable to get new transaction.")
 
-      val partition = {
-        if (nextPartition == -1)
-          producerOptions.writePolicy.getNextPartition
-        else
-          nextPartition
-      }
+    val partition = {
+      if (nextPartition == -1)
+        producerOptions.writePolicy.getNextPartition
+      else
+        nextPartition
+    }
 
-      if (!(partition >= 0 && partition < stream.getPartitions))
-        throw new IllegalArgumentException(s"Producer ${name} - invalid partition")
+    if (!(partition >= 0 && partition < stream.getPartitions))
+      throw new IllegalArgumentException(s"Producer ${name} - invalid partition")
 
-      val transaction = {
-        if (openTransactionsMap.contains(partition)) {
-          val prevTxn = openTransactionsMap(partition)
-          if (!prevTxn.isClosed) {
+    val partOpt = Option(openTransactionsMap.getOrDefault(partition, null))
+    if (partOpt.isDefined) {
+      partOpt.get.awaitMaterialized()
+    }
+
+    val txnUUID = p2pAgent.generateNewTransaction(partition)
+    logger.debug(s"[NEW_TRANSACTION PARTITION_$partition] uuid=${txnUUID.timestamp()}")
+    var action: () => Unit = null
+    val txn =
+      LockUtil.withLockOrDieDo[Transaction[USERTYPE]](threadLock, (100, TimeUnit.SECONDS), Some(logger), () => {
+        if (partOpt.isDefined) {
+          if (!partOpt.get.isClosed) {
             policy match {
               case NewTransactionProducerPolicy.CheckpointIfOpened =>
-                prevTxn.checkpoint()
+                action = () => partOpt.get.checkpoint()
 
               case NewTransactionProducerPolicy.CancelIfOpened =>
-                prevTxn.cancel()
+                action = () => partOpt.get.cancel()
 
               case NewTransactionProducerPolicy.ErrorIfOpened =>
                 throw new IllegalStateException(s"Producer ${name} - previous transaction was not closed")
             }
           }
         }
-
-        val txnUUID = p2pAgent.generateNewTransaction(partition)
-        logger.debug(s"[NEW_TRANSACTION PARTITION_$partition] uuid=${txnUUID.timestamp()}")
-
         val txn = new Transaction[USERTYPE](txnLocks(partition % threadPoolSize), partition, txnUUID, this)
-        openTransactionsMap(partition) = txn
+        openTransactionsMap.put(partition, txn)
         txn
-      }
-      transaction })
+      })
+    if(action != null) action()
+    txn
   }
 
   /**
@@ -188,39 +194,42 @@ class Producer[USERTYPE](val name: String,
     * @return Transaction reference if it exist and is opened
     */
   def getOpenedTransactionForPartition(partition: Int): Option[Transaction[USERTYPE]] = {
-    LockUtil.withLockOrDieDo[Option[Transaction[USERTYPE]]](threadLock, (100, TimeUnit.SECONDS), Some(logger), () => {
-      if (!(partition >= 0 && partition < stream.getPartitions))
-        throw new IllegalArgumentException(s"Producer ${name} - invalid partition")
+    if (!(partition >= 0 && partition < stream.getPartitions))
+      throw new IllegalArgumentException(s"Producer ${name} - invalid partition")
 
-      val res = if (openTransactionsMap.contains(partition)) {
-        val txn = openTransactionsMap(partition)
-        if (txn.isClosed)
-          return None
-        Some(txn)
+    val partOpt = Option(openTransactionsMap.getOrDefault(partition, null))
+    val txnOpt =
+      if (partOpt.isDefined) {
+        if (partOpt.get.isClosed) {
+          None
+        }
+        partOpt
       }
       else
         None
-      res })
+    txnOpt
   }
 
   /**
     * Checkpoint all opened transactions (not atomic). For atomic use CheckpointGroup.
     */
-  def checkpoint(): Unit = {
-    LockUtil.withLockOrDieDo[Unit](threadLock, (100, TimeUnit.SECONDS), Some(logger), () => {
-      openTransactionsMap.
-        map { case (partition, txn) => txn }.
-        foreach { x => if (!x.isClosed) x.checkpoint() }})
+  def checkpoint(isAsynchronous: Boolean = false): Unit = {
+    val keys = openTransactionsMap.keys()
+    val keyIterator = Iterator.continually((keys, keys.nextElement)).takeWhile(_._1.hasMoreElements).map(_._2)
+    keyIterator.foreach(k =>
+      Option(openTransactionsMap.getOrDefault(k, null)).map(t =>
+        if(!t.isClosed) t.checkpoint(isAsynchronous)))
   }
 
   /**
     * Cancel all opened transactions (not atomic). For atomic use CheckpointGroup.
     */
   def cancel(): Unit = {
-    LockUtil.withLockOrDieDo[Unit](threadLock, (100, TimeUnit.SECONDS), Some(logger), () => {
-      openTransactionsMap.
-        map { case (partition, txn) => txn }.
-        foreach { x => if (!x.isClosed) x.cancel() }})
+    val keys = openTransactionsMap.keys()
+    val keyIterator = Iterator.continually((keys, keys.nextElement)).takeWhile(_._1.hasMoreElements).map(_._2)
+    keyIterator.foreach(k =>
+      Option(openTransactionsMap.getOrDefault(k, null)).map(t =>
+        if(!t.isClosed) t.cancel()))
   }
 
 
@@ -228,42 +237,19 @@ class Producer[USERTYPE](val name: String,
     * Info to commit
     */
   override def getCheckpointInfoAndClear(): List[CheckpointInfo] = {
-    val checkpointData = openTransactionsMap.filter(k => !k._2.isClosed).map {
-      case (partition, txn) =>
+    LockUtil.withLockOrDieDo[List[CheckpointInfo]](threadLock, (100, TimeUnit.SECONDS), Some(logger), () => {
+      val keys = openTransactionsMap.keys()
+      val keyIterator = Iterator.continually((keys, keys.nextElement)).takeWhile(_._1.hasMoreElements).map(_._2)
 
-        val (txnUuid, txnCnt, txnPartition) =
-          LockUtil.withLockOrDieDo[(UUID,Int,Int)](txn.getTransactionLock, (100, TimeUnit.SECONDS), Some(logger), () => {
-           txn.markAsClosed()
-          (txn.getTxnUUID, txn.getCnt, txn.getPartition)
-        })
+      var checkpointInfo = List[CheckpointInfo]()
 
-        assert(partition == txnPartition)
+      keyIterator.map(part =>
+        Option(openTransactionsMap.getOrDefault(part, null)).map(t =>
+          if (!t.isClosed) checkpointInfo = t.getTransactionInfo() :: checkpointInfo))
 
-        val preCheckpoint = Message(
-          txnUuid = txnUuid,
-          ttl = -1,
-          status = TransactionStatus.preCheckpoint,
-          partition = partition)
-
-        val finalCheckpoint = Message(
-          txnUuid = txnUuid,
-          ttl = -1,
-          status = TransactionStatus.postCheckpoint,
-          partition = partition)
-
-        ProducerCheckpointInfo(transactionRef = txn,
-          agent = p2pAgent,
-          preCheckpointEvent = preCheckpoint,
-          finalCheckpointEvent = finalCheckpoint,
-          streamName = stream.getName,
-          partition = partition,
-          transaction = txnUuid,
-          totalCnt = txnCnt,
-          ttl = stream.getTTL)
-    }.toList
-
-    openTransactionsMap.clear()
-    checkpointData
+      openTransactionsMap.clear()
+      checkpointInfo
+    })
   }
 
   /**

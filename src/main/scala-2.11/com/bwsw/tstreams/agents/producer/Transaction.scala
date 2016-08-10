@@ -5,6 +5,7 @@ import java.util.concurrent.{CountDownLatch, TimeUnit}
 import java.util.concurrent.atomic.{AtomicBoolean, AtomicInteger}
 import java.util.concurrent.locks.ReentrantLock
 
+import com.bwsw.tstreams.agents.group.ProducerCheckpointInfo
 import com.bwsw.tstreams.common.LockUtil
 import com.bwsw.tstreams.coordination.messages.state.{Message, TransactionStatus}
 import com.bwsw.tstreams.debug.GlobalHooks
@@ -44,7 +45,7 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
     * BasicProducerTransaction logger for logging
     */
   private val logger = LoggerFactory.getLogger(this.getClass)
-  logger.debug(s"Open transaction for stream,partition : {${txnOwner.stream.getName}},{$partition}")
+  logger.info(s"\nOpen transaction ${getTxnUUID} for\nstream, partition: {${txnOwner.stream.getName}}, {$partition}")
 
   /**
     *
@@ -59,7 +60,16 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
   /**
     * makes transaction materialized
     */
-  def makeMaterialized(): Unit = state.makeMaterialized()
+  def makeMaterialized(): Unit = {
+    logger.info(s"Materialize transaction ${getTxnUUID} for\nstream,partition : {${txnOwner.stream.getName}},{$partition}")
+    state.makeMaterialized()
+  }
+
+  def awaitMaterialized(): Unit = {
+    logger.info(s"Await for transaction ${getTxnUUID} to be materialized\nfor stream,partition : {${txnOwner.stream.getName}},{$partition}")
+    state.awaitMaterialization(txnOwner.producerOptions.coordinationOptions.transport.getTimeout())
+    logger.info(s"Transaction ${getTxnUUID} is materialized\nfor stream,partition : {${txnOwner.stream.getName}},{$partition}")
+  }
 
   /**
     * Return transaction UUID
@@ -377,4 +387,29 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
     * @return
     */
   def getTransactionLock(): ReentrantLock = transactionLock
+
+
+  def getTransactionInfo(): ProducerCheckpointInfo = {
+    val preCheckpoint = Message(
+      txnUuid = getTxnUUID,
+      ttl = -1,
+      status = TransactionStatus.preCheckpoint,
+      partition = partition)
+
+    val finalCheckpoint = Message(
+      txnUuid = getTxnUUID,
+      ttl = -1,
+      status = TransactionStatus.postCheckpoint,
+      partition = partition)
+
+    ProducerCheckpointInfo(transactionRef = this,
+      agent = txnOwner.p2pAgent,
+      preCheckpointEvent = preCheckpoint,
+      finalCheckpointEvent = finalCheckpoint,
+      streamName = txnOwner.stream.getName,
+      partition = partition,
+      transaction = getTxnUUID,
+      totalCnt = getCnt,
+      ttl = txnOwner.stream.getTTL)
+  }
 }

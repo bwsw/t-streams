@@ -3,16 +3,17 @@ package com.bwsw.tstreams.coordination.producer.transport.impl
 import java.util.concurrent.LinkedBlockingQueue
 
 import com.bwsw.tstreams.coordination.messages.master._
-import com.bwsw.tstreams.coordination.producer.transport.impl.client.MasterCommunicationClient
+import com.bwsw.tstreams.coordination.producer.transport.impl.client.InterProducerCommunicationClient
 import com.bwsw.tstreams.coordination.producer.transport.impl.server.ProducerRequestsTcpServer
 import com.bwsw.tstreams.coordination.producer.transport.traits.ITransport
+import org.slf4j.LoggerFactory
 
 /**
   * [[ITransport]] implementation
   */
 class TcpTransport(timeoutMs: Int) extends ITransport {
   private var server: ProducerRequestsTcpServer = null
-  private val client: MasterCommunicationClient = new MasterCommunicationClient(timeoutMs)
+  private val client: InterProducerCommunicationClient = new InterProducerCommunicationClient(timeoutMs)
   private val msgQueue = new LinkedBlockingQueue[IMessage]()
 
   /**
@@ -53,7 +54,8 @@ class TcpTransport(timeoutMs: Int) extends ITransport {
     * @param msg EmptyRequest
     */
   override def stopRequest(msg: EmptyRequest): Unit = {
-    client.sendAndWaitResponse(msg)
+    val logger = LoggerFactory.getLogger(this.getClass)
+    client.sendAndNoWaitResponse(msg)
   }
 
   /**
