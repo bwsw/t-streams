@@ -9,12 +9,15 @@ import org.slf4j.LoggerFactory
 
 import scala.util.Random
 
+object IMessage {
+  val logger = LoggerFactory.getLogger(this.getClass)
+}
+
 /**
   * Messages which used for providing
   * interaction between [[com.bwsw.tstreams.coordination.producer.p2p.PeerAgent]]]
   */
 trait IMessage {
-  val logger = LoggerFactory.getLogger(this.getClass)
   var msgID: Long = Random.nextLong()
   val senderID: String
   val receiverID: String
@@ -41,7 +44,7 @@ trait IMessage {
   */
 case class NewTransactionRequest(senderID: String, receiverID: String, partition: Int) extends IMessage {
   override def handleP2PRequest(agent: PeerAgent) = {
-    logger.debug("Start handling NewTransactionRequest")
+    IMessage.logger.debug("Start handling NewTransactionRequest")
     assert(receiverID == agent.getAgentAddress)
     val master = agent.localMasters.getOrDefault(partition, "")
     if (master == agent.getAgentAddress) {
@@ -49,13 +52,13 @@ case class NewTransactionRequest(senderID: String, receiverID: String, partition
       val response = TransactionResponse(receiverID, senderID, txnUUID, partition)
       response.msgID = msgID
       agent.getTransport.respond(response)
-      logger.debug(s"Responded with early ready virtualized TXN: ${txnUUID}")
+      IMessage.logger.debug(s"Responded with early ready virtualized TXN: ${txnUUID}")
       agent.submitPipelinedTask(new Runnable {
           def run(): Unit = agent.getProducer.openTxnLocal(txnUUID, partition,
               onComplete = () => {
                   agent.notifyMaterialize(
                       Message(txnUUID, -1, TransactionStatus.materialize, partition), senderID)
-                  logger.debug(s"Responded with complete ready TXN: ${txnUUID}")
+                IMessage.logger.debug(s"Responded with complete ready TXN: ${txnUUID}")
               })
         }, partition)
     } else {
@@ -85,7 +88,7 @@ case class TransactionResponse(senderID: String, receiverID: String, txnUUID: UU
   */
 case class DeleteMasterRequest(senderID: String, receiverID: String, partition: Int) extends IMessage {
   override def handleP2PRequest(agent: PeerAgent) = {
-    logger.debug("Start handling DeleteMasterRequest")
+    IMessage.logger.debug("Start handling DeleteMasterRequest")
     assert(receiverID == agent.getAgentAddress)
     val master = agent.localMasters.getOrDefault(partition, "")
     val response = {
@@ -101,7 +104,7 @@ case class DeleteMasterRequest(senderID: String, receiverID: String, partition: 
     }
     response.msgID = msgID
     agent.getTransport.respond(response)
-    logger.debug(s"sEnd handling DeleteMasterRequest ${response}")
+    IMessage.logger.debug(s"sEnd handling DeleteMasterRequest ${response}")
   }
 }
 
@@ -123,7 +126,7 @@ case class DeleteMasterResponse(senderID: String, receiverID: String, partition:
   */
 case class SetMasterRequest(senderID: String, receiverID: String, partition: Int) extends IMessage {
   override def handleP2PRequest(agent: PeerAgent) = {
-    logger.debug("Start handling SetMasterRequest")
+    IMessage.logger.debug("Start handling SetMasterRequest")
     assert(receiverID == agent.getAgentAddress)
     val master = agent.localMasters.getOrDefault(partition, "")
     val response = {
@@ -140,7 +143,7 @@ case class SetMasterRequest(senderID: String, receiverID: String, partition: Int
     }
     response.msgID = msgID
     agent.getTransport.respond(response)
-    logger.debug(s"End handling SetMasterRequest ${response}")
+    IMessage.logger.debug(s"End handling SetMasterRequest ${response}")
   }
 }
 
@@ -162,7 +165,7 @@ case class SetMasterResponse(senderID: String, receiverID: String, partition: In
   */
 case class PingRequest(senderID: String, receiverID: String, partition: Int) extends IMessage {
   override def handleP2PRequest(agent: PeerAgent) = {
-    logger.debug("Start handling PingRequest")
+    IMessage.logger.debug("Start handling PingRequest")
     assert(receiverID == agent.getAgentAddress)
     val master = agent.localMasters.getOrDefault(partition, "")
     val response = {
@@ -173,7 +176,7 @@ case class PingRequest(senderID: String, receiverID: String, partition: Int) ext
     }
     response.msgID = msgID
     agent.getTransport.respond(response)
-    logger.debug(s"End handling SetMasterRequest: ${response}")
+    IMessage.logger.debug(s"End handling SetMasterRequest: ${response}")
   }
 }
 
@@ -197,7 +200,7 @@ case class PublishRequest(senderID: String, receiverID: String, msg: Message) ex
   override val partition: Int = msg.partition
 
   override def handleP2PRequest(agent: PeerAgent) = {
-    logger.debug("Start handling PublishRequest")
+    IMessage.logger.debug("Start handling PublishRequest")
     assert(receiverID == agent.getAgentAddress)
     val master = agent.localMasters.getOrDefault(partition, "")
     if(master == agent.getAgentAddress) {
@@ -205,7 +208,7 @@ case class PublishRequest(senderID: String, receiverID: String, msg: Message) ex
         override def run(): Unit = agent.getProducer.subscriberNotifier.publish(msg, onComplete = () => {})
       }, partition)
     }
-    logger.debug("End handling PublishRequest")
+    IMessage.logger.debug("End handling PublishRequest")
   }
 }
 

@@ -40,7 +40,7 @@ object LockUtil {
         logger.get.error(s"Token ${token} / Lock ${l.toString} / Failed to get lock object ${l.toString} in ${lt._1} ${lt._2.toString}.")
       throw new IllegalStateException(s"Token ${token} / Lock ${l.toString} / Failed to get lock object in ${lt._1} ${lt._2.toString}.")
     } else {
-      if (logger.isDefined)
+      if (logger.isDefined && logger.get.isDebugEnabled)
         logger.get.debug(s"Token ${token} / Lock ${l.toString} / Lock object ${l.toString} received.")
     }
     val fStartTime = System.currentTimeMillis()
@@ -49,14 +49,14 @@ object LockUtil {
       val rv = lambda()
       // end function
 
-      if (logger.isDefined) {
+      if (logger.isDefined && logger.get.isDebugEnabled) {
         val fEndTime = System.currentTimeMillis()
         logger.get.debug(s"Token ${token} / Lock ${l.toString} / Function inside of withLockOrDieDo took ${fEndTime - fStartTime} ms to run.")
       }
 
       l.unlock()
 
-      if (logger.isDefined) {
+      if (logger.isDefined && logger.get.isDebugEnabled) {
         val lEndTime = System.currentTimeMillis()
         logger.get.debug(s"Token ${token} /Lock ${l.toString} / Section of withLockOrDieDo took ${lEndTime - lStartTime} ms to run.")
         logger.get.debug(s"Token ${token} /Lock ${l.toString} / Unlocked ${l.toString} in ${lt._1} ${lt._2.toString}.")
@@ -92,7 +92,7 @@ object LockUtil {
         logger.get.error(s"Token ${token} / Lock ${l.toString} / Failed to get lock object ${l.toString} in ${lt._1} ${lt._2.toString}.")
       throw new IllegalStateException(s"Token ${token} / Lock ${l.toString} / Failed to get lock object in ${lt._1} ${lt._2.toString}.")
     } else {
-      if (logger.isDefined)
+      if (logger.isDefined && logger.get.isDebugEnabled)
         logger.get.debug(s"Token ${token} / Lock ${l.toString} / Lock object ${l.toString} received.")
     }
     val fStartTime = System.currentTimeMillis()
@@ -101,14 +101,14 @@ object LockUtil {
       val rv = lambda()
       // end function
 
-      if (logger.isDefined) {
+      if (logger.isDefined && logger.get.isDebugEnabled) {
         val fEndTime = System.currentTimeMillis()
         logger.get.debug(s"Token ${token} / Lock ${l.toString} / Function inside of withLockOrDieDo took ${fEndTime - fStartTime} ms to run.")
       }
 
       l.unlock()
 
-      if (logger.isDefined) {
+      if (logger.isDefined && logger.get.isDebugEnabled) {
         val lEndTime = System.currentTimeMillis()
         logger.get.debug(s"Token ${token} /Lock ${l.toString} / Section of withLockOrDieDo took ${lEndTime - lStartTime} ms to run.")
         logger.get.debug(s"Token ${token} /Lock ${l.toString} / Unlocked ${l.toString} in ${lt._1} ${lt._2.toString}.")
@@ -119,7 +119,7 @@ object LockUtil {
       case e: Exception =>
         l.unlock()
         if (logger.isDefined) {
-          val fEndTime = System.currentTimeMillis();
+          val fEndTime = System.currentTimeMillis()
           val lEndTime = System.currentTimeMillis()
           logger.get.debug(s"Token ${token} /Lock ${l.toString} / Function inside of withLockOrDieDo took ${fEndTime - fStartTime} ms to run. Resulted to exception.")
           logger.get.debug(s"Token ${token} /Lock ${l.toString} / Section of withLockOrDieDo took ${lEndTime - lStartTime} ms to run. Resulted to exception.")
