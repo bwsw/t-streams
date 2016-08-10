@@ -21,13 +21,9 @@ class FirstFailLockableTaskExecutorTest extends FlatSpec with Matchers with Befo
     val executor = new FirstFailLockableTaskExecutor("test")
     val logger = LoggerFactory.getLogger(this.getClass)
 
-    logger.info("before submit")
     executor.submit(runnableWithException)
-    logger.info("after submit")
     try {
-      logger.info("before await")
       executor.awaitCurrentTasksWillComplete()
-      logger.info("after await")
     }
     catch {
       case e: Exception =>
