@@ -6,7 +6,7 @@ import java.util.concurrent.{ConcurrentHashMap, CountDownLatch, TimeUnit}
 
 import com.bwsw.tstreams.agents.group.{Agent, CheckpointInfo, ProducerCheckpointInfo}
 import com.bwsw.tstreams.agents.producer.NewTransactionProducerPolicy.ProducerPolicy
-import com.bwsw.tstreams.common.{FirstFailLockableTaskExecutor, LockUtil, ThreadSignalSleepVar}
+import com.bwsw.tstreams.common.{ResettableCountDownLatch, FirstFailLockableTaskExecutor, LockUtil, ThreadSignalSleepVar}
 import com.bwsw.tstreams.coordination.clients.ProducerToSubscriberNotifier
 import com.bwsw.tstreams.coordination.messages.state.{Message, TransactionStatus}
 import com.bwsw.tstreams.coordination.producer.p2p.PeerAgent
@@ -42,8 +42,12 @@ class Producer[USERTYPE](val name: String,
 
   // stores currently opened transactions per partition
   private val openTransactionsMap = new ConcurrentHashMap[Int, Transaction[USERTYPE]]()
+  private val transactionReadynessMap = new ConcurrentHashMap[Int, ResettableCountDownLatch]()
   private val logger = LoggerFactory.getLogger(this.getClass)
   private val threadLock = new ReentrantLock(true)
+
+  producerOptions.writePolicy.getUsedPartitions()
+    .map(p => transactionReadynessMap.put(p, new ResettableCountDownLatch(0)))
 
   // amount of threads which will handle partitions in masters, etc
   val threadPoolSize: Int = {
@@ -160,29 +164,27 @@ class Producer[USERTYPE](val name: String,
       partOpt.get.awaitMaterialized()
     }
 
+    transactionReadynessMap.get(partition).setValue(1)
+    var action: () => Unit = null
+    if (partOpt.isDefined) {
+      if (!partOpt.get.isClosed) {
+        policy match {
+          case NewTransactionProducerPolicy.CheckpointIfOpened =>
+            action = () => partOpt.get.checkpoint()
+
+          case NewTransactionProducerPolicy.CancelIfOpened =>
+            action = () => partOpt.get.cancel()
+
+          case NewTransactionProducerPolicy.ErrorIfOpened =>
+            throw new IllegalStateException(s"Producer ${name} - previous transaction was not closed")
+        }
+      }
+    }
     val txnUUID = p2pAgent.generateNewTransaction(partition)
     logger.debug(s"[NEW_TRANSACTION PARTITION_$partition] uuid=${txnUUID.timestamp()}")
-    var action: () => Unit = null
-    val txn =
-      LockUtil.withLockOrDieDo[Transaction[USERTYPE]](threadLock, (100, TimeUnit.SECONDS), Some(logger), () => {
-        if (partOpt.isDefined) {
-          if (!partOpt.get.isClosed) {
-            policy match {
-              case NewTransactionProducerPolicy.CheckpointIfOpened =>
-                action = () => partOpt.get.checkpoint()
-
-              case NewTransactionProducerPolicy.CancelIfOpened =>
-                action = () => partOpt.get.cancel()
-
-              case NewTransactionProducerPolicy.ErrorIfOpened =>
-                throw new IllegalStateException(s"Producer ${name} - previous transaction was not closed")
-            }
-          }
-        }
-        val txn = new Transaction[USERTYPE](txnLocks(partition % threadPoolSize), partition, txnUUID, this)
-        openTransactionsMap.put(partition, txn)
-        txn
-      })
+    val txn = new Transaction[USERTYPE](txnLocks(partition % threadPoolSize), partition, txnUUID, this)
+    openTransactionsMap.put(partition, txn)
+    transactionReadynessMap.get(partition).countDown
     if(action != null) action()
     txn
   }
@@ -196,7 +198,6 @@ class Producer[USERTYPE](val name: String,
   def getOpenedTransactionForPartition(partition: Int): Option[Transaction[USERTYPE]] = {
     if (!(partition >= 0 && partition < stream.getPartitions))
       throw new IllegalArgumentException(s"Producer ${name} - invalid partition")
-
     val partOpt = Option(openTransactionsMap.getOrDefault(partition, null))
     val txnOpt =
       if (partOpt.isDefined) {
@@ -318,4 +319,15 @@ class Producer[USERTYPE](val name: String,
     */
   override def getThreadLock(): ReentrantLock = threadLock
 
+
+  def materialize(msg: Message) = {
+    logger.debug(s"Start handling MaterializeRequest at partition: ${msg.partition}")
+    transactionReadynessMap.get(msg.partition).await()
+    assert(getOpenedTransactionForPartition(msg.partition).isDefined)
+    logger.debug(s"In Map TXN: ${getOpenedTransactionForPartition(msg.partition).get.getTxnUUID.toString}\nIn Request TXN: ${msg.txnUuid}")
+    assert(getOpenedTransactionForPartition(msg.partition).get.getTxnUUID == msg.txnUuid)
+    assert(msg.status == TransactionStatus.materialize)
+    getOpenedTransactionForPartition(msg.partition).get.makeMaterialized()
+    logger.debug("End handling MaterializeRequest")
+  }
 }

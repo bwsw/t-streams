@@ -53,7 +53,6 @@ case class NewTransactionRequest(senderID: String, receiverID: String, partition
       agent.submitPipelinedTask(new Runnable {
           def run(): Unit = agent.getProducer.openTxnLocal(txnUUID, partition,
               onComplete = () => {
-                  // TODO Fix here!!! Implement materialization.
                   agent.notifyMaterialize(
                       Message(txnUUID, -1, TransactionStatus.materialize, partition), senderID)
                   logger.debug(s"Responded with complete ready TXN: ${txnUUID}")
@@ -250,13 +249,6 @@ case class EmptyResponse(senderID: String, receiverID: String, partition: Int) e
 case class MaterializeRequest(senderID: String, receiverID: String, msg: Message) extends IMessage {
   override val partition: Int = msg.partition
   override def handleP2PRequest(agent: PeerAgent) = {
-    logger.info("Start handling MaterializeRequest")
-    assert(agent.getProducer.getOpenedTransactionForPartition(partition).isDefined)
-    logger.info(s"In Map TXN: ${agent.getProducer.getOpenedTransactionForPartition(partition).get.getTxnUUID.toString}")
-    logger.info(s"In Request TXN: ${msg.txnUuid}")
-    assert(agent.getProducer.getOpenedTransactionForPartition(partition).get.getTxnUUID == msg.txnUuid)
-    assert(msg.status == TransactionStatus.materialize)
-    agent.getProducer.getOpenedTransactionForPartition(partition).get.makeMaterialized()
-    logger.info("End handling MaterializeRequest")
+   agent.getProducer.materialize(msg)
   }
 }
