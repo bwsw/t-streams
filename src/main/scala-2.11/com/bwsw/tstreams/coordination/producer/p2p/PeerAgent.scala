@@ -397,7 +397,6 @@ class PeerAgent(agentAddress: String, zkHosts: List[InetSocketAddress], zkRootPa
   //TODO remove after complex testing
   def publish(msg: Message): Unit = {
     LockUtil.withLockOrDieDo[Unit](externalAccessLock, (100, TimeUnit.SECONDS), Some(logger), () => {
-      assert(msg.status != TransactionStatus.update)
       val master = localMasters.getOrDefault(msg.partition, null)
       logger.debug(s"[PUBLISH] SEND PTM:{$msg} to [MASTER:{$master}] from agent:{$agentAddress}," +
         s"stream:{$streamName}\n")
@@ -455,7 +454,7 @@ class PeerAgent(agentAddress: String, zkHosts: List[InetSocketAddress], zkRootPa
 
   /**
     * public method which allows to submit delayed task for execution
- *
+    *
     * @param task
     * @param partition
     */
