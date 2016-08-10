@@ -818,15 +818,7 @@ class TStreamsFactory(envname: String = "T-streams") {
       pAssertIntRange(pAsInt(TSF_Dictionary.Coordination.CONNECTION_TIMEOUT, Coordination_connection_timeout_default),
         Coordination_connection_timeout_min, Coordination_connection_timeout_max)
 
-      val cao = new CoordinationOptions(
-        agentAddress = pAsString(TSF_Dictionary.Producer.BIND_HOST) + ":" + pAsString(TSF_Dictionary.Producer.BIND_PORT),
-        zkHosts = NetworkUtil.getInetSocketAddressCompatibleHostList(pAsString(TSF_Dictionary.Coordination.ENDPOINTS)),
-        zkRootPath = pAsString(TSF_Dictionary.Coordination.ROOT),
-        zkSessionTimeout = pAsInt(TSF_Dictionary.Coordination.TTL, Coordination_ttl_default),
-        isLowPriorityToBeMaster = isLowPriority,
-        transport = new TcpTransport,
-        transportTimeout = pAsInt(TSF_Dictionary.Producer.MASTER_TIMEOUT, Producer_master_timeout_default),
-        zkConnectionTimeout = pAsInt(TSF_Dictionary.Coordination.CONNECTION_TIMEOUT, Coordination_connection_timeout_default))
+      val cao = new CoordinationOptions(agentAddress = pAsString(TSF_Dictionary.Producer.BIND_HOST) + ":" + pAsString(TSF_Dictionary.Producer.BIND_PORT), zkHosts = NetworkUtil.getInetSocketAddressCompatibleHostList(pAsString(TSF_Dictionary.Coordination.ENDPOINTS)), zkRootPath = pAsString(TSF_Dictionary.Coordination.ROOT), zkSessionTimeout = pAsInt(TSF_Dictionary.Coordination.TTL, Coordination_ttl_default), zkConnectionTimeout = pAsInt(TSF_Dictionary.Coordination.CONNECTION_TIMEOUT, Coordination_connection_timeout_default), isLowPriorityToBeMaster = isLowPriority, transport = new TcpTransport(pAsInt(TSF_Dictionary.Producer.MASTER_TIMEOUT, Producer_master_timeout_default) * 1000))
 
 
       var writePolicy: AbstractPolicy = null

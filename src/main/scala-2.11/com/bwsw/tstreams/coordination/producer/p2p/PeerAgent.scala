@@ -31,17 +31,7 @@ import scala.util.Random
  * @param transport Transport to provide interaction
  * @param transportTimeout Timeout for waiting response
  */
-class PeerAgent(agentAddress : String,
-                zkHosts : List[InetSocketAddress],
-                zkRootPath : String,
-                zkSessionTimeout: Int,
-                zkConnectionTimeout : Int,
-                producer : Producer[_],
-                usedPartitions : List[Int],
-                isLowPriorityToBeMaster : Boolean,
-                transport: ITransport,
-                transportTimeout : Int,
-                poolSize : Int) {
+class PeerAgent(agentAddress: String, zkHosts: List[InetSocketAddress], zkRootPath: String, zkSessionTimeout: Int, zkConnectionTimeout: Int, producer: Producer[_], usedPartitions: List[Int], isLowPriorityToBeMaster: Boolean, transport: ITransport, poolSize: Int) {
 
   private val zkRetriesAmount = 60
   private val externalAccessLock = new ReentrantLock(true)
@@ -64,8 +54,6 @@ class PeerAgent(agentAddress : String,
   def getUsedPartitions = usedPartitions
 
   def getProducer = producer
-
-  def getTransportTimeout = transportTimeout
 
   /**
     * this ID is used to track sequential transactions from the same master
@@ -198,7 +186,7 @@ class PeerAgent(agentAddress : String,
       assert(agentsOpt.isDefined)
       val agents = agentsOpt.get.sortBy(x => x.priority - x.penalty)
       val bestMaster = agents.last.agentAddress
-      transport.setMasterRequest(SetMasterRequest(agentAddress, bestMaster, partition), transportTimeout) match {
+      transport.setMasterRequest(SetMasterRequest(agentAddress, bestMaster, partition)) match {
         case null =>
           if (retries == 0)
             throw new IllegalStateException("agent is not responded")
@@ -241,7 +229,7 @@ class PeerAgent(agentAddress : String,
     val masterOpt = getMaster(partition)
     masterOpt.fold[Unit](startVoting(partition)) { master =>
       if (init) {
-        val ans = transport.deleteMasterRequest(DeleteMasterRequest(agentAddress, master.agentAddress, partition), transportTimeout)
+        val ans = transport.deleteMasterRequest(DeleteMasterRequest(agentAddress, master.agentAddress, partition))
         ans match {
           case null =>
             if (retries == 0)
@@ -263,7 +251,7 @@ class PeerAgent(agentAddress : String,
             localMasters.put(partition, newMaster)
         }
       } else {
-        transport.pingRequest(PingRequest(agentAddress, master.agentAddress, partition), transportTimeout) match {
+        transport.pingRequest(PingRequest(agentAddress, master.agentAddress, partition)) match {
           case null =>
             if (retries == 0)
               throw new IllegalStateException("agent is not responded")
@@ -375,7 +363,7 @@ class PeerAgent(agentAddress : String,
 
       val res =
         if (master != null) {
-          val txnResponse = transport.transactionRequest(NewTransactionRequest(agentAddress, master, partition), transportTimeout)
+          val txnResponse = transport.transactionRequest(NewTransactionRequest(agentAddress, master, partition))
           txnResponse match {
             case null =>
               updateMaster(partition, init = false)
@@ -467,6 +455,7 @@ class PeerAgent(agentAddress : String,
 
   /**
     * public method which allows to submit delayed task for execution
+ *
     * @param task
     * @param partition
     */

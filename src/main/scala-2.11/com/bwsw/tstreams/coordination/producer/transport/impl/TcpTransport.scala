@@ -3,29 +3,30 @@ package com.bwsw.tstreams.coordination.producer.transport.impl
 import java.util.concurrent.LinkedBlockingQueue
 
 import com.bwsw.tstreams.coordination.messages.master._
-import com.bwsw.tstreams.coordination.producer.transport.impl.client.TransactionStateUpdateClient
+import com.bwsw.tstreams.coordination.producer.transport.impl.client.MasterCommunicationClient
 import com.bwsw.tstreams.coordination.producer.transport.impl.server.ProducerRequestsTcpServer
 import com.bwsw.tstreams.coordination.producer.transport.traits.ITransport
 
 /**
   * [[ITransport]] implementation
   */
-class TcpTransport extends ITransport {
+class TcpTransport(timeoutMs: Int) extends ITransport {
   private var server: ProducerRequestsTcpServer = null
-  private val client: TransactionStateUpdateClient = new TransactionStateUpdateClient
+  private val client: MasterCommunicationClient = new MasterCommunicationClient(timeoutMs)
   private val msgQueue = new LinkedBlockingQueue[IMessage]()
 
   /**
     * Request to disable concrete master
     *
     * @param msg     Msg to disable master
-    * @param timeout Timeout for waiting
     * @return DeleteMasterResponse or null
     */
-  override def deleteMasterRequest(msg: DeleteMasterRequest, timeout: Int): IMessage = {
-    val response = client.sendAndWaitResponse(msg, timeout)
+  override def deleteMasterRequest(msg: DeleteMasterRequest): IMessage = {
+    val response = client.sendAndWaitResponse(msg)
     response
   }
+
+  override def getTimeout() = timeoutMs
 
   /**
     * Request to figure out state of receiver
@@ -33,8 +34,8 @@ class TcpTransport extends ITransport {
     * @param msg Message
     * @return PingResponse or null
     */
-  override def pingRequest(msg: PingRequest, timeout: Int): IMessage = {
-    val response = client.sendAndWaitResponse(msg, timeout)
+  override def pingRequest(msg: PingRequest): IMessage = {
+    val response = client.sendAndWaitResponse(msg)
     response
   }
 
@@ -52,18 +53,17 @@ class TcpTransport extends ITransport {
     * @param msg EmptyRequest
     */
   override def stopRequest(msg: EmptyRequest): Unit = {
-    client.sendAndWaitResponse(msg, 3)
+    client.sendAndWaitResponse(msg)
   }
 
   /**
     * Request to set concrete master
     *
     * @param msg     Message
-    * @param timeout Timeout to wait master
     * @return SetMasterResponse or null
     */
-  override def setMasterRequest(msg: SetMasterRequest, timeout: Int): IMessage = {
-    val response: IMessage = client.sendAndWaitResponse(msg, timeout)
+  override def setMasterRequest(msg: SetMasterRequest): IMessage = {
+    val response: IMessage = client.sendAndWaitResponse(msg)
     response
   }
 
@@ -71,12 +71,29 @@ class TcpTransport extends ITransport {
     * Request to get Txn
     *
     * @param msg     Message
-    * @param timeout Timeout to wait master
     * @return TransactionResponse or null
     */
-  override def transactionRequest(msg: NewTransactionRequest, timeout: Int): IMessage = {
-    val response: IMessage = client.sendAndWaitResponse(msg, timeout)
+  override def transactionRequest(msg: NewTransactionRequest): IMessage = {
+    val response: IMessage = client.sendAndWaitResponse(msg)
     response
+  }
+
+  /**
+    * Request to publish event about Txn
+    *
+    * @param msg     Message
+    */
+  override def publishRequest(msg: PublishRequest): Unit = {
+    client.sendAndNoWaitResponse(msg)
+  }
+
+  /**
+    * Request to publish event about Txn
+    *
+    * @param msg     Message
+    */
+  override def materializeRequest(msg: MaterializeRequest): Unit = {
+    client.sendAndNoWaitResponse(msg)
   }
 
   /**
@@ -110,21 +127,5 @@ class TcpTransport extends ITransport {
     server.stop()
   }
 
-  /**
-    * Request to publish event about Txn
-    *
-    * @param msg     Message
-    */
-  override def publishRequest(msg: PublishRequest): Unit = {
-    client.sendAndNoWaitResponse(msg)
-  }
 
-  /**
-    * Request to publish event about Txn
-    *
-    * @param msg     Message
-    */
-  override def materializeRequest(msg: MaterializeRequest): Unit = {
-    client.sendAndNoWaitResponse(msg)
-  }
 }

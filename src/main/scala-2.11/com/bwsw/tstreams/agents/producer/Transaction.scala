@@ -154,7 +154,7 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
     * Canceling current transaction
     */
   def cancel() = {
-    state.awaitMaterialization(txnOwner.producerOptions.coordinationOptions.transportTimeout)
+    state.awaitMaterialization(txnOwner.producerOptions.coordinationOptions.transport.getTimeout())
     LockUtil.withLockOrDieDo[Unit](transactionLock, (100, TimeUnit.SECONDS), Some(logger), () => {
       state.awaitUpdateComplete
       state.closeOrDie
@@ -254,7 +254,7 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
     * Submit transaction(transaction will be available by consumer only after closing)
     */
   def checkpoint(isSynchronous: Boolean = true): Unit = {
-    state.awaitMaterialization(txnOwner.producerOptions.coordinationOptions.transportTimeout)
+    state.awaitMaterialization(txnOwner.producerOptions.coordinationOptions.transport.getTimeout())
     LockUtil.withLockOrDieDo[Unit](transactionLock, (100, TimeUnit.SECONDS), Some(logger), () => {
       state.awaitUpdateComplete
       state.closeOrDie

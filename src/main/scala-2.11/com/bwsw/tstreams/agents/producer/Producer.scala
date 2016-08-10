@@ -76,18 +76,7 @@ class Producer[USERTYPE](val name: String,
     * P2P Agent for producers interaction
     * (getNewTxn uuid; publish openTxn event; publish closeTxn event)
     */
-  override val p2pAgent: PeerAgent = new PeerAgent(
-    agentAddress = pcs.agentAddress,
-    zkHosts = pcs.zkHosts,
-    zkRootPath = pcs.zkRootPath,
-    zkSessionTimeout = pcs.zkSessionTimeout,
-    zkConnectionTimeout = pcs.zkConnectionTimeout,
-    producer = this,
-    usedPartitions = producerOptions.writePolicy.getUsedPartitions(),
-    isLowPriorityToBeMaster = pcs.isLowPriorityToBeMaster,
-    transport = pcs.transport,
-    transportTimeout = pcs.transportTimeout,
-    poolSize = threadPoolSize)
+  override val p2pAgent: PeerAgent = new PeerAgent(agentAddress = pcs.agentAddress, zkHosts = pcs.zkHosts, zkRootPath = pcs.zkRootPath, zkSessionTimeout = pcs.zkSessionTimeout, zkConnectionTimeout = pcs.zkConnectionTimeout, producer = this, usedPartitions = producerOptions.writePolicy.getUsedPartitions(), isLowPriorityToBeMaster = pcs.isLowPriorityToBeMaster, transport = pcs.transport, poolSize = threadPoolSize)
 
   //used for managing new agents on stream
 
