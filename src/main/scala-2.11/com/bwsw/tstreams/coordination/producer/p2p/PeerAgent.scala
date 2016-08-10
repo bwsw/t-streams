@@ -31,21 +31,12 @@ import scala.util.Random
  * @param transport Transport to provide interaction
  * @param transportTimeout Timeout for waiting response
  */
-class PeerAgent(agentAddress : String,
-                zkHosts : List[InetSocketAddress],
-                zkRootPath : String,
-                zkSessionTimeout: Int,
-                zkConnectionTimeout : Int,
-                producer : Producer[_],
-                usedPartitions : List[Int],
-                isLowPriorityToBeMaster : Boolean,
-                transport: ITransport,
-                transportTimeout : Int,
-                poolSize : Int) {
+class PeerAgent(agentAddress: String, zkHosts: List[InetSocketAddress], zkRootPath: String, zkSessionTimeout: Int, zkConnectionTimeout: Int, producer: Producer[_], usedPartitions: List[Int], isLowPriorityToBeMaster: Boolean, transport: ITransport, poolSize: Int) {
 
   private val zkRetriesAmount = 60
   private val externalAccessLock = new ReentrantLock(true)
   private val zkService = new ZookeeperDLMService(zkRootPath, zkHosts, zkSessionTimeout, zkConnectionTimeout)
+  private val executors = mutable.Map[Int, FirstFailLockableTaskExecutor]()
 
   val localMasters = new java.util.concurrent.ConcurrentHashMap[Int /*partition*/ , String /*master address*/ ]()
   val logger = LoggerFactory.getLogger(this.getClass)
@@ -89,6 +80,16 @@ class PeerAgent(agentAddress : String,
   transport.bindLocalAddress(agentAddress)
 
   startSessionKeepAliveThread()
+
+  (0 until poolSize) foreach { x =>
+    executors(x) = new FirstFailLockableTaskExecutor(s"PeerAgent-PartitionWorker-${producer.name}")
+  }
+
+  private val partitionsToExecutors = usedPartitions
+    .zipWithIndex
+    .map { case (partition, execNum) => (partition, execNum % poolSize) }
+    .toMap
+
   beginHandleMessages()
 
   usedPartitions foreach { p =>
@@ -185,7 +186,7 @@ class PeerAgent(agentAddress : String,
       assert(agentsOpt.isDefined)
       val agents = agentsOpt.get.sortBy(x => x.priority - x.penalty)
       val bestMaster = agents.last.agentAddress
-      transport.setMasterRequest(SetMasterRequest(agentAddress, bestMaster, partition), transportTimeout) match {
+      transport.setMasterRequest(SetMasterRequest(agentAddress, bestMaster, partition)) match {
         case null =>
           if (retries == 0)
             throw new IllegalStateException("agent is not responded")
@@ -228,7 +229,7 @@ class PeerAgent(agentAddress : String,
     val masterOpt = getMaster(partition)
     masterOpt.fold[Unit](startVoting(partition)) { master =>
       if (init) {
-        val ans = transport.deleteMasterRequest(DeleteMasterRequest(agentAddress, master.agentAddress, partition), transportTimeout)
+        val ans = transport.deleteMasterRequest(DeleteMasterRequest(agentAddress, master.agentAddress, partition))
         ans match {
           case null =>
             if (retries == 0)
@@ -250,7 +251,7 @@ class PeerAgent(agentAddress : String,
             localMasters.put(partition, newMaster)
         }
       } else {
-        transport.pingRequest(PingRequest(agentAddress, master.agentAddress, partition), transportTimeout) match {
+        transport.pingRequest(PingRequest(agentAddress, master.agentAddress, partition)) match {
           case null =>
             if (retries == 0)
               throw new IllegalStateException("agent is not responded")
@@ -362,7 +363,7 @@ class PeerAgent(agentAddress : String,
 
       val res =
         if (master != null) {
-          val txnResponse = transport.transactionRequest(TransactionRequest(agentAddress, master, partition), transportTimeout)
+          val txnResponse = transport.transactionRequest(NewTransactionRequest(agentAddress, master, partition))
           txnResponse match {
             case null =>
               updateMaster(partition, init = false)
@@ -387,31 +388,20 @@ class PeerAgent(agentAddress : String,
     })
   }
 
+  def notifyMaterialize(msg: Message, to: String): Unit = {
+    logger.debug(s"[MATERIALIZE] Send materialize request address\nMe: {$agentAddress}\n" +
+      s"TXN owner: ${to}\nStream:${streamName}\npartition:${msg.partition}\nTXN: ${msg.txnUuid}")
+    transport.materializeRequest(MaterializeRequest(agentAddress, to , msg))
+  }
+
   //TODO remove after complex testing
   def publish(msg: Message): Unit = {
     LockUtil.withLockOrDieDo[Unit](externalAccessLock, (100, TimeUnit.SECONDS), Some(logger), () => {
-      assert(msg.status != TransactionStatus.update)
       val master = localMasters.getOrDefault(msg.partition, null)
       logger.debug(s"[PUBLISH] SEND PTM:{$msg} to [MASTER:{$master}] from agent:{$agentAddress}," +
         s"stream:{$streamName}\n")
-
       if (master != null) {
-        val txnResponse = transport.publishRequest(PublishRequest(agentAddress, master, msg), transportTimeout)
-        txnResponse match {
-          case null =>
-            updateMaster(msg.partition, init = false)
-            publish(msg)
-
-          case EmptyResponse(snd, rcv, p) =>
-            assert(p == msg.partition)
-            updateMaster(msg.partition, init = false)
-            publish(msg)
-
-          case PublishResponse(snd, rcv, m) =>
-            assert(msg.partition == m.partition)
-            logger.debug(s"[PUBLISH] PUBLISHED PTM:{$msg} to [MASTER:{$master}] from agent:{$agentAddress}," +
-              s"stream:{$streamName}\n")
-        }
+        transport.publishRequest(PublishRequest(agentAddress, master, msg))
       } else {
         updateMaster(msg.partition, init = false)
         publish(msg)
@@ -441,15 +431,6 @@ class PeerAgent(agentAddress : String,
     val agent = this
     messageHandler = new Thread(new Runnable {
       override def run(): Unit = {
-        val executors = mutable.Map[Int, FirstFailLockableTaskExecutor]()
-        (0 until poolSize) foreach { x =>
-          executors(x) = new FirstFailLockableTaskExecutor(s"PeerAgent-PartitionWorker-${producer.name}")
-        }
-        val partitionsToExecutors = usedPartitions
-          .zipWithIndex
-          .map { case (partition, execNum) => (partition, execNum % poolSize) }
-          .toMap
-
         latch.countDown()
 
         while (isRunning.get()) {
@@ -471,4 +452,14 @@ class PeerAgent(agentAddress : String,
     latch.await()
   }
 
+  /**
+    * public method which allows to submit delayed task for execution
+    *
+    * @param task
+    * @param partition
+    */
+  def submitPipelinedTask(task: Runnable, partition: Int) = {
+    val execNum = partitionsToExecutors(partition)
+    executors(execNum).execute(task)
+  }
 }
