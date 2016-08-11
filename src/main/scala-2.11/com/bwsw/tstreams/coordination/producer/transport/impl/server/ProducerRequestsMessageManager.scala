@@ -21,7 +21,7 @@ class ProducerRequestsMessageManager() {
     if (addressToId.contains(responseAddress)) {
       val id = addressToId(responseAddress)
       val channel = idToChannel(id)
-      channel.writeAndFlush(msg)
+      channel.writeAndFlush(msg, channel.voidPromise())
     }
   }
 
