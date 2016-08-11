@@ -51,6 +51,7 @@ class InterProducerCommunicationClient(timeoutMs: Int) {
           InterProducerCommunicationClient.logger.info(s"Socket from peer ${msg.senderID} to peer ${msg.receiverID} is in wrong state.")
           socket = openSocket(msg)
           socket.setSoTimeout(timeoutMs)
+          socket.setTcpNoDelay(true)
           peerMap(msg.receiverID) = socket
         }
       } else {
