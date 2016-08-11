@@ -69,6 +69,7 @@ class InterProducerCommunicationClient(timeoutMs: Int, retryCount: Int = 3, retr
       throw new IllegalStateException(s"Operation is failed to complete in ${cnt} retries.")
     val rv = f()
     if(failDeterminant == rv) {
+      InterProducerCommunicationClient.logger.warn(s"Operation failed. Retry it for ${cnt} times more.")
       Thread.sleep(retryDelay * 1000)
       withRetryDo[TYPE](failDeterminant, f, cnt - 1)
     }
