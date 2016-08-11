@@ -269,7 +269,18 @@ object TSF_Dictionary {
     /**
       * Transport timeout is maximum time to wait for master to respond
       */
-    val MASTER_TIMEOUT = "producer.master-timeout"
+    val TRANSPORT_TIMEOUT = "producer.transport-timeout"
+
+    /**
+      * Retry count for transport failures
+      */
+    val TRANSPORT_RETRY_COUNT = "producer.transport-retry-count"
+
+    /**
+      * Retry delay for transport failures
+      */
+    val TRANSPORT_RETRY_DELAY = "producer.transport-retry-delay"
+
 
     //TODO: fix internals transport->master
 
@@ -459,10 +470,16 @@ class TStreamsFactory(envname: String = "T-streams") {
   // producer scope
   propertyMap += (TSF_Dictionary.Producer.BIND_HOST -> "localhost")
   propertyMap += (TSF_Dictionary.Producer.BIND_PORT -> 18000)
-  val Producer_master_timeout_default = 5
-  val Producer_master_timeout_min = 1
-  val Producer_master_timeout_max = 10
-  propertyMap += (TSF_Dictionary.Producer.MASTER_TIMEOUT -> Producer_master_timeout_default)
+  val Producer_transport_timeout_default = 5
+  val Producer_transport_timeout_min = 1
+  val Producer_transport_timeout_max = 10
+  propertyMap += (TSF_Dictionary.Producer.TRANSPORT_TIMEOUT -> Producer_transport_timeout_default)
+
+  val Producer_transport_retry_count_default = 3
+  val Producer_transport_retry_delay_default = 5
+
+  propertyMap += (TSF_Dictionary.Producer.TRANSPORT_RETRY_COUNT -> Producer_transport_retry_count_default)
+  propertyMap += (TSF_Dictionary.Producer.TRANSPORT_RETRY_DELAY -> Producer_transport_retry_delay_default)
 
   val Producer_transaction_ttl_default = 6
   val Producer_transaction_ttl_min = 3
@@ -814,11 +831,16 @@ class TStreamsFactory(envname: String = "T-streams") {
       assert(pAsString(TSF_Dictionary.Coordination.ROOT) != null)
 
       pAssertIntRange(pAsInt(TSF_Dictionary.Coordination.TTL, Coordination_ttl_default), Coordination_ttl_min, Coordination_ttl_max)
-      pAssertIntRange(pAsInt(TSF_Dictionary.Producer.MASTER_TIMEOUT, Producer_master_timeout_default), Producer_master_timeout_min, Producer_master_timeout_max)
+      pAssertIntRange(pAsInt(TSF_Dictionary.Producer.TRANSPORT_TIMEOUT, Producer_transport_timeout_default), Producer_transport_timeout_min, Producer_transport_timeout_max)
       pAssertIntRange(pAsInt(TSF_Dictionary.Coordination.CONNECTION_TIMEOUT, Coordination_connection_timeout_default),
         Coordination_connection_timeout_min, Coordination_connection_timeout_max)
 
-      val cao = new CoordinationOptions(agentAddress = pAsString(TSF_Dictionary.Producer.BIND_HOST) + ":" + pAsString(TSF_Dictionary.Producer.BIND_PORT), zkHosts = NetworkUtil.getInetSocketAddressCompatibleHostList(pAsString(TSF_Dictionary.Coordination.ENDPOINTS)), zkRootPath = pAsString(TSF_Dictionary.Coordination.ROOT), zkSessionTimeout = pAsInt(TSF_Dictionary.Coordination.TTL, Coordination_ttl_default), zkConnectionTimeout = pAsInt(TSF_Dictionary.Coordination.CONNECTION_TIMEOUT, Coordination_connection_timeout_default), isLowPriorityToBeMaster = isLowPriority, transport = new TcpTransport(pAsInt(TSF_Dictionary.Producer.MASTER_TIMEOUT, Producer_master_timeout_default) * 1000))
+      val transport = new TcpTransport(
+        pAsInt(TSF_Dictionary.Producer.TRANSPORT_TIMEOUT, Producer_transport_timeout_default) * 1000,
+        pAsInt(TSF_Dictionary.Producer.TRANSPORT_RETRY_COUNT, Producer_transport_retry_count_default),
+        pAsInt(TSF_Dictionary.Producer.TRANSPORT_RETRY_DELAY, Producer_transport_retry_delay_default) * 1000)
+
+      val cao = new CoordinationOptions(agentAddress = pAsString(TSF_Dictionary.Producer.BIND_HOST) + ":" + pAsString(TSF_Dictionary.Producer.BIND_PORT), zkHosts = NetworkUtil.getInetSocketAddressCompatibleHostList(pAsString(TSF_Dictionary.Coordination.ENDPOINTS)), zkRootPath = pAsString(TSF_Dictionary.Coordination.ROOT), zkSessionTimeout = pAsInt(TSF_Dictionary.Coordination.TTL, Coordination_ttl_default), zkConnectionTimeout = pAsInt(TSF_Dictionary.Coordination.CONNECTION_TIMEOUT, Coordination_connection_timeout_default), isLowPriorityToBeMaster = isLowPriority, transport = transport)
 
 
       var writePolicy: AbstractPolicy = null
