@@ -17,7 +17,7 @@ object InterProducerCommunicationClient {
 /**
   * Client for sending [[IMessage]]]
   */
-class InterProducerCommunicationClient(timeoutMs: Int) {
+class InterProducerCommunicationClient(timeoutMs: Int, retryCount: Int = 3, retryDelay: Int = 5) {
   private val peerMap = mutable.Map[String, Socket]()
   private val serializer = new ProtocolMessageSerializer
   private val isClosed = new AtomicBoolean(false)
@@ -64,6 +64,18 @@ class InterProducerCommunicationClient(timeoutMs: Int) {
     socket
   }
 
+  private def withRetryDo[TYPE](failDeterminant: TYPE, f: () => TYPE, cnt: Int): TYPE = {
+    if(cnt == 0)
+      throw new IllegalStateException(s"Operation is failed to complete in ${cnt} retries.")
+    val rv = f()
+    if(failDeterminant == rv) {
+      Thread.sleep(retryDelay * 1000)
+      withRetryDo[TYPE](failDeterminant, f, cnt - 1)
+    }
+    else
+      rv
+  }
+
   /**
     * @param msg     Message to send
     * @return Response message
@@ -71,10 +83,13 @@ class InterProducerCommunicationClient(timeoutMs: Int) {
   def sendAndWaitResponse(msg: IMessage): IMessage = {
     if(isClosed.get)
       throw new IllegalStateException("Communication Client is closed. Unable to operate.")
-    val sock = getSocket(msg)
-    val r = writeMsgAndWaitResponse(sock, msg)
-    r
+    withRetryDo[IMessage](null, () => {
+      val sock = getSocket(msg)
+      val r = writeMsgAndWaitResponse(sock, msg)
+      r}, retryCount)
   }
+
+
 
   /**
     * @param msg     Message to send
@@ -83,8 +98,10 @@ class InterProducerCommunicationClient(timeoutMs: Int) {
   def sendAndNoWaitResponse(msg: IMessage):Unit = {
     if(isClosed.get)
       throw new IllegalStateException("Communication Client is closed. Unable to operate.")
-    val sock = getSocket(msg)
-    writeMsgAndNoWaitResponse(sock, msg)
+    withRetryDo[Boolean](false, () => {
+      val sock = getSocket(msg)
+      writeMsgAndNoWaitResponse(sock, msg)
+    }, retryCount)
   }
 
   /**
@@ -112,9 +129,7 @@ class InterProducerCommunicationClient(timeoutMs: Int) {
         InterProducerCommunicationClient.logger.warn(s"exception occurred: ${e.getMessage}")
         InterProducerCommunicationClient.logger.warn(msg.toString())
     } finally {
-      this.synchronized {
-        peerMap.remove(msg.receiverID)
-      }
+      peerMap.remove(msg.receiverID)
     }
   }
 
@@ -180,7 +195,7 @@ class InterProducerCommunicationClient(timeoutMs: Int) {
     * @param msg             Msg to send
     * @return Response message
     */
-  private def writeMsgAndNoWaitResponse(sock: Socket, msg: IMessage) = {
+  private def writeMsgAndNoWaitResponse(sock: Socket, msg: IMessage): Boolean = {
     //do request
     val string = wrapMsg(serializer.serialize(msg))
     try {
@@ -197,7 +212,9 @@ class InterProducerCommunicationClient(timeoutMs: Int) {
         InterProducerCommunicationClient.logger.warn(s"exception occurred: ${e.getMessage}")
         InterProducerCommunicationClient.logger.warn(msg.toString())
         closeSocketAndCleanPeerMap(sock, msg)
+        return false
     }
+    return true
   }
 
   /**
