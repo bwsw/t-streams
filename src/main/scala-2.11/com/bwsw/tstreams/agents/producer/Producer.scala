@@ -38,15 +38,16 @@ class Producer[USERTYPE](val name: String,
 
   // shortkey
   val pcs = producerOptions.coordinationOptions
-
   var isStop = false
 
   // stores currently opened transactions per partition
-  private val openTransactionsMap = new ConcurrentHashMap[Int, Transaction[USERTYPE]]()
+  private val openTransactionsMap     = new ConcurrentHashMap[Int, Transaction[USERTYPE]]()
+  // stores latches for materialization await (protects from materialization before main transaction response)
   private val transactionReadynessMap = new ConcurrentHashMap[Int, ResettableCountDownLatch]()
-  private val logger = LoggerFactory.getLogger(this.getClass)
-  private val threadLock = new ReentrantLock(true)
+  private val logger      = LoggerFactory.getLogger(this.getClass)
+  private val threadLock  = new ReentrantLock(true)
 
+  // initialize latches
   producerOptions.writePolicy.getUsedPartitions()
     .map(p => transactionReadynessMap.put(p, new ResettableCountDownLatch(0)))
 
@@ -58,11 +59,9 @@ class Producer[USERTYPE](val name: String,
       pcs.threadPoolAmount
   }
 
+  // every transaction reuses lock object from array below
   val txnLocks = new Array[ReentrantLock](threadPoolSize)
-
-  (0 until threadPoolSize) foreach { idx =>
-    txnLocks(idx) = new ReentrantLock()
-  }
+  (0 until threadPoolSize) foreach { idx => txnLocks(idx) = new ReentrantLock() }
 
   stream.dataStorage.bind() //TODO: fix, probably deprecated
 
@@ -184,9 +183,13 @@ class Producer[USERTYPE](val name: String,
         }
       }
     }
+    //val tm = getNewTxnUUIDLocal().timestamp()
     val txnUUID = p2pAgent.generateNewTransaction(partition)
+    //val delta = txnUUID.timestamp()
 
-    logger.debug(s"[NEW_TRANSACTION PARTITION_$partition] uuid=${txnUUID.timestamp()}")
+    //logger.info(s"Elapsed for TXN ->: {}",delta - tm)
+    if(logger.isDebugEnabled)
+      logger.debug(s"[NEW_TRANSACTION PARTITION_$partition] uuid=${txnUUID.timestamp()}")
     val txn = new Transaction[USERTYPE](txnLocks(partition % threadPoolSize), partition, txnUUID, this)
     LockUtil.withLockOrDieDo[Unit](threadLock, (100, TimeUnit.SECONDS), Some(logger), () => {
       openTransactionsMap.put(partition, txn)
@@ -287,21 +290,29 @@ class Producer[USERTYPE](val name: String,
     * @return UUID
     */
   override def openTxnLocal(txnUUID: UUID, partition: Int, onComplete: () => Unit): Unit = {
-    stream.metadataStorage.commitEntity.commit(
+    stream.metadataStorage.commitEntity.commitAsync(
       streamName = stream.getName,
       partition = partition,
       transaction = txnUUID,
       totalCnt = -1,
-      ttl = producerOptions.transactionTTL)
-
-    val msg = Message(
-      txnUuid = txnUUID,
       ttl = producerOptions.transactionTTL,
-      status = TransactionStatus.opened,
-      partition = partition)
+      function = () => {
+        backendActivityService.submit(new Runnable {
+          override def run(): Unit = {
+            val msg = Message(
+              txnUuid = txnUUID,
+              ttl = producerOptions.transactionTTL,
+              status = TransactionStatus.opened,
+              partition = partition)
+            if(logger.isDebugEnabled)
+              logger.debug(s"Producer ${name} - [GET_LOCAL_TXN PRODUCER] update with msg partition=$partition uuid=${txnUUID.timestamp()} opened")
+            subscriberNotifier.publish(msg, onComplete)
+          }
+        })
+      },
+      executor = backendActivityService)
 
-    logger.debug(s"Producer ${name} - [GET_LOCAL_TXN PRODUCER] update with msg partition=$partition uuid=${txnUUID.timestamp()} opened")
-    subscriberNotifier.publish(msg, onComplete)
+
   }
 
 
@@ -333,15 +344,18 @@ class Producer[USERTYPE](val name: String,
 
 
   def materialize(msg: Message) = {
-    logger.debug(s"Start handling MaterializeRequest at partition: ${msg.partition}")
+    if(logger.isDebugEnabled)
+      logger.debug(s"Start handling MaterializeRequest at partition: ${msg.partition}")
     transactionReadynessMap.get(msg.partition).await()
     val opt = getOpenedTransactionForPartition(msg.partition)
     assert(opt.isDefined)
-    logger.debug(s"In Map TXN: ${opt.get.getTxnUUID.toString}\nIn Request TXN: ${msg.txnUuid}")
+    if(logger.isDebugEnabled)
+      logger.debug(s"In Map TXN: ${opt.get.getTxnUUID.toString}\nIn Request TXN: ${msg.txnUuid}")
     assert(opt.get.getTxnUUID == msg.txnUuid)
     assert(msg.status == TransactionStatus.materialize)
     opt.get.makeMaterialized()
-    logger.debug("End handling MaterializeRequest")
+    if(logger.isDebugEnabled)
+      logger.debug("End handling MaterializeRequest")
 
   }
 }
