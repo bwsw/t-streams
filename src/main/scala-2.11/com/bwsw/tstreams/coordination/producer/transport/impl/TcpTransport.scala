@@ -117,7 +117,6 @@ class TcpTransport(timeoutMs: Int) extends ITransport {
     val port = splits(1).toInt
     server = new ProducerRequestsTcpServer(port)
     server.addCallback((msg: IMessage) => {
-      TimeTracker.update_end("From writeMsg flush to Netty")
       msgQueue.add(msg)
     })
     server.start()

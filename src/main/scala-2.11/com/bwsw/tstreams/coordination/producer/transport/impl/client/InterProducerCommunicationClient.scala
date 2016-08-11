@@ -133,7 +133,6 @@ class InterProducerCommunicationClient(timeoutMs: Int) {
       val outputStream = sock.getOutputStream
       outputStream.write(reqString.getBytes)
       outputStream.flush()
-      TimeTracker.update_start("From writeMsg flush to Netty")
       if (InterProducerCommunicationClient.logger.isDebugEnabled)
         InterProducerCommunicationClient.logger.debug(s"Sent message ${reqString} from peer ${msg.senderID} to peer ${msg.receiverID}.")
     }
@@ -190,7 +189,6 @@ class InterProducerCommunicationClient(timeoutMs: Int) {
       val outputStream = sock.getOutputStream
       outputStream.write(string.getBytes)
       outputStream.flush()
-      TimeTracker.update_start("From writeMsg flush to Netty")
       if (InterProducerCommunicationClient.logger.isDebugEnabled)
         InterProducerCommunicationClient.logger.debug(s"Sent message ${string} from peer ${msg.senderID} to peer ${msg.receiverID}.")
     }

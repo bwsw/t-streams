@@ -186,7 +186,6 @@ class Producer[USERTYPE](val name: String,
     }
     val txnUUID = p2pAgent.generateNewTransaction(partition)
 
-    //TimeTracker.update("From Producer.newTransaction start to p2pAgent.generateNewTransaction")
     logger.debug(s"[NEW_TRANSACTION PARTITION_$partition] uuid=${txnUUID.timestamp()}")
     val txn = new Transaction[USERTYPE](txnLocks(partition % threadPoolSize), partition, txnUUID, this)
     LockUtil.withLockOrDieDo[Unit](threadLock, (100, TimeUnit.SECONDS), Some(logger), () => {
