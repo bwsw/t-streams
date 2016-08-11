@@ -26,6 +26,7 @@ class SubscriberBroadcastNotifier {
     .handler(new ChannelInitializer[SocketChannel]() {
       override def initChannel(ch: SocketChannel) {
         val p = ch.pipeline()
+        ch.config().setTcpNoDelay(true)
         p.addLast("decoder", new StringDecoder())
         p.addLast("encoder", new StringEncoder())
         p.addLast("serializer", new MasterMessageEncoder())
