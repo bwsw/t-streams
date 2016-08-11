@@ -24,7 +24,7 @@ class TcpTransport(timeoutMs: Int, retryCount: Int = 3, retryDelayMs: Int = 5000
     * @return DeleteMasterResponse or null
     */
   override def deleteMasterRequest(msg: DeleteMasterRequest): IMessage = {
-    val response = client.sendAndWaitResponse(msg)
+    val response = client.sendAndWaitResponse(msg, isExceptionOnFail = false)
     response
   }
 
@@ -37,7 +37,7 @@ class TcpTransport(timeoutMs: Int, retryCount: Int = 3, retryDelayMs: Int = 5000
     * @return PingResponse or null
     */
   override def pingRequest(msg: PingRequest): IMessage = {
-    val response = client.sendAndWaitResponse(msg)
+    val response = client.sendAndWaitResponse(msg, isExceptionOnFail = false)
     response
   }
 
@@ -56,7 +56,7 @@ class TcpTransport(timeoutMs: Int, retryCount: Int = 3, retryDelayMs: Int = 5000
     */
   override def stopRequest(msg: EmptyRequest): Unit = {
     val logger = LoggerFactory.getLogger(this.getClass)
-    client.sendAndNoWaitResponse(msg)
+    client.sendAndNoWaitResponse(msg, isExceptionOnFail = true)
   }
 
   /**
@@ -66,7 +66,7 @@ class TcpTransport(timeoutMs: Int, retryCount: Int = 3, retryDelayMs: Int = 5000
     * @return SetMasterResponse or null
     */
   override def setMasterRequest(msg: SetMasterRequest): IMessage = {
-    val response: IMessage = client.sendAndWaitResponse(msg)
+    val response: IMessage = client.sendAndWaitResponse(msg, isExceptionOnFail = false)
     response
   }
 
@@ -77,7 +77,7 @@ class TcpTransport(timeoutMs: Int, retryCount: Int = 3, retryDelayMs: Int = 5000
     * @return TransactionResponse or null
     */
   override def transactionRequest(msg: NewTransactionRequest): IMessage = {
-    val response: IMessage = client.sendAndWaitResponse(msg)
+    val response: IMessage = client.sendAndWaitResponse(msg, isExceptionOnFail = false)
     response
   }
 
@@ -87,7 +87,7 @@ class TcpTransport(timeoutMs: Int, retryCount: Int = 3, retryDelayMs: Int = 5000
     * @param msg     Message
     */
   override def publishRequest(msg: PublishRequest): Unit = {
-    client.sendAndNoWaitResponse(msg)
+    client.sendAndNoWaitResponse(msg, isExceptionOnFail = true)
   }
 
   /**
@@ -96,7 +96,7 @@ class TcpTransport(timeoutMs: Int, retryCount: Int = 3, retryDelayMs: Int = 5000
     * @param msg     Message
     */
   override def materializeRequest(msg: MaterializeRequest): Unit = {
-    client.sendAndNoWaitResponse(msg)
+    client.sendAndNoWaitResponse(msg, isExceptionOnFail = true)
   }
 
   /**

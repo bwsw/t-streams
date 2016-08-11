@@ -83,13 +83,13 @@ class InterProducerCommunicationClient(timeoutMs: Int, retryCount: Int = 3, retr
     * @param msg     Message to send
     * @return Response message
     */
-  def sendAndWaitResponse(msg: IMessage): IMessage = {
+  def sendAndWaitResponse(msg: IMessage, isExceptionOnFail: Boolean): IMessage = {
     if(isClosed.get)
       throw new IllegalStateException("Communication Client is closed. Unable to operate.")
     withRetryDo[IMessage](null, () => {
       val sock = getSocket(msg)
       val r = writeMsgAndWaitResponse(sock, msg)
-      r}, retryCount, isExceptionOnFail = false)
+      r}, retryCount, isExceptionOnFail = isExceptionOnFail)
   }
 
 
@@ -98,13 +98,13 @@ class InterProducerCommunicationClient(timeoutMs: Int, retryCount: Int = 3, retr
     * @param msg     Message to send
     * @return Response message
     */
-  def sendAndNoWaitResponse(msg: IMessage):Unit = {
+  def sendAndNoWaitResponse(msg: IMessage, isExceptionOnFail: Boolean):Unit = {
     if(isClosed.get)
       throw new IllegalStateException("Communication Client is closed. Unable to operate.")
     withRetryDo[Boolean](false, () => {
       val sock = getSocket(msg)
       writeMsgAndNoWaitResponse(sock, msg)
-    }, retryCount, isExceptionOnFail = true)
+    }, retryCount, isExceptionOnFail = isExceptionOnFail)
   }
 
   /**
