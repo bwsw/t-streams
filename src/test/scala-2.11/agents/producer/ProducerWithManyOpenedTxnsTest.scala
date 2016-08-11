@@ -14,7 +14,7 @@ class ProducerWithManyOpenedTxnsTest extends FlatSpec with Matchers with BeforeA
     setProperty(TSF_Dictionary.Stream.TTL, 60 * 10).
     setProperty(TSF_Dictionary.Coordination.CONNECTION_TIMEOUT, 7).
     setProperty(TSF_Dictionary.Coordination.TTL, 7).
-    setProperty(TSF_Dictionary.Producer.MASTER_TIMEOUT, 5).
+    setProperty(TSF_Dictionary.Producer.TRANSPORT_TIMEOUT, 5).
     setProperty(TSF_Dictionary.Producer.Transaction.TTL, 6).
     setProperty(TSF_Dictionary.Producer.Transaction.KEEP_ALIVE, 2).
     setProperty(TSF_Dictionary.Consumer.TRANSACTION_PRELOAD, 10).

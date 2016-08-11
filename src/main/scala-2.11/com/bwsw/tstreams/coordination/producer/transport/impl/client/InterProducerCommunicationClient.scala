@@ -17,7 +17,7 @@ object InterProducerCommunicationClient {
 /**
   * Client for sending [[IMessage]]]
   */
-class InterProducerCommunicationClient(timeoutMs: Int, retryCount: Int = 3, retryDelay: Int = 5) {
+class InterProducerCommunicationClient(timeoutMs: Int, retryCount: Int = 3, retryDelayMs: Int = 5000) {
   private val peerMap = mutable.Map[String, Socket]()
   private val serializer = new ProtocolMessageSerializer
   private val isClosed = new AtomicBoolean(false)
@@ -70,7 +70,7 @@ class InterProducerCommunicationClient(timeoutMs: Int, retryCount: Int = 3, retr
     val rv = f()
     if(failDeterminant == rv) {
       InterProducerCommunicationClient.logger.warn(s"Operation failed. Retry it for ${cnt} times more.")
-      Thread.sleep(retryDelay * 1000)
+      Thread.sleep(retryDelayMs)
       withRetryDo[TYPE](failDeterminant, f, cnt - 1)
     }
     else
