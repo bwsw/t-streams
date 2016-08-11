@@ -1,7 +1,5 @@
 package com.bwsw.tstreams.coordination.producer.transport.impl.server
 
-import java.util.concurrent.locks.ReentrantLock
-
 import com.bwsw.tstreams.coordination.messages.master.IMessage
 import io.netty.channel.{Channel, ChannelId}
 
@@ -13,27 +11,21 @@ class ProducerRequestsMessageManager() {
   private val addressToId = scala.collection.mutable.Map[String, ChannelId]()
   private val idToAddress = scala.collection.mutable.Map[ChannelId, String]()
   private val callbacks = ListBuffer[(IMessage) => Unit]()
-  private val lock = new ReentrantLock(true)
 
-  def addCallback(callback: (IMessage) => Unit) = {
-    lock.lock()
+  def addCallback(callback: (IMessage) => Unit) = this.synchronized {
     callbacks += callback
-    lock.unlock()
   }
 
-  def respond(msg: IMessage): Unit = {
-    lock.lock()
+  def respond(msg: IMessage): Unit = this.synchronized {
     val responseAddress = msg.receiverID
     if (addressToId.contains(responseAddress)) {
       val id = addressToId(responseAddress)
       val channel = idToChannel(id)
       channel.writeAndFlush(msg)
     }
-    lock.unlock()
   }
 
-  def channelRead(address: String, id: ChannelId, channel: Channel, msg: IMessage) = {
-    lock.lock()
+  def channelRead(address: String, id: ChannelId, channel: Channel, msg: IMessage) = this.synchronized {
     if (!idToChannel.contains(id)) {
       idToChannel(id) = channel
       assert(!addressToId.contains(address))
@@ -42,11 +34,9 @@ class ProducerRequestsMessageManager() {
       idToAddress(id) = address
     }
     callbacks.foreach(x => x(msg))
-    lock.unlock()
   }
 
-  def channelInactive(id: ChannelId) = {
-    lock.lock()
+  def channelInactive(id: ChannelId) = this.synchronized {
     if (idToChannel.contains(id)) {
       idToChannel.remove(id)
       assert(idToAddress.contains(id))
@@ -55,6 +45,5 @@ class ProducerRequestsMessageManager() {
       assert(addressToId.contains(address))
       addressToId.remove(address)
     }
-    lock.unlock()
   }
 }

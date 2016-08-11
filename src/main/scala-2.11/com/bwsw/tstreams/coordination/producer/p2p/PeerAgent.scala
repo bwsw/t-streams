@@ -7,7 +7,7 @@ import java.util.concurrent.locks.ReentrantLock
 import java.util.concurrent.{CountDownLatch, TimeUnit}
 
 import com.bwsw.tstreams.agents.producer.Producer
-import com.bwsw.tstreams.common.{FirstFailLockableTaskExecutor, LockUtil, ZookeeperDLMService}
+import com.bwsw.tstreams.common.{TimeTracker, FirstFailLockableTaskExecutor, LockUtil, ZookeeperDLMService}
 import com.bwsw.tstreams.coordination.messages.master._
 import com.bwsw.tstreams.coordination.messages.state.{Message, TransactionStatus}
 import com.bwsw.tstreams.coordination.producer.transport.traits.ITransport
@@ -29,7 +29,6 @@ import scala.util.Random
  * @param usedPartitions List of used producer partitions
  * @param isLowPriorityToBeMaster Flag which indicate to have low priority to be master
  * @param transport Transport to provide interaction
- * @param transportTimeout Timeout for waiting response
  */
 class PeerAgent(agentAddress: String, zkHosts: List[InetSocketAddress], zkRootPath: String, zkSessionTimeout: Int, zkConnectionTimeout: Int, producer: Producer[_], usedPartitions: List[Int], isLowPriorityToBeMaster: Boolean, transport: ITransport, poolSize: Int) {
 

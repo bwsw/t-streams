@@ -2,6 +2,7 @@ package com.bwsw.tstreams.coordination.messages.master
 
 import java.util.UUID
 
+import com.bwsw.tstreams.common.TimeTracker
 import com.bwsw.tstreams.coordination.messages.state.TransactionStatus._
 import com.bwsw.tstreams.coordination.messages.state.{TransactionStatus, Message}
 import com.bwsw.tstreams.coordination.producer.p2p.PeerAgent
