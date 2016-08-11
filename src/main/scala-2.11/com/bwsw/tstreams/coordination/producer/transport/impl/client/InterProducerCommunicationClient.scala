@@ -64,14 +64,16 @@ class InterProducerCommunicationClient(timeoutMs: Int, retryCount: Int = 3, retr
     socket
   }
 
-  private def withRetryDo[TYPE](failDeterminant: TYPE, f: () => TYPE, cnt: Int): TYPE = {
-    if(cnt == 0)
-      throw new IllegalStateException(s"Operation is failed to complete in ${cnt} retries.")
+  private def withRetryDo[TYPE](failDeterminant: TYPE, f: () => TYPE, cnt: Int, isExceptionOnFail: Boolean): TYPE = {
+    if(cnt == 0) {
+      if(isExceptionOnFail) throw new IllegalStateException(s"Operation is failed to complete in ${cnt} retries.")
+      return failDeterminant
+    }
     val rv = f()
     if(failDeterminant == rv) {
       InterProducerCommunicationClient.logger.warn(s"Operation failed. Retry it for ${cnt} times more.")
       Thread.sleep(retryDelayMs)
-      withRetryDo[TYPE](failDeterminant, f, cnt - 1)
+      withRetryDo[TYPE](failDeterminant, f, cnt - 1, isExceptionOnFail)
     }
     else
       rv
@@ -87,7 +89,7 @@ class InterProducerCommunicationClient(timeoutMs: Int, retryCount: Int = 3, retr
     withRetryDo[IMessage](null, () => {
       val sock = getSocket(msg)
       val r = writeMsgAndWaitResponse(sock, msg)
-      r}, retryCount)
+      r}, retryCount, isExceptionOnFail = false)
   }
 
 
@@ -102,7 +104,7 @@ class InterProducerCommunicationClient(timeoutMs: Int, retryCount: Int = 3, retr
     withRetryDo[Boolean](false, () => {
       val sock = getSocket(msg)
       writeMsgAndNoWaitResponse(sock, msg)
-    }, retryCount)
+    }, retryCount, isExceptionOnFail = true)
   }
 
   /**

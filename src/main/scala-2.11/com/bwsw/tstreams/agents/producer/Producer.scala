@@ -211,15 +211,19 @@ class Producer[USERTYPE](val name: String,
     if (!(partition >= 0 && partition < stream.getPartitions))
       throw new IllegalArgumentException(s"Producer ${name} - invalid partition")
     val partOpt = Option(openTransactionsMap.getOrDefault(partition, null))
-    val txnOpt =
+    val txnOpt = {
       if (partOpt.isDefined) {
         if (partOpt.get.isClosed) {
           None
         }
-        partOpt
+        else {
+          partOpt
+        }
       }
-      else
+      else {
         None
+      }
+    }
     txnOpt
   }
 
