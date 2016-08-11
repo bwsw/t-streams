@@ -3,7 +3,7 @@ package com.bwsw.tstreams.coordination.producer.transport.impl.client
 import java.io.{BufferedReader, IOException, InputStreamReader}
 import java.net.{Socket, SocketTimeoutException}
 import java.util.concurrent.atomic.AtomicBoolean
-import com.bwsw.tstreams.common.ProtocolMessageSerializer
+import com.bwsw.tstreams.common.{TimeTracker, ProtocolMessageSerializer}
 import com.bwsw.tstreams.common.ProtocolMessageSerializer.ProtocolMessageSerializerException
 import com.bwsw.tstreams.coordination.messages.master.IMessage
 import org.slf4j.LoggerFactory
@@ -71,7 +71,9 @@ class InterProducerCommunicationClient(timeoutMs: Int) {
     if(isClosed.get)
       throw new IllegalStateException("Communication Client is closed. Unable to operate.")
     val sock = getSocket(msg)
-    writeMsgAndWaitResponse(sock, msg)
+    val r = writeMsgAndWaitResponse(sock, msg)
+
+    r
   }
 
   /**
@@ -124,7 +126,6 @@ class InterProducerCommunicationClient(timeoutMs: Int) {
     * @return Response message
     */
   private def writeMsgAndWaitResponse(sock: Socket, msg: IMessage): IMessage = {
-    //do request
     val reqString = wrapMsg(serializer.serialize(msg))
     try {
       if (InterProducerCommunicationClient.logger.isDebugEnabled)

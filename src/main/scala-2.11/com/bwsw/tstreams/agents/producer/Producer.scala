@@ -6,7 +6,7 @@ import java.util.concurrent.{ConcurrentHashMap, CountDownLatch, TimeUnit}
 
 import com.bwsw.tstreams.agents.group.{Agent, CheckpointInfo, ProducerCheckpointInfo}
 import com.bwsw.tstreams.agents.producer.NewTransactionProducerPolicy.ProducerPolicy
-import com.bwsw.tstreams.common.{ResettableCountDownLatch, FirstFailLockableTaskExecutor, LockUtil, ThreadSignalSleepVar}
+import com.bwsw.tstreams.common._
 import com.bwsw.tstreams.coordination.clients.ProducerToSubscriberNotifier
 import com.bwsw.tstreams.coordination.messages.state.{Message, TransactionStatus}
 import com.bwsw.tstreams.coordination.producer.p2p.PeerAgent
@@ -185,6 +185,8 @@ class Producer[USERTYPE](val name: String,
       }
     }
     val txnUUID = p2pAgent.generateNewTransaction(partition)
+
+    //TimeTracker.update("From Producer.newTransaction start to p2pAgent.generateNewTransaction")
     logger.debug(s"[NEW_TRANSACTION PARTITION_$partition] uuid=${txnUUID.timestamp()}")
     val txn = new Transaction[USERTYPE](txnLocks(partition % threadPoolSize), partition, txnUUID, this)
     LockUtil.withLockOrDieDo[Unit](threadLock, (100, TimeUnit.SECONDS), Some(logger), () => {
@@ -341,5 +343,6 @@ class Producer[USERTYPE](val name: String,
     assert(msg.status == TransactionStatus.materialize)
     opt.get.makeMaterialized()
     logger.debug("End handling MaterializeRequest")
+
   }
 }
