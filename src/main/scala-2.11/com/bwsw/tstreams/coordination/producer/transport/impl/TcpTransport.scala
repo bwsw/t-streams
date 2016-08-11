@@ -2,6 +2,7 @@ package com.bwsw.tstreams.coordination.producer.transport.impl
 
 import java.util.concurrent.LinkedBlockingQueue
 
+import com.bwsw.tstreams.common.TimeTracker
 import com.bwsw.tstreams.coordination.messages.master._
 import com.bwsw.tstreams.coordination.producer.transport.impl.client.InterProducerCommunicationClient
 import com.bwsw.tstreams.coordination.producer.transport.impl.server.ProducerRequestsTcpServer
@@ -116,6 +117,7 @@ class TcpTransport(timeoutMs: Int) extends ITransport {
     val port = splits(1).toInt
     server = new ProducerRequestsTcpServer(port)
     server.addCallback((msg: IMessage) => {
+      TimeTracker.update_end("From writeMsg flush to Netty")
       msgQueue.add(msg)
     })
     server.start()

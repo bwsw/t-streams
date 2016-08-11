@@ -2,6 +2,7 @@ package com.bwsw.tstreams.coordination.producer.transport.impl.server
 
 import java.util.concurrent.locks.ReentrantLock
 
+import com.bwsw.tstreams.common.TimeTracker
 import com.bwsw.tstreams.coordination.messages.master.IMessage
 import io.netty.channel.{Channel, ChannelId}
 
