@@ -12,9 +12,9 @@ import org.slf4j.LoggerFactory
 /**
   * [[ITransport]] implementation
   */
-class TcpTransport(timeoutMs: Int) extends ITransport {
+class TcpTransport(timeoutMs: Int, retryCount: Int = 3, retryDelay: Int = 5) extends ITransport {
   private var server: ProducerRequestsTcpServer = null
-  private val client: InterProducerCommunicationClient = new InterProducerCommunicationClient(timeoutMs)
+  private val client: InterProducerCommunicationClient = new InterProducerCommunicationClient(timeoutMs, retryCount, retryDelay)
   private val msgQueue = new LinkedBlockingQueue[IMessage]()
 
   /**
