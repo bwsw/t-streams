@@ -73,7 +73,6 @@ class InterProducerCommunicationClient(timeoutMs: Int) {
       throw new IllegalStateException("Communication Client is closed. Unable to operate.")
     val sock = getSocket(msg)
     val r = writeMsgAndWaitResponse(sock, msg)
-
     r
   }
 
@@ -103,7 +102,7 @@ class InterProducerCommunicationClient(timeoutMs: Int) {
     * @param socket
     * @param msg
     */
-  private def closeSocketAndCleanPeerMap(socket: Socket, msg: IMessage) = {
+  private def closeSocketAndCleanPeerMap(socket: Socket, msg: IMessage) = this.synchronized {
     try {
       InterProducerCommunicationClient.logger.info(s"Socket from peer ${msg.senderID} to peer ${msg.receiverID} is to be closed.")
       socket.close()
@@ -204,7 +203,7 @@ class InterProducerCommunicationClient(timeoutMs: Int) {
   /**
     * Close client
     */
-  def close() = {
+  def close() = this.synchronized {
     if(isClosed.getAndSet(true))
       throw new IllegalStateException("Communication Client is closed. Unable to operate.")
     peerMap.foreach { x =>
@@ -220,4 +219,3 @@ class InterProducerCommunicationClient(timeoutMs: Int) {
   }
 }
 
-case class SocketAndReader(sock: Socket, reader: BufferedReader)
