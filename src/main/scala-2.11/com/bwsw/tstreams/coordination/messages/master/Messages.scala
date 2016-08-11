@@ -54,11 +54,11 @@ case class NewTransactionRequest(senderID: String, receiverID: String, partition
       response.msgID = msgID
       agent.getTransport.respond(response)
       IMessage.logger.debug(s"Responded with early ready virtualized TXN: ${txnUUID}")
+
       agent.submitPipelinedTask(new Runnable {
           def run(): Unit = agent.getProducer.openTxnLocal(txnUUID, partition,
               onComplete = () => {
-                  agent.notifyMaterialize(
-                      Message(txnUUID, -1, TransactionStatus.materialize, partition), senderID)
+                agent.notifyMaterialize(Message(txnUUID, -1, TransactionStatus.materialize, partition), senderID)
                 IMessage.logger.debug(s"Responded with complete ready TXN: ${txnUUID}")
               })
         }, partition)
