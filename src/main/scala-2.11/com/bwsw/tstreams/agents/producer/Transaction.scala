@@ -5,12 +5,17 @@ import java.util.concurrent.{CountDownLatch, TimeUnit}
 import java.util.concurrent.atomic.{AtomicBoolean, AtomicInteger}
 import java.util.concurrent.locks.ReentrantLock
 
+import com.bwsw.tstreams.agents.group.ProducerCheckpointInfo
 import com.bwsw.tstreams.common.LockUtil
 import com.bwsw.tstreams.coordination.messages.state.{Message, TransactionStatus}
 import com.bwsw.tstreams.debug.GlobalHooks
 import org.slf4j.LoggerFactory
 
 import scala.collection.mutable.ListBuffer
+
+object Transaction {
+  val logger = LoggerFactory.getLogger(this.getClass)
+}
 
 /**
   * Transaction retrieved by BasicProducer.newTransaction method
@@ -32,8 +37,7 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
     * state of transaction
     */
   private val state = new TransactionState
-  //TODO remove it!
-  state.makeMaterialized
+
   /**
     * State indicator of the transaction
     *
@@ -44,8 +48,7 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
   /**
     * BasicProducerTransaction logger for logging
     */
-  private val logger = LoggerFactory.getLogger(this.getClass)
-  logger.debug(s"Open transaction for stream,partition : {${txnOwner.stream.getName}},{$partition}")
+  Transaction.logger.debug("Open transaction {} for\nstream, partition: {}, {}", List(getTxnUUID, txnOwner.stream.getName, partition))
 
   /**
     *
@@ -56,6 +59,20 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
     * Return transaction partition
     */
   def getPartition: Int = partition
+
+  /**
+    * makes transaction materialized
+    */
+  def makeMaterialized(): Unit = {
+    Transaction.logger.debug("Materialize transaction {} for\nstream, partition: {}, {}", List(getTxnUUID, txnOwner.stream.getName, partition))
+    state.makeMaterialized()
+  }
+
+  def awaitMaterialized(): Unit = {
+    Transaction.logger.debug("Await for transaction {} to be materialized\nfor stream,partition : {},{}", List(getTxnUUID, txnOwner.stream.getName, partition))
+    state.awaitMaterialization(txnOwner.producerOptions.coordinationOptions.transport.getTimeout())
+    Transaction.logger.debug("Transaction {} is materialized\nfor stream,partition : {}, {}", List(getTxnUUID, txnOwner.stream.getName, partition))
+  }
 
   /**
     * Return transaction UUID
@@ -86,7 +103,7 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
   def send(obj: USERTYPE): Unit = {
     state.isOpenedOrDie
 
-    LockUtil.withLockOrDieDo[Unit](transactionLock, (100, TimeUnit.SECONDS), Some(logger), () => {
+    LockUtil.withLockOrDieDo[Unit](transactionLock, (100, TimeUnit.SECONDS), Some(Transaction.logger), () => {
       txnOwner.producerOptions.insertType match {
 
         case DataInsertType.BatchInsert(size) =>
@@ -142,7 +159,7 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
           status = TransactionStatus.cancel,
           partition = partition)
         txnOwner.p2pAgent.publish(msg)
-        logger.debug(s"[CANCEL PARTITION_${msg.partition}] ts=${msg.txnUuid.timestamp()} status=${msg.status}")
+        Transaction.logger.debug("[CANCEL PARTITION_{}] ts={} status={}", List(msg.partition, msg.txnUuid.toString, msg.status.toString))
       })
   }
 
@@ -150,8 +167,8 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
     * Canceling current transaction
     */
   def cancel() = {
-    state.awaitMaterialization(txnOwner.producerOptions.coordinationOptions.transportTimeout)
-    LockUtil.withLockOrDieDo[Unit](transactionLock, (100, TimeUnit.SECONDS), Some(logger), () => {
+    state.awaitMaterialization(txnOwner.producerOptions.coordinationOptions.transport.getTimeout())
+    LockUtil.withLockOrDieDo[Unit](transactionLock, (100, TimeUnit.SECONDS), Some(Transaction.logger), () => {
       state.awaitUpdateComplete
       state.closeOrDie
       txnOwner.backendActivityService.submit(new Runnable {
@@ -161,7 +178,7 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
   }
 
   private def checkpointPostEventPart() : Unit = {
-    logger.debug(s"[COMMIT PARTITION_$partition] ts=${transactionUuid.timestamp()}")
+    Transaction.logger.debug(s"[COMMIT PARTITION_{}] ts={}", partition, transactionUuid.toString)
 
     //debug purposes only
     {
@@ -170,7 +187,7 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
         false
       } catch {
         case e: Exception =>
-          logger.warn("AfterCommitFailure in DEBUG mode")
+          Transaction.logger.warn("AfterCommitFailure in DEBUG mode")
           true
       }
       if (interruptExecution)
@@ -183,8 +200,7 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
       status = TransactionStatus.postCheckpoint,
       partition = partition))
 
-    logger.debug(s"[FINAL CHECKPOINT PARTITION_$partition] " +
-      s"ts=${transactionUuid.timestamp()}")
+    Transaction.logger.debug("[FINAL CHECKPOINT PARTITION_{}] ts={}", partition, transactionUuid.toString)
   }
 
 
@@ -204,8 +220,7 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
     if (part.get() > 0) {
       jobs.foreach(x => x())
 
-      logger.debug(s"[START PRE CHECKPOINT PARTITION_$partition] " +
-        s"ts=${transactionUuid.timestamp()}")
+      Transaction.logger.debug("[START PRE CHECKPOINT PARTITION_{}] ts={}", partition, transactionUuid.toString)
 
       txnOwner.p2pAgent.publish(Message(
         txnUuid = transactionUuid,
@@ -220,7 +235,7 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
           false
         } catch {
           case e: Exception =>
-            logger.warn("PreCommitFailure in DEBUG mode")
+            Transaction.logger.warn("PreCommitFailure in DEBUG mode")
             true
         }
         if (interruptExecution) {
@@ -250,8 +265,8 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
     * Submit transaction(transaction will be available by consumer only after closing)
     */
   def checkpoint(isSynchronous: Boolean = true): Unit = {
-    state.awaitMaterialization(txnOwner.producerOptions.coordinationOptions.transportTimeout)
-    LockUtil.withLockOrDieDo[Unit](transactionLock, (100, TimeUnit.SECONDS), Some(logger), () => {
+    state.awaitMaterialization(txnOwner.producerOptions.coordinationOptions.transport.getTimeout())
+    LockUtil.withLockOrDieDo[Unit](transactionLock, (100, TimeUnit.SECONDS), Some(Transaction.logger), () => {
       state.awaitUpdateComplete
       state.closeOrDie
       if (!isSynchronous) {
@@ -275,8 +290,7 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
         if (part.get() > 0) {
           jobs.foreach(x => x())
 
-          logger.debug(s"[START PRE CHECKPOINT PARTITION_$partition] " +
-            s"ts=${transactionUuid.timestamp()}")
+          Transaction.logger.debug("[START PRE CHECKPOINT PARTITION_{}] ts={}", partition, transactionUuid.toString)
 
           txnOwner.p2pAgent.publish(Message(
             txnUuid = transactionUuid,
@@ -294,7 +308,7 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
             totalCnt = part.get(),
             ttl = txnOwner.stream.getTTL)
 
-          logger.debug(s"[COMMIT PARTITION_$partition] ts=${transactionUuid.timestamp()}")
+          Transaction.logger.debug(s"[COMMIT PARTITION_{}] ts={}", partition, transactionUuid.toString)
 
           //debug purposes only
           GlobalHooks.invoke(GlobalHooks.afterCommitFailure)
@@ -305,8 +319,7 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
             status = TransactionStatus.postCheckpoint,
             partition = partition))
 
-          logger.debug(s"[FINAL CHECKPOINT PARTITION_$partition] " +
-            s"ts=${transactionUuid.timestamp()}")
+          Transaction.logger.debug("[FINAL CHECKPOINT PARTITION_{}] ts={}", partition, transactionUuid.toString)
 
         }
         else {
@@ -328,12 +341,12 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
     }
 
     state.setUpdateFinished
-    txnOwner.subscriberNotifier.publish(Message(
+    txnOwner.p2pAgent.publish(Message(
       txnUuid = transactionUuid,
       ttl = txnOwner.producerOptions.transactionTTL,
       status = TransactionStatus.update,
-      partition = partition), () => ())
-    logger.debug(s"[KEEP_ALIVE THREAD PARTITION_${partition}] ts=${transactionUuid.timestamp()} status=${TransactionStatus.update}")
+      partition = partition))
+    Transaction.logger.debug("[KEEP_ALIVE THREAD PARTITION_PARTITION_{}] ts={} status={}", List(partition, transactionUuid.toString, TransactionStatus.update))
   }
 
   def updateTxnKeepAliveState(): Unit = {
@@ -341,7 +354,7 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
       return
     // atomically check state and launch update process
     val stateOnUpdateClosed =
-      LockUtil.withLockOrDieDo[Boolean](transactionLock, (100, TimeUnit.SECONDS), Some(logger), () => {
+      LockUtil.withLockOrDieDo[Boolean](transactionLock, (100, TimeUnit.SECONDS), Some(Transaction.logger), () => {
         val s = state.isClosed
         if (!s) state.setUpdateInProgress
         s })
@@ -356,7 +369,7 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
     }
 
     //-1 here indicate that transaction is started but is not finished yet
-    logger.debug(s"Update event for txn ${transactionUuid}, partition: ${partition}")
+    Transaction.logger.debug("Update event for txn {}, partition: {}", transactionUuid, partition)
     val f = txnOwner.stream.metadataStorage.commitEntity.commitAsync(
     streamName = txnOwner.stream.getName,
     partition = partition,
@@ -373,4 +386,31 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
     * @return
     */
   def getTransactionLock(): ReentrantLock = transactionLock
+
+
+  def getTransactionInfo(): ProducerCheckpointInfo = {
+    state.awaitMaterialization(txnOwner.producerOptions.coordinationOptions.transport.getTimeout())
+
+    val preCheckpoint = Message(
+      txnUuid = getTxnUUID,
+      ttl = -1,
+      status = TransactionStatus.preCheckpoint,
+      partition = partition)
+
+    val finalCheckpoint = Message(
+      txnUuid = getTxnUUID,
+      ttl = -1,
+      status = TransactionStatus.postCheckpoint,
+      partition = partition)
+
+    ProducerCheckpointInfo(transactionRef = this,
+      agent = txnOwner.p2pAgent,
+      preCheckpointEvent = preCheckpoint,
+      finalCheckpointEvent = finalCheckpoint,
+      streamName = txnOwner.stream.getName,
+      partition = partition,
+      transaction = getTxnUUID,
+      totalCnt = getCnt,
+      ttl = txnOwner.stream.getTTL)
+  }
 }

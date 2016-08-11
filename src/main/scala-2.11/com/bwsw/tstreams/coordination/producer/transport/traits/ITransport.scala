@@ -7,44 +7,49 @@ import com.bwsw.tstreams.coordination.messages.master._
   */
 trait ITransport {
 
+  def getTimeout(): Int
   /**
     * Request to disable concrete master
     *
     * @param msg     Msg to disable master
-    * @param timeout Timeout for waiting
     */
-  def deleteMasterRequest(msg: DeleteMasterRequest, timeout: Int): IMessage
+  def deleteMasterRequest(msg: DeleteMasterRequest): IMessage
 
   /**
     * Request to set concrete master
     *
     * @param msg     Message
-    * @param timeout Timeout to wait master
     */
-  def setMasterRequest(msg: SetMasterRequest, timeout: Int): IMessage
+  def setMasterRequest(msg: SetMasterRequest): IMessage
 
   /**
     * Request to get Txn
     *
     * @param msg     Message
-    * @param timeout Timeout to wait master
     */
-  def transactionRequest(msg: TransactionRequest, timeout: Int): IMessage
+  def transactionRequest(msg: NewTransactionRequest): IMessage
 
   /**
     * Request to publish event about Txn
     *
     * @param msg     Message
-    * @param timeout Timeout to wait master
     */
-  def publishRequest(msg: PublishRequest, timeout: Int): IMessage
+  def publishRequest(msg: PublishRequest): Unit
+
+  /**
+    * Request to materialize event about Txn
+    *
+    * @param msg     Message
+    */
+  def materializeRequest(msg: MaterializeRequest): Unit
+
 
   /**
     * Request to figure out state of receiver
     *
     * @param msg Message
     */
-  def pingRequest(msg: PingRequest, timeout: Int): IMessage
+  def pingRequest(msg: PingRequest): IMessage
 
   /**
     * Wait incoming requests(every p2p agent must handle this incoming messages)

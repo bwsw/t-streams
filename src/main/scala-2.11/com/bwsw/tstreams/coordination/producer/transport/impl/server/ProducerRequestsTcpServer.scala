@@ -63,6 +63,7 @@ class ProducerRequestsTcpServer(port: Int) {
             .handler(new LoggingHandler(LogLevel.DEBUG))
             .childHandler(new ChannelInitializer[SocketChannel]() {
               override def initChannel(ch: SocketChannel) {
+                ch.config().setTcpNoDelay(true)
                 val p = ch.pipeline()
                 p.addLast("framer", new DelimiterBasedFrameDecoder(MAX_FRAME_LENGTH, Delimiters.lineDelimiter(): _*))
                 p.addLast("decoder", new StringDecoder())

@@ -41,6 +41,10 @@ class ProtocolMessageSerializer {
         val serializedMsg = serializeInternal(x.msg)
         s"{PuRq,${x.senderID},${x.receiverID},$serializedMsg,${x.msgID}}"
 
+      case x: MaterializeRequest =>
+        val serializedMsg = serializeInternal(x.msg)
+        s"{MRq,${x.senderID},${x.receiverID},$serializedMsg,${x.msgID}}"
+
       case x: PublishResponse =>
         val serializedMsg = serializeInternal(x.msg)
         s"{PuRs,${x.senderID},${x.receiverID},$serializedMsg,${x.msgID}}"
@@ -51,7 +55,7 @@ class ProtocolMessageSerializer {
       case x: SetMasterResponse =>
         s"{SMRs,${x.senderID},${x.receiverID},${x.partition},${x.msgID}}"
 
-      case x: TransactionRequest =>
+      case x: NewTransactionRequest =>
         s"{TRq,${x.senderID},${x.receiverID},${x.partition},${x.msgID}}"
 
       case x: TransactionResponse =>
@@ -66,6 +70,7 @@ class ProtocolMessageSerializer {
       case TransactionStatus.`update` => "{U}"
       case TransactionStatus.`cancel` => "{C}"
       case TransactionStatus.opened => "{O}"
+      case TransactionStatus.materialize => "{M}"
     }
   }
 
@@ -146,6 +151,12 @@ class ProtocolMessageSerializer {
         val res = PublishRequest(tokens(1).toString, tokens(2).toString, tokens(3).asInstanceOf[Message])
         res.msgID = tokens(4).toString.toLong
         res
+      case "MRq" =>
+        assert(tokens.size == 5)
+        val res = MaterializeRequest(tokens(1).toString, tokens(2).toString, tokens(3).asInstanceOf[Message])
+        res.msgID = tokens(4).toString.toLong
+        res
+
       case "PuRs" =>
         assert(tokens.size == 5)
         val res = PublishResponse(tokens(1).toString, tokens(2).toString, tokens(3).asInstanceOf[Message])
@@ -163,7 +174,7 @@ class ProtocolMessageSerializer {
         res
       case "TRq" =>
         assert(tokens.size == 5)
-        val res = TransactionRequest(tokens(1).toString, tokens(2).toString, tokens(3).toString.toInt)
+        val res = NewTransactionRequest(tokens(1).toString, tokens(2).toString, tokens(3).toString.toInt)
         res.msgID = tokens(4).toString.toLong
         res
       case "TRs" =>
@@ -194,6 +205,9 @@ class ProtocolMessageSerializer {
       case "O" =>
         assert(tokens.size == 1)
         TransactionStatus.opened
+      case "M" =>
+        assert(tokens.size == 1)
+        TransactionStatus.materialize
     }
   }
 

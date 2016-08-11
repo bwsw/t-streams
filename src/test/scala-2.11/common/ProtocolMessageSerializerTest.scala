@@ -74,9 +74,9 @@ class ProtocolMessageSerializerTest extends FlatSpec with Matchers with BeforeAn
     clazz shouldEqual req
   }
   "TStreams serializer" should "serialize and deserialize TransactionRequest" in {
-    val clazz = TransactionRequest("snd", "rcv", -1)
+    val clazz = NewTransactionRequest("snd", "rcv", -1)
     val string = serializer.serialize(clazz)
-    val req = serializer.deserialize[TransactionRequest](string)
+    val req = serializer.deserialize[NewTransactionRequest](string)
     clazz shouldEqual req
   }
   "TStreams serializer" should "serialize and deserialize TransactionResponse" in {

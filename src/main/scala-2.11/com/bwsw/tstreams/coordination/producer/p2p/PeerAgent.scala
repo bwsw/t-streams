@@ -7,7 +7,7 @@ import java.util.concurrent.locks.ReentrantLock
 import java.util.concurrent.{CountDownLatch, TimeUnit}
 
 import com.bwsw.tstreams.agents.producer.Producer
-import com.bwsw.tstreams.common.{FirstFailLockableTaskExecutor, LockUtil, ZookeeperDLMService}
+import com.bwsw.tstreams.common.{TimeTracker, FirstFailLockableTaskExecutor, LockUtil, ZookeeperDLMService}
 import com.bwsw.tstreams.coordination.messages.master._
 import com.bwsw.tstreams.coordination.messages.state.{Message, TransactionStatus}
 import com.bwsw.tstreams.coordination.producer.transport.traits.ITransport
@@ -29,23 +29,13 @@ import scala.util.Random
  * @param usedPartitions List of used producer partitions
  * @param isLowPriorityToBeMaster Flag which indicate to have low priority to be master
  * @param transport Transport to provide interaction
- * @param transportTimeout Timeout for waiting response
  */
-class PeerAgent(agentAddress : String,
-                zkHosts : List[InetSocketAddress],
-                zkRootPath : String,
-                zkSessionTimeout: Int,
-                zkConnectionTimeout : Int,
-                producer : Producer[_],
-                usedPartitions : List[Int],
-                isLowPriorityToBeMaster : Boolean,
-                transport: ITransport,
-                transportTimeout : Int,
-                poolSize : Int) {
+class PeerAgent(agentAddress: String, zkHosts: List[InetSocketAddress], zkRootPath: String, zkSessionTimeout: Int, zkConnectionTimeout: Int, producer: Producer[_], usedPartitions: List[Int], isLowPriorityToBeMaster: Boolean, transport: ITransport, poolSize: Int) {
 
   private val zkRetriesAmount = 60
   private val externalAccessLock = new ReentrantLock(true)
   private val zkService = new ZookeeperDLMService(zkRootPath, zkHosts, zkSessionTimeout, zkConnectionTimeout)
+  private val executors = mutable.Map[Int, FirstFailLockableTaskExecutor]()
 
   val localMasters = new java.util.concurrent.ConcurrentHashMap[Int /*partition*/ , String /*master address*/ ]()
   val logger = LoggerFactory.getLogger(this.getClass)
@@ -89,6 +79,16 @@ class PeerAgent(agentAddress : String,
   transport.bindLocalAddress(agentAddress)
 
   startSessionKeepAliveThread()
+
+  (0 until poolSize) foreach { x =>
+    executors(x) = new FirstFailLockableTaskExecutor(s"PeerAgent-PartitionWorker-${producer.name}")
+  }
+
+  private val partitionsToExecutors = usedPartitions
+    .zipWithIndex
+    .map { case (partition, execNum) => (partition, execNum % poolSize) }
+    .toMap
+
   beginHandleMessages()
 
   usedPartitions foreach { p =>
@@ -105,9 +105,9 @@ class PeerAgent(agentAddress : String,
   usedPartitions foreach { p =>
     updateMaster(p, init = true)
   }
-
-  logger.debug(s"[INIT] Finish initialize agent with address:{$agentAddress}," +
-    s"stream:{$streamName},partitions:{${usedPartitions.mkString(",")}\n")
+  if (logger.isDebugEnabled)
+    logger.debug(s"[INIT] Finish initialize agent with address:{$agentAddress}," +
+      s"stream:{$streamName},partitions:{${usedPartitions.mkString(",")}\n")
 
   /**
     * Invalidate this peer overdue information in case if it exist
@@ -120,8 +120,9 @@ class PeerAgent(agentAddress : String,
       //try to remove overdue agents information
       val filtered = agents.filter(x => x.contains(agentAddress) && !x.contains(uniqueAgentId))
       filtered foreach { path =>
-        logger.debug(s"[INIT CLEAN] Delete agent on address:{$path} on" +
-          s"stream:{$streamName},partition:{$partition}\n")
+        if (logger.isDebugEnabled)
+            logger.debug(s"[INIT CLEAN] Delete agent on address:{$path} on" +
+            s"stream:{$streamName},partition:{$partition}\n")
         try {
           zkService.delete(s"/producers/agents/$streamName/$partition/" + path)
         } catch {
@@ -135,14 +136,15 @@ class PeerAgent(agentAddress : String,
     master.foreach{masterSettings =>
       if (masterSettings.agentAddress == agentAddress &&
           masterSettings.uniqueAgentId != uniqueAgentId){
-        logger.debug(s"[INIT CLEAN] Delete agent as MASTER on address:{$agentAddress} on" +
-          s"stream:{$streamName},partition:{$partition} because id was overdue\n")
+        if (logger.isDebugEnabled)
+          logger.debug(s"[INIT CLEAN] Delete agent as MASTER on address:{$agentAddress} on" +
+            s"stream:{$streamName},partition:{$partition} because id was overdue\n")
         deleteThisAgentFromMasters(partition)
       }
     }
-
-    logger.debug(s"[INIT CLEAN FINISHED] Delete agent on address:{$agentAddress} on" +
-      s"stream:{$streamName},partition:{$partition}\n")
+    if (logger.isDebugEnabled)
+      logger.debug(s"[INIT CLEAN FINISHED] Delete agent on address:{$agentAddress} on" +
+        s"stream:{$streamName},partition:{$partition}\n")
   }
 
   /**
@@ -152,8 +154,9 @@ class PeerAgent(agentAddress : String,
     * @param value     Value which will be added to current priority
     */
   def updateThisAgentPriority(partition: Int, value: Int) = {
-    logger.debug(s"[PRIOR] Start amend agent priority with value:{$value} with address:{$agentAddress}" +
-      s" on stream:{$streamName},partition:{$partition}\n")
+    if (logger.isDebugEnabled)
+      logger.debug(s"[PRIOR] Start amend agent priority with value:{$value} with address:{$agentAddress}" +
+        s" on stream:{$streamName},partition:{$partition}\n")
     val agentsOpt = zkService.getAllSubPath(s"/producers/agents/$streamName/$partition")
     assert(agentsOpt.isDefined)
     val agents: List[String] = agentsOpt.get
@@ -165,8 +168,9 @@ class PeerAgent(agentAddress : String,
     val updatedAgentSettings = agentSettingsOpt.get
     updatedAgentSettings.priority += value
     zkService.setData(s"/producers/agents/$streamName/$partition/" + thisAgentPath, updatedAgentSettings)
-    logger.debug(s"[PRIOR] Finish amend agent priority with value:{$value} with address:{$agentAddress}" +
-      s" on stream:{$streamName},partition:{$partition} VALUENOW={${updatedAgentSettings.priority}}\n")
+    if (logger.isDebugEnabled)
+      logger.debug(s"[PRIOR] Finish amend agent priority with value:{$value} with address:{$agentAddress}" +
+        s" on stream:{$streamName},partition:{$partition} VALUENOW={${updatedAgentSettings.priority}}\n")
   }
 
   /**
@@ -177,15 +181,16 @@ class PeerAgent(agentAddress : String,
     * @return Selected master address
     */
   private def startVotingInternal(partition: Int, retries: Int = zkRetriesAmount): String = {
-    logger.debug(s"[VOTING] Start voting new agent on address:{$agentAddress}" +
-      s" on stream:{$streamName},partition:{$partition}\n")
+    if (logger.isDebugEnabled)
+      logger.debug(s"[VOTING] Start voting new agent on address:{$agentAddress}" +
+        s" on stream:{$streamName},partition:{$partition}\n")
     val master = getMaster(partition)
     master.fold{
       val agentsOpt = zkService.getAllSubNodesData[AgentSettings](s"/producers/agents/$streamName/$partition")
       assert(agentsOpt.isDefined)
       val agents = agentsOpt.get.sortBy(x => x.priority - x.penalty)
       val bestMaster = agents.last.agentAddress
-      transport.setMasterRequest(SetMasterRequest(agentAddress, bestMaster, partition), transportTimeout) match {
+      transport.setMasterRequest(SetMasterRequest(agentAddress, bestMaster, partition)) match {
         case null =>
           if (retries == 0)
             throw new IllegalStateException("agent is not responded")
@@ -223,12 +228,13 @@ class PeerAgent(agentAddress : String,
     * @param retries   Retries to try to interact with master
     */
   private def updateMaster(partition: Int, init: Boolean, retries: Int = zkRetriesAmount): Unit = {
-    logger.debug(s"[UPDATER] Updating master with init:{$init} on agent:{$agentAddress}" +
-      s" on stream:{$streamName},partition:{$partition} with retry=$retries\n")
+    if (logger.isDebugEnabled)
+      logger.debug(s"[UPDATER] Updating master with init:{$init} on agent:{$agentAddress}" +
+        s" on stream:{$streamName},partition:{$partition} with retry=$retries\n")
     val masterOpt = getMaster(partition)
     masterOpt.fold[Unit](startVoting(partition)) { master =>
       if (init) {
-        val ans = transport.deleteMasterRequest(DeleteMasterRequest(agentAddress, master.agentAddress, partition), transportTimeout)
+        val ans = transport.deleteMasterRequest(DeleteMasterRequest(agentAddress, master.agentAddress, partition))
         ans match {
           case null =>
             if (retries == 0)
@@ -245,12 +251,13 @@ class PeerAgent(agentAddress : String,
           case DeleteMasterResponse(_, _, p) =>
             assert(p == partition)
             val newMaster = startVoting(partition)
-            logger.debug(s"[UPDATER] Finish updating master with init:{$init} on agent:{$agentAddress}" +
-              s" on stream:{$streamName},partition:{$partition} with retry=$retries; revoted master:{$newMaster}\n")
+            if (logger.isDebugEnabled)
+              logger.debug(s"[UPDATER] Finish updating master with init:{$init} on agent:{$agentAddress}" +
+                s" on stream:{$streamName},partition:{$partition} with retry=$retries; revoted master:{$newMaster}\n")
             localMasters.put(partition, newMaster)
         }
       } else {
-        transport.pingRequest(PingRequest(agentAddress, master.agentAddress, partition), transportTimeout) match {
+        transport.pingRequest(PingRequest(agentAddress, master.agentAddress, partition)) match {
           case null =>
             if (retries == 0)
               throw new IllegalStateException("agent is not responded")
@@ -265,8 +272,9 @@ class PeerAgent(agentAddress : String,
 
           case PingResponse(_, _, p) =>
             assert(p == partition)
-            logger.debug(s"[UPDATER] Finish updating master with init:{$init} on agent:{$agentAddress}" +
-              s" on stream:{$streamName},partition:{$partition} with retry=$retries; old master:{$master} is alive now\n")
+            if (logger.isDebugEnabled)
+              logger.debug(s"[UPDATER] Finish updating master with init:{$init} on agent:{$agentAddress}" +
+                s" on stream:{$streamName},partition:{$partition} with retry=$retries; old master:{$master} is alive now\n")
             localMasters.put(partition, master.agentAddress)
         }
       }
@@ -283,8 +291,9 @@ class PeerAgent(agentAddress : String,
     LockUtil.withLockOrDieDo[Option[MasterSettings]](lockManagingMaster, (100, TimeUnit.SECONDS), Some(logger), () => {
       LockUtil.withZkLockOrDieDo[Option[MasterSettings]](zkService.getLock(s"/producers/lock_master/$streamName/$partition"), (100, TimeUnit.SECONDS), Some(logger), () => {
         val masterOpt = zkService.get[MasterSettings](s"/producers/master/$streamName/$partition")
-        logger.debug(s"[GET MASTER]Agent:{${masterOpt.getOrElse("None")}} is current master on" +
-          s" stream:{$streamName},partition:{$partition}\n")
+        if (logger.isDebugEnabled)
+          logger.debug(s"[GET MASTER]Agent:{${masterOpt.getOrElse("None")}} is current master on" +
+            s" stream:{$streamName},partition:{$partition}\n")
         masterOpt
       })
     })
@@ -300,8 +309,9 @@ class PeerAgent(agentAddress : String,
         assert(!zkService.exist(s"/producers/master/$streamName/$partition"))
         val masterSettings = MasterSettings(agentAddress, uniqueAgentId)
         zkService.create[MasterSettings](s"/producers/master/$streamName/$partition", masterSettings, CreateMode.EPHEMERAL)
-        logger.debug(s"[SET MASTER]Agent:{$agentAddress} in master now on" +
-          s" stream:{$streamName},partition:{$partition}\n")
+        if (logger.isDebugEnabled)
+          logger.debug(s"[SET MASTER]Agent:{$agentAddress} in master now on" +
+            s" stream:{$streamName},partition:{$partition}\n")
       })
     })
 
@@ -315,8 +325,9 @@ class PeerAgent(agentAddress : String,
     LockUtil.withLockOrDieDo[Unit](lockManagingMaster, (100, TimeUnit.SECONDS), Some(logger), () => {
       LockUtil.withZkLockOrDieDo[Unit](zkService.getLock(s"/producers/lock_master/$streamName/$partition"), (100, TimeUnit.SECONDS), Some(logger), () => {
         zkService.delete(s"/producers/master/$streamName/$partition")
-        logger.debug(s"[DELETE MASTER]Agent:{$agentAddress} in NOT master now on" +
-          s" stream:{$streamName},partition:{$partition}\n")
+        if (logger.isDebugEnabled)
+          logger.debug(s"[DELETE MASTER]Agent:{$agentAddress} in NOT master now on" +
+            s" stream:{$streamName},partition:{$partition}\n")
       })
     })
 
@@ -357,12 +368,13 @@ class PeerAgent(agentAddress : String,
   def generateNewTransaction(partition: Int): UUID = {
     LockUtil.withLockOrDieDo[UUID](externalAccessLock, (100, TimeUnit.SECONDS), Some(logger), () => {
       val master = localMasters.getOrDefault(partition, null)
-      logger.debug(s"[GETTXN] Start retrieve txn for agent with address:{$agentAddress}," +
-        s"stream:{$streamName},partition:{$partition} from [MASTER:{$master}]\n")
+      if (logger.isDebugEnabled)
+        logger.debug(s"[GETTXN] Start retrieve txn for agent with address:{$agentAddress}," +
+          s"stream:{$streamName},partition:{$partition} from [MASTER:{$master}]\n")
 
       val res =
         if (master != null) {
-          val txnResponse = transport.transactionRequest(TransactionRequest(agentAddress, master, partition), transportTimeout)
+          val txnResponse = transport.transactionRequest(NewTransactionRequest(agentAddress, master, partition))
           txnResponse match {
             case null =>
               updateMaster(partition, init = false)
@@ -375,8 +387,9 @@ class PeerAgent(agentAddress : String,
 
             case TransactionResponse(snd, rcv, uuid, p) =>
               assert(p == partition)
-              logger.debug(s"[GETTXN] Finish retrieve txn for agent with address:{$agentAddress}," +
-                s"stream:{$streamName},partition:{$partition} with timeuuid:{${uuid.timestamp()}} from [MASTER:{$master}]s")
+              if (logger.isDebugEnabled)
+                logger.debug(s"[GETTXN] Finish retrieve txn for agent with address:{$agentAddress}," +
+                  s"stream:{$streamName},partition:{$partition} with timeuuid:{${uuid.timestamp()}} from [MASTER:{$master}]s")
               uuid
           }
         } else {
@@ -387,31 +400,22 @@ class PeerAgent(agentAddress : String,
     })
   }
 
+  def notifyMaterialize(msg: Message, to: String): Unit = {
+    if (logger.isDebugEnabled)
+      logger.debug(s"[MATERIALIZE] Send materialize request address\nMe: {$agentAddress}\n" +
+        s"TXN owner: ${to}\nStream:${streamName}\npartition:${msg.partition}\nTXN: ${msg.txnUuid}")
+    transport.materializeRequest(MaterializeRequest(agentAddress, to , msg))
+  }
+
   //TODO remove after complex testing
   def publish(msg: Message): Unit = {
     LockUtil.withLockOrDieDo[Unit](externalAccessLock, (100, TimeUnit.SECONDS), Some(logger), () => {
-      assert(msg.status != TransactionStatus.update)
       val master = localMasters.getOrDefault(msg.partition, null)
-      logger.debug(s"[PUBLISH] SEND PTM:{$msg} to [MASTER:{$master}] from agent:{$agentAddress}," +
-        s"stream:{$streamName}\n")
-
+      if (logger.isDebugEnabled)
+        logger.debug(s"[PUBLISH] SEND PTM:{$msg} to [MASTER:{$master}] from agent:{$agentAddress}," +
+          s"stream:{$streamName}\n")
       if (master != null) {
-        val txnResponse = transport.publishRequest(PublishRequest(agentAddress, master, msg), transportTimeout)
-        txnResponse match {
-          case null =>
-            updateMaster(msg.partition, init = false)
-            publish(msg)
-
-          case EmptyResponse(snd, rcv, p) =>
-            assert(p == msg.partition)
-            updateMaster(msg.partition, init = false)
-            publish(msg)
-
-          case PublishResponse(snd, rcv, m) =>
-            assert(msg.partition == m.partition)
-            logger.debug(s"[PUBLISH] PUBLISHED PTM:{$msg} to [MASTER:{$master}] from agent:{$agentAddress}," +
-              s"stream:{$streamName}\n")
-        }
+        transport.publishRequest(PublishRequest(agentAddress, master, msg))
       } else {
         updateMaster(msg.partition, init = false)
         publish(msg)
@@ -441,20 +445,12 @@ class PeerAgent(agentAddress : String,
     val agent = this
     messageHandler = new Thread(new Runnable {
       override def run(): Unit = {
-        val executors = mutable.Map[Int, FirstFailLockableTaskExecutor]()
-        (0 until poolSize) foreach { x =>
-          executors(x) = new FirstFailLockableTaskExecutor(s"PeerAgent-PartitionWorker-${producer.name}")
-        }
-        val partitionsToExecutors = usedPartitions
-          .zipWithIndex
-          .map { case (partition, execNum) => (partition, execNum % poolSize) }
-          .toMap
-
         latch.countDown()
 
         while (isRunning.get()) {
           val request: IMessage = transport.waitRequest()
-          logger.debug(s"[HANDLER] Start handle msg:{$request} on agent:{$agentAddress}")
+          if (logger.isDebugEnabled)
+            logger.debug(s"[HANDLER] Start handle msg:{$request} on agent:{$agentAddress}")
           val task: Runnable = new Runnable {
               override def run(): Unit = request.handleP2PRequest(agent)
             }
@@ -471,4 +467,14 @@ class PeerAgent(agentAddress : String,
     latch.await()
   }
 
+  /**
+    * public method which allows to submit delayed task for execution
+    *
+    * @param task
+    * @param partition
+    */
+  def submitPipelinedTask(task: Runnable, partition: Int) = {
+    val execNum = partitionsToExecutors(partition)
+    executors(execNum).execute(task)
+  }
 }

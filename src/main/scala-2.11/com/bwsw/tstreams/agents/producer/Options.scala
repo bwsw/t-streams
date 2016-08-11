@@ -60,17 +60,8 @@ class Options[USERTYPE](val transactionTTL: Int, val transactionKeepAliveInterva
   * @param isLowPriorityToBeMaster Flag which indicate priority to became master on stream/partition
   *                                of this agent
   * @param transport               Transport providing interaction between agents
-  * @param transportTimeout        Transport timeout in seconds
   * @param threadPoolAmount        Thread pool amount which is used by
   *                                [[PeerAgent]]]
   *                                by default (threads_amount == used_producer_partitions)
   */
-class CoordinationOptions(val agentAddress: String,
-                          val zkHosts: List[InetSocketAddress],
-                          val zkRootPath: String,
-                          val zkSessionTimeout: Int,
-                          val zkConnectionTimeout: Int,
-                          val isLowPriorityToBeMaster: Boolean,
-                          val transport: ITransport,
-                          val transportTimeout: Int,
-                          val threadPoolAmount: Int = -1)
+class CoordinationOptions(val agentAddress: String, val zkHosts: List[InetSocketAddress], val zkRootPath: String, val zkSessionTimeout: Int, val zkConnectionTimeout: Int, val isLowPriorityToBeMaster: Boolean, val transport: ITransport, val threadPoolAmount: Int = -1)

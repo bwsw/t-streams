@@ -1,4 +1,4 @@
-package agents.both.group_commit
+package agents.group
 
 import java.net.InetSocketAddress
 
@@ -16,8 +16,8 @@ import testutils._
 
 class GroupCheckpointTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
 
-  //System.setProperty("DEBUG", "true")
-  //System.setProperty(org.slf4j.impl.SimpleLogger.DEFAULT_LOG_LEVEL_KEY, "DEBUG");
+  System.setProperty("DEBUG", "true")
+  System.setProperty(org.slf4j.impl.SimpleLogger.DEFAULT_LOG_LEVEL_KEY, "DEBUG");
 
   f.setProperty(TSF_Dictionary.Stream.NAME,"test_stream").
     setProperty(TSF_Dictionary.Stream.PARTITIONS,3).

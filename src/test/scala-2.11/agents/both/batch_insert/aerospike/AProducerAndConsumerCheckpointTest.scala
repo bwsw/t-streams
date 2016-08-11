@@ -3,8 +3,8 @@ package agents.both.batch_insert.aerospike
 import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
 import com.bwsw.tstreams.agents.consumer.{Consumer, ConsumerTransaction}
 import com.bwsw.tstreams.agents.producer.NewTransactionProducerPolicy
+import com.bwsw.tstreams.common.TimeTracker
 import com.bwsw.tstreams.env.TSF_Dictionary
-import com.bwsw.tstreams.streams.TStream
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import testutils._
 
@@ -48,7 +48,7 @@ class AProducerAndConsumerCheckpointTest extends FlatSpec with Matchers with Bef
 
   "producer, consumer" should "producer - generate many transactions, consumer - retrieve all of them with reinitialization after some time" in {
     val dataToSend = (for (i <- 0 until 10) yield randomString).sorted
-    val txnNum = 20
+    val txnNum = 1000
 
     (0 until txnNum) foreach { _ =>
       val txn = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
@@ -88,5 +88,6 @@ class AProducerAndConsumerCheckpointTest extends FlatSpec with Matchers with Bef
   override def afterAll(): Unit = {
     producer.stop()
     onAfterAll()
+    TimeTracker.dump()
   }
 }
