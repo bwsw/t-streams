@@ -64,14 +64,16 @@ class InterProducerCommunicationClient(timeoutMs: Int, retryCount: Int = 3, retr
     socket
   }
 
-  private def withRetryDo[TYPE](failDeterminant: TYPE, f: () => TYPE, cnt: Int): TYPE = {
-    if(cnt == 0)
-      throw new IllegalStateException(s"Operation is failed to complete in ${cnt} retries.")
+  private def withRetryDo[TYPE](failDeterminant: TYPE, f: () => TYPE, cnt: Int, isExceptionOnFail: Boolean): TYPE = {
+    if(cnt == 0) {
+      if(isExceptionOnFail) throw new IllegalStateException(s"Operation is failed to complete in ${cnt} retries.")
+      return failDeterminant
+    }
     val rv = f()
     if(failDeterminant == rv) {
       InterProducerCommunicationClient.logger.warn(s"Operation failed. Retry it for ${cnt} times more.")
       Thread.sleep(retryDelayMs)
-      withRetryDo[TYPE](failDeterminant, f, cnt - 1)
+      withRetryDo[TYPE](failDeterminant, f, cnt - 1, isExceptionOnFail)
     }
     else
       rv
@@ -81,13 +83,13 @@ class InterProducerCommunicationClient(timeoutMs: Int, retryCount: Int = 3, retr
     * @param msg     Message to send
     * @return Response message
     */
-  def sendAndWaitResponse(msg: IMessage): IMessage = {
+  def sendAndWaitResponse(msg: IMessage, isExceptionOnFail: Boolean): IMessage = {
     if(isClosed.get)
       throw new IllegalStateException("Communication Client is closed. Unable to operate.")
     withRetryDo[IMessage](null, () => {
       val sock = getSocket(msg)
       val r = writeMsgAndWaitResponse(sock, msg)
-      r}, retryCount)
+      r}, retryCount, isExceptionOnFail = isExceptionOnFail)
   }
 
 
@@ -96,13 +98,13 @@ class InterProducerCommunicationClient(timeoutMs: Int, retryCount: Int = 3, retr
     * @param msg     Message to send
     * @return Response message
     */
-  def sendAndNoWaitResponse(msg: IMessage):Unit = {
+  def sendAndNoWaitResponse(msg: IMessage, isExceptionOnFail: Boolean):Unit = {
     if(isClosed.get)
       throw new IllegalStateException("Communication Client is closed. Unable to operate.")
     withRetryDo[Boolean](false, () => {
       val sock = getSocket(msg)
       writeMsgAndNoWaitResponse(sock, msg)
-    }, retryCount)
+    }, retryCount, isExceptionOnFail = isExceptionOnFail)
   }
 
   /**
