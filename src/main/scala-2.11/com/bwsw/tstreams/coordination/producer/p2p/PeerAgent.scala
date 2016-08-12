@@ -452,7 +452,7 @@ class PeerAgent(agentAddress: String, zkHosts: List[InetSocketAddress], zkRootPa
           if (logger.isDebugEnabled)
             logger.debug(s"[HANDLER] Start handle msg:{$request} on agent:{$agentAddress}")
           val task: Runnable = new Runnable {
-              override def run(): Unit = request.handleP2PRequest(agent)
+              override def run(): Unit = request.run(agent)
             }
 
           assert(partitionsToExecutors.contains(request.partition))
