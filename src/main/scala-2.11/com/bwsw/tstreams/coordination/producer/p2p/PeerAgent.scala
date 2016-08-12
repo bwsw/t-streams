@@ -7,9 +7,9 @@ import java.util.concurrent.locks.ReentrantLock
 import java.util.concurrent.{CountDownLatch, TimeUnit}
 
 import com.bwsw.tstreams.agents.producer.Producer
-import com.bwsw.tstreams.common.{TimeTracker, FirstFailLockableTaskExecutor, LockUtil, ZookeeperDLMService}
+import com.bwsw.tstreams.common.{FirstFailLockableTaskExecutor, LockUtil, ZookeeperDLMService}
 import com.bwsw.tstreams.coordination.messages.master._
-import com.bwsw.tstreams.coordination.messages.state.{Message, TransactionStatus}
+import com.bwsw.tstreams.coordination.messages.state.{Message}
 import com.bwsw.tstreams.coordination.producer.transport.traits.ITransport
 import org.apache.zookeeper.{CreateMode, KeeperException}
 import org.slf4j.LoggerFactory
@@ -438,6 +438,7 @@ class PeerAgent(agentAddress: String, zkHosts: List[InetSocketAddress], zkRootPa
       //to avoid infinite polling block
       transport.stopRequest(EmptyRequest(agentAddress, agentAddress, usedPartitions.head))
       messageHandler.join()
+      masterRequestsExecutor.shutdownSafe()
       transport.unbindLocalAddress()
       zkService.close()
     })
@@ -469,7 +470,6 @@ class PeerAgent(agentAddress: String, zkHosts: List[InetSocketAddress], zkRootPa
           }
         }
         //graceful shutdown all executors after finishing message handling
-        masterRequestsExecutor.shutdownSafe()
         newTxnExecutors.foreach(x => x._2.shutdownSafe())
         publishExecutors.foreach(x => x._2.shutdownSafe())
         materializationExecutors.foreach(x => x._2.shutdownSafe())
@@ -489,5 +489,15 @@ class PeerAgent(agentAddress: String, zkHosts: List[InetSocketAddress], zkRootPa
   def submitPipelinedTaskToPublishExecutors(task: Runnable, partition: Int) = {
     val execNum = partitionsToExecutors(partition)
     publishExecutors(execNum).execute(task)
+  }
+
+  /**
+    * public method which allows to submit delayed task for execution
+    *
+    * @param task
+    * @param partition
+    */
+  def submitPipelinedTaskToCassandraExecutor(task: Runnable, partition: Int) = {
+    producer.backendActivityService.execute(task)
   }
 }

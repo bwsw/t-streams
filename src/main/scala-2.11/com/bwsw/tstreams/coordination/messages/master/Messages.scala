@@ -74,7 +74,7 @@ case class NewTransactionRequest(senderID: String, receiverID: String, partition
       if(IMessage.logger.isDebugEnabled)
         IMessage.logger.debug(s"Responded with early ready virtualized TXN: ${txnUUID}")
 
-      agent.submitPipelinedTaskToPublishExecutors(new Runnable {
+      agent.submitPipelinedTaskToCassandraExecutor(new Runnable {
           def run(): Unit = agent.getProducer.openTxnLocal(txnUUID, partition,
               onComplete = () => {
                 agent.notifyMaterialize(Message(txnUUID, -1, TransactionStatus.materialize, partition), senderID)
