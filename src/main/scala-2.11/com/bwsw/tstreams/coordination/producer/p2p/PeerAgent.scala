@@ -7,9 +7,9 @@ import java.util.concurrent.locks.ReentrantLock
 import java.util.concurrent.{CountDownLatch, TimeUnit}
 
 import com.bwsw.tstreams.agents.producer.Producer
-import com.bwsw.tstreams.common.{TimeTracker, FirstFailLockableTaskExecutor, LockUtil, ZookeeperDLMService}
+import com.bwsw.tstreams.common.{FirstFailLockableTaskExecutor, LockUtil, ZookeeperDLMService}
 import com.bwsw.tstreams.coordination.messages.master._
-import com.bwsw.tstreams.coordination.messages.state.{Message, TransactionStatus}
+import com.bwsw.tstreams.coordination.messages.state.{Message}
 import com.bwsw.tstreams.coordination.producer.transport.traits.ITransport
 import org.apache.zookeeper.{CreateMode, KeeperException}
 import org.slf4j.LoggerFactory
@@ -35,7 +35,10 @@ class PeerAgent(agentAddress: String, zkHosts: List[InetSocketAddress], zkRootPa
   private val zkRetriesAmount = 60
   private val externalAccessLock = new ReentrantLock(true)
   private val zkService = new ZookeeperDLMService(zkRootPath, zkHosts, zkSessionTimeout, zkConnectionTimeout)
-  private val executors = mutable.Map[Int, FirstFailLockableTaskExecutor]()
+  private val newTxnExecutors = mutable.Map[Int, FirstFailLockableTaskExecutor]()
+  private val publishExecutors = mutable.Map[Int, FirstFailLockableTaskExecutor]()
+  private val materializationExecutors = mutable.Map[Int, FirstFailLockableTaskExecutor]()
+  private val masterRequestsExecutor = new FirstFailLockableTaskExecutor(s"${producer.name}-masterRequests")
 
   val localMasters = new java.util.concurrent.ConcurrentHashMap[Int /*partition*/ , String /*master address*/ ]()
   val logger = LoggerFactory.getLogger(this.getClass)
@@ -81,7 +84,9 @@ class PeerAgent(agentAddress: String, zkHosts: List[InetSocketAddress], zkRootPa
   startSessionKeepAliveThread()
 
   (0 until poolSize) foreach { x =>
-    executors(x) = new FirstFailLockableTaskExecutor(s"PeerAgent-PartitionWorker-${producer.name}")
+    newTxnExecutors(x) = new FirstFailLockableTaskExecutor(s"${producer.name}-newTxn-${x}")
+    materializationExecutors(x) = new FirstFailLockableTaskExecutor(s"${producer.name}-materialization-${x}")
+    publishExecutors(x) = new FirstFailLockableTaskExecutor(s"${producer.name}-publish-${x}")
   }
 
   private val partitionsToExecutors = usedPartitions
@@ -433,6 +438,7 @@ class PeerAgent(agentAddress: String, zkHosts: List[InetSocketAddress], zkRootPa
       //to avoid infinite polling block
       transport.stopRequest(EmptyRequest(agentAddress, agentAddress, usedPartitions.head))
       messageHandler.join()
+      masterRequestsExecutor.shutdownSafe()
       transport.unbindLocalAddress()
       zkService.close()
     })
@@ -452,19 +458,37 @@ class PeerAgent(agentAddress: String, zkHosts: List[InetSocketAddress], zkRootPa
           if (logger.isDebugEnabled)
             logger.debug(s"[HANDLER] Start handle msg:{$request} on agent:{$agentAddress}")
           val task: Runnable = new Runnable {
-              override def run(): Unit = request.handleP2PRequest(agent)
-            }
+              override def run(): Unit = request.run(agent)
+          }
 
           assert(partitionsToExecutors.contains(request.partition))
-          val execNum = partitionsToExecutors(request.partition)
-          executors(execNum).execute(task)
+          request match {
+            case _: PublishRequest => publishExecutors(partitionsToExecutors(request.partition)).submit(task)
+            case _: NewTransactionRequest => newTxnExecutors(partitionsToExecutors(request.partition)).submit(task)
+            case _: MaterializeRequest => materializationExecutors(partitionsToExecutors(request.partition)).submit(task)
+            case _ => masterRequestsExecutor.submit(task)
+          }
         }
         //graceful shutdown all executors after finishing message handling
-        executors.foreach(x => x._2.shutdownSafe())
+        newTxnExecutors.foreach(x => x._2.shutdownSafe())
+        publishExecutors.foreach(x => x._2.shutdownSafe())
+        materializationExecutors.foreach(x => x._2.shutdownSafe())
       }
     })
     messageHandler.start()
     latch.await()
+  }
+
+
+  /**
+    * public method which allows to submit delayed task for execution
+    *
+    * @param task
+    * @param partition
+    */
+  def submitPipelinedTaskToPublishExecutors(task: Runnable, partition: Int) = {
+    val execNum = partitionsToExecutors(partition)
+    publishExecutors(execNum).execute(task)
   }
 
   /**
@@ -473,8 +497,7 @@ class PeerAgent(agentAddress: String, zkHosts: List[InetSocketAddress], zkRootPa
     * @param task
     * @param partition
     */
-  def submitPipelinedTask(task: Runnable, partition: Int) = {
-    val execNum = partitionsToExecutors(partition)
-    executors(execNum).execute(task)
+  def submitPipelinedTaskToCassandraExecutor(task: Runnable, partition: Int) = {
+    producer.backendActivityService.execute(task)
   }
 }
