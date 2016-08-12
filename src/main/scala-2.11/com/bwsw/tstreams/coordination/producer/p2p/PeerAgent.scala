@@ -371,7 +371,7 @@ class PeerAgent(agentAddress: String, zkHosts: List[InetSocketAddress], zkRootPa
     * @return Transaction UUID
     */
   def generateNewTransaction(partition: Int): UUID = {
-    //LockUtil.withLockOrDieDo[UUID](externalAccessLock, (100, TimeUnit.SECONDS), Some(logger), () => {
+    LockUtil.withLockOrDieDo[UUID](externalAccessLock, (100, TimeUnit.SECONDS), Some(logger), () => {
       val master = localMasters.getOrDefault(partition, null)
       if (logger.isDebugEnabled)
         logger.debug(s"[GETTXN] Start retrieve txn for agent with address:{$agentAddress}," +
@@ -402,7 +402,7 @@ class PeerAgent(agentAddress: String, zkHosts: List[InetSocketAddress], zkRootPa
           generateNewTransaction(partition)
         }
       res
-    //})
+    })
   }
 
   def notifyMaterialize(msg: Message, to: String): Unit = {
@@ -414,18 +414,18 @@ class PeerAgent(agentAddress: String, zkHosts: List[InetSocketAddress], zkRootPa
 
   //TODO remove after complex testing
   def publish(msg: Message): Unit = {
-    //LockUtil.withLockOrDieDo[Unit](externalAccessLock, (100, TimeUnit.SECONDS), Some(logger), () => {
-    val master = localMasters.getOrDefault(msg.partition, null)
-    if (logger.isDebugEnabled)
-      logger.debug(s"[PUBLISH] SEND PTM:{$msg} to [MASTER:{$master}] from agent:{$agentAddress}," +
-        s"stream:{$streamName}\n")
-    if (master != null) {
-      transport.publishRequest(PublishRequest(agentAddress, master, msg))
-    } else {
-      updateMaster(msg.partition, init = false)
-      publish(msg)
-    }
-    //})
+    LockUtil.withLockOrDieDo[Unit](externalAccessLock, (100, TimeUnit.SECONDS), Some(logger), () => {
+      val master = localMasters.getOrDefault(msg.partition, null)
+      if (logger.isDebugEnabled)
+        logger.debug(s"[PUBLISH] SEND PTM:{$msg} to [MASTER:{$master}] from agent:{$agentAddress}," +
+          s"stream:{$streamName}\n")
+      if (master != null) {
+        transport.publishRequest(PublishRequest(agentAddress, master, msg))
+      } else {
+        updateMaster(msg.partition, init = false)
+        publish(msg)
+      }
+    })
   }
 
   /**
@@ -486,8 +486,8 @@ class PeerAgent(agentAddress: String, zkHosts: List[InetSocketAddress], zkRootPa
     * @param task
     * @param partition
     */
-  def submitPipelinedTask(task: Runnable, partition: Int) = {
+  def submitPipelinedTaskToPublishExecutors(task: Runnable, partition: Int) = {
     val execNum = partitionsToExecutors(partition)
-    newTxnExecutors(execNum).execute(task)
+    publishExecutors(execNum).execute(task)
   }
 }

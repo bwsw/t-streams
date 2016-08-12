@@ -301,7 +301,7 @@ class Producer[USERTYPE](val name: String,
       totalCnt = -1,
       ttl = producerOptions.transactionTTL,
       function = () => {
-        backendActivityService.submit(new Runnable {
+        p2pAgent.submitPipelinedTaskToPublishExecutors(new Runnable {
           override def run(): Unit = {
             val msg = Message(
               txnUuid = txnUUID,
@@ -312,7 +312,7 @@ class Producer[USERTYPE](val name: String,
               logger.debug(s"Producer ${name} - [GET_LOCAL_TXN PRODUCER] update with msg partition=$partition uuid=${txnUUID.timestamp()} opened")
             subscriberNotifier.publish(msg, onComplete)
           }
-        })
+        }, partition)
       },
       executor = backendActivityService)
 

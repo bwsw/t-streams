@@ -12,6 +12,7 @@ import scala.util.Random
 
 object IMessage {
   val logger = LoggerFactory.getLogger(this.getClass)
+  val isDebugMessages = true
 }
 
 /**
@@ -35,17 +36,17 @@ trait IMessage {
 
   def run(agent: PeerAgent) = {
     val start = System.currentTimeMillis()
-    if(IMessage.logger.isDebugEnabled)
+    if(IMessage.isDebugMessages)
     {
-      IMessage.logger.debug(s"${getClass.toString} / ${msgID.toString} - Start handling at ${start}, was-sent-at ${remotePeerTimestamp}, re-created ${localPeerTimestamp}")
-      IMessage.logger.debug(s"${getClass.toString} / ${msgID.toString} - Waiting to be run time: ${start - remotePeerTimestamp}")
+      IMessage.logger.info(s"${getClass.toString} / ${msgID.toString} - Start handling at ${start}, was-sent-at ${remotePeerTimestamp}, re-created ${localPeerTimestamp}")
+      IMessage.logger.info(s"${getClass.toString} / ${msgID.toString} - Waiting to be run time: ${start - remotePeerTimestamp}")
     }
 
     handleP2PRequest(agent)
 
-    if(IMessage.logger.isDebugEnabled)
+    if(IMessage.isDebugMessages)
     {
-      IMessage.logger.debug(s"${getClass.toString} / ${msgID.toString} - Execution delta: ${System.currentTimeMillis() - start}")
+      IMessage.logger.info(s"${getClass.toString} / ${msgID.toString} - Execution delta: ${System.currentTimeMillis() - start}")
     }
   }
 
@@ -73,7 +74,7 @@ case class NewTransactionRequest(senderID: String, receiverID: String, partition
       if(IMessage.logger.isDebugEnabled)
         IMessage.logger.debug(s"Responded with early ready virtualized TXN: ${txnUUID}")
 
-      agent.submitPipelinedTask(new Runnable {
+      agent.submitPipelinedTaskToPublishExecutors(new Runnable {
           def run(): Unit = agent.getProducer.openTxnLocal(txnUUID, partition,
               onComplete = () => {
                 agent.notifyMaterialize(Message(txnUUID, -1, TransactionStatus.materialize, partition), senderID)
@@ -231,7 +232,7 @@ case class PublishRequest(senderID: String, receiverID: String, msg: Message) ex
     assert(receiverID == agent.getAgentAddress)
     val master = agent.localMasters.getOrDefault(partition, "")
     if(master == agent.getAgentAddress) {
-      agent.submitPipelinedTask(new Runnable {
+      agent.submitPipelinedTaskToPublishExecutors(new Runnable {
         override def run(): Unit = agent.getProducer.subscriberNotifier.publish(msg, onComplete = () => {})
       }, partition)
     }
