@@ -35,13 +35,17 @@ trait IMessage {
 
   def run(agent: PeerAgent) = {
     val start = System.currentTimeMillis()
-    if(IMessage.logger.isInfoEnabled) {
-      IMessage.logger.info(s"${getClass.toString} / ${msgID.toString} - Start handling at ${start}, was-sent-at ${remotePeerTimestamp}, re-created ${localPeerTimestamp}")
-      IMessage.logger.info(s"${getClass.toString} / ${msgID.toString} - Waiting to be run time: ${start - remotePeerTimestamp}")
+    if(IMessage.logger.isDebugEnabled)
+    {
+      IMessage.logger.debug(s"${getClass.toString} / ${msgID.toString} - Start handling at ${start}, was-sent-at ${remotePeerTimestamp}, re-created ${localPeerTimestamp}")
+      IMessage.logger.debug(s"${getClass.toString} / ${msgID.toString} - Waiting to be run time: ${start - remotePeerTimestamp}")
     }
+
     handleP2PRequest(agent)
-    if(IMessage.logger.isInfoEnabled) {
-      IMessage.logger.info(s"${getClass.toString} / ${msgID.toString} - Execution delta: ${System.currentTimeMillis() - start}")
+
+    if(IMessage.logger.isDebugEnabled)
+    {
+      IMessage.logger.debug(s"${getClass.toString} / ${msgID.toString} - Execution delta: ${System.currentTimeMillis() - start}")
     }
   }
 
