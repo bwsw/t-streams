@@ -15,7 +15,7 @@ import scala.collection.mutable
   * @param options User defined aerospike options
   * @param client  Aerospike client instance
   */
-class AerospikeStorage(client: AerospikeClient, options: AerospikeStorageOptions) extends IStorage[Array[Byte]] {
+class Storage(client: AerospikeClient, options: Options) extends IStorage[Array[Byte]] {
 
   /**
     * AerospikeStorage logger for logging

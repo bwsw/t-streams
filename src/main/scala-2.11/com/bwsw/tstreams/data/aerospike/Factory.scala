@@ -9,7 +9,7 @@ import com.aerospike.client.{AerospikeClient, Host}
 /**
   * Factory for creating Aerospike storage instances
   */
-class AerospikeStorageFactory {
+class Factory {
 
   /**
     * Map for memorize clients which are already created
@@ -27,7 +27,7 @@ class AerospikeStorageFactory {
     * @param aerospikeOptions Options of aerospike client
     * @return Instance of CassandraStorage
     */
-  def getInstance(aerospikeOptions: AerospikeStorageOptions): AerospikeStorage = {
+  def getInstance(aerospikeOptions: Options): Storage = {
     lock.lock()
 
     if (isClosed)
@@ -45,7 +45,7 @@ class AerospikeStorageFactory {
       }
     }
 
-    val inst = new AerospikeStorage(client, aerospikeOptions)
+    val inst = new Storage(client, aerospikeOptions)
     lock.unlock()
 
     inst

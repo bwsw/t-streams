@@ -4,7 +4,7 @@ import java.util.UUID
 import java.util.concurrent.locks.ReentrantLock
 import java.util.concurrent.{ConcurrentHashMap, CountDownLatch, TimeUnit}
 
-import com.bwsw.tstreams.agents.group.{Agent, CheckpointInfo, ProducerCheckpointInfo}
+import com.bwsw.tstreams.agents.group.{Agent, CheckpointInfo}
 import com.bwsw.tstreams.agents.producer.NewTransactionProducerPolicy.ProducerPolicy
 import com.bwsw.tstreams.common._
 import com.bwsw.tstreams.coordination.clients.ProducerToSubscriberNotifier

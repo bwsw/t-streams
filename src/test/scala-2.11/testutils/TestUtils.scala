@@ -9,8 +9,8 @@ import java.util.concurrent.atomic.AtomicInteger
 import com.aerospike.client.Host
 import com.bwsw.tstreams.common.{CassandraConnectorConf, ZookeeperDLMService, MetadataConnectionPool, CassandraHelper}
 import com.bwsw.tstreams.converter.{ArrayByteToStringConverter, StringToArrayByteConverter}
-import com.bwsw.tstreams.data.aerospike.{AerospikeStorageFactory, AerospikeStorageOptions}
-import com.bwsw.tstreams.data.cassandra.{CassandraStorageFactory, CassandraStorageOptions}
+import com.bwsw.tstreams.data.aerospike.{Factory, Options}
+import com.bwsw.tstreams.data.cassandra.{Factory, Options}
 import com.bwsw.tstreams.debug.GlobalHooks
 import com.bwsw.tstreams.env.{TSF_Dictionary, TStreamsFactory}
 import com.bwsw.tstreams.metadata.MetadataStorageFactory
@@ -74,9 +74,8 @@ trait TestUtils {
 
   //metadata/data factories
   val metadataStorageFactory = new MetadataStorageFactory
-  val storageFactory = new AerospikeStorageFactory
-  val cassandraStorageFactory = new CassandraStorageFactory
-  //val cassandraStorageOptions = new CassandraStorageOptions(List(new InetSocketAddress("localhost", 9042)), randomKeyspace)
+  val storageFactory = new com.bwsw.tstreams.data.aerospike.Factory
+  val cassandraStorageFactory = new com.bwsw.tstreams.data.cassandra.Factory
 
 
   //converters to convert usertype->storagetype; storagetype->usertype
@@ -87,7 +86,7 @@ trait TestUtils {
   val hosts = List(
     new Host("localhost", 3000))
 
-  val aerospikeOptions = new AerospikeStorageOptions("test", hosts)
+  val aerospikeOptions = new com.bwsw.tstreams.data.aerospike.Options("test", hosts)
   val zkService = new ZookeeperDLMService("", List(new InetSocketAddress("127.0.0.1", 21810)), 7, 7)
 
   removeZkMetadata(f.getProperty(TSF_Dictionary.Coordination.ROOT).toString)

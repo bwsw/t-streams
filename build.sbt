@@ -40,7 +40,7 @@ libraryDependencies ++= Seq(
   "net.openhft" % "chronicle-queue" % "4.2.6",
   "org.scala-lang" % "scala-reflect" % "2.11.8",
   "org.scala-lang.modules" % "scala-xml_2.11" % "1.0.4",
-  "org.cassandraunit" % "cassandra-unit" % "3.0.0.1",
+  "org.cassandraunit" % "cassandra-unit" % "2.2.2.1",
   "log4j" % "log4j" % "1.2.17",
   ("org.apache.zookeeper" % "zookeeper" % "3.4.6")
     .exclude("org.slf4j", "slf4j-log4j12"),
@@ -55,7 +55,7 @@ libraryDependencies += ("com.datastax.cassandra" % "cassandra-driver-core" % "3.
   .exclude("io.netty", "netty-buffer")
   .exclude("io.netty", "netty-handler")
 
-libraryDependencies += ("org.cassandraunit" % "cassandra-unit" % "3.0.0.1")
+libraryDependencies += ("org.cassandraunit" % "cassandra-unit" % "2.2.2.1")
   .exclude("com.google.guava", "guava")
   .exclude("io.netty", "netty-common")
   .exclude("io.netty", "netty-codec")
