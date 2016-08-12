@@ -23,6 +23,7 @@ trait IMessage {
   val senderID: String
   val receiverID: String
   val partition: Int
+  var timestamp: Long = System.currentTimeMillis()
 
   /**
     * Called by PeerAgent if message is received
@@ -45,6 +46,7 @@ trait IMessage {
   */
 case class NewTransactionRequest(senderID: String, receiverID: String, partition: Int) extends IMessage {
   override def handleP2PRequest(agent: PeerAgent) = {
+    IMessage.logger.info(s"Placed - processed delta: ${System.currentTimeMillis() - timestamp}")
     if(IMessage.logger.isDebugEnabled)
       IMessage.logger.debug("Start handling NewTransactionRequest")
     assert(receiverID == agent.getAgentAddress)
@@ -52,6 +54,7 @@ case class NewTransactionRequest(senderID: String, receiverID: String, partition
     if (master == agent.getAgentAddress) {
       val txnUUID: UUID = agent.getProducer.getNewTxnUUIDLocal()
       val response = TransactionResponse(receiverID, senderID, txnUUID, partition)
+      response.timestamp = System.currentTimeMillis()
       response.msgID = msgID
       agent.getTransport.respond(response)
       if(IMessage.logger.isDebugEnabled)
