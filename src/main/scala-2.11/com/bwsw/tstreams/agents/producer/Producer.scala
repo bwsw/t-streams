@@ -178,6 +178,9 @@ class Producer[USERTYPE](val name: String,
           case NewTransactionProducerPolicy.CancelIfOpened =>
             action = () => partOpt.get.cancel()
 
+          case NewTransactionProducerPolicy.CheckpointAsyncIfOpened =>
+            action = () => partOpt.get.checkpoint(isSynchronous = false)
+
           case NewTransactionProducerPolicy.ErrorIfOpened =>
             throw new IllegalStateException(s"Producer ${name} - previous transaction was not closed")
         }
