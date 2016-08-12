@@ -12,7 +12,7 @@ class MetadataStorageFactoryTest extends FlatSpec with Matchers with BeforeAndAf
 
   "MetadataStorageFactory.getInstance()" should "return MetadataStorage instance" in {
     val factory = new MetadataStorageFactory
-    val instance = factory.getInstance(CassandraConnectorConf(Set(new InetSocketAddress("localhost", 9042))), randomKeyspace)
+    val instance = factory.getInstance(CassandraConnectorConf(Set(new InetSocketAddress("localhost", 9142))), randomKeyspace)
     val checkVal = instance.isInstanceOf[MetadataStorage]
     checkVal shouldEqual true
   }

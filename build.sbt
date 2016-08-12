@@ -40,6 +40,7 @@ libraryDependencies ++= Seq(
   "net.openhft" % "chronicle-queue" % "4.2.6",
   "org.scala-lang" % "scala-reflect" % "2.11.8",
   "org.scala-lang.modules" % "scala-xml_2.11" % "1.0.4",
+  "org.cassandraunit" % "cassandra-unit" % "3.0.0.1",
   "log4j" % "log4j" % "1.2.17",
   ("org.apache.zookeeper" % "zookeeper" % "3.4.6")
     .exclude("org.slf4j", "slf4j-log4j12"),
@@ -69,6 +70,7 @@ assemblyJarName in assembly := "t-streams-" + tstreamsVersion + ".jar"
 
 assemblyMergeStrategy in assembly := {
   case PathList("org", "slf4j", "impl", xs@_*) => MergeStrategy.discard
+  case PathList("org", "cassandraunit", "cassandra-unit", xs@_*) => MergeStrategy.discard
   case PathList("com", "twitter", "common", "zookeeper", xs@_*) => MergeStrategy.first
   case PathList("io", "netty", xs@_*) => MergeStrategy.first
   case PathList("com", "datastax", "cassandra", xs@_*) => MergeStrategy.first

@@ -17,6 +17,7 @@ import com.bwsw.tstreams.metadata.MetadataStorageFactory
 import com.google.common.io.Files
 import org.apache.zookeeper.server.{ServerConfig, ZooKeeperServerMain}
 import org.apache.zookeeper.server.quorum.QuorumPeerConfig
+import org.cassandraunit.utils.EmbeddedCassandraServerHelper
 import org.slf4j.LoggerFactory
 
 import scala.collection.mutable.ListBuffer
@@ -45,8 +46,8 @@ trait TestUtils {
   logger.info("-------------------------------------------------------")
 
 
-  val cluster = MetadataConnectionPool.getCluster(CassandraConnectorConf(Set(new InetSocketAddress("localhost", 9042))))
-  val session = MetadataConnectionPool.getSession(CassandraConnectorConf(Set(new InetSocketAddress("localhost", 9042))), null)
+  val cluster = MetadataConnectionPool.getCluster(CassandraConnectorConf(Set(new InetSocketAddress("localhost", 9142))))
+  val session = MetadataConnectionPool.getSession(CassandraConnectorConf(Set(new InetSocketAddress("localhost", 9142))), null)
 
   def createRandomKeyspace(): String = {
     val randomKeyspace = randomString
@@ -63,6 +64,7 @@ trait TestUtils {
 
   val f = new TStreamsFactory()
   f.setProperty(TSF_Dictionary.Metadata.Cluster.NAMESPACE, randomKeyspace).
+    setProperty(TSF_Dictionary.Metadata.Cluster.ENDPOINTS, "localhost:9142").
     setProperty(TSF_Dictionary.Data.Cluster.NAMESPACE, "test").
     setProperty(TSF_Dictionary.Coordination.ROOT, coordinationRoot).
     setProperty(TSF_Dictionary.Coordination.ENDPOINTS, "localhost:21810").
@@ -146,6 +148,9 @@ object TestUtils {
 
   private val id: AtomicInteger = new AtomicInteger(0)
   private val port = new AtomicInteger(28000)
+
+  EmbeddedCassandraServerHelper.startEmbeddedCassandra(60000L)
+  System.getProperty("java.io.tmpdir","./target/")
   private val zk = new ZooKeeperLocal(Files.createTempDir().toString)
 
   def moveId(): Int = {
