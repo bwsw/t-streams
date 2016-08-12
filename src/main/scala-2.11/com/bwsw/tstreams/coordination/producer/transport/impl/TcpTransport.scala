@@ -79,7 +79,7 @@ class TcpTransport(timeoutMs: Int, retryCount: Int = 3, retryDelayMs: Int = 5000
   override def transactionRequest(msg: NewTransactionRequest): IMessage = {
     val start = System.currentTimeMillis()
     val response: IMessage = client.sendAndWaitResponse(msg, isExceptionOnFail = false)
-    val delaySvr = response.timestamp - msg.timestamp
+    val delaySvr = response.remotePeerTimestamp - msg.remotePeerTimestamp
     val end = System.currentTimeMillis()
     if(IMessage.logger.isDebugEnabled)
       IMessage.logger.debug(s"Server view: ${delaySvr}, client view: ${end - start}")

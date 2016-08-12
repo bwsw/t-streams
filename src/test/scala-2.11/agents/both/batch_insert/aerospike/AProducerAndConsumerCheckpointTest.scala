@@ -48,7 +48,7 @@ class AProducerAndConsumerCheckpointTest extends FlatSpec with Matchers with Bef
 
   "producer, consumer" should "producer - generate many transactions, consumer - retrieve all of them with reinitialization after some time" in {
     val dataToSend = (for (i <- 0 until 10) yield randomString).sorted
-    val txnNum = 100
+    val txnNum = 5
 
     (0 until txnNum) foreach { _ =>
       val txn = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)

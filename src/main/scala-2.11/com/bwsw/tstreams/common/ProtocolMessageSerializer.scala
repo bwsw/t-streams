@@ -20,46 +20,46 @@ class ProtocolMessageSerializer {
         s"{AS,$id,$prior,$penalty}"
 
       case x: DeleteMasterRequest =>
-        s"{DMRq,${x.senderID},${x.receiverID},${x.partition},${x.msgID},${x.timestamp}}"
+        s"{DMRq,${x.senderID},${x.receiverID},${x.partition},${x.msgID},${x.remotePeerTimestamp}}"
 
       case x: DeleteMasterResponse =>
-        s"{DMRs,${x.senderID},${x.receiverID},${x.partition},${x.msgID},${x.timestamp}}"
+        s"{DMRs,${x.senderID},${x.receiverID},${x.partition},${x.msgID},${x.remotePeerTimestamp}}"
 
       case x: EmptyRequest =>
-        s"{ERq,${x.senderID},${x.receiverID},${x.partition},${x.msgID},${x.timestamp}}"
+        s"{ERq,${x.senderID},${x.receiverID},${x.partition},${x.msgID},${x.remotePeerTimestamp}}"
 
       case x: EmptyResponse =>
-        s"{ERs,${x.senderID},${x.receiverID},${x.partition},${x.msgID},${x.timestamp}}"
+        s"{ERs,${x.senderID},${x.receiverID},${x.partition},${x.msgID},${x.remotePeerTimestamp}}"
 
       case x: PingRequest =>
-        s"{PiRq,${x.senderID},${x.receiverID},${x.partition},${x.msgID},${x.timestamp}}"
+        s"{PiRq,${x.senderID},${x.receiverID},${x.partition},${x.msgID},${x.remotePeerTimestamp}}"
 
       case x: PingResponse =>
-        s"{PiRs,${x.senderID},${x.receiverID},${x.partition},${x.msgID},${x.timestamp}}"
+        s"{PiRs,${x.senderID},${x.receiverID},${x.partition},${x.msgID},${x.remotePeerTimestamp}}"
 
       case x: PublishRequest =>
         val serializedMsg = serializeInternal(x.msg)
-        s"{PuRq,${x.senderID},${x.receiverID},$serializedMsg,${x.msgID},${x.timestamp}}"
+        s"{PuRq,${x.senderID},${x.receiverID},$serializedMsg,${x.msgID},${x.remotePeerTimestamp}}"
 
       case x: MaterializeRequest =>
         val serializedMsg = serializeInternal(x.msg)
-        s"{MRq,${x.senderID},${x.receiverID},$serializedMsg,${x.msgID},${x.timestamp}}"
+        s"{MRq,${x.senderID},${x.receiverID},$serializedMsg,${x.msgID},${x.remotePeerTimestamp}}"
 
       case x: PublishResponse =>
         val serializedMsg = serializeInternal(x.msg)
-        s"{PuRs,${x.senderID},${x.receiverID},$serializedMsg,${x.msgID},${x.timestamp}}"
+        s"{PuRs,${x.senderID},${x.receiverID},$serializedMsg,${x.msgID},${x.remotePeerTimestamp}}"
 
       case x: SetMasterRequest =>
-        s"{SMRq,${x.senderID},${x.receiverID},${x.partition},${x.msgID},${x.timestamp}}"
+        s"{SMRq,${x.senderID},${x.receiverID},${x.partition},${x.msgID},${x.remotePeerTimestamp}}"
 
       case x: SetMasterResponse =>
-        s"{SMRs,${x.senderID},${x.receiverID},${x.partition},${x.msgID},${x.timestamp}}"
+        s"{SMRs,${x.senderID},${x.receiverID},${x.partition},${x.msgID},${x.remotePeerTimestamp}}"
 
       case x: NewTransactionRequest =>
-        s"{TRq,${x.senderID},${x.receiverID},${x.partition},${x.msgID},${x.timestamp}}"
+        s"{TRq,${x.senderID},${x.receiverID},${x.partition},${x.msgID},${x.remotePeerTimestamp}}"
 
       case x: TransactionResponse =>
-        s"{TRs,${x.senderID},${x.receiverID},${x.txnUUID.toString},${x.partition},${x.msgID},${x.timestamp}}"
+        s"{TRs,${x.senderID},${x.receiverID},${x.txnUUID.toString},${x.partition},${x.msgID},${x.remotePeerTimestamp}}"
 
       case Message(txnUuid, ttl, status, partition) =>
         val serializedStatus = serializeInternal(status)
@@ -120,81 +120,81 @@ class ProtocolMessageSerializer {
         assert(tokens.size == 6)
         val res = DeleteMasterRequest(tokens(1).toString, tokens(2).toString, tokens(3).toString.toInt)
         res.msgID = tokens(4).toString.toLong
-        res.timestamp = tokens(5).toString.toLong
+        res.remotePeerTimestamp = tokens(5).toString.toLong
         res
       case "DMRs" =>
         assert(tokens.size == 6)
         val res = DeleteMasterResponse(tokens(1).toString, tokens(2).toString, tokens(3).toString.toInt)
         res.msgID = tokens(4).toString.toLong
-        res.timestamp = tokens(5).toString.toLong
+        res.remotePeerTimestamp = tokens(5).toString.toLong
         res
       case "ERq" =>
         assert(tokens.size == 6)
         val res = EmptyRequest(tokens(1).toString, tokens(2).toString, tokens(3).toString.toInt)
         res.msgID = tokens(4).toString.toLong
-        res.timestamp = tokens(5).toString.toLong
+        res.remotePeerTimestamp = tokens(5).toString.toLong
         res
       case "ERs" =>
         assert(tokens.size == 6)
         val res = EmptyResponse(tokens(1).toString, tokens(2).toString, tokens(3).toString.toInt)
         res.msgID = tokens(4).toString.toLong
-        res.timestamp = tokens(5).toString.toLong
+        res.remotePeerTimestamp = tokens(5).toString.toLong
         res
       case "PiRq" =>
         assert(tokens.size == 6)
         val res = PingRequest(tokens(1).toString, tokens(2).toString, tokens(3).toString.toInt)
         res.msgID = tokens(4).toString.toLong
-        res.timestamp = tokens(5).toString.toLong
+        res.remotePeerTimestamp = tokens(5).toString.toLong
         res
       case "PiRs" =>
         assert(tokens.size == 6)
         val res = PingResponse(tokens(1).toString, tokens(2).toString, tokens(3).toString.toInt)
         res.msgID = tokens(4).toString.toLong
-        res.timestamp = tokens(5).toString.toLong
+        res.remotePeerTimestamp = tokens(5).toString.toLong
         res
       case "PuRq" =>
         assert(tokens.size == 6)
         val res = PublishRequest(tokens(1).toString, tokens(2).toString, tokens(3).asInstanceOf[Message])
         res.msgID = tokens(4).toString.toLong
-        res.timestamp = tokens(5).toString.toLong
+        res.remotePeerTimestamp = tokens(5).toString.toLong
         res
       case "MRq" =>
         assert(tokens.size == 6)
         val res = MaterializeRequest(tokens(1).toString, tokens(2).toString, tokens(3).asInstanceOf[Message])
         res.msgID = tokens(4).toString.toLong
-        res.timestamp = tokens(5).toString.toLong
+        res.remotePeerTimestamp = tokens(5).toString.toLong
         res
 
       case "PuRs" =>
         assert(tokens.size == 6)
         val res = PublishResponse(tokens(1).toString, tokens(2).toString, tokens(3).asInstanceOf[Message])
         res.msgID = tokens(4).toString.toLong
-        res.timestamp = tokens(5).toString.toLong
+        res.remotePeerTimestamp = tokens(5).toString.toLong
         res
       case "SMRq" =>
         assert(tokens.size == 6)
         val res = SetMasterRequest(tokens(1).toString, tokens(2).toString, tokens(3).toString.toInt)
         res.msgID = tokens(4).toString.toLong
-        res.timestamp = tokens(5).toString.toLong
+        res.remotePeerTimestamp = tokens(5).toString.toLong
         res
       case "SMRs" =>
         assert(tokens.size == 6)
         val res = SetMasterResponse(tokens(1).toString, tokens(2).toString, tokens(3).toString.toInt)
         res.msgID = tokens(4).toString.toLong
-        res.timestamp = tokens(5).toString.toLong
+        res.remotePeerTimestamp = tokens(5).toString.toLong
         res
       case "TRq" =>
         assert(tokens.size == 6)
         val res = NewTransactionRequest(tokens(1).toString, tokens(2).toString, tokens(3).toString.toInt)
         res.msgID = tokens(4).toString.toLong
-        res.timestamp = tokens(5).toString.toLong
+        res.remotePeerTimestamp = tokens(5).toString.toLong
         res
       case "TRs" =>
         assert(tokens.size == 7)
         val res = TransactionResponse(tokens(1).toString,
           tokens(2).toString, UUID.fromString(tokens(3).toString), tokens(4).toString.toInt)
         res.msgID = tokens(5).toString.toLong
-        res.timestamp = tokens(6).toString.toLong
+        res.remotePeerTimestamp = tokens(6).toString.toLong
         res
       case "PTM" =>
         assert(tokens.size == 5)

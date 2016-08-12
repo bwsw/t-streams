@@ -23,7 +23,8 @@ trait IMessage {
   val senderID: String
   val receiverID: String
   val partition: Int
-  var timestamp: Long = System.currentTimeMillis()
+  var remotePeerTimestamp: Long = System.currentTimeMillis()
+  val localPeerTimestamp: Long = System.currentTimeMillis()
 
   /**
     * Called by PeerAgent if message is received
@@ -34,13 +35,13 @@ trait IMessage {
 
   def run(agent: PeerAgent) = {
     val start = System.currentTimeMillis()
-    if(IMessage.logger.isDebugEnabled) {
-      IMessage.logger.debug(s"Start handling ${getClass.toString}")
-      IMessage.logger.debug(s"Received to start processing delta time: ${start - timestamp}")
+    if(IMessage.logger.isInfoEnabled) {
+      IMessage.logger.info(s"${getClass.toString} / ${msgID.toString} - Start handling at ${start}, was-sent-at ${remotePeerTimestamp}, re-created ${localPeerTimestamp}")
+      IMessage.logger.info(s"${getClass.toString} / ${msgID.toString} - Waiting to be run time: ${start - remotePeerTimestamp}")
     }
     handleP2PRequest(agent)
-    if(IMessage.logger.isDebugEnabled) {
-      IMessage.logger.debug(s"Processed delta: ${System.currentTimeMillis() - start}")
+    if(IMessage.logger.isInfoEnabled) {
+      IMessage.logger.info(s"${getClass.toString} / ${msgID.toString} - Execution delta: ${System.currentTimeMillis() - start}")
     }
   }
 

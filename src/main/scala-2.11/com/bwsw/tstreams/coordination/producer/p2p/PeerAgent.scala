@@ -35,7 +35,10 @@ class PeerAgent(agentAddress: String, zkHosts: List[InetSocketAddress], zkRootPa
   private val zkRetriesAmount = 60
   private val externalAccessLock = new ReentrantLock(true)
   private val zkService = new ZookeeperDLMService(zkRootPath, zkHosts, zkSessionTimeout, zkConnectionTimeout)
-  private val executors = mutable.Map[Int, FirstFailLockableTaskExecutor]()
+  private val newTxnExecutors = mutable.Map[Int, FirstFailLockableTaskExecutor]()
+  private val publishExecutors = mutable.Map[Int, FirstFailLockableTaskExecutor]()
+  private val materializationExecutors = mutable.Map[Int, FirstFailLockableTaskExecutor]()
+  private val masterRequestsExecutor = new FirstFailLockableTaskExecutor(s"${producer.name}-masterRequests")
 
   val localMasters = new java.util.concurrent.ConcurrentHashMap[Int /*partition*/ , String /*master address*/ ]()
   val logger = LoggerFactory.getLogger(this.getClass)
@@ -81,7 +84,9 @@ class PeerAgent(agentAddress: String, zkHosts: List[InetSocketAddress], zkRootPa
   startSessionKeepAliveThread()
 
   (0 until poolSize) foreach { x =>
-    executors(x) = new FirstFailLockableTaskExecutor(s"PeerAgent-PartitionWorker-${producer.name}")
+    newTxnExecutors(x) = new FirstFailLockableTaskExecutor(s"${producer.name}-newTxn-${x}")
+    materializationExecutors(x) = new FirstFailLockableTaskExecutor(s"${producer.name}-materialization-${x}")
+    publishExecutors(x) = new FirstFailLockableTaskExecutor(s"${producer.name}-publish-${x}")
   }
 
   private val partitionsToExecutors = usedPartitions
@@ -366,7 +371,7 @@ class PeerAgent(agentAddress: String, zkHosts: List[InetSocketAddress], zkRootPa
     * @return Transaction UUID
     */
   def generateNewTransaction(partition: Int): UUID = {
-    LockUtil.withLockOrDieDo[UUID](externalAccessLock, (100, TimeUnit.SECONDS), Some(logger), () => {
+    //LockUtil.withLockOrDieDo[UUID](externalAccessLock, (100, TimeUnit.SECONDS), Some(logger), () => {
       val master = localMasters.getOrDefault(partition, null)
       if (logger.isDebugEnabled)
         logger.debug(s"[GETTXN] Start retrieve txn for agent with address:{$agentAddress}," +
@@ -397,7 +402,7 @@ class PeerAgent(agentAddress: String, zkHosts: List[InetSocketAddress], zkRootPa
           generateNewTransaction(partition)
         }
       res
-    })
+    //})
   }
 
   def notifyMaterialize(msg: Message, to: String): Unit = {
@@ -409,7 +414,7 @@ class PeerAgent(agentAddress: String, zkHosts: List[InetSocketAddress], zkRootPa
 
   //TODO remove after complex testing
   def publish(msg: Message): Unit = {
-    LockUtil.withLockOrDieDo[Unit](externalAccessLock, (100, TimeUnit.SECONDS), Some(logger), () => {
+    //LockUtil.withLockOrDieDo[Unit](externalAccessLock, (100, TimeUnit.SECONDS), Some(logger), () => {
       val master = localMasters.getOrDefault(msg.partition, null)
       if (logger.isDebugEnabled)
         logger.debug(s"[PUBLISH] SEND PTM:{$msg} to [MASTER:{$master}] from agent:{$agentAddress}," +
@@ -420,7 +425,7 @@ class PeerAgent(agentAddress: String, zkHosts: List[InetSocketAddress], zkRootPa
         updateMaster(msg.partition, init = false)
         publish(msg)
       }
-    })
+    //})
   }
 
   /**
@@ -453,19 +458,27 @@ class PeerAgent(agentAddress: String, zkHosts: List[InetSocketAddress], zkRootPa
             logger.debug(s"[HANDLER] Start handle msg:{$request} on agent:{$agentAddress}")
           val task: Runnable = new Runnable {
               override def run(): Unit = request.run(agent)
-            }
+          }
 
           assert(partitionsToExecutors.contains(request.partition))
-          val execNum = partitionsToExecutors(request.partition)
-          executors(execNum).execute(task)
+          request match {
+            case _: PublishRequest => publishExecutors(partitionsToExecutors(request.partition)).submit(task)
+            case _: NewTransactionRequest => newTxnExecutors(partitionsToExecutors(request.partition)).submit(task)
+            case _: MaterializeRequest => materializationExecutors(partitionsToExecutors(request.partition)).submit(task)
+            case _ => masterRequestsExecutor.submit(task)
+          }
         }
         //graceful shutdown all executors after finishing message handling
-        executors.foreach(x => x._2.shutdownSafe())
+        masterRequestsExecutor.shutdownSafe()
+        newTxnExecutors.foreach(x => x._2.shutdownSafe())
+        publishExecutors.foreach(x => x._2.shutdownSafe())
+        materializationExecutors.foreach(x => x._2.shutdownSafe())
       }
     })
     messageHandler.start()
     latch.await()
   }
+
 
   /**
     * public method which allows to submit delayed task for execution
@@ -475,6 +488,6 @@ class PeerAgent(agentAddress: String, zkHosts: List[InetSocketAddress], zkRootPa
     */
   def submitPipelinedTask(task: Runnable, partition: Int) = {
     val execNum = partitionsToExecutors(partition)
-    executors(execNum).execute(task)
+    newTxnExecutors(execNum).execute(task)
   }
 }
