@@ -415,16 +415,16 @@ class PeerAgent(agentAddress: String, zkHosts: List[InetSocketAddress], zkRootPa
   //TODO remove after complex testing
   def publish(msg: Message): Unit = {
     //LockUtil.withLockOrDieDo[Unit](externalAccessLock, (100, TimeUnit.SECONDS), Some(logger), () => {
-      val master = localMasters.getOrDefault(msg.partition, null)
-      if (logger.isDebugEnabled)
-        logger.debug(s"[PUBLISH] SEND PTM:{$msg} to [MASTER:{$master}] from agent:{$agentAddress}," +
-          s"stream:{$streamName}\n")
-      if (master != null) {
-        transport.publishRequest(PublishRequest(agentAddress, master, msg))
-      } else {
-        updateMaster(msg.partition, init = false)
-        publish(msg)
-      }
+    val master = localMasters.getOrDefault(msg.partition, null)
+    if (logger.isDebugEnabled)
+      logger.debug(s"[PUBLISH] SEND PTM:{$msg} to [MASTER:{$master}] from agent:{$agentAddress}," +
+        s"stream:{$streamName}\n")
+    if (master != null) {
+      transport.publishRequest(PublishRequest(agentAddress, master, msg))
+    } else {
+      updateMaster(msg.partition, init = false)
+      publish(msg)
+    }
     //})
   }
 
