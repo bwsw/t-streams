@@ -81,10 +81,10 @@ class FirstFailLockableTaskExecutor(name: String) extends Executor {
   def submit(runnable : Runnable, l : Option[ReentrantLock] = None) = {
     LockUtil.withLockOrDieDo[Unit](lock, (100, TimeUnit.SECONDS), Some(logger), () => {
       if (isShutdown.get()){
-        throw new FirstFailLockableExecutorException("executor is been shutdown")
+        throw new FirstFailLockableExecutorException(s"Executor ${name} is shut down.")
       }
       if (runnable == null) {
-        throw new FirstFailLockableExecutorException("runnable must be not null")
+        throw new FirstFailLockableExecutorException("Executor ${name} - runnable must be not null")
       }
       if (executor != null && !isNotFailed.get()){
         throw new FirstFailLockableExecutorException(failureExc.getMessage)
