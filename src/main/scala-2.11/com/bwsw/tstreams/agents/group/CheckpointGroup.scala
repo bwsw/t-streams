@@ -4,7 +4,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.{CountDownLatch, TimeUnit}
 import java.util.concurrent.locks.ReentrantLock
 
-import com.bwsw.tstreams.common.{FirstFailLockableTaskExecutorPool, LockUtil}
+import com.bwsw.tstreams.common.{FirstFailLockableTaskExecutor, LockUtil}
 import org.slf4j.LoggerFactory
 
 /**
@@ -17,7 +17,7 @@ class CheckpointGroup(val executors: Int = 1) {
   private var agents = scala.collection.mutable.Map[String, Agent]()
   private val lock = new ReentrantLock()
   private val lockTimeout = (20, TimeUnit.SECONDS)
-  private val executorPool = new FirstFailLockableTaskExecutorPool("CheckpointGroup-Workers", executors)
+  private val executorPool = new FirstFailLockableTaskExecutor("CheckpointGroup-Workers", executors)
   private val isStopped = new AtomicBoolean(false)
 
   /**
@@ -165,7 +165,7 @@ class CheckpointGroup(val executors: Int = 1) {
   def stop(): Unit = {
     if(isStopped.getAndSet(true))
       throw new IllegalStateException("Group is stopped. No longer operations are possible.")
-    executorPool.shutdownSafe()
+    executorPool.shutdown()
     clear()
   }
 

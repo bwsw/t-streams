@@ -6,7 +6,6 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.locks.ReentrantLock
 
-import com.aerospike.client.Host
 import com.aerospike.client.policy.{ClientPolicy, Policy, WritePolicy}
 import com.bwsw.tstreams.agents.consumer.Offsets.IOffset
 import com.bwsw.tstreams.agents.consumer.subscriber.{Callback, SubscribingConsumer}
@@ -17,14 +16,13 @@ import com.bwsw.tstreams.common.{CassandraConnectorConf, LockUtil, NetworkUtil}
 import com.bwsw.tstreams.converter.IConverter
 import com.bwsw.tstreams.coordination.producer.transport.impl.TcpTransport
 import com.bwsw.tstreams.data.IStorage
-import com.bwsw.tstreams.data.aerospike.{AerospikeStorageFactory, AerospikeStorageOptions}
-import com.bwsw.tstreams.data.cassandra.{CassandraStorageFactory, CassandraStorageOptions}
 import com.bwsw.tstreams.generator.IUUIDGenerator
 import com.bwsw.tstreams.metadata.{MetadataStorage, MetadataStorageFactory}
 import com.bwsw.tstreams.policy.{AbstractPolicy, RoundRobinPolicy}
 import com.bwsw.tstreams.streams.TStream
 import org.slf4j.LoggerFactory
 
+import scala.collection.mutable
 import scala.collection.mutable.HashMap
 
 /**
@@ -34,12 +32,12 @@ object TSF_Dictionary {
 
 
   /**
-    * UF_Dictionary metadata scope
+    * TSF_Dictionary metadata scope
     */
   object Metadata {
 
     /**
-      * UF_Dictionary.Metadata cluster scope
+      * TSF_Dictionary.Metadata cluster scope
       */
     object Cluster {
       /**
@@ -100,12 +98,12 @@ object TSF_Dictionary {
   }
 
   /**
-    * UF_Dictionary data scope
+    * TSF_Dictionary data scope
     */
   object Data {
 
     /**
-      * UF_Dictionary cluster scope
+      * TSF_Dictionary cluster scope
       */
     object Cluster {
       /**
@@ -130,7 +128,7 @@ object TSF_Dictionary {
       val PASSWORD = "data.cluster.password"
 
       /**
-        * Stores consts for UF_Dictionary.Data.Cluster
+        * Stores consts for TSF_Dictionary.Data.Cluster
         */
       object Consts {
         /**
@@ -141,10 +139,29 @@ object TSF_Dictionary {
           * Definition for cassandra backend
           */
         val DATA_DRIVER_CASSANDRA = "cassandra"
+
+        /**
+          * Definition for hazelcast backend
+          */
+        val DATA_DRIVER_HAZELCAST = "hazelcast"
       }
 
       /**
-        * scope UF_Dictionary.Data.Cluster aerospike engine
+        * scope TSF_Dictionary.Data.Cluster hazelcast engine
+        */
+      object Hazelcast {
+        /**
+          * Amount of synchronous replicas
+          */
+        val SYNCHRONOUS_REPLICAS = "data.cluster.hazelcast.synchronous-replicas"
+        /**
+          * Amount of asynchronous replicas
+          */
+        val ASYNCHRONOUS_REPLICAS = "data.cluster.hazelcast.asynchronous-replicas"
+      }
+      
+      /**
+        * scope TSF_Dictionary.Data.Cluster aerospike engine
         */
       object Aerospike {
         /**
@@ -204,7 +221,7 @@ object TSF_Dictionary {
   }
 
   /**
-    * UF_Dictionary coordination scope
+    * TSF_Dictionary coordination scope
     */
   object Coordination {
     /**
@@ -227,7 +244,7 @@ object TSF_Dictionary {
   }
 
   /**
-    * UF_Dictionary stream scope
+    * TSF_Dictionary stream scope
     */
   object Stream {
     /**
@@ -249,7 +266,7 @@ object TSF_Dictionary {
   }
 
   /**
-    * UF_Dictionary producer scope
+    * TSF_Dictionary producer scope
     */
   object Producer {
 
@@ -310,7 +327,7 @@ object TSF_Dictionary {
       // TODO: fix internals write->distribution
 
       /**
-        * UF_Dictionary.Producer.Transaction consts scope
+        * TSF_Dictionary.Producer.Transaction consts scope
         */
       object Consts {
         /**
@@ -325,7 +342,7 @@ object TSF_Dictionary {
   }
 
   /**
-    * UF_Dictionary consumer scope
+    * TSF_Dictionary consumer scope
     */
   object Consumer {
     /**
@@ -343,7 +360,7 @@ object TSF_Dictionary {
     val DATA_PRELOAD = "consumer.data-preload"
 
     /**
-      * UF_Dictionary.Consumer subscriber scope
+      * TSF_Dictionary.Consumer subscriber scope
       */
     object Subscriber {
       /**
@@ -437,7 +454,10 @@ class TStreamsFactory(envname: String = "T-streams") {
   propertyMap += (TSF_Dictionary.Data.Cluster.Cassandra.CONNECTION_TIMEOUT_MS     -> Cluster_cassandra_connection_timeout_ms_default)
   propertyMap += (TSF_Dictionary.Data.Cluster.Cassandra.READ_TIMEOUT_MS           -> Cluster_cassandra_read_timeout_ms_default)
 
-
+  val Cluster_hazelcast_synchronous_replicas_default = 1
+  val Cluster_hazelcast_asynchronous_replicas_default = 0
+  propertyMap += (TSF_Dictionary.Data.Cluster.Hazelcast.SYNCHRONOUS_REPLICAS -> Cluster_hazelcast_synchronous_replicas_default)
+  propertyMap += (TSF_Dictionary.Data.Cluster.Hazelcast.ASYNCHRONOUS_REPLICAS -> Cluster_hazelcast_asynchronous_replicas_default)
 
   // coordination scope
   propertyMap += (TSF_Dictionary.Coordination.ENDPOINTS -> "localhost:2181")
@@ -533,8 +553,6 @@ class TStreamsFactory(envname: String = "T-streams") {
 
   //metadata/data factories
   val msFactory = new MetadataStorageFactory
-  val aerospikeStorageFactory = new AerospikeStorageFactory
-  val cassandraStorageFactory = new CassandraStorageFactory
 
   /**
     * locks factory, after lock setProperty leads to exception.
@@ -636,7 +654,7 @@ class TStreamsFactory(envname: String = "T-streams") {
     */
   def getDataStorage(): IStorage[Array[Byte]] = {
     if (pAsString(TSF_Dictionary.Data.Cluster.DRIVER) == TSF_Dictionary.Data.Cluster.Consts.DATA_DRIVER_AEROSPIKE) {
-      val dsf = aerospikeStorageFactory
+      val dsf = new com.bwsw.tstreams.data.aerospike.Factory
 
       // construct client policy
       var cp: ClientPolicy = null
@@ -667,7 +685,7 @@ class TStreamsFactory(envname: String = "T-streams") {
       assert(namespace != null)
       assert(data_cluster_endpoints != null)
 
-      val opts = new AerospikeStorageOptions(
+      val opts = new com.bwsw.tstreams.data.aerospike.Options(
         namespace = namespace,
         hosts = NetworkUtil.getAerospikeCompatibleHostList(data_cluster_endpoints),
         clientPolicy = cp,
@@ -679,7 +697,7 @@ class TStreamsFactory(envname: String = "T-streams") {
 
     }
     else if (pAsString(TSF_Dictionary.Data.Cluster.DRIVER) == TSF_Dictionary.Data.Cluster.Consts.DATA_DRIVER_CASSANDRA) {
-      val dsf = cassandraStorageFactory
+      val dsf = new com.bwsw.tstreams.data.cassandra.Factory
 
       val login = pAsString(TSF_Dictionary.Data.Cluster.LOGIN, null)
       val password = pAsString(TSF_Dictionary.Data.Cluster.PASSWORD, null)
@@ -703,8 +721,8 @@ class TStreamsFactory(envname: String = "T-streams") {
       return dsf.getInstance(opts, pAsString(TSF_Dictionary.Data.Cluster.NAMESPACE))
     }
     else {
-      throw new InvalidParameterException("Only UF_Dictionary.Data.Cluster.Consts.DATA_DRIVER_CASSANDRA and " +
-        "UF_Dictionary.Data.Cluster.Consts.DATA_DRIVER_AEROSPIKE engines " +
+      throw new InvalidParameterException("Only TSF_Dictionary.Data.Cluster.Consts.DATA_DRIVER_CASSANDRA and " +
+        "TSF_Dictionary.Data.Cluster.Consts.DATA_DRIVER_AEROSPIKE engines " +
         "are supported currently in UniversalFactory. Received: " + pAsString(TSF_Dictionary.Data.Cluster.DRIVER))
     }
     null
@@ -850,7 +868,7 @@ class TStreamsFactory(envname: String = "T-streams") {
         writePolicy = new RoundRobinPolicy(stream, partitions)
       }
       else {
-        throw new InvalidParameterException("Only UF_Dictionary.Producer.Transaction.Consts.DISTRIBUTION_POLICY_RR policy " +
+        throw new InvalidParameterException("Only TSF_Dictionary.Producer.Transaction.Consts.DISTRIBUTION_POLICY_RR policy " +
           "is supported currently in UniversalFactory.")
       }
 
@@ -1001,7 +1019,8 @@ class TStreamsFactory(envname: String = "T-streams") {
       throw new IllegalStateException("TStreamsFactory is closed. This is repeatable close operation.")
 
     msFactory.closeFactory()
-    aerospikeStorageFactory.closeFactory()
+    // TODO FIXIT
+    //aerospikeStorageFactory.closeFactory()
   }
 
 }

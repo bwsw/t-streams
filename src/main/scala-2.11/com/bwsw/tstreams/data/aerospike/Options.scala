@@ -10,11 +10,11 @@ import com.aerospike.client.policy.{ClientPolicy, Policy, WritePolicy}
   * @param writePolicy  custom write policy for storage
   * @param readPolicy   custom read policy for storage
   */
-class AerospikeStorageOptions(val namespace: String,
-                              val hosts: List[Host],
-                              var clientPolicy: ClientPolicy = null,
-                              var writePolicy: WritePolicy = null,
-                              var readPolicy: Policy = null) {
+class Options(val namespace: String,
+              val hosts: List[Host],
+              var clientPolicy: ClientPolicy = null,
+              var writePolicy: WritePolicy = null,
+              var readPolicy: Policy = null) {
   if (namespace == null)
     throw new Exception("namespace can't be null")
 

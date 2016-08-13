@@ -4,7 +4,7 @@ import java.util.UUID
 import java.util.concurrent.locks.ReentrantLock
 import java.util.concurrent.{ConcurrentHashMap, CountDownLatch, TimeUnit}
 
-import com.bwsw.tstreams.agents.group.{Agent, CheckpointInfo, ProducerCheckpointInfo}
+import com.bwsw.tstreams.agents.group.{Agent, CheckpointInfo}
 import com.bwsw.tstreams.agents.producer.NewTransactionProducerPolicy.ProducerPolicy
 import com.bwsw.tstreams.common._
 import com.bwsw.tstreams.coordination.clients.ProducerToSubscriberNotifier
@@ -337,7 +337,7 @@ class Producer[USERTYPE](val name: String,
     shutdownKeepAliveThread.signal(true)
     txnKeepAliveThread.join()
     // stop executor
-    backendActivityService.shutdownSafe()
+    backendActivityService.shutdown()
     // stop provide master features to public
     p2pAgent.stop()
     // stop function which works with subscribers

@@ -13,7 +13,7 @@ class TStreamServiceTest extends FlatSpec with Matchers with BeforeAndAfterAll w
 
   val storageInst = storageFactory.getInstance(aerospikeOptions)
   val metadataStorageInst = metadataStorageFactory.getInstance(
-    CassandraConnectorConf(Set(new InetSocketAddress("localhost", 9042))),
+    CassandraConnectorConf(Set(new InetSocketAddress("localhost", 9142))),
     keyspace = randomKeyspace)
 
   def randomVal: String = RandomStringCreator.randomAlphaString(10)

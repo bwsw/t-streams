@@ -1,5 +1,7 @@
 package com.bwsw.tstreams.services
 
+import java.net.InetSocketAddress
+
 import com.datastax.driver.core.Cluster.Builder
 import com.datastax.driver.core.{Cluster, Session}
 import org.slf4j.LoggerFactory
@@ -54,7 +56,7 @@ object CassandraStorageService {
   private def getCluster(hosts: Set[String]): Cluster = {
     logger.info(s"Start create cluster for hosts : {${hosts.mkString(",")}")
     val builder: Builder = Cluster.builder()
-    hosts.foreach(x => builder.addContactPoint(x))
+    hosts.foreach(x => builder.addContactPointsWithPorts(new InetSocketAddress(x.split(":").head, x.split(":").tail.head.toInt)))
     val cluster = builder.build()
     logger.info(s"End create cluster for hosts : {${hosts.mkString(",")}")
     cluster
