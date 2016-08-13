@@ -40,6 +40,7 @@ libraryDependencies ++= Seq(
   "net.openhft" % "chronicle-queue" % "4.2.6",
   "org.scala-lang" % "scala-reflect" % "2.11.8",
   "org.scala-lang.modules" % "scala-xml_2.11" % "1.0.4",
+  "org.cassandraunit" % "cassandra-unit" % "2.2.2.1",
   "log4j" % "log4j" % "1.2.17",
   ("org.apache.zookeeper" % "zookeeper" % "3.4.6")
     .exclude("org.slf4j", "slf4j-log4j12"),
@@ -47,6 +48,14 @@ libraryDependencies ++= Seq(
 
 
 libraryDependencies += ("com.datastax.cassandra" % "cassandra-driver-core" % "3.0.0")
+  .exclude("com.google.guava", "guava")
+  .exclude("io.netty", "netty-common")
+  .exclude("io.netty", "netty-codec")
+  .exclude("io.netty", "netty-transport")
+  .exclude("io.netty", "netty-buffer")
+  .exclude("io.netty", "netty-handler")
+
+libraryDependencies += ("org.cassandraunit" % "cassandra-unit" % "2.2.2.1")
   .exclude("com.google.guava", "guava")
   .exclude("io.netty", "netty-common")
   .exclude("io.netty", "netty-codec")
@@ -69,6 +78,8 @@ assemblyJarName in assembly := "t-streams-" + tstreamsVersion + ".jar"
 
 assemblyMergeStrategy in assembly := {
   case PathList("org", "slf4j", "impl", xs@_*) => MergeStrategy.discard
+  case PathList("org", "cassandraunit", xs@_*) => MergeStrategy.discard
+  case PathList("org", "hamcrest", xs@_*) => MergeStrategy.discard
   case PathList("com", "twitter", "common", "zookeeper", xs@_*) => MergeStrategy.first
   case PathList("io", "netty", xs@_*) => MergeStrategy.first
   case PathList("com", "datastax", "cassandra", xs@_*) => MergeStrategy.first

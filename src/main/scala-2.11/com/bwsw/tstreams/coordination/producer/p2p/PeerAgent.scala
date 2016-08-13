@@ -438,7 +438,7 @@ class PeerAgent(agentAddress: String, zkHosts: List[InetSocketAddress], zkRootPa
       //to avoid infinite polling block
       transport.stopRequest(EmptyRequest(agentAddress, agentAddress, usedPartitions.head))
       messageHandler.join()
-      masterRequestsExecutor.shutdownSafe()
+      masterRequestsExecutor.shutdown()
       transport.unbindLocalAddress()
       zkService.close()
     })
@@ -470,9 +470,9 @@ class PeerAgent(agentAddress: String, zkHosts: List[InetSocketAddress], zkRootPa
           }
         }
         //graceful shutdown all executors after finishing message handling
-        newTxnExecutors.foreach(x => x._2.shutdownSafe())
-        publishExecutors.foreach(x => x._2.shutdownSafe())
-        materializationExecutors.foreach(x => x._2.shutdownSafe())
+        newTxnExecutors.foreach(x => x._2.shutdown())
+        publishExecutors.foreach(x => x._2.shutdown())
+        materializationExecutors.foreach(x => x._2.shutdown())
       }
     })
     messageHandler.start()

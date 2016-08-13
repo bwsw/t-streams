@@ -1,13 +1,13 @@
 package data
 
-import com.bwsw.tstreams.data.cassandra.{CassandraStorage, CassandraStorageFactory}
+import com.bwsw.tstreams.data.cassandra.{Storage, Factory}
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import testutils.TestUtils
 
 class CassandraStorageFactoryTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
 
   "CassandraStorageFactory.getInstance()" should "return CassandraStorage instance" in {
-    val factory = new CassandraStorageFactory
+    val factory = new Factory
 //    val instance = factory.getInstance(cassandraStorageOptions)
 //    val checkVal = instance.isInstanceOf[CassandraStorage]
 //    factory.closeFactory()
@@ -16,7 +16,7 @@ class CassandraStorageFactoryTest extends FlatSpec with Matchers with BeforeAndA
   }
 
   "CassandraStorageFactory.closeFactory()" should "close instances connections" in {
-    val factory: CassandraStorageFactory = new CassandraStorageFactory
+    val factory: Factory = new Factory
 //    val instance1 = factory.getInstance(cassandraStorageOptions)
 //    val instance2 = factory.getInstance(cassandraStorageOptions)
 //    factory.closeFactory()

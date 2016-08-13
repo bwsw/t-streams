@@ -12,7 +12,7 @@ import org.slf4j.LoggerFactory
 /**
   * Cassandra storage impl of IStorage
   */
-class CassandraStorage(cluster: Cluster, session: Session, keyspace: String) extends IStorage[Array[Byte]] {
+class Storage(cluster: Cluster, session: Session, keyspace: String) extends IStorage[Array[Byte]] {
 
   /**
     * CassandraStorage logger for logging
