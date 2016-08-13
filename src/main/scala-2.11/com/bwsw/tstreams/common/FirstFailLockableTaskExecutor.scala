@@ -21,12 +21,22 @@ class FirstFailLockableTaskExecutor(name: String, cnt: Int = 1)
   private val logger = LoggerFactory.getLogger(this.getClass)
   private var failureExc: Throwable = null
 
+  /**
+    * if lock is provided this class wraps runnable with lock
+    * @param r Runnable to run wrapped
+    * @param lock Lock
+    */
   class RunnableWithLock(r: Runnable, lock: ReentrantLock) extends Runnable {
     override def run(): Unit = LockUtil.withLockOrDieDo[Unit](lock, (100, TimeUnit.SECONDS), Some(logger), () => r.run())
 
     def getLock: ReentrantLock = lock
   }
 
+  /**
+    * Allows to determine that task was executed with errors and prevents further task to be executed
+    * @param runnable
+    * @param throwable
+    */
   override def afterExecute(runnable: Runnable, throwable: Throwable): Unit =  {
     super.afterExecute(runnable, throwable)
     if(throwable != null) {
@@ -39,6 +49,11 @@ class FirstFailLockableTaskExecutor(name: String, cnt: Int = 1)
     }
   }
 
+  /**
+    * submit task for execution with or without lock
+    * @param runnable
+    * @param l
+    */
   def submit(runnable : Runnable, l : Option[ReentrantLock] = None) = {
     if (l.isDefined)
       super.execute(new RunnableWithLock(runnable, l.get))
@@ -46,9 +61,10 @@ class FirstFailLockableTaskExecutor(name: String, cnt: Int = 1)
       super.execute(runnable)
   }
 
+  /**
+    * get last exception
+    * @return
+    */
   def getException: Option[Throwable] = Option(failureExc)
 
-  def shutdownSafe() : Unit = {
-    shutdown()
-  }
 }

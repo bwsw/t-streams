@@ -165,7 +165,7 @@ class CheckpointGroup(val executors: Int = 1) {
   def stop(): Unit = {
     if(isStopped.getAndSet(true))
       throw new IllegalStateException("Group is stopped. No longer operations are possible.")
-    executorPool.shutdownSafe()
+    executorPool.shutdown()
     clear()
   }
 

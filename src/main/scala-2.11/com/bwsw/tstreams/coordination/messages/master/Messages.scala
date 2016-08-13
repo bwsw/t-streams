@@ -12,7 +12,7 @@ import scala.util.Random
 
 object IMessage {
   val logger = LoggerFactory.getLogger(this.getClass)
-  val isDebugMessages = false
+  val isDebugMessages = true
 }
 
 /**

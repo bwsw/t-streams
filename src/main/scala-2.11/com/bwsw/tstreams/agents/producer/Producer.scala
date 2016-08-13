@@ -337,7 +337,7 @@ class Producer[USERTYPE](val name: String,
     shutdownKeepAliveThread.signal(true)
     txnKeepAliveThread.join()
     // stop executor
-    backendActivityService.shutdownSafe()
+    backendActivityService.shutdown()
     // stop provide master features to public
     p2pAgent.stop()
     // stop function which works with subscribers
