@@ -12,7 +12,7 @@ import scala.util.Random
 
 object IMessage {
   val logger = LoggerFactory.getLogger(this.getClass)
-  val isDebugMessages = false
+  val isDebugMessages = true
 }
 
 /**
@@ -81,7 +81,7 @@ case class NewTransactionRequest(senderID: String, receiverID: String, partition
                 if(IMessage.logger.isDebugEnabled)
                   IMessage.logger.debug(s"Responded with complete ready TXN: ${txnUUID}")
               })
-        }, partition)
+        })
     } else {
       val response = EmptyResponse(receiverID, senderID, partition)
       response.msgID = msgID

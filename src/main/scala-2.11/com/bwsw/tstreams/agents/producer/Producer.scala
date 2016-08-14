@@ -304,6 +304,9 @@ class Producer[USERTYPE](val name: String,
       totalCnt = -1,
       ttl = producerOptions.transactionTTL,
       function = () => {
+        // submit task for materialize notification request
+        p2pAgent.submitPipelinedTaskToPublishExecutors(new Runnable { override def run(): Unit = onComplete()}, partition)
+        // submit task for publish notification requests
         p2pAgent.submitPipelinedTaskToPublishExecutors(new Runnable {
           override def run(): Unit = {
             val msg = Message(
@@ -311,9 +314,9 @@ class Producer[USERTYPE](val name: String,
               ttl = producerOptions.transactionTTL,
               status = TransactionStatus.opened,
               partition = partition)
+            subscriberNotifier.publish(msg, () => ())
             if(logger.isDebugEnabled)
               logger.debug(s"Producer ${name} - [GET_LOCAL_TXN PRODUCER] update with msg partition=$partition uuid=${txnUUID.timestamp()} opened")
-            subscriberNotifier.publish(msg, onComplete)
           }
         }, partition)
       },

@@ -495,9 +495,19 @@ class PeerAgent(agentAddress: String, zkHosts: List[InetSocketAddress], zkRootPa
     * public method which allows to submit delayed task for execution
     *
     * @param task
+    */
+  def submitPipelinedTaskToCassandraExecutor(task: Runnable) = {
+    producer.backendActivityService.execute(task)
+  }
+
+  /**
+    * public method which allows to submit delayed task for execution
+    *
+    * @param task
     * @param partition
     */
-  def submitPipelinedTaskToCassandraExecutor(task: Runnable, partition: Int) = {
-    producer.backendActivityService.execute(task)
+  def submitPipelinedTaskToNewTxnExecutors(task: Runnable, partition: Int) = {
+    val execNum = partitionsToExecutors(partition)
+    newTxnExecutors(execNum).execute(task)
   }
 }
