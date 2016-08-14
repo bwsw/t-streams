@@ -14,7 +14,7 @@ import io.netty.channel.socket.SocketChannel
 
 object IMessage {
   val logger = LoggerFactory.getLogger(this.getClass)
-  val isDebugMessages = true
+  val isDebugMessages = false
 }
 
 /**

@@ -30,6 +30,11 @@ class InterProducerCommunicationClient(timeoutMs: Int, retryCount: Int = 3, retr
       val port = splits(1).toInt
       val sock = new Socket(host, port)
       InterProducerCommunicationClient.logger.info(s"Opened socket from peer ${msg.senderID} to peer ${msg.receiverID}.")
+      sock.setSoTimeout(timeoutMs)
+      sock.setTcpNoDelay(true)
+      sock.setKeepAlive(true)
+      sock.setTrafficClass(0x10)
+      sock.setPerformancePreferences(0,1,0)
       sock
     } catch {
       case e: IOException =>
@@ -49,14 +54,11 @@ class InterProducerCommunicationClient(timeoutMs: Int, retryCount: Int = 3, retr
         if (socket.isClosed || !socket.isConnected || socket.isOutputShutdown) {
           InterProducerCommunicationClient.logger.info(s"Socket from peer ${msg.senderID} to peer ${msg.receiverID} is in wrong state.")
           socket = openSocket(msg)
-          socket.setSoTimeout(timeoutMs)
-          socket.setTcpNoDelay(true)
           peerMap(msg.receiverID) = socket
         }
       } else {
         InterProducerCommunicationClient.logger.info(s"Socket from peer ${msg.senderID} to peer ${msg.receiverID} is not known.")
         socket = openSocket(msg)
-        socket.setSoTimeout(timeoutMs)
         peerMap(msg.receiverID) = socket
       }
     }
