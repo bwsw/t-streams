@@ -11,7 +11,7 @@ import com.bwsw.tstreams.common.ProtocolMessageSerializer.ProtocolMessageSeriali
 import com.bwsw.tstreams.common.{FirstFailLockableTaskExecutor, LockUtil, ProtocolMessageSerializer, ZookeeperDLMService}
 import com.bwsw.tstreams.coordination.messages.master._
 import com.bwsw.tstreams.coordination.messages.state.Message
-import com.bwsw.tstreams.coordination.producer.transport.traits.ITransport
+import com.bwsw.tstreams.coordination.producer.transport.impl.TcpTransport
 import io.netty.channel.Channel
 import org.apache.zookeeper.{CreateMode, KeeperException}
 import org.slf4j.LoggerFactory
@@ -32,7 +32,7 @@ import scala.util.Random
  * @param isLowPriorityToBeMaster Flag which indicate to have low priority to be master
  * @param transport Transport to provide interaction
  */
-class PeerAgent(agentAddress: String, zkHosts: List[InetSocketAddress], zkRootPath: String, zkSessionTimeout: Int, zkConnectionTimeout: Int, producer: Producer[_], usedPartitions: List[Int], isLowPriorityToBeMaster: Boolean, transport: ITransport, poolSize: Int) {
+class PeerAgent(agentAddress: String, zkHosts: List[InetSocketAddress], zkRootPath: String, zkSessionTimeout: Int, zkConnectionTimeout: Int, producer: Producer[_], usedPartitions: List[Int], isLowPriorityToBeMaster: Boolean, transport: TcpTransport, poolSize: Int) {
 
   private val zkRetriesAmount = 60
   private val externalAccessLock = new ReentrantLock(true)

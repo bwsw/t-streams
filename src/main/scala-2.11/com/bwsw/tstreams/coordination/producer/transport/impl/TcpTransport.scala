@@ -5,15 +5,14 @@ import java.util.concurrent.Executors
 import com.bwsw.tstreams.coordination.messages.master._
 import com.bwsw.tstreams.coordination.producer.transport.impl.client.InterProducerCommunicationClient
 import com.bwsw.tstreams.coordination.producer.transport.impl.server.ProducerRequestsTcpServer
-import com.bwsw.tstreams.coordination.producer.transport.traits.ITransport
 import io.netty.channel.{Channel, ChannelHandler, ChannelHandlerContext, SimpleChannelInboundHandler}
 import io.netty.util.ReferenceCountUtil
 import org.slf4j.LoggerFactory
 
 /**
-  * [[ITransport]] implementation
+  * Transport implementation
   */
-class TcpTransport(address: String, timeoutMs: Int, retryCount: Int = 3, retryDelayMs: Int = 5000) extends ITransport {
+class TcpTransport(address: String, timeoutMs: Int, retryCount: Int = 3, retryDelayMs: Int = 5000) {
 
   var callback: (Channel,String) => Unit = null
 
@@ -44,12 +43,12 @@ class TcpTransport(address: String, timeoutMs: Int, retryCount: Int = 3, retryDe
     * @param msg     Msg to disable master
     * @return DeleteMasterResponse or null
     */
-  override def deleteMasterRequest(msg: DeleteMasterRequest): IMessage = {
+  def deleteMasterRequest(msg: DeleteMasterRequest): IMessage = {
     val response = client.sendAndWaitResponse(msg, isExceptionOnFail = false)
     response
   }
 
-  override def getTimeout() = timeoutMs
+  def getTimeout() = timeoutMs
 
   /**
     * Request to figure out state of receiver
@@ -57,7 +56,7 @@ class TcpTransport(address: String, timeoutMs: Int, retryCount: Int = 3, retryDe
     * @param msg Message
     * @return PingResponse or null
     */
-  override def pingRequest(msg: PingRequest): IMessage = {
+  def pingRequest(msg: PingRequest): IMessage = {
     val response = client.sendAndWaitResponse(msg, isExceptionOnFail = false)
     response
   }
@@ -67,7 +66,7 @@ class TcpTransport(address: String, timeoutMs: Int, retryCount: Int = 3, retryDe
     *
     * @param msg EmptyRequest
     */
-  override def stopRequest(msg: EmptyRequest): Unit = {
+  def stopRequest(msg: EmptyRequest): Unit = {
     val logger = LoggerFactory.getLogger(this.getClass)
     client.sendAndNoWaitResponse(msg, isExceptionOnFail = true)
   }
@@ -78,7 +77,7 @@ class TcpTransport(address: String, timeoutMs: Int, retryCount: Int = 3, retryDe
     * @param msg     Message
     * @return SetMasterResponse or null
     */
-  override def setMasterRequest(msg: SetMasterRequest): IMessage = {
+  def setMasterRequest(msg: SetMasterRequest): IMessage = {
     val response: IMessage = client.sendAndWaitResponse(msg, isExceptionOnFail = false)
     response
   }
@@ -89,7 +88,7 @@ class TcpTransport(address: String, timeoutMs: Int, retryCount: Int = 3, retryDe
     * @param msg     Message
     * @return TransactionResponse or null
     */
-  override def transactionRequest(msg: NewTransactionRequest): IMessage = {
+  def transactionRequest(msg: NewTransactionRequest): IMessage = {
     val start = System.currentTimeMillis()
     val response: IMessage = client.sendAndWaitResponse(msg, isExceptionOnFail = false)
     val delaySvr = response.remotePeerTimestamp - msg.remotePeerTimestamp
@@ -104,7 +103,7 @@ class TcpTransport(address: String, timeoutMs: Int, retryCount: Int = 3, retryDe
     *
     * @param msg     Message
     */
-  override def publishRequest(msg: PublishRequest): Unit = {
+  def publishRequest(msg: PublishRequest): Unit = {
     client.sendAndNoWaitResponse(msg, isExceptionOnFail = true)
   }
 
@@ -113,14 +112,14 @@ class TcpTransport(address: String, timeoutMs: Int, retryCount: Int = 3, retryDe
     *
     * @param msg     Message
     */
-  override def materializeRequest(msg: MaterializeRequest): Unit = {
+  def materializeRequest(msg: MaterializeRequest): Unit = {
     client.sendAndNoWaitResponse(msg, isExceptionOnFail = true)
   }
 
   /**
     * Bind local agent address in transport
     */
-  override def start(callback: (Channel,String) => Unit): Unit = {
+  def start(callback: (Channel,String) => Unit): Unit = {
     this.callback = callback
     server.start()
   }
@@ -128,7 +127,7 @@ class TcpTransport(address: String, timeoutMs: Int, retryCount: Int = 3, retryDe
   /**
     * Stop transport listen incoming messages
     */
-  override def stop(): Unit = {
+  def stop(): Unit = {
     IMessage.logger.warn("Transport is shutting down.")
     client.close()
     server.stop()
