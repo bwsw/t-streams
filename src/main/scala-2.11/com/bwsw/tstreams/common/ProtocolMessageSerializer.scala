@@ -13,7 +13,7 @@ import scala.util.control.Breaks._
 /**
   * TStreams object serializer
   */
-class ProtocolMessageSerializer {
+object ProtocolMessageSerializer {
   private def serializeInternal(value: Any): String = {
     value match {
       case AgentSettings(id, prior, penalty) =>
@@ -244,11 +244,19 @@ class ProtocolMessageSerializer {
         throw new ProtocolMessageSerializerException(s"msg : {${e.getMessage}} for value : {$value}")
     }
   }
-}
 
-
-object ProtocolMessageSerializer {
+  /**
+    * Wrap message with line delimiter to separate it on server side
+    *
+    * @param msg
+    * @return
+    */
+  def wrapMsg(msg: String): String = {
+    msg + "\n"
+  }
 
   class ProtocolMessageSerializerException(msg: String) extends Exception(msg)
-
 }
+
+
+

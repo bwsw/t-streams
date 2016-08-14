@@ -2,13 +2,15 @@ package com.bwsw.tstreams.coordination.messages.master
 
 import java.util.UUID
 
-import com.bwsw.tstreams.common.TimeTracker
-import com.bwsw.tstreams.coordination.messages.state.TransactionStatus._
-import com.bwsw.tstreams.coordination.messages.state.{TransactionStatus, Message}
+import com.bwsw.tstreams.common.ProtocolMessageSerializer
+import com.bwsw.tstreams.coordination.messages.state.{Message, TransactionStatus}
 import com.bwsw.tstreams.coordination.producer.p2p.PeerAgent
+import io.netty.channel.Channel
 import org.slf4j.LoggerFactory
 
 import scala.util.Random
+import io.netty.channel.socket.SocketChannel
+
 
 object IMessage {
   val logger = LoggerFactory.getLogger(this.getClass)
@@ -26,6 +28,12 @@ trait IMessage {
   val partition: Int
   var remotePeerTimestamp: Long = System.currentTimeMillis()
   val localPeerTimestamp: Long = System.currentTimeMillis()
+  var channel: Channel = null
+
+  def respond(m: IMessage): Unit = {
+    val s: String = ProtocolMessageSerializer.wrapMsg(ProtocolMessageSerializer.serialize(m))
+    channel.writeAndFlush(s)
+  }
 
   /**
     * Called by PeerAgent if message is received
@@ -70,7 +78,7 @@ case class NewTransactionRequest(senderID: String, receiverID: String, partition
       val txnUUID: UUID = agent.getProducer.getNewTxnUUIDLocal()
       val response = TransactionResponse(receiverID, senderID, txnUUID, partition)
       response.msgID = msgID
-      agent.getTransport.respond(response)
+      this.respond(response)
       if(IMessage.logger.isDebugEnabled)
         IMessage.logger.debug(s"Responded with early ready virtualized TXN: ${txnUUID}")
 
@@ -81,11 +89,11 @@ case class NewTransactionRequest(senderID: String, receiverID: String, partition
                 if(IMessage.logger.isDebugEnabled)
                   IMessage.logger.debug(s"Responded with complete ready TXN: ${txnUUID}")
               })
-        }, partition)
+        })
     } else {
       val response = EmptyResponse(receiverID, senderID, partition)
       response.msgID = msgID
-      agent.getTransport.respond(response)
+      this.respond(response)
     }
   }
 }
@@ -125,7 +133,7 @@ case class DeleteMasterRequest(senderID: String, receiverID: String, partition: 
         EmptyResponse(receiverID, senderID, partition)
     }
     response.msgID = msgID
-    agent.getTransport.respond(response)
+    this.respond(response)
     if(IMessage.logger.isDebugEnabled)
       IMessage.logger.debug(s"sEnd handling DeleteMasterRequest ${response}")
   }
@@ -166,7 +174,7 @@ case class SetMasterRequest(senderID: String, receiverID: String, partition: Int
       }
     }
     response.msgID = msgID
-    agent.getTransport.respond(response)
+    this.respond(response)
     if(IMessage.logger.isDebugEnabled)
       IMessage.logger.debug(s"End handling SetMasterRequest ${response}")
   }
@@ -201,7 +209,7 @@ case class PingRequest(senderID: String, receiverID: String, partition: Int) ext
         EmptyResponse(receiverID, senderID, partition)
     }
     response.msgID = msgID
-    agent.getTransport.respond(response)
+    this.respond(response)
     if(IMessage.logger.isDebugEnabled)
       IMessage.logger.debug(s"End handling SetMasterRequest: ${response}")
   }

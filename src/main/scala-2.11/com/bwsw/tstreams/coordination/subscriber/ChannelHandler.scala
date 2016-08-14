@@ -56,12 +56,11 @@ class ChannelHandler(subscriberManager: CallbackManager) extends SimpleChannelIn
   */
 class ProducerTopicMessageDecoder extends MessageToMessageDecoder[String] {
   val logger = LoggerFactory.getLogger(this.getClass)
-  val serializer = new ProtocolMessageSerializer
 
   override def decode(ctx: ChannelHandlerContext, msg: String, out: util.List[AnyRef]): Unit = {
     try {
       if (msg != null)
-        out.add(serializer.deserialize[Message](msg))
+        out.add(ProtocolMessageSerializer.deserialize[Message](msg))
     }
     catch {
       case e: ProtocolMessageSerializerException =>

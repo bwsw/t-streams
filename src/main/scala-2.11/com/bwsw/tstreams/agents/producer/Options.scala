@@ -5,7 +5,7 @@ import java.net.InetSocketAddress
 import com.bwsw.tstreams.agents.producer.DataInsertType.AbstractInsertType
 import com.bwsw.tstreams.converter.IConverter
 import com.bwsw.tstreams.coordination.producer.p2p.PeerAgent
-import com.bwsw.tstreams.coordination.producer.transport.traits.ITransport
+import com.bwsw.tstreams.coordination.producer.transport.impl.TcpTransport
 import com.bwsw.tstreams.generator.IUUIDGenerator
 import com.bwsw.tstreams.policy.AbstractPolicy
 
@@ -64,4 +64,4 @@ class Options[USERTYPE](val transactionTTL: Int, val transactionKeepAliveInterva
   *                                [[PeerAgent]]]
   *                                by default (threads_amount == used_producer_partitions)
   */
-class CoordinationOptions(val agentAddress: String, val zkHosts: List[InetSocketAddress], val zkRootPath: String, val zkSessionTimeout: Int, val zkConnectionTimeout: Int, val isLowPriorityToBeMaster: Boolean, val transport: ITransport, val threadPoolAmount: Int = -1)
+class CoordinationOptions(val agentAddress: String, val zkHosts: List[InetSocketAddress], val zkRootPath: String, val zkSessionTimeout: Int, val zkConnectionTimeout: Int, val isLowPriorityToBeMaster: Boolean, val transport: TcpTransport, val threadPoolAmount: Int = -1)

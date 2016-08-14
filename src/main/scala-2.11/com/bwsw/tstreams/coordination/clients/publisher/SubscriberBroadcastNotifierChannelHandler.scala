@@ -74,9 +74,8 @@ class SubscriberBroadcastNotifierChannelHandler(connectionManager: SubscriberBro
   * Encoder [[Message]]] to [[java.lang.String]]]
   */
 class MasterMessageEncoder extends MessageToMessageEncoder[Message] {
-  val serializer = new ProtocolMessageSerializer
 
   override def encode(ctx: ChannelHandlerContext, msg: Message, out: util.List[AnyRef]): Unit = {
-    out.add(serializer.serialize(msg) + "\n")
+    out.add(ProtocolMessageSerializer.wrapMsg(ProtocolMessageSerializer.serialize(msg)))
   }
 }
