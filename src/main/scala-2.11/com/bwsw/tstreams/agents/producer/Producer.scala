@@ -353,6 +353,12 @@ class Producer[USERTYPE](val name: String,
   override def getThreadLock(): ReentrantLock = threadLock
 
 
+  /**
+    * Special method which waits until newTransaction method will be completed and after
+    * does materializetion. It's called from another thread (p2pAgent), not from thread of
+    * Producer.
+    * @param msg
+    */
   def materialize(msg: Message) = {
     if(logger.isDebugEnabled)
       logger.debug(s"Start handling MaterializeRequest at partition: ${msg.partition}")
