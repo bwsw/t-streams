@@ -1,21 +1,41 @@
 package com.bwsw.tstreams.coordination.producer.transport.impl
 
-import java.util.concurrent.LinkedBlockingQueue
+import java.util.concurrent.Executors
 
-import com.bwsw.tstreams.common.TimeTracker
 import com.bwsw.tstreams.coordination.messages.master._
 import com.bwsw.tstreams.coordination.producer.transport.impl.client.InterProducerCommunicationClient
 import com.bwsw.tstreams.coordination.producer.transport.impl.server.ProducerRequestsTcpServer
-import com.bwsw.tstreams.coordination.producer.transport.traits.ITransport
+import io.netty.channel.{Channel, ChannelHandler, ChannelHandlerContext, SimpleChannelInboundHandler}
+import io.netty.util.ReferenceCountUtil
 import org.slf4j.LoggerFactory
 
 /**
-  * [[ITransport]] implementation
+  * Transport implementation
   */
-class TcpTransport(timeoutMs: Int, retryCount: Int = 3, retryDelayMs: Int = 5000) extends ITransport {
-  private var server: ProducerRequestsTcpServer = null
+class TcpTransport(address: String, timeoutMs: Int, retryCount: Int = 3, retryDelayMs: Int = 5000) {
+
+  var callback: (Channel,String) => Unit = null
+
+  @ChannelHandler.Sharable
+  class ChannelHandler extends SimpleChannelInboundHandler[String] {
+    override def channelRead0(ctx: ChannelHandlerContext, msg: String): Unit = {
+      executor.submit(new Runnable {
+        override def run(): Unit = {
+          callback(ctx.channel, msg)
+          ReferenceCountUtil.release(msg)
+        }
+      })
+    }
+
+    override def exceptionCaught(ctx: ChannelHandlerContext, cause: Throwable) = {
+      println(cause.getCause)
+    }
+  }
+
+  private val executor = Executors.newSingleThreadExecutor()
+  private val splits = address.split(":")
+  private val server: ProducerRequestsTcpServer = new ProducerRequestsTcpServer(splits(0), splits(1).toInt, new ChannelHandler())
   private val client: InterProducerCommunicationClient = new InterProducerCommunicationClient(timeoutMs, retryCount, retryDelayMs)
-  private val msgQueue = new LinkedBlockingQueue[IMessage]()
 
   /**
     * Request to disable concrete master
@@ -23,12 +43,12 @@ class TcpTransport(timeoutMs: Int, retryCount: Int = 3, retryDelayMs: Int = 5000
     * @param msg     Msg to disable master
     * @return DeleteMasterResponse or null
     */
-  override def deleteMasterRequest(msg: DeleteMasterRequest): IMessage = {
+  def deleteMasterRequest(msg: DeleteMasterRequest): IMessage = {
     val response = client.sendAndWaitResponse(msg, isExceptionOnFail = false)
     response
   }
 
-  override def getTimeout() = timeoutMs
+  def getTimeout() = timeoutMs
 
   /**
     * Request to figure out state of receiver
@@ -36,25 +56,17 @@ class TcpTransport(timeoutMs: Int, retryCount: Int = 3, retryDelayMs: Int = 5000
     * @param msg Message
     * @return PingResponse or null
     */
-  override def pingRequest(msg: PingRequest): IMessage = {
+  def pingRequest(msg: PingRequest): IMessage = {
     val response = client.sendAndWaitResponse(msg, isExceptionOnFail = false)
     response
   }
-
-  /**
-    * Wait incoming requests(every p2p agent must handle this incoming messages)
-    *
-    * @return IMessage or null
-    */
-  override def waitRequest(): IMessage =
-    msgQueue.take()
 
   /**
     * Send empty request (just for testing)
     *
     * @param msg EmptyRequest
     */
-  override def stopRequest(msg: EmptyRequest): Unit = {
+  def stopRequest(msg: EmptyRequest): Unit = {
     val logger = LoggerFactory.getLogger(this.getClass)
     client.sendAndNoWaitResponse(msg, isExceptionOnFail = true)
   }
@@ -65,7 +77,7 @@ class TcpTransport(timeoutMs: Int, retryCount: Int = 3, retryDelayMs: Int = 5000
     * @param msg     Message
     * @return SetMasterResponse or null
     */
-  override def setMasterRequest(msg: SetMasterRequest): IMessage = {
+  def setMasterRequest(msg: SetMasterRequest): IMessage = {
     val response: IMessage = client.sendAndWaitResponse(msg, isExceptionOnFail = false)
     response
   }
@@ -76,7 +88,7 @@ class TcpTransport(timeoutMs: Int, retryCount: Int = 3, retryDelayMs: Int = 5000
     * @param msg     Message
     * @return TransactionResponse or null
     */
-  override def transactionRequest(msg: NewTransactionRequest): IMessage = {
+  def transactionRequest(msg: NewTransactionRequest): IMessage = {
     val start = System.currentTimeMillis()
     val response: IMessage = client.sendAndWaitResponse(msg, isExceptionOnFail = false)
     val delaySvr = response.remotePeerTimestamp - msg.remotePeerTimestamp
@@ -91,7 +103,7 @@ class TcpTransport(timeoutMs: Int, retryCount: Int = 3, retryDelayMs: Int = 5000
     *
     * @param msg     Message
     */
-  override def publishRequest(msg: PublishRequest): Unit = {
+  def publishRequest(msg: PublishRequest): Unit = {
     client.sendAndNoWaitResponse(msg, isExceptionOnFail = true)
   }
 
@@ -100,37 +112,23 @@ class TcpTransport(timeoutMs: Int, retryCount: Int = 3, retryDelayMs: Int = 5000
     *
     * @param msg     Message
     */
-  override def materializeRequest(msg: MaterializeRequest): Unit = {
+  def materializeRequest(msg: MaterializeRequest): Unit = {
     client.sendAndNoWaitResponse(msg, isExceptionOnFail = true)
-  }
-
-  /**
-    * Send response to requester
-    *
-    * @param msg IMessage
-    */
-  override def respond(msg: IMessage): Unit = {
-    server.respond(msg)
   }
 
   /**
     * Bind local agent address in transport
     */
-  override def bindLocalAddress(address: String): Unit = {
-    val splits = address.split(":")
-    assert(splits.size == 2)
-    val port = splits(1).toInt
-    server = new ProducerRequestsTcpServer(port)
-    server.addCallback((msg: IMessage) => {
-      msgQueue.add(msg)
-    })
+  def start(callback: (Channel,String) => Unit): Unit = {
+    this.callback = callback
     server.start()
   }
 
   /**
     * Stop transport listen incoming messages
     */
-  override def unbindLocalAddress(): Unit = {
+  def stop(): Unit = {
+    IMessage.logger.warn("Transport is shutting down.")
     client.close()
     server.stop()
   }

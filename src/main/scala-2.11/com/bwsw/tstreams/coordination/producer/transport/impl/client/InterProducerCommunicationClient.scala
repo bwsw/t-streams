@@ -3,7 +3,7 @@ package com.bwsw.tstreams.coordination.producer.transport.impl.client
 import java.io.{BufferedReader, IOException, InputStreamReader}
 import java.net.{Socket, SocketTimeoutException}
 import java.util.concurrent.atomic.AtomicBoolean
-import com.bwsw.tstreams.common.{TimeTracker, ProtocolMessageSerializer}
+import com.bwsw.tstreams.common.ProtocolMessageSerializer
 import com.bwsw.tstreams.common.ProtocolMessageSerializer.ProtocolMessageSerializerException
 import com.bwsw.tstreams.coordination.messages.master.IMessage
 import org.slf4j.LoggerFactory
@@ -19,7 +19,6 @@ object InterProducerCommunicationClient {
   */
 class InterProducerCommunicationClient(timeoutMs: Int, retryCount: Int = 3, retryDelayMs: Int = 5000) {
   private val peerMap = mutable.Map[String, Socket]()
-  private val serializer = new ProtocolMessageSerializer
   private val isClosed = new AtomicBoolean(false)
 
   private def openSocket(msg: IMessage): Socket = {
@@ -31,6 +30,11 @@ class InterProducerCommunicationClient(timeoutMs: Int, retryCount: Int = 3, retr
       val port = splits(1).toInt
       val sock = new Socket(host, port)
       InterProducerCommunicationClient.logger.info(s"Opened socket from peer ${msg.senderID} to peer ${msg.receiverID}.")
+      sock.setSoTimeout(timeoutMs)
+      sock.setTcpNoDelay(true)
+      sock.setKeepAlive(true)
+      sock.setTrafficClass(0x10)
+      sock.setPerformancePreferences(0,1,0)
       sock
     } catch {
       case e: IOException =>
@@ -50,14 +54,11 @@ class InterProducerCommunicationClient(timeoutMs: Int, retryCount: Int = 3, retr
         if (socket.isClosed || !socket.isConnected || socket.isOutputShutdown) {
           InterProducerCommunicationClient.logger.info(s"Socket from peer ${msg.senderID} to peer ${msg.receiverID} is in wrong state.")
           socket = openSocket(msg)
-          socket.setSoTimeout(timeoutMs)
-          socket.setTcpNoDelay(true)
           peerMap(msg.receiverID) = socket
         }
       } else {
         InterProducerCommunicationClient.logger.info(s"Socket from peer ${msg.senderID} to peer ${msg.receiverID} is not known.")
         socket = openSocket(msg)
-        socket.setSoTimeout(timeoutMs)
         peerMap(msg.receiverID) = socket
       }
     }
@@ -108,16 +109,6 @@ class InterProducerCommunicationClient(timeoutMs: Int, retryCount: Int = 3, retr
   }
 
   /**
-    * Wrap message with line delimiter to separate it on server side
-    *
-    * @param msg
-    * @return
-    */
-  private def wrapMsg(msg: String): String = {
-    msg + "\n"
-  }
-
-  /**
     *
     * @param socket
     * @param msg
@@ -144,7 +135,7 @@ class InterProducerCommunicationClient(timeoutMs: Int, retryCount: Int = 3, retr
     * @return Response message
     */
   private def writeMsgAndWaitResponse(sock: Socket, msg: IMessage): IMessage = {
-    val reqString = wrapMsg(serializer.serialize(msg))
+    val reqString = ProtocolMessageSerializer.wrapMsg(ProtocolMessageSerializer.serialize(msg))
     try {
       if (InterProducerCommunicationClient.logger.isDebugEnabled)
         InterProducerCommunicationClient.logger.debug(s"To send message ${reqString} from peer ${msg.senderID} to peer ${msg.receiverID}.")
@@ -171,7 +162,7 @@ class InterProducerCommunicationClient(timeoutMs: Int, retryCount: Int = 3, retr
         if (string == null)
           null.asInstanceOf[IMessage]
         else {
-          val response = serializer.deserialize[IMessage](string)
+          val response = ProtocolMessageSerializer.deserialize[IMessage](string)
           if (InterProducerCommunicationClient.logger.isDebugEnabled)
             InterProducerCommunicationClient.logger.debug(s"Received response message ${response} on ${reqString}sent from peer ${msg.senderID} to peer ${msg.receiverID}.")
           response
@@ -200,7 +191,7 @@ class InterProducerCommunicationClient(timeoutMs: Int, retryCount: Int = 3, retr
     */
   private def writeMsgAndNoWaitResponse(sock: Socket, msg: IMessage): Boolean = {
     //do request
-    val string = wrapMsg(serializer.serialize(msg))
+    val string = ProtocolMessageSerializer.wrapMsg(ProtocolMessageSerializer.serialize(msg))
     try {
       if (InterProducerCommunicationClient.logger.isDebugEnabled)
         InterProducerCommunicationClient.logger.debug(s"To send message ${string} from peer ${msg.senderID} to peer ${msg.receiverID}.")
