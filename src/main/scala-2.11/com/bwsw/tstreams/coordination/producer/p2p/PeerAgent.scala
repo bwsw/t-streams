@@ -436,11 +436,11 @@ class PeerAgent(agentAddress: String, zkHosts: List[InetSocketAddress], zkRootPa
       isRunning.set(false)
       zkConnectionValidator.join()
       //to avoid infinite polling block
-      transport.stop()
-      masterRequestsExecutor.shutdown()
       newTxnExecutors.foreach(x => x._2.shutdown())
       publishExecutors.foreach(x => x._2.shutdown())
       materializationExecutors.foreach(x => x._2.shutdown())
+      masterRequestsExecutor.shutdown()
+      transport.stop()
       zkService.close()
     })
 
