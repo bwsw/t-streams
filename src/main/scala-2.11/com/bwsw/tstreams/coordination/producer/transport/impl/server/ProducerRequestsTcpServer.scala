@@ -57,6 +57,9 @@ class ProducerRequestsTcpServer(host: String, port: Int, handler: SimpleChannelI
             .childHandler(new ChannelInitializer[SocketChannel]() {
               override def initChannel(ch: SocketChannel) {
                 ch.config().setTcpNoDelay(true)
+                ch.config().setKeepAlive(true)
+                ch.config().setTrafficClass(0x10)
+                ch.config().setPerformancePreferences(0,1,0)
                 val p = ch.pipeline()
                 p.addLast("framer", new DelimiterBasedFrameDecoder(MAX_FRAME_LENGTH, Delimiters.lineDelimiter(): _*))
                 p.addLast("decoder", new StringDecoder())
