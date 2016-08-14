@@ -854,6 +854,7 @@ class TStreamsFactory(envname: String = "T-streams") {
         Coordination_connection_timeout_min, Coordination_connection_timeout_max)
 
       val transport = new TcpTransport(
+        pAsString(TSF_Dictionary.Producer.BIND_HOST) + ":" + pAsString(TSF_Dictionary.Producer.BIND_PORT),
         pAsInt(TSF_Dictionary.Producer.TRANSPORT_TIMEOUT, Producer_transport_timeout_default) * 1000,
         pAsInt(TSF_Dictionary.Producer.TRANSPORT_RETRY_COUNT, Producer_transport_retry_count_default),
         pAsInt(TSF_Dictionary.Producer.TRANSPORT_RETRY_DELAY, Producer_transport_retry_delay_default) * 1000)

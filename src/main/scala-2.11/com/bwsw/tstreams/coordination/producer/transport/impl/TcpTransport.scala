@@ -1,21 +1,42 @@
 package com.bwsw.tstreams.coordination.producer.transport.impl
 
-import java.util.concurrent.LinkedBlockingQueue
+import java.util.concurrent.Executors
 
-import com.bwsw.tstreams.common.TimeTracker
 import com.bwsw.tstreams.coordination.messages.master._
 import com.bwsw.tstreams.coordination.producer.transport.impl.client.InterProducerCommunicationClient
 import com.bwsw.tstreams.coordination.producer.transport.impl.server.ProducerRequestsTcpServer
 import com.bwsw.tstreams.coordination.producer.transport.traits.ITransport
+import io.netty.channel.{Channel, ChannelHandler, ChannelHandlerContext, SimpleChannelInboundHandler}
+import io.netty.util.ReferenceCountUtil
 import org.slf4j.LoggerFactory
 
 /**
   * [[ITransport]] implementation
   */
-class TcpTransport(timeoutMs: Int, retryCount: Int = 3, retryDelayMs: Int = 5000) extends ITransport {
-  private var server: ProducerRequestsTcpServer = null
+class TcpTransport(address: String, timeoutMs: Int, retryCount: Int = 3, retryDelayMs: Int = 5000) extends ITransport {
+
+  var callback: (Channel,String) => Unit = null
+
+  @ChannelHandler.Sharable
+  class ChannelHandler extends SimpleChannelInboundHandler[String] {
+    override def channelRead0(ctx: ChannelHandlerContext, msg: String): Unit = {
+      executor.submit(new Runnable {
+        override def run(): Unit = {
+          callback(ctx.channel, msg)
+          ReferenceCountUtil.release(msg)
+        }
+      })
+    }
+
+    override def exceptionCaught(ctx: ChannelHandlerContext, cause: Throwable) = {
+      println(cause.getCause)
+    }
+  }
+
+  private val executor = Executors.newSingleThreadExecutor()
+  private val splits = address.split(":")
+  private val server: ProducerRequestsTcpServer = new ProducerRequestsTcpServer(splits(0), splits(1).toInt, new ChannelHandler())
   private val client: InterProducerCommunicationClient = new InterProducerCommunicationClient(timeoutMs, retryCount, retryDelayMs)
-  private val msgQueue = new LinkedBlockingQueue[IMessage]()
 
   /**
     * Request to disable concrete master
@@ -40,14 +61,6 @@ class TcpTransport(timeoutMs: Int, retryCount: Int = 3, retryDelayMs: Int = 5000
     val response = client.sendAndWaitResponse(msg, isExceptionOnFail = false)
     response
   }
-
-  /**
-    * Wait incoming requests(every p2p agent must handle this incoming messages)
-    *
-    * @return IMessage or null
-    */
-  override def waitRequest(): IMessage =
-    msgQueue.take()
 
   /**
     * Send empty request (just for testing)
@@ -105,32 +118,18 @@ class TcpTransport(timeoutMs: Int, retryCount: Int = 3, retryDelayMs: Int = 5000
   }
 
   /**
-    * Send response to requester
-    *
-    * @param msg IMessage
-    */
-  override def respond(msg: IMessage): Unit = {
-    server.respond(msg)
-  }
-
-  /**
     * Bind local agent address in transport
     */
-  override def bindLocalAddress(address: String): Unit = {
-    val splits = address.split(":")
-    assert(splits.size == 2)
-    val port = splits(1).toInt
-    server = new ProducerRequestsTcpServer(port)
-    server.addCallback((msg: IMessage) => {
-      msgQueue.add(msg)
-    })
+  override def start(callback: (Channel,String) => Unit): Unit = {
+    this.callback = callback
     server.start()
   }
 
   /**
     * Stop transport listen incoming messages
     */
-  override def unbindLocalAddress(): Unit = {
+  override def stop(): Unit = {
+    IMessage.logger.warn("Transport is shutting down.")
     client.close()
     server.stop()
   }

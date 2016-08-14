@@ -1,6 +1,8 @@
 package com.bwsw.tstreams.coordination.producer.transport.traits
 
 import com.bwsw.tstreams.coordination.messages.master._
+import io.netty.channel.Channel
+import io.netty.channel.socket.SocketChannel
 
 /**
   * Basic trait for transport
@@ -52,18 +54,6 @@ trait ITransport {
   def pingRequest(msg: PingRequest): IMessage
 
   /**
-    * Wait incoming requests(every p2p agent must handle this incoming messages)
-    */
-  def waitRequest(): IMessage
-
-  /**
-    * Send response to requester
-    *
-    * @param msg IMessage
-    */
-  def respond(msg: IMessage): Unit
-
-  /**
     * Send empty request
     *
     * @param msg EmptyRequest
@@ -73,11 +63,11 @@ trait ITransport {
   /**
     * Bind local agent address in transport
     */
-  def bindLocalAddress(address: String): Unit
+  def start(callback: (Channel,String) => Unit): Unit
 
   /**
     * Stop transport listen incoming messages
     */
-  def unbindLocalAddress(): Unit
+  def stop(): Unit
 }
 
