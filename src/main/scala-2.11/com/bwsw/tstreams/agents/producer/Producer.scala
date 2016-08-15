@@ -4,7 +4,7 @@ import java.util.UUID
 import java.util.concurrent.locks.ReentrantLock
 import java.util.concurrent.{ConcurrentHashMap, CountDownLatch, TimeUnit}
 
-import com.bwsw.tstreams.agents.group.{Agent, CheckpointInfo}
+import com.bwsw.tstreams.agents.group.{Agent, CheckpointInfo, SendingAgent}
 import com.bwsw.tstreams.agents.producer.NewTransactionProducerPolicy.ProducerPolicy
 import com.bwsw.tstreams.common._
 import com.bwsw.tstreams.coordination.clients.ProducerToSubscriberNotifier
@@ -29,7 +29,7 @@ import collection.JavaConversions._
 class Producer[USERTYPE](val name: String,
                          val stream: TStream[Array[Byte]],
                          val producerOptions: Options[USERTYPE])
-  extends Agent with Interaction {
+  extends Agent with SendingAgent with Interaction {
 
   /**
     * agent name
@@ -258,6 +258,19 @@ class Producer[USERTYPE](val name: String,
     })
   }
 
+  /**
+    * Finalize all opened transactions (not atomic). For atomic use CheckpointGroup.
+    */
+  def finalizeDataSend(): Unit = {
+    LockUtil.withLockOrDieDo[Unit](threadLock, (100, TimeUnit.SECONDS), Some(logger), () => {
+      val keys = openTransactionsMap.keys()
+      for(k <- keys) {
+        val v = openTransactionsMap.getOrDefault(k, null)
+        if(!v.isClosed)
+          v.finalizeDataSend()
+      }
+    })
+  }
 
   /**
     * Info to commit

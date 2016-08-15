@@ -25,3 +25,10 @@ trait Agent {
     */
   def getMetadataRef(): MetadataStorage
 }
+
+/**
+  * Agent which sends data into transactions
+  */
+trait SendingAgent {
+  def finalizeDataSend(): Unit
+}
