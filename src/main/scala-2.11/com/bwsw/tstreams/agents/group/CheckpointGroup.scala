@@ -4,6 +4,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.{CountDownLatch, TimeUnit}
 import java.util.concurrent.locks.ReentrantLock
 
+import com.bwsw.tstreams.agents.producer.Producer
 import com.bwsw.tstreams.common.{FirstFailLockableTaskExecutor, LockUtil}
 import org.slf4j.LoggerFactory
 
@@ -99,6 +100,8 @@ class CheckpointGroup(val executors: Int = 1) {
     agents.foreach { case (name, agent) =>
       LockUtil.lockOrDie(agent.getThreadLock(), lockTimeout, Some(logger))
     }
+
+    agents.foreach { case (name, agent) => if(agent.isInstanceOf[SendingAgent]) agent.asInstanceOf[SendingAgent].finalizeDataSend() }
 
     var exc: Exception = null
 
