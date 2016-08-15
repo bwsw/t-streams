@@ -1,7 +1,9 @@
 package com.bwsw.tstreams.coordination.producer.transport.impl
 
-import java.util.concurrent.Executors
+import java.util.concurrent.{TimeUnit, Executors}
+import java.util.concurrent.atomic.AtomicBoolean
 
+import com.bwsw.tstreams.common.FirstFailLockableTaskExecutor
 import com.bwsw.tstreams.coordination.messages.master._
 import com.bwsw.tstreams.coordination.producer.transport.impl.client.InterProducerCommunicationClient
 import com.bwsw.tstreams.coordination.producer.transport.impl.server.ProducerRequestsTcpServer
@@ -13,26 +15,27 @@ import org.slf4j.LoggerFactory
   * Transport implementation
   */
 class TcpTransport(address: String, timeoutMs: Int, retryCount: Int = 3, retryDelayMs: Int = 5000) {
-
+  val isIgnore = new AtomicBoolean(false)
   var callback: (Channel,String) => Unit = null
 
   @ChannelHandler.Sharable
   class ChannelHandler extends SimpleChannelInboundHandler[String] {
     override def channelRead0(ctx: ChannelHandlerContext, msg: String): Unit = {
-      executor.submit(new Runnable {
-        override def run(): Unit = {
-          callback(ctx.channel, msg)
-          ReferenceCountUtil.release(msg)
-        }
-      })
+      if(!isIgnore.get)
+        executor.submit(new Runnable {
+          override def run(): Unit = {
+            callback(ctx.channel, msg)
+            ReferenceCountUtil.release(msg)
+          }
+        })
     }
 
     override def exceptionCaught(ctx: ChannelHandlerContext, cause: Throwable) = {
-      println(cause.getCause)
+      IMessage.logger.error(cause.getMessage)
     }
   }
 
-  private val executor = Executors.newSingleThreadExecutor()
+  private val executor = new FirstFailLockableTaskExecutor("PeerAgent-TcpTransportExecutor")
   private val splits = address.split(":")
   private val server: ProducerRequestsTcpServer = new ProducerRequestsTcpServer(splits(0), splits(1).toInt, new ChannelHandler())
   private val client: InterProducerCommunicationClient = new InterProducerCommunicationClient(timeoutMs, retryCount, retryDelayMs)
@@ -67,7 +70,6 @@ class TcpTransport(address: String, timeoutMs: Int, retryCount: Int = 3, retryDe
     * @param msg EmptyRequest
     */
   def stopRequest(msg: EmptyRequest): Unit = {
-    val logger = LoggerFactory.getLogger(this.getClass)
     client.sendAndNoWaitResponse(msg, isExceptionOnFail = true)
   }
 
@@ -128,9 +130,10 @@ class TcpTransport(address: String, timeoutMs: Int, retryCount: Int = 3, retryDe
     * Stop transport listen incoming messages
     */
   def stop(): Unit = {
-    IMessage.logger.warn("Transport is shutting down.")
+    IMessage.logger.warn(s"Transport is shutting down.")
     client.close()
     server.stop()
+    executor.shutdownOrDie(100, TimeUnit.SECONDS)
   }
 
 

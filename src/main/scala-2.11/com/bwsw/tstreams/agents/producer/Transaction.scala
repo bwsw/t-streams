@@ -168,7 +168,7 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
       streamName  = txnOwner.stream.getName,
       partition   = partition,
       transaction = transactionUuid,
-      executor    = txnOwner.backendActivityService,
+      executor    = txnOwner.p2pAgent.getCassandraAsyncExecutor,
       function    = () => {
         val msg = Message(txnUuid = transactionUuid,
           ttl = -1,
@@ -255,7 +255,7 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
         transaction = transactionUuid,
         totalCnt = part.get(),
         ttl = txnOwner.stream.getTTL,
-        executor = txnOwner.backendActivityService,
+        executor = txnOwner.p2pAgent.getCassandraAsyncExecutor,
         function = checkpointPostEventPart)
     }
     else {
@@ -372,7 +372,7 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
     transaction = transactionUuid,
     totalCnt = -1,
     ttl = txnOwner.producerOptions.transactionTTL,
-    executor = txnOwner.backendActivityService,
+    executor = txnOwner.p2pAgent.getCassandraAsyncExecutor,
     function = doSendUpdateMessage)
   }
 
