@@ -245,12 +245,13 @@ class Consumer[USERTYPE](val name: String,
     if(!isStarted.get())
       throw new IllegalStateException("Start consumer first.")
 
-    LockUtil.lockOrDie(consumerLock, (100, TimeUnit.SECONDS), Some(logger))
+    if(logger.isDebugEnabled) {
+      logger.debug(s"Start retrieving new historic transaction for consumer with" +
+        s" name : $name, streamName : ${stream.getName}, streamPartitions : ${stream.getPartitions}")
+    }
 
-    logger.debug(s"Start retrieving new historic transaction for consumer with" +
-      s" name : $name, streamName : ${stream.getName}, streamPartitions : ${stream.getPartitions}")
-    val txnOpt = updateTransactionInfoFromDB(uuid, partition)
-    val res =
+    LockUtil.withLockOrDieDo[Option[ConsumerTransaction[USERTYPE]]](consumerLock, (100, TimeUnit.SECONDS), Some(logger), () => {
+      val txnOpt = updateTransactionInfoFromDB(uuid, partition)
       if (txnOpt.isDefined) {
         val txn = txnOpt.get
         if (txn.totalItems != -1)
@@ -261,8 +262,7 @@ class Consumer[USERTYPE](val name: String,
       else {
         None
       }
-    consumerLock.unlock()
-    res
+    })
   }
 
   /**
@@ -275,15 +275,15 @@ class Consumer[USERTYPE](val name: String,
     if(!isStarted.get())
       throw new IllegalStateException("Start consumer first.")
 
-    LockUtil.lockOrDie(consumerLock, (100, TimeUnit.SECONDS), Some(logger))
-    offsetsForCheckpoint(partition) = uuid
-    currentOffsets(partition) = uuid
-    transactionBuffer(partition) = stream.metadataStorage.commitEntity.getTransactions(
-      stream.getName,
-      partition,
-      uuid,
-      options.transactionsPreload)
-    consumerLock.unlock()
+    LockUtil.withLockOrDieDo[Unit](consumerLock, (100, TimeUnit.SECONDS), Some(logger), () => {
+      offsetsForCheckpoint(partition) = uuid
+      currentOffsets(partition) = uuid
+      transactionBuffer(partition) = stream.metadataStorage.commitEntity.getTransactions(
+        stream.getName,
+        partition,
+        uuid,
+        options.transactionsPreload)
+    })
   }
 
   /**
@@ -296,12 +296,13 @@ class Consumer[USERTYPE](val name: String,
     if(!isStarted.get())
       throw new IllegalStateException("Start consumer first.")
 
-    LockUtil.lockOrDie(consumerLock, (100, TimeUnit.SECONDS), Some(logger))
-    val data: Option[(Int, Int)] = stream.metadataStorage.commitEntity.getTransactionItemCountAndTTL(
-      stream.getName,
-      partition,
-      txn)
-    consumerLock.unlock()
+    val data: Option[(Int, Int)] = LockUtil.withLockOrDieDo[Option[(Int, Int)]](consumerLock, (100, TimeUnit.SECONDS), Some(logger), () => {
+      stream.metadataStorage.commitEntity.getTransactionItemCountAndTTL(
+        stream.getName,
+        partition,
+        txn)
+    })
+
     if (data.isDefined) {
       val (cnt, ttl) = data.get
       Some(TransactionSettings(txn, cnt, ttl))
@@ -318,13 +319,14 @@ class Consumer[USERTYPE](val name: String,
     if(!isStarted.get())
       throw new IllegalStateException("Start consumer first.")
 
-    LockUtil.lockOrDie(consumerLock, (100, TimeUnit.SECONDS), Some(logger))
-    logger.info(s"Start saving checkpoints for " +
-      s"consumer with name : $name, streamName : ${stream.getName}, streamPartitions : ${stream.getPartitions}")
-
-    stream.metadataStorage.consumerEntity.saveBatchOffset(name, stream.getName, offsetsForCheckpoint)
-    offsetsForCheckpoint.clear()
-    consumerLock.unlock()
+    LockUtil.withLockOrDieDo[Unit](consumerLock, (100, TimeUnit.SECONDS), Some(logger), () => {
+      if (logger.isDebugEnabled) {
+        logger.debug(s"Start saving checkpoints for " +
+          s"consumer with name : $name, streamName : ${stream.getName}, streamPartitions : ${stream.getPartitions}")
+      }
+      stream.metadataStorage.consumerEntity.saveBatchOffset(name, stream.getName, offsetsForCheckpoint)
+      offsetsForCheckpoint.clear()
+    })
   }
 
   /**
@@ -334,12 +336,13 @@ class Consumer[USERTYPE](val name: String,
     if(!isStarted.get())
       throw new IllegalStateException("Start consumer first.")
 
-    LockUtil.lockOrDie(consumerLock, (100, TimeUnit.SECONDS), Some(logger))
-    val checkpointData = offsetsForCheckpoint.map { case (partition, lastTxn) =>
-      ConsumerCheckpointInfo(name, stream.getName, partition, lastTxn)
-    }.toList
-    offsetsForCheckpoint.clear()
-    consumerLock.unlock()
+    val checkpointData = LockUtil.withLockOrDieDo[List[ConsumerCheckpointInfo]](consumerLock, (100, TimeUnit.SECONDS), Some(logger), () => {
+      val checkpointData = offsetsForCheckpoint.map { case (partition, lastTxn) =>
+        ConsumerCheckpointInfo(name, stream.getName, partition, lastTxn)
+      }.toList
+      offsetsForCheckpoint.clear()
+      checkpointData
+    })
     checkpointData
   }
 

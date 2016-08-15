@@ -5,9 +5,8 @@ import java.util.UUID
 import com.aerospike.client._
 import com.bwsw.tstreams.data.IStorage
 import org.slf4j.LoggerFactory
-
 import scala.collection.mutable
-import com.bwsw.tstreams.common.FirstFailLockableTaskExecutor
+import scala.collection.mutable.ListBuffer
 
 /**
   * Aerospike storage impl of IStorage
@@ -60,62 +59,39 @@ class Storage(client: AerospikeClient, options: Options) extends IStorage[Array[
   }
 
   /**
-    * Put data in storage
-    *
-    * @param streamName  Name of the stream
-    * @param partition   Number of stream partitions
-    * @param transaction Number of stream transactions
-    * @param data        Data which will be put
-    * @param partNum     Data unique number
-    * @param ttl         Time of records expiration in seconds
-    * @return Null instead of wait lambda because client.put is not async
-    */
-  override def put(streamName: String, partition: Int, transaction: UUID, ttl: Int, data: Array[Byte], partNum: Int): () => Unit = {
-    options.writePolicy.expiration = ttl
-    val key: Key = new Key(options.namespace, s"$streamName/$partition", transaction.toString)
-    val bin = new Bin(partNum.toString, data)
-    client.put(options.writePolicy, key, bin)
-    null
-  }
-
-  /**
     * Remove all data in data storage
     */
   override def truncate(): Unit = {
-    logger.warn("aerospike can't be truncated")
+    logger.error("aerospike can't be truncated")
   }
 
   /**
     * Remove storage
     */
   override def remove(): Unit = {
-    logger.warn("aerospike data storage can't be removed")
+    logger.error("aerospike data storage can't be removed")
   }
 
-  /**
-    * Save all info from buffer in IStorage
-    *
-    * @return Lambda which indicate done or not putting request(if request was async) null else
-    */
-  override def saveBuffer(txn: UUID): () => Unit = {
-    if (buffer.contains(txn)) {
-      val elem = buffer(txn).head
-      options.writePolicy.expiration = elem.ttl
-      val key: Key = new Key(options.namespace, s"${elem.streamName}/${elem.partition}", elem.transaction.toString)
+  override def save(txn: UUID,
+                    stream: String,
+                    partition: Int,
+                    ttl: Int,
+                    lastItm: Int,
+                    data: ListBuffer[Array[Byte]]): () => Unit = {
 
-      val mapped = buffer(txn) map { el => new Bin(el.partNum.toString, el.data) }
-      if(logger.isDebugEnabled)
-      {
-        logger.debug(s"Start putting batch of data with size:${getBufferSize(txn)} in aerospike for streamName: {${elem.streamName}}, partition: {${elem.partition}")
-      }
-
-      client.put(options.writePolicy, key, mapped: _*)
-
-      if(logger.isDebugEnabled)
-      {
-        logger.debug(s"Finished putting batch of data with size:${getBufferSize(txn)} in aerospike for streamName: {${elem.streamName}}, partition: {${elem.partition}")
+    val key: Key = new Key(options.namespace, s"${stream}/${partition}", txn.toString)
+    if(data.size == 0)
+      return null
+    var i = lastItm - data.size
+    val mapped = data map {
+      el => {
+        val b = new Bin(i.toString, el)
+        i+=1
+        b
       }
     }
+
+    client.put(options.writePolicy, key, mapped: _*)
     null
   }
 }

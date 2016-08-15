@@ -48,7 +48,7 @@ class ConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll with Te
     val totalDataInTxn = 10
     val data = (for (i <- 0 until totalDataInTxn) yield randomString).toList.sorted
     val txn = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened, 1)
-    val txnUuid = txn.getTxnUUID
+    val txnUuid = txn.getTransactionUUID
     data.foreach(x => txn.send(x))
     txn.checkpoint()
     var checkVal = true

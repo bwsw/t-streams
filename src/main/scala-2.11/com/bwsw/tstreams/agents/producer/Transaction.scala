@@ -32,6 +32,7 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
                             txnOwner: Producer[USERTYPE]) {
 
 
+  private val data = new TransactionData[USERTYPE](this, txnOwner.stream.getTTL, txnOwner.stream.dataStorage)
 
   /**
     * state of transaction
@@ -48,7 +49,7 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
   /**
     * BasicProducerTransaction logger for logging
     */
-  Transaction.logger.debug("Open transaction {} for\nstream, partition: {}, {}", List(getTxnUUID, txnOwner.stream.getName, partition))
+  Transaction.logger.debug("Open transaction {} for\nstream, partition: {}, {}", List(getTransactionUUID, txnOwner.stream.getName, partition))
 
   /**
     *
@@ -64,30 +65,30 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
     * makes transaction materialized
     */
   def makeMaterialized(): Unit = {
-    Transaction.logger.debug("Materialize transaction {} for\nstream, partition: {}, {}", List(getTxnUUID, txnOwner.stream.getName, partition))
+    Transaction.logger.debug("Materialize transaction {} for\nstream, partition: {}, {}", List(getTransactionUUID, txnOwner.stream.getName, partition))
     state.makeMaterialized()
   }
 
   def awaitMaterialized(): Unit = {
-    Transaction.logger.debug("Await for transaction {} to be materialized\nfor stream,partition : {},{}", List(getTxnUUID, txnOwner.stream.getName, partition))
+    Transaction.logger.debug("Await for transaction {} to be materialized\nfor stream,partition : {},{}", List(getTransactionUUID, txnOwner.stream.getName, partition))
     state.awaitMaterialization(txnOwner.producerOptions.coordinationOptions.transport.getTimeout())
-    Transaction.logger.debug("Transaction {} is materialized\nfor stream,partition : {}, {}", List(getTxnUUID, txnOwner.stream.getName, partition))
+    Transaction.logger.debug("Transaction {} is materialized\nfor stream,partition : {}, {}", List(getTransactionUUID, txnOwner.stream.getName, partition))
   }
 
   /**
     * Return transaction UUID
     */
-  def getTxnUUID: UUID = transactionUuid
+  def getTransactionUUID(): UUID = transactionUuid
 
   /**
     * Return current transaction amount of data
     */
-  def getCnt = part.get
+  def getDataItemsCount() = data.lastOffset
 
   /**
-    * Transaction part index
+    * Returns Transaction owner
     */
-  private var part = new AtomicInteger(0)
+  def getTransactionOwner() = txnOwner
 
   /**
     * All inserts (can be async) in storage (must be waited before closing this transaction)
@@ -102,41 +103,17 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
     */
   def send(obj: USERTYPE): Unit = {
     state.isOpenedOrDie
-
-    LockUtil.withLockOrDieDo[Unit](transactionLock, (100, TimeUnit.SECONDS), Some(Transaction.logger), () => {
-      txnOwner.producerOptions.insertType match {
-
-        case DataInsertType.BatchInsert(size) =>
-
-          txnOwner.stream.dataStorage.putInBuffer(
-            txnOwner.stream.getName,
-            partition,
-            transactionUuid,
-            txnOwner.stream.getTTL,
-            txnOwner.producerOptions.converter.convert(obj),
-            part.get)
-
-          if (txnOwner.stream.dataStorage.getBufferSize(transactionUuid) == size) {
-
-            val job: () => Unit = txnOwner.stream.dataStorage.saveBuffer(transactionUuid)
-            if (job != null) jobs += job
-            txnOwner.stream.dataStorage.clearBuffer(transactionUuid)
-
-          }
-
-        case DataInsertType.SingleElementInsert =>
-
-          val job: () => Unit = txnOwner.stream.dataStorage.put(
-            txnOwner.stream.getName,
-            partition,
-            transactionUuid,
-            txnOwner.stream.getTTL,
-            txnOwner.producerOptions.converter.convert(obj),
-            part.get)
-          if (job != null) jobs += job
-      }
-
-      part.incrementAndGet() })
+    val number = data.put(obj, txnOwner.producerOptions.converter)
+    val job = txnOwner.producerOptions.insertType match {
+      case DataInsertType.BatchInsert(size) =>
+        if (number % size == 0) {
+          data.save()
+        }
+        null
+      case DataInsertType.SingleElementInsert =>
+        data.save()
+    }
+    if (job != null) jobs += job
   }
 
   /**
@@ -144,24 +121,19 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
     */
   def finalizeDataSend(): Unit = {
     txnOwner.producerOptions.insertType match {
-      case DataInsertType.SingleElementInsert =>
-
       case DataInsertType.BatchInsert(size) =>
-        if (txnOwner.stream.dataStorage.getBufferSize(transactionUuid) > 0) {
-          val job: () => Unit = txnOwner.stream.dataStorage.saveBuffer(transactionUuid)
-          if (job != null) jobs += job
-          txnOwner.stream.dataStorage.clearBuffer(transactionUuid)
-        }
+        val job: () => Unit = data.save()
+        if (job != null)
+          jobs += job
+      case DataInsertType.SingleElementInsert =>
     }
-
   }
 
   private def cancelAsync() = {
     txnOwner.producerOptions.insertType match {
-      case DataInsertType.SingleElementInsert =>
-
       case DataInsertType.BatchInsert(_) =>
-        txnOwner.stream.dataStorage.clearBuffer(transactionUuid)
+
+      case DataInsertType.SingleElementInsert =>
     }
 
     txnOwner.stream.metadataStorage.commitEntity.deleteAsync(
@@ -223,7 +195,7 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
   private def checkpointAsync() : Unit = {
     finalizeDataSend()
     //close transaction using stream ttl
-    if (part.get() > 0) {
+    if (getDataItemsCount > 0) {
       jobs.foreach(x => x())
 
       Transaction.logger.debug("[START PRE CHECKPOINT PARTITION_{}] ts={}", partition, transactionUuid.toString)
@@ -253,7 +225,7 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
         streamName = txnOwner.stream.getName,
         partition = partition,
         transaction = transactionUuid,
-        totalCnt = part.get(),
+        totalCnt = getDataItemsCount,
         ttl = txnOwner.stream.getTTL,
         executor = txnOwner.p2pAgent.getCassandraAsyncExecutor,
         function = checkpointPostEventPart)
@@ -283,7 +255,7 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
       else {
         finalizeDataSend()
 
-        if (part.get() > 0) {
+        if (getDataItemsCount > 0) {
           jobs.foreach(x => x())
 
           Transaction.logger.debug("[START PRE CHECKPOINT PARTITION_{}] ts={}", partition, transactionUuid.toString)
@@ -301,7 +273,7 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
             streamName = txnOwner.stream.getName,
             partition = partition,
             transaction = transactionUuid,
-            totalCnt = part.get(),
+            totalCnt = getDataItemsCount,
             ttl = txnOwner.stream.getTTL)
 
           Transaction.logger.debug(s"[COMMIT PARTITION_{}] ts={}", partition, transactionUuid.toString)
@@ -388,13 +360,13 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
     state.awaitMaterialization(txnOwner.producerOptions.coordinationOptions.transport.getTimeout())
 
     val preCheckpoint = Message(
-      txnUuid = getTxnUUID,
+      txnUuid = getTransactionUUID,
       ttl = -1,
       status = TransactionStatus.preCheckpoint,
       partition = partition)
 
     val finalCheckpoint = Message(
-      txnUuid = getTxnUUID,
+      txnUuid = getTransactionUUID,
       ttl = -1,
       status = TransactionStatus.postCheckpoint,
       partition = partition)
@@ -405,8 +377,8 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
       finalCheckpointEvent = finalCheckpoint,
       streamName = txnOwner.stream.getName,
       partition = partition,
-      transaction = getTxnUUID,
-      totalCnt = getCnt,
+      transaction = getTransactionUUID,
+      totalCnt = getDataItemsCount,
       ttl = txnOwner.stream.getTTL)
   }
 }
