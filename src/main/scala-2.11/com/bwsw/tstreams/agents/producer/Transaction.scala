@@ -139,6 +139,22 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
       part.incrementAndGet() })
   }
 
+  /**
+    * Does actual send of the data that is not sent yet
+    */
+  def finalizeDataSend(): Unit = {
+    txnOwner.producerOptions.insertType match {
+      case DataInsertType.SingleElementInsert =>
+
+      case DataInsertType.BatchInsert(size) =>
+        if (txnOwner.stream.dataStorage.getBufferSize(transactionUuid) > 0) {
+          val job: () => Unit = txnOwner.stream.dataStorage.saveBuffer(transactionUuid)
+          if (job != null) jobs += job
+          txnOwner.stream.dataStorage.clearBuffer(transactionUuid)
+        }
+    }
+
+  }
 
   private def cancelAsync() = {
     txnOwner.producerOptions.insertType match {
@@ -205,17 +221,7 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
 
 
   private def checkpointAsync() : Unit = {
-    txnOwner.producerOptions.insertType match {
-
-      case DataInsertType.SingleElementInsert =>
-
-      case DataInsertType.BatchInsert(size) =>
-        if (txnOwner.stream.dataStorage.getBufferSize(transactionUuid) > 0) {
-          val job: () => Unit = txnOwner.stream.dataStorage.saveBuffer(transactionUuid)
-          if (job != null) jobs += job
-          txnOwner.stream.dataStorage.clearBuffer(transactionUuid)
-        }
-    }
+    finalizeDataSend()
     //close transaction using stream ttl
     if (part.get() > 0) {
       jobs.foreach(x => x())
@@ -275,17 +281,7 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
         }, Option(transactionLock))
       }
       else {
-        txnOwner.producerOptions.insertType match {
-
-          case DataInsertType.SingleElementInsert =>
-
-          case DataInsertType.BatchInsert(size) =>
-            if (txnOwner.stream.dataStorage.getBufferSize(transactionUuid) > 0) {
-              val job: () => Unit = txnOwner.stream.dataStorage.saveBuffer(transactionUuid)
-              if (job != null) jobs += job
-              txnOwner.stream.dataStorage.clearBuffer(transactionUuid)
-            }
-        }
+        finalizeDataSend()
 
         if (part.get() > 0) {
           jobs.foreach(x => x())
