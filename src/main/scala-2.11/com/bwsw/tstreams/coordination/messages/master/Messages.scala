@@ -237,7 +237,6 @@ case class PublishRequest(senderID: String, receiverID: String, msg: Message) ex
   override def handleP2PRequest(agent: PeerAgent) = {
     if(IMessage.logger.isDebugEnabled)
       IMessage.logger.debug("Start handling PublishRequest")
-    assert(receiverID == agent.getAgentAddress)
     val master = agent.localMasters.getOrDefault(partition, "")
     if(master == agent.getAgentAddress) {
       agent.submitPipelinedTaskToPublishExecutors(new Runnable {
