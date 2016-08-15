@@ -20,7 +20,8 @@ class AProducerAndConsumerCheckpointTest extends FlatSpec with Matchers with Bef
     setProperty(TSF_Dictionary.Producer.Transaction.TTL, 6).
     setProperty(TSF_Dictionary.Producer.Transaction.KEEP_ALIVE, 2).
     setProperty(TSF_Dictionary.Consumer.TRANSACTION_PRELOAD, 10).
-    setProperty(TSF_Dictionary.Consumer.DATA_PRELOAD, 10)
+    setProperty(TSF_Dictionary.Consumer.DATA_PRELOAD, 10).
+    setProperty(TSF_Dictionary.Producer.Transaction.DATA_WRITE_BATCH_SIZE, 100)
 
   val producer = f.getProducer[String](
     name = "test_producer",
@@ -47,7 +48,7 @@ class AProducerAndConsumerCheckpointTest extends FlatSpec with Matchers with Bef
 
 
   "producer, consumer" should "producer - generate many transactions, consumer - retrieve all of them with reinitialization after some time" in {
-    val dataToSend = (for (i <- 0 until 10) yield randomString).sorted
+    val dataToSend = (for (i <- 0 until 100) yield randomString).sorted
     val txnNum = 1000
 
     (0 until txnNum) foreach { _ =>

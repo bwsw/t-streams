@@ -1,6 +1,7 @@
 package com.bwsw.tstreams.data
 
 import java.util.UUID
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
   * Interface of data storage
@@ -8,6 +9,17 @@ import java.util.UUID
   * @tparam T Storage data type
   */
 trait IStorage[T] {
+
+  /**
+    * Buffer for buffering data to push it with saveBuffer()
+    */
+  protected val buffer = scala.collection.mutable.Map[java.util.UUID, scala.collection.mutable.ListBuffer[dataToPush]]()
+
+  /**
+    * Flag indicating binded this IStorage or not
+    */
+  private val isBound = new AtomicBoolean(false)
+
 
   /**
     * @return Closed concrete storage or not
@@ -98,11 +110,6 @@ trait IStorage[T] {
   }
 
   /**
-    * Buffer for buffering data to push it with saveBuffer()
-    */
-  protected val buffer = scala.collection.mutable.Map[java.util.UUID, scala.collection.mutable.ListBuffer[dataToPush]]()
-
-  /**
     * Helper class for buffering data
     *
     * @param streamName  Name of the stream to push data
@@ -116,17 +123,10 @@ trait IStorage[T] {
 
 
   /**
-    * Flag indicating binded this IStorage or not
-    */
-  private var isBound = false
-
-
-  /**
     * Bind this storage for agent
     */
   def bind() = {
-    if (isBound)
-      throw new IllegalStateException("storage is already binded")
-    isBound = true
+    if (isBound.getAndSet(true))
+      throw new IllegalStateException("Storage instance is bound already.")
   }
 }
