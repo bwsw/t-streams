@@ -887,7 +887,7 @@ class TStreamsFactory(envname: String = "T-streams") {
       if (insertCnt > 1)
         insertType = BatchInsert(insertCnt)
 
-      val po = new Options[USERTYPE](transactionTTL = pAsInt(TSF_Dictionary.Producer.Transaction.TTL, Producer_transaction_ttl_default), transactionKeepAliveInterval = pAsInt(TSF_Dictionary.Producer.Transaction.KEEP_ALIVE, Producer_transaction_keep_alive_default), writePolicy = writePolicy, insertType = SingleElementInsert, txnGenerator = txnGenerator, coordinationOptions = cao, converter = converter)
+      val po = new Options[USERTYPE](transactionTTL = pAsInt(TSF_Dictionary.Producer.Transaction.TTL, Producer_transaction_ttl_default), transactionKeepAliveInterval = pAsInt(TSF_Dictionary.Producer.Transaction.KEEP_ALIVE, Producer_transaction_keep_alive_default), writePolicy = writePolicy, insertType = insertType, txnGenerator = txnGenerator, coordinationOptions = cao, converter = converter)
 
       new Producer[USERTYPE](name = name, stream = stream, producerOptions = po)
     })
