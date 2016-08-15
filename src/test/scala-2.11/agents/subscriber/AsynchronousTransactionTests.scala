@@ -60,7 +60,7 @@ class AsynchronousTransactionTests  extends FlatSpec with Matchers
     val ctxn = c.getTransaction
 
     ctxn.isDefined shouldBe true
-    ptxn.getTxnUUID shouldBe ctxn.get.getTxnUUID
+    ptxn.getTransactionUUID shouldBe ctxn.get.getTxnUUID
     if(ctxn.isDefined)
       c.checkpoint()
   }

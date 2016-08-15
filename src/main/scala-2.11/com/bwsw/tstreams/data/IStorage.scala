@@ -3,17 +3,14 @@ package com.bwsw.tstreams.data
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicBoolean
 
+import scala.collection.mutable.ListBuffer
+
 /**
   * Interface of data storage
   *
   * @tparam T Storage data type
   */
 trait IStorage[T] {
-
-  /**
-    * Buffer for buffering data to push it with saveBuffer()
-    */
-  protected val buffer = scala.collection.mutable.Map[java.util.UUID, scala.collection.mutable.ListBuffer[dataToPush]]()
 
   /**
     * Flag indicating binded this IStorage or not
@@ -43,19 +40,6 @@ trait IStorage[T] {
   def remove()
 
   /**
-    * Put data in storage
-    *
-    * @param streamName  Name of the stream
-    * @param partition   Number of stream partitions
-    * @param transaction Number of stream transactions
-    * @param data        Data which will be put
-    * @param partNum     Data unique number
-    * @param ttl         Time of records expiration in seconds
-    * @return Lambda which indicate done or not putting request(if request was async) null else
-    */
-  def put(streamName: String, partition: Int, transaction: java.util.UUID, ttl: Int, data: T, partNum: Int): () => Unit
-
-  /**
     * Get data from storage
     *
     * @param streamName  Name of the stream
@@ -69,64 +53,16 @@ trait IStorage[T] {
 
 
   /**
-    * Put data in buffer to save it later
-    *
-    * @param streamName  Name of the stream
-    * @param partition   Number of stream partitions
-    * @param transaction Number of stream transactions
-    * @param data        Data which will be put
-    * @param partNum     Data unique number
-    * @param ttl         Time of records expiration in seconds
-    */
-  def putInBuffer(streamName: String, partition: Int, transaction: java.util.UUID, ttl: Int, data: T, partNum: Int): Unit = {
-    if (!buffer.contains(transaction)) {
-      buffer(transaction) = scala.collection.mutable.ListBuffer[dataToPush]()
-    }
-    buffer(transaction) += dataToPush(streamName, partition, transaction, ttl, data, partNum)
-  }
-
-
-  /**
-    * Save all info from buffer in IStorage
-    *
-    * @return Lambda which indicate done or not putting request(if request was async) null else
-    */
-  def saveBuffer(txn: java.util.UUID): () => Unit
-
-
-  /**
-    * Clear current producer buffer
-    */
-  def clearBuffer(txn: java.util.UUID): Unit =
-    if (buffer.contains(txn))
-      buffer(txn).clear()
-
-
-  /**
-    * @return Buffer size
-    */
-  def getBufferSize(txn: java.util.UUID): Int = {
-    if (!buffer.contains(txn)) 0 else buffer(txn).size
-  }
-
-  /**
-    * Helper class for buffering data
-    *
-    * @param streamName  Name of the stream to push data
-    * @param partition   Number of the partition
-    * @param transaction Number of the transaction
-    * @param ttl         Ttl of how long data will exist
-    * @param data        User data
-    * @param partNum     Part number of data(in single txn can be >1 parts of userdata)
-    */
-  protected case class dataToPush(streamName: String, partition: Int, transaction: UUID, ttl: Int, data: T, partNum: Int)
-
-
-  /**
     * Bind this storage for agent
     */
   def bind() = {
     if (isBound.getAndSet(true))
       throw new IllegalStateException("Storage instance is bound already.")
   }
+
+
+  /**
+    * Saves data to storage
+    */
+  def save(txn: UUID, stream: String, partition: Int, ttl: Int, lastItm: Int, data: ListBuffer[Array[Byte]]): () => Unit
 }
