@@ -28,8 +28,6 @@ class FirstFailLockableTaskExecutor(name: String, cnt: Int = 1)
     */
   class RunnableWithLock(r: Runnable, lock: ReentrantLock) extends Runnable {
     override def run(): Unit = LockUtil.withLockOrDieDo[Unit](lock, (100, TimeUnit.SECONDS), Some(logger), () => r.run())
-
-    def getLock: ReentrantLock = lock
   }
 
   /**
@@ -40,8 +38,6 @@ class FirstFailLockableTaskExecutor(name: String, cnt: Int = 1)
   override def afterExecute(runnable: Runnable, throwable: Throwable): Unit =  {
     super.afterExecute(runnable, throwable)
     if(throwable != null) {
-      if(runnable.isInstanceOf[RunnableWithLock])
-        runnable.asInstanceOf[RunnableWithLock].getLock.unlock()
       this.shutdownNow()
       failureExc = throwable
       isFailed.set(true)
@@ -55,10 +51,24 @@ class FirstFailLockableTaskExecutor(name: String, cnt: Int = 1)
     * @param l
     */
   def submit(runnable : Runnable, l : Option[ReentrantLock] = None) = {
+    if(isShutdown)
+      throw new IllegalStateException(s"Executor ${name} is no longer online. Unable to execute.")
     if (l.isDefined)
       super.execute(new RunnableWithLock(runnable, l.get))
     else
       super.execute(runnable)
+  }
+
+  override def submit(runnable: Runnable): Future[_] = {
+    if(isShutdown)
+      throw new IllegalStateException(s"Executor ${name} is no longer online. Unable to execute.")
+    super.submit(runnable)
+  }
+
+  override def execute(runnable: Runnable) = {
+    if(isShutdown)
+      throw new IllegalStateException(s"Executor ${name} is no longer online. Unable to execute.")
+    super.execute(runnable)
   }
 
   /**
@@ -67,4 +77,14 @@ class FirstFailLockableTaskExecutor(name: String, cnt: Int = 1)
     */
   def getException: Option[Throwable] = Option(failureExc)
 
+
+  /**
+    * safely shut down or die
+    */
+
+  def shutdownOrDie(amount: Long, tu: TimeUnit) = {
+    this.shutdown()
+    if(!this.awaitTermination(amount, tu))
+      throw new IllegalStateException(s"Executor service with ${name} was unable to shut down in ${amount} ${tu}")
+  }
 }

@@ -80,7 +80,17 @@ class Producer[USERTYPE](val name: String,
     * P2P Agent for producers interaction
     * (getNewTxn uuid; publish openTxn event; publish closeTxn event)
     */
-  override val p2pAgent: PeerAgent = new PeerAgent(agentAddress = pcs.agentAddress, zkHosts = pcs.zkHosts, zkRootPath = pcs.zkRootPath, zkSessionTimeout = pcs.zkSessionTimeout, zkConnectionTimeout = pcs.zkConnectionTimeout, producer = this, usedPartitions = producerOptions.writePolicy.getUsedPartitions(), isLowPriorityToBeMaster = pcs.isLowPriorityToBeMaster, transport = pcs.transport, poolSize = threadPoolSize)
+  override val p2pAgent: PeerAgent = new PeerAgent(
+    agentAddress = pcs.agentAddress,
+    zkHosts = pcs.zkHosts,
+    zkRootPath = pcs.zkRootPath,
+    zkSessionTimeout = pcs.zkSessionTimeout,
+    zkConnectionTimeout = pcs.zkConnectionTimeout,
+    producer = this,
+    usedPartitions = producerOptions.writePolicy.getUsedPartitions(),
+    isLowPriorityToBeMaster = pcs.isLowPriorityToBeMaster,
+    transport = pcs.transport,
+    poolSize = threadPoolSize)
 
   //used for managing new agents on stream
 
@@ -97,7 +107,7 @@ class Producer[USERTYPE](val name: String,
     */
   private val shutdownKeepAliveThread = new ThreadSignalSleepVar[Boolean](1)
   private val txnKeepAliveThread = getTxnKeepAliveThread
-  val backendActivityService = new FirstFailLockableTaskExecutor(s"Producer-worker-${name}")
+  val backendActivityService = new FirstFailLockableTaskExecutor(s"Producer ${name}-BackendWorker")
 
   /**
     *
@@ -333,7 +343,7 @@ class Producer[USERTYPE](val name: String,
           }
         }, partition)
       },
-      executor = backendActivityService)
+      executor = p2pAgent.getCassandraAsyncExecutor)
 
 
   }
@@ -343,7 +353,7 @@ class Producer[USERTYPE](val name: String,
     * Stop this agent
     */
   def stop() = {
-
+    logger.info(s"Producer ${name} is shutting down.")
     LockUtil.withLockOrDieDo[Unit](threadLock, (100, TimeUnit.SECONDS), Some(logger), () => {
       if (isStop)
         throw new IllegalStateException(s"Producer ${this.name} is already stopped. Duplicate action.")
@@ -353,7 +363,7 @@ class Producer[USERTYPE](val name: String,
     shutdownKeepAliveThread.signal(true)
     txnKeepAliveThread.join()
     // stop executor
-    backendActivityService.shutdown()
+    backendActivityService.shutdownOrDie(100, TimeUnit.SECONDS)
     // stop provide master features to public
     p2pAgent.stop()
     // stop function which works with subscribers
