@@ -53,7 +53,6 @@ class Options[USERTYPE](val transactionTTL: Int, val transactionKeepAliveInterva
 
 
 /**
-  * @param agentAddress            Address of producer in network
   * @param zkHosts                 Zk hosts to connect
   * @param zkRootPath              Zk root path for all metadata
   * @param zkSessionTimeout        Zk session timeout
@@ -64,4 +63,4 @@ class Options[USERTYPE](val transactionTTL: Int, val transactionKeepAliveInterva
   *                                PeerAgent
   *                                by default (threads_amount == used_producer_partitions)
   */
-class CoordinationOptions(val agentAddress: String, val zkHosts: List[InetSocketAddress], val zkRootPath: String, val zkSessionTimeout: Int, val zkConnectionTimeout: Int, val isLowPriorityToBeMaster: Boolean, val transport: TcpTransport, val threadPoolAmount: Int = -1)
+class CoordinationOptions(val zkHosts: List[InetSocketAddress], val zkRootPath: String, val zkSessionTimeout: Int, val zkConnectionTimeout: Int, val isLowPriorityToBeMaster: Boolean, val transport: TcpTransport, val threadPoolAmount: Int = -1)

@@ -81,7 +81,6 @@ class Producer[USERTYPE](val name: String,
     * (getNewTxn uuid; publish openTxn event; publish closeTxn event)
     */
   override val p2pAgent: PeerAgent = new PeerAgent(
-    agentAddress = pcs.agentAddress,
     zkHosts = pcs.zkHosts,
     zkRootPath = pcs.zkRootPath,
     zkSessionTimeout = pcs.zkSessionTimeout,

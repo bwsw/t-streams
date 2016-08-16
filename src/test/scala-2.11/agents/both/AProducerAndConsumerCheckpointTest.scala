@@ -1,4 +1,4 @@
-package agents.both.batch_insert.aerospike
+package agents.both
 
 import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
 import com.bwsw.tstreams.agents.consumer.{Consumer, ConsumerTransaction}
