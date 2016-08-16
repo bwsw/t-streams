@@ -314,7 +314,7 @@ class Producer[USERTYPE](val name: String,
   }
 
   /**
-    * Method to implement for concrete producer [[PeerAgent]] method
+    * Method to implement for concrete producer PeerAgent method
     * Need only if this producer is master
     *
     * @return UUID
@@ -378,7 +378,7 @@ class Producer[USERTYPE](val name: String,
 
   /**
     * Special method which waits until newTransaction method will be completed and after
-    * does materializetion. It's called from another thread (p2pAgent), not from thread of
+    * does materialization. It's called from another thread (p2pAgent), not from thread of
     * Producer.
     * @param msg
     */

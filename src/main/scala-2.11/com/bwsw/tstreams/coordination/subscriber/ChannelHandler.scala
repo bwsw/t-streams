@@ -13,7 +13,7 @@ import org.slf4j.LoggerFactory
 
 
 /**
-  * Incoming connections manager for [[ProducerEventReceiverTcpServer]]]
+  * Incoming connections manager
   */
 @Sharable
 class ChannelHandler(subscriberManager: CallbackManager) extends SimpleChannelInboundHandler[Message] {
@@ -29,10 +29,10 @@ class ChannelHandler(subscriberManager: CallbackManager) extends SimpleChannelIn
   }
 
   /**
-    * Triggered when new message [[Message]]] received
+    * Triggered when new message received
     *
     * @param ctx Netty ctx
-    * @param msg [[Message]]]
+    * @param msg Message
     */
   override def channelRead0(ctx: ChannelHandlerContext, msg: Message): Unit = {
     logger.debug(s"[READ PARTITION_${msg.partition}] ts=${msg.txnUuid.timestamp()} ttl=${msg.ttl} status=${msg.status}")
@@ -52,7 +52,7 @@ class ChannelHandler(subscriberManager: CallbackManager) extends SimpleChannelIn
 }
 
 /**
-  * Decoder to convert [[java.lang.String]] to [[Message]]]
+  * Decoder to convert string to message
   */
 class ProducerTopicMessageDecoder extends MessageToMessageDecoder[String] {
   val logger = LoggerFactory.getLogger(this.getClass)

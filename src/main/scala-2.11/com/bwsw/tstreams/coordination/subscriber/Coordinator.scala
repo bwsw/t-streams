@@ -68,7 +68,7 @@ class Coordinator(agentAddress: String,
   def isStoped: Boolean = stopped.get()
 
   /**
-    * Start listen of all [[com.bwsw.tstreams.agents.producer.Producer]]] updates
+    * Start listen of all  updates
     */
   def startListen() = {
     if(stopped.get)
@@ -176,7 +176,7 @@ class Coordinator(agentAddress: String,
   /**
     * Global distributed Lock on stream
     *
-    * @return [[com.twitter.common.zookeeper.DistributedLockImpl]]]
+    * @return
     */
   def getStreamLock(streamName: String) = {
     if(stopped.get)

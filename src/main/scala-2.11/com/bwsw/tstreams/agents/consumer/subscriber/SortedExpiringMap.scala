@@ -7,8 +7,8 @@ import org.apache.commons.collections4.map.PassiveExpiringMap
 import org.apache.commons.collections4.map.PassiveExpiringMap.ExpirationPolicy
 
 /**
-  * Map with expiring records based on [[expirationPolicy]]]
-  * in order which is determined by [[comparator]]]
+  * Map with expiring records based on expirationPolicy
+  * in order which is determined by comparator
   *
   * @param comparator       Comparator to organize order
   * @param expirationPolicy Policy of record expiration
