@@ -57,40 +57,48 @@ class ZookeeperDLMService(prefix: String, zkHosts: List[InetSocketAddress], zkSe
   }
 
   /**
-    * Allows to create path in Zookeeper in proper manner (with locks)
-    *
+    * Creates path recursively with lock
     * @param path
     * @param data
     * @param createMode
     * @tparam T
     * @return
     */
-  def create[T](path: String, data: T, createMode: CreateMode) = this.synchronized {
+  def create[T](path: String, data: T, createMode: CreateMode) = {
     val serialized = ZookeeperDLMService.serializer.serialize(data)
     var initPath = prefix + path.reverse.dropWhile(_ != '/').reverse.dropRight(1)
-
     if (initPath.isEmpty)
       initPath = "/"
-
-    LockUtil.withZkLockOrDieDo[Unit](getLock(s"/locks/create_path_lock"), (100, TimeUnit.SECONDS), Some(ZookeeperDLMService.logger), () => {
-      if (zkClient.exists(initPath, null) == null)
-        createPathRecursive(initPath, CreateMode.PERSISTENT) })
-
-    LockUtil.withZkLockOrDieDo[Unit](getLock(s"/locks/create_path_lock"), (100, TimeUnit.SECONDS), Some(ZookeeperDLMService.logger), () => {
-      if (zkClient.exists(prefix + path, null) == null)
-          zkClient.create(prefix + path, serialized.getBytes, Ids.OPEN_ACL_UNSAFE, createMode)
-      else {
-        throw new IllegalStateException(s"Path ${prefix + path} requested for creation already exist.")
-      }})
+    if (zkClient.exists(initPath, null) == null) {
+      LockUtil.withZkLockOrDieDo[Unit](getLock(s"/locks/create_path_lock"), (100, TimeUnit.SECONDS), Some(ZookeeperDLMService.logger), () => {
+        if (zkClient.exists(initPath, null) == null)
+          createPathRecursive(initPath, CreateMode.PERSISTENT) })
+    }
+    if (zkClient.exists(prefix + path, null) == null)
+      zkClient.create(prefix + path, serialized.getBytes, Ids.OPEN_ACL_UNSAFE, createMode)
+    else {
+      throw new IllegalStateException(s"Requested path ${prefix + path} already exists.")
+    }
   }
 
-  def setWatcher(path: String, watcher: Watcher): Unit = this.synchronized {
-    LockUtil.withZkLockOrDieDo[Unit](getLock(s"/locks/watcher_path_lock"), (100, TimeUnit.SECONDS), Some(ZookeeperDLMService.logger), () => {
-      if (zkClient.exists(prefix + path, null) == null)
-        createPathRecursive(prefix + path, CreateMode.PERSISTENT) })
+  /**
+    * Establishes watcher
+    * @param path
+    * @param watcher
+    */
+  def setWatcher(path: String, watcher: Watcher): Unit = {
+    if (zkClient.exists(prefix + path, null) == null) {
+      LockUtil.withZkLockOrDieDo[Unit](getLock(s"/locks/watcher_path_lock"), (100, TimeUnit.SECONDS), Some(ZookeeperDLMService.logger), () => {
+        if (zkClient.exists(prefix + path, null) == null)
+          createPathRecursive(prefix + path, CreateMode.PERSISTENT) })
+    }
     zkClient.getData(prefix + path, watcher, null)
   }
 
+  /**
+    *
+    * @param path
+    */
   def notify(path: String): Unit = this.synchronized {
     if (zkClient.exists(prefix + path, null) != null) {
       zkClient.setData(prefix + path, null, -1)
@@ -102,10 +110,21 @@ class ZookeeperDLMService(prefix: String, zkHosts: List[InetSocketAddress], zkSe
     zkClient.setData(prefix + path, string.getBytes, -1)
   }
 
+  /**
+    * Check if path exists
+    * @param path
+    * @return
+    */
   def exist(path: String): Boolean = this.synchronized {
     zkClient.exists(prefix + path, null) != null
   }
 
+  /**
+    * Get data for specified node
+    * @param path
+    * @tparam T
+    * @return
+    */
   def get[T: Manifest](path: String): Option[T] = this.synchronized {
     if (zkClient.exists(prefix + path, null) == null)
       None
@@ -115,6 +134,12 @@ class ZookeeperDLMService(prefix: String, zkHosts: List[InetSocketAddress], zkSe
     }
   }
 
+  /**
+    * Get data of all children nodes
+    * @param path
+    * @tparam T
+    * @return
+    */
   def getAllSubNodesData[T: Manifest](path: String): Option[List[T]] = this.synchronized {
     if (zkClient.exists(prefix + path, null) == null)
       None
@@ -125,6 +150,11 @@ class ZookeeperDLMService(prefix: String, zkHosts: List[InetSocketAddress], zkSe
     }
   }
 
+  /**
+    * Get path of all children nodes
+    * @param path
+    * @return
+    */
   def getAllSubPath(path: String): Option[List[String]] = this.synchronized {
     if (zkClient.exists(prefix + path, null) == null)
       None
@@ -134,10 +164,18 @@ class ZookeeperDLMService(prefix: String, zkHosts: List[InetSocketAddress], zkSe
     }
   }
 
+  /**
+    * Delete path
+    * @param path
+    */
   def delete(path: String) = this.synchronized {
     zkClient.delete(prefix + path, -1)
   }
 
+  /**
+    * Delete path recursively
+    * @param path
+    */
   def deleteRecursive(path: String): Unit = this.synchronized {
     val children = zkClient.getChildren(prefix + path, null, null).asScala
     if (children.nonEmpty) {
@@ -147,6 +185,11 @@ class ZookeeperDLMService(prefix: String, zkHosts: List[InetSocketAddress], zkSe
     zkClient.delete(prefix + path, -1)
   }
 
+  /**
+    * Create path recursively
+    * @param path
+    * @param mode
+    */
   private def createPathRecursive(path: String, mode: CreateMode) = this.synchronized {
     val splits = path.split("/").filter(x => x != "")
     def createRecursive(path: List[String], acc: List[String]): Unit = path match {
