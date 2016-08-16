@@ -11,9 +11,9 @@ import testutils._
 class AManyProducersStreamingInManyPartitionsAndConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
   val timeoutForWaiting = 60 * 5
   val totalPartitions = 4
-  val totalTxn = 1
+  val totalTxn = 100
   val totalElementsInTxn = 10
-  val producersAmount = 20
+  val producersAmount = 10
   val dataToSend = (for (part <- 0 until totalElementsInTxn) yield randomString).sorted
 
   f.setProperty(TSF_Dictionary.Stream.NAME, "test_stream").
@@ -38,7 +38,7 @@ class AManyProducersStreamingInManyPartitionsAndConsumerTest extends FlatSpec wi
       def run() {
         var i = 0
         while (i < totalTxn) {
-          //Thread.sleep(2000)
+          Thread.sleep(1000)
           val txn = p.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
           dataToSend.foreach(x => txn.send(x))
           txn.checkpoint()
@@ -103,7 +103,7 @@ class AManyProducersStreamingInManyPartitionsAndConsumerTest extends FlatSpec wi
     val port = TestUtils.getPort
     f.setProperty(TSF_Dictionary.Producer.BIND_PORT, port)
     f.getProducer[String](
-      name = "test_producer",
+      name = "test_producer-" + Thread.currentThread().getName(),
       txnGenerator = LocalGeneratorCreator.getGen(),
       converter = stringToArrayByteConverter,
       partitions = usedPartitions,

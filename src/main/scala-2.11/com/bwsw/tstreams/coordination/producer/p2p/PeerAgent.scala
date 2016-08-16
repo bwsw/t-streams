@@ -167,7 +167,7 @@ class PeerAgent(zkHosts: List[InetSocketAddress], zkRootPath: String, zkSessionT
         {
           PeerAgent.logger.debug(s"[INIT CLEAN] Delete agent as MASTER on address:{$myIPAddress} from stream: {$streamName}, partition:{$partition} because id was overdue.")
         }
-        deleteThisAgentFromMasters(partition)
+        unsetThisAgentAsMaster(partition)
       }
     }
     if (PeerAgent.logger.isDebugEnabled)
@@ -345,10 +345,7 @@ class PeerAgent(zkHosts: List[InetSocketAddress], zkRootPath: String, zkSessionT
         assert(!zkService.exist(s"/producers/master/$streamName/$partition"))
         val masterSettings = MasterSettings(myIPAddress, uniqueAgentId)
         zkService.create[MasterSettings](s"/producers/master/$streamName/$partition", masterSettings, CreateMode.EPHEMERAL)
-        if (PeerAgent.logger.isDebugEnabled)
-        {
-          PeerAgent.logger.debug(s"[SET MASTER]Agent:{$myIPAddress} in master now on stream: {$streamName}, partition: {$partition}.")
-        }
+        PeerAgent.logger.info(s"[SET MASTER ANNOUNCE] Producer ${producer.getAgentName} ($myIPAddress) - I was elected as master for stream/partition: ($streamName,$partition).")
       })
     })
 
@@ -358,13 +355,13 @@ class PeerAgent(zkHosts: List[InetSocketAddress], zkRootPath: String, zkSessionT
     *
     * @param partition Partition to set
     */
-  def deleteThisAgentFromMasters(partition: Int) =
+  def unsetThisAgentAsMaster(partition: Int) =
     LockUtil.withLockOrDieDo[Unit](lockManagingMaster, (100, TimeUnit.SECONDS), Some(PeerAgent.logger), () => {
       LockUtil.withZkLockOrDieDo[Unit](zkService.getLock(s"/producers/lock_master/$streamName/$partition"), (100, TimeUnit.SECONDS), Some(PeerAgent.logger), () => {
         zkService.delete(s"/producers/master/$streamName/$partition")
         if (PeerAgent.logger.isDebugEnabled)
         {
-          PeerAgent.logger.debug(s"[DELETE MASTER]Agent:{$myIPAddress} in NOT master now for stream: {$streamName}, partition: {$partition}.")
+          PeerAgent.logger.info(s"[USET MASTER ANNOUNCE] Producer ${producer.getAgentName} ($myIPAddress) - I'm no longer the master for stream/partition: ($streamName,$partition).")
         }
       })
     })
