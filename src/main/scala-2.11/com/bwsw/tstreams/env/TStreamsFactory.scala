@@ -6,6 +6,7 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.locks.ReentrantLock
 
+import com.aerospike.client.Host
 import com.aerospike.client.policy.{ClientPolicy, Policy, WritePolicy}
 import com.bwsw.tstreams.agents.consumer.Offsets.IOffset
 import com.bwsw.tstreams.agents.consumer.subscriber.{Callback, SubscribingConsumer}
@@ -687,7 +688,7 @@ class TStreamsFactory(envname: String = "T-streams") {
 
       val opts = new com.bwsw.tstreams.data.aerospike.Options(
         namespace = namespace,
-        hosts = NetworkUtil.getAerospikeCompatibleHostList(data_cluster_endpoints),
+        hosts = scala.Predef.Set.empty[Host] ++ NetworkUtil.getAerospikeCompatibleHostList(data_cluster_endpoints),
         clientPolicy = cp,
         writePolicy = wp,
         readPolicy = rp)

@@ -83,8 +83,7 @@ trait TestUtils {
   val stringToArrayByteConverter = new StringToArrayByteConverter
 
   //aerospike storage options
-  val hosts = List(
-    new Host("localhost", 3000))
+  val hosts = Set(new Host("localhost", 3000))
 
   val aerospikeOptions = new com.bwsw.tstreams.data.aerospike.Options("test", hosts)
   val zkService = new ZookeeperDLMService("", List(new InetSocketAddress("127.0.0.1", 21810)), 7, 7)
