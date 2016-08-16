@@ -6,6 +6,7 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.locks.ReentrantLock
 
+import com.aerospike.client.Host
 import com.aerospike.client.policy.{ClientPolicy, Policy, WritePolicy}
 import com.bwsw.tstreams.agents.consumer.Offsets.IOffset
 import com.bwsw.tstreams.agents.consumer.subscriber.{Callback, SubscribingConsumer}
@@ -21,8 +22,6 @@ import com.bwsw.tstreams.metadata.{MetadataStorage, MetadataStorageFactory}
 import com.bwsw.tstreams.policy.{AbstractPolicy, RoundRobinPolicy}
 import com.bwsw.tstreams.streams.TStream
 import org.slf4j.LoggerFactory
-
-import scala.collection.mutable
 import scala.collection.mutable.HashMap
 
 /**
@@ -454,7 +453,7 @@ class TStreamsFactory(envname: String = "T-streams") {
   propertyMap += (TSF_Dictionary.Data.Cluster.Cassandra.CONNECTION_TIMEOUT_MS     -> Cluster_cassandra_connection_timeout_ms_default)
   propertyMap += (TSF_Dictionary.Data.Cluster.Cassandra.READ_TIMEOUT_MS           -> Cluster_cassandra_read_timeout_ms_default)
 
-  val Cluster_hazelcast_synchronous_replicas_default = 1
+  val Cluster_hazelcast_synchronous_replicas_default = 0
   val Cluster_hazelcast_asynchronous_replicas_default = 0
   propertyMap += (TSF_Dictionary.Data.Cluster.Hazelcast.SYNCHRONOUS_REPLICAS -> Cluster_hazelcast_synchronous_replicas_default)
   propertyMap += (TSF_Dictionary.Data.Cluster.Hazelcast.ASYNCHRONOUS_REPLICAS -> Cluster_hazelcast_asynchronous_replicas_default)
@@ -687,7 +686,7 @@ class TStreamsFactory(envname: String = "T-streams") {
 
       val opts = new com.bwsw.tstreams.data.aerospike.Options(
         namespace = namespace,
-        hosts = NetworkUtil.getAerospikeCompatibleHostList(data_cluster_endpoints),
+        hosts = scala.Predef.Set.empty[Host] ++ NetworkUtil.getAerospikeCompatibleHostList(data_cluster_endpoints),
         clientPolicy = cp,
         writePolicy = wp,
         readPolicy = rp)
@@ -720,8 +719,16 @@ class TStreamsFactory(envname: String = "T-streams") {
 
       return dsf.getInstance(opts, pAsString(TSF_Dictionary.Data.Cluster.NAMESPACE))
     }
+    else if (pAsString(TSF_Dictionary.Data.Cluster.DRIVER) == TSF_Dictionary.Data.Cluster.Consts.DATA_DRIVER_HAZELCAST) {
+      val dsf = new com.bwsw.tstreams.data.hazelcast.Factory()
+      val opts = com.bwsw.tstreams.data.hazelcast.Options(
+        pAsString(TSF_Dictionary.Data.Cluster.NAMESPACE),
+        pAsInt(pAsString(TSF_Dictionary.Data.Cluster.Hazelcast.SYNCHRONOUS_REPLICAS)),
+        pAsInt(pAsString(TSF_Dictionary.Data.Cluster.Hazelcast.ASYNCHRONOUS_REPLICAS)))
+      return dsf.getInstance(opts)
+    }
     else {
-      throw new InvalidParameterException("Only TSF_Dictionary.Data.Cluster.Consts.DATA_DRIVER_CASSANDRA and " +
+      throw new InvalidParameterException("Only TSF_Dictionary.Data.Cluster.Consts.DATA_DRIVER_CASSANDRA, TSF_Dictionary.Data.Cluster.Consts.DATA_DRIVER_HAZELCAST and " +
         "TSF_Dictionary.Data.Cluster.Consts.DATA_DRIVER_AEROSPIKE engines " +
         "are supported currently in UniversalFactory. Received: " + pAsString(TSF_Dictionary.Data.Cluster.DRIVER))
     }
