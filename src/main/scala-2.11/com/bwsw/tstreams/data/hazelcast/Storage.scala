@@ -9,12 +9,21 @@ import scala.collection.mutable.ListBuffer
 import scala.collection.mutable.Queue
 
 /**
-  * Created by ivan on 12.08.16.
+  * Created by Ivan Kudryavtsev on 12.08.16.
   */
 class Storage(map: Factory.StorageMapType) extends IStorage[Array[Byte]] {
 
   private val logger = LoggerFactory.getLogger(this.getClass)
 
+  /**
+    * Get data from txn from storage
+    * @param streamName  Name of the stream
+    * @param partition   Number of stream partitions
+    * @param transaction Number of stream transactions
+    * @param from        Data unique number from which reading will start
+    * @param to          Data unique number from which reading will stop
+    * @return Queue of object which have storage type
+    */
   override def get(streamName: String,
                    partition: Int,
                    transaction: UUID,
@@ -34,6 +43,16 @@ class Storage(map: Factory.StorageMapType) extends IStorage[Array[Byte]] {
     */
   override def isClosed(): Boolean = false
 
+  /**
+    * Put data in txn in storage
+    * @param txn
+    * @param stream
+    * @param partition
+    * @param ttl
+    * @param lastItm
+    * @param data
+    * @return
+    */
   override def save(txn: UUID,
                     stream: String,
                     partition: Int,
