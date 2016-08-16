@@ -11,6 +11,7 @@ import com.bwsw.tstreams.common.{CassandraConnectorConf, ZookeeperDLMService, Me
 import com.bwsw.tstreams.converter.{ArrayByteToStringConverter, StringToArrayByteConverter}
 import com.bwsw.tstreams.data.aerospike.{Factory, Options}
 import com.bwsw.tstreams.data.cassandra.{Factory, Options}
+import com.bwsw.tstreams.data.hazelcast
 import com.bwsw.tstreams.debug.GlobalHooks
 import com.bwsw.tstreams.env.{TSF_Dictionary, TStreamsFactory}
 import com.bwsw.tstreams.metadata.MetadataStorageFactory
@@ -63,18 +64,20 @@ trait TestUtils {
   val randomKeyspace = createRandomKeyspace()
 
   val f = new TStreamsFactory()
-  f.setProperty(TSF_Dictionary.Metadata.Cluster.NAMESPACE, randomKeyspace).
-    setProperty(TSF_Dictionary.Metadata.Cluster.ENDPOINTS, "localhost:9142").
-    setProperty(TSF_Dictionary.Data.Cluster.NAMESPACE, "test").
-    setProperty(TSF_Dictionary.Coordination.ROOT, coordinationRoot).
-    setProperty(TSF_Dictionary.Coordination.ENDPOINTS, "localhost:21810").
-    setProperty(TSF_Dictionary.Consumer.Subscriber.BIND_PORT, TestUtils.getPort).
-    setProperty(TSF_Dictionary.Consumer.Subscriber.PERSISTENT_QUEUE_PATH, randomKeyspace).
-    setProperty(TSF_Dictionary.Stream.NAME, "test-stream")
+  f.setProperty(TSF_Dictionary.Metadata.Cluster.NAMESPACE, randomKeyspace)
+    .setProperty(TSF_Dictionary.Metadata.Cluster.ENDPOINTS, "localhost:9142")
+    .setProperty(TSF_Dictionary.Data.Cluster.NAMESPACE, "test")
+    .setProperty(TSF_Dictionary.Coordination.ROOT, coordinationRoot)
+    .setProperty(TSF_Dictionary.Coordination.ENDPOINTS, "localhost:21810")
+    .setProperty(TSF_Dictionary.Consumer.Subscriber.BIND_PORT, TestUtils.getPort)
+    .setProperty(TSF_Dictionary.Consumer.Subscriber.PERSISTENT_QUEUE_PATH, randomKeyspace)
+    .setProperty(TSF_Dictionary.Stream.NAME, "test-stream")
+    .setProperty(TSF_Dictionary.Data.Cluster.DRIVER, TSF_Dictionary.Data.Cluster.Consts.DATA_DRIVER_HAZELCAST)
 
   //metadata/data factories
   val metadataStorageFactory = new MetadataStorageFactory
   val storageFactory = new com.bwsw.tstreams.data.aerospike.Factory
+  val hazelcastStorageFactory = new hazelcast.Factory
   val cassandraStorageFactory = new com.bwsw.tstreams.data.cassandra.Factory
 
 
@@ -83,10 +86,10 @@ trait TestUtils {
   val stringToArrayByteConverter = new StringToArrayByteConverter
 
   //aerospike storage options
-  val hosts = List(
-    new Host("localhost", 3000))
+  val hosts = Set(new Host("localhost", 3000))
 
   val aerospikeOptions = new com.bwsw.tstreams.data.aerospike.Options("test", hosts)
+  val hazelcastOptions = new hazelcast.Options("test", 0,0)
   val zkService = new ZookeeperDLMService("", List(new InetSocketAddress("127.0.0.1", 21810)), 7, 7)
 
   removeZkMetadata(f.getProperty(TSF_Dictionary.Coordination.ROOT).toString)

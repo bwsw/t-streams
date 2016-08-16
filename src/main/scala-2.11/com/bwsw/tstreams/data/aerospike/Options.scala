@@ -11,12 +11,13 @@ import com.aerospike.client.policy.{ClientPolicy, Policy, WritePolicy}
   * @param readPolicy   custom read policy for storage
   */
 class Options(val namespace: String,
-              val hosts: List[Host],
+              val hosts: Set[Host],
               var clientPolicy: ClientPolicy = null,
               var writePolicy: WritePolicy = null,
               var readPolicy: Policy = null) {
+
   if (namespace == null)
-    throw new Exception("namespace can't be null")
+    throw new Exception("Namespace can't be null")
 
   /**
     * Client policy

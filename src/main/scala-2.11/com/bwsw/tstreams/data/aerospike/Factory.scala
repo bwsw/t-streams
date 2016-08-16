@@ -14,7 +14,7 @@ class Factory {
   /**
     * Map for memorize clients which are already created
     */
-  private val aerospikeClients = scala.collection.mutable.Map[(List[Host], ClientPolicy), AerospikeClient]()
+  private val aerospikeClients = scala.collection.mutable.Map[(Set[Host], ClientPolicy), AerospikeClient]()
 
   private var isClosed = false
 
@@ -39,7 +39,7 @@ class Factory {
         aerospikeClients((aerospikeOptions.hosts, aerospikeOptions.clientPolicy))
       }
       else {
-        val client = new AerospikeClient(aerospikeOptions.clientPolicy, aerospikeOptions.hosts: _*)
+        val client = new AerospikeClient(aerospikeOptions.clientPolicy, aerospikeOptions.hosts.toList: _*)
         aerospikeClients((aerospikeOptions.hosts, aerospikeOptions.clientPolicy)) = client
         client
       }
