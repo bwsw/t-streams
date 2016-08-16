@@ -15,9 +15,18 @@ class Factory {
   }
 }
 
+/**
+  * Singleton which does all one-time initialization for Hazelcast
+  */
 object Factory {
   val isInitialized = new AtomicBoolean(false)
   var hazelcastInstance: HazelcastInstance = null
+
+  /**
+    * Initialization method itself. Works only one time, after returns created object
+    * @param opts
+    * @return
+    */
   def init(opts: Options): HazelcastInstance = {
     if(isInitialized.getAndSet(true))
       return hazelcastInstance
@@ -31,5 +40,8 @@ object Factory {
     hazelcastInstance
   }
 
+  /**
+    * Type stored in Hazelcast map
+    */
   type StorageMapType = Map[String, List[Array[Byte]]]
 }
