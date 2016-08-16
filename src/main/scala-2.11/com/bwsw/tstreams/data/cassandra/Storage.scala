@@ -65,44 +65,11 @@ class Storage(cluster: Cluster, session: Session, keyspace: String) extends ISto
   }
 
   /**
-    * Initialize data storage
-    */
-  override def init(): Unit = {
-    logger.info("start initializing CassandraStorage table")
-    session.execute(s"CREATE TABLE IF NOT EXISTS data_queue ( " +
-      s"stream text, " +
-      s"partition int, " +
-      s"transaction timeuuid, " +
-      s"seq int, " +
-      s"data blob, " +
-      s"PRIMARY KEY ((stream, partition), transaction, seq))")
-    logger.info("finished initializing CassandraStorage table")
-  }
-
-  /**
-    * Remove all data in data storage
-    */
-  override def truncate(): Unit = {
-    logger.info("start truncating CassandraStorage data_queue table")
-    session.execute("TRUNCATE data_queue")
-    logger.info("finished truncating CassandraStorage data_queue table")
-  }
-
-  /**
-    * Remove storage
-    */
-  override def remove(): Unit = {
-    logger.info("start removing CassandraStorage data_queue table")
-    session.execute("DROP TABLE IF EXISTS data_queue")
-    logger.info("finished removing CassandraStorage data_queue table")
-  }
-
-  /**
     * Checking closed or not this storage
     *
     * @return Closed concrete storage or not
     */
-  override def isClosed(): Boolean = session.isClosed && cluster.isClosed
+  override def isClosed(): Boolean = session.isClosed
 
   override def save(txn: UUID,
                     stream: String,
