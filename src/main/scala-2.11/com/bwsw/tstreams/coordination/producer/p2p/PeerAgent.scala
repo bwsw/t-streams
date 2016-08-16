@@ -126,8 +126,7 @@ class PeerAgent(agentAddress: String, zkHosts: List[InetSocketAddress], zkRootPa
     val agentsOpt = zkService.getAllSubPath(s"/producers/agents/$streamName/$partition")
     agentsOpt.foreach{ agents =>
       //try to remove overdue agents information
-      // TODO wrong!!!! 1.1.1.1:1111  and 11.1.1.1:1111 will match
-      val filtered = agents.filter(x => x.contains(agentAddress) && !x.contains(uniqueAgentId))
+      val filtered = agents.filter(x => x.contains("agent_" + agentAddress + "_") && !x.contains(uniqueAgentId))
       filtered foreach { path =>
         if (logger.isDebugEnabled)
         {
