@@ -20,8 +20,8 @@ object CassandraHelper {
     */
   def createKeyspace(session: Session, keyspace: String) =
     session.execute(s"CREATE KEYSPACE IF NOT EXISTS $keyspace WITH replication = " +
-    s" {'class': '${replicationStrategy}', 'replication_factor': '{$replicationFactor}'} " +
-    s" AND durable_writes = ${durableWrites}")
+    s" {'class': '$replicationStrategy', 'replication_factor': '$replicationFactor'} " +
+    s" AND durable_writes = $durableWrites")
 
   /**
     * Metadata tables creator helper
