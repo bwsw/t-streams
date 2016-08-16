@@ -61,7 +61,7 @@ class Options[USERTYPE](val transactionTTL: Int, val transactionKeepAliveInterva
   *                                of this agent
   * @param transport               Transport providing interaction between agents
   * @param threadPoolAmount        Thread pool amount which is used by
-  *                                [[PeerAgent]]]
+  *                                PeerAgent
   *                                by default (threads_amount == used_producer_partitions)
   */
 class CoordinationOptions(val agentAddress: String, val zkHosts: List[InetSocketAddress], val zkRootPath: String, val zkSessionTimeout: Int, val zkConnectionTimeout: Int, val isLowPriorityToBeMaster: Boolean, val transport: TcpTransport, val threadPoolAmount: Int = -1)

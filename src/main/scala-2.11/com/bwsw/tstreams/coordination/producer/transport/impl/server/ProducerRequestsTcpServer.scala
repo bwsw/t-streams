@@ -34,7 +34,7 @@ class ProducerRequestsTcpServer(host: String, port: Int, handler: SimpleChannelI
 
 
   /**
-    * Response with [[IMessage]]]
+    * Response with
     */
   def respond(msg: IMessage): Unit = {
     msg.channel.writeAndFlush(
