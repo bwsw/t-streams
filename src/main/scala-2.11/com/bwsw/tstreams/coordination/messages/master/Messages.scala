@@ -124,7 +124,7 @@ case class DeleteMasterRequest(senderID: String, receiverID: String, partition: 
     val response = {
       if (master == agent.getAgentAddress) {
         agent.localMasters.remove(partition)
-        agent.deleteThisAgentFromMasters(partition)
+        agent.unsetThisAgentAsMaster(partition)
         agent.getUsedPartitions foreach { partition =>
           agent.updateThisAgentPriority(partition, value = 1)
         }

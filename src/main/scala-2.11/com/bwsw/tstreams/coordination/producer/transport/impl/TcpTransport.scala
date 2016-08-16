@@ -5,6 +5,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 
 import com.bwsw.tstreams.common.FirstFailLockableTaskExecutor
 import com.bwsw.tstreams.coordination.messages.master._
+import com.bwsw.tstreams.coordination.messages.state.Message
 import com.bwsw.tstreams.coordination.producer.transport.impl.client.InterProducerCommunicationClient
 import com.bwsw.tstreams.coordination.producer.transport.impl.server.ProducerRequestsTcpServer
 import io.netty.channel.{Channel, ChannelHandler, ChannelHandlerContext, SimpleChannelInboundHandler}
@@ -17,6 +18,8 @@ import org.slf4j.LoggerFactory
 class TcpTransport(address: String, timeoutMs: Int, retryCount: Int = 3, retryDelayMs: Int = 5000) {
   val isIgnore = new AtomicBoolean(false)
   var callback: (Channel,String) => Unit = null
+
+  def getIpAddress() = address
 
   @ChannelHandler.Sharable
   class ChannelHandler extends SimpleChannelInboundHandler[String] {
@@ -43,11 +46,12 @@ class TcpTransport(address: String, timeoutMs: Int, retryCount: Int = 3, retryDe
   /**
     * Request to disable concrete master
     *
-    * @param msg     Msg to disable master
+    * @param to
+    * @param partition
     * @return DeleteMasterResponse or null
     */
-  def deleteMasterRequest(msg: DeleteMasterRequest): IMessage = {
-    val response = client.sendAndWaitResponse(msg, isExceptionOnFail = false)
+  def deleteMasterRequest(to: String, partition: Int): IMessage = {
+    val response = client.sendAndWaitResponse(DeleteMasterRequest(address, to, partition), isExceptionOnFail = false)
     response
   }
 
@@ -56,66 +60,57 @@ class TcpTransport(address: String, timeoutMs: Int, retryCount: Int = 3, retryDe
   /**
     * Request to figure out state of receiver
     *
-    * @param msg Message
+    * @param to
+    * @param partition
     * @return PingResponse or null
     */
-  def pingRequest(msg: PingRequest): IMessage = {
-    val response = client.sendAndWaitResponse(msg, isExceptionOnFail = false)
+  def pingRequest(to: String, partition: Int): IMessage = {
+    val response = client.sendAndWaitResponse(PingRequest(address, to, partition), isExceptionOnFail = false)
     response
-  }
-
-  /**
-    * Send empty request (just for testing)
-    *
-    * @param msg EmptyRequest
-    */
-  def stopRequest(msg: EmptyRequest): Unit = {
-    client.sendAndNoWaitResponse(msg, isExceptionOnFail = true)
   }
 
   /**
     * Request to set concrete master
     *
-    * @param msg     Message
+    * @param to
+    * @param partition
     * @return SetMasterResponse or null
     */
-  def setMasterRequest(msg: SetMasterRequest): IMessage = {
-    val response: IMessage = client.sendAndWaitResponse(msg, isExceptionOnFail = false)
+  def setMasterRequest(to: String, partition: Int): IMessage = {
+    val response: IMessage = client.sendAndWaitResponse(SetMasterRequest(address, to, partition), isExceptionOnFail = false)
     response
   }
 
   /**
     * Request to get Txn
     *
-    * @param msg     Message
+    * @param to
+    * @param partition
     * @return TransactionResponse or null
     */
-  def transactionRequest(msg: NewTransactionRequest): IMessage = {
-    val start = System.currentTimeMillis()
-    val response: IMessage = client.sendAndWaitResponse(msg, isExceptionOnFail = false)
-    val delaySvr = response.remotePeerTimestamp - msg.remotePeerTimestamp
-    val end = System.currentTimeMillis()
-    if(IMessage.logger.isDebugEnabled)
-      IMessage.logger.debug(s"Server view: ${delaySvr}, client view: ${end - start}")
+  def transactionRequest(to: String, partition: Int): IMessage = {
+    val response: IMessage = client.sendAndWaitResponse(NewTransactionRequest(address, to, partition), isExceptionOnFail = false)
     response
   }
 
   /**
     * Request to publish event about Txn
     *
+    * @param to
     * @param msg     Message
     */
-  def publishRequest(msg: PublishRequest): Unit = {
-    client.sendAndNoWaitResponse(msg, isExceptionOnFail = true)
+  def publishRequest(to: String, msg: Message): Unit = {
+    client.sendAndNoWaitResponse(PublishRequest(address, to, msg) , isExceptionOnFail = true)
   }
 
   /**
     * Request to publish event about Txn
     *
+    * @param to
     * @param msg     Message
     */
-  def materializeRequest(msg: MaterializeRequest): Unit = {
-    client.sendAndNoWaitResponse(msg, isExceptionOnFail = true)
+  def materializeRequest(to: String, msg: Message): Unit = {
+    client.sendAndNoWaitResponse(MaterializeRequest(address, to , msg), isExceptionOnFail = true)
   }
 
   /**
@@ -130,7 +125,7 @@ class TcpTransport(address: String, timeoutMs: Int, retryCount: Int = 3, retryDe
     * Stop transport listen incoming messages
     */
   def stop(): Unit = {
-    IMessage.logger.warn(s"Transport is shutting down.")
+    IMessage.logger.info(s"Transport is shutting down.")
     client.close()
     server.stop()
     executor.shutdownOrDie(100, TimeUnit.SECONDS)
