@@ -1,15 +1,10 @@
-package agents.both.batch_insert.aerospike
-
-import java.net.InetSocketAddress
+package agents.both
 
 import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
-import com.bwsw.tstreams.agents.consumer.{Consumer, ConsumerOptions, ConsumerTransaction}
-import com.bwsw.tstreams.agents.producer.DataInsertType.BatchInsert
-import com.bwsw.tstreams.agents.producer.{Producer, Options, CoordinationOptions, NewTransactionProducerPolicy}
+import com.bwsw.tstreams.agents.consumer.{ConsumerTransaction}
+import com.bwsw.tstreams.agents.producer.{NewTransactionProducerPolicy}
 import com.bwsw.tstreams.common.CassandraHelper
-import com.bwsw.tstreams.coordination.producer.transport.impl.TcpTransport
 import com.bwsw.tstreams.env.TSF_Dictionary
-import com.bwsw.tstreams.streams.TStream
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import testutils._
 

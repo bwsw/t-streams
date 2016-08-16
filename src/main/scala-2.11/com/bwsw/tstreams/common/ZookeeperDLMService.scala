@@ -38,6 +38,8 @@ class ZookeeperDLMService(prefix: String, zkHosts: List[InetSocketAddress], zkSe
   private val twitterZkClient = new ZooKeeperClient(st, zkHosts.asJava)
   private val zkClient        = twitterZkClient.get(ct)
 
+  ZookeeperDLMService.logger.info("Starting DLM service")
+
   if(ZookeeperDLMService.logger.isDebugEnabled) {
     ZookeeperDLMService.logger.debug("Zookeeper session timeout is set to " + st)
     ZookeeperDLMService.logger.debug("Zookeeper connection timeout is set to " + ct)

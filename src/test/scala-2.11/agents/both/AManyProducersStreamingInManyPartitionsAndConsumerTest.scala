@@ -1,4 +1,4 @@
-package agents.both.batch_insert.aerospike
+package agents.both
 
 import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
 import com.bwsw.tstreams.agents.producer.{Producer, NewTransactionProducerPolicy}
@@ -11,9 +11,9 @@ import testutils._
 class AManyProducersStreamingInManyPartitionsAndConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
   val timeoutForWaiting = 60 * 5
   val totalPartitions = 4
-  val totalTxn = 10
-  val totalElementsInTxn = 3
-  val producersAmount = 10
+  val totalTxn = 1
+  val totalElementsInTxn = 10
+  val producersAmount = 20
   val dataToSend = (for (part <- 0 until totalElementsInTxn) yield randomString).sorted
 
   f.setProperty(TSF_Dictionary.Stream.NAME, "test_stream").
