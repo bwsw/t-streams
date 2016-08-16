@@ -1,8 +1,7 @@
 package com.bwsw.tstreams.agents.producer
 
 import java.util.UUID
-import java.util.concurrent.{CountDownLatch, TimeUnit}
-import java.util.concurrent.atomic.{AtomicBoolean, AtomicInteger}
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantLock
 
 import com.bwsw.tstreams.agents.group.ProducerCheckpointInfo
@@ -49,7 +48,7 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
   /**
     * BasicProducerTransaction logger for logging
     */
-  Transaction.logger.debug("Open transaction {} for\nstream, partition: {}, {}", List(getTransactionUUID, txnOwner.stream.getName, partition))
+  Transaction.logger.debug(s"Open transaction ${getTransactionUUID} for\nstream, partition: ${txnOwner.stream.getName}, ${}")
 
   /**
     *
@@ -65,14 +64,17 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
     * makes transaction materialized
     */
   def makeMaterialized(): Unit = {
-    Transaction.logger.debug("Materialize transaction {} for\nstream, partition: {}, {}", List(getTransactionUUID, txnOwner.stream.getName, partition))
     state.makeMaterialized()
   }
 
   def awaitMaterialized(): Unit = {
-    Transaction.logger.debug("Await for transaction {} to be materialized\nfor stream,partition : {},{}", List(getTransactionUUID, txnOwner.stream.getName, partition))
+    if(Transaction.logger.isDebugEnabled) {
+      Transaction.logger.debug(s"Await for transaction ${getTransactionUUID} to be materialized\nfor stream,partition : ${txnOwner.stream.getName},${partition}")
+    }
     state.awaitMaterialization(txnOwner.producerOptions.coordinationOptions.transport.getTimeout())
-    Transaction.logger.debug("Transaction {} is materialized\nfor stream,partition : {}, {}", List(getTransactionUUID, txnOwner.stream.getName, partition))
+    if(Transaction.logger.isDebugEnabled) {
+      Transaction.logger.debug(s"Transaction ${getTransactionUUID} is materialized\nfor stream,partition : ${txnOwner.stream.getName}, ${partition}")
+    }
   }
 
   /**
@@ -104,14 +106,13 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
   def send(obj: USERTYPE): Unit = {
     state.isOpenedOrDie
     val number = data.put(obj, txnOwner.producerOptions.converter)
-    val job = txnOwner.producerOptions.insertType match {
-      case DataInsertType.BatchInsert(size) =>
-        if (number % size == 0) {
-          data.save()
-        }
-        null
-      case DataInsertType.SingleElementInsert =>
+    val job = {
+      if (number % txnOwner.producerOptions.batchSize == 0) {
         data.save()
+      }
+      else {
+        null
+      }
     }
     if (job != null) jobs += job
   }
@@ -120,22 +121,11 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
     * Does actual send of the data that is not sent yet
     */
   def finalizeDataSend(): Unit = {
-    txnOwner.producerOptions.insertType match {
-      case DataInsertType.BatchInsert(size) =>
-        val job: () => Unit = data.save()
-        if (job != null)
-          jobs += job
-      case DataInsertType.SingleElementInsert =>
-    }
+    val job = data.save()
+    if (job != null) jobs += job
   }
 
   private def cancelAsync() = {
-    txnOwner.producerOptions.insertType match {
-      case DataInsertType.BatchInsert(_) =>
-
-      case DataInsertType.SingleElementInsert =>
-    }
-
     txnOwner.stream.metadataStorage.commitEntity.deleteAsync(
       streamName  = txnOwner.stream.getName,
       partition   = partition,
@@ -147,7 +137,10 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
           status = TransactionStatus.cancel,
           partition = partition)
         txnOwner.p2pAgent.publish(msg)
-        Transaction.logger.debug("[CANCEL PARTITION_{}] ts={} status={}", List(msg.partition, msg.txnUuid.toString, msg.status.toString))
+        if(Transaction.logger.isDebugEnabled)
+        {
+          Transaction.logger.debug(s"[CANCEL PARTITION_${msg.partition}] ts=${msg.txnUuid.toString} status=${msg.status.toString}")
+        }
       })
   }
 
@@ -166,8 +159,9 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
   }
 
   private def checkpointPostEventPart() : Unit = {
-    Transaction.logger.debug(s"[COMMIT PARTITION_{}] ts={}", partition, transactionUuid.toString)
-
+    if(Transaction.logger.isDebugEnabled) {
+      Transaction.logger.debug(s"[COMMIT PARTITION_{}] ts={}", partition, transactionUuid.toString)
+    }
     //debug purposes only
     {
       val interruptExecution: Boolean = try {
@@ -188,7 +182,9 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
       status = TransactionStatus.postCheckpoint,
       partition = partition))
 
-    Transaction.logger.debug("[FINAL CHECKPOINT PARTITION_{}] ts={}", partition, transactionUuid.toString)
+    if(Transaction.logger.isDebugEnabled) {
+      Transaction.logger.debug("[FINAL CHECKPOINT PARTITION_{}] ts={}", partition, transactionUuid.toString)
+    }
   }
 
 
@@ -198,7 +194,9 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
     if (getDataItemsCount > 0) {
       jobs.foreach(x => x())
 
-      Transaction.logger.debug("[START PRE CHECKPOINT PARTITION_{}] ts={}", partition, transactionUuid.toString)
+      if(Transaction.logger.isDebugEnabled) {
+        Transaction.logger.debug("[START PRE CHECKPOINT PARTITION_{}] ts={}", partition, transactionUuid.toString)
+      }
 
       txnOwner.p2pAgent.publish(Message(
         txnUuid = transactionUuid,
@@ -258,7 +256,9 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
         if (getDataItemsCount > 0) {
           jobs.foreach(x => x())
 
-          Transaction.logger.debug("[START PRE CHECKPOINT PARTITION_{}] ts={}", partition, transactionUuid.toString)
+          if(Transaction.logger.isDebugEnabled) {
+            Transaction.logger.debug("[START PRE CHECKPOINT PARTITION_{}] ts={}", partition, transactionUuid.toString)
+          }
 
           txnOwner.p2pAgent.publish(Message(
             txnUuid = transactionUuid,
@@ -276,8 +276,9 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
             totalCnt = getDataItemsCount,
             ttl = txnOwner.stream.getTTL)
 
-          Transaction.logger.debug(s"[COMMIT PARTITION_{}] ts={}", partition, transactionUuid.toString)
-
+          if(Transaction.logger.isDebugEnabled) {
+            Transaction.logger.debug("[COMMIT PARTITION_{}] ts={}", partition, transactionUuid.toString)
+          }
           //debug purposes only
           GlobalHooks.invoke(GlobalHooks.afterCommitFailure)
 
@@ -287,8 +288,9 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
             status = TransactionStatus.postCheckpoint,
             partition = partition))
 
-          Transaction.logger.debug("[FINAL CHECKPOINT PARTITION_{}] ts={}", partition, transactionUuid.toString)
-
+          if(Transaction.logger.isDebugEnabled) {
+            Transaction.logger.debug("[FINAL CHECKPOINT PARTITION_{}] ts={}", partition, transactionUuid.toString)
+          }
         }
         else {
           txnOwner.p2pAgent.publish(Message(
@@ -314,7 +316,10 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
       ttl = txnOwner.producerOptions.transactionTTL,
       status = TransactionStatus.update,
       partition = partition))
-    Transaction.logger.debug("[KEEP_ALIVE THREAD PARTITION_PARTITION_{}] ts={} status={}", List(partition, transactionUuid.toString, TransactionStatus.update))
+
+    if(Transaction.logger.isDebugEnabled) {
+      Transaction.logger.debug(s"[KEEP_ALIVE THREAD PARTITION_PARTITION_${partition}] ts=${transactionUuid.toString} status=${TransactionStatus.update}")
+    }
   }
 
   def updateTxnKeepAliveState(): Unit = {
@@ -337,7 +342,10 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
     }
 
     //-1 here indicate that transaction is started but is not finished yet
-    Transaction.logger.debug("Update event for txn {}, partition: {}", transactionUuid, partition)
+    if(Transaction.logger.isDebugEnabled) {
+      Transaction.logger.debug("Update event for txn {}, partition: {}", transactionUuid, partition)
+    }
+
     val f = txnOwner.stream.metadataStorage.commitEntity.commitAsync(
     streamName = txnOwner.stream.getName,
     partition = partition,

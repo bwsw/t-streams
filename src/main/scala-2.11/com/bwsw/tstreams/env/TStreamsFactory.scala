@@ -11,7 +11,6 @@ import com.aerospike.client.policy.{ClientPolicy, Policy, WritePolicy}
 import com.bwsw.tstreams.agents.consumer.Offsets.IOffset
 import com.bwsw.tstreams.agents.consumer.subscriber.{Callback, SubscribingConsumer}
 import com.bwsw.tstreams.agents.consumer.{Consumer, ConsumerOptions, SubscriberCoordinationOptions}
-import com.bwsw.tstreams.agents.producer.DataInsertType.{AbstractInsertType, BatchInsert, SingleElementInsert}
 import com.bwsw.tstreams.agents.producer.{CoordinationOptions, Options, Producer}
 import com.bwsw.tstreams.common.{CassandraConnectorConf, LockUtil, NetworkUtil}
 import com.bwsw.tstreams.converter.IConverter
@@ -885,16 +884,12 @@ class TStreamsFactory(envname: String = "T-streams") {
       assert(pAsInt(TSF_Dictionary.Producer.Transaction.TTL, Producer_transaction_ttl_default) >=
         pAsInt(TSF_Dictionary.Producer.Transaction.KEEP_ALIVE, Producer_transaction_keep_alive_default) * 3)
 
-      var insertType: AbstractInsertType = SingleElementInsert
-
       val insertCnt = pAsInt(TSF_Dictionary.Producer.Transaction.DATA_WRITE_BATCH_SIZE, Producer_transaction_data_write_batch_size_default)
       pAssertIntRange(insertCnt,
         Producer_transaction_data_write_batch_size_min, Producer_transaction_data_write_batch_size_max)
 
-      if (insertCnt > 1)
-        insertType = BatchInsert(insertCnt)
 
-      val po = new Options[USERTYPE](transactionTTL = pAsInt(TSF_Dictionary.Producer.Transaction.TTL, Producer_transaction_ttl_default), transactionKeepAliveInterval = pAsInt(TSF_Dictionary.Producer.Transaction.KEEP_ALIVE, Producer_transaction_keep_alive_default), writePolicy = writePolicy, insertType = insertType, txnGenerator = txnGenerator, coordinationOptions = cao, converter = converter)
+      val po = new Options[USERTYPE](transactionTTL = pAsInt(TSF_Dictionary.Producer.Transaction.TTL, Producer_transaction_ttl_default), transactionKeepAliveInterval = pAsInt(TSF_Dictionary.Producer.Transaction.KEEP_ALIVE, Producer_transaction_keep_alive_default), writePolicy = writePolicy, batchSize = insertCnt, txnGenerator = txnGenerator, coordinationOptions = cao, converter = converter)
 
       new Producer[USERTYPE](name = name, stream = stream, producerOptions = po)
     })
