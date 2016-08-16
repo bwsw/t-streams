@@ -14,9 +14,9 @@ import io.netty.handler.codec.{DelimiterBasedFrameDecoder, Delimiters}
 import io.netty.handler.logging.{LogLevel, LoggingHandler}
 
 /**
-  * Listener of [[Message]]
-  *
-  * @param port Listener port
+  * Event listener which receives events from Producers.
+  * @param host Listener host bind address
+  * @param port Listener port bind address
   */
 class ProducerEventReceiverTcpServer(host: String, port: Int) {
   private val bossGroup = new NioEventLoopGroup(1)
@@ -28,7 +28,7 @@ class ProducerEventReceiverTcpServer(host: String, port: Int) {
   private val isStopped = new AtomicBoolean(false)
 
   /**
-    * Stop to listen [[Message]]]
+    * Stop to listen incoming messages from Producers
     */
   def stop(): Unit = {
     if(isStopped.getAndSet(true))
@@ -39,7 +39,7 @@ class ProducerEventReceiverTcpServer(host: String, port: Int) {
   }
 
   /**
-    * Add new event to [[channelHandler]]]
+    * Adds new event handler for messages
     *
     * @param callback Event callback
     */
@@ -50,8 +50,7 @@ class ProducerEventReceiverTcpServer(host: String, port: Int) {
   }
 
   /**
-    * Retrieve count of accepted
-    * connection managed by [[channelHandler]]]
+    * Retrieve amount of connections
     */
   def getConnectionsAmount(): Int = {
     if(isStopped.get)

@@ -21,7 +21,7 @@ import scala.util.Random
 
 
 /**
- * Agent for providing peer to peer interaction between [[Producer]]]
+ * Agent for providing peer to peer interaction between Producers
  *
  * @param agentAddress Concrete agent address
  * @param zkHosts ZkHosts to connect

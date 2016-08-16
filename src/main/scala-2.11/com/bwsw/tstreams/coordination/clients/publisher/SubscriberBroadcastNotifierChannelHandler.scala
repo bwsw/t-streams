@@ -71,7 +71,7 @@ class SubscriberBroadcastNotifierChannelHandler(connectionManager: SubscriberBro
 }
 
 /**
-  * Encoder [[Message]]] to [[java.lang.String]]]
+  * Encoder Message to java.lang.String
   */
 class MasterMessageEncoder extends MessageToMessageEncoder[Message] {
 

@@ -43,9 +43,9 @@ class ProducerToSubscriberNotifier(prefix: String,
   }
 
   /**
-    * Publish [[Message]]] to all accepted subscribers
+    * Publish Message to all accepted subscribers
     *
-    * @param msg [[Message]]]
+    * @param msg Message
     */
   def publish(msg: Message, onComplete: () => Unit) = {
     broadcaster.broadcast(msg, onComplete)
@@ -64,7 +64,7 @@ class ProducerToSubscriberNotifier(prefix: String,
     * Get global distributed lock on stream
     *
     * @param streamName Stream name
-    * @return [[com.twitter.common.zookeeper.DistributedLockImpl]]]
+    * @return com.twitter.common.zookeeper.DistributedLockImpl
     */
   def getStreamLock(streamName: String) = {
     val lock = zkService.getLock(s"/global/stream/$streamName")

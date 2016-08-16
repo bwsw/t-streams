@@ -15,7 +15,7 @@ object InterProducerCommunicationClient {
 }
 
 /**
-  * Client for sending [[IMessage]]]
+  * Client for sending messages to PeerAgents
   */
 class InterProducerCommunicationClient(timeoutMs: Int, retryCount: Int = 3, retryDelayMs: Int = 5000) {
   private val peerMap = mutable.Map[String, Socket]()
