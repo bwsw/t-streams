@@ -8,15 +8,20 @@ import com.datastax.driver.core.Session
   */
 object CassandraHelper {
 
+  var replicationStrategy = "SimpleStrategy"
+  var replicationFactor = "1"
+  var durableWrites = "true"
+
   /**
     * Keyspace creator helper
     *
     * @param session  Session instance which will be used for keyspace creation
     * @param keyspace Keyspace name
     */
-  def createKeyspace(session: Session, keyspace: String) = session.execute(s"CREATE KEYSPACE IF NOT EXISTS $keyspace WITH replication = " +
-    s" {'class': 'SimpleStrategy', 'replication_factor': '1'} " +
-    s" AND durable_writes = true")
+  def createKeyspace(session: Session, keyspace: String) =
+    session.execute(s"CREATE KEYSPACE IF NOT EXISTS $keyspace WITH replication = " +
+    s" {'class': '$replicationStrategy', 'replication_factor': '$replicationFactor'} " +
+    s" AND durable_writes = $durableWrites")
 
   /**
     * Metadata tables creator helper
@@ -52,7 +57,7 @@ object CassandraHelper {
       s"partition int, " +
       s"transaction timeuuid, " +
       s"cnt int, " +
-      s"PRIMARY KEY (stream, partition, transaction))")
+      s"PRIMARY KEY ((stream, partition), transaction))")
 
 
     session.execute(s"CREATE TABLE IF NOT EXISTS $keyspace.generators (" +

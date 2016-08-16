@@ -28,13 +28,6 @@ class Storage(client: AerospikeClient, options: Options) extends IStorage[Array[
     client.isConnected
 
   /**
-    * Initialize data storage
-    */
-  override def init(): Unit = {
-    logger.warn("Aerospike data storage doesn't require initialization")
-  }
-
-  /**
     * Get data from storage
     *
     * @param streamName  Name of the stream
@@ -58,19 +51,6 @@ class Storage(client: AerospikeClient, options: Options) extends IStorage[Array[
     data
   }
 
-  /**
-    * Remove all data in data storage
-    */
-  override def truncate(): Unit = {
-    logger.error("aerospike can't be truncated")
-  }
-
-  /**
-    * Remove storage
-    */
-  override def remove(): Unit = {
-    logger.error("aerospike data storage can't be removed")
-  }
 
   override def save(txn: UUID,
                     stream: String,
