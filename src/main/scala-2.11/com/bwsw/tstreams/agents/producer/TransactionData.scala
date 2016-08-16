@@ -10,13 +10,13 @@ class TransactionData[USERTYPE](txn: Transaction[USERTYPE], ttl: Int, storage: I
   var items = new scala.collection.mutable.ListBuffer[Array[Byte]]()
   var lastOffset: Int = 0
 
-  def put(elt: USERTYPE, converter: IConverter[USERTYPE, Array[Byte]]): Int = synchronized {
+  def put(elt: USERTYPE, converter: IConverter[USERTYPE, Array[Byte]]): Int = this.synchronized {
     items += converter.convert(elt)
     lastOffset += 1
     return lastOffset
   }
 
-  def save(): () => Unit = synchronized {
+  def save(): () => Unit = this.synchronized {
     val job = storage.save(
       txn.getTransactionUUID(),
       txn.getTransactionOwner().stream.name,
