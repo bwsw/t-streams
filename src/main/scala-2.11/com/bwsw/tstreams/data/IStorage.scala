@@ -24,22 +24,6 @@ trait IStorage[T] {
   def isClosed(): Boolean
 
   /**
-    * Initialize data storage
-    */
-  def init()
-
-  /**
-    * Remove all data in data storage
-    */
-  def truncate()
-
-
-  /**
-    * Remove storage
-    */
-  def remove()
-
-  /**
     * Get data from storage
     *
     * @param streamName  Name of the stream
