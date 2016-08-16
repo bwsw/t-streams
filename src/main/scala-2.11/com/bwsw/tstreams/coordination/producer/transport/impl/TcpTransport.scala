@@ -130,7 +130,7 @@ class TcpTransport(address: String, timeoutMs: Int, retryCount: Int = 3, retryDe
     * Stop transport listen incoming messages
     */
   def stop(): Unit = {
-    IMessage.logger.warn(s"Transport is shutting down.")
+    IMessage.logger.info(s"Transport is shutting down.")
     client.close()
     server.stop()
     executor.shutdownOrDie(100, TimeUnit.SECONDS)

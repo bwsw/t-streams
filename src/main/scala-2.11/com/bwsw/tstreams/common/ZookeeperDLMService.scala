@@ -18,6 +18,9 @@ import scala.collection.JavaConverters._
 object ZookeeperDLMService {
   val logger = LoggerFactory.getLogger(this.getClass)
   val serializer = new JsonSerializer
+
+  val CREATE_PATH_LOCK = "/locks/create_path_lock"
+  val WATCHER_LOCK = "/locks/watcher_path_lock"
 }
 
 //TODO test it harder on zk ephemeral nodes elimination
@@ -47,52 +50,56 @@ class ZookeeperDLMService(prefix: String, zkHosts: List[InetSocketAddress], zkSe
     * @return
     */
   def getLock(path: String): DistributedLockImpl = this.synchronized {
-    if (lockMap.contains(prefix + path))
-      lockMap(prefix + path)
+    val p = java.nio.file.Paths.get(prefix, path).toString
+    if (lockMap.contains(p))
+      lockMap(p)
     else {
-      val lock = new DistributedLockImpl(twitterZkClient, prefix + path)
-      lockMap += (prefix + path -> lock)
+      val lock = new DistributedLockImpl(twitterZkClient, p)
+      lockMap += (p -> lock)
       lock
     }
   }
 
   /**
     * Creates path recursively with lock
+    *
     * @param path
     * @param data
     * @param createMode
     * @tparam T
     * @return
     */
-  def create[T](path: String, data: T, createMode: CreateMode) = {
+  def create[T](path: String, data: T, createMode: CreateMode) = this.synchronized {
     val serialized = ZookeeperDLMService.serializer.serialize(data)
-    var initPath = prefix + path.reverse.dropWhile(_ != '/').reverse.dropRight(1)
-    if (initPath.isEmpty)
-      initPath = "/"
+    val initPath = java.nio.file.Paths.get(prefix,path).toFile.getParentFile().getPath()
     if (zkClient.exists(initPath, null) == null) {
-      LockUtil.withZkLockOrDieDo[Unit](getLock(s"/locks/create_path_lock"), (100, TimeUnit.SECONDS), Some(ZookeeperDLMService.logger), () => {
+      LockUtil.withZkLockOrDieDo[Unit](getLock(ZookeeperDLMService.CREATE_PATH_LOCK), (100, TimeUnit.SECONDS), Some(ZookeeperDLMService.logger), () => {
         if (zkClient.exists(initPath, null) == null)
           createPathRecursive(initPath, CreateMode.PERSISTENT) })
     }
-    if (zkClient.exists(prefix + path, null) == null)
-      zkClient.create(prefix + path, serialized.getBytes, Ids.OPEN_ACL_UNSAFE, createMode)
+
+    val p = java.nio.file.Paths.get(prefix, path).toString
+    if (zkClient.exists(p, null) == null)
+      zkClient.create(p, serialized.getBytes, Ids.OPEN_ACL_UNSAFE, createMode)
     else {
-      throw new IllegalStateException(s"Requested path ${prefix + path} already exists.")
+      throw new IllegalStateException(s"Requested path ${p} already exists.")
     }
   }
 
   /**
     * Establishes watcher
+    *
     * @param path
     * @param watcher
     */
-  def setWatcher(path: String, watcher: Watcher): Unit = {
-    if (zkClient.exists(prefix + path, null) == null) {
-      LockUtil.withZkLockOrDieDo[Unit](getLock(s"/locks/watcher_path_lock"), (100, TimeUnit.SECONDS), Some(ZookeeperDLMService.logger), () => {
-        if (zkClient.exists(prefix + path, null) == null)
-          createPathRecursive(prefix + path, CreateMode.PERSISTENT) })
+  def setWatcher(path: String, watcher: Watcher): Unit = this.synchronized {
+    val p = java.nio.file.Paths.get(prefix, path).toString
+    if (zkClient.exists(p, null) == null) {
+      LockUtil.withZkLockOrDieDo[Unit](getLock(ZookeeperDLMService.WATCHER_LOCK), (100, TimeUnit.SECONDS), Some(ZookeeperDLMService.logger), () => {
+        if (zkClient.exists(p, null) == null)
+          createPathRecursive(p, CreateMode.PERSISTENT) })
     }
-    zkClient.getData(prefix + path, watcher, null)
+    zkClient.getData(p, watcher, null)
   }
 
   /**
@@ -100,51 +107,61 @@ class ZookeeperDLMService(prefix: String, zkHosts: List[InetSocketAddress], zkSe
     * @param path
     */
   def notify(path: String): Unit = this.synchronized {
-    if (zkClient.exists(prefix + path, null) != null) {
-      zkClient.setData(prefix + path, null, -1)
+    val p = java.nio.file.Paths.get(prefix, path).toString
+    if (zkClient.exists(p, null) != null) {
+      zkClient.setData(p, null, -1)
     }
   }
 
   def setData(path: String, data: Any): Unit = this.synchronized {
     val string = ZookeeperDLMService.serializer.serialize(data)
-    zkClient.setData(prefix + path, string.getBytes, -1)
+    val p = java.nio.file.Paths.get(prefix, path).toString
+    zkClient.setData(p, string.getBytes, -1)
   }
 
   /**
     * Check if path exists
+    *
     * @param path
     * @return
     */
   def exist(path: String): Boolean = this.synchronized {
-    zkClient.exists(prefix + path, null) != null
+    val p = java.nio.file.Paths.get(prefix, path).toString
+    zkClient.exists(p, null) != null
   }
 
   /**
     * Get data for specified node
+    *
     * @param path
     * @tparam T
     * @return
     */
   def get[T: Manifest](path: String): Option[T] = this.synchronized {
-    if (zkClient.exists(prefix + path, null) == null)
+    val p = java.nio.file.Paths.get(prefix, path).toString
+    if (zkClient.exists(p, null) == null)
       None
     else {
-      val data = zkClient.getData(prefix + path, null, null)
+      val data = zkClient.getData(p, null, null)
       Some(ZookeeperDLMService.serializer.deserialize[T](new String(data)))
     }
   }
 
   /**
     * Get data of all children nodes
+    *
     * @param path
     * @tparam T
     * @return
     */
   def getAllSubNodesData[T: Manifest](path: String): Option[List[T]] = this.synchronized {
-    if (zkClient.exists(prefix + path, null) == null)
+    val p = java.nio.file.Paths.get(prefix, path).toString
+    if (zkClient.exists(p, null) == null)
       None
     else {
-      val subNodes = zkClient.getChildren(prefix + path, null).asScala.map(x => zkClient.getData(prefix + path + "/" + x, null, null))
+      val subNodes = zkClient.getChildren(p, null)
+        .asScala
+        .map(x => zkClient.getData(java.nio.file.Paths.get(p, x).toString, null, null))
       val data = subNodes.flatMap(x => List(ZookeeperDLMService.serializer.deserialize[T](new String(x)))).toList
       Some(data)
     }
@@ -152,59 +169,58 @@ class ZookeeperDLMService(prefix: String, zkHosts: List[InetSocketAddress], zkSe
 
   /**
     * Get path of all children nodes
+    *
     * @param path
     * @return
     */
   def getAllSubPath(path: String): Option[List[String]] = this.synchronized {
-    if (zkClient.exists(prefix + path, null) == null)
+    val p = java.nio.file.Paths.get(prefix, path).toString
+    if (zkClient.exists(p, null) == null)
       None
     else {
-      val subNodes = zkClient.getChildren(prefix + path, null).asScala.toList
+      val subNodes = zkClient.getChildren(p, null).asScala.toList
       Some(subNodes)
     }
   }
 
   /**
     * Delete path
+    *
     * @param path
     */
   def delete(path: String) = this.synchronized {
-    zkClient.delete(prefix + path, -1)
+    val p = java.nio.file.Paths.get(prefix, path).toString
+    zkClient.delete(p, -1)
   }
 
   /**
     * Delete path recursively
+    *
     * @param path
     */
   def deleteRecursive(path: String): Unit = this.synchronized {
-    val children = zkClient.getChildren(prefix + path, null, null).asScala
+    val p = java.nio.file.Paths.get(prefix, path).toString
+    val children = zkClient.getChildren(p, null, null).asScala
     if (children.nonEmpty) {
-      children.foreach { x => deleteRecursive(path + "/" + x) }
+      children
+        .foreach { x => deleteRecursive(java.nio.file.Paths.get(path, x).toString) }
     }
-
-    zkClient.delete(prefix + path, -1)
+    zkClient.delete(p, -1)
   }
 
   /**
     * Create path recursively
+    *
     * @param path
     * @param mode
     */
-  private def createPathRecursive(path: String, mode: CreateMode) = this.synchronized {
-    val splits = path.split("/").filter(x => x != "")
-    def createRecursive(path: List[String], acc: List[String]): Unit = path match {
-      case Nil =>
-        val path = "/" + acc.mkString("/")
-        if (zkClient.exists(path, null) == null)
-          zkClient.create(path, null, Ids.OPEN_ACL_UNSAFE, mode)
-
-      case h :: t =>
-        val path = "/" + acc.mkString("/")
-        if (zkClient.exists(path, null) == null)
-          zkClient.create(path, null, Ids.OPEN_ACL_UNSAFE, mode)
-        createRecursive(t, acc :+ h)
+  private def createPathRecursive(path: String, mode: CreateMode): Unit = this.synchronized {
+    if (zkClient.exists(path, null) == null) {
+      val parent = java.nio.file.Paths.get(path).getParent.toString
+      if(parent != "/")
+        createPathRecursive(parent, mode)
+      zkClient.create(path, null, Ids.OPEN_ACL_UNSAFE, mode)
     }
-    createRecursive(splits.toList.drop(1), List(splits.head))
   }
 
   def isZkConnected = this.synchronized {
