@@ -9,7 +9,7 @@ import com.bwsw.tstreams.agents.producer.NewTransactionProducerPolicy.ProducerPo
 import com.bwsw.tstreams.common._
 import com.bwsw.tstreams.coordination.clients.ProducerToSubscriberNotifier
 import com.bwsw.tstreams.coordination.messages.state.{Message, TransactionStatus}
-import com.bwsw.tstreams.coordination.producer.p2p.PeerAgent
+import com.bwsw.tstreams.coordination.producer.p2p.{PartitionMasterManager, PeerAgent}
 import com.bwsw.tstreams.coordination.producer.transport.traits.Interaction
 import com.bwsw.tstreams.metadata.MetadataStorage
 import com.bwsw.tstreams.streams.TStream
@@ -80,11 +80,18 @@ class Producer[USERTYPE](var name: String,
     streamName = stream.getName,
     usedPartitions = producerOptions.writePolicy.getUsedPartitions())
 
+  private val masterManager = new PartitionMasterManager(
+    zkService,
+    producerOptions.coordinationOptions.transport.getIpAddress(),
+    stream.getName,
+    Set[Int]().empty ++ producerOptions.writePolicy.getUsedPartitions())
+
   /**
     * P2P Agent for producers interaction
     * (getNewTxn uuid; publish openTxn event; publish closeTxn event)
     */
   override val p2pAgent: PeerAgent = new PeerAgent(
+    masterManager = masterManager,
     zkService = zkService,
     zkRetriesAmount = zkRetriesAmount,
     producer = this,
@@ -382,6 +389,7 @@ class Producer[USERTYPE](var name: String,
     * Special method which waits until newTransaction method will be completed and after
     * does materialization. It's called from another thread (p2pAgent), not from thread of
     * Producer.
+ *
     * @param msg
     */
   def materialize(msg: Message) = {
