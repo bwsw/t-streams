@@ -475,9 +475,7 @@ class PeerAgent(zkService: ZookeeperDLMService, zkRetriesAmount: Int, producer: 
     materializationExecutors.foreach(x => { x._2.shutdownOrDie(100, TimeUnit.SECONDS) })
     cassandraAsyncExecutor.shutdownOrDie(100, TimeUnit.SECONDS)
     publishExecutors.foreach(x => { x._2.shutdownOrDie(100, TimeUnit.SECONDS)})
-
     transport.stop()
-    zkService.close()
   }
 
   def handleMessage(channel: Channel, rawMessage: String): Unit = {

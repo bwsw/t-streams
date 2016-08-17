@@ -369,6 +369,7 @@ class Producer[USERTYPE](var name: String,
     p2pAgent.stop()
     // stop function which works with subscribers
     subscriberNotifier.stop()
+    zkService.close()
   }
 
   /**
