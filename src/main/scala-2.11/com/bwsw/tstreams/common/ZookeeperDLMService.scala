@@ -22,7 +22,7 @@ object ZookeeperDLMService {
 
   val CREATE_PATH_LOCK = "/locks/create_path_lock"
   val WATCHER_LOCK = "/locks/watcher_path_lock"
-
+  val executor = new FirstFailLockableTaskExecutor("ZookeeperDLMService-executor")
   val ctr = new AtomicInteger(0)
 }
 

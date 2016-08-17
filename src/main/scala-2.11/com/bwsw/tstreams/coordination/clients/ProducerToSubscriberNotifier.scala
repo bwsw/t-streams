@@ -20,7 +20,6 @@ class ProducerToSubscriberNotifier(zkService: ZookeeperDLMService,
                                    usedPartitions: List[Int]) {
 
   private val broadcaster = new SubscriberBroadcastNotifier
-  private val executor = new FirstFailLockableTaskExecutor("WatcherEventProcessor")
 
   /**
     * Initialize coordinator
@@ -28,9 +27,9 @@ class ProducerToSubscriberNotifier(zkService: ZookeeperDLMService,
   def init(): Unit = {
     usedPartitions foreach { p =>
       val watcher = new Watcher {
-        val wo = this
         override def process(event: WatchedEvent): Unit = {
-          executor.submit(new Runnable {
+          val wo = this
+          ZookeeperDLMService.executor.submit(new Runnable {
             override def run(): Unit = {
               updateSubscribers(p)
               zkService.setWatcher(s"/subscribers/event/$streamName/$p", wo)
@@ -76,7 +75,6 @@ class ProducerToSubscriberNotifier(zkService: ZookeeperDLMService,
     */
   def stop() = {
     broadcaster.close()
-    executor.shutdownOrDie(100, TimeUnit.SECONDS)
     zkService.close()
   }
 }

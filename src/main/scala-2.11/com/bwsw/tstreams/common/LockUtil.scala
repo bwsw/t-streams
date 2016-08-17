@@ -1,6 +1,6 @@
 package com.bwsw.tstreams.common
 
-import java.util.concurrent.TimeUnit
+import java.util.concurrent.{Callable, TimeUnit}
 import java.util.concurrent.locks.ReentrantLock
 
 import com.twitter.common.zookeeper.{DistributedLockImpl, DistributedLock}
@@ -97,9 +97,7 @@ object LockUtil {
     }
     val fStartTime = System.currentTimeMillis()
     try {
-      // function
       val rv = lambda()
-      // end function
 
       if (logger.isDefined && logger.get.isDebugEnabled) {
         val fEndTime = System.currentTimeMillis()
