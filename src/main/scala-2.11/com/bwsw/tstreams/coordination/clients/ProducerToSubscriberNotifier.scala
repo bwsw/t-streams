@@ -1,6 +1,8 @@
 package com.bwsw.tstreams.coordination.clients
 
-import com.bwsw.tstreams.common.ZookeeperDLMService
+import java.util.concurrent.TimeUnit
+
+import com.bwsw.tstreams.common.{FirstFailLockableTaskExecutor, ZookeeperDLMService}
 import com.bwsw.tstreams.coordination.clients.publisher.SubscriberBroadcastNotifier
 import com.bwsw.tstreams.coordination.messages.state.Message
 import org.apache.zookeeper.{WatchedEvent, Watcher}
@@ -26,8 +28,13 @@ class ProducerToSubscriberNotifier(zkService: ZookeeperDLMService,
     usedPartitions foreach { p =>
       val watcher = new Watcher {
         override def process(event: WatchedEvent): Unit = {
-          updateSubscribers(p)
-          zkService.setWatcher(s"/subscribers/event/$streamName/$p", this)
+          val wo = this
+          ZookeeperDLMService.executor.submit(new Runnable {
+            override def run(): Unit = {
+              updateSubscribers(p)
+              zkService.setWatcher(s"/subscribers/event/$streamName/$p", wo)
+            }
+          })
         }
       }
       watcher.process(null)

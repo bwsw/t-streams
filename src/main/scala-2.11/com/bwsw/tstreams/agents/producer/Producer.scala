@@ -26,7 +26,7 @@ import collection.JavaConversions._
   * @param producerOptions This producer options
   * @tparam USERTYPE User data type
   */
-class Producer[USERTYPE](val name: String,
+class Producer[USERTYPE](var name: String,
                          val stream: TStream[Array[Byte]],
                          val producerOptions: Options[USERTYPE])
   extends Agent with SendingAgent with Interaction {
@@ -35,6 +35,10 @@ class Producer[USERTYPE](val name: String,
     * agent name
     */
   override def getAgentName = name
+
+  def setAgentName(name: String) = {
+    this.name = name
+  }
 
   // shortkey
   val pcs = producerOptions.coordinationOptions

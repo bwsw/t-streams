@@ -51,6 +51,8 @@ class ALazyProducersAndSubscriberTest extends FlatSpec with Matchers with Before
   val producersThreads = producers.map(p =>
     new Thread(new Runnable {
       def run() {
+        Thread.currentThread().setName(p.p2pAgent.getAgentAddress)
+        p.setAgentName("producer-" + Thread.currentThread().getName)
         var i = 0
         while (i < totalTxn) {
           Thread.sleep(1000)
