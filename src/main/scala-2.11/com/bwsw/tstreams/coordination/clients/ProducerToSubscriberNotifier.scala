@@ -1,7 +1,5 @@
 package com.bwsw.tstreams.coordination.clients
 
-import java.net.InetSocketAddress
-
 import com.bwsw.tstreams.common.ZookeeperDLMService
 import com.bwsw.tstreams.coordination.clients.publisher.SubscriberBroadcastNotifier
 import com.bwsw.tstreams.coordination.messages.state.Message
@@ -11,20 +9,14 @@ import org.apache.zookeeper.{WatchedEvent, Watcher}
 /**
   * Producer coordinator
   *
-  * @param prefix           Zookeeper root prefix for all metadata
+  * @param zkService
   * @param streamName       Producer stream
   * @param usedPartitions   Producer used partition
-  * @param zkHosts          Zookeeper hosts to connect
-  * @param zkSessionTimeout Zookeeper connect timeout
   */
-class ProducerToSubscriberNotifier(prefix: String,
+class ProducerToSubscriberNotifier(zkService: ZookeeperDLMService,
                                    streamName: String,
-                                   usedPartitions: List[Int],
-                                   zkHosts: List[InetSocketAddress],
-                                   zkSessionTimeout: Int,
-                                   zkConnectionTimeout: Int) {
+                                   usedPartitions: List[Int]) {
 
-  private val zkService = new ZookeeperDLMService(prefix, zkHosts, zkSessionTimeout, zkConnectionTimeout)
   private val broadcaster = new SubscriberBroadcastNotifier
 
   /**

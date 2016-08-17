@@ -1,6 +1,5 @@
 package com.bwsw.tstreams.coordination.producer.p2p
 
-import java.net.InetSocketAddress
 import java.util.UUID
 import java.util.concurrent.atomic.{AtomicBoolean, AtomicLong}
 import java.util.concurrent.locks.ReentrantLock
@@ -42,16 +41,14 @@ object PeerAgent {
 /**
  * Agent for providing peer to peer interaction between Producers
  *
- * @param zkHosts ZkHosts to connect
- * @param zkRootPath Common prefix for all zk created entities
- * @param zkSessionTimeout Session Zk Timeout
+ * @param zkService
+ * @param zkRetriesAmount
  * @param producer Producer reference
  * @param usedPartitions List of used producer partitions
  * @param isLowPriorityToBeMaster Flag which indicate to have low priority to be master
  * @param transport Transport to provide interaction
  */
-class PeerAgent(zkHosts: List[InetSocketAddress], zkRootPath: String, zkSessionTimeout: Int, zkConnectionTimeout: Int, producer: Producer[_], usedPartitions: List[Int], isLowPriorityToBeMaster: Boolean, transport: TcpTransport, poolSize: Int) {
-
+class PeerAgent(zkService: ZookeeperDLMService, zkRetriesAmount: Int, producer: Producer[_], usedPartitions: List[Int], isLowPriorityToBeMaster: Boolean, transport: TcpTransport, poolSize: Int) {
   val myIPAddress: String = producer.producerOptions.coordinationOptions.transport.getIpAddress()
   /**
     * locks
@@ -59,8 +56,6 @@ class PeerAgent(zkHosts: List[InetSocketAddress], zkRootPath: String, zkSessionT
   private val externalAccessLock = new ReentrantLock(true)
   private val lockManagingMaster = new ReentrantLock(true)
 
-  private val zkRetriesAmount = zkSessionTimeout * 1000 / PeerAgent.RETRY_SLEEP_TIME + 1
-  private val zkService       = new ZookeeperDLMService(zkRootPath, zkHosts, zkSessionTimeout, zkConnectionTimeout)
 
   /**
     * Job Executors
