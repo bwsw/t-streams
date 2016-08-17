@@ -79,7 +79,7 @@ object LockUtil {
         if (l.isDebugEnabled){
           val lEndTime = System.currentTimeMillis()
           l.debug(s"Token $token /Lock ${l.toString} / Section of withLockOrDieDo took ${lEndTime - lStartTime} ms to run.")
-          l.debug(s"Token $token /Lock ${l.toString} / Unlocked ${l.toString} in ${lt._1} ${lt._2.toString}.")
+          l.debug(s"Token $token /Lock ${l.toString} / Unlocked ${l.toString} in $amount ${timeUnit.toString}.")
         })
 
       return rv
@@ -127,7 +127,7 @@ object LockUtil {
     if(!l.tryLock(amount, timeUnit)) {
       logger.foreach(l =>
         l.error(s"Token $token / Lock ${l.toString} / Failed to get lock object ${l.toString} in $amount ${timeUnit.toString}."))
-      throw new LockUtilException(s"Token ${token} / Lock ${l.toString} / Failed to get lock object in $amount ${timeUnit.toString}.")
+      throw new LockUtilException(s"Token $token / Lock ${l.toString} / Failed to get lock object in $amount ${timeUnit.toString}.")
     } else {
       logger.foreach(l =>
         if (l.isDebugEnabled)
