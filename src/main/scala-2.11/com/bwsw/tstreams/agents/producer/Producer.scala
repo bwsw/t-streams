@@ -47,6 +47,9 @@ class Producer[USERTYPE](val name: String,
   private val logger      = LoggerFactory.getLogger(this.getClass)
   private val threadLock  = new ReentrantLock(true)
 
+  private val zkRetriesAmount = pcs.zkSessionTimeout * 1000 / PeerAgent.RETRY_SLEEP_TIME + 1
+  private val zkService       = new ZookeeperDLMService(pcs.zkRootPath, pcs.zkHosts, pcs.zkSessionTimeout, pcs.zkConnectionTimeout)
+
   // initialize latches
   producerOptions.writePolicy.getUsedPartitions()
     .map(p => transactionReadynessMap.put(p, new ResettableCountDownLatch(0)))
@@ -69,22 +72,17 @@ class Producer[USERTYPE](val name: String,
 
   // this client is used to find new subscribers
   val subscriberNotifier = new ProducerToSubscriberNotifier(
-    prefix = pcs.zkRootPath,
+    zkService = zkService,
     streamName = stream.getName,
-    usedPartitions = producerOptions.writePolicy.getUsedPartitions(),
-    zkHosts = pcs.zkHosts,
-    zkSessionTimeout = pcs.zkSessionTimeout,
-    zkConnectionTimeout = pcs.zkConnectionTimeout)
+    usedPartitions = producerOptions.writePolicy.getUsedPartitions())
 
   /**
     * P2P Agent for producers interaction
     * (getNewTxn uuid; publish openTxn event; publish closeTxn event)
     */
   override val p2pAgent: PeerAgent = new PeerAgent(
-    zkHosts = pcs.zkHosts,
-    zkRootPath = pcs.zkRootPath,
-    zkSessionTimeout = pcs.zkSessionTimeout,
-    zkConnectionTimeout = pcs.zkConnectionTimeout,
+    zkService = zkService,
+    zkRetriesAmount = zkRetriesAmount,
     producer = this,
     usedPartitions = producerOptions.writePolicy.getUsedPartitions(),
     isLowPriorityToBeMaster = pcs.isLowPriorityToBeMaster,
