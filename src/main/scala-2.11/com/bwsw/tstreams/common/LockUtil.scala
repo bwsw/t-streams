@@ -1,9 +1,9 @@
 package com.bwsw.tstreams.common
 
-import java.util.concurrent.TimeUnit
+import java.util.concurrent.{Callable, TimeUnit}
 import java.util.concurrent.locks.ReentrantLock
 
-import com.twitter.common.zookeeper.DistributedLock
+import com.twitter.common.zookeeper.{DistributedLockImpl, DistributedLock}
 import org.slf4j.Logger
 
 import scala.util.Random
@@ -78,7 +78,7 @@ object LockUtil {
     }
   }
 
-  def withZkLockOrDieDo[RTYPE](l: DistributedLock,
+  def withZkLockOrDieDo[RTYPE](l: DistributedLockImpl,
                              lt: (Int, TimeUnit),
                              logger: Option[Logger] = None,
                              lambda: () => RTYPE): RTYPE = {
@@ -97,9 +97,7 @@ object LockUtil {
     }
     val fStartTime = System.currentTimeMillis()
     try {
-      // function
       val rv = lambda()
-      // end function
 
       if (logger.isDefined && logger.get.isDebugEnabled) {
         val fEndTime = System.currentTimeMillis()
