@@ -36,6 +36,7 @@ class AManyProducersStreamingInManyPartitionsAndConsumerTest extends FlatSpec wi
     producers.map(p =>
     new Thread(new Runnable {
       def run() {
+        p.setAgentName("producer-" + Thread.currentThread().getName)
         var i = 0
         while (i < totalTxn) {
           val txn = p.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)

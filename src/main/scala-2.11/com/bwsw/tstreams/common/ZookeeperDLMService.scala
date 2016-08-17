@@ -2,6 +2,7 @@ package com.bwsw.tstreams.common
 
 import java.net.InetSocketAddress
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicInteger
 
 import com.twitter.common.quantity.Amount
 import com.twitter.common.zookeeper.{DistributedLockImpl, ZooKeeperClient}
@@ -21,6 +22,8 @@ object ZookeeperDLMService {
 
   val CREATE_PATH_LOCK = "/locks/create_path_lock"
   val WATCHER_LOCK = "/locks/watcher_path_lock"
+
+  val ctr = new AtomicInteger(0)
 }
 
 //TODO test it harder on zk ephemeral nodes elimination
@@ -30,6 +33,9 @@ object ZookeeperDLMService {
   * @param zkSessionTimeout Zk session timeout to connect
   */
 class ZookeeperDLMService(prefix: String, zkHosts: List[InetSocketAddress], zkSessionTimeout: Int, connectionTimeout: Long) {
+
+  private val id = ZookeeperDLMService.ctr.incrementAndGet()
+
   private val st = Amount.of(new Integer(zkSessionTimeout), com.twitter.common.quantity.Time.SECONDS)
   private val ct = Amount.of(connectionTimeout, com.twitter.common.quantity.Time.SECONDS)
 
@@ -74,18 +80,16 @@ class ZookeeperDLMService(prefix: String, zkHosts: List[InetSocketAddress], zkSe
   def create[T](path: String, data: T, createMode: CreateMode) = this.synchronized {
     val serialized = ZookeeperDLMService.serializer.serialize(data)
     val initPath = java.nio.file.Paths.get(prefix,path).toFile.getParentFile().getPath()
-    if (zkClient.exists(initPath, null) == null) {
-      LockUtil.withZkLockOrDieDo[Unit](getLock(ZookeeperDLMService.CREATE_PATH_LOCK), (100, TimeUnit.SECONDS), Some(ZookeeperDLMService.logger), () => {
-        if (zkClient.exists(initPath, null) == null)
-          createPathRecursive(initPath, CreateMode.PERSISTENT) })
-    }
-
-    val p = java.nio.file.Paths.get(prefix, path).toString
-    if (zkClient.exists(p, null) == null)
-      zkClient.create(p, serialized.getBytes, Ids.OPEN_ACL_UNSAFE, createMode)
-    else {
-      throw new IllegalStateException(s"Requested path ${p} already exists.")
-    }
+    LockUtil.withZkLockOrDieDo[Unit](getLock(ZookeeperDLMService.CREATE_PATH_LOCK), (100, TimeUnit.SECONDS), Some(ZookeeperDLMService.logger), () => {
+      if (zkClient.exists(initPath, null) == null)
+        createPathRecursive(initPath, CreateMode.PERSISTENT)
+      val p = java.nio.file.Paths.get(prefix, path).toString
+      if (zkClient.exists(p, null) == null)
+        zkClient.create(p, serialized.getBytes, Ids.OPEN_ACL_UNSAFE, createMode)
+      else {
+        throw new IllegalStateException(s"Requested path ${p} already exists.")
+      }
+    })
   }
 
   /**
@@ -96,12 +100,11 @@ class ZookeeperDLMService(prefix: String, zkHosts: List[InetSocketAddress], zkSe
     */
   def setWatcher(path: String, watcher: Watcher): Unit = this.synchronized {
     val p = java.nio.file.Paths.get(prefix, path).toString
-    if (zkClient.exists(p, null) == null) {
-      LockUtil.withZkLockOrDieDo[Unit](getLock(ZookeeperDLMService.WATCHER_LOCK), (100, TimeUnit.SECONDS), Some(ZookeeperDLMService.logger), () => {
-        if (zkClient.exists(p, null) == null)
-          createPathRecursive(p, CreateMode.PERSISTENT) })
-    }
-    zkClient.getData(p, watcher, null)
+    LockUtil.withZkLockOrDieDo[Unit](getLock(ZookeeperDLMService.WATCHER_LOCK), (100, TimeUnit.SECONDS), Some(ZookeeperDLMService.logger), () => {
+      if (zkClient.exists(p, null) == null)
+        createPathRecursive(p, CreateMode.PERSISTENT)
+      zkClient.getData(p, watcher, null)
+    })
   }
 
   /**

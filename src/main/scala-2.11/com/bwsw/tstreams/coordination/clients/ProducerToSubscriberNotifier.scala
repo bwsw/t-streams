@@ -1,6 +1,8 @@
 package com.bwsw.tstreams.coordination.clients
 
-import com.bwsw.tstreams.common.ZookeeperDLMService
+import java.util.concurrent.TimeUnit
+
+import com.bwsw.tstreams.common.{FirstFailLockableTaskExecutor, ZookeeperDLMService}
 import com.bwsw.tstreams.coordination.clients.publisher.SubscriberBroadcastNotifier
 import com.bwsw.tstreams.coordination.messages.state.Message
 import org.apache.zookeeper.{WatchedEvent, Watcher}
@@ -18,6 +20,7 @@ class ProducerToSubscriberNotifier(zkService: ZookeeperDLMService,
                                    usedPartitions: List[Int]) {
 
   private val broadcaster = new SubscriberBroadcastNotifier
+  private val executor = new FirstFailLockableTaskExecutor("WatcherEventProcessor")
 
   /**
     * Initialize coordinator
@@ -25,9 +28,14 @@ class ProducerToSubscriberNotifier(zkService: ZookeeperDLMService,
   def init(): Unit = {
     usedPartitions foreach { p =>
       val watcher = new Watcher {
+        val wo = this
         override def process(event: WatchedEvent): Unit = {
-          updateSubscribers(p)
-          zkService.setWatcher(s"/subscribers/event/$streamName/$p", this)
+          executor.submit(new Runnable {
+            override def run(): Unit = {
+              updateSubscribers(p)
+              zkService.setWatcher(s"/subscribers/event/$streamName/$p", wo)
+            }
+          })
         }
       }
       watcher.process(null)
@@ -68,6 +76,7 @@ class ProducerToSubscriberNotifier(zkService: ZookeeperDLMService,
     */
   def stop() = {
     broadcaster.close()
+    executor.shutdownOrDie(100, TimeUnit.SECONDS)
     zkService.close()
   }
 }

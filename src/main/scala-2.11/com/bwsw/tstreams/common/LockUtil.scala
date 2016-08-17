@@ -3,7 +3,7 @@ package com.bwsw.tstreams.common
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantLock
 
-import com.twitter.common.zookeeper.DistributedLock
+import com.twitter.common.zookeeper.{DistributedLockImpl, DistributedLock}
 import org.slf4j.Logger
 
 import scala.util.Random
@@ -78,7 +78,7 @@ object LockUtil {
     }
   }
 
-  def withZkLockOrDieDo[RTYPE](l: DistributedLock,
+  def withZkLockOrDieDo[RTYPE](l: DistributedLockImpl,
                              lt: (Int, TimeUnit),
                              logger: Option[Logger] = None,
                              lambda: () => RTYPE): RTYPE = {
