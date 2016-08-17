@@ -109,10 +109,6 @@ class PeerAgent(masterManager: PartitionMasterManager, zkService: ZookeeperDLMSe
 
   masterManager.bootstrap(this, isLowPriorityToBeMaster, uniqueAgentId)
 
-
-
-
-
   /**
     * Helper method for new master voting
     *
