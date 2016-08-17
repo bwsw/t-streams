@@ -75,6 +75,5 @@ class ProducerToSubscriberNotifier(zkService: ZookeeperDLMService,
     */
   def stop() = {
     broadcaster.close()
-    zkService.close()
   }
 }
