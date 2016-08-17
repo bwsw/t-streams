@@ -24,6 +24,15 @@ object CassandraHelper {
     s" AND durable_writes = $durableWrites")
 
   /**
+    * Keyspace destroyer helper
+    *
+    * @param session  Session instance which will be used for keyspace creation
+    * @param keyspace Keyspace name
+    */
+  def dropKeyspace(session: Session, keyspace: String) =
+    session.execute(s"DROP KEYSPACE IF EXISTS $keyspace")
+
+  /**
     * Metadata tables creator helper
     *
     * @param session  Session
