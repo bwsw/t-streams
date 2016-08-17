@@ -13,7 +13,7 @@ class AManyProducersStreamingInManyPartitionsAndConsumerTest extends FlatSpec wi
   val totalPartitions = 4
   val totalTxn = 100
   val totalElementsInTxn = 10
-  val producersAmount = 10
+  val producersAmount = 5
   val dataToSend = (for (part <- 0 until totalElementsInTxn) yield randomString).sorted
 
   f.setProperty(TSF_Dictionary.Stream.NAME, "test_stream").
@@ -38,7 +38,6 @@ class AManyProducersStreamingInManyPartitionsAndConsumerTest extends FlatSpec wi
       def run() {
         var i = 0
         while (i < totalTxn) {
-          Thread.sleep(1000)
           val txn = p.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
           dataToSend.foreach(x => txn.send(x))
           txn.checkpoint()
@@ -70,20 +69,33 @@ class AManyProducersStreamingInManyPartitionsAndConsumerTest extends FlatSpec wi
       new Runnable {
         def run() = {
           var i = 0
+          val startTime = System.currentTimeMillis()
           while (i < totalTxn * producersAmount) {
             val txn = consumer.getTransaction
             if (txn.isDefined) {
               checkVal &= txn.get.getAll().sorted == dataToSend
               i += 1
             }
+            if(System.currentTimeMillis() - startTime > 5000)
+              {
+                logger.info(s"I: ${i}, expected: ${totalTxn * producersAmount}")
+                i = totalTxn * producersAmount
+                false shouldBe true
+              }
           }
         }
       })
 
+    logger.info("Created all producers")
+
     producersThreads.foreach(x => x.start())
+    logger.info("Started all producers")
     consumerThread.start()
+    logger.info("Started consumer")
     consumerThread.join(timeoutForWaiting * 1000)
+    logger.info("Awaited consumer")
     producersThreads.foreach(x => x.join(timeoutForWaiting * 1000))
+    logger.info("Awaited all producers")
 
 
     //assert that is nothing to read
