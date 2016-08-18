@@ -219,8 +219,10 @@ class Consumer[T](val name: String,
     val txnOpt = updateTransactionInfoFromDB(uuid, partition)
     if (txnOpt.isDefined) {
       val txn = txnOpt.get
-      if (txn.getCount() != -1)
+      if (txn.getCount() != -1) {
+        txnOpt.get.attach(this)
         txnOpt
+      }
       else
         None
     }
