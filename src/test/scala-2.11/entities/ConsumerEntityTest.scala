@@ -21,8 +21,8 @@ class ConsumerEntityTest extends FlatSpec with Matchers with BeforeAndAfterAll w
     val partition = 1
     val offset = UUIDs.timeBased()
     consumerEntity.saveSingleOffset(consumer, stream, partition, offset)
-    val checkExist: Boolean = consumerEntity.exist(consumer)
-    val retValOffset: UUID = consumerEntity.getOffset(consumer, stream, partition)
+    val checkExist: Boolean = consumerEntity.exists(consumer)
+    val retValOffset: UUID = consumerEntity.getLastSavedOffset(consumer, stream, partition)
 
     val checkVal = checkExist && retValOffset == offset
     checkVal shouldBe true
@@ -31,7 +31,7 @@ class ConsumerEntityTest extends FlatSpec with Matchers with BeforeAndAfterAll w
   "ConsumerEntity.exist()" should "return false if consumer not exist" in {
     val consumerEntity = new ConsumerEntity("consumers", connectedSession)
     val consumer = randomVal
-    consumerEntity.exist(consumer) shouldEqual false
+    consumerEntity.exists(consumer) shouldEqual false
   }
 
   "ConsumerEntity.getOffset()" should "throw java.lang.IndexOutOfBoundsException if consumer not exist" in {
@@ -40,7 +40,7 @@ class ConsumerEntityTest extends FlatSpec with Matchers with BeforeAndAfterAll w
     val stream = randomVal
     val partition = 1
     intercept[java.lang.IndexOutOfBoundsException] {
-      consumerEntity.getOffset(consumer, stream, partition)
+      consumerEntity.getLastSavedOffset(consumer, stream, partition)
     }
   }
 
@@ -58,7 +58,7 @@ class ConsumerEntityTest extends FlatSpec with Matchers with BeforeAndAfterAll w
     var checkVal = true
 
     for (i <- 0 to 100) {
-      val uuid: UUID = consumerEntity.getOffset(consumer, stream, i)
+      val uuid: UUID = consumerEntity.getLastSavedOffset(consumer, stream, i)
       checkVal &= uuid == offsets(i)
     }
     checkVal shouldBe true

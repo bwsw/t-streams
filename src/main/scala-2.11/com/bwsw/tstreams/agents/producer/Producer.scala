@@ -4,7 +4,7 @@ import java.util.UUID
 import java.util.concurrent.locks.ReentrantLock
 import java.util.concurrent.{ConcurrentHashMap, CountDownLatch, TimeUnit}
 
-import com.bwsw.tstreams.agents.group.{Agent, CheckpointInfo, SendingAgent}
+import com.bwsw.tstreams.agents.group.{GroupParticipant, CheckpointInfo, SendingAgent}
 import com.bwsw.tstreams.agents.producer.NewTransactionProducerPolicy.ProducerPolicy
 import com.bwsw.tstreams.common._
 import com.bwsw.tstreams.coordination.clients.ProducerToSubscriberNotifier
@@ -24,12 +24,12 @@ import collection.JavaConversions._
   * @param name            Producer name
   * @param stream          Stream for transaction sending
   * @param producerOptions This producer options
-  * @tparam USERTYPE User data type
+  * @tparam T User data type
   */
-class Producer[USERTYPE](var name: String,
+class Producer[T](var name: String,
                          val stream: TStream[Array[Byte]],
-                         val producerOptions: Options[USERTYPE])
-  extends Agent with SendingAgent with Interaction {
+                         val producerOptions: Options[T])
+  extends GroupParticipant with SendingAgent with Interaction {
 
   /**
     * agent name
@@ -45,9 +45,9 @@ class Producer[USERTYPE](var name: String,
   var isStop = false
 
   // stores currently opened transactions per partition
-  private val openTransactionsMap     = new ConcurrentHashMap[Int, Transaction[USERTYPE]]()
+  private val openTransactionsMap     = new ConcurrentHashMap[Int, Transaction[T]]()
   // stores latches for materialization await (protects from materialization before main transaction response)
-  private val transactionReadynessMap = new ConcurrentHashMap[Int, ResettableCountDownLatch]()
+  private val transactionMaterializationBlockingMap = new ConcurrentHashMap[Int, ResettableCountDownLatch]()
   private val logger      = LoggerFactory.getLogger(this.getClass)
   private val threadLock  = new ReentrantLock(true)
 
@@ -56,7 +56,7 @@ class Producer[USERTYPE](var name: String,
 
   // initialize latches
   producerOptions.writePolicy.getUsedPartitions()
-    .map(p => transactionReadynessMap.put(p, new ResettableCountDownLatch(0)))
+    .map(p => transactionMaterializationBlockingMap.put(p, new ResettableCountDownLatch(0)))
 
   // amount of threads which will handle partitions in masters, etc
   val threadPoolSize: Int = {
@@ -166,7 +166,7 @@ class Producer[USERTYPE](var name: String,
     * @param nextPartition Next partition to use for transaction (default -1 which mean that write policy will be used)
     * @return BasicProducerTransaction instance
     */
-  def newTransaction(policy: ProducerPolicy, nextPartition: Int = -1): Transaction[USERTYPE] = {
+  def newTransaction(policy: ProducerPolicy, nextPartition: Int = -1): Transaction[T] = {
     if (isStop)
       throw new IllegalStateException(s"Producer ${this.name} is already stopped. Unable to get new transaction.")
 
@@ -185,7 +185,7 @@ class Producer[USERTYPE](var name: String,
       partOpt.get.awaitMaterialized()
     }
 
-    transactionReadynessMap.get(partition).setValue(1)
+    transactionMaterializationBlockingMap.get(partition).setValue(1)
     var action: () => Unit = null
     if (partOpt.isDefined) {
       if (!partOpt.get.isClosed) {
@@ -211,11 +211,11 @@ class Producer[USERTYPE](var name: String,
     //logger.info(s"Elapsed for TXN ->: {}",delta - tm)
     if(logger.isDebugEnabled)
       logger.debug(s"[NEW_TRANSACTION PARTITION_$partition] uuid=${txnUUID.timestamp()}")
-    val txn = new Transaction[USERTYPE](txnLocks(partition % threadPoolSize), partition, txnUUID, this)
+    val txn = new Transaction[T](txnLocks(partition % threadPoolSize), partition, txnUUID, this)
     LockUtil.withLockOrDieDo[Unit](threadLock, (100, TimeUnit.SECONDS), Some(logger), () => {
       openTransactionsMap.put(partition, txn)
     })
-    transactionReadynessMap.get(partition).countDown
+    transactionMaterializationBlockingMap.get(partition).countDown
     if(action != null)
       backendActivityService.submit(new Runnable {
         override def run(): Unit = action() })
@@ -228,7 +228,7 @@ class Producer[USERTYPE](var name: String,
     * @param partition Partition from which transaction will be retrieved
     * @return Transaction reference if it exist and is opened
     */
-  def getOpenedTransactionForPartition(partition: Int): Option[Transaction[USERTYPE]] = {
+  def getOpenedTransactionForPartition(partition: Int): Option[Transaction[T]] = {
     if (!(partition >= 0 && partition < stream.getPartitions))
       throw new IllegalArgumentException(s"Producer ${name} - invalid partition")
     val partOpt = Option(openTransactionsMap.getOrDefault(partition, null))
@@ -395,7 +395,7 @@ class Producer[USERTYPE](var name: String,
   def materialize(msg: Message) = {
     if(logger.isDebugEnabled)
       logger.debug(s"Start handling MaterializeRequest at partition: ${msg.partition}")
-    transactionReadynessMap.get(msg.partition).await()
+    transactionMaterializationBlockingMap.get(msg.partition).await()
     val opt = getOpenedTransactionForPartition(msg.partition)
     assert(opt.isDefined)
     if(logger.isDebugEnabled)

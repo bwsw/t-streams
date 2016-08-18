@@ -6,16 +6,9 @@ import java.util.concurrent.Executor
 
 import com.datastax.driver.core.{ResultSet, Row, Session}
 import com.google.common.util.concurrent.{FutureCallback, Futures}
+import com.bwsw.tstreams.agents.consumer.Transaction
 
 
-/**
-  * Transactions settings
-  *
-  * @param txnUuid    Time of transaction
-  * @param totalItems Total packets in transaction
-  * @param ttl        Transaction expiration time in seconds
-  */
-case class TransactionSettings(txnUuid: UUID, totalItems: Int, ttl: Int)
 
 /**
   * Metadata entity for commits
@@ -129,7 +122,7 @@ class CommitEntity(commitLog: String, session: Session) {
     * @param cnt             Amount of retrieved queue (can be less than cnt in case of insufficiency of transactions)
     * @return Queue of selected transactions
     */
-  def getTransactions(streamName: String, partition: Int, lastTransaction: UUID, cnt: Int = -1): scala.collection.mutable.Queue[TransactionSettings] = {
+  def getTransactions[T](streamName: String, partition: Int, lastTransaction: UUID, cnt: Int = -1): scala.collection.mutable.Queue[Transaction[T]] = {
     val statementWithBindings =
       if (cnt == -1) {
         val values: List[AnyRef] = List(streamName, new Integer(partition), lastTransaction)
@@ -142,11 +135,11 @@ class CommitEntity(commitLog: String, session: Session) {
 
     val selected = session.execute(statementWithBindings)
 
-    val q = scala.collection.mutable.Queue[TransactionSettings]()
+    val q = scala.collection.mutable.Queue[Transaction[T]]()
     val it = selected.iterator()
     while (it.hasNext) {
       val value = it.next()
-      q.enqueue(TransactionSettings(value.getUUID("transaction"), value.getInt("cnt"), value.getInt("ttl(cnt)")))
+      q.enqueue(new Transaction[T](partition, value.getUUID("transaction"), value.getInt("cnt"), value.getInt("ttl(cnt)")))
     }
     q
   }
@@ -160,16 +153,16 @@ class CommitEntity(commitLog: String, session: Session) {
     * @param cnt             Amount of retrieved queue (can be less than cnt in case of insufficiency of transactions)
     * @return Queue of selected transactions
     */
-  def getLastTransactionHelper(streamName: String, partition: Int, lastTransaction: UUID, cnt: Int = 128): scala.collection.mutable.Queue[TransactionSettings] = {
+  def getLastTransactionHelper[T](streamName: String, partition: Int, lastTransaction: UUID, cnt: Int = 128): scala.collection.mutable.Queue[Transaction[T]] = {
     val values: List[AnyRef] = List(streamName, new Integer(partition), lastTransaction, new Integer(cnt))
     val statementWithBindings = selectTransactionsLessThanStatement.bind(values: _*)
     val selected = session.execute(statementWithBindings)
 
-    val q = scala.collection.mutable.Queue[TransactionSettings]()
+    val q = scala.collection.mutable.Queue[Transaction[T]]()
     val it = selected.iterator()
     while (it.hasNext) {
       val value = it.next()
-      q.enqueue(TransactionSettings(value.getUUID("transaction"), value.getInt("cnt"), value.getInt("ttl(cnt)")))
+      q.enqueue(new Transaction(partition, value.getUUID("transaction"), value.getInt("cnt"), value.getInt("ttl(cnt)")))
     }
     q.reverse
   }

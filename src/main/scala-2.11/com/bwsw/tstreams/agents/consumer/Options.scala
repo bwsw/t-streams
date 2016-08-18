@@ -2,10 +2,10 @@ package com.bwsw.tstreams.agents.consumer
 
 import java.net.InetSocketAddress
 
-import com.bwsw.tstreams.agents.consumer.Offsets.IOffset
+import com.bwsw.tstreams.agents.consumer.Offset.IOffset
+import com.bwsw.tstreams.common.AbstractPolicy
 import com.bwsw.tstreams.converter.IConverter
 import com.bwsw.tstreams.generator.IUUIDGenerator
-import com.bwsw.tstreams.policy.AbstractPolicy
 
 /**
   * @param converter                 User defined or predefined converter which convert storage type into usertype
@@ -18,12 +18,18 @@ import com.bwsw.tstreams.policy.AbstractPolicy
   * @param txnGenerator              Generator for generating UUIDs
   * @tparam USERTYPE User type
   */
-class ConsumerOptions[USERTYPE](val transactionsPreload: Int, val dataPreload: Int, val converter: IConverter[Array[Byte], USERTYPE], val readPolicy: AbstractPolicy, val offset: IOffset, val txnGenerator: IUUIDGenerator, val useLastOffset: Boolean = true) {
+case class Options[USERTYPE](val transactionsPreload: Int,
+                              val dataPreload:        Int,
+                              val converter:          IConverter[Array[Byte], USERTYPE],
+                              val readPolicy:         AbstractPolicy,
+                              val offset:             IOffset,
+                              val txnGenerator:       IUUIDGenerator,
+                              val useLastOffset:      Boolean = true) {
   if (transactionsPreload < 1)
-    throw new IllegalArgumentException("incorrect transactionPreload value, should be greater or equal one")
+    throw new IllegalArgumentException("Incorrect transactionPreload value, should be greater than or equal to one.")
 
   if (dataPreload < 1)
-    throw new IllegalArgumentException("incorrect transactionDataPreload value, should be greater or equal one")
+    throw new IllegalArgumentException("Incorrect transactionDataPreload value, should be greater than or equal to one.")
 
 }
 
@@ -37,7 +43,6 @@ class ConsumerOptions[USERTYPE](val transactionsPreload: Int, val dataPreload: I
   *                         [[com.bwsw.tstreams.agents.consumer.subscriber.SubscribingConsumer]]]
   *                         by default (threads_amount == used_consumer_partitions)
   */
-//TODO validate params
 class SubscriberCoordinationOptions(val agentAddress: String,
                                     val zkRootPath: String,
                                     val zkHosts: List[InetSocketAddress],

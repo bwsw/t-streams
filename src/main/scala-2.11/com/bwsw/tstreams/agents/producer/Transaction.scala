@@ -67,6 +67,8 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
     state.makeMaterialized()
   }
 
+  override def toString(): String = s"producer.Transaction(uuid=${transactionUuid}, partition=${partition}, count=${getDataItemsCount()})"
+
   def awaitMaterialized(): Unit = {
     if(Transaction.logger.isDebugEnabled) {
       Transaction.logger.debug(s"Await for transaction ${getTransactionUUID} to be materialized\nfor stream,partition : ${txnOwner.stream.getName},${partition}")

@@ -147,16 +147,16 @@ class SubscriberTransactionsRelay[USERTYPE](subscriber: SubscribingConsumer[USER
 
     transactionBufferLock.lock()
     transactionsGreaterThanLast foreach { txn =>
-      logger.debug(s"[MORE_LAST PARTITION_$partition] consumed txn with uuid:{${txn.txnUuid.timestamp()}}")
-      if (txn.totalItems == -1) {
-        transactionBuffer.update(txn.txnUuid, TransactionStatus.opened, txn.ttl)
+      logger.debug(s"[MORE_LAST PARTITION_$partition] consumed txn with uuid:{${txn.getTxnUUID().timestamp()}}")
+      if (txn.getCount() == -1) {
+        transactionBuffer.update(txn.getTxnUUID(), TransactionStatus.opened, txn.getTTL())
       } else {
-        transactionBuffer.update(txn.txnUuid, TransactionStatus.postCheckpoint, -1)
+        transactionBuffer.update(txn.getTxnUUID(), TransactionStatus.postCheckpoint, -1)
       }
-      assert(txn.txnUuid.timestamp() > lastTxn.timestamp(),
-        logger.debug(s"[RELAY WRONG ASSERT] ${txn.txnUuid.timestamp()} " +
+      assert(txn.getTxnUUID().timestamp() > lastTxn.timestamp(),
+        logger.debug(s"[RELAY WRONG ASSERT] ${txn.getTxnUUID().timestamp()} " +
           s"with lastTxn={${lastTxn.timestamp()}}"))
-      lastTxn = txn.txnUuid
+      lastTxn = txn.getTxnUUID()
     }
     transactionBufferLock.unlock()
   }

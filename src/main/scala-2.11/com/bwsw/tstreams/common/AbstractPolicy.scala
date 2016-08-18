@@ -1,4 +1,4 @@
-package com.bwsw.tstreams.policy
+package com.bwsw.tstreams.common
 
 import com.bwsw.tstreams.streams.TStream
 
@@ -7,6 +7,16 @@ import com.bwsw.tstreams.streams.TStream
   * Class is not thread safe. User must create separate instance for every producer/consumer
   */
 abstract class AbstractPolicy(stream: TStream[_], usedPartitions: List[Int]) {
+
+  /**
+    * Used by classes that implement policy logic to determine current partition
+    */
+  protected var currentPos = 0
+
+  /**
+    * Used by starting new round from though all usedPartitions
+    */
+  protected var roundPos: Int = 0
 
   /**
     * Partitions validation
@@ -19,42 +29,40 @@ abstract class AbstractPolicy(stream: TStream[_], usedPartitions: List[Int]) {
       throw new IllegalArgumentException(s"Invalid partition:{$x} in usedPartitions")
   }
 
-
-  /**
-    * Used by classes that implement policy logic to determine current partition
-    */
-  protected var currentPos = 0
-
   /**
     * @return Next partition (start from the first partition of usedPartitions)
     */
-  def getNextPartition: Int
+  def getNextPartition(): Int
 
   /**
     * @return Current partition
     */
-  def getCurrentPartition: Int = usedPartitions(currentPos)
+  def getCurrentPartition(): Int = this.synchronized {
+    usedPartitions(currentPos)
+  }
 
-  /**
-    * Used by starting new round from though all usedPartitions
-    */
-  protected var roundPos: Int = 0
 
   /**
     * Starting new round
     */
-  def startNewRound(): Unit = roundPos = 0
+  def startNewRound(): Unit = this.synchronized {
+    roundPos = 0
+  }
 
   /**
     *
     * @return Finished round or not
     */
-  def isRoundFinished(): Boolean = roundPos >= usedPartitions.size
+  def isRoundFinished(): Boolean = this.synchronized {
+    roundPos >= usedPartitions.size
+  }
 
   /**
     * Getter for used partitions
     *
     * @return Used partitions
     */
-  def getUsedPartitions(): List[Int] = usedPartitions
+  def getUsedPartitions(): List[Int] = this.synchronized {
+    usedPartitions
+  }
 }

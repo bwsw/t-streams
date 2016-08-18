@@ -7,7 +7,7 @@ import com.bwsw.tstreams.metadata.MetadataStorage
 /**
   * Trait which can be implemented by any producer/consumer to apply group checkpoint
   */
-trait Agent {
+trait GroupParticipant {
 
   def getAgentName(): String
   /**
