@@ -10,15 +10,15 @@ import scala.collection.mutable
   * @param uuid
   * @param count
   * @param ttl
-  * @tparam USERTYPE
+  * @tparam T
   */
-class Transaction[USERTYPE](partition:  Int,
+class Transaction[T](partition:  Int,
                             uuid:       UUID,
                             count:      Int,
                             ttl:        Int) {
 
-  var consumer: Consumer[USERTYPE] = null
-  def attach(c: Consumer[USERTYPE]) = this.synchronized {
+  var consumer: Consumer[T] = null
+  def attach(c: Consumer[T]) = this.synchronized {
     if(c == null)
       throw new IllegalArgumentException("Argument must be not null.")
 
@@ -61,7 +61,7 @@ class Transaction[USERTYPE](partition:  Int,
   /**
     * @return Next piece of data from current transaction
     */
-  def next(): USERTYPE = this.synchronized {
+  def next(): T = this.synchronized {
 
     if(consumer == null)
       throw new IllegalArgumentException("Transaction is not yet attached to consumer. Attach it first.")
@@ -99,7 +99,7 @@ class Transaction[USERTYPE](partition:  Int,
   /**
     * @return All consumed transaction
     */
-  def getAll(): List[USERTYPE] = this.synchronized {
+  def getAll(): List[T] = this.synchronized {
 
     if(consumer == null)
       throw new IllegalArgumentException("Transaction is not yet attached to consumer. Attach it first.")

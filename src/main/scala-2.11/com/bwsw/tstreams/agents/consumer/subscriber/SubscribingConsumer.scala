@@ -17,16 +17,16 @@ import org.slf4j.LoggerFactory
   * @param options             Basic consumer options
   * @param persistentQueuePath Local path for queue which maintain transactions that already exist
   *                            and new incoming transactions
-  * @tparam USERTYPE User data type
+  * @tparam T User data type
   */
-class SubscribingConsumer[USERTYPE](name: String,
+class SubscribingConsumer[T](name: String,
                                     stream: TStream[Array[Byte]],
-                                    options: Options[USERTYPE],
+                                    options: Options[T],
                                     subscriberCoordinationOptions: SubscriberCoordinationOptions,
-                                    callBack: Callback[USERTYPE],
+                                    callBack: Callback[T],
                                     persistentQueuePath: String,
                                     pollingFrequencyMaxDelay: Int = 100)
-  extends Consumer[USERTYPE](name, stream, options) {
+  extends Consumer[T](name, stream, options) {
 
   /**
     * agent name
@@ -182,9 +182,9 @@ class SubscribingConsumer[USERTYPE](name: String,
     isStarted.set(true)
   }
 
-  def resolveLastTxn(partition: Int): Option[Transaction[USERTYPE]] = {
-    val txn: Option[Transaction[USERTYPE]] = getLastTransaction(partition)
-    txn.fold[Option[Transaction[USERTYPE]]](None) { txn =>
+  def resolveLastTxn(partition: Int): Option[Transaction[T]] = {
+    val txn: Option[Transaction[T]] = getLastTransaction(partition)
+    txn.fold[Option[Transaction[T]]](None) { txn =>
       if (txn.getTxnUUID.timestamp() <= currentOffsets(partition).timestamp()) {
         None
       } else {

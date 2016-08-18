@@ -10,17 +10,17 @@ import com.aerospike.client.Host
 import com.aerospike.client.policy.{ClientPolicy, Policy, WritePolicy}
 import com.bwsw.tstreams.agents.consumer.Offset.IOffset
 import com.bwsw.tstreams.agents.consumer.subscriber.{Callback, SubscribingConsumer}
-import com.bwsw.tstreams.agents.consumer.{Consumer, Options, SubscriberCoordinationOptions}
-import com.bwsw.tstreams.agents.producer.{CoordinationOptions, Options, Producer}
-import com.bwsw.tstreams.common._
+import com.bwsw.tstreams.agents.consumer.{Consumer, SubscriberCoordinationOptions}
+import com.bwsw.tstreams.agents.producer.{CoordinationOptions, Producer}
+import com.bwsw.tstreams.common.{RoundRobinPolicy, _}
 import com.bwsw.tstreams.converter.IConverter
 import com.bwsw.tstreams.coordination.producer.transport.impl.TcpTransport
 import com.bwsw.tstreams.data.IStorage
 import com.bwsw.tstreams.generator.IUUIDGenerator
 import com.bwsw.tstreams.metadata.{MetadataStorage, MetadataStorageFactory}
-import com.bwsw.tstreams.common.RoundRobinPolicy
 import com.bwsw.tstreams.streams.TStream
 import org.slf4j.LoggerFactory
+
 import scala.collection.mutable.HashMap
 
 /**
