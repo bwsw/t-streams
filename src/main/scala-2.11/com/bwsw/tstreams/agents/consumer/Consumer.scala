@@ -206,7 +206,7 @@ class Consumer[T](val name: String,
     * @param uuid      Uuid for this transaction
     * @return BasicConsumerTransaction
     */
-  def getTransactionById(partition: Int, uuid: UUID): Option[Transaction[T]] = {
+  def getTransactionById(partition: Int, uuid: UUID): Option[Transaction[T]] = this.synchronized {
 
     if(!isStarted.get())
       throw new IllegalStateException("Consumer is not started. Start consumer first.")
