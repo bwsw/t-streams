@@ -98,7 +98,8 @@ class CheckpointGroup(val executors: Int = 1) {
     LockUtil.lockOrDie(lock, lockTimeout, Some(logger))
 
     agents.foreach { case (name, agent) =>
-      LockUtil.lockOrDie(agent.getThreadLock(), lockTimeout, Some(logger))
+      if(agent.getThreadLock() != null)
+        LockUtil.lockOrDie(agent.getThreadLock(), lockTimeout, Some(logger))
     }
 
     agents.foreach { case (name, agent) => if(agent.isInstanceOf[SendingAgent]) agent.asInstanceOf[SendingAgent].finalizeDataSend() }
@@ -129,7 +130,8 @@ class CheckpointGroup(val executors: Int = 1) {
 
     // unlock all agents
     agents.foreach { case (name, agent) =>
-      agent.getThreadLock().unlock()
+      if(agent.getThreadLock() != null)
+        agent.getThreadLock().unlock()
     }
 
     lock.unlock()

@@ -55,6 +55,7 @@ class Consumer[T](val name: String,
 
   def start(): Unit = this.synchronized {
     Consumer.logger.info(s"Start a new consumer with name: ${name}, streamName : ${stream.getName}, streamPartitions : ${stream.getPartitions}")
+
     if(isStarted.get())
       throw new IllegalStateException(s"Consumer ${name} is started already. Double start is detected.")
 
@@ -102,7 +103,7 @@ class Consumer[T](val name: String,
     *
     * @return BasicConsumerTransaction or None
     */
-  private def getNextTransaction(): Option[Transaction[T]] = {
+  private def getNextTransaction(): Option[Transaction[T]] = this.synchronized {
 
     if(!isStarted.get())
       throw new IllegalStateException(s"Consumer ${name} is not started. Start it first.")
@@ -119,47 +120,43 @@ class Consumer[T](val name: String,
         partition = partition,
         lastTransaction = currentOffsets(partition),
         cnt = options.transactionsPreload)
+
+      if (transactionBuffer(partition).isEmpty) {
+        return getNextTransaction()
+      }
     }
 
-    if (transactionBuffer(partition).isEmpty) {
-      return getNextTransaction()
-    }
-
-    val txn = transactionBuffer(partition).front
+    val txn = transactionBuffer(partition).dequeue()
 
     if (txn.getCount() != -1) {
       offsetsForCheckpoint(partition) = txn.getTxnUUID()
-      currentOffsets(partition) = txn.getTxnUUID()
-      transactionBuffer(partition).dequeue()
+      currentOffsets(partition)       = txn.getTxnUUID()
       txn.attach(this)
       return Some(txn)
-    }
+    } else {
+      val updatedTxnOpt: Option[Transaction[T]] = updateTransactionInfoFromDB(txn.getTxnUUID(), partition)
+      if (updatedTxnOpt.isDefined) {
+        val updatedTxn = updatedTxnOpt.get
 
-    val updatedTxnOpt: Option[Transaction[T]] = updateTransactionInfoFromDB(txn.getTxnUUID(), partition)
-
-    if (updatedTxnOpt.isDefined) {
-      val updatedTxn = updatedTxnOpt.get
-
-      if (updatedTxn.getCount() != -1) {
-        offsetsForCheckpoint(partition) = txn.getTxnUUID()
-        currentOffsets(partition) = txn.getTxnUUID()
-        transactionBuffer(partition).dequeue()
-        updatedTxn.attach(this)
-        return Some(updatedTxn)
+        if (updatedTxn.getCount() != -1) {
+          offsetsForCheckpoint(partition) = txn.getTxnUUID()
+          currentOffsets(partition) = txn.getTxnUUID()
+          updatedTxn.attach(this)
+          return Some(updatedTxn)
+        }
       }
     }
-    else
-      transactionBuffer(partition).dequeue()
-
     getNextTransaction()
   }
 
   /**
     * @return Consumed transaction or None if nothing to consume
     */
-  def getTransaction: Option[Transaction[T]] = {
+  def getTransaction(): Option[Transaction[T]] = {
+
     if(!isStarted.get())
-      throw new IllegalStateException("Start consumer first.")
+      throw new IllegalStateException(s"Consumer ${name} is not started. Start it first.")
+
     Consumer.logger.debug(s"Start new transaction for consumer with name : $name, streamName : ${stream.getName}, streamPartitions : ${stream.getPartitions}")
     options.readPolicy.startNewRound()
     val txn: Option[Transaction[T]] = getNextTransaction
@@ -172,7 +169,7 @@ class Consumer[T](val name: String,
     * @param partition Partition to get last transaction
     * @return Last txn
     */
-  def getLastTransaction(partition: Int): Option[Transaction[T]] = {
+  def getLastTransaction(partition: Int): Option[Transaction[T]] = this.synchronized {
 
     if(!isStarted.get())
       throw new IllegalStateException("Consumer is not started. Start consumer first.")
@@ -208,8 +205,9 @@ class Consumer[T](val name: String,
     * @return BasicConsumerTransaction
     */
   def getTransactionById(partition: Int, uuid: UUID): Option[Transaction[T]] = {
+
     if(!isStarted.get())
-      throw new IllegalStateException("Start consumer first.")
+      throw new IllegalStateException("Consumer is not started. Start consumer first.")
 
     if(Consumer.logger.isDebugEnabled) {
       Consumer.logger.debug(s"Start retrieving new historic transaction for consumer with" +
@@ -235,17 +233,18 @@ class Consumer[T](val name: String,
     * @param partition partition to set offset
     * @param uuid      offset value
     */
-  def setLocalOffset(partition: Int, uuid: UUID): Unit = {
+  def setLocalOffset(partition: Int, uuid: UUID): Unit = this.synchronized {
     if(!isStarted.get())
-      throw new IllegalStateException("Start consumer first.")
+      throw new IllegalStateException("Consumer is not started. Start consumer first.")
 
     offsetsForCheckpoint(partition) = uuid
-    currentOffsets(partition) = uuid
+    currentOffsets(partition)       = uuid
+
     transactionBuffer(partition) = stream.metadataStorage.commitEntity.getTransactions(
-      stream.getName,
-      partition,
-      uuid,
-      options.transactionsPreload)
+                                                                            stream.getName,
+                                                                            partition,
+                                                                            uuid,
+                                                                            options.transactionsPreload)
   }
 
   /**
@@ -254,9 +253,9 @@ class Consumer[T](val name: String,
     * @param txn Transaction to update
     * @return Updated transaction
     */
-  def updateTransactionInfoFromDB(txn: UUID, partition: Int): Option[Transaction[T]] = {
+  def updateTransactionInfoFromDB(txn: UUID, partition: Int): Option[Transaction[T]] = this.synchronized {
     if(!isStarted.get())
-      throw new IllegalStateException("Start consumer first.")
+      throw new IllegalStateException("Consumer is not started. Start consumer first.")
 
     val data: Option[(Int, Int)] =
       stream.metadataStorage.commitEntity.getTransactionItemCountAndTTL(
@@ -276,9 +275,9 @@ class Consumer[T](val name: String,
     * Save current offsets in metadata
     * to read later from them (in case of system stop/failure)
     */
-  def checkpoint(): Unit = {
+  def checkpoint(): Unit = this.synchronized {
     if(!isStarted.get())
-      throw new IllegalStateException("Start consumer first.")
+      throw new IllegalStateException("Consumer is not started. Start consumer first.")
 
     if (Consumer.logger.isDebugEnabled) {
       Consumer.logger.debug(s"Start saving checkpoints for " +
@@ -292,8 +291,9 @@ class Consumer[T](val name: String,
     * Info to commit
     */
   override def getCheckpointInfoAndClear(): List[CheckpointInfo] = this.synchronized {
+
     if(!isStarted.get())
-      throw new IllegalStateException("Start consumer first.")
+      throw new IllegalStateException("Consumer is not started. Start consumer first.")
 
     val checkpointData = offsetsForCheckpoint.map { case (partition, lastTxn) =>
       ConsumerCheckpointInfo(name, stream.getName, partition, lastTxn)
@@ -314,8 +314,7 @@ class Consumer[T](val name: String,
   override def getThreadLock(): ReentrantLock = null
 
   def stop() = {
-    if (!isStarted.get())
-      throw new IllegalStateException("Consumer is not started")
-    isStarted.set(false)
+    if (!isStarted.getAndSet(false))
+      throw new IllegalStateException("Consumer is not started. Start consumer first.")
   }
 }

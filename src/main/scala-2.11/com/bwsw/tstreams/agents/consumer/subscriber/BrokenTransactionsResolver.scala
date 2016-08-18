@@ -110,8 +110,8 @@ class BrokenTransactionsResolver(subscriber: SubscribingConsumer[_]) {
         } else {
           val updatedTransaction = subscriber.updateTransactionInfoFromDB(txn, partition)
           updatedTransaction match {
-            case Some(transactionSettings) =>
-              if (transactionSettings.totalItems != -1) {
+            case Some(transaction) =>
+              if (transaction.getCount() != -1) {
                 updateTransactionBuffer(partition, txn, TransactionStatus.postCheckpoint, -1)
                 removeTxn(partition, txn)
                 logger.debug(s"[CHECKPOINT EVENT RESOLVER] [REFRESH TB UPDATE] CER on" +

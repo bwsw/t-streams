@@ -44,6 +44,11 @@ class Transaction[USERTYPE](partition:  Int,
   def getCount(): Int = count
 
   /**
+    * Return TTL
+    */
+  def getTTL(): Int = ttl
+
+  /**
   * Transaction data pointer
   */
   private var cnt = 0

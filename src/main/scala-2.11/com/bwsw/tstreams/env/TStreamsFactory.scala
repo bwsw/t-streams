@@ -18,7 +18,7 @@ import com.bwsw.tstreams.coordination.producer.transport.impl.TcpTransport
 import com.bwsw.tstreams.data.IStorage
 import com.bwsw.tstreams.generator.IUUIDGenerator
 import com.bwsw.tstreams.metadata.{MetadataStorage, MetadataStorageFactory}
-import com.bwsw.tstreams.policy.RoundRobinPolicy
+import com.bwsw.tstreams.common.RoundRobinPolicy
 import com.bwsw.tstreams.streams.TStream
 import org.slf4j.LoggerFactory
 import scala.collection.mutable.HashMap
