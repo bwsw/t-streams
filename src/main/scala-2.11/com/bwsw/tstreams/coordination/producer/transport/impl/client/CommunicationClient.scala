@@ -3,9 +3,11 @@ package com.bwsw.tstreams.coordination.producer.transport.impl.client
 import java.io.{BufferedReader, IOException, InputStreamReader}
 import java.net.{Socket, SocketTimeoutException}
 import java.util.concurrent.atomic.AtomicBoolean
+
 import com.bwsw.tstreams.common.ProtocolMessageSerializer
 import com.bwsw.tstreams.common.ProtocolMessageSerializer.ProtocolMessageSerializerException
 import com.bwsw.tstreams.coordination.messages.master.IMessage
+import com.bwsw.tstreams.coordination.messages.state.Message
 import org.slf4j.LoggerFactory
 
 import scala.collection.mutable
@@ -42,7 +44,6 @@ object CommunicationClient {
 class CommunicationClient(timeoutMs: Int, retryCount: Int = 3, retryDelayMs: Int = 5000) {
   private val peerMap = mutable.Map[String, Socket]()
   private val isClosed = new AtomicBoolean(false)
-
 
 
   private def getSocket(address: String): Socket = this.synchronized {
@@ -111,6 +112,29 @@ class CommunicationClient(timeoutMs: Int, retryCount: Int = 3, retryDelayMs: Int
       val reqString = ProtocolMessageSerializer.wrapMsg(ProtocolMessageSerializer.serialize(msg))
       writeMsgAndNoWaitResponse(sock, reqString)
     }, retryCount, isExceptionOnFail = isExceptionOnFail)
+  }
+
+  /**
+    * Send broadcast message to several recipients
+    * @param peers
+    * @param msg
+    * @return Set of failed peers (to exclude them from further send-outs until next update)
+    */
+  def broadcast(peers: Set[String], msg: Message): Set[String] = {
+    val req = ProtocolMessageSerializer
+      .wrapMsg(ProtocolMessageSerializer
+        .serialize(msg))
+
+    peers.filter( p =>
+      try {
+        val s = getSocket(p)
+        writeMsgAndNoWaitResponse(s, req)
+        false // ok, not failed
+      } catch {
+        case e: IOException =>
+          CommunicationClient.logger.warn(s"exception occurred when opening connection to peer ${p}: ${e.getMessage}")
+          true // failed
+      })
   }
 
   /**
