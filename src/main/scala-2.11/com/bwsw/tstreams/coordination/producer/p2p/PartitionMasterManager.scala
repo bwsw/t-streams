@@ -43,7 +43,7 @@ class PartitionMasterManager(dlm: ZookeeperDLMService, myIPAddress: String, stre
         val masterOpt = dlm.get[MasterSettings](getPartitionMasterPath(partition))
         if (PeerAgent.logger.isDebugEnabled)
         {
-          PeerAgent.logger.debug(s"[GET MASTER]Agent:{${masterOpt.getOrElse("None")}} is current master on stream: {$streamName}, partition: {$partition}.")
+          PeerAgent.logger.debug(s"[REQUEST CURRENT MASTER] Agent: ${masterOpt.getOrElse("None")} is current master on stream: {$streamName}, partition: {$partition}.")
         }
         masterOpt
       })
@@ -64,8 +64,7 @@ class PartitionMasterManager(dlm: ZookeeperDLMService, myIPAddress: String, stre
       val penalty = if (isLowPriorityToBeMaster) PeerAgent.LOW_PRIORITY_PENALTY else 0
 
       val settings = AgentSettings(myIPAddress, priority = 0, penalty)
-      PeerAgent.logger.info(s"Create ${getMyPath(p)} for ${settings}")
-      dlm.create[AgentSettings](getMyPath(p), settings, CreateMode.EPHEMERAL_SEQUENTIAL)
+      dlm.create[AgentSettings](getMyPath(p), settings, CreateMode.EPHEMERAL)
     }
 
     if (PeerAgent.logger.isDebugEnabled)
@@ -123,7 +122,6 @@ class PartitionMasterManager(dlm: ZookeeperDLMService, myIPAddress: String, stre
   }
 
   def getStreamPartitionParticipantsData(partition: Int): List[AgentSettings] = this.synchronized {
-    PeerAgent.logger.info(s"Get data for ${getPartitionPath(partition)}")
     val agentsDataOpt = dlm.getAllSubNodesData[AgentSettings](getPartitionPath(partition))
     if(agentsDataOpt.isDefined)
       agentsDataOpt.get
@@ -147,7 +145,7 @@ class PartitionMasterManager(dlm: ZookeeperDLMService, myIPAddress: String, stre
     LockUtil.withZkLockOrDieDo[Unit](dlm.getLock(getPartitionLockPath(partition)), (100, TimeUnit.SECONDS), Some(PeerAgent.logger), () => {
       dlm.delete(getPartitionMasterPath(partition))
       if (PeerAgent.logger.isDebugEnabled) {
-        PeerAgent.logger.info(s"[USET MASTER ANNOUNCE] Agent ($myIPAddress) - I'm no longer the master for stream/partition: ($streamName,$partition).")
+        PeerAgent.logger.debug(s"[USET MASTER ANNOUNCE] Agent ($myIPAddress) - I'm no longer the master for stream/partition: ($streamName,$partition).")
       }
     })
   }
@@ -190,7 +188,6 @@ class PartitionMasterManager(dlm: ZookeeperDLMService, myIPAddress: String, stre
           PeerAgent.logger.debug(s"[INIT CLEAN] Delete agent on address:{$agent} from stream:{$streamName}, partition:{$partition}.")
         }
         try {
-          PeerAgent.logger.info(s"Delete data for ${getMyPath(partition)}")
           dlm.delete(getMyPath(partition))
         } catch {
           case e: KeeperException =>
