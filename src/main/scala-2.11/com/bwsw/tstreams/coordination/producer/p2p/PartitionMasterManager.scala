@@ -216,9 +216,13 @@ class PartitionMasterManager(dlm: ZookeeperDLMService, myIPAddress: String, stre
       })
   }
 
+  def withElectionLockDo(partition: Int, f: () => String): String =
+    LockUtil.withZkLockOrDieDo[String](dlm.getLock(getLockVotingPath(partition)), (100, TimeUnit.SECONDS), Some(PeerAgent.logger), f)
 
-  private def getPartitionPath(partition: Int)        = s"/producers/agents/$streamName/$partition"
+
+      private def getPartitionPath(partition: Int)        = s"/producers/agents/$streamName/$partition"
   private def getMyPath(partition: Int)               = s"${getPartitionPath(partition)}/agent_${myIPAddress}_$agentID"
   private def getPartitionLockPath(partition: Int)    = s"/producers/lock_master/$streamName/$partition"
   private def getPartitionMasterPath(partition: Int)  = s"/producers/master/$streamName/$partition"
+  private def getLockVotingPath(partition: Int)       = s"/producers/lock_voting/$streamName/$partition"
 }
