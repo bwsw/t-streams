@@ -2,7 +2,7 @@ package env
 
 import java.util.UUID
 
-import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
+import com.bwsw.tstreams.agents.consumer.Offset.Oldest
 import com.bwsw.tstreams.agents.consumer.subscriber.{Callback, SubscribingConsumer}
 import com.bwsw.tstreams.converter.{ArrayByteToStringConverter, StringToArrayByteConverter}
 import com.bwsw.tstreams.env.TSF_Dictionary

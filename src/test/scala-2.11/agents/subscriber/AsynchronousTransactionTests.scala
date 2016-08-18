@@ -2,7 +2,7 @@ package agents.subscriber
 
 import java.util.concurrent.CountDownLatch
 
-import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
+import com.bwsw.tstreams.agents.consumer.Offset.Oldest
 import com.bwsw.tstreams.agents.producer.NewTransactionProducerPolicy
 import com.bwsw.tstreams.debug.GlobalHooks
 import com.bwsw.tstreams.env.TSF_Dictionary

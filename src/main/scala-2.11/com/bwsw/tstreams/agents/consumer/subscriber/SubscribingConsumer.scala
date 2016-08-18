@@ -3,7 +3,7 @@ package com.bwsw.tstreams.agents.consumer.subscriber
 import java.util.UUID
 import java.util.concurrent.{ExecutorService, Executors}
 
-import com.bwsw.tstreams.agents.consumer.{Consumer, ConsumerOptions, ConsumerTransaction, SubscriberCoordinationOptions}
+import com.bwsw.tstreams.agents.consumer.{Consumer, Options, Transaction, SubscriberCoordinationOptions}
 import com.bwsw.tstreams.coordination.subscriber.Coordinator
 import com.bwsw.tstreams.streams.TStream
 import com.bwsw.tstreams.txnqueue.PersistentTransactionQueue
@@ -21,7 +21,7 @@ import org.slf4j.LoggerFactory
   */
 class SubscribingConsumer[USERTYPE](name: String,
                                     stream: TStream[Array[Byte]],
-                                    options: ConsumerOptions[USERTYPE],
+                                    options: Options[USERTYPE],
                                     subscriberCoordinationOptions: SubscriberCoordinationOptions,
                                     callBack: Callback[USERTYPE],
                                     persistentQueuePath: String,
@@ -182,9 +182,9 @@ class SubscribingConsumer[USERTYPE](name: String,
     isStarted.set(true)
   }
 
-  def resolveLastTxn(partition: Int): Option[ConsumerTransaction[USERTYPE]] = {
-    val txn: Option[ConsumerTransaction[USERTYPE]] = getLastTransaction(partition)
-    txn.fold[Option[ConsumerTransaction[USERTYPE]]](None) { txn =>
+  def resolveLastTxn(partition: Int): Option[Transaction[USERTYPE]] = {
+    val txn: Option[Transaction[USERTYPE]] = getLastTransaction(partition)
+    txn.fold[Option[Transaction[USERTYPE]]](None) { txn =>
       if (txn.getTxnUUID.timestamp() <= currentOffsets(partition).timestamp()) {
         None
       } else {

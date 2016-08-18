@@ -1,4 +1,4 @@
-package com.bwsw.tstreams.policy
+package com.bwsw.tstreams.common
 
 import com.bwsw.tstreams.streams.TStream
 
@@ -16,7 +16,7 @@ class RoundRobinPolicy(stream: TStream[_], usedPartitions: List[Int])
     *
     * @return Next partition
     */
-  override def getNextPartition: Int = {
+  override def getNextPartition(): Int = this.synchronized {
     val partition = usedPartitions(currentPos)
 
     if (roundPos < usedPartitions.size)

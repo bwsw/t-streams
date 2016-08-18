@@ -1,6 +1,6 @@
 package testutils
 
-import com.bwsw.tstreams.policy.RoundRobinPolicy
+import com.bwsw.tstreams.common.RoundRobinPolicy
 import com.bwsw.tstreams.streams.TStream
 
 /**
