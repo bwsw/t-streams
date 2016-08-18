@@ -1,16 +1,15 @@
 package com.bwsw.tstreams.coordination.producer.transport.impl
 
-import java.util.concurrent.{TimeUnit, Executors}
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 
 import com.bwsw.tstreams.common.FirstFailLockableTaskExecutor
 import com.bwsw.tstreams.coordination.messages.master._
 import com.bwsw.tstreams.coordination.messages.state.Message
-import com.bwsw.tstreams.coordination.producer.transport.impl.client.CommunicationClient$
+import com.bwsw.tstreams.coordination.producer.transport.impl.client.CommunicationClient
 import com.bwsw.tstreams.coordination.producer.transport.impl.server.ProducerRequestsTcpServer
 import io.netty.channel.{Channel, ChannelHandler, ChannelHandlerContext, SimpleChannelInboundHandler}
 import io.netty.util.ReferenceCountUtil
-import org.slf4j.LoggerFactory
 
 /**
   * Transport implementation
