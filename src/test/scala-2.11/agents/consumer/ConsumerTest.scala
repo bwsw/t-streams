@@ -1,8 +1,8 @@
 package agents.consumer
 
 import java.util.UUID
-import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
-import com.bwsw.tstreams.agents.consumer.ConsumerTransaction
+import com.bwsw.tstreams.agents.consumer.Offset.Oldest
+import com.bwsw.tstreams.agents.consumer.Transaction
 import com.bwsw.tstreams.agents.producer.NewTransactionProducerPolicy
 import com.bwsw.tstreams.entities.CommitEntity
 import com.bwsw.tstreams.env.TSF_Dictionary
@@ -74,7 +74,7 @@ class ConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll with Te
     txns.drop(1) foreach { x =>
       commitEntity.commit("test_stream", 1, x, -1, 120)
     }
-    val retrievedTxnOpt: Option[ConsumerTransaction[String]] = consumer.getLastTransaction(partition = 1)
+    val retrievedTxnOpt: Option[Transaction[String]] = consumer.getLastTransaction(partition = 1)
     val retrievedTxn = retrievedTxnOpt.get
     retrievedTxn.getTxnUUID shouldEqual txn
   }

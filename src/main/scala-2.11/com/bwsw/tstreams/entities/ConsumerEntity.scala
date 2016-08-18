@@ -16,19 +16,19 @@ class ConsumerEntity(entityName: String, session: Session) {
     * Statement for check exist or not some specific consumer
     */
   private val existStatement = session
-    .prepare(s"select name from $entityName where name=? limit 1")
+    .prepare(s"SELECT name FROM $entityName WHERE name=? LIMIT 1")
 
   /**
     * Statement for saving single offset
     */
   private val saveSingleOffsetStatement = session
-    .prepare(s"insert into $entityName (name,stream,partition,last_transaction) values(?,?,?,?)")
+    .prepare(s"INSERT INTO $entityName (name,stream,partition,last_transaction) VALUES(?,?,?,?)")
 
   /**
     * Statement for retrieving offsets from consumers metadata
     */
   private val getOffsetStatement = session
-    .prepare(s"select last_transaction from $entityName where name=? AND stream=? AND partition=? limit 1")
+    .prepare(s"SELECT last_transaction FROM $entityName WHERE name=? AND stream=? AND partition=? LIMIT 1")
 
 
   /**
@@ -37,7 +37,7 @@ class ConsumerEntity(entityName: String, session: Session) {
     * @param consumerName Name of the consumer
     * @return Exist or not concrete consumer
     */
-  def exist(consumerName: String): Boolean = {
+  def exists(consumerName: String): Boolean = {
     val statementWithBindings = existStatement.bind(consumerName)
     val res = session.execute(statementWithBindings).all()
     !res.isEmpty
@@ -82,7 +82,7 @@ class ConsumerEntity(entityName: String, session: Session) {
     * @param partition Name of the specific partition
     * @return Offset
     */
-  def getOffset(name: String, stream: String, partition: Int): UUID = {
+  def getLastSavedOffset(name: String, stream: String, partition: Int): UUID = {
     val values = List(name, stream, new Integer(partition))
     val statementWithBindings = getOffsetStatement.bind(values: _*)
     val selected = session.execute(statementWithBindings).all()

@@ -5,7 +5,7 @@ import java.util.Date
 /**
   * All possible start offsets for consumer
   */
-object Offsets {
+object Offset {
 
   /**
     * Basic trait for all offsets
@@ -34,7 +34,7 @@ object Offsets {
     *
     * @param startUUID Start offset in uuid
     */
-  case class CustomUUID(startUUID: java.util.UUID) extends IOffset
+  case class UUID(startUUID: java.util.UUID) extends IOffset
 
 }
 

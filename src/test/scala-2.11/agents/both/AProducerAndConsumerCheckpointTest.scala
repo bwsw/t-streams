@@ -1,7 +1,7 @@
 package agents.both
 
-import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
-import com.bwsw.tstreams.agents.consumer.{Consumer, ConsumerTransaction}
+import com.bwsw.tstreams.agents.consumer.Offset.Oldest
+import com.bwsw.tstreams.agents.consumer.{Consumer, Transaction}
 import com.bwsw.tstreams.agents.producer.NewTransactionProducerPolicy
 import com.bwsw.tstreams.common.TimeTracker
 import com.bwsw.tstreams.env.TSF_Dictionary
@@ -69,7 +69,7 @@ class AProducerAndConsumerCheckpointTest extends FlatSpec with Matchers with Bef
 
     consumer.start
     (0 until firstPart) foreach { _ =>
-      val txn: ConsumerTransaction[String] = consumer.getTransaction.get
+      val txn: Transaction[String] = consumer.getTransaction.get
       val data = txn.getAll().sorted
       consumer.checkpoint()
       checkVal &= data == dataToSend
@@ -77,7 +77,7 @@ class AProducerAndConsumerCheckpointTest extends FlatSpec with Matchers with Bef
 
     consumer2.start
     (0 until secondPart) foreach { _ =>
-      val txn: ConsumerTransaction[String] = consumer2.getTransaction.get
+      val txn: Transaction[String] = consumer2.getTransaction.get
       val data = txn.getAll().sorted
       checkVal &= data == dataToSend
     }

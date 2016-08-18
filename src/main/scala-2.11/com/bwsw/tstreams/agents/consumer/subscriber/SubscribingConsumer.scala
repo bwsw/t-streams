@@ -3,7 +3,7 @@ package com.bwsw.tstreams.agents.consumer.subscriber
 import java.util.UUID
 import java.util.concurrent.{ExecutorService, Executors}
 
-import com.bwsw.tstreams.agents.consumer.{Consumer, ConsumerOptions, ConsumerTransaction, SubscriberCoordinationOptions}
+import com.bwsw.tstreams.agents.consumer.{Consumer, Options, Transaction, SubscriberCoordinationOptions}
 import com.bwsw.tstreams.coordination.subscriber.Coordinator
 import com.bwsw.tstreams.streams.TStream
 import com.bwsw.tstreams.txnqueue.PersistentTransactionQueue
@@ -17,16 +17,16 @@ import org.slf4j.LoggerFactory
   * @param options             Basic consumer options
   * @param persistentQueuePath Local path for queue which maintain transactions that already exist
   *                            and new incoming transactions
-  * @tparam USERTYPE User data type
+  * @tparam T User data type
   */
-class SubscribingConsumer[USERTYPE](name: String,
+class SubscribingConsumer[T](name: String,
                                     stream: TStream[Array[Byte]],
-                                    options: ConsumerOptions[USERTYPE],
+                                    options: Options[T],
                                     subscriberCoordinationOptions: SubscriberCoordinationOptions,
-                                    callBack: Callback[USERTYPE],
+                                    callBack: Callback[T],
                                     persistentQueuePath: String,
                                     pollingFrequencyMaxDelay: Int = 100)
-  extends Consumer[USERTYPE](name, stream, options) {
+  extends Consumer[T](name, stream, options) {
 
   /**
     * agent name
@@ -93,11 +93,10 @@ class SubscribingConsumer[USERTYPE](name: String,
   /**
     * Start subscriber to consume new transactions
     */
-  override def start(): Unit = {
+  override def start(): Unit = this.synchronized {
     if (isStarted.get())
       throw new IllegalStateException("Subscriber already started")
 
-    getThreadLock().lock()
     super.start()
 
     updateManager = new UpdateManager
@@ -178,13 +177,12 @@ class SubscribingConsumer[USERTYPE](name: String,
     }
 
     streamLock.unlock()
-    getThreadLock().unlock()
     isStarted.set(true)
   }
 
-  def resolveLastTxn(partition: Int): Option[ConsumerTransaction[USERTYPE]] = {
-    val txn: Option[ConsumerTransaction[USERTYPE]] = getLastTransaction(partition)
-    txn.fold[Option[ConsumerTransaction[USERTYPE]]](None) { txn =>
+  def resolveLastTxn(partition: Int): Option[Transaction[T]] = {
+    val txn: Option[Transaction[T]] = getLastTransaction(partition)
+    txn.fold[Option[Transaction[T]]](None) { txn =>
       if (txn.getTxnUUID.timestamp() <= currentOffsets(partition).timestamp()) {
         None
       } else {

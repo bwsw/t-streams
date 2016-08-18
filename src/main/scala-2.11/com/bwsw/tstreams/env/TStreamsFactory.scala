@@ -8,19 +8,19 @@ import java.util.concurrent.locks.ReentrantLock
 
 import com.aerospike.client.Host
 import com.aerospike.client.policy.{ClientPolicy, Policy, WritePolicy}
-import com.bwsw.tstreams.agents.consumer.Offsets.IOffset
+import com.bwsw.tstreams.agents.consumer.Offset.IOffset
 import com.bwsw.tstreams.agents.consumer.subscriber.{Callback, SubscribingConsumer}
-import com.bwsw.tstreams.agents.consumer.{Consumer, ConsumerOptions, SubscriberCoordinationOptions}
-import com.bwsw.tstreams.agents.producer.{CoordinationOptions, Options, Producer}
-import com.bwsw.tstreams.common.{CassandraConnectorConf, LockUtil, NetworkUtil}
+import com.bwsw.tstreams.agents.consumer.{Consumer, SubscriberCoordinationOptions}
+import com.bwsw.tstreams.agents.producer.{CoordinationOptions, Producer}
+import com.bwsw.tstreams.common.{RoundRobinPolicy, _}
 import com.bwsw.tstreams.converter.IConverter
 import com.bwsw.tstreams.coordination.producer.transport.impl.TcpTransport
 import com.bwsw.tstreams.data.IStorage
 import com.bwsw.tstreams.generator.IUUIDGenerator
 import com.bwsw.tstreams.metadata.{MetadataStorage, MetadataStorageFactory}
-import com.bwsw.tstreams.policy.{AbstractPolicy, RoundRobinPolicy}
 import com.bwsw.tstreams.streams.TStream
 import org.slf4j.LoggerFactory
+
 import scala.collection.mutable.HashMap
 
 /**
@@ -794,14 +794,14 @@ class TStreamsFactory(envname: String = "T-streams") {
                                                 converter: IConverter[Array[Byte], USERTYPE],
                                                 txnGenerator: IUUIDGenerator,
                                                 offset: IOffset,
-                                                isUseLastOffset: Boolean = true): ConsumerOptions[USERTYPE] = {
+                                                isUseLastOffset: Boolean = true): com.bwsw.tstreams.agents.consumer.Options[USERTYPE] = {
     val consumer_transaction_preload = pAsInt(TSF_Dictionary.Consumer.TRANSACTION_PRELOAD, Consumer_transaction_preload_default)
     pAssertIntRange(consumer_transaction_preload, Consumer_transaction_preload_min, Consumer_transaction_preload_max)
 
     val consumer_data_preload = pAsInt(TSF_Dictionary.Consumer.DATA_PRELOAD, Consumer_data_preload_default)
     pAssertIntRange(consumer_data_preload, Consumer_data_preload_min, Consumer_data_preload_max)
 
-    val consumerOptions = new ConsumerOptions[USERTYPE](transactionsPreload = consumer_transaction_preload, dataPreload = consumer_data_preload, converter = converter, readPolicy = new RoundRobinPolicy(stream, partitions), offset = offset, txnGenerator = txnGenerator, useLastOffset = isUseLastOffset)
+    val consumerOptions = new com.bwsw.tstreams.agents.consumer.Options[USERTYPE](transactionsPreload = consumer_transaction_preload, dataPreload = consumer_data_preload, converter = converter, readPolicy = new RoundRobinPolicy(stream, partitions), offset = offset, txnGenerator = txnGenerator, useLastOffset = isUseLastOffset)
 
     consumerOptions
   }
@@ -888,8 +888,7 @@ class TStreamsFactory(envname: String = "T-streams") {
       pAssertIntRange(insertCnt,
         Producer_transaction_data_write_batch_size_min, Producer_transaction_data_write_batch_size_max)
 
-
-      val po = new Options[USERTYPE](transactionTTL = pAsInt(TSF_Dictionary.Producer.Transaction.TTL, Producer_transaction_ttl_default), transactionKeepAliveInterval = pAsInt(TSF_Dictionary.Producer.Transaction.KEEP_ALIVE, Producer_transaction_keep_alive_default), writePolicy = writePolicy, batchSize = insertCnt, txnGenerator = txnGenerator, coordinationOptions = cao, converter = converter)
+      val po = new com.bwsw.tstreams.agents.producer.Options[USERTYPE](transactionTTL = pAsInt(TSF_Dictionary.Producer.Transaction.TTL, Producer_transaction_ttl_default), transactionKeepAliveInterval = pAsInt(TSF_Dictionary.Producer.Transaction.KEEP_ALIVE, Producer_transaction_keep_alive_default), writePolicy = writePolicy, batchSize = insertCnt, txnGenerator = txnGenerator, coordinationOptions = cao, converter = converter)
 
       new Producer[USERTYPE](name = name, stream = stream, producerOptions = po)
     })

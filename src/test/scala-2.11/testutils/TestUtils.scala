@@ -38,6 +38,9 @@ trait TestUtils {
   val randomString = TestUtils.getKeyspace(id)
   val coordinationRoot = TestUtils.getCoordinationRoot(id)
 
+  val zookeeperPort = TestUtils.zookeperPort
+
+
   val logger = LoggerFactory.getLogger(this.getClass)
   val uptime = ManagementFactory.getRuntimeMXBean.getStartTime
 
@@ -47,8 +50,8 @@ trait TestUtils {
   logger.info("-------------------------------------------------------")
 
 
-  val cluster = MetadataConnectionPool.getCluster(CassandraConnectorConf(Set(new InetSocketAddress("localhost", 9142))))
-  val session = MetadataConnectionPool.getSession(CassandraConnectorConf(Set(new InetSocketAddress("localhost", 9142))), null)
+  val cluster = MetadataConnectionPool.getCluster(CassandraConnectorConf(Set(new InetSocketAddress("localhost", TestUtils.cassandraPort))))
+  val session = MetadataConnectionPool.getSession(CassandraConnectorConf(Set(new InetSocketAddress("localhost", TestUtils.cassandraPort))), null)
 
   def createRandomKeyspace(): String = {
     val randomKeyspace = randomString
@@ -65,10 +68,10 @@ trait TestUtils {
 
   val f = new TStreamsFactory()
   f.setProperty(TSF_Dictionary.Metadata.Cluster.NAMESPACE, randomKeyspace)
-    .setProperty(TSF_Dictionary.Metadata.Cluster.ENDPOINTS, "localhost:9142")
+    .setProperty(TSF_Dictionary.Metadata.Cluster.ENDPOINTS, s"localhost:${TestUtils.cassandraPort}")
     .setProperty(TSF_Dictionary.Data.Cluster.NAMESPACE, "test")
     .setProperty(TSF_Dictionary.Coordination.ROOT, coordinationRoot)
-    .setProperty(TSF_Dictionary.Coordination.ENDPOINTS, "localhost:21810")
+    .setProperty(TSF_Dictionary.Coordination.ENDPOINTS, s"localhost:${zookeeperPort}")
     .setProperty(TSF_Dictionary.Consumer.Subscriber.BIND_PORT, TestUtils.getPort)
     .setProperty(TSF_Dictionary.Consumer.Subscriber.PERSISTENT_QUEUE_PATH, randomKeyspace)
     .setProperty(TSF_Dictionary.Stream.NAME, "test-stream")
@@ -90,7 +93,7 @@ trait TestUtils {
 
   val aerospikeOptions = new com.bwsw.tstreams.data.aerospike.Options("test", hosts)
   val hazelcastOptions = new hazelcast.Options("test", 0,0)
-  val zkService = new ZookeeperDLMService("", List(new InetSocketAddress("127.0.0.1", 21810)), 7, 7)
+  val zkService = new ZookeeperDLMService("", List(new InetSocketAddress("127.0.0.1", zookeeperPort)), 7, 7)
 
   removeZkMetadata(f.getProperty(TSF_Dictionary.Coordination.ROOT).toString)
 
@@ -148,12 +151,15 @@ trait TestUtils {
 
 object TestUtils {
 
+  val zookeperPort = 21810
+  val cassandraPort = 9142
+
   private val id: AtomicInteger = new AtomicInteger(0)
   private val port = new AtomicInteger(28000)
 
   EmbeddedCassandraServerHelper.startEmbeddedCassandra(60000L)
   System.getProperty("java.io.tmpdir","./target/")
-  private val zk = new ZooKeeperLocal(Files.createTempDir().toString)
+  private val zk = new ZooKeeperLocal(zookeperPort, Files.createTempDir().toString)
 
   def moveId(): Int = {
     val rid = id.incrementAndGet()
@@ -172,14 +178,14 @@ object TestUtils {
 
 }
 
-class ZooKeeperLocal(tmp: String) {
+class ZooKeeperLocal(zookeperPort: Int, tmp: String) {
 
   val properties = new Properties()
   properties.setProperty("tickTime","2000")
   properties.setProperty("initLimit","10")
   properties.setProperty("syncLimit","5")
   properties.setProperty("dataDir",s"${tmp}")
-  properties.setProperty("clientPort","21810")
+  properties.setProperty("clientPort",s"${zookeperPort}")
 
   val zooKeeperServer = new ZooKeeperServerMain
   val quorumConfiguration = new QuorumPeerConfig()

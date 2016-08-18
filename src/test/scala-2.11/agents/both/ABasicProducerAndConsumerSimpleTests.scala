@@ -1,7 +1,7 @@
 package agents.both
 
-import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
-import com.bwsw.tstreams.agents.consumer.{ConsumerTransaction}
+import com.bwsw.tstreams.agents.consumer.Offset.Oldest
+import com.bwsw.tstreams.agents.consumer.{Transaction}
 import com.bwsw.tstreams.agents.producer.{NewTransactionProducerPolicy}
 import com.bwsw.tstreams.common.CassandraHelper
 import com.bwsw.tstreams.env.TSF_Dictionary
@@ -148,7 +148,7 @@ class ABasicProducerAndConsumerSimpleTests extends FlatSpec with Matchers with B
       def run() {
         breakable {
           while (true) {
-            val consumedTxn: Option[ConsumerTransaction[String]] = consumer.getTransaction
+            val consumedTxn: Option[Transaction[String]] = consumer.getTransaction
             if (consumedTxn.isDefined) {
               checkVal &= consumedTxn.get.getAll().sorted == sendData
               break()
