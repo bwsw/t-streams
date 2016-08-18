@@ -128,8 +128,7 @@ class CommunicationClient(timeoutMs: Int, retryCount: Int = 3, retryDelayMs: Int
     peers.filter( p =>
       try {
         val s = getSocket(p)
-        writeMsgAndNoWaitResponse(s, req)
-        false // ok, not failed
+        !writeMsgAndNoWaitResponse(s, req) // if !false -> true then failed, if !true - ok
       } catch {
         case e: IOException =>
           CommunicationClient.logger.warn(s"exception occurred when opening connection to peer ${p}: ${e.getMessage}")
