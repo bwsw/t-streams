@@ -17,6 +17,10 @@ class Transaction[T](partition:  Int,
                             count:      Int,
                             ttl:        Int) {
 
+  override def toString(): String = {
+    s"consumer.Transaction(uuid=${uuid},partition=${partition}, count=${count}, ttl=${ttl})"
+  }
+
   var consumer: Consumer[T] = null
   def attach(c: Consumer[T]) = this.synchronized {
     if(c == null)

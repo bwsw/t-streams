@@ -15,7 +15,7 @@ class CheckpointGroup(val executors: Int = 1) {
   /**
     * Group of agents (producers/consumer)
     */
-  private var agents = scala.collection.mutable.Map[String, Agent]()
+  private var agents = scala.collection.mutable.Map[String, GroupParticipant]()
   private val lock = new ReentrantLock()
   private val lockTimeout = (20, TimeUnit.SECONDS)
   private val executorPool = new FirstFailLockableTaskExecutor("CheckpointGroup-Workers", executors)
@@ -41,7 +41,7 @@ class CheckpointGroup(val executors: Int = 1) {
     *
     * @param agent Agent ref
     */
-  def add(agent: Agent): Unit = {
+  def add(agent: GroupParticipant): Unit = {
     LockUtil.withLockOrDieDo[Unit](lock, lockTimeout, Some(logger), () => {
       if(isStopped.get)
         throw new IllegalStateException("Group is stopped. No longer operations are possible.")

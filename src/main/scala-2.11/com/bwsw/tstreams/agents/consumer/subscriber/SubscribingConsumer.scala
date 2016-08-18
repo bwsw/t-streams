@@ -93,11 +93,10 @@ class SubscribingConsumer[T](name: String,
   /**
     * Start subscriber to consume new transactions
     */
-  override def start(): Unit = {
+  override def start(): Unit = this.synchronized {
     if (isStarted.get())
       throw new IllegalStateException("Subscriber already started")
 
-    getThreadLock().lock()
     super.start()
 
     updateManager = new UpdateManager
@@ -178,7 +177,6 @@ class SubscribingConsumer[T](name: String,
     }
 
     streamLock.unlock()
-    getThreadLock().unlock()
     isStarted.set(true)
   }
 

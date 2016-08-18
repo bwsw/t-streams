@@ -77,17 +77,21 @@ class AManyProducersStreamingInManyPartitionsAndConsumerWithCheckpointsTest exte
         def run() = {
           var i = 0
           while (i < totalTxn * producersAmount) {
-
-            if (i % 30 == 0) {
+            if (i == 30) {
               consumer.checkpoint()
               consumer2.start
             }
 
-            val txn = consumer2.getTransaction
+            val txn = if (i<30)
+              consumer.getTransaction
+            else
+              consumer2.getTransaction
 
             if (txn.isDefined) {
               txn.get.getAll().sorted shouldBe dataToSend
               i += 1
+            } else {
+              Thread.sleep(100)
             }
           }
         }

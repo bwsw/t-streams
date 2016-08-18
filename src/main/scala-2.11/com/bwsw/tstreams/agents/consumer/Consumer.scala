@@ -4,7 +4,7 @@ import java.util.UUID
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.locks.ReentrantLock
 
-import com.bwsw.tstreams.agents.group.{Agent, CheckpointInfo, ConsumerCheckpointInfo}
+import com.bwsw.tstreams.agents.group.{GroupParticipant, CheckpointInfo, ConsumerCheckpointInfo}
 import com.bwsw.tstreams.metadata.MetadataStorage
 import com.bwsw.tstreams.streams.TStream
 import org.slf4j.LoggerFactory
@@ -23,7 +23,7 @@ object Consumer {
   */
 class Consumer[T](val name: String,
                          val stream: TStream[Array[Byte]],
-                         val options: Options[T]) extends Agent {
+                         val options: Options[T]) extends GroupParticipant {
   /**
     * agent name
     */
@@ -126,12 +126,13 @@ class Consumer[T](val name: String,
       }
     }
 
-    val txn = transactionBuffer(partition).dequeue()
+    val txn = transactionBuffer(partition).head
 
     if (txn.getCount() != -1) {
       offsetsForCheckpoint(partition) = txn.getTxnUUID()
       currentOffsets(partition)       = txn.getTxnUUID()
       txn.attach(this)
+      transactionBuffer(partition).dequeue()
       return Some(txn)
     } else {
       val updatedTxnOpt: Option[Transaction[T]] = updateTransactionInfoFromDB(txn.getTxnUUID(), partition)
@@ -142,6 +143,7 @@ class Consumer[T](val name: String,
           offsetsForCheckpoint(partition) = txn.getTxnUUID()
           currentOffsets(partition) = txn.getTxnUUID()
           updatedTxn.attach(this)
+          transactionBuffer(partition).dequeue()
           return Some(updatedTxn)
         }
       }
