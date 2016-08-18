@@ -78,7 +78,10 @@ class PeerAgent(masterManager: PartitionMasterManager, zkService: ZookeeperDLMSe
   /**
     * this ID is used to track sequential transactions from the same master
     */
-  private val uniqueAgentId = Random.nextInt()
+  private val uniqueAgentId = {
+    val v = Random.nextInt()
+    if (v<0) -v else v
+  }
 
   /**
     * this ID map is used to track sequential transactions on subscribers
@@ -104,10 +107,16 @@ class PeerAgent(masterManager: PartitionMasterManager, zkService: ZookeeperDLMSe
     .map { case (partition, execNum) => (partition, execNum % poolSize) }
     .toMap
 
+
+
   // fill initial sequential counters
   usedPartitions foreach { p =>sequentialIds += (p -> new AtomicLong(0)) }
 
-  masterManager.bootstrap(this, isLowPriorityToBeMaster, uniqueAgentId)
+  masterManager.bootstrap(isLowPriorityToBeMaster, uniqueAgentId)
+
+  usedPartitions foreach { p =>
+    updateMaster(p, init = true)
+  }
 
   /**
     * Helper method for new master voting

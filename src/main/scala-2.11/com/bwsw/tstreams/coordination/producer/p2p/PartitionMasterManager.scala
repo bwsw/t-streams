@@ -52,11 +52,10 @@ class PartitionMasterManager(dlm: ZookeeperDLMService, myIPAddress: String, stre
   /**
     * Does bootstrap for agent
     *
-    * @param p2p
     * @param isLowPriorityToBeMaster
     * @param uniqueAgentId
     */
-  def bootstrap(p2p: PeerAgent, isLowPriorityToBeMaster: Boolean, uniqueAgentId: Int) = this.synchronized {
+  def bootstrap(isLowPriorityToBeMaster: Boolean, uniqueAgentId: Int) = this.synchronized {
     agentID = uniqueAgentId
 
     partitions foreach { p =>
@@ -64,12 +63,9 @@ class PartitionMasterManager(dlm: ZookeeperDLMService, myIPAddress: String, stre
       // save initial records to zk
       val penalty = if (isLowPriorityToBeMaster) PeerAgent.LOW_PRIORITY_PENALTY else 0
 
-      dlm.create[AgentSettings](getMyPath(p), AgentSettings(myIPAddress, priority = 0, penalty),
-        CreateMode.EPHEMERAL_SEQUENTIAL)
-    }
-
-    partitions foreach { p =>
-      p2p.updateMaster(p, init = true)
+      val settings = AgentSettings(myIPAddress, priority = 0, penalty)
+      PeerAgent.logger.info(s"Create ${getMyPath(p)} for ${settings}")
+      dlm.create[AgentSettings](getMyPath(p), settings, CreateMode.EPHEMERAL_SEQUENTIAL)
     }
 
     if (PeerAgent.logger.isDebugEnabled)
@@ -127,6 +123,7 @@ class PartitionMasterManager(dlm: ZookeeperDLMService, myIPAddress: String, stre
   }
 
   def getStreamPartitionParticipantsData(partition: Int): List[AgentSettings] = this.synchronized {
+    PeerAgent.logger.info(s"Get data for ${getPartitionPath(partition)}")
     val agentsDataOpt = dlm.getAllSubNodesData[AgentSettings](getPartitionPath(partition))
     if(agentsDataOpt.isDefined)
       agentsDataOpt.get
@@ -187,13 +184,14 @@ class PartitionMasterManager(dlm: ZookeeperDLMService, myIPAddress: String, stre
   private def removeLastSessionArtifact(partition: Int) = this.synchronized {
     val agents = getStreamPartitionParticipants(partition)
     agents foreach { agent =>
-      if(agent.contains("agent_" + myIPAddress + "_") && !agent.contains(agentID)) {
+      if(agent.contains("agent_" + myIPAddress + "_") && !agent.contains(agentID.toString)) {
         if (PeerAgent.logger.isDebugEnabled)
         {
           PeerAgent.logger.debug(s"[INIT CLEAN] Delete agent on address:{$agent} from stream:{$streamName}, partition:{$partition}.")
         }
         try {
-          dlm.delete(s"/producers/agents/$streamName/$partition/" + agent)
+          PeerAgent.logger.info(s"Delete data for ${getMyPath(partition)}")
+          dlm.delete(getMyPath(partition))
         } catch {
           case e: KeeperException =>
         }
@@ -208,7 +206,7 @@ class PartitionMasterManager(dlm: ZookeeperDLMService, myIPAddress: String, stre
     }
   }
 
-  def assignMeAsMaster(partition: Int) = this.synchronized {
+  def assignMeAsMaster(partition: Int) = {
       LockUtil.withZkLockOrDieDo[Unit](dlm.getLock(getPartitionLockPath(partition)), (100, TimeUnit.SECONDS), Some(PeerAgent.logger), () => {
         assert(!dlm.exist(getPartitionMasterPath(partition)))
         dlm.create[MasterSettings](
@@ -222,8 +220,8 @@ class PartitionMasterManager(dlm: ZookeeperDLMService, myIPAddress: String, stre
   }
 
 
-  private def getPartitionPath(partition: Int) = s"/producers/agents/$streamName/$partition"
-  private def getPartitionLockPath(partition: Int) = s"/producers/lock_master/$streamName/$partition"
-  private def getPartitionMasterPath(partition: Int) = s"/producers/master/$streamName/$partition"
-  private def getMyPath(partition: Int) = s"/producers/agents/$streamName/$partition/agent_${myIPAddress}_$agentID"
+  private def getPartitionPath(partition: Int)        = s"/producers/agents/$streamName/$partition"
+  private def getMyPath(partition: Int)               = s"${getPartitionPath(partition)}/agent_${myIPAddress}_$agentID"
+  private def getPartitionLockPath(partition: Int)    = s"/producers/lock_master/$streamName/$partition"
+  private def getPartitionMasterPath(partition: Int)  = s"/producers/master/$streamName/$partition"
 }

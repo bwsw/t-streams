@@ -161,7 +161,6 @@ case class DeleteMasterResponse(senderID: String, receiverID: String, partition:
   */
 case class SetMasterRequest(senderID: String, receiverID: String, partition: Int) extends IMessage {
   override def handleP2PRequest(agent: PeerAgent) = {
-
     if(IMessage.logger.isDebugEnabled)
       IMessage.logger.debug("Start handling SetMasterRequest")
 
