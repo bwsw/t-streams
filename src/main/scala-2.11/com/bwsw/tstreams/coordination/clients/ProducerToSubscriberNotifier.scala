@@ -1,8 +1,6 @@
 package com.bwsw.tstreams.coordination.clients
 
-import java.util.concurrent.TimeUnit
-
-import com.bwsw.tstreams.common.{FirstFailLockableTaskExecutor, ZookeeperDLMService}
+import com.bwsw.tstreams.common.ZookeeperDLMService
 import com.bwsw.tstreams.coordination.clients.publisher.SubscriberBroadcastNotifier
 import com.bwsw.tstreams.coordination.messages.state.Message
 import org.apache.zookeeper.{WatchedEvent, Watcher}

@@ -10,26 +10,18 @@ import org.slf4j.LoggerFactory
 
 import scala.collection.mutable
 
-object InterProducerCommunicationClient {
- val logger = LoggerFactory.getLogger(this.getClass)
-}
+object CommunicationClient {
+  val logger = LoggerFactory.getLogger(this.getClass)
 
-/**
-  * Client for sending messages to PeerAgents
-  */
-class InterProducerCommunicationClient(timeoutMs: Int, retryCount: Int = 3, retryDelayMs: Int = 5000) {
-  private val peerMap = mutable.Map[String, Socket]()
-  private val isClosed = new AtomicBoolean(false)
-
-  private def openSocket(msg: IMessage): Socket = {
+  private def openSocket(msg: IMessage, timeoutMs: Int): Socket = {
     try {
-      InterProducerCommunicationClient.logger.info(s"Start opening socket from peer ${msg.senderID} to peer ${msg.receiverID}.")
+      CommunicationClient.logger.info(s"Start opening socket from peer ${msg.senderID} to peer ${msg.receiverID}.")
       val splits = msg.receiverID.split(":")
       assert(splits.size == 2)
       val host = splits(0)
       val port = splits(1).toInt
       val sock = new Socket(host, port)
-      InterProducerCommunicationClient.logger.info(s"Opened socket from peer ${msg.senderID} to peer ${msg.receiverID}.")
+      CommunicationClient.logger.info(s"Opened socket from peer ${msg.senderID} to peer ${msg.receiverID}.")
       sock.setSoTimeout(timeoutMs)
       sock.setTcpNoDelay(true)
       sock.setKeepAlive(true)
@@ -38,27 +30,37 @@ class InterProducerCommunicationClient(timeoutMs: Int, retryCount: Int = 3, retr
       sock
     } catch {
       case e: IOException =>
-        InterProducerCommunicationClient.logger.warn(s"exception occurred: ${e.getMessage}")
-        InterProducerCommunicationClient.logger.warn(msg.toString())
+        CommunicationClient.logger.warn(s"exception occurred: ${e.getMessage}")
+        CommunicationClient.logger.warn(msg.toString())
         throw e
     }
   }
+}
+
+/**
+  * Client for sending messages to PeerAgents
+  */
+class CommunicationClient(timeoutMs: Int, retryCount: Int = 3, retryDelayMs: Int = 5000) {
+  private val peerMap = mutable.Map[String, Socket]()
+  private val isClosed = new AtomicBoolean(false)
+
+
 
   private def getSocket(msg: IMessage): Socket = {
     var socket: Socket = null
     this.synchronized {
       if (peerMap.contains(msg.receiverID)) {
-        if (InterProducerCommunicationClient.logger.isDebugEnabled)
-          InterProducerCommunicationClient.logger.debug(s"Socket from peer ${msg.senderID} to peer ${msg.receiverID} is already known.")
+        if (CommunicationClient.logger.isDebugEnabled)
+          CommunicationClient.logger.debug(s"Socket from peer ${msg.senderID} to peer ${msg.receiverID} is already known.")
         socket = peerMap(msg.receiverID)
         if (socket.isClosed || !socket.isConnected || socket.isOutputShutdown) {
-          InterProducerCommunicationClient.logger.info(s"Socket from peer ${msg.senderID} to peer ${msg.receiverID} is in wrong state.")
-          socket = openSocket(msg)
+          CommunicationClient.logger.info(s"Socket from peer ${msg.senderID} to peer ${msg.receiverID} is in wrong state.")
+          socket = CommunicationClient.openSocket(msg, timeoutMs)
           peerMap(msg.receiverID) = socket
         }
       } else {
-        InterProducerCommunicationClient.logger.info(s"Socket from peer ${msg.senderID} to peer ${msg.receiverID} is not known.")
-        socket = openSocket(msg)
+        CommunicationClient.logger.info(s"Socket from peer ${msg.senderID} to peer ${msg.receiverID} is not known.")
+        socket = CommunicationClient.openSocket(msg, timeoutMs)
         peerMap(msg.receiverID) = socket
       }
     }
@@ -72,7 +74,7 @@ class InterProducerCommunicationClient(timeoutMs: Int, retryCount: Int = 3, retr
     }
     val rv = f()
     if(failDeterminant == rv) {
-      InterProducerCommunicationClient.logger.warn(s"Operation failed. Retry it for ${cnt} times more.")
+      CommunicationClient.logger.warn(s"Operation failed. Retry it for ${cnt} times more.")
       Thread.sleep(retryDelayMs)
       withRetryDo[TYPE](failDeterminant, f, cnt - 1, isExceptionOnFail)
     }
@@ -115,13 +117,13 @@ class InterProducerCommunicationClient(timeoutMs: Int, retryCount: Int = 3, retr
     */
   private def closeSocketAndCleanPeerMap(socket: Socket, msg: IMessage) = this.synchronized {
     try {
-      InterProducerCommunicationClient.logger.info(s"Socket from peer ${msg.senderID} to peer ${msg.receiverID} is to be closed.")
+      CommunicationClient.logger.info(s"Socket from peer ${msg.senderID} to peer ${msg.receiverID} is to be closed.")
       socket.close()
-      InterProducerCommunicationClient.logger.info(s"Socket from peer ${msg.senderID} to peer ${msg.receiverID} is closed.")
+      CommunicationClient.logger.info(s"Socket from peer ${msg.senderID} to peer ${msg.receiverID} is closed.")
     } catch {
       case e: IOException =>
-        InterProducerCommunicationClient.logger.warn(s"exception occurred: ${e.getMessage}")
-        InterProducerCommunicationClient.logger.warn(msg.toString())
+        CommunicationClient.logger.warn(s"exception occurred: ${e.getMessage}")
+        CommunicationClient.logger.warn(msg.toString())
     } finally {
       peerMap.remove(msg.receiverID)
     }
@@ -137,41 +139,41 @@ class InterProducerCommunicationClient(timeoutMs: Int, retryCount: Int = 3, retr
   private def writeMsgAndWaitResponse(sock: Socket, msg: IMessage): IMessage = {
     val reqString = ProtocolMessageSerializer.wrapMsg(ProtocolMessageSerializer.serialize(msg))
     try {
-      if (InterProducerCommunicationClient.logger.isDebugEnabled)
-        InterProducerCommunicationClient.logger.debug(s"To send message ${reqString} from peer ${msg.senderID} to peer ${msg.receiverID}.")
+      if (CommunicationClient.logger.isDebugEnabled)
+        CommunicationClient.logger.debug(s"To send message ${reqString} from peer ${msg.senderID} to peer ${msg.receiverID}.")
       val outputStream = sock.getOutputStream
       outputStream.write(reqString.getBytes)
       outputStream.flush()
-      if (InterProducerCommunicationClient.logger.isDebugEnabled)
-        InterProducerCommunicationClient.logger.debug(s"Sent message ${reqString} from peer ${msg.senderID} to peer ${msg.receiverID}.")
+      if (CommunicationClient.logger.isDebugEnabled)
+        CommunicationClient.logger.debug(s"Sent message ${reqString} from peer ${msg.senderID} to peer ${msg.receiverID}.")
     }
     catch {
       case e: IOException =>
-        InterProducerCommunicationClient.logger.warn(s"exception occurred: ${e.getMessage}")
-        InterProducerCommunicationClient.logger.warn(msg.toString())
+        CommunicationClient.logger.warn(s"exception occurred: ${e.getMessage}")
+        CommunicationClient.logger.warn(msg.toString())
         closeSocketAndCleanPeerMap(sock, msg)
         return null.asInstanceOf[IMessage]
     }
     //wait response with timeout
     var answer = {
       try {
-        if (InterProducerCommunicationClient.logger.isDebugEnabled)
-          InterProducerCommunicationClient.logger.debug(s"To receive response message on ${reqString}sent from peer ${msg.senderID} to peer ${msg.receiverID}.")
+        if (CommunicationClient.logger.isDebugEnabled)
+          CommunicationClient.logger.debug(s"To receive response message on ${reqString}sent from peer ${msg.senderID} to peer ${msg.receiverID}.")
         val reader = new BufferedReader(new InputStreamReader(sock.getInputStream))
         val string = reader.readLine()
         if (string == null)
           null.asInstanceOf[IMessage]
         else {
           val response = ProtocolMessageSerializer.deserialize[IMessage](string)
-          if (InterProducerCommunicationClient.logger.isDebugEnabled)
-            InterProducerCommunicationClient.logger.debug(s"Received response message ${response} on ${reqString}sent from peer ${msg.senderID} to peer ${msg.receiverID}.")
+          if (CommunicationClient.logger.isDebugEnabled)
+            CommunicationClient.logger.debug(s"Received response message ${response} on ${reqString}sent from peer ${msg.senderID} to peer ${msg.receiverID}.")
           response
         }
       }
       catch {
         case e@(_: SocketTimeoutException | _: ProtocolMessageSerializerException | _: IOException) =>
-          InterProducerCommunicationClient.logger.warn(s"exception occurred: ${e.getMessage}")
-          InterProducerCommunicationClient.logger.warn(msg.toString())
+          CommunicationClient.logger.warn(s"exception occurred: ${e.getMessage}")
+          CommunicationClient.logger.warn(msg.toString())
           null.asInstanceOf[IMessage]
       }
     }
@@ -193,18 +195,18 @@ class InterProducerCommunicationClient(timeoutMs: Int, retryCount: Int = 3, retr
     //do request
     val string = ProtocolMessageSerializer.wrapMsg(ProtocolMessageSerializer.serialize(msg))
     try {
-      if (InterProducerCommunicationClient.logger.isDebugEnabled)
-        InterProducerCommunicationClient.logger.debug(s"To send message ${string} from peer ${msg.senderID} to peer ${msg.receiverID}.")
+      if (CommunicationClient.logger.isDebugEnabled)
+        CommunicationClient.logger.debug(s"To send message ${string} from peer ${msg.senderID} to peer ${msg.receiverID}.")
       val outputStream = sock.getOutputStream
       outputStream.write(string.getBytes)
       outputStream.flush()
-      if (InterProducerCommunicationClient.logger.isDebugEnabled)
-        InterProducerCommunicationClient.logger.debug(s"Sent message ${string} from peer ${msg.senderID} to peer ${msg.receiverID}.")
+      if (CommunicationClient.logger.isDebugEnabled)
+        CommunicationClient.logger.debug(s"Sent message ${string} from peer ${msg.senderID} to peer ${msg.receiverID}.")
     }
     catch {
       case e: IOException =>
-        InterProducerCommunicationClient.logger.warn(s"exception occurred: ${e.getMessage}")
-        InterProducerCommunicationClient.logger.warn(msg.toString())
+        CommunicationClient.logger.warn(s"exception occurred: ${e.getMessage}")
+        CommunicationClient.logger.warn(msg.toString())
         closeSocketAndCleanPeerMap(sock, msg)
         return false
     }
@@ -222,7 +224,7 @@ class InterProducerCommunicationClient(timeoutMs: Int, retryCount: Int = 3, retr
         x._2.close()
       } catch {
         case e: IOException =>
-          InterProducerCommunicationClient.logger.warn(s"exception occurred: ${e.getMessage}")
+          CommunicationClient.logger.warn(s"exception occurred: ${e.getMessage}")
           throw e
       }
     }
