@@ -1,9 +1,9 @@
 package com.bwsw.tstreams.common
 
-import java.util.concurrent.TimeUnit
+import java.util.concurrent.{Callable, TimeUnit}
 import java.util.concurrent.locks.ReentrantLock
 
-import com.twitter.common.zookeeper.DistributedLockImpl
+import com.twitter.common.zookeeper.{DistributedLockImpl, DistributedLock}
 import org.slf4j.Logger
 
 import scala.util.Random
@@ -12,172 +12,120 @@ import scala.util.Random
   * Created by ivan on 02.08.16.
   */
 object LockUtil {
-  private val randomGenerator = new Random
+  val randomGenerator = new Random
 
-  /**
-    * Try acquire lock or throw exception in case of failure
-    *
-    * @param l lock
-    * @param lt time amount and time unit
-    * @param logger
-    */
-  def lockOrDie(l: ReentrantLock,
-                lt: (Int, TimeUnit),
-                logger: Option[Logger] = None): Unit = {
-    val (amount, timeUnit) = lt
-    if(!l.tryLock(amount, timeUnit)) {
-      logger.foreach(l => l.error(s"Failed to get lock object ${l.toString} in $amount $timeUnit."))
-      throw new LockUtilException(s"Failed to get lock object in $amount $timeUnit.")
-    } else
-      logger.foreach(l => l.debug(s"Lock object ${l.toString} received."))
-  }
-
-  /**
-    * Try execute lambda with lock or throw exception in case of failure
-    *
-    * @param l lock
-    * @param lt time amount and time unit
-    * @param logger
-    * @param lambda
-    * @tparam T
-    * @return
-    */
-  def withLockOrDieDo[T](l: ReentrantLock,
-                        lt: (Int, TimeUnit),
-                        logger: Option[Logger] = None,
-                        lambda: () => T): T = {
-
-    val lStartTime = System.currentTimeMillis()
-    val token = randomGenerator.nextInt().toString
-    val (amount, timeUnit) = lt
-
-    //acquire lock or throw exception
-    if(!l.tryLock(amount, timeUnit)) {
-      logger.foreach(l =>
-        l.error(s"Token $token / Lock ${l.toString} / Failed to get lock object ${l.toString} in $amount ${timeUnit.toString}."))
-      throw new LockUtilException(s"Token $token / Lock ${l.toString} / Failed to get lock object in $amount ${timeUnit.toString}.")
+  def lockOrDie(l: ReentrantLock, lt: (Int, TimeUnit), logger: Option[Logger] = None): Unit = {
+    if(!l.tryLock(lt._1, lt._2))
+    {
+      if (logger.isDefined)
+        logger.get.error(s"Failed to get lock object ${l.toString} in ${lt._1} ${lt._2.toString}.")
+      throw new IllegalStateException(s"Failed to get lock object in ${lt._1} ${lt._2.toString}.")
     } else {
-      logger.foreach(l =>
-        if (l.isDebugEnabled)
-          l.debug(s"Token $token / Lock ${l.toString} / Lock object ${l.toString} received."))
-    }
-
-    val fStartTime = System.currentTimeMillis()
-    // try execute lambda, throw exception in case of failure
-    try {
-      val rv: T = lambda()
-      logger.foreach(l =>
-        if (l.isDebugEnabled){
-          val fEndTime = System.currentTimeMillis()
-          l.debug(s"Token $token / Lock ${l.toString} / Function inside of withLockOrDieDo took ${fEndTime - fStartTime} ms to run.")
-        })
-
-      //unlock acquired lock
-      l.unlock()
-
-      logger.foreach(l =>
-        if (l.isDebugEnabled){
-          val lEndTime = System.currentTimeMillis()
-          l.debug(s"Token $token /Lock ${l.toString} / Section of withLockOrDieDo took ${lEndTime - lStartTime} ms to run.")
-          l.debug(s"Token $token /Lock ${l.toString} / Unlocked ${l.toString} in $amount ${timeUnit.toString}.")
-        })
-
-      return rv
-    }
-    catch {
-      case e: Exception =>
-        //unlock acquired lock to prevent deadlock of further execution
-        l.unlock()
-
-        logger.foreach{l =>
-            val fEndTime = System.currentTimeMillis()
-            val lEndTime = System.currentTimeMillis()
-            l.debug(s"Token $token /Lock ${l.toString} / Function inside of withLockOrDieDo took" +
-              s" ${fEndTime - fStartTime} ms to run. Resulted to exception.")
-            l.debug(s"Token $token /Lock ${l.toString} / Section of withLockOrDieDo" +
-              s" took ${lEndTime - lStartTime} ms to run. Resulted to exception.")
-            l.error(s"Lock ${l.toString} / Exception is: ${e.toString}")
-        }
-
-        throw e
+      if (logger.isDefined)
+        logger.get.debug(s"Lock object ${l.toString} received.")
     }
   }
 
-  /**
-    * Try execute lambda with distributed Zookeeper lock
-    * or throw exception in case of failure
-    *
-    * @param l lock
-    * @param lt time amount and time unit
-    * @param logger
-    * @param lambda
-    * @tparam T
-    * @return
-    */
-  def withZkLockOrDieDo[T](l: DistributedLockImpl,
-                           lt: (Int, TimeUnit),
-                           logger: Option[Logger] = None,
-                           lambda: () => T): T = {
+  def withLockOrDieDo[RTYPE](l: ReentrantLock,
+                             lt: (Int, TimeUnit),
+                             logger: Option[Logger] = None,
+                             lambda: () => RTYPE): RTYPE = {
 
     val lStartTime = System.currentTimeMillis()
     val token = randomGenerator.nextInt().toString
-    val (amount, timeUnit) = lt
 
-    //acquire lock or throw exception
-    if(!l.tryLock(amount, timeUnit)) {
-      logger.foreach(l =>
-        l.error(s"Token $token / Lock ${l.toString} / Failed to get lock object ${l.toString} in $amount ${timeUnit.toString}."))
-      throw new LockUtilException(s"Token $token / Lock ${l.toString} / Failed to get lock object in $amount ${timeUnit.toString}.")
+    if(!l.tryLock(lt._1, lt._2))
+    {
+      if (logger.isDefined)
+        logger.get.error(s"Token ${token} / Lock ${l.toString} / Failed to get lock object ${l.toString} in ${lt._1} ${lt._2.toString}.")
+      throw new IllegalStateException(s"Token ${token} / Lock ${l.toString} / Failed to get lock object in ${lt._1} ${lt._2.toString}.")
     } else {
-      logger.foreach(l =>
-        if (l.isDebugEnabled)
-          l.debug(s"Token $token / Lock ${l.toString} / Lock object ${l.toString} received."))
+      if (logger.isDefined && logger.get.isDebugEnabled)
+        logger.get.debug(s"Token ${token} / Lock ${l.toString} / Lock object ${l.toString} received.")
     }
-
     val fStartTime = System.currentTimeMillis()
-    // try execute lambda, throw exception in case of failure
     try {
+      // function
       val rv = lambda()
+      // end function
 
-      logger.foreach(l =>
-        if (l.isDebugEnabled) {
-          val fEndTime = System.currentTimeMillis()
-          l.debug(s"Token $token / Lock ${l.toString} / Function inside of withLockOrDieDo took ${fEndTime - fStartTime} ms to run.")
-        })
+      if (logger.isDefined && logger.get.isDebugEnabled) {
+        val fEndTime = System.currentTimeMillis()
+        logger.get.debug(s"Token ${token} / Lock ${l.toString} / Function inside of withLockOrDieDo took ${fEndTime - fStartTime} ms to run.")
+      }
 
-      //unlock acquired lock
       l.unlock()
 
-      logger.foreach(l =>
-        if (l.isDebugEnabled){
-          val lEndTime = System.currentTimeMillis()
-          l.debug(s"Token $token /Lock ${l.toString} / Section of withLockOrDieDo took ${lEndTime - lStartTime} ms to run.")
-          l.debug(s"Token $token /Lock ${l.toString} / Unlocked ${l.toString} in $amount ${timeUnit.toString}.")
-        })
+      if (logger.isDefined && logger.get.isDebugEnabled) {
+        val lEndTime = System.currentTimeMillis()
+        logger.get.debug(s"Token ${token} /Lock ${l.toString} / Section of withLockOrDieDo took ${lEndTime - lStartTime} ms to run.")
+        logger.get.debug(s"Token ${token} /Lock ${l.toString} / Unlocked ${l.toString} in ${lt._1} ${lt._2.toString}.")
+      }
 
       return rv
     } catch {
       case e: Exception =>
-        //unlock acquired lock to prevent deadlock of further execution
         l.unlock()
-
-        logger.foreach { l =>
-          val fEndTime = System.currentTimeMillis()
+        if (logger.isDefined) {
+          val fEndTime = System.currentTimeMillis();
           val lEndTime = System.currentTimeMillis()
-          l.debug(s"Token $token /Lock ${l.toString} / Function inside of withLockOrDieDo " +
-            s"took ${fEndTime - fStartTime} ms to run. Resulted to exception.")
-          l.debug(s"Token $token /Lock ${l.toString} / Section of withLockOrDieDo " +
-            s"took ${lEndTime - lStartTime} ms to run. Resulted to exception.")
-          l.error(s"Lock ${l.toString} / Exception is: ${e.toString}")
+          logger.get.debug(s"Token ${token} /Lock ${l.toString} / Function inside of withLockOrDieDo took ${fEndTime - fStartTime} ms to run. Resulted to exception.")
+          logger.get.debug(s"Token ${token} /Lock ${l.toString} / Section of withLockOrDieDo took ${lEndTime - lStartTime} ms to run. Resulted to exception.")
+          logger.get.error(s"Lock ${l.toString} / Exception is: ${e.toString}")
         }
 
         throw e
     }
   }
 
-  /**
-    *
-    * @param msg
-    */
-  case class LockUtilException(msg : String) extends Exception(msg)
+  def withZkLockOrDieDo[RTYPE](l: DistributedLockImpl,
+                               lt: (Int, TimeUnit),
+                               logger: Option[Logger] = None,
+                               lambda: () => RTYPE): RTYPE = {
+
+    val lStartTime = System.currentTimeMillis()
+    val token = randomGenerator.nextInt().toString
+
+    if(!l.tryLock(lt._1, lt._2))
+    {
+      if (logger.isDefined)
+        logger.get.error(s"Token ${token} / Lock ${l.toString} / Failed to get lock object ${l.toString} in ${lt._1} ${lt._2.toString}.")
+      throw new IllegalStateException(s"Token ${token} / Lock ${l.toString} / Failed to get lock object in ${lt._1} ${lt._2.toString}.")
+    } else {
+      if (logger.isDefined && logger.get.isDebugEnabled)
+        logger.get.debug(s"Token ${token} / Lock ${l.toString} / Lock object ${l.toString} received.")
+    }
+    val fStartTime = System.currentTimeMillis()
+    try {
+      val rv = lambda()
+
+      if (logger.isDefined && logger.get.isDebugEnabled) {
+        val fEndTime = System.currentTimeMillis()
+        logger.get.debug(s"Token ${token} / Lock ${l.toString} / Function inside of withLockOrDieDo took ${fEndTime - fStartTime} ms to run.")
+      }
+
+      l.unlock()
+
+      if (logger.isDefined && logger.get.isDebugEnabled) {
+        val lEndTime = System.currentTimeMillis()
+        logger.get.debug(s"Token ${token} /Lock ${l.toString} / Section of withLockOrDieDo took ${lEndTime - lStartTime} ms to run.")
+        logger.get.debug(s"Token ${token} /Lock ${l.toString} / Unlocked ${l.toString} in ${lt._1} ${lt._2.toString}.")
+      }
+
+      return rv
+    } catch {
+      case e: Exception =>
+        l.unlock()
+        if (logger.isDefined) {
+          val fEndTime = System.currentTimeMillis()
+          val lEndTime = System.currentTimeMillis()
+          logger.get.debug(s"Token ${token} /Lock ${l.toString} / Function inside of withLockOrDieDo took ${fEndTime - fStartTime} ms to run. Resulted to exception.")
+          logger.get.debug(s"Token ${token} /Lock ${l.toString} / Section of withLockOrDieDo took ${lEndTime - lStartTime} ms to run. Resulted to exception.")
+          logger.get.error(s"Lock ${l.toString} / Exception is: ${e.getMessage}")
+          logger.get.error("Stack trace is:", e)
+        }
+
+        throw e
+    }
+  }
 }
