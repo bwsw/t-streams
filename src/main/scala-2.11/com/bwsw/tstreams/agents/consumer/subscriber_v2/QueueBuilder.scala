@@ -11,7 +11,7 @@ object QueueBuilder {
     * Abstract factory
     */
   trait Abstract {
-    def generateQueueObject(partition: Int): java.util.concurrent.BlockingQueue[String] = ???
+    def generateQueueObject(partition: Int): AbstractQueue[List[TransactionState]] = ???
   }
 
   /**

@@ -9,7 +9,7 @@ import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue
 /**
   * Created by ivan on 19.08.16.
   */
-class AbstractPersistentQueue[T](basePath: String) extends AbstractQueue[T] {
+abstract class AbstractPersistentQueue[T](basePath: String) extends AbstractQueue[T] {
   val q: SingleChronicleQueue = ChronicleQueueBuilder
     .single(java.nio.file.Paths.get(basePath, "q1").toString)
     .build()
@@ -32,17 +32,19 @@ class AbstractPersistentQueue[T](basePath: String) extends AbstractQueue[T] {
     })
   }
 
-  override def get(): T = {
+  override def get(delay: Long, units: TimeUnit): T = {
     LockUtil.withLockOrDieDo[T](mutex, (100, TimeUnit.SECONDS), None, () => {
       val data: T = deserialize(getter.readText()).asInstanceOf[T]
       if(data == null) {
-        cond.await()
-        deserialize(getter.readText())
+        if(cond.await(delay, units))
+          deserialize(getter.readText()).asInstanceOf[T]
+        else
+          null.asInstanceOf[T]
       } else
         data
     })
   }
 
-  protected def deserialize(s: String): Object
-  protected def serialize(elt: Object): String
+  protected def deserialize(s: String): Object = ???
+  protected def serialize(elt: Object): String = ???
 }
