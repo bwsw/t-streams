@@ -1,4 +1,4 @@
-package com.bwsw.tstreams.agents.consumer.subscriber
+package com.bwsw.tstreams.common
 
 import java.util
 import java.util.Comparator

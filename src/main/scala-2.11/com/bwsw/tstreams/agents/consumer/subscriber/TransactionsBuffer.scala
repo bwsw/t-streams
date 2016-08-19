@@ -2,6 +2,7 @@ package com.bwsw.tstreams.agents.consumer.subscriber
 
 import java.util.UUID
 
+import com.bwsw.tstreams.common.{UUIDComparator, SortedExpiringMap}
 import com.bwsw.tstreams.coordination.messages.state.TransactionStatus._
 import com.bwsw.tstreams.coordination.messages.state.TransactionStatus
 
