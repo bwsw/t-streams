@@ -68,12 +68,12 @@ class BroadcastCommunicationClient(agentsStateManager: AgentsStateDBService,
     * Update subscribers on specific partition
     */
   private def updateSubscribers(partition: Int) = {
-    CommunicationClient.logger.info("update started")
     if(!isStopped.get) {
       val (_, broadcaster) = partitionSubscribers.get(partition)
+      val endpoints = agentsStateManager.getPartitionSubscribers(partition)
+      broadcaster.initConnections(endpoints)
       partitionSubscribers.put(partition, (agentsStateManager.getPartitionSubscribers(partition), broadcaster))
     }
-    CommunicationClient.logger.info("update finished")
 
   }
 

@@ -115,6 +115,21 @@ class CommunicationClient(timeoutMs: Int, retryCount: Int = 3, retryDelayMs: Int
   }
 
   /**
+    *
+    * @param peers
+    */
+  def initConnections(peers: Set[String]) = {
+    peers.foreach( p =>
+    try {
+      peerMap get p foreach (s => closeSocketAndCleanPeerMap(s))
+      val s = getSocket(p)
+    } catch {
+      case e: IOException =>
+        CommunicationClient.logger.warn(s"exception occurred when opening connection to peer ${p}: ${e.getMessage}")
+    })
+  }
+
+  /**
     * Send broadcast message to several recipients
     * @param peers
     * @param msg
@@ -127,7 +142,8 @@ class CommunicationClient(timeoutMs: Int, retryCount: Int = 3, retryDelayMs: Int
 
     peers.filter( p =>
       try {
-        writeMsgAndNoWaitResponse(getSocket(p), req)
+        val r = writeMsgAndNoWaitResponse(getSocket(p), req)
+        r
       } catch {
         case e: IOException =>
           CommunicationClient.logger.warn(s"exception occurred when opening connection to peer ${p}: ${e.getMessage}")
