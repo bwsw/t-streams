@@ -3,6 +3,7 @@ package com.bwsw.tstreams.agents.consumer.subscriber_v2
 import java.net.InetSocketAddress
 
 import com.bwsw.tstreams.agents.consumer.Offset.IOffset
+import com.bwsw.tstreams.agents.consumer.subscriber_v2.QueueBuilder.InMemory
 import com.bwsw.tstreams.common.AbstractPolicy
 import com.bwsw.tstreams.converter.IConverter
 import com.bwsw.tstreams.generator.IUUIDGenerator
@@ -40,5 +41,7 @@ case class Options[T](val transactionsPreload: Int,
                       val zkSessionTimeout:       Int,
                       val zkConnectionTimeout:    Int,
                       val threadPoolAmount:       Int      = 1,
+                      val txnQueue:               QueueBuilder.Abstract  = new InMemory,
                       val useLastOffset:          Boolean  = true)
+
 
