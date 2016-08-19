@@ -1,5 +1,6 @@
 package com.bwsw.tstreams.common
 
+import java.nio.file.Files
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantLock
 
@@ -10,8 +11,9 @@ import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue
   * Created by ivan on 19.08.16.
   */
 abstract class AbstractPersistentQueue[T](basePath: String) extends AbstractQueue[T] {
+  Files.createDirectories(java.nio.file.Paths.get(basePath))
   val q: SingleChronicleQueue = ChronicleQueueBuilder
-    .single(java.nio.file.Paths.get(basePath, "q1").toString)
+    .single(java.nio.file.Paths.get(basePath, "queue").toString)
     .build()
 
   private val appender: ExcerptAppender = q.createAppender()
@@ -34,14 +36,14 @@ abstract class AbstractPersistentQueue[T](basePath: String) extends AbstractQueu
 
   override def get(delay: Long, units: TimeUnit): T = {
     LockUtil.withLockOrDieDo[T](mutex, (100, TimeUnit.SECONDS), None, () => {
-      val data: T = deserialize(getter.readText()).asInstanceOf[T]
-      if(data == null) {
+      val raw = getter.readText()
+      if(raw == null) {
         if(cond.await(delay, units))
           deserialize(getter.readText()).asInstanceOf[T]
         else
           null.asInstanceOf[T]
       } else
-        data
+        deserialize(raw).asInstanceOf[T]
     })
   }
 

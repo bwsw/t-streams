@@ -3,7 +3,8 @@ package com.bwsw.tstreams.agents.consumer.subscriber_v2
 import java.io.StringWriter
 
 import com.bwsw.tstreams.common.AbstractPersistentQueue
-import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.core.`type`.TypeReference
+import com.fasterxml.jackson.databind.{JavaType, ObjectMapper}
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
 
 /**
@@ -18,11 +19,12 @@ class TransactionStatePersistentQueue(basePath: String)
   override def serialize(elt: Object): String = {
     val out = new StringWriter
     mapper.writeValue(out, elt.asInstanceOf[List[TransactionState]])
-    out.toString()
+    val r = out.toString()
+    r
   }
 
   override def deserialize(data: String): Object = {
-    mapper.readValue(data, classOf[List[TransactionState]]).asInstanceOf[Object]
+    mapper.readValue(data, new TypeReference[List[TransactionState]] {}).asInstanceOf[Object]
   }
 
 }

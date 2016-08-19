@@ -15,13 +15,16 @@ class InMemoryQueue[T] extends AbstractQueue[T] {
   val q = new scala.collection.mutable.Queue[T]()
 
   override def put(elt: T) = {
-    LockUtil.withLockOrDieDo[Unit](mutex, (100, TimeUnit.SECONDS), None, () => q enqueue elt)
+    LockUtil.withLockOrDieDo[Unit](mutex, (100, TimeUnit.SECONDS), None, () => {
+      q enqueue elt
+      cond.signal()
+    })
   }
 
   override def get(delay: Long, units: TimeUnit): T =
   LockUtil.withLockOrDieDo[T](mutex, (100, TimeUnit.SECONDS), None, () => {
     if(q.isEmpty && !cond.await(delay, units))
-      null.asInstanceOf[T]
+      return null.asInstanceOf[T]
     q dequeue()
   })
 }
