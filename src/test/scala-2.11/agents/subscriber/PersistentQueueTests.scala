@@ -11,7 +11,7 @@ import org.scalatest.{Matchers, FlatSpec}
   * Created by ivan on 19.08.16.
   */
 class PersistentQueueTests extends FlatSpec with Matchers {
-  "PeristentQueue" should "created" in {
+  it should "created" in {
     val dir = s"target/${UUID.randomUUID().toString}"
     val q = new TransactionStatePersistentQueue(dir)
     q.put(Nil)
@@ -19,7 +19,7 @@ class PersistentQueueTests extends FlatSpec with Matchers {
     java.nio.file.Paths.get(dir, "queue").toFile.exists() shouldBe true
   }
 
-  "PeristentQueue" should "allow to put/get list" in {
+  it should "allow to put/get list" in {
     val q = new TransactionStatePersistentQueue(s"target/${UUID.randomUUID().toString}")
     val s = TransactionState(UUID.randomUUID(), 1, 1, 1, TransactionStatus.opened, 1)
     q.put(List(s))
@@ -28,13 +28,13 @@ class PersistentQueueTests extends FlatSpec with Matchers {
     g.head.uuid shouldBe s.uuid
   }
 
-  "InMemoryQueue" should "return null no data in list" in {
+  it should "return null no data in list" in {
     val q = new TransactionStatePersistentQueue(s"target/${UUID.randomUUID().toString}")
     val g: List[TransactionState] = q.get(1, TimeUnit.SECONDS)
     g shouldBe null
   }
 
-  "InMemoryQueue" should "lock if no data in list" in {
+  it should "lock if no data in list" in {
     val q = new TransactionStatePersistentQueue(s"target/${UUID.randomUUID().toString}")
     val start = System.currentTimeMillis()
     val g: List[TransactionState] = q.get(10, TimeUnit.MILLISECONDS)
@@ -42,7 +42,7 @@ class PersistentQueueTests extends FlatSpec with Matchers {
     end - start > 9 shouldBe true
   }
 
-  "InMemoryQueue" should "work with empty lists" in {
+  it should "work with empty lists" in {
     val q = new TransactionStatePersistentQueue(s"target/${UUID.randomUUID().toString}")
     q.put(Nil)
     val g: List[TransactionState] = q.get(10, TimeUnit.MILLISECONDS)

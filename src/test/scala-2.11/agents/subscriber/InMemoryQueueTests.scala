@@ -12,11 +12,11 @@ import java.util.UUID
   * Created by ivan on 19.08.16.
   */
 class InMemoryQueueTests extends FlatSpec with Matchers {
-  "InMemoryQueue" should "created" in {
+  it should "created" in {
     val q = new InMemoryQueue[List[TransactionState]]()
   }
 
-  "InMemoryQueue" should "allow to put/get list" in {
+  it should "allow to put/get list" in {
     val q = new InMemoryQueue[List[TransactionState]]()
     val s = TransactionState(UUID.randomUUID(), 1, 1, 1, TransactionStatus.opened, 1)
     q.put(List(s))
@@ -25,13 +25,13 @@ class InMemoryQueueTests extends FlatSpec with Matchers {
     g.head.uuid shouldBe s.uuid
   }
 
-  "InMemoryQueue" should "return null no data in list" in {
+  it should "return null no data in list" in {
     val q = new InMemoryQueue[List[TransactionState]]()
     val g: List[TransactionState] = q.get(1, TimeUnit.SECONDS)
     g shouldBe null
   }
 
-  "InMemoryQueue" should "lock if no data in list" in {
+  it should "lock if no data in list" in {
     val q = new InMemoryQueue[List[TransactionState]]()
     val start = System.currentTimeMillis()
     val g: List[TransactionState] = q.get(10, TimeUnit.MILLISECONDS)
@@ -39,14 +39,14 @@ class InMemoryQueueTests extends FlatSpec with Matchers {
     end - start > 9 shouldBe true
   }
 
-  "InMemoryQueue" should "work with empty lists" in {
+  it should "work with empty lists" in {
     val q = new InMemoryQueue[List[TransactionState]]()
     q.put(Nil)
     val g: List[TransactionState] = q.get(10, TimeUnit.MILLISECONDS)
     g shouldBe Nil
   }
 
-  "InMemoryQueue" should "keep all items" in {
+  it should "keep all items" in {
     val q = new InMemoryQueue[List[TransactionState]]()
     val N = 1000
     for(i <- 0 until N) {
@@ -61,7 +61,7 @@ class InMemoryQueueTests extends FlatSpec with Matchers {
     ctr shouldBe N
   }
 
-  "InMemoryQueue" should "be signalled" in {
+  it should "be signalled" in {
     val q = new InMemoryQueue[List[TransactionState]]()
     val t = new Thread(new Runnable {
       override def run(): Unit = {
