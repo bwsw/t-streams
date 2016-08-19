@@ -55,7 +55,7 @@ class ABasicSubscriberAfterCommitFailureTest extends FlatSpec with Matchers
 
       acc += 1
 
-      subscriber.setLocalOffset(partition, transactionUuid)
+      subscriber.setStreamPartitionOffset(partition, transactionUuid)
       subscriber.checkpoint()
 
       if (acc == totalTxns)

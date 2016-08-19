@@ -49,7 +49,7 @@ class ABasicSubscriberTotalAmountTest extends FlatSpec with Matchers with Before
 
       acc += 1
 
-      subscriber.setLocalOffset(partition, transactionUuid)
+      subscriber.setStreamPartitionOffset(partition, transactionUuid)
       subscriber.checkpoint()
 
       if (acc == totalTxns)

@@ -7,9 +7,9 @@ import java.util.concurrent.{ConcurrentHashMap, CountDownLatch, TimeUnit}
 import com.bwsw.tstreams.agents.group.{GroupParticipant, CheckpointInfo, SendingAgent}
 import com.bwsw.tstreams.agents.producer.NewTransactionProducerPolicy.ProducerPolicy
 import com.bwsw.tstreams.common._
-import com.bwsw.tstreams.coordination.clients.ProducerToSubscriberNotifier
 import com.bwsw.tstreams.coordination.messages.state.{Message, TransactionStatus}
-import com.bwsw.tstreams.coordination.producer.p2p.{PartitionMasterManager, PeerAgent}
+import com.bwsw.tstreams.coordination.producer.p2p.{AgentsStateDBService, PeerAgent}
+import com.bwsw.tstreams.coordination.producer.transport.impl.client.BroadcastCommunicationClient
 import com.bwsw.tstreams.coordination.producer.transport.traits.Interaction
 import com.bwsw.tstreams.metadata.MetadataStorage
 import com.bwsw.tstreams.streams.TStream
@@ -74,24 +74,23 @@ class Producer[T](var name: String,
 
   logger.info(s"Start new Basic producer with name : $name, streamName : ${stream.getName}, streamPartitions : ${stream.getPartitions}")
 
-  // this client is used to find new subscribers
-  val subscriberNotifier = new ProducerToSubscriberNotifier(
-    zkService = zkService,
-    streamName = stream.getName,
-    usedPartitions = producerOptions.writePolicy.getUsedPartitions())
 
-  private val masterManager = new PartitionMasterManager(
+
+  private val agentsStateManager = new AgentsStateDBService(
     zkService,
     producerOptions.coordinationOptions.transport.getIpAddress(),
     stream.getName,
     Set[Int]().empty ++ producerOptions.writePolicy.getUsedPartitions())
+
+  // this client is used to find new subscribers
+  val subscriberNotifier = new BroadcastCommunicationClient(agentsStateManager, usedPartitions = producerOptions.writePolicy.getUsedPartitions())
 
   /**
     * P2P Agent for producers interaction
     * (getNewTxn uuid; publish openTxn event; publish closeTxn event)
     */
   override val p2pAgent: PeerAgent = new PeerAgent(
-    masterManager = masterManager,
+    agentsStateManager = agentsStateManager,
     zkService = zkService,
     zkRetriesAmount = zkRetriesAmount,
     producer = this,
@@ -103,10 +102,7 @@ class Producer[T](var name: String,
   //used for managing new agents on stream
 
   {
-    val zkStreamLock = subscriberNotifier.getStreamLock(stream.getName)
-    zkStreamLock.lock()
     subscriberNotifier.init()
-    zkStreamLock.unlock()
   }
 
 
