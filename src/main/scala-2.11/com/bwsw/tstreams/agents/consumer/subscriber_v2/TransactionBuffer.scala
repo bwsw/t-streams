@@ -48,10 +48,10 @@ class TransactionBuffer(queue: QueueBuilder.QueueType) {
         map.put(update.uuid, update.copy(ttl = - 1))
 
       //just ignore ttl because transaction is closed
-      case TransactionStatus.`postCheckpoint` =>
+      case TransactionStatus.postCheckpoint =>
         map.put(update.uuid, update.copy(ttl = - 1))
 
-      case TransactionStatus.`cancel` =>
+      case TransactionStatus.cancel =>
         map.remove(update.uuid)
     }
   }
@@ -70,6 +70,7 @@ class TransactionBuffer(queue: QueueBuilder.QueueType) {
         }
       }
       queue.put(completeList.toList)
+      completeList foreach (i => map.remove(i.uuid) )
     }
   }
 }

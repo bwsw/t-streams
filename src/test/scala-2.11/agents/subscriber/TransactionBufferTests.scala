@@ -2,6 +2,7 @@ package agents.subscriber
 
 
 import java.util.UUID
+import java.util.concurrent.TimeUnit
 
 import com.bwsw.tstreams.agents.consumer.subscriber_v2.{QueueBuilder, TransactionBuffer, TransactionState}
 import com.bwsw.tstreams.coordination.messages.state.TransactionStatus
@@ -134,4 +135,86 @@ class TransactionBufferTests extends FlatSpec with Matchers {
     b.update(ts0(UPDATE))
     b.getState(ts0(UPDATE).uuid).isDefined shouldBe false
   }
+
+  it should "signal for one completed txn" in {
+    val q = new QueueBuilder.InMemory().generateQueueObject(0)
+    val b = new TransactionBuffer(q)
+    val ts0 = generateAllStates()
+    val ts1 = generateAllStates()
+    b.update(ts0(OPENED))
+    b.update(ts0(PRE))
+    b.update(ts0(POST))
+    b.signalCompleteTransactions()
+    val r = q.get(1,TimeUnit.MILLISECONDS)
+    r.size shouldBe 1
+    r.head.uuid shouldBe ts0(OPENED).uuid
+    b.getState(ts0(OPENED).uuid).isDefined shouldBe false
+  }
+
+
+  it should "signal for two completed txn" in {
+    val q = new QueueBuilder.InMemory().generateQueueObject(0)
+    val b = new TransactionBuffer(q)
+    val ts0 = generateAllStates()
+    val ts1 = generateAllStates()
+    b.update(ts0(OPENED))
+    b.update(ts1(OPENED))
+    b.update(ts0(PRE))
+    b.update(ts1(PRE))
+    b.update(ts0(POST))
+    b.update(ts1(POST))
+    b.signalCompleteTransactions()
+    val r = q.get(1,TimeUnit.MILLISECONDS)
+    r.size shouldBe 2
+    r.head.uuid shouldBe ts0(OPENED).uuid
+    r.tail.head.uuid shouldBe ts1(OPENED).uuid
+  }
+
+  it should "signal for first incomplete, second completed" in {
+    val q = new QueueBuilder.InMemory().generateQueueObject(0)
+    val b = new TransactionBuffer(q)
+    val ts0 = generateAllStates()
+    val ts1 = generateAllStates()
+    b.update(ts0(OPENED))
+    b.update(ts1(OPENED))
+    b.update(ts0(PRE))
+    b.update(ts1(PRE))
+    b.update(ts1(POST))
+    b.signalCompleteTransactions()
+    val r = q.get(1,TimeUnit.MILLISECONDS)
+    r shouldBe null
+  }
+
+  it should "signal for first incomplete, second incomplete" in {
+    val q = new QueueBuilder.InMemory().generateQueueObject(0)
+    val b = new TransactionBuffer(q)
+    val ts0 = generateAllStates()
+    val ts1 = generateAllStates()
+    b.update(ts0(OPENED))
+    b.update(ts1(OPENED))
+    b.update(ts0(PRE))
+    b.update(ts1(PRE))
+    b.signalCompleteTransactions()
+    val r = q.get(1,TimeUnit.MILLISECONDS)
+    r shouldBe null
+  }
+
+  it should "signal for first incomplete, second complete, first complete" in {
+    val q = new QueueBuilder.InMemory().generateQueueObject(0)
+    val b = new TransactionBuffer(q)
+    val ts0 = generateAllStates()
+    val ts1 = generateAllStates()
+    b.update(ts0(OPENED))
+    b.update(ts1(OPENED))
+    b.update(ts1(PRE))
+    b.update(ts0(PRE))
+    b.update(ts1(POST))
+    b.update(ts0(POST))
+    b.signalCompleteTransactions()
+    val r = q.get(1,TimeUnit.MILLISECONDS)
+    r.size shouldBe 2
+    r.head.uuid shouldBe ts0(OPENED).uuid
+    r.tail.head.uuid shouldBe ts1(OPENED).uuid
+  }
+
 }
