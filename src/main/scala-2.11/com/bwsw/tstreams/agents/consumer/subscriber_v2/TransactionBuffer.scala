@@ -21,7 +21,7 @@ class TransactionBuffer(queue: QueueBuilder.QueueType) {
   def update(update: TransactionState): Unit = this.synchronized {
 
     //ignore update events until txn doesn't exist in buffer
-    if (!map.exists(update.uuid) && update.state == TransactionStatus.update) {
+    if (!map.exists(update.uuid) && update.state != TransactionStatus.opened) {
       return
     }
 

@@ -107,6 +107,31 @@ class TransactionBufferTests extends FlatSpec with Matchers {
     b.getState(ts0(PRE).uuid).get.ttl shouldBe -1
   }
 
+  it should "move to preCheckpoint impossible" in {
+    val b = new TransactionBuffer(new QueueBuilder.InMemory().generateQueueObject(0))
+    val ts0 = generateAllStates()
+    b.update(ts0(PRE))
+    b.getState(ts0(PRE).uuid).isDefined shouldBe false
+  }
 
+  it should "move to postCheckpoint impossible" in {
+    val b = new TransactionBuffer(new QueueBuilder.InMemory().generateQueueObject(0))
+    val ts0 = generateAllStates()
+    b.update(ts0(POST))
+    b.getState(ts0(POST).uuid).isDefined shouldBe false
+  }
 
+  it should "move to cancel impossible" in {
+    val b = new TransactionBuffer(new QueueBuilder.InMemory().generateQueueObject(0))
+    val ts0 = generateAllStates()
+    b.update(ts0(CANCEL))
+    b.getState(ts0(CANCEL).uuid).isDefined shouldBe false
+  }
+
+  it should "move to update impossible" in {
+    val b = new TransactionBuffer(new QueueBuilder.InMemory().generateQueueObject(0))
+    val ts0 = generateAllStates()
+    b.update(ts0(UPDATE))
+    b.getState(ts0(UPDATE).uuid).isDefined shouldBe false
+  }
 }
