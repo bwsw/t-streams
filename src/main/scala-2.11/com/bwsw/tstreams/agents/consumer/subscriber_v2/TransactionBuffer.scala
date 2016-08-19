@@ -10,13 +10,15 @@ import scala.util.control.Breaks._
 /**
   * Created by ivan on 19.08.16.
   */
-class TransactionBuffer(partition: Int,
-                        queue: QueueBuilder.QueueType) {
+class TransactionBuffer(queue: QueueBuilder.QueueType) {
 
   private val map: SortedExpiringMap[UUID, TransactionState] =
     new SortedExpiringMap(new UUIDComparator, new TransactionStateExpirationPolicy)
 
-  def signal(update: TransactionState): Unit = this.synchronized {
+  def getState(uuid: UUID): Option[TransactionState] =
+    if (map.exists(uuid)) Option(map.get(uuid)) else None
+
+  def update(update: TransactionState): Unit = this.synchronized {
 
     //ignore update events until txn doesn't exist in buffer
     if (!map.exists(update.uuid) && update.state == TransactionStatus.update) {
@@ -39,7 +41,7 @@ class TransactionBuffer(partition: Int,
 
     update.state match {
       case TransactionStatus.update | TransactionStatus.opened =>
-        map.put(update.uuid, update)
+        map.put(update.uuid, update.copy(state = TransactionStatus.opened))
 
       //ignore ttl, preCheckpoint will be resolved by another thread
       case TransactionStatus.preCheckpoint =>
