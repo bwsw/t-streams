@@ -59,7 +59,7 @@ class CommunicationClient(timeoutMs: Int, retryCount: Int = 3, retryDelayMs: Int
           peerMap(address) = socket
         }
       } else {
-        CommunicationClient.logger.info(s"Socket fto peer ${address} is not known.")
+        CommunicationClient.logger.info(s"Socket to peer ${address} is not known.")
         socket = CommunicationClient.openSocket(address, timeoutMs)
         peerMap(address) = socket
       }
@@ -118,7 +118,7 @@ class CommunicationClient(timeoutMs: Int, retryCount: Int = 3, retryDelayMs: Int
     * Send broadcast message to several recipients
     * @param peers
     * @param msg
-    * @return Set of failed peers (to exclude them from further send-outs until next update)
+    * @return Set of not  peers (to exclude failed from further send-outs until next update)
     */
   def broadcast(peers: Set[String], msg: Message): Set[String] = {
     val req = ProtocolMessageSerializer
@@ -127,11 +127,11 @@ class CommunicationClient(timeoutMs: Int, retryCount: Int = 3, retryDelayMs: Int
 
     peers.filter( p =>
       try {
-        !writeMsgAndNoWaitResponse(getSocket(p), req) // if !false -> true then failed, if !true - ok
+        writeMsgAndNoWaitResponse(getSocket(p), req)
       } catch {
         case e: IOException =>
           CommunicationClient.logger.warn(s"exception occurred when opening connection to peer ${p}: ${e.getMessage}")
-          true // failed
+          false // failed
       })
   }
 
