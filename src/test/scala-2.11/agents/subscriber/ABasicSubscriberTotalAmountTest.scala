@@ -94,13 +94,9 @@ class ABasicSubscriberTotalAmountTest extends FlatSpec with Matchers with Before
 
   "Subscriber consumer with same name" should "retrieve all sent messages without duplicates" in {
 
-    logger.info("S1 starting")
     s1.start()
-    logger.info("S1 started")
     sendTxnsAndWait(totalTxns, dataInTxn, data, l1)
-    logger.info("S1 stopping")
     s1.stop()
-    logger.info("S1 stopped")
 
     s2.start()
     sendTxnsAndWait(totalTxns, dataInTxn, data, l2)
@@ -124,7 +120,6 @@ class ABasicSubscriberTotalAmountTest extends FlatSpec with Matchers with Before
         txn.send(data)
       }
       try {
-        logger.info(s"sent X ${x}")
         txn.checkpoint()
       } catch {
         case e: RuntimeException =>
