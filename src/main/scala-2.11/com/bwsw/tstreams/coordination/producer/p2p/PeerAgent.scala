@@ -8,9 +8,9 @@ import java.util.concurrent.{CountDownLatch, TimeUnit}
 import com.bwsw.tstreams.agents.producer.Producer
 import com.bwsw.tstreams.common.ProtocolMessageSerializer.ProtocolMessageSerializerException
 import com.bwsw.tstreams.common.{FirstFailLockableTaskExecutor, LockUtil, ProtocolMessageSerializer, ZookeeperDLMService}
+import com.bwsw.tstreams.coordination.client.TcpTransport
 import com.bwsw.tstreams.coordination.messages.master._
 import com.bwsw.tstreams.coordination.messages.state.Message
-import com.bwsw.tstreams.coordination.producer.transport.impl.TcpTransport
 import io.netty.channel.Channel
 import org.slf4j.LoggerFactory
 

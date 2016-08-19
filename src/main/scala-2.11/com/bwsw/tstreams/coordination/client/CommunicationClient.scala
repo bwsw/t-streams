@@ -1,4 +1,4 @@
-package com.bwsw.tstreams.coordination.producer.transport.impl.client
+package com.bwsw.tstreams.coordination.client
 
 import java.io.{BufferedReader, IOException, InputStreamReader}
 import java.net.{Socket, SocketTimeoutException}

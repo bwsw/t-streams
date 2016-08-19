@@ -1,4 +1,4 @@
-package com.bwsw.tstreams.coordination.producer.transport.impl.server
+package com.bwsw.tstreams.coordination.server
 
 import java.util.concurrent.{CountDownLatch, TimeUnit}
 
@@ -16,7 +16,7 @@ import io.netty.handler.logging.{LogLevel, LoggingHandler}
 /**
   * @param port Listener port
   */
-class ProducerRequestsTcpServer(host: String, port: Int, handler: SimpleChannelInboundHandler[String]) {
+class RequestsTcpServer(host: String, port: Int, handler: SimpleChannelInboundHandler[String]) {
   //socket accept worker
   private val bossGroup = new NioEventLoopGroup(1)
   //channel workers

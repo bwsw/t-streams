@@ -4,7 +4,7 @@ import java.net.InetSocketAddress
 
 import com.bwsw.tstreams.common.AbstractPolicy
 import com.bwsw.tstreams.converter.IConverter
-import com.bwsw.tstreams.coordination.producer.transport.impl.TcpTransport
+import com.bwsw.tstreams.coordination.client.TcpTransport
 import com.bwsw.tstreams.generator.IUUIDGenerator
 
 import scala.language.existentials

@@ -16,11 +16,11 @@ import com.bwsw.tstreams.generator.IUUIDGenerator
   * @param dataPreload               Buffer size of preloaded data for each consumed transaction
   * @param readPolicy                Strategy how to read from concrete stream
   * @param txnGenerator              Generator for generating UUIDs
-  * @tparam USERTYPE User type
+  * @tparam T User type
   */
-case class Options[USERTYPE](val transactionsPreload: Int,
+case class Options[T](val transactionsPreload: Int,
                               val dataPreload:        Int,
-                              val converter:          IConverter[Array[Byte], USERTYPE],
+                              val converter:          IConverter[Array[Byte], T],
                               val readPolicy:         AbstractPolicy,
                               val offset:             IOffset,
                               val txnGenerator:       IUUIDGenerator,
@@ -43,9 +43,11 @@ case class Options[USERTYPE](val transactionsPreload: Int,
   *                         [[com.bwsw.tstreams.agents.consumer.subscriber.SubscribingConsumer]]]
   *                         by default (threads_amount == used_consumer_partitions)
   */
-class SubscriberCoordinationOptions(val agentAddress: String,
-                                    val zkRootPath: String,
-                                    val zkHosts: List[InetSocketAddress],
-                                    val zkSessionTimeout: Int,
-                                    val zkConnectionTimeout: Int,
-                                    val threadPoolAmount: Int = -1)
+class SubscriberCoordinationOptions(val agentAddress:         String,
+                                    val zkRootPath:           String,
+                                    val zkHosts:              List[InetSocketAddress],
+                                    val zkSessionTimeout:     Int,
+                                    val zkConnectionTimeout:  Int,
+                                    val threadPoolAmount:     Int = -1)
+
+
