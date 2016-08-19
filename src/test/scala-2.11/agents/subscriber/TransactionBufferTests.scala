@@ -14,11 +14,11 @@ import org.scalatest.{FlatSpec, Matchers}
   */
 class TransactionBufferTests extends FlatSpec with Matchers {
 
-  val OPENED  =0
-  val UPDATE  =1
-  val PRE     =2
-  val POST    =3
-  val CANCEL  =4
+  val OPENED = 0
+  val UPDATE = 1
+  val PRE = 2
+  val POST = 3
+  val CANCEL = 4
   val UPDATE_TTL = 20
   val OPEN_TTL = 10
 
@@ -145,7 +145,7 @@ class TransactionBufferTests extends FlatSpec with Matchers {
     b.update(ts0(PRE))
     b.update(ts0(POST))
     b.signalCompleteTransactions()
-    val r = q.get(1,TimeUnit.MILLISECONDS)
+    val r = q.get(1, TimeUnit.MILLISECONDS)
     r.size shouldBe 1
     r.head.uuid shouldBe ts0(OPENED).uuid
     b.getState(ts0(OPENED).uuid).isDefined shouldBe false
@@ -164,7 +164,7 @@ class TransactionBufferTests extends FlatSpec with Matchers {
     b.update(ts0(POST))
     b.update(ts1(POST))
     b.signalCompleteTransactions()
-    val r = q.get(1,TimeUnit.MILLISECONDS)
+    val r = q.get(1, TimeUnit.MILLISECONDS)
     r.size shouldBe 2
     r.head.uuid shouldBe ts0(OPENED).uuid
     r.tail.head.uuid shouldBe ts1(OPENED).uuid
@@ -181,7 +181,7 @@ class TransactionBufferTests extends FlatSpec with Matchers {
     b.update(ts1(PRE))
     b.update(ts1(POST))
     b.signalCompleteTransactions()
-    val r = q.get(1,TimeUnit.MILLISECONDS)
+    val r = q.get(1, TimeUnit.MILLISECONDS)
     r shouldBe null
   }
 
@@ -195,7 +195,7 @@ class TransactionBufferTests extends FlatSpec with Matchers {
     b.update(ts0(PRE))
     b.update(ts1(PRE))
     b.signalCompleteTransactions()
-    val r = q.get(1,TimeUnit.MILLISECONDS)
+    val r = q.get(1, TimeUnit.MILLISECONDS)
     r shouldBe null
   }
 
@@ -211,10 +211,21 @@ class TransactionBufferTests extends FlatSpec with Matchers {
     b.update(ts1(POST))
     b.update(ts0(POST))
     b.signalCompleteTransactions()
-    val r = q.get(1,TimeUnit.MILLISECONDS)
+    val r = q.get(1, TimeUnit.MILLISECONDS)
     r.size shouldBe 2
     r.head.uuid shouldBe ts0(OPENED).uuid
     r.tail.head.uuid shouldBe ts1(OPENED).uuid
+  }
+
+  it should "expire" in {
+    val q = new QueueBuilder.InMemory().generateQueueObject(0)
+    val b = new TransactionBuffer(q)
+    val uuid = UUIDs.timeBased()
+    b.update(TransactionState(uuid, 0, 0, -1, TransactionStatus.opened, 1))
+    Thread.sleep(500)
+    b.getState(uuid).isDefined shouldBe true
+    Thread.sleep(500)
+    b.getState(uuid).isDefined shouldBe false
   }
 
 }
