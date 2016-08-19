@@ -1,10 +1,10 @@
-package agents.subscriber
+package agents.both
 
 import com.bwsw.tstreams.coordination.messages.state.{Message, TransactionStatus}
 import com.bwsw.tstreams.coordination.subscriber.CallbackManager
 import com.datastax.driver.core.utils.UUIDs
-import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import org.scalamock.scalatest.MockFactory
+import org.scalatest.{FlatSpec, Matchers}
 
 /**
   * Created by ivan on 06.08.16.

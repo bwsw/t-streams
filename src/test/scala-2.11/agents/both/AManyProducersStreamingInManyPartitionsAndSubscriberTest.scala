@@ -1,12 +1,12 @@
-package agents.subscriber
+package agents.both
 
 import java.util.UUID
-import java.util.concurrent.{TimeUnit, CountDownLatch}
 import java.util.concurrent.locks.ReentrantLock
+import java.util.concurrent.{CountDownLatch, TimeUnit}
 
 import com.bwsw.tstreams.agents.consumer.Offset.Oldest
 import com.bwsw.tstreams.agents.consumer.subscriber.{Callback, SubscribingConsumer}
-import com.bwsw.tstreams.agents.producer.{Producer, NewTransactionProducerPolicy}
+import com.bwsw.tstreams.agents.producer.{NewTransactionProducerPolicy, Producer}
 import com.bwsw.tstreams.env.TSF_Dictionary
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import testutils._

@@ -1,4 +1,4 @@
-package agents.subscriber
+package agents.both
 
 import com.bwsw.tstreams.coordination.messages.state.Message
 import com.bwsw.tstreams.coordination.subscriber.ProducerEventReceiverTcpServer

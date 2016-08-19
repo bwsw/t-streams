@@ -8,11 +8,11 @@ import com.bwsw.tstreams.common.AbstractPersistentQueue
 class TransactionStatePersistentQueue(basePath: String)
   extends AbstractPersistentQueue[List[TransactionState]](basePath: String) {
 
-  def serialize(elt: List[TransactionState]): Unit = {
-
+  override def serialize(elt: Object): String = {
+    null
   }
 
-  def deserialize(data: String): List[TransactionState] = {
+  override def deserialize(data: String): Object = {
     Nil
   }
 
