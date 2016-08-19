@@ -24,6 +24,13 @@ class BroadcastCommunicationClient(agentsStateManager: AgentsStateDBService,
     * Initialize coordinator
     */
   def init(): Unit = {
+    agentsStateManager.withGlobalStreamLockDo(() => initInternal())
+  }
+
+  /**
+    * init itself
+    */
+  def initInternal(): Unit = {
     usedPartitions foreach { p =>
 
       partitionSubscribers
@@ -40,7 +47,7 @@ class BroadcastCommunicationClient(agentsStateManager: AgentsStateDBService,
           })
         }
       }
-      agentsStateManager.withGlobalStreamLockDo(() => watcher.process(null))
+      watcher.process(null)
     }
   }
 
@@ -54,16 +61,20 @@ class BroadcastCommunicationClient(agentsStateManager: AgentsStateDBService,
       val (set, broadcaster) = partitionSubscribers.get(msg.partition)
       partitionSubscribers.put(msg.partition, (broadcaster.broadcast(set, msg), broadcaster))
     }
+    onComplete()
   }
 
   /**
     * Update subscribers on specific partition
     */
   private def updateSubscribers(partition: Int) = {
+    CommunicationClient.logger.info("update started")
     if(!isStopped.get) {
       val (_, broadcaster) = partitionSubscribers.get(partition)
       partitionSubscribers.put(partition, (agentsStateManager.getPartitionSubscribers(partition), broadcaster))
     }
+    CommunicationClient.logger.info("update finished")
+
   }
 
   /**

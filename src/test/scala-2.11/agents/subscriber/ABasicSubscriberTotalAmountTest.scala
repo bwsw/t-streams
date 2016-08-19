@@ -120,6 +120,7 @@ class ABasicSubscriberTotalAmountTest extends FlatSpec with Matchers with Before
         txn.send(data)
       }
       try {
+        logger.info(s"sent X ${x}")
         txn.checkpoint()
       } catch {
         case e: RuntimeException =>
