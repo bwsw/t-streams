@@ -4,6 +4,9 @@ import java.util.UUID
 import com.bwsw.tstreams.common.{UUIDComparator, SortedExpiringMap}
 import com.bwsw.tstreams.coordination.messages.state.TransactionStatus
 
+import scala.collection.mutable
+import scala.util.control.Breaks._
+
 /**
   * Created by ivan on 19.08.16.
   */
@@ -13,7 +16,7 @@ class TransactionBuffer(partition: Int,
   private val map: SortedExpiringMap[UUID, TransactionState] =
     new SortedExpiringMap(new UUIDComparator, new TransactionStateExpirationPolicy)
 
-  def signal(update: TransactionState): Unit = {
+  def signal(update: TransactionState): Unit = this.synchronized {
 
     //ignore update events until txn doesn't exist in buffer
     if (!map.exists(update.uuid) && update.state == TransactionStatus.update) {
@@ -51,7 +54,20 @@ class TransactionBuffer(partition: Int,
     }
   }
 
-  def signalCompleteTransactions() = {
-
+  def signalCompleteTransactions() = this.synchronized {
+    val it = map.entrySetIterator()
+    breakable {
+      val completeList = mutable.ListBuffer[TransactionState]()
+      while (it.hasNext) {
+        val entry = it.next()
+        val key: UUID = entry.getKey
+        entry.getValue.state match {
+          case TransactionStatus.postCheckpoint =>
+            completeList.append(entry.getValue)
+          case _ => break()
+        }
+      }
+      queue.put(completeList.toList)
+    }
   }
 }

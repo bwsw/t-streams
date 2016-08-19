@@ -24,11 +24,11 @@ class TransactionsBuffer {
 
     //TODO wrap all checks in validate method and log it
     //ignore update events until txn doesn't exist in buffer
-    if (!map.exist(txnUuid) && status == TransactionStatus.update) {
+    if (!map.exists(txnUuid) && status == TransactionStatus.update) {
       return
     }
 
-    if (map.exist(txnUuid)) {
+    if (map.exists(txnUuid)) {
       map.get(txnUuid)._1 match {
         case TransactionStatus.preCheckpoint =>
           if (status != TransactionStatus.postCheckpoint &&
