@@ -174,7 +174,7 @@ class Consumer[T](val name: String,
   def getLastTransaction(partition: Int): Option[Transaction[T]] = this.synchronized {
 
     if(!isStarted.get())
-      throw new IllegalStateException("Consumer is not started. Start consumer first.")
+      throw new IllegalStateException(s"Consumer ${name} is not started. Start it first.")
 
     var curUuid = options.txnGenerator.getTimeUUID()
     var isFinished = false
@@ -209,7 +209,7 @@ class Consumer[T](val name: String,
   def getTransactionById(partition: Int, uuid: UUID): Option[Transaction[T]] = this.synchronized {
 
     if(!isStarted.get())
-      throw new IllegalStateException("Consumer is not started. Start consumer first.")
+      throw new IllegalStateException(s"Consumer ${name} is not started. Start it first.")
 
     if(Consumer.logger.isDebugEnabled) {
       Consumer.logger.debug(s"Start retrieving new historic transaction for consumer with" +
@@ -237,9 +237,9 @@ class Consumer[T](val name: String,
     * @param partition partition to set offset
     * @param uuid      offset value
     */
-  def setLocalOffset(partition: Int, uuid: UUID): Unit = this.synchronized {
+  def setStreamPartitionOffset(partition: Int, uuid: UUID): Unit = this.synchronized {
     if(!isStarted.get())
-      throw new IllegalStateException("Consumer is not started. Start consumer first.")
+      throw new IllegalStateException(s"Consumer ${name} is not started. Start it first.")
 
     offsetsForCheckpoint(partition) = uuid
     currentOffsets(partition)       = uuid

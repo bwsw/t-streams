@@ -18,26 +18,26 @@ import com.bwsw.tstreams.agents.consumer.Transaction
   */
 class CommitEntity(commitLog: String, session: Session) {
   private val commitStatement = session
-    .prepare(s"insert into $commitLog (stream,partition,transaction,cnt) values(?,?,?,?) USING TTL ?")
+    .prepare(s"INSERT INTO $commitLog (stream,partition,transaction,cnt) VALUES (?,?,?,?) USING TTL ?")
 
   private val deleteStatement = session
-    .prepare(s"delete from $commitLog where stream = ? and partition = ? and transaction = ?")
+    .prepare(s"DELETE FROM $commitLog WHERE stream = ? AND partition = ? AND transaction = ?")
 
 
   private val selectTransactionsMoreThanStatement = session
-    .prepare(s"select transaction,cnt,TTL(cnt) from $commitLog where stream=? AND partition=? AND transaction>? LIMIT ?")
+    .prepare(s"SELECT transaction,cnt,TTL(cnt) FROM $commitLog WHERE stream = ? AND partition = ? AND transaction > ? LIMIT ?")
 
   private val selectTransactionsMoreThanStatementWithoutLimit = session
-    .prepare(s"select transaction,cnt,TTL(cnt) from $commitLog where stream=? AND partition=? AND transaction>?")
+    .prepare(s"SELECT transaction,cnt,TTL(cnt) FROM $commitLog WHERE stream = ? AND partition = ? AND transaction > ?")
 
   private val selectTransactionsMoreThanAndLessOrEqualThanStatement = session
-    .prepare(s"select transaction,cnt,TTL(cnt) from $commitLog where stream=? AND partition=? AND transaction>? AND transaction <= ?")
+    .prepare(s"SELECT transaction,cnt,TTL(cnt) FROM $commitLog WHERE stream = ? AND partition = ? AND transaction > ? AND transaction <= ?")
 
   private val selectTransactionsLessThanStatement = session
-    .prepare(s"select transaction,cnt,TTL(cnt) from $commitLog where stream=? AND partition=? AND transaction<? LIMIT ?")
+    .prepare(s"SELECT transaction,cnt,TTL(cnt) FROM $commitLog WHERE stream = ? AND partition = ? AND transaction < ? LIMIT ?")
 
   private val selectTransactionAmountStatement = session
-    .prepare(s"select cnt,TTL(cnt) from $commitLog where stream=? AND partition=? AND transaction=? LIMIT 1")
+    .prepare(s"SELECT cnt,TTL(cnt) FROM $commitLog WHERE stream = ? AND partition = ? AND transaction = ? LIMIT 1")
 
   /**
     * Closing some specific transaction

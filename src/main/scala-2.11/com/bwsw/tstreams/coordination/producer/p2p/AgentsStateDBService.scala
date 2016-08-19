@@ -3,14 +3,14 @@ package com.bwsw.tstreams.coordination.producer.p2p
 import java.util.concurrent.TimeUnit
 
 import com.bwsw.tstreams.common.{LockUtil, ZookeeperDLMService}
-import org.apache.zookeeper.{KeeperException, CreateMode}
+import org.apache.zookeeper.{Watcher, KeeperException, CreateMode}
 
 import scala.collection.mutable
 
 /**
   * Created by ivan on 17.08.16.
   */
-class PartitionMasterManager(dlm: ZookeeperDLMService, myIPAddress: String, streamName: String, partitions: Set[Int]) {
+class AgentsStateDBService(dlm: ZookeeperDLMService, myIPAddress: String, streamName: String, partitions: Set[Int]) {
 
   private val masterMap = mutable.Map[Int, String]()
   var agentID: Int = 0
@@ -216,13 +216,31 @@ class PartitionMasterManager(dlm: ZookeeperDLMService, myIPAddress: String, stre
       })
   }
 
-  def withElectionLockDo(partition: Int, f: () => String): String =
+  def withElectionLockDo(partition: Int, f: () => String): String = {
     LockUtil.withZkLockOrDieDo[String](dlm.getLock(getLockVotingPath(partition)), (100, TimeUnit.SECONDS), Some(PeerAgent.logger), f)
+  }
 
+  def withGlobalStreamLockDo(f: () => Unit) = {
+    LockUtil.withZkLockOrDieDo[Unit](dlm.getLock(getStreamLockPath()), (100, TimeUnit.SECONDS), Some(PeerAgent.logger), f)
+  }
 
-      private def getPartitionPath(partition: Int)        = s"/producers/agents/$streamName/$partition"
-  private def getMyPath(partition: Int)               = s"${getPartitionPath(partition)}/agent_${myIPAddress}_$agentID"
-  private def getPartitionLockPath(partition: Int)    = s"/producers/lock_master/$streamName/$partition"
-  private def getPartitionMasterPath(partition: Int)  = s"/producers/master/$streamName/$partition"
-  private def getLockVotingPath(partition: Int)       = s"/producers/lock_voting/$streamName/$partition"
+  def setSubscriberStateWatcher(partition: Int, watcher: Watcher) = {
+    dlm.setWatcher(getSubscribersEventPath(partition), watcher)
+  }
+
+  def getPartitionSubscribers(partition: Int) = {
+    val subscribersPathOpt = dlm.getAllSubNodesData[String](getSubscribersDataPath(partition))
+    val s = Set[String]().empty
+    s ++ { if (subscribersPathOpt.isDefined) subscribersPathOpt.get else Nil }
+  }
+
+  def getStream()                             = streamName
+  def getPartitionPath(partition: Int)        = s"/producers/agents/$streamName/$partition"
+  def getMyPath(partition: Int)               = s"${getPartitionPath(partition)}/agent_${myIPAddress}_$agentID"
+  def getPartitionLockPath(partition: Int)    = s"/producers/lock_master/$streamName/$partition"
+  def getPartitionMasterPath(partition: Int)  = s"/producers/master/$streamName/$partition"
+  def getLockVotingPath(partition: Int)       = s"/producers/lock_voting/$streamName/$partition"
+  def getSubscribersEventPath(partition: Int) = s"/subscribers/event/$streamName/$partition"
+  def getSubscribersDataPath(partition: Int)  = s"/subscribers/agents/$streamName/$partition"
+  def getStreamLockPath()                     = s"/global/stream/$streamName"
 }
