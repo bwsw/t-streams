@@ -23,6 +23,16 @@ class ProcessingEngine[T](consumer: Consumer[T],
   val lastTransactionsMap = mutable.Map[Int, TransactionState]()
   val lastTransactionsEventsMap = mutable.Map[Int, Long]()
 
+
+  val consumerPartitions = consumer.getPartitions()
+
+  if(!partitions.subsetOf(consumerPartitions))
+    throw new IllegalArgumentException("Partition set which is used in ProcessingEngine is not subset of Consumer's partitions.")
+
+  partitions foreach (p => {
+    lastTransactionsEventsMap(p)  = System.currentTimeMillis()
+    lastTransactionsMap(p)        = TransactionState(consumer.getCurrentOffset(p), p, -1, -1, -1, TransactionStatus.postCheckpoint, -1) })
+
   /**
     * allows to load data fast without database calls
     * @param seq
@@ -40,11 +50,13 @@ class ProcessingEngine[T](consumer: Consumer[T],
     */
   def loadFull(seq: QueueBuilder.QueueItemType) = {
     val last = seq.last
-    val uuid: UUID = if (lastTransactionsMap.contains(last.partition)) lastTransactionsMap(last.partition).uuid else null
-    val data = consumer.getTransactionsFromTo(last.partition, uuid, last.uuid)
+    val first: UUID = lastTransactionsMap(last.partition).uuid
+    val data = consumer.getTransactionsFromTo(last.partition, first, last.uuid)
+
     data foreach(elt =>
       executor.submit(new ProcessingEngine.CallbackTask[T](consumer,
         TransactionState(elt.getTxnUUID(), last.partition, -1, -1, elt.getCount(), TransactionStatus.postCheckpoint, -1), callback)))
+
     if (data.size > 0)
       lastTransactionsMap(last.partition) = TransactionState(data.last.getTxnUUID(), last.partition, -1, -1, data.last.getCount(), TransactionStatus.postCheckpoint, -1)
   }
@@ -57,8 +69,7 @@ class ProcessingEngine[T](consumer: Consumer[T],
   def checkCanBeLoadFast(seq: QueueBuilder.QueueItemType): Boolean = {
     val first = seq.head
     // if there is no last for partition, then no info
-    if(!lastTransactionsMap.contains(first.partition))
-      return false
+
     val prev = lastTransactionsMap(first.partition)
     checkListSeq(prev, seq, compareIfStrictlySequentialFast)
   }
@@ -72,7 +83,7 @@ class ProcessingEngine[T](consumer: Consumer[T],
     val last = seq.last
     val uuidComparator = new UUIDComparator()
     // if there is no last for partition, then no info
-    if(lastTransactionsMap.contains(last.partition) && uuidComparator.compare(last.uuid, lastTransactionsMap(last.partition).uuid) != 1)
+    if(uuidComparator.compare(last.uuid, lastTransactionsMap(last.partition).uuid) != 1)
       return false
     true
   }
@@ -129,8 +140,7 @@ class ProcessingEngine[T](consumer: Consumer[T],
     val uuidComparator = new UUIDComparator()
 
     // if current last transaction is newer than from db
-    if(lastTransactionsMap.contains(partition) &&
-      uuidComparator.compare(t.get.getTxnUUID(), lastTransactionsMap(partition).uuid) != 1)
+    if(uuidComparator.compare(t.get.getTxnUUID(), lastTransactionsMap(partition).uuid) != 1)
       return
 
     val r = Random
@@ -143,7 +153,6 @@ class ProcessingEngine[T](consumer: Consumer[T],
     queue.put(tl)
     lastTransactionsEventsMap(partition) = System.currentTimeMillis()
   }
-
 }
 
 

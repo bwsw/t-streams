@@ -30,6 +30,11 @@ class Consumer[T](val name: String,
   override def getAgentName = name
 
   /**
+    * returns partitions
+    */
+  def getPartitions(): Set[Int] = Set[Int]().empty ++ options.readPolicy.getUsedPartitions()
+
+  /**
     * Temporary checkpoints (will be cleared after every checkpoint() invokes)
     */
   private val offsetsForCheckpoint = scala.collection.mutable.Map[Int, UUID]()
@@ -43,6 +48,8 @@ class Consumer[T](val name: String,
     * Buffer for transactions preload
     */
   private val transactionBuffer = scala.collection.mutable.Map[Int, scala.collection.mutable.Queue[Transaction[T]]]()
+
+  def getCurrentOffset(partition: Int) = currentOffsets(partition)
 
   /**
     * Indicate set offsets or not
