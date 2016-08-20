@@ -6,7 +6,6 @@ import com.bwsw.tstreams.common.{SortedExpiringMap, UUIDComparator}
 import com.bwsw.tstreams.coordination.messages.state.TransactionStatus
 
 import scala.collection.mutable
-import scala.util.control.Breaks._
 
 /**
   * Created by Ivan Kudryavtsev on 19.08.16.
@@ -109,10 +108,8 @@ class TransactionBuffer(queue: QueueBuilder.QueueType) {
     while (it.hasNext && continue) {
       val entry = it.next()
       entry.getValue.state match {
-        case TransactionStatus.postCheckpoint =>
-          completeList.append(entry.getValue)
-        case _ =>
-          continue = false
+        case TransactionStatus.postCheckpoint => completeList.append(entry.getValue)
+        case _ => continue = false
       }
     }
     if(completeList.size > 0) {

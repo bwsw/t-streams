@@ -18,7 +18,7 @@ class InMemoryQueueTests extends FlatSpec with Matchers {
 
   it should "allow to put/get list" in {
     val q = new InMemoryQueue[List[TransactionState]]()
-    val s = TransactionState(UUID.randomUUID(), 1, 1, 1, TransactionStatus.opened, 1)
+    val s = TransactionState(UUID.randomUUID(), 0, 1, 1, 1, TransactionStatus.opened, 1)
     q.put(List(s))
     val g: List[TransactionState] = q.get(1, TimeUnit.SECONDS)
     g.size shouldBe 1

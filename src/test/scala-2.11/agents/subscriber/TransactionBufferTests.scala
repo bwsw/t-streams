@@ -18,11 +18,11 @@ object TransactionBufferTests {
   def generateAllStates(): Array[TransactionState] = {
     val uuid = UUIDs.timeBased()
     Array[TransactionState](
-      TransactionState(uuid, 0, 0, -1, TransactionStatus.opened, OPEN_TTL),
-      TransactionState(uuid, 0, 0, -1, TransactionStatus.update, UPDATE_TTL),
-      TransactionState(uuid, 0, 0, -1, TransactionStatus.preCheckpoint, 10),
-      TransactionState(uuid, 0, 0, -1, TransactionStatus.postCheckpoint, 10),
-      TransactionState(uuid, 0, 0, -1, TransactionStatus.cancel, 10))
+      TransactionState(uuid, 0, 0, 0, -1, TransactionStatus.opened, OPEN_TTL),
+      TransactionState(uuid, 0, 0, 0, -1, TransactionStatus.update, UPDATE_TTL),
+      TransactionState(uuid, 0, 0, 0, -1, TransactionStatus.preCheckpoint, 10),
+      TransactionState(uuid, 0, 0, 0, -1, TransactionStatus.postCheckpoint, 10),
+      TransactionState(uuid, 0, 0, 0, -1, TransactionStatus.cancel, 10))
   }
 }
 /**
@@ -275,7 +275,7 @@ class TransactionBufferTests extends FlatSpec with Matchers {
     val q = new QueueBuilder.InMemory().generateQueueObject(0)
     val b = new TransactionBuffer(q)
     val uuid = UUIDs.timeBased()
-    b.update(TransactionState(uuid, 0, 0, -1, TransactionStatus.opened, 1))
+    b.update(TransactionState(uuid, 0, 0, 0, -1, TransactionStatus.opened, 1))
     Thread.sleep(500)
     b.getState(uuid).isDefined shouldBe true
     Thread.sleep(500)

@@ -8,8 +8,9 @@ import com.bwsw.tstreams.coordination.messages.state.TransactionStatus.ProducerT
   * Created by ivan on 19.08.16.
   */
 case class TransactionState(uuid: UUID,
-                       masterSessionID: Int,
-                       queueOrderID: Int,
-                       itemCount: Int,
-                       state: ProducerTransactionStatus,
-                       ttl: Int)
+                            partition: Int,
+                            masterSessionID: Int,
+                            queueOrderID: Int,
+                            itemCount: Int,
+                            state: ProducerTransactionStatus,
+                            ttl: Int)
