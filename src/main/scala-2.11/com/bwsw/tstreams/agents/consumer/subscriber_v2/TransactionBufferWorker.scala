@@ -5,11 +5,21 @@ import java.util.concurrent.atomic.AtomicBoolean
 
 import com.bwsw.tstreams.common.FirstFailLockableTaskExecutor
 
+import scala.collection.mutable
+
 /**
   * Created by Ivan Kudryavtsev at 20.08.2016
   */
-class TransactionBufferWorker(transactionBuffer: TransactionBuffer) {
+class TransactionBufferWorker() {
   private val executor = new FirstFailLockableTaskExecutor("TransactionBufferWorker-Executor")
+  val transactionBufferMap = mutable.Map[Int, TransactionBuffer]()
+
+  def assign(partition: Int, transactionBuffer: TransactionBuffer) = {
+    if(!transactionBufferMap.contains(partition))
+      transactionBufferMap(partition) = transactionBuffer
+    else
+      throw new IllegalStateException(s"Partition ${partition} is bound already.")
+  }
 
   /**
     * submits state to executor for offloaded computation
@@ -18,8 +28,8 @@ class TransactionBufferWorker(transactionBuffer: TransactionBuffer) {
   def updateAndNotify(transactionState: TransactionState) = {
     executor.submit(new Runnable {
       override def run(): Unit = {
-        transactionBuffer.update(transactionState)
-        transactionBuffer.signalCompleteTransactions()
+        transactionBufferMap(transactionState.partition).update(transactionState)
+        transactionBufferMap(transactionState.partition).signalCompleteTransactions()
       }
     })
   }

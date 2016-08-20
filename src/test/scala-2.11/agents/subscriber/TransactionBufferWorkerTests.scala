@@ -15,7 +15,8 @@ class TransactionBufferWorkerTests extends FlatSpec with Matchers {
   it should "Do combine update and signal and produce output to queue 2 items with 1 state each" in {
     val q = new QueueBuilder.InMemory().generateQueueObject(0)
     val b = new TransactionBuffer(q)
-    val w = new TransactionBufferWorker(b)
+    val w = new TransactionBufferWorker()
+    w.assign(0, b)
 
     w.updateAndNotify(ts0(TransactionBufferTests.OPENED))
     w.updateAndNotify(ts1(TransactionBufferTests.OPENED))
@@ -38,7 +39,9 @@ class TransactionBufferWorkerTests extends FlatSpec with Matchers {
   it should "Do combine update and signal and produce output to queue 1 item with 2 states" in {
     val q = new QueueBuilder.InMemory().generateQueueObject(0)
     val b = new TransactionBuffer(q)
-    val w = new TransactionBufferWorker(b)
+    val w = new TransactionBufferWorker()
+    w.assign(0, b)
+
     w.updateAndNotify(ts0(TransactionBufferTests.OPENED))
     w.updateAndNotify(ts1(TransactionBufferTests.OPENED))
 
@@ -61,7 +64,8 @@ class TransactionBufferWorkerTests extends FlatSpec with Matchers {
   it should "raise exception after stop" in {
     val q = new QueueBuilder.InMemory().generateQueueObject(0)
     val b = new TransactionBuffer(q)
-    val w = new TransactionBufferWorker(b)
+    val w = new TransactionBufferWorker()
+    w.assign(0, b)
     w.updateAndNotify(ts0(TransactionBufferTests.OPENED))
     w.stop()
     val flag: Boolean = {
@@ -75,5 +79,43 @@ class TransactionBufferWorkerTests extends FlatSpec with Matchers {
     }
     flag shouldBe true
   }
+
+  it should "raise exception if second assignment to the same partition" in {
+    val q = new QueueBuilder.InMemory().generateQueueObject(0)
+    val b = new TransactionBuffer(q)
+    val w = new TransactionBufferWorker()
+    w.assign(0, b)
+    val flag: Boolean = {
+      try {
+        w.assign(0, b)
+        false
+      } catch {
+        case e: RuntimeException =>
+          true
+      }
+    }
+    flag shouldBe true
+  }
+
+  it should "not raise exception if second assignment to another partition" in {
+    val q = new QueueBuilder.InMemory().generateQueueObject(0)
+    val b = new TransactionBuffer(q)
+    val w = new TransactionBufferWorker()
+    w.assign(0, b)
+    val flag: Boolean = {
+      try {
+        w.assign(1, b)
+        true
+      } catch {
+        case e: RuntimeException =>
+          false
+      }
+      finally {
+        false
+      }
+    }
+    flag shouldBe true
+  }
+
 
 }
