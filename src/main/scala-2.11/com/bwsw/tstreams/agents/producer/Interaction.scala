@@ -1,4 +1,4 @@
-package com.bwsw.tstreams.coordination.producer.transport.traits
+package com.bwsw.tstreams.agents.producer
 
 import java.util.UUID
 

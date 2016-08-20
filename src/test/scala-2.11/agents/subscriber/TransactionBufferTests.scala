@@ -1,19 +1,13 @@
 package agents.subscriber
 
 
-import java.util.UUID
 import java.util.concurrent.TimeUnit
-
 import com.bwsw.tstreams.agents.consumer.subscriber_v2.{QueueBuilder, TransactionBuffer, TransactionState}
 import com.bwsw.tstreams.coordination.messages.state.TransactionStatus
 import com.datastax.driver.core.utils.UUIDs
 import org.scalatest.{FlatSpec, Matchers}
 
-/**
-  * Created by ivan on 19.08.16.
-  */
-class TransactionBufferTests extends FlatSpec with Matchers {
-
+object TransactionBufferTests {
   val OPENED = 0
   val UPDATE = 1
   val PRE = 2
@@ -21,8 +15,6 @@ class TransactionBufferTests extends FlatSpec with Matchers {
   val CANCEL = 4
   val UPDATE_TTL = 20
   val OPEN_TTL = 10
-
-
   def generateAllStates(): Array[TransactionState] = {
     val uuid = UUIDs.timeBased()
     Array[TransactionState](
@@ -32,6 +24,22 @@ class TransactionBufferTests extends FlatSpec with Matchers {
       TransactionState(uuid, 0, 0, -1, TransactionStatus.postCheckpoint, 10),
       TransactionState(uuid, 0, 0, -1, TransactionStatus.cancel, 10))
   }
+}
+/**
+  * Created by ivan on 19.08.16.
+  */
+class TransactionBufferTests extends FlatSpec with Matchers {
+
+  val OPENED  = TransactionBufferTests.OPENED
+  val UPDATE  = TransactionBufferTests.UPDATE
+  val PRE     = TransactionBufferTests.PRE
+  val POST    = TransactionBufferTests.POST
+  val CANCEL  = TransactionBufferTests.CANCEL
+  val UPDATE_TTL  = TransactionBufferTests.UPDATE_TTL
+  val OPEN_TTL    = TransactionBufferTests.OPEN_TTL
+
+  def generateAllStates() = TransactionBufferTests.generateAllStates()
+
 
   it should "be created" in {
     val b = new TransactionBuffer(new QueueBuilder.InMemory().generateQueueObject(0))
@@ -197,6 +205,21 @@ class TransactionBufferTests extends FlatSpec with Matchers {
     b.signalCompleteTransactions()
     val r = q.get(1, TimeUnit.MILLISECONDS)
     r shouldBe null
+  }
+
+  it should "signal for first complete, second incomplete" in {
+    val q = new QueueBuilder.InMemory().generateQueueObject(0)
+    val b = new TransactionBuffer(q)
+    val ts0 = generateAllStates()
+    val ts1 = generateAllStates()
+    println(s"TS0 ${ts0(OPENED)}")
+    b.update(ts0(OPENED))
+    b.update(ts1(OPENED))
+    b.update(ts0(PRE))
+    b.update(ts0(POST))
+    b.signalCompleteTransactions()
+    val r = q.get(1, TimeUnit.MILLISECONDS)
+    r.size shouldBe 1
   }
 
   it should "signal for first incomplete, second complete, first complete" in {

@@ -4,13 +4,12 @@ import java.util.UUID
 import java.util.concurrent.locks.ReentrantLock
 import java.util.concurrent.{ConcurrentHashMap, CountDownLatch, TimeUnit}
 
-import com.bwsw.tstreams.agents.group.{GroupParticipant, CheckpointInfo, SendingAgent}
+import com.bwsw.tstreams.agents.group.{CheckpointInfo, GroupParticipant, SendingAgent}
 import com.bwsw.tstreams.agents.producer.NewTransactionProducerPolicy.ProducerPolicy
 import com.bwsw.tstreams.common._
 import com.bwsw.tstreams.coordination.client.BroadcastCommunicationClient
 import com.bwsw.tstreams.coordination.messages.state.{Message, TransactionStatus}
 import com.bwsw.tstreams.coordination.producer.p2p.{AgentsStateDBService, PeerAgent}
-import com.bwsw.tstreams.coordination.producer.transport.traits.Interaction
 import com.bwsw.tstreams.metadata.MetadataStorage
 import com.bwsw.tstreams.streams.TStream
 import org.slf4j.LoggerFactory
