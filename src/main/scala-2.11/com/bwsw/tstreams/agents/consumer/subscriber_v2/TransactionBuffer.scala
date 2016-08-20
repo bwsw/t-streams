@@ -14,6 +14,9 @@ import scala.util.control.Breaks._
   */
 class TransactionBuffer(queue: QueueBuilder.QueueType) {
 
+  var lastTransaction: UUID = null
+  val comparator = new UUIDComparator()
+
   private val map: SortedExpiringMap[UUID, TransactionState] =
     new SortedExpiringMap(new UUIDComparator, new TransactionStateExpirationPolicy)
 
@@ -31,40 +34,69 @@ class TransactionBuffer(queue: QueueBuilder.QueueType) {
     */
   def update(update: TransactionState): Unit = this.synchronized {
 
-    //ignore update events until txn doesn't exist in buffer
-    if (!map.exists(update.uuid) && update.state != TransactionStatus.opened) {
-      return
+    // avoid transactions which are delayed
+    if (update.state == TransactionStatus.opened) {
+      if(lastTransaction != null
+        && comparator.compare(update.uuid, lastTransaction) != 1)
+        return
     }
 
     if (map.exists(update.uuid)) {
-      map.get(update.uuid).state match {
-        case TransactionStatus.preCheckpoint =>
-          if (!(update.state == TransactionStatus.postCheckpoint ||
-            update.state == TransactionStatus.cancel)) {
-            return
-          }
-        case TransactionStatus.postCheckpoint =>
-          return
 
-        case _ =>
+      /*
+      * finite automata
+      * */
+      (map.get(update.uuid).state, update.state) match {
+          /*
+          from opened to *
+           */
+        case (TransactionStatus.opened, TransactionStatus.opened) =>
+
+        case (TransactionStatus.opened, TransactionStatus.update) =>
+          map.put(update.uuid, update.copy(state = TransactionStatus.opened))
+
+        case (TransactionStatus.opened, TransactionStatus.preCheckpoint) =>
+          map.put(update.uuid, update.copy(ttl = - 1))
+
+        case (TransactionStatus.opened, TransactionStatus.postCheckpoint) =>
+
+        case (TransactionStatus.opened, TransactionStatus.cancel) =>
+          map.remove(update.uuid)
+
+          /*
+          from update -> * no implement because opened
+           */
+        case (TransactionStatus.update, _) =>
+
+          /*
+          from cancel -> * no implement because removed
+          */
+        case (TransactionStatus.cancel, _) =>
+
+          /*
+          from pre -> *
+           */
+        case (TransactionStatus.preCheckpoint, TransactionStatus.cancel) =>
+          map.remove(update.uuid)
+
+        case (TransactionStatus.preCheckpoint, TransactionStatus.postCheckpoint) =>
+          map.put(update.uuid, update.copy(ttl = - 1))
+
+        case (TransactionStatus.preCheckpoint, _) =>
+
+          /*
+          from post -> *
+           */
+        case (TransactionStatus.postCheckpoint, _) =>
+      }
+
+    } else {
+      if (update.state == TransactionStatus.opened) {
+        map.put(update.uuid, update)
+        lastTransaction = update.uuid
       }
     }
 
-    update.state match {
-      case TransactionStatus.update | TransactionStatus.opened =>
-        map.put(update.uuid, update.copy(state = TransactionStatus.opened))
-
-      //ignore ttl, preCheckpoint will be resolved by another thread
-      case TransactionStatus.preCheckpoint =>
-        map.put(update.uuid, update.copy(ttl = - 1))
-
-      //just ignore ttl because transaction is closed
-      case TransactionStatus.postCheckpoint =>
-        map.put(update.uuid, update.copy(ttl = - 1))
-
-      case TransactionStatus.cancel =>
-        map.remove(update.uuid)
-    }
   }
 
   /**

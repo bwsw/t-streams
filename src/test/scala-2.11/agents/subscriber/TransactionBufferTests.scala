@@ -52,6 +52,38 @@ class TransactionBufferTests extends FlatSpec with Matchers {
     b.getState(ts0(UPDATE).uuid).isDefined shouldBe false
   }
 
+  it should "avoid addition of pre state if no previous state" in {
+    val b = new TransactionBuffer(new QueueBuilder.InMemory().generateQueueObject(0))
+    val ts0 = generateAllStates()
+    b.update(ts0(PRE))
+    b.getState(ts0(PRE).uuid).isDefined shouldBe false
+  }
+
+  it should "avoid addition of post state if no previous state" in {
+    val b = new TransactionBuffer(new QueueBuilder.InMemory().generateQueueObject(0))
+    val ts0 = generateAllStates()
+    b.update(ts0(POST))
+    b.getState(ts0(POST).uuid).isDefined shouldBe false
+  }
+
+  it should "avoid addition of cancel state if no previous state" in {
+    val b = new TransactionBuffer(new QueueBuilder.InMemory().generateQueueObject(0))
+    val ts0 = generateAllStates()
+    b.update(ts0(CANCEL))
+    b.getState(ts0(CANCEL).uuid).isDefined shouldBe false
+  }
+
+  it should "avoid addition of ts0 after ts1" in {
+    val b = new TransactionBuffer(new QueueBuilder.InMemory().generateQueueObject(0))
+    val ts0 = generateAllStates()
+    val ts1 = generateAllStates()
+    b.update(ts1(OPENED))
+    b.update(ts0(OPENED))
+    b.getState(ts0(OPENED).uuid).isDefined shouldBe false
+    b.getState(ts1(OPENED).uuid).isDefined shouldBe true
+  }
+
+
   it should "allow to place opened state" in {
     val b = new TransactionBuffer(new QueueBuilder.InMemory().generateQueueObject(0))
     val ts0 = generateAllStates()
@@ -212,7 +244,6 @@ class TransactionBufferTests extends FlatSpec with Matchers {
     val b = new TransactionBuffer(q)
     val ts0 = generateAllStates()
     val ts1 = generateAllStates()
-    println(s"TS0 ${ts0(OPENED)}")
     b.update(ts0(OPENED))
     b.update(ts1(OPENED))
     b.update(ts0(PRE))

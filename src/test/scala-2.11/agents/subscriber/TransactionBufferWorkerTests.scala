@@ -9,9 +9,10 @@ import org.scalatest.{FlatSpec, Matchers}
   * Created by ivan on 20.08.16.
   */
 class TransactionBufferWorkerTests extends FlatSpec with Matchers {
+  val ts0 = TransactionBufferTests.generateAllStates()
+  val ts1 = TransactionBufferTests.generateAllStates()
+
   it should "Do combine update and signal and produce output to queue 2 items with 1 state each" in {
-    val ts0 = TransactionBufferTests.generateAllStates()
-    val ts1 = TransactionBufferTests.generateAllStates()
     val q = new QueueBuilder.InMemory().generateQueueObject(0)
     val b = new TransactionBuffer(q)
     val w = new TransactionBufferWorker(b)
@@ -31,11 +32,10 @@ class TransactionBufferWorkerTests extends FlatSpec with Matchers {
     itm1.size shouldBe 1
     itm0.head.uuid shouldBe ts0(TransactionBufferTests.OPENED).uuid
     itm1.head.uuid shouldBe ts1(TransactionBufferTests.OPENED).uuid
+    w.stop()
   }
 
   it should "Do combine update and signal and produce output to queue 1 item with 2 states" in {
-    val ts0 = TransactionBufferTests.generateAllStates()
-    val ts1 = TransactionBufferTests.generateAllStates()
     val q = new QueueBuilder.InMemory().generateQueueObject(0)
     val b = new TransactionBuffer(q)
     val w = new TransactionBufferWorker(b)
@@ -55,6 +55,25 @@ class TransactionBufferWorkerTests extends FlatSpec with Matchers {
 
     val itm1 = q.get(100, TimeUnit.MILLISECONDS)
     itm1 shouldBe null
+    w.stop()
+  }
+
+  it should "raise exception after stop" in {
+    val q = new QueueBuilder.InMemory().generateQueueObject(0)
+    val b = new TransactionBuffer(q)
+    val w = new TransactionBufferWorker(b)
+    w.updateAndNotify(ts0(TransactionBufferTests.OPENED))
+    w.stop()
+    val flag: Boolean = {
+      try {
+        w.updateAndNotify(ts0(TransactionBufferTests.UPDATE))
+        false
+      } catch {
+        case e: RuntimeException =>
+          true
+      }
+    }
+    flag shouldBe true
   }
 
 }

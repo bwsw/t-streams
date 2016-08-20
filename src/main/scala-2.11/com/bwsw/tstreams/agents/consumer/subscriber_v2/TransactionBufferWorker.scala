@@ -1,5 +1,8 @@
 package com.bwsw.tstreams.agents.consumer.subscriber_v2
 
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
+
 import com.bwsw.tstreams.common.FirstFailLockableTaskExecutor
 
 /**
@@ -9,7 +12,7 @@ class TransactionBufferWorker(transactionBuffer: TransactionBuffer) {
   private val executor = new FirstFailLockableTaskExecutor("TransactionBufferWorker-Executor")
 
   /**
-    *
+    * submits state to executor for offloaded computation
     * @param transactionState
     */
   def updateAndNotify(transactionState: TransactionState) = {
@@ -21,4 +24,10 @@ class TransactionBufferWorker(transactionBuffer: TransactionBuffer) {
     })
   }
 
+  /**
+    * stops executor
+    */
+  def stop() = {
+    executor.shutdownOrDie(100, TimeUnit.SECONDS)
+  }
 }
