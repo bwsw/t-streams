@@ -104,25 +104,20 @@ class TransactionBuffer(queue: QueueBuilder.QueueType) {
     */
   def signalCompleteTransactions() = this.synchronized {
     val it = map.entrySetIterator()
-    breakable {
-      val completeList = mutable.ListBuffer[TransactionState]()
-      while (it.hasNext) {
-        val entry = it.next()
-        entry.getValue.state match {
-          case TransactionStatus.postCheckpoint =>
-            completeList.append(entry.getValue)
-          case _ =>
-            if(completeList.size > 0) {
-              queue.put(completeList.toList)
-              completeList foreach (i => map.remove(i.uuid))
-            }
-            break()
-        }
+    val completeList = mutable.ListBuffer[TransactionState]()
+    var continue = true
+    while (it.hasNext && continue) {
+      val entry = it.next()
+      entry.getValue.state match {
+        case TransactionStatus.postCheckpoint =>
+          completeList.append(entry.getValue)
+        case _ =>
+          continue = false
       }
-      if(completeList.size > 0) {
-        queue.put(completeList.toList)
-        completeList foreach (i => map.remove(i.uuid))
-      }
+    }
+    if(completeList.size > 0) {
+      queue.put(completeList.toList)
+      completeList foreach (i => map.remove(i.uuid))
     }
   }
 }
