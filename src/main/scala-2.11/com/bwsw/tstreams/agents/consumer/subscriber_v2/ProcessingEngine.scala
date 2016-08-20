@@ -50,10 +50,10 @@ class ProcessingEngine[T](consumer: Consumer[T],
     */
   private def checkListSeq(head: TransactionState,
                            l: QueueBuilder.QueueItemType ,
-                           predicate: (TransactionState, TransactionState) => Boolean): Boolean = (head, l) match {
+                           predicate: (TransactionState, TransactionState) => Boolean): Boolean = (head, l, predicate) match {
     case (_, Nil, _) => true
-    case (head, e :: l, _) =>
-      predicate(head, e) && checkListSeq(e, l, predicate)
+    case (h, e :: l, p) =>
+      predicate(h, e) && checkListSeq(e, l, p)
   }
 
   /**
