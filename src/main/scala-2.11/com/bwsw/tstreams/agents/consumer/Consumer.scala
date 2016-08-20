@@ -4,10 +4,12 @@ import java.util.UUID
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.locks.ReentrantLock
 
-import com.bwsw.tstreams.agents.group.{GroupParticipant, CheckpointInfo, ConsumerCheckpointInfo}
+import com.bwsw.tstreams.agents.group.{CheckpointInfo, ConsumerCheckpointInfo, GroupParticipant}
 import com.bwsw.tstreams.metadata.MetadataStorage
 import com.bwsw.tstreams.streams.TStream
 import org.slf4j.LoggerFactory
+
+import scala.collection.mutable.ListBuffer
 
 object Consumer {
   val logger = LoggerFactory.getLogger(this.getClass)
@@ -207,8 +209,30 @@ class Consumer[T](val name: String,
     None
   }
 
-  def getTransactionsFromTo(partition: Int, from: UUID, to: UUID): List[Transaction[T]] = {
-    Nil
+  def getTransactionsFromTo(partition: Int, from: UUID, to: UUID): ListBuffer[Transaction[T]] = {
+    val txns = stream.metadataStorage.commitEntity.getTransactions[T](
+                                          streamName = stream.getName,
+                                          partition = partition,
+                                          fromTransaction = currentOffsets(partition),
+                                          cnt = options.transactionsPreload)
+    val okList = ListBuffer[Transaction[T]]()
+    var addFlag = true
+    var moreItems = true
+    while(addFlag && moreItems) {
+      if(txns.isEmpty) {
+        moreItems = false
+      } else {
+        val t = txns.dequeue()
+        if (t.getCount() >= 0)
+          okList.append(t)
+        else
+          addFlag = false
+      }
+    }
+    if(addFlag)
+      okList.appendAll(if (okList.size > 0) getTransactionsFromTo(partition, okList.head.getTxnUUID(), to) else ListBuffer[Transaction[T]]())
+
+    okList
   }
 
   /**
