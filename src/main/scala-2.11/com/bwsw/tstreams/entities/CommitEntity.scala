@@ -118,18 +118,18 @@ class CommitEntity(commitLog: String, session: Session) {
     *
     * @param streamName      Name of the stream
     * @param partition       Number of the partition
-    * @param lastTransaction Transaction from which start to retrieve
+    * @param fromTransaction Transaction from which start to retrieve
     * @param cnt             Amount of retrieved queue (can be less than cnt in case of insufficiency of transactions)
     * @return Queue of selected transactions
     */
-  def getTransactions[T](streamName: String, partition: Int, lastTransaction: UUID, cnt: Int = -1): scala.collection.mutable.Queue[Transaction[T]] = {
+  def getTransactions[T](streamName: String, partition: Int, fromTransaction: UUID, cnt: Int = -1): scala.collection.mutable.Queue[Transaction[T]] = {
     val statementWithBindings =
       if (cnt == -1) {
-        val values: List[AnyRef] = List(streamName, new Integer(partition), lastTransaction)
+        val values: List[AnyRef] = List(streamName, new Integer(partition), fromTransaction)
         selectTransactionsMoreThanStatementWithoutLimit.bind(values: _*)
       }
       else {
-        val values: List[AnyRef] = List(streamName, new Integer(partition), lastTransaction, new Integer(cnt))
+        val values: List[AnyRef] = List(streamName, new Integer(partition), fromTransaction, new Integer(cnt))
         selectTransactionsMoreThanStatement.bind(values: _*)
       }
 

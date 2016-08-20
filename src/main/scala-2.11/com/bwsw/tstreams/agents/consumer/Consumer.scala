@@ -92,7 +92,7 @@ class Consumer[T](val name: String,
       transactionBuffer(i) = stream.metadataStorage.commitEntity.getTransactions[T](
         streamName = stream.getName,
         partition = i,
-        lastTransaction = currentOffsets(i),
+        fromTransaction = currentOffsets(i),
         cnt = options.transactionsPreload)
 
     isStarted.set(true)
@@ -118,7 +118,7 @@ class Consumer[T](val name: String,
       transactionBuffer(partition) = stream.metadataStorage.commitEntity.getTransactions(
         streamName = stream.getName,
         partition = partition,
-        lastTransaction = currentOffsets(partition),
+        fromTransaction = currentOffsets(partition),
         cnt = options.transactionsPreload)
 
       if (transactionBuffer(partition).isEmpty) {
@@ -198,6 +198,10 @@ class Consumer[T](val name: String,
       }
     }
     None
+  }
+
+  def getTransactionsFromTo(partition: Int, from: UUID, to: UUID): List[Transaction[T]] = {
+    Nil
   }
 
   /**

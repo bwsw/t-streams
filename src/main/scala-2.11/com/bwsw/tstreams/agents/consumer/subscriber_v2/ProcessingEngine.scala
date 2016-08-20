@@ -1,5 +1,8 @@
 package com.bwsw.tstreams.agents.consumer.subscriber_v2
 
+import java.util.UUID
+import java.util.concurrent.TimeUnit
+
 import com.bwsw.tstreams.agents.consumer.Consumer
 import com.bwsw.tstreams.common.{FirstFailLockableTaskExecutor, UUIDComparator}
 import com.bwsw.tstreams.coordination.messages.state.TransactionStatus
@@ -18,7 +21,7 @@ class ProcessingEngine[T](consumer: Consumer[T],
 
   // keeps last transaction states processed
   val lastTransactionsMap = mutable.Map[Int, TransactionState]()
-
+  val lastTransactionsEventsMap = mutable.Map[Int, Long]()
 
   /**
     * allows to load data fast without database calls
@@ -29,6 +32,21 @@ class ProcessingEngine[T](consumer: Consumer[T],
       executor.submit(new ProcessingEngine.CallbackTask[T](consumer, elt, callback)))
     val last = seq.last
     lastTransactionsMap(last.partition) = last
+  }
+
+  /**
+    * loads from C*
+    * @param seq
+    */
+  def loadFull(seq: QueueBuilder.QueueItemType) = {
+    val last = seq.last
+    val uuid: UUID = if (lastTransactionsMap.contains(last.partition)) lastTransactionsMap(last.partition).uuid else null
+    val data = consumer.getTransactionsFromTo(last.partition, uuid, last.uuid)
+    data foreach(elt =>
+      executor.submit(new ProcessingEngine.CallbackTask[T](consumer,
+        TransactionState(elt.getTxnUUID(), last.partition, -1, -1, elt.getCount(), TransactionStatus.postCheckpoint, -1), callback)))
+    if (data.size > 0)
+      lastTransactionsMap(last.partition) = TransactionState(data.last.getTxnUUID(), last.partition, -1, -1, data.last.getCount(), TransactionStatus.postCheckpoint, -1)
   }
 
   /**
@@ -43,6 +61,34 @@ class ProcessingEngine[T](consumer: Consumer[T],
       return false
     val prev = lastTransactionsMap(first.partition)
     checkListSeq(prev, seq, compareIfStrictlySequentialFast)
+  }
+
+  /**
+    * Checks if seq can be load fast without additional calls to database
+    * @param seq
+    * @return
+    */
+  def checkCanBeLoadFull(seq: QueueBuilder.QueueItemType): Boolean = {
+    val last = seq.last
+    val uuidComparator = new UUIDComparator()
+    // if there is no last for partition, then no info
+    if(lastTransactionsMap.contains(last.partition) && uuidComparator.compare(last.uuid, lastTransactionsMap(last.partition).uuid) != 1)
+      return false
+    true
+  }
+
+  def handleQueue(pollTimeMs: Int) = {
+    val seq = queue.get(pollTimeMs, TimeUnit.MILLISECONDS)
+    if(seq != null) {
+      if(seq.size > 0) {
+        if(checkCanBeLoadFast(seq))
+          loadFast(seq)
+        else if (checkCanBeLoadFull(seq))
+          loadFull(seq)
+        lastTransactionsEventsMap(seq.head.partition) = System.currentTimeMillis()
+      }
+    }
+    partitions foreach (p => if (System.currentTimeMillis() - lastTransactionsEventsMap(p) > pollTimeMs) enqueueLastTransactionFromDB(p))
   }
 
   /**
@@ -71,20 +117,8 @@ class ProcessingEngine[T](consumer: Consumer[T],
       partitions.contains(e2.partition)
 
   /**
-    * checks that two items satisfy load fast condition
-    * @param e1
-    * @param e2
-    * @return
-    */
-  private def compareIfStrictlySequentialFull(e1: TransactionState, e2: TransactionState): Boolean =
-    partitions.contains(e2.partition)
-
-
-
-  /**
     * Enqueues in queue last transaction from Cassandra
     */
-
   def enqueueLastTransactionFromDB(partition: Int): Unit = {
     assert(partitions.contains(partition))
 
@@ -107,6 +141,7 @@ class ProcessingEngine[T](consumer: Consumer[T],
                                     itemCount       = t.get.getCount(), state = TransactionStatus.postCheckpoint,
                                     ttl             = -1))
     queue.put(tl)
+    lastTransactionsEventsMap(partition) = System.currentTimeMillis()
   }
 
 }
