@@ -1,14 +1,17 @@
 package com.bwsw.tstreams.agents.consumer.subscriber_v2
 
 import com.bwsw.tstreams.agents.consumer.Consumer
-import com.bwsw.tstreams.common.FirstFailLockableTaskExecutor
+import com.bwsw.tstreams.common.{FirstFailLockableTaskExecutor, UUIDComparator}
+import com.bwsw.tstreams.coordination.messages.state.TransactionStatus
 
 import scala.collection.mutable
+import scala.util.Random
 
 /**
   * Created by Ivan Kudryavtsev on 20.08.16.
   */
 class ProcessingEngine[T](consumer: Consumer[T],
+                          partitions: Set[Int],
                           queue: QueueBuilder.QueueType,
                           callback: Callback[T],
                           executor: FirstFailLockableTaskExecutor) {
@@ -39,7 +42,7 @@ class ProcessingEngine[T](consumer: Consumer[T],
     if(!lastTransactionsMap.contains(first.partition))
       return false
     val prev = lastTransactionsMap(first.partition)
-    checkListSeq(prev, seq, compareIfStrictlySequential)
+    checkListSeq(prev, seq, compareIfStrictlySequentialFast)
   }
 
   /**
@@ -62,10 +65,49 @@ class ProcessingEngine[T](consumer: Consumer[T],
     * @param e2
     * @return
     */
-  private def compareIfStrictlySequential(e1: TransactionState, e2: TransactionState): Boolean =
+  private def compareIfStrictlySequentialFast(e1: TransactionState, e2: TransactionState): Boolean =
     (e1.masterSessionID == e2.masterSessionID) &&
-      (e2.queueOrderID - e1.queueOrderID == 1)
+      (e2.queueOrderID - e1.queueOrderID == 1) &&
+      partitions.contains(e2.partition)
 
+  /**
+    * checks that two items satisfy load fast condition
+    * @param e1
+    * @param e2
+    * @return
+    */
+  private def compareIfStrictlySequentialFull(e1: TransactionState, e2: TransactionState): Boolean =
+    partitions.contains(e2.partition)
+
+
+
+  /**
+    * Enqueues in queue last transaction from Cassandra
+    */
+
+  def enqueueLastTransactionFromDB(partition: Int): Unit = {
+    assert(partitions.contains(partition))
+
+    val t = consumer.getLastTransaction(partition)
+    if(!t.isDefined)
+      return
+
+    val uuidComparator = new UUIDComparator()
+
+    // if current last transaction is newer than from db
+    if(lastTransactionsMap.contains(partition) &&
+      uuidComparator.compare(t.get.getTxnUUID(), lastTransactionsMap(partition).uuid) != 1)
+      return
+
+    val r = Random
+    val tl = List(TransactionState(uuid             = t.get.getTxnUUID(),
+                                    partition       = partition,
+                                    masterSessionID = r.nextInt(),
+                                    queueOrderID    =  r.nextInt(),
+                                    itemCount       = t.get.getCount(), state = TransactionStatus.postCheckpoint,
+                                    ttl             = -1))
+    queue.put(tl)
+  }
 
 }
 
