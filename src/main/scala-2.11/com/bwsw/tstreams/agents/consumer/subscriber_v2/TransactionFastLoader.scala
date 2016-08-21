@@ -7,8 +7,8 @@ import com.bwsw.tstreams.common.FirstFailLockableTaskExecutor
 /**
   * Created by Ivan Kudryavtsev on 21.08.16.
   */
-class TransactionStateFastLoader(partitions: Set[Int],
-                                 lastTransactionsMap: scala.collection.mutable.Map[Int, TransactionState]) {
+class TransactionFastLoader(partitions: Set[Int],
+                            lastTransactionsMap: ProcessingEngine.LastTransactionStateMapType) {
   /**
     * checks that two items satisfy load fast condition
     * @param e1

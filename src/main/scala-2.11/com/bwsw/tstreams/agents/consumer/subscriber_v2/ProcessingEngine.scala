@@ -22,7 +22,7 @@ class ProcessingEngine[T](consumer: Consumer[T],
   // keeps last transaction states processed
   val lastTransactionsMap = mutable.Map[Int, TransactionState]()
   val lastTransactionsEventsMap = mutable.Map[Int, Long]()
-  val fastLoader = new TransactionStateFastLoader(partitions, lastTransactionsMap)
+  val fastLoader = new TransactionFastLoader(partitions, lastTransactionsMap)
 
 
   val consumerPartitions = consumer.getPartitions()
@@ -116,6 +116,7 @@ class ProcessingEngine[T](consumer: Consumer[T],
 
 
 object ProcessingEngine {
+  type LastTransactionStateMapType = mutable.Map[Int, TransactionState]
   class CallbackTask[T](consumer: Consumer[T], transactionState: TransactionState, callback: Callback[T]) extends Runnable {
     override def run(): Unit = {
       callback.onEvent(consumer = consumer, partition = transactionState.partition, uuid = transactionState.uuid, count = transactionState.itemCount)
