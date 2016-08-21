@@ -22,6 +22,7 @@ class ProcessingEngine[T](consumer: Consumer[T],
   // keeps last transaction states processed
   val lastTransactionsMap = mutable.Map[Int, TransactionState]()
   val lastTransactionsEventsMap = mutable.Map[Int, Long]()
+  val fastLoader = new TransactionStateFastLoader(partitions, lastTransactionsMap)
 
 
   val consumerPartitions = consumer.getPartitions()
@@ -33,16 +34,7 @@ class ProcessingEngine[T](consumer: Consumer[T],
     lastTransactionsEventsMap(p)  = System.currentTimeMillis()
     lastTransactionsMap(p)        = TransactionState(consumer.getCurrentOffset(p), p, -1, -1, -1, TransactionStatus.postCheckpoint, -1) })
 
-  /**
-    * allows to load data fast without database calls
-    * @param seq
-    */
-  def loadFast(seq: QueueBuilder.QueueItemType) = {
-    seq foreach(elt =>
-      executor.submit(new ProcessingEngine.CallbackTask[T](consumer, elt, callback)))
-    val last = seq.last
-    lastTransactionsMap(last.partition) = last
-  }
+
 
   /**
     * loads from C*
@@ -61,18 +53,7 @@ class ProcessingEngine[T](consumer: Consumer[T],
       lastTransactionsMap(last.partition) = TransactionState(data.last.getTxnUUID(), last.partition, -1, -1, data.last.getCount(), TransactionStatus.postCheckpoint, -1)
   }
 
-  /**
-    * Checks if seq can be load fast without additional calls to database
-    * @param seq
-    * @return
-    */
-  def checkCanBeLoadFast(seq: QueueBuilder.QueueItemType): Boolean = {
-    val first = seq.head
-    // if there is no last for partition, then no info
 
-    val prev = lastTransactionsMap(first.partition)
-    checkListSeq(prev, seq, compareIfStrictlySequentialFast)
-  }
 
   /**
     * Checks if seq can be load fast without additional calls to database
@@ -92,8 +73,8 @@ class ProcessingEngine[T](consumer: Consumer[T],
     val seq = queue.get(pollTimeMs, TimeUnit.MILLISECONDS)
     if(seq != null) {
       if(seq.size > 0) {
-        if(checkCanBeLoadFast(seq))
-          loadFast(seq)
+        if(fastLoader.checkCanBeLoadFast(seq))
+          fastLoader.loadFast[T](seq, consumer, executor, callback)
         else if (checkCanBeLoadFull(seq))
           loadFull(seq)
         lastTransactionsEventsMap(seq.head.partition) = System.currentTimeMillis()
@@ -102,30 +83,8 @@ class ProcessingEngine[T](consumer: Consumer[T],
     partitions foreach (p => if (System.currentTimeMillis() - lastTransactionsEventsMap(p) > pollTimeMs) enqueueLastTransactionFromDB(p))
   }
 
-  /**
-    * utility function with compares head and tail of the list to find if they satisfy some condition
-    * @param head
-    * @param l
-    * @return
-    */
-  private def checkListSeq(head: TransactionState,
-                           l: QueueBuilder.QueueItemType ,
-                           predicate: (TransactionState, TransactionState) => Boolean): Boolean = (head, l, predicate) match {
-    case (_, Nil, _) => true
-    case (h, e :: l, p) =>
-      predicate(h, e) && checkListSeq(e, l, p)
-  }
 
-  /**
-    * checks that two items satisfy load fast condition
-    * @param e1
-    * @param e2
-    * @return
-    */
-  private def compareIfStrictlySequentialFast(e1: TransactionState, e2: TransactionState): Boolean =
-    (e1.masterSessionID == e2.masterSessionID) &&
-      (e2.queueOrderID - e1.queueOrderID == 1) &&
-      partitions.contains(e2.partition)
+
 
   /**
     * Enqueues in queue last transaction from Cassandra
