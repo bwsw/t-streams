@@ -22,5 +22,7 @@ trait FastLoaderTestContainer {
   */
 class TransactionFastLoaderTests extends FlatSpec with Matchers {
 
-  it should ""
+  it should "" in {
+
+  }
 }
