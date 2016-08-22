@@ -40,7 +40,7 @@ class TransactionFastLoader(partitions: Set[Int],
     * @param seq
     * @return
     */
-  def checkCanBeLoadFast(seq: QueueBuilder.QueueItemType): Boolean = {
+  def checkIfPossible(seq: QueueBuilder.QueueItemType): Boolean = {
     val first = seq.head
     // if there is no last for partition, then no info
 

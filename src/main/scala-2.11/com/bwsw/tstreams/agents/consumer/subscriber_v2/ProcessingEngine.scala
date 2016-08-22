@@ -73,7 +73,7 @@ class ProcessingEngine[T](consumer: Consumer[T],
     val seq = queue.get(pollTimeMs, TimeUnit.MILLISECONDS)
     if(seq != null) {
       if(seq.size > 0) {
-        if(fastLoader.checkCanBeLoadFast(seq))
+        if(fastLoader.checkIfPossible(seq))
           fastLoader.loadFast[T](seq, consumer, executor, callback)
         else if (checkCanBeLoadFull(seq))
           loadFull(seq)

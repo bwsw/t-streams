@@ -32,7 +32,7 @@ class TransactionFastLoaderTests extends FlatSpec with Matchers {
       val nextTxnState = List(TransactionState(UUIDs.timeBased(), partition, masterID, orderID + 1, 1, TransactionStatus.postCheckpoint, -1))
 
       override def test(): Unit = {
-        fastLoader.checkCanBeLoadFast(nextTxnState) shouldBe true
+        fastLoader.checkIfPossible(nextTxnState) shouldBe true
       }
     }
 
@@ -51,7 +51,7 @@ class TransactionFastLoaderTests extends FlatSpec with Matchers {
         TransactionState(UUIDs.timeBased(), partition, masterID, orderID + 3, 1, TransactionStatus.postCheckpoint, -1))
 
       override def test(): Unit = {
-        fastLoader.checkCanBeLoadFast(nextTxnState) shouldBe true
+        fastLoader.checkIfPossible(nextTxnState) shouldBe true
       }
     }
 
@@ -70,7 +70,7 @@ class TransactionFastLoaderTests extends FlatSpec with Matchers {
         TransactionState(UUIDs.timeBased(), partition, masterID, orderID + 2, 1, TransactionStatus.postCheckpoint, -1))
 
       override def test(): Unit = {
-        fastLoader.checkCanBeLoadFast(nextTxnState) shouldBe false
+        fastLoader.checkIfPossible(nextTxnState) shouldBe false
       }
     }
 
@@ -87,7 +87,7 @@ class TransactionFastLoaderTests extends FlatSpec with Matchers {
         TransactionState(UUIDs.timeBased(), partition, masterID, orderID, 1, TransactionStatus.postCheckpoint, -1))
 
       override def test(): Unit = {
-        fastLoader.checkCanBeLoadFast(nextTxnState) shouldBe false
+        fastLoader.checkIfPossible(nextTxnState) shouldBe false
       }
     }
 
@@ -104,7 +104,7 @@ class TransactionFastLoaderTests extends FlatSpec with Matchers {
         TransactionState(UUIDs.timeBased(), partition, masterID+1, orderID+1, 1, TransactionStatus.postCheckpoint, -1))
 
       override def test(): Unit = {
-        fastLoader.checkCanBeLoadFast(nextTxnState) shouldBe false
+        fastLoader.checkIfPossible(nextTxnState) shouldBe false
       }
     }
 
@@ -123,7 +123,7 @@ class TransactionFastLoaderTests extends FlatSpec with Matchers {
         TransactionState(UUIDs.timeBased(), partition, masterID, orderID + 2, 1, TransactionStatus.postCheckpoint, -1))
 
       override def test(): Unit = {
-        fastLoader.checkCanBeLoadFast(nextTxnState) shouldBe false
+        fastLoader.checkIfPossible(nextTxnState) shouldBe false
       }
     }
 
@@ -142,7 +142,7 @@ class TransactionFastLoaderTests extends FlatSpec with Matchers {
         TransactionState(UUIDs.timeBased(), partition, masterID+1, orderID+3, 1, TransactionStatus.postCheckpoint, -1))
 
       override def test(): Unit = {
-        fastLoader.checkCanBeLoadFast(nextTxnState) shouldBe false
+        fastLoader.checkIfPossible(nextTxnState) shouldBe false
       }
     }
 
