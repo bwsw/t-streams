@@ -13,14 +13,14 @@ object QueueBuilder {
     * Abstract factory
     */
   trait Abstract {
-    def generateQueueObject(partition: Int): QueueType = ???
+    def generateQueueObject(id: Int): QueueType = ???
   }
 
   /**
     * InMemory Queues factory
     */
   class InMemory extends Abstract {
-    override def generateQueueObject(partition: Int): QueueType
+    override def generateQueueObject(id: Int): QueueType
       = new InMemoryQueue[QueueItemType]()
   }
 
@@ -30,7 +30,7 @@ object QueueBuilder {
     * @param dir
     */
   class Persistent(dir: String) extends Abstract {
-    override def generateQueueObject(partition: Int): QueueType
-      = new TransactionStatePersistentQueue(java.nio.file.Paths.get(dir, partition.toString).toString)
+    override def generateQueueObject(id: Int): QueueType
+      = new TransactionStatePersistentQueue(java.nio.file.Paths.get(dir, id.toString).toString)
   }
 }
