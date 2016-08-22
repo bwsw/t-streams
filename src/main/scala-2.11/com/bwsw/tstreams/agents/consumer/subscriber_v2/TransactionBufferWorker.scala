@@ -39,5 +39,6 @@ class TransactionBufferWorker() {
     */
   def stop() = {
     executor.shutdownOrDie(100, TimeUnit.SECONDS)
+    transactionBufferMap.clear()
   }
 }

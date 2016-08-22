@@ -30,13 +30,13 @@ import com.bwsw.tstreams.agents.consumer
   * @param useLastOffset
   * @tparam T
   */
-case class Options[T](override val transactionsPreload:    Int,
-                      override val dataPreload:            Int,
-                      override val converter:              IConverter[Array[Byte], T],
-                      override val readPolicy:             AbstractPolicy,
-                      override val offset:                 IOffset,
-                      override val txnGenerator:           IUUIDGenerator,
-                      override val useLastOffset:          Boolean,
+case class Options[T](val transactionsPreload:    Int,
+                      val dataPreload:            Int,
+                      val converter:              IConverter[Array[Byte], T],
+                      val readPolicy:             AbstractPolicy,
+                      val offset:                 IOffset,
+                      val txnGenerator:           IUUIDGenerator,
+                      val useLastOffset:          Boolean,
                       val agentAddress:           String,
                       val zkRootPath:             String,
                       val zkHosts:                Set[InetSocketAddress],
@@ -44,14 +44,16 @@ case class Options[T](override val transactionsPreload:    Int,
                       val zkConnectionTimeout:    Int,
                       val threadPoolAmount:       Int      = 1,
                       val pollingFrequencyDelay:  Int      = 1000,
-                      val txnQueue:               QueueBuilder.Abstract  = new InMemory
-                      ) extends consumer.Options[T](
-  transactionsPreload = transactionsPreload,
-  dataPreload         = dataPreload,
-  converter           = converter,
-  readPolicy          = readPolicy,
-  offset              = offset,
-  txnGenerator        = txnGenerator,
-  useLastOffset       = useLastOffset)
+                      val txnQueueBuilder:        QueueBuilder.Abstract  = new InMemory
+                      ) {
 
+  def getConsumerOptions() = consumer.Options[T](
+                                transactionsPreload = transactionsPreload,
+                                dataPreload = dataPreload,
+                                converter = converter,
+                                readPolicy = readPolicy,
+                                offset = offset,
+                                txnGenerator = txnGenerator,
+                                useLastOffset = useLastOffset)
 
+}
