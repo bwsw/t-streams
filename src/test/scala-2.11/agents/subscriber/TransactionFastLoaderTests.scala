@@ -1,11 +1,14 @@
 package agents.subscriber
 
 import java.util.UUID
-
-import com.bwsw.tstreams.agents.consumer.subscriber_v2.{TransactionFastLoader, TransactionState}
+import java.util.concurrent.CountDownLatch
+import org.scalamock.scalatest.MockFactory
+import com.bwsw.tstreams.agents.consumer.Consumer
+import com.bwsw.tstreams.agents.consumer.subscriber_v2.{TransactionState, TransactionFastLoader, Callback}
 import com.bwsw.tstreams.coordination.messages.state.TransactionStatus
 import com.datastax.driver.core.utils.UUIDs
 import org.scalatest.{FlatSpec, Matchers}
+import com.bwsw.tstreams.common.FirstFailLockableTaskExecutor
 
 import scala.collection.mutable
 
@@ -21,7 +24,7 @@ trait FastLoaderTestContainer {
 /**
   * Created by ivan on 21.08.16.
   */
-class TransactionFastLoaderTests extends FlatSpec with Matchers {
+class TransactionFastLoaderTests extends FlatSpec with Matchers with MockFactory {
 
   it should "load fast if next state is after prev state from the same master" in {
     val tc = new FastLoaderTestContainer {
@@ -148,4 +151,60 @@ class TransactionFastLoaderTests extends FlatSpec with Matchers {
 
     tc.test()
   }
+
+  it should "load one transaction if check is ok" in {
+    val tc = new FastLoaderTestContainer {
+      val partition = 0
+      val masterID = 0
+      val orderID = 0
+      lastTransactionsMap(0) = TransactionState(UUIDs.timeBased(), partition, masterID, orderID, 1, TransactionStatus.postCheckpoint, -1)
+      val nextTxnState = List(
+        TransactionState(UUIDs.timeBased(), partition, masterID, orderID+1, 1, TransactionStatus.postCheckpoint, -1))
+      var ctr: Int = 0
+      val l = new CountDownLatch(1)
+      override def test(): Unit = {
+        fastLoader.load[String](nextTxnState, null, new FirstFailLockableTaskExecutor("lf"), new Callback[String] {
+           override def onEvent(consumer: Consumer[String], partition: Int, uuid: UUID, count: Int): Unit = {
+             ctr += 1
+             l.countDown()
+           }
+        })
+        l.await()
+        ctr shouldBe 1
+        lastTransactionsMap(0).uuid shouldBe nextTxnState.head.uuid
+      }
+    }
+
+    tc.test()
+  }
+
+  it should "load three transactions if check is ok" in {
+    val tc = new FastLoaderTestContainer {
+      val partition = 0
+      val masterID = 0
+      val orderID = 0
+      lastTransactionsMap(0) = TransactionState(UUIDs.timeBased(), partition, masterID, orderID, 1, TransactionStatus.postCheckpoint, -1)
+      val nextTxnState = List(
+        TransactionState(UUIDs.timeBased(), partition, masterID, orderID+1, 1, TransactionStatus.postCheckpoint, -1),
+        TransactionState(UUIDs.timeBased(), partition, masterID, orderID+2, 1, TransactionStatus.postCheckpoint, -1),
+        TransactionState(UUIDs.timeBased(), partition, masterID, orderID+3, 1, TransactionStatus.postCheckpoint, -1))
+      var ctr: Int = 0
+      val l = new CountDownLatch(1)
+      override def test(): Unit = {
+        fastLoader.load[String](nextTxnState, null, new FirstFailLockableTaskExecutor("lf"), new Callback[String] {
+          override def onEvent(consumer: Consumer[String], partition: Int, uuid: UUID, count: Int): Unit = {
+            ctr += 1
+            if(ctr == 3)
+              l.countDown()
+          }
+        })
+        l.await()
+        ctr shouldBe 3
+        lastTransactionsMap(0).uuid shouldBe nextTxnState.last.uuid
+      }
+    }
+
+    tc.test()
+  }
+
 }

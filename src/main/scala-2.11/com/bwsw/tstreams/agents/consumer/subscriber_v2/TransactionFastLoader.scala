@@ -52,10 +52,10 @@ class TransactionFastLoader(partitions: Set[Int],
     * allows to load data fast without database calls
     * @param seq
     */
-  def loadFast[T](seq: QueueBuilder.QueueItemType,
-                  consumer: Consumer[T],
-                  executor: FirstFailLockableTaskExecutor,
-                  callback: Callback[T]) = {
+  def load[T](seq: QueueBuilder.QueueItemType,
+              consumer: Consumer[T],
+              executor: FirstFailLockableTaskExecutor,
+              callback: Callback[T]) = {
     seq foreach(elt =>
       executor.submit(new ProcessingEngine.CallbackTask[T](consumer, elt, callback)))
     val last = seq.last

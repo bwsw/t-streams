@@ -16,6 +16,5 @@ trait Callback[T] {
   def onEvent(consumer: Consumer[T],
               partition: Int,
               uuid: java.util.UUID,
-              count: Int): Unit = {
-  }
+              count: Int): Unit
 }

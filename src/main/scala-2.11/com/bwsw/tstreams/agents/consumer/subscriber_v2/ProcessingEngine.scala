@@ -74,7 +74,7 @@ class ProcessingEngine[T](consumer: Consumer[T],
     if(seq != null) {
       if(seq.size > 0) {
         if(fastLoader.checkIfPossible(seq))
-          fastLoader.loadFast[T](seq, consumer, executor, callback)
+          fastLoader.load[T](seq, consumer, executor, callback)
         else if (checkCanBeLoadFull(seq))
           loadFull(seq)
         lastTransactionsEventsMap(seq.head.partition) = System.currentTimeMillis()
