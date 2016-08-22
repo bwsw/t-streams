@@ -3,7 +3,7 @@ package agents.subscriber
 import java.util.UUID
 import java.util.concurrent.CountDownLatch
 import org.scalamock.scalatest.MockFactory
-import com.bwsw.tstreams.agents.consumer.Consumer
+import com.bwsw.tstreams.agents.consumer.{TransactionOperator, Consumer}
 import com.bwsw.tstreams.agents.consumer.subscriber_v2.{TransactionState, TransactionFastLoader, Callback}
 import com.bwsw.tstreams.coordination.messages.state.TransactionStatus
 import com.datastax.driver.core.utils.UUIDs
@@ -164,7 +164,7 @@ class TransactionFastLoaderTests extends FlatSpec with Matchers with MockFactory
       val l = new CountDownLatch(1)
       override def test(): Unit = {
         fastLoader.load[String](nextTxnState, null, new FirstFailLockableTaskExecutor("lf"), new Callback[String] {
-           override def onEvent(consumer: Consumer[String], partition: Int, uuid: UUID, count: Int): Unit = {
+           override def onEvent(consumer: TransactionOperator[String], partition: Int, uuid: UUID, count: Int): Unit = {
              ctr += 1
              l.countDown()
            }
@@ -192,7 +192,7 @@ class TransactionFastLoaderTests extends FlatSpec with Matchers with MockFactory
       val l = new CountDownLatch(1)
       override def test(): Unit = {
         fastLoader.load[String](nextTxnState, null, new FirstFailLockableTaskExecutor("lf"), new Callback[String] {
-          override def onEvent(consumer: Consumer[String], partition: Int, uuid: UUID, count: Int): Unit = {
+          override def onEvent(consumer: TransactionOperator[String], partition: Int, uuid: UUID, count: Int): Unit = {
             ctr += 1
             if(ctr == 3)
               l.countDown()

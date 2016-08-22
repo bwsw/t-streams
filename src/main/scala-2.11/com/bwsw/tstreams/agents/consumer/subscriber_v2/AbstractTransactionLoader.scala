@@ -1,6 +1,6 @@
 package com.bwsw.tstreams.agents.consumer.subscriber_v2
 
-import com.bwsw.tstreams.agents.consumer.Consumer
+import com.bwsw.tstreams.agents.consumer.TransactionOperator
 import com.bwsw.tstreams.common.FirstFailLockableTaskExecutor
 
 /**
@@ -9,7 +9,7 @@ import com.bwsw.tstreams.common.FirstFailLockableTaskExecutor
 trait AbstractTransactionLoader {
   def checkIfPossible(seq: QueueBuilder.QueueItemType): Boolean
   def load[T](seq: QueueBuilder.QueueItemType,
-              consumer: Consumer[T],
+              consumer: TransactionOperator[T],
               executor: FirstFailLockableTaskExecutor,
               callback: Callback[T])
 }

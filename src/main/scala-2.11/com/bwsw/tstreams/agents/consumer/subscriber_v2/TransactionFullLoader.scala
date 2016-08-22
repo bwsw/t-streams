@@ -2,7 +2,7 @@ package com.bwsw.tstreams.agents.consumer.subscriber_v2
 
 import java.util.UUID
 
-import com.bwsw.tstreams.agents.consumer.Consumer
+import com.bwsw.tstreams.agents.consumer.{TransactionOperator, Consumer}
 import com.bwsw.tstreams.agents.consumer.subscriber_v2.QueueBuilder.QueueItemType
 import com.bwsw.tstreams.common.{UUIDComparator, FirstFailLockableTaskExecutor}
 import com.bwsw.tstreams.coordination.messages.state.TransactionStatus
@@ -12,12 +12,14 @@ import com.bwsw.tstreams.coordination.messages.state.TransactionStatus
   * Loads transactions in full from database if fast loader is unable to load them
   */
 class TransactionFullLoader(partitions: Set[Int],
-                            lastTransactionsMap: ProcessingEngine.LastTransactionStateMapType) extends AbstractTransactionLoader {
+                            lastTransactionsMap: ProcessingEngine.LastTransactionStateMapType)
+  extends AbstractTransactionLoader {
 
   val uuidComparator = new UUIDComparator()
 
   /**
     * checks if possible to do full loading
+ *
     * @param seq
     * @return
     */
@@ -30,6 +32,7 @@ class TransactionFullLoader(partitions: Set[Int],
 
   /**
     * loads transactions to callback
+ *
     * @param seq
     * @param consumer
     * @param executor
@@ -37,7 +40,7 @@ class TransactionFullLoader(partitions: Set[Int],
     * @tparam T
     */
   override def load[T](seq: QueueItemType,
-                       consumer: Consumer[T],
+                       consumer: TransactionOperator[T],
                        executor: FirstFailLockableTaskExecutor,
                        callback: Callback[T]): Unit = {
     val last = seq.last

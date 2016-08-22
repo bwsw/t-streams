@@ -3,7 +3,7 @@ package com.bwsw.tstreams.agents.consumer.subscriber_v2
 import java.util.UUID
 import java.util.concurrent.TimeUnit
 
-import com.bwsw.tstreams.agents.consumer.Consumer
+import com.bwsw.tstreams.agents.consumer.{TransactionOperator, Consumer}
 import com.bwsw.tstreams.common.{FirstFailLockableTaskExecutor, UUIDComparator}
 import com.bwsw.tstreams.coordination.messages.state.TransactionStatus
 
@@ -90,7 +90,7 @@ class ProcessingEngine[T](consumer: Consumer[T],
 
 object ProcessingEngine {
   type LastTransactionStateMapType = mutable.Map[Int, TransactionState]
-  class CallbackTask[T](consumer: Consumer[T], transactionState: TransactionState, callback: Callback[T]) extends Runnable {
+  class CallbackTask[T](consumer: TransactionOperator[T], transactionState: TransactionState, callback: Callback[T]) extends Runnable {
     override def run(): Unit = {
       callback.onEvent(consumer = consumer, partition = transactionState.partition, uuid = transactionState.uuid, count = transactionState.itemCount)
     }

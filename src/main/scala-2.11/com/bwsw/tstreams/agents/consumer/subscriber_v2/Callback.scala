@@ -1,6 +1,6 @@
 package com.bwsw.tstreams.agents.consumer.subscriber_v2
 
-import com.bwsw.tstreams.agents.consumer.Consumer
+import com.bwsw.tstreams.agents.consumer.{TransactionOperator, Consumer}
 
 /**
   * Trait to implement to handle incoming messages
@@ -13,7 +13,7 @@ trait Callback[T] {
     * @param uuid time uuid of the incoming transaction
     * @param consumer        associated Consumer
     */
-  def onEvent(consumer: Consumer[T],
+  def onEvent(consumer: TransactionOperator[T],
               partition: Int,
               uuid: java.util.UUID,
               count: Int): Unit

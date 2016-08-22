@@ -25,7 +25,10 @@ object Consumer {
   */
 class Consumer[T](val name: String,
                          val stream: TStream[Array[Byte]],
-                         val options: Options[T]) extends GroupParticipant {
+                         val options: Options[T])
+  extends GroupParticipant
+    with TransactionOperator[T] {
+  
   /**
     * agent name
     */
