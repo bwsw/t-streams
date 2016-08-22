@@ -2,13 +2,13 @@ package agents.subscriber
 
 import java.util.UUID
 import java.util.concurrent.CountDownLatch
-import org.scalamock.scalatest.MockFactory
-import com.bwsw.tstreams.agents.consumer.{TransactionOperator, Consumer}
-import com.bwsw.tstreams.agents.consumer.subscriber_v2.{TransactionState, TransactionFastLoader, Callback}
+
+import com.bwsw.tstreams.agents.consumer.TransactionOperator
+import com.bwsw.tstreams.agents.consumer.subscriber_v2.{Callback, TransactionFastLoader, TransactionState}
+import com.bwsw.tstreams.common.FirstFailLockableTaskExecutor
 import com.bwsw.tstreams.coordination.messages.state.TransactionStatus
 import com.datastax.driver.core.utils.UUIDs
 import org.scalatest.{FlatSpec, Matchers}
-import com.bwsw.tstreams.common.FirstFailLockableTaskExecutor
 
 import scala.collection.mutable
 
@@ -24,8 +24,7 @@ trait FastLoaderTestContainer {
 /**
   * Created by ivan on 21.08.16.
   */
-class TransactionFastLoaderTests extends FlatSpec with Matchers with MockFactory {
-
+class TransactionFastLoaderTests extends FlatSpec with Matchers {
   it should "load fast if next state is after prev state from the same master" in {
     val tc = new FastLoaderTestContainer {
       val partition = 0
