@@ -7,6 +7,8 @@ import com.bwsw.tstreams.agents.consumer.subscriber_v2.QueueBuilder.QueueItemTyp
 import com.bwsw.tstreams.common.{UUIDComparator, FirstFailLockableTaskExecutor}
 import com.bwsw.tstreams.coordination.messages.state.TransactionStatus
 
+import scala.collection.mutable
+
 /**
   * Created by Ivan Kudryavtsev on 22.08.16.
   * Loads transactions in full from database if fast loader is unable to load them
@@ -19,7 +21,7 @@ class TransactionFullLoader(partitions: Set[Int],
 
   /**
     * checks if possible to do full loading
- *
+    *
     * @param seq
     * @return
     */
@@ -32,7 +34,7 @@ class TransactionFullLoader(partitions: Set[Int],
 
   /**
     * loads transactions to callback
- *
+    *
     * @param seq
     * @param consumer
     * @param executor
