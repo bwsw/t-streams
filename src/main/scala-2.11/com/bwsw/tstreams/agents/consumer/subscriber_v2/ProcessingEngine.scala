@@ -23,6 +23,7 @@ class ProcessingEngine[T](consumer: Consumer[T],
   val lastTransactionsMap = mutable.Map[Int, TransactionState]()
   val lastTransactionsEventsMap = mutable.Map[Int, Long]()
   val fastLoader = new TransactionFastLoader(partitions, lastTransactionsMap)
+  val fullLoader = new TransactionFullLoader(partitions, lastTransactionsMap)
 
 
   val consumerPartitions = consumer.getPartitions()
@@ -35,48 +36,16 @@ class ProcessingEngine[T](consumer: Consumer[T],
     lastTransactionsMap(p)        = TransactionState(consumer.getCurrentOffset(p), p, -1, -1, -1, TransactionStatus.postCheckpoint, -1) })
 
 
-
-  /**
-    * loads from C*
-    * @param seq
-    */
-  def loadFull(seq: QueueBuilder.QueueItemType) = {
-    val last = seq.last
-    val first: UUID = lastTransactionsMap(last.partition).uuid
-    val data = consumer.getTransactionsFromTo(last.partition, first, last.uuid)
-
-    data foreach(elt =>
-      executor.submit(new ProcessingEngine.CallbackTask[T](consumer,
-        TransactionState(elt.getTxnUUID(), last.partition, -1, -1, elt.getCount(), TransactionStatus.postCheckpoint, -1), callback)))
-
-    if (data.size > 0)
-      lastTransactionsMap(last.partition) = TransactionState(data.last.getTxnUUID(), last.partition, -1, -1, data.last.getCount(), TransactionStatus.postCheckpoint, -1)
-  }
-
-
-
-  /**
-    * Checks if seq can be load fast without additional calls to database
-    * @param seq
-    * @return
-    */
-  def checkCanBeLoadFull(seq: QueueBuilder.QueueItemType): Boolean = {
-    val last = seq.last
-    val uuidComparator = new UUIDComparator()
-    // if there is no last for partition, then no info
-    if(uuidComparator.compare(last.uuid, lastTransactionsMap(last.partition).uuid) != 1)
-      return false
-    true
-  }
-
   def handleQueue(pollTimeMs: Int) = {
     val seq = queue.get(pollTimeMs, TimeUnit.MILLISECONDS)
     if(seq != null) {
       if(seq.size > 0) {
-        if(fastLoader.checkIfPossible(seq))
+        if(fastLoader.checkIfPossible(seq)) {
           fastLoader.load[T](seq, consumer, executor, callback)
-        else if (checkCanBeLoadFull(seq))
-          loadFull(seq)
+        }
+        else if (fullLoader.checkIfPossible(seq)) {
+          fullLoader.load[T](seq, consumer, executor, callback)
+        }
         lastTransactionsEventsMap(seq.head.partition) = System.currentTimeMillis()
       }
     }

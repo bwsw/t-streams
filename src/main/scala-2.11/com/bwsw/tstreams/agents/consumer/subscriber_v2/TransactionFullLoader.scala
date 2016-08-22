@@ -1,0 +1,54 @@
+package com.bwsw.tstreams.agents.consumer.subscriber_v2
+
+import java.util.UUID
+
+import com.bwsw.tstreams.agents.consumer.Consumer
+import com.bwsw.tstreams.agents.consumer.subscriber_v2.QueueBuilder.QueueItemType
+import com.bwsw.tstreams.common.{UUIDComparator, FirstFailLockableTaskExecutor}
+import com.bwsw.tstreams.coordination.messages.state.TransactionStatus
+
+/**
+  * Created by Ivan Kudryavtsev on 22.08.16.
+  * Loads transactions in full from database if fast loader is unable to load them
+  */
+class TransactionFullLoader(partitions: Set[Int],
+                            lastTransactionsMap: ProcessingEngine.LastTransactionStateMapType) extends AbstractTransactionLoader {
+
+  val uuidComparator = new UUIDComparator()
+
+  /**
+    * checks if possible to do full loading
+    * @param seq
+    * @return
+    */
+  override def checkIfPossible(seq: QueueItemType): Boolean = {
+    val last = seq.last
+    if(uuidComparator.compare(last.uuid, lastTransactionsMap(last.partition).uuid) != 1)
+      return false
+    true
+  }
+
+  /**
+    * loads transactions to callback
+    * @param seq
+    * @param consumer
+    * @param executor
+    * @param callback
+    * @tparam T
+    */
+  override def load[T](seq: QueueItemType,
+                       consumer: Consumer[T],
+                       executor: FirstFailLockableTaskExecutor,
+                       callback: Callback[T]): Unit = {
+    val last = seq.last
+    val first: UUID = lastTransactionsMap(last.partition).uuid
+    val data = consumer.getTransactionsFromTo(last.partition, first, last.uuid)
+
+    data foreach(elt =>
+      executor.submit(new ProcessingEngine.CallbackTask[T](consumer,
+        TransactionState(elt.getTxnUUID(), last.partition, -1, -1, elt.getCount(), TransactionStatus.postCheckpoint, -1), callback)))
+
+    if (data.size > 0)
+      lastTransactionsMap(last.partition) = TransactionState(data.last.getTxnUUID(), last.partition, -1, -1, data.last.getCount(), TransactionStatus.postCheckpoint, -1)
+  }
+}

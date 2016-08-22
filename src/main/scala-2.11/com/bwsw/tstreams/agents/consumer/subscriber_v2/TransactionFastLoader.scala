@@ -8,7 +8,7 @@ import com.bwsw.tstreams.common.FirstFailLockableTaskExecutor
   * Created by Ivan Kudryavtsev on 21.08.16.
   */
 class TransactionFastLoader(partitions: Set[Int],
-                            lastTransactionsMap: ProcessingEngine.LastTransactionStateMapType) {
+                            lastTransactionsMap: ProcessingEngine.LastTransactionStateMapType) extends AbstractTransactionLoader {
   /**
     * checks that two items satisfy load fast condition
     * @param e1
@@ -40,7 +40,7 @@ class TransactionFastLoader(partitions: Set[Int],
     * @param seq
     * @return
     */
-  def checkIfPossible(seq: QueueBuilder.QueueItemType): Boolean = {
+  override def checkIfPossible(seq: QueueBuilder.QueueItemType): Boolean = {
     val first = seq.head
     // if there is no last for partition, then no info
 
@@ -52,7 +52,7 @@ class TransactionFastLoader(partitions: Set[Int],
     * allows to load data fast without database calls
     * @param seq
     */
-  def load[T](seq: QueueBuilder.QueueItemType,
+  override def load[T](seq: QueueBuilder.QueueItemType,
               consumer: Consumer[T],
               executor: FirstFailLockableTaskExecutor,
               callback: Callback[T]) = {
