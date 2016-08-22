@@ -5,6 +5,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.locks.ReentrantLock
 
 import com.bwsw.tstreams.agents.group.{CheckpointInfo, ConsumerCheckpointInfo, GroupParticipant}
+import com.bwsw.tstreams.common.UUIDComparator
 import com.bwsw.tstreams.metadata.MetadataStorage
 import com.bwsw.tstreams.streams.TStream
 import org.slf4j.LoggerFactory
@@ -213,10 +214,11 @@ class Consumer[T](val name: String,
   }
 
   def getTransactionsFromTo(partition: Int, from: UUID, to: UUID): ListBuffer[Transaction[T]] = {
+    val comparator = new UUIDComparator()
     val txns = stream.metadataStorage.commitEntity.getTransactions[T](
                                           streamName = stream.getName,
                                           partition = partition,
-                                          fromTransaction = currentOffsets(partition),
+                                          fromTransaction = from,
                                           cnt = options.transactionsPreload)
     val okList = ListBuffer[Transaction[T]]()
     var addFlag = true
@@ -226,14 +228,20 @@ class Consumer[T](val name: String,
         moreItems = false
       } else {
         val t = txns.dequeue()
-        if (t.getCount() >= 0)
-          okList.append(t)
-        else
+        if(comparator.compare(to, t.getTxnUUID()) == 1) {
+          if (t.getCount() >= 0)
+            okList.append(t)
+          else
+            addFlag = false // we have reached uncompleted transaction, stop
+        } else {
+          // we have reached right end of interval [from, -> to]
+          moreItems = false
           addFlag = false
+        }
       }
     }
-    if(addFlag)
-      okList.appendAll(if (okList.size > 0) getTransactionsFromTo(partition, okList.head.getTxnUUID(), to) else ListBuffer[Transaction[T]]())
+    if(addFlag && comparator.compare(to, okList.last.getTxnUUID()) == 1)
+      okList.appendAll(if (okList.size > 0) getTransactionsFromTo(partition, okList.last.getTxnUUID(), to) else ListBuffer[Transaction[T]]())
 
     okList
   }
