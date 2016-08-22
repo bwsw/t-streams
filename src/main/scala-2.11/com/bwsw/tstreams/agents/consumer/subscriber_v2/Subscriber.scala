@@ -63,7 +63,7 @@ class Subscriber[T](val name: String,
     }
 
     for(thID <- 0 until peWorkerThreads) {
-      val ex = new FirstFailLockableTaskExecutor(s"Subscriber ${name}-pee-${thID}")
+      val ex = new FirstFailLockableTaskExecutor(s"Subscriber ${name}-pe-executor-${thID}")
       options.readPolicy.getUsedPartitions() foreach (part =>
         if(part % peWorkerThreads == thID)
           processingEngines(part) = new ProcessingEngine[T](consumer, Set(part), txnBuffers(part).getQueue(), callback, ex))
