@@ -35,10 +35,10 @@ class TransactionFullLoader(partitions: Set[Int],
   /**
     * loads transactions to callback
     *
-    * @param seq
-    * @param consumer
-    * @param executor
-    * @param callback
+    * @param seq      sequence to load (we need the last one)
+    * @param consumer consumer which loads
+    * @param executor executor which adds to callback
+    * @param callback callback which handles
     * @tparam T
     */
   override def load[T](seq: QueueItemType,
