@@ -16,6 +16,8 @@ class TransactionBuffer(queue: QueueBuilder.QueueType) {
   var lastTransaction: UUID = null
   val comparator = new UUIDComparator()
 
+  def getQueue(): QueueBuilder.QueueType = queue
+
   private val map: SortedExpiringMap[UUID, TransactionState] =
     new SortedExpiringMap(new UUIDComparator, new TransactionStateExpirationPolicy)
 

@@ -23,6 +23,8 @@ class ProcessingEngine[T](consumer: TransactionOperator[T],
   private val lastTransactionsMap = mutable.Map[Int, TransactionState]()
   private val lastTransactionsEventsMap = mutable.Map[Int, Long]()
 
+  def getExecutor() = executor
+
   def getLastPartitionActivity(partition: Int): Long = lastTransactionsEventsMap(partition)
   def setLastPartitionActivity(partition: Int): Unit = lastTransactionsEventsMap(partition) = System.currentTimeMillis()
   def getLastTransactionHandled(partition: Int) = lastTransactionsMap(partition)

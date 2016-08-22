@@ -2,6 +2,7 @@ package com.bwsw.tstreams.agents.consumer.subscriber_v2
 
 import java.util.concurrent.atomic.AtomicBoolean
 
+import com.bwsw.tstreams.common.FirstFailLockableTaskExecutor
 import com.bwsw.tstreams.streams.TStream
 import org.slf4j.LoggerFactory
 
@@ -20,8 +21,11 @@ class Subscriber[T](val name: String,
                     val options: Options[T],
                     val callback: Callback[T]) {
 
-  val threads = calculateThreadAmount()
   val txnBufferWorkers = mutable.Map[Int, TransactionBufferWorker]()
+  val processingEngines = mutable.Map[Int, ProcessingEngine[T]]()
+
+  val bufferWorkerThreads = calculateBufferWorkersThreadAmount()
+  val peWorkerThreads     = calculateProcessingEngineWorkersThreadAmount()
 
   val consumer = new com.bwsw.tstreams.agents.consumer.Consumer[T](
       name,
@@ -34,38 +38,63 @@ class Subscriber[T](val name: String,
     *  Starts the subscriber
     */
   def start() = this.synchronized {
+
     if(isStarted.getAndSet(true))
       throw new IllegalStateException("Double start is detected. Please stop it first.")
 
     val txnBuffers = mutable.Map[Int, TransactionBuffer]()
+
+
+
     options.readPolicy.getUsedPartitions() foreach (part =>
       txnBuffers(part) = new TransactionBuffer(options.txnQueueBuilder.generateQueueObject(part)))
 
     txnBufferWorkers foreach (kv => kv._2.stop())
     txnBufferWorkers.clear()
 
-    for(thID <- 0 until threads) {
+    for(thID <- 0 until bufferWorkerThreads) {
       val worker = new TransactionBufferWorker()
 
       options.readPolicy.getUsedPartitions() foreach (part =>
-        if(part % threads == thID)
+        if(part % bufferWorkerThreads == thID)
           worker.assign(part, txnBuffers(part)))
 
       txnBufferWorkers(thID) = worker
+    }
+
+    for(thID <- 0 until peWorkerThreads) {
+      val ex = new FirstFailLockableTaskExecutor(s"Subscriber ${name}-pee-${thID}")
+      options.readPolicy.getUsedPartitions() foreach (part =>
+        if(part % peWorkerThreads == thID)
+          processingEngines(part) = new ProcessingEngine[T](consumer, Set(part), txnBuffers(part).getQueue(), callback, ex))
     }
 
     consumer.start()
   }
 
   /**
-    * Calculates amount of threads based on user requested amount and total partitions amount.
- *
+    * Calculates amount of BufferWorkers threads based on user requested amount and total partitions amount.
+    *
     * @return
     */
-  private def calculateThreadAmount(): Int = {
+  private def calculateBufferWorkersThreadAmount(): Int = {
     val maxThreads = options.readPolicy.getUsedPartitions().size
-    val minThreads = options.threadPoolAmount
+    val minThreads = options.txnBufferWorkersThreadPoolAmount
+    calculateThreadAmount(minThreads, maxThreads)
+  }
 
+  /**
+    * Calculates amount of Processing Engine workers
+    *
+    * @return
+    */
+  def calculateProcessingEngineWorkersThreadAmount(): Int = {
+    val maxThreads = options.readPolicy.getUsedPartitions().size
+    val minThreads = options.processingEngineWorkersThreadAmount
+    calculateThreadAmount(minThreads, maxThreads)
+  }
+
+  private def calculateThreadAmount(minThreads: Int, maxThreads: Int): Int = {
     if (minThreads >= maxThreads) {
       Subscriber.logger.warn(s"User requested ${minThreads} worker threads, but total partitions amount is ${maxThreads}. Will use ${maxThreads}")
       return maxThreads

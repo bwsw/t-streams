@@ -26,7 +26,7 @@ import com.bwsw.tstreams.agents.consumer
   * @param zkHosts
   * @param zkSessionTimeout
   * @param zkConnectionTimeout
-  * @param threadPoolAmount
+  * @param txnBufferWorkersThreadPoolAmount
   * @param useLastOffset
   * @tparam T
   */
@@ -42,9 +42,10 @@ case class Options[T](val transactionsPreload:    Int,
                       val zkHosts:                Set[InetSocketAddress],
                       val zkSessionTimeout:       Int,
                       val zkConnectionTimeout:    Int,
-                      val threadPoolAmount:       Int      = 1,
-                      val pollingFrequencyDelay:  Int      = 1000,
-                      val txnQueueBuilder:        QueueBuilder.Abstract  = new InMemory
+                      val txnBufferWorkersThreadPoolAmount:       Int      = 1,
+                      val processingEngineWorkersThreadAmount:    Int      = 1,
+                      val pollingFrequencyDelay:                  Int      = 1000,
+                      val txnQueueBuilder:                        QueueBuilder.Abstract  = new InMemory
                       ) {
 
   def getConsumerOptions() = consumer.Options[T](
