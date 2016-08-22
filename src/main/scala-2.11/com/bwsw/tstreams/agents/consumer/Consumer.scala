@@ -55,7 +55,7 @@ class Consumer[T](val name: String,
     */
   private val transactionBuffer = scala.collection.mutable.Map[Int, scala.collection.mutable.Queue[Transaction[T]]]()
 
-  def getCurrentOffset(partition: Int) = currentOffsets(partition)
+  def getCurrentOffset(partition: Int): UUID = currentOffsets(partition)
 
   /**
     * Indicate set offsets or not

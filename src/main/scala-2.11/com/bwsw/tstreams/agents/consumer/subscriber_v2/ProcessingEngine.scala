@@ -1,6 +1,5 @@
 package com.bwsw.tstreams.agents.consumer.subscriber_v2
 
-import java.util.UUID
 import java.util.concurrent.TimeUnit
 
 import com.bwsw.tstreams.agents.consumer.{TransactionOperator, Consumer}
@@ -13,7 +12,7 @@ import scala.util.Random
 /**
   * Created by Ivan Kudryavtsev on 20.08.16.
   */
-class ProcessingEngine[T](consumer: Consumer[T],
+class ProcessingEngine[T](consumer: TransactionOperator[T],
                           partitions: Set[Int],
                           queue: QueueBuilder.QueueType,
                           callback: Callback[T],

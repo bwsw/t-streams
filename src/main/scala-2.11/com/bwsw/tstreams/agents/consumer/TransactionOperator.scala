@@ -15,4 +15,6 @@ trait TransactionOperator[T] {
   def setStreamPartitionOffset(partition: Int, uuid: UUID): Unit
   def updateTransactionInfoFromDB(txn: UUID, partition: Int): Option[Transaction[T]]
   def checkpoint(): Unit
+  def getPartitions(): Set[Int]
+  def getCurrentOffset(partition: Int): UUID
 }
