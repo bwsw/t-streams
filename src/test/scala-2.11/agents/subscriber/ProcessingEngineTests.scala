@@ -48,14 +48,14 @@ class ProcessingEngineTests extends FlatSpec with Matchers {
   }
 
   val e = new FirstFailLockableTaskExecutor("lf")
+  val q = new QueueBuilder.InMemory().generateQueueObject(0)
+
 
   "constructor" should "create Processing engine" in {
-    val q = new QueueBuilder.InMemory().generateQueueObject(0)
     val pe = new ProcessingEngine[String](new ProcessingEngineOperatorTestImpl(), Set[Int](0), q, cb, e)
   }
 
   "enqueueLastTransactionFromDB" should "not Enqueue last transaction state to Queue if it's not defined" in {
-    val q = new QueueBuilder.InMemory().generateQueueObject(0)
     val pe = new ProcessingEngine[String](new ProcessingEngineOperatorTestImpl(), Set[Int](0), q, cb, e)
     pe.enqueueLastTransactionFromDB(0)
     val elt = q.get(200, TimeUnit.MILLISECONDS)
@@ -63,7 +63,6 @@ class ProcessingEngineTests extends FlatSpec with Matchers {
   }
 
   "enqueueLastTransactionFromDB" should "enqueue last transaction state to Queue if it's newer than we have in our database" in {
-    val q = new QueueBuilder.InMemory().generateQueueObject(0)
     val c = new ProcessingEngineOperatorTestImpl()
     val pe = new ProcessingEngine[String](c, Set[Int](0), q, cb, e)
     c.lstTransaction = Option[Transaction[String]](new Transaction(0, UUIDs.timeBased(), 1, -1))
@@ -73,7 +72,6 @@ class ProcessingEngineTests extends FlatSpec with Matchers {
   }
 
   "enqueueLastTransactionFromDB" should "not enqueue last transaction state to Queue if it's older than we have in our database" in {
-    val q = new QueueBuilder.InMemory().generateQueueObject(0)
     val c = new ProcessingEngineOperatorTestImpl()
     c.lstTransaction = Option[Transaction[String]](new Transaction(0, UUIDs.timeBased(), 1, -1))
     val pe = new ProcessingEngine[String](c, Set[Int](0), q, cb, e)
