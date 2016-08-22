@@ -5,6 +5,7 @@ import java.util.concurrent.TimeUnit
 import com.bwsw.tstreams.agents.consumer.{TransactionOperator, Consumer}
 import com.bwsw.tstreams.common.{FirstFailLockableTaskExecutor, UUIDComparator}
 import com.bwsw.tstreams.coordination.messages.state.TransactionStatus
+import org.slf4j.LoggerFactory
 
 import scala.collection.mutable
 
@@ -47,6 +48,7 @@ class ProcessingEngine[T](consumer: TransactionOperator[T],
           fastLoader.load[T](seq, consumer, executor, callback)
         }
         else if (fullLoader.checkIfPossible(seq)) {
+          ProcessingEngine.logger.info(s"Load full occured for seq ${seq}")
           fullLoader.load[T](seq, consumer, executor, callback)
         }
         setLastPartitionActivity(seq.head.partition)
@@ -54,8 +56,10 @@ class ProcessingEngine[T](consumer: TransactionOperator[T],
     }
     partitions
       .foreach(p =>
-        if (System.currentTimeMillis() - getLastPartitionActivity(p) > pollTimeMs)
-          enqueueLastTransactionFromDB(p))
+        if (System.currentTimeMillis() - getLastPartitionActivity(p) > pollTimeMs) {
+          ProcessingEngine.logger.info(s"No events during polling interval for partition ${p}, will do enqueuing from DB.")
+          enqueueLastTransactionFromDB(p)
+        })
   }
 
 
@@ -89,6 +93,8 @@ class ProcessingEngine[T](consumer: TransactionOperator[T],
 
 
 object ProcessingEngine {
+  val logger = LoggerFactory.getLogger(this.getClass)
+
   type LastTransactionStateMapType = mutable.Map[Int, TransactionState]
   class CallbackTask[T](consumer: TransactionOperator[T], transactionState: TransactionState, callback: Callback[T]) extends Runnable {
     override def run(): Unit = {
