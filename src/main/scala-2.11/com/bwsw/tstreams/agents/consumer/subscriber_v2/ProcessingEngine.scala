@@ -39,7 +39,10 @@ class ProcessingEngine[T](consumer: TransactionOperator[T],
     setLastPartitionActivity(p)
     lastTransactionsMap(p) = TransactionState(consumer.getCurrentOffset(p), p, -1, -1, -1, TransactionStatus.postCheckpoint, -1) })
 
-
+  /**
+    * Reads transactions from database or fast and does self-kick if no events.
+    * @param pollTimeMs
+    */
   def handleQueue(pollTimeMs: Int) = {
     val seq = queue.get(pollTimeMs, TimeUnit.MILLISECONDS)
     if(seq != null) {
