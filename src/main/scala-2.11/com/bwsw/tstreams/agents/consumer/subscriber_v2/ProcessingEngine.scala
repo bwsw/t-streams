@@ -22,9 +22,10 @@ class ProcessingEngine[T](consumer: Consumer[T],
   // keeps last transaction states processed
   val lastTransactionsMap = mutable.Map[Int, TransactionState]()
   val lastTransactionsEventsMap = mutable.Map[Int, Long]()
+
+  // loaders
   val fastLoader = new TransactionFastLoader(partitions, lastTransactionsMap)
   val fullLoader = new TransactionFullLoader(partitions, lastTransactionsMap)
-
 
   val consumerPartitions = consumer.getPartitions()
 
@@ -49,7 +50,10 @@ class ProcessingEngine[T](consumer: Consumer[T],
         lastTransactionsEventsMap(seq.head.partition) = System.currentTimeMillis()
       }
     }
-    partitions foreach (p => if (System.currentTimeMillis() - lastTransactionsEventsMap(p) > pollTimeMs) enqueueLastTransactionFromDB(p))
+    partitions
+      .foreach(p =>
+        if (System.currentTimeMillis() - lastTransactionsEventsMap(p) > pollTimeMs)
+          enqueueLastTransactionFromDB(p))
   }
 
 
