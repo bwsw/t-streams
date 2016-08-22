@@ -7,6 +7,7 @@ import com.bwsw.tstreams.agents.consumer.subscriber_v2.QueueBuilder.InMemory
 import com.bwsw.tstreams.common.AbstractPolicy
 import com.bwsw.tstreams.converter.IConverter
 import com.bwsw.tstreams.generator.IUUIDGenerator
+import com.bwsw.tstreams.agents.consumer
 
 /**
   * Created by ivan on 19.08.16.
@@ -29,19 +30,28 @@ import com.bwsw.tstreams.generator.IUUIDGenerator
   * @param useLastOffset
   * @tparam T
   */
-case class Options[T](val transactionsPreload: Int,
-                      val dataPreload:            Int,
-                      val converter:              IConverter[Array[Byte], T],
-                      val readPolicy:             AbstractPolicy,
-                      val offset:                 IOffset,
-                      val txnGenerator:           IUUIDGenerator,
+case class Options[T](override val transactionsPreload:    Int,
+                      override val dataPreload:            Int,
+                      override val converter:              IConverter[Array[Byte], T],
+                      override val readPolicy:             AbstractPolicy,
+                      override val offset:                 IOffset,
+                      override val txnGenerator:           IUUIDGenerator,
+                      override val useLastOffset:          Boolean,
                       val agentAddress:           String,
                       val zkRootPath:             String,
-                      val zkHosts:                List[InetSocketAddress],
+                      val zkHosts:                Set[InetSocketAddress],
                       val zkSessionTimeout:       Int,
                       val zkConnectionTimeout:    Int,
                       val threadPoolAmount:       Int      = 1,
-                      val txnQueue:               QueueBuilder.Abstract  = new InMemory,
-                      val useLastOffset:          Boolean  = true)
+                      val pollingFrequencyDelay:  Int      = 1000,
+                      val txnQueue:               QueueBuilder.Abstract  = new InMemory
+                      ) extends consumer.Options[T](
+  transactionsPreload = transactionsPreload,
+  dataPreload         = dataPreload,
+  converter           = converter,
+  readPolicy          = readPolicy,
+  offset              = offset,
+  txnGenerator        = txnGenerator,
+  useLastOffset       = useLastOffset)
 
 

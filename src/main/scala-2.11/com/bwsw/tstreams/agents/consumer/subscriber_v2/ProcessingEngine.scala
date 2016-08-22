@@ -11,6 +11,7 @@ import scala.collection.mutable
 
 /**
   * Created by Ivan Kudryavtsev on 20.08.16.
+  * Does top-level management tasks for new events.
   */
 class ProcessingEngine[T](consumer: TransactionOperator[T],
                           partitions: Set[Int],
