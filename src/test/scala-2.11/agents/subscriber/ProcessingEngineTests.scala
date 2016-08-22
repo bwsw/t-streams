@@ -3,10 +3,9 @@ package agents.subscriber
 import java.util.UUID
 import java.util.concurrent.TimeUnit
 
-import com.bwsw.tstreams.agents.consumer.subscriber_v2.{TransactionState, Callback, QueueBuilder, ProcessingEngine}
+import com.bwsw.tstreams.agents.consumer.subscriber_v2.{Callback, QueueBuilder, ProcessingEngine}
 import com.bwsw.tstreams.agents.consumer.{Transaction, TransactionOperator}
 import com.bwsw.tstreams.common.FirstFailLockableTaskExecutor
-import com.bwsw.tstreams.coordination.messages.state.TransactionStatus
 import com.datastax.driver.core.utils.UUIDs
 import org.scalatest.{Matchers, FlatSpec}
 
@@ -80,5 +79,37 @@ class ProcessingEngineTests extends FlatSpec with Matchers {
     elt shouldBe null
   }
 
+  "handleQueue" should "do nothing if there is nothing in queue" in {
+    val c = new ProcessingEngineOperatorTestImpl()
+    val pe = new ProcessingEngine[String](c, Set[Int](0), q, cb, e)
+    val act1 = pe.getLastPartitionActivity(0)
+    pe.handleQueue(100)
+    val act2 = pe.getLastPartitionActivity(0)
+    act1 shouldBe act2
+  }
+
+  "handleQueue" should "do fast/full load if there is seq in queue" in {
+    val c = new ProcessingEngineOperatorTestImpl()
+    val pe = new ProcessingEngine[String](c, Set[Int](0), q, cb, e)
+    c.lstTransaction = Option[Transaction[String]](new Transaction(0, UUIDs.timeBased(), 1, -1))
+    pe.enqueueLastTransactionFromDB(0)
+    val act1 = pe.getLastPartitionActivity(0)
+    pe.handleQueue(100)
+    val act2 = pe.getLastPartitionActivity(0)
+    act2 - act1 > 0 shouldBe true
+  }
+
+  "handleQueue" should "enqueue last transaction to queue if polling interval have been expired" in {
+    val c = new ProcessingEngineOperatorTestImpl()
+    val pe = new ProcessingEngine[String](c, Set[Int](0), q, cb, e)
+    c.lstTransaction = Option[Transaction[String]](new Transaction(0, UUIDs.timeBased(), 1, -1))
+    val act1 = pe.getLastPartitionActivity(0)
+    val POLLING_DELAY = 5
+    Thread.sleep(1)
+    pe.handleQueue(POLLING_DELAY)
+    pe.enqueueLastTransactionFromDB(0)
+    val elt = q.get(200, TimeUnit.MILLISECONDS)
+    elt.head.uuid shouldBe c.lstTransaction.get.getTxnUUID()
+  }
 
 }

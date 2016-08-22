@@ -7,7 +7,6 @@ import com.bwsw.tstreams.common.{FirstFailLockableTaskExecutor, UUIDComparator}
 import com.bwsw.tstreams.coordination.messages.state.TransactionStatus
 
 import scala.collection.mutable
-import scala.util.Random
 
 /**
   * Created by Ivan Kudryavtsev on 20.08.16.
@@ -19,8 +18,12 @@ class ProcessingEngine[T](consumer: TransactionOperator[T],
                           executor: FirstFailLockableTaskExecutor) {
 
   // keeps last transaction states processed
-  val lastTransactionsMap = mutable.Map[Int, TransactionState]()
-  val lastTransactionsEventsMap = mutable.Map[Int, Long]()
+  private val lastTransactionsMap = mutable.Map[Int, TransactionState]()
+  private val lastTransactionsEventsMap = mutable.Map[Int, Long]()
+
+  def getLastPartitionActivity(partition: Int): Long = lastTransactionsEventsMap(partition)
+  def setLastPartitionActivity(partition: Int): Unit = lastTransactionsEventsMap(partition) = System.currentTimeMillis()
+  def getLastTransactionHandled(partition: Int) = lastTransactionsMap(partition)
 
   // loaders
   val fastLoader = new TransactionFastLoader(partitions, lastTransactionsMap)
@@ -32,8 +35,8 @@ class ProcessingEngine[T](consumer: TransactionOperator[T],
     throw new IllegalArgumentException("Partition set which is used in ProcessingEngine is not subset of Consumer's partitions.")
 
   partitions foreach (p => {
-    lastTransactionsEventsMap(p)  = System.currentTimeMillis()
-    lastTransactionsMap(p)        = TransactionState(consumer.getCurrentOffset(p), p, -1, -1, -1, TransactionStatus.postCheckpoint, -1) })
+    setLastPartitionActivity(p)
+    lastTransactionsMap(p) = TransactionState(consumer.getCurrentOffset(p), p, -1, -1, -1, TransactionStatus.postCheckpoint, -1) })
 
 
   def handleQueue(pollTimeMs: Int) = {
@@ -46,12 +49,12 @@ class ProcessingEngine[T](consumer: TransactionOperator[T],
         else if (fullLoader.checkIfPossible(seq)) {
           fullLoader.load[T](seq, consumer, executor, callback)
         }
-        lastTransactionsEventsMap(seq.head.partition) = System.currentTimeMillis()
+        setLastPartitionActivity(seq.head.partition)
       }
     }
     partitions
       .foreach(p =>
-        if (System.currentTimeMillis() - lastTransactionsEventsMap(p) > pollTimeMs)
+        if (System.currentTimeMillis() - getLastPartitionActivity(p) > pollTimeMs)
           enqueueLastTransactionFromDB(p))
   }
 
@@ -74,15 +77,13 @@ class ProcessingEngine[T](consumer: TransactionOperator[T],
     if(uuidComparator.compare(t.get.getTxnUUID(), lastTransactionsMap(partition).uuid) != 1)
       return
 
-    val r = Random
     val tl = List(TransactionState(uuid             = t.get.getTxnUUID(),
                                     partition       = partition,
-                                    masterSessionID = r.nextInt(),
-                                    queueOrderID    =  r.nextInt(),
+                                    masterSessionID = 0,
+                                    queueOrderID    = 0,
                                     itemCount       = t.get.getCount(), state = TransactionStatus.postCheckpoint,
                                     ttl             = -1))
     queue.put(tl)
-    lastTransactionsEventsMap(partition) = System.currentTimeMillis()
   }
 }
 
