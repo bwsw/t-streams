@@ -31,6 +31,10 @@ class FullLoaderOperatorTestImpl extends TransactionOperator[String] {
     txns
 
   override def checkpoint(): Unit = {}
+
+  override def getPartitions(): Set[Int] = Set[Int](0)
+
+  override def getCurrentOffset(partition: Int): UUID = UUIDs.timeBased()
 }
 
 trait FullLoaderTestContainer {

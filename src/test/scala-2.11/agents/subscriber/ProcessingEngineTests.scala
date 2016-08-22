@@ -8,7 +8,7 @@ import org.scalatest.{Matchers, FlatSpec}
 
 import scala.collection.mutable.ListBuffer
 
-class FullLoaderOperatorTestImpl extends TransactionOperator[String] {
+class ProcessingEngineOperatorTestImpl extends TransactionOperator[String] {
   val TOTAL = 10
   val txns = new ListBuffer[Transaction[String]]()
   for(i <- 0 until TOTAL)
@@ -26,6 +26,10 @@ class FullLoaderOperatorTestImpl extends TransactionOperator[String] {
     txns
 
   override def checkpoint(): Unit = {}
+
+  override def getPartitions(): Set[Int] = Set[Int](0)
+
+  override def getCurrentOffset(partition: Int): UUID = ???
 }
 
 /**
