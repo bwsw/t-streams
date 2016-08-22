@@ -44,13 +44,28 @@ class Subscriber[T](val name: String,
 
     val txnBuffers = mutable.Map[Int, TransactionBuffer]()
 
+    /**
+      * Initialize processing engines
+      */
 
+    for(thID <- 0 until peWorkerThreads) {
+      val parts: Set[Int] = Set[Int]().empty ++ options.readPolicy.getUsedPartitions() filter (p => p % thID == 0)
+      processingEngines(thID) = new ProcessingEngine[T](consumer, parts, options.txnQueueBuilder, callback)
+    }
+
+    /**
+      * end initialize
+      */
+
+    txnBuffers.clear()
 
     options.readPolicy.getUsedPartitions() foreach (part =>
-      txnBuffers(part) = new TransactionBuffer(options.txnQueueBuilder.generateQueueObject(part)))
+      for(thID <- 0 until peWorkerThreads) {
+        if(part % peWorkerThreads == thID)
+          txnBuffers(part) = new TransactionBuffer(processingEngines(thID).getQueue())
+      })
 
-    txnBufferWorkers foreach (kv => kv._2.stop())
-    txnBufferWorkers.clear()
+
 
     for(thID <- 0 until bufferWorkerThreads) {
       val worker = new TransactionBufferWorker()
@@ -62,14 +77,28 @@ class Subscriber[T](val name: String,
       txnBufferWorkers(thID) = worker
     }
 
+    consumer.start()
+
     for(thID <- 0 until peWorkerThreads) {
-      val ex = new FirstFailLockableTaskExecutor(s"Subscriber ${name}-pe-executor-${thID}")
-      options.readPolicy.getUsedPartitions() foreach (part =>
-        if(part % peWorkerThreads == thID)
-          processingEngines(part) = new ProcessingEngine[T](consumer, Set(part), txnBuffers(part).getQueue(), callback, ex))
+      processingEngines(thID).getExecutor().submit(new Poller[T](processingEngines(thID), options.pollingFrequencyDelay))
     }
 
-    consumer.start()
+  }
+
+  /**
+    *
+    */
+  def stop() = {
+    if(!isStarted.getAndSet(false))
+      throw new IllegalStateException("Double stop is detected. Please start it first.")
+
+    processingEngines foreach(kv => kv._2.stop())
+    processingEngines clear()
+
+    txnBufferWorkers foreach (kv => kv._2.stop())
+    txnBufferWorkers.clear()
+
+    consumer.stop()
   }
 
   /**

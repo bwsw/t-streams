@@ -8,6 +8,7 @@ import com.bwsw.tstreams.coordination.messages.state.TransactionStatus
 import org.slf4j.LoggerFactory
 
 import scala.collection.mutable
+import scala.util.Random
 
 /**
   * Created by Ivan Kudryavtsev on 20.08.16.
@@ -15,15 +16,18 @@ import scala.collection.mutable
   */
 class ProcessingEngine[T](consumer: TransactionOperator[T],
                           partitions: Set[Int],
-                          queue: QueueBuilder.QueueType,
-                          callback: Callback[T],
-                          executor: FirstFailLockableTaskExecutor) {
+                          queueBuilder: QueueBuilder.Abstract,
+                          callback: Callback[T]) {
 
   // keeps last transaction states processed
   private val lastTransactionsMap = mutable.Map[Int, TransactionState]()
   private val lastTransactionsEventsMap = mutable.Map[Int, Long]()
+  private val executor = new FirstFailLockableTaskExecutor(s"pe-${partitions}-executor")
+  private val queue = queueBuilder.generateQueueObject(Math.abs(Random.nextInt()))
+
 
   def getExecutor() = executor
+  def getQueue():QueueBuilder.QueueType = queue
 
   def getLastPartitionActivity(partition: Int): Long = lastTransactionsEventsMap(partition)
   def setLastPartitionActivity(partition: Int): Unit = lastTransactionsEventsMap(partition) = System.currentTimeMillis()
@@ -94,6 +98,10 @@ class ProcessingEngine[T](consumer: TransactionOperator[T],
                                     itemCount       = t.get.getCount(), state = TransactionStatus.postCheckpoint,
                                     ttl             = -1))
     queue.put(tl)
+  }
+
+  def stop() = {
+    executor.shutdownOrDie(100, TimeUnit.SECONDS)
   }
 }
 

@@ -1,8 +1,11 @@
 package com.bwsw.tstreams.agents.consumer.subscriber_v2
 
 /**
-  * Created by ivan on 22.08.16.
+  * Created by Ivan Kudryavtsev on 22.08.16.
   */
-class Poller {
-
+class Poller[T](processingEngine: ProcessingEngine[T], interval: Int) extends Runnable {
+  override def run(): Unit = {
+    processingEngine.handleQueue(interval)
+    processingEngine.getExecutor().submit(this)
+  }
 }

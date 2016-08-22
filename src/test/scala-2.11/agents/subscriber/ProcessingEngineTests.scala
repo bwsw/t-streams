@@ -45,43 +45,41 @@ class ProcessingEngineTests extends FlatSpec with Matchers {
   val cb = new Callback[String] {
     override def onEvent(consumer: TransactionOperator[String], partition: Int, uuid: UUID, count: Int): Unit = {}
   }
-
-  val e = new FirstFailLockableTaskExecutor("lf")
-  val q = new QueueBuilder.InMemory().generateQueueObject(0)
+  val qb = new QueueBuilder.InMemory()
 
 
   "constructor" should "create Processing engine" in {
-    val pe = new ProcessingEngine[String](new ProcessingEngineOperatorTestImpl(), Set[Int](0), q, cb, e)
+    val pe = new ProcessingEngine[String](new ProcessingEngineOperatorTestImpl(), Set[Int](0), qb, cb)
   }
 
   "enqueueLastTransactionFromDB" should "not Enqueue last transaction state to Queue if it's not defined" in {
-    val pe = new ProcessingEngine[String](new ProcessingEngineOperatorTestImpl(), Set[Int](0), q, cb, e)
+    val pe = new ProcessingEngine[String](new ProcessingEngineOperatorTestImpl(), Set[Int](0), qb, cb)
     pe.enqueueLastTransactionFromDB(0)
-    val elt = q.get(200, TimeUnit.MILLISECONDS)
+    val elt = pe.getQueue().get(200, TimeUnit.MILLISECONDS)
     elt shouldBe null
   }
 
   "enqueueLastTransactionFromDB" should "enqueue last transaction state to Queue if it's newer than we have in our database" in {
     val c = new ProcessingEngineOperatorTestImpl()
-    val pe = new ProcessingEngine[String](c, Set[Int](0), q, cb, e)
+    val pe = new ProcessingEngine[String](c, Set[Int](0), qb, cb)
     c.lstTransaction = Option[Transaction[String]](new Transaction(0, UUIDs.timeBased(), 1, -1))
     pe.enqueueLastTransactionFromDB(0)
-    val elt = q.get(200, TimeUnit.MILLISECONDS)
+    val elt = pe.getQueue().get(200, TimeUnit.MILLISECONDS)
     elt.head.uuid shouldBe c.lstTransaction.get.getTxnUUID()
   }
 
   "enqueueLastTransactionFromDB" should "not enqueue last transaction state to Queue if it's older than we have in our database" in {
     val c = new ProcessingEngineOperatorTestImpl()
     c.lstTransaction = Option[Transaction[String]](new Transaction(0, UUIDs.timeBased(), 1, -1))
-    val pe = new ProcessingEngine[String](c, Set[Int](0), q, cb, e)
+    val pe = new ProcessingEngine[String](c, Set[Int](0), qb, cb)
     pe.enqueueLastTransactionFromDB(0)
-    val elt = q.get(200, TimeUnit.MILLISECONDS)
+    val elt = pe.getQueue().get(200, TimeUnit.MILLISECONDS)
     elt shouldBe null
   }
 
   "handleQueue" should "do nothing if there is nothing in queue" in {
     val c = new ProcessingEngineOperatorTestImpl()
-    val pe = new ProcessingEngine[String](c, Set[Int](0), q, cb, e)
+    val pe = new ProcessingEngine[String](c, Set[Int](0), qb, cb)
     val act1 = pe.getLastPartitionActivity(0)
     pe.handleQueue(100)
     val act2 = pe.getLastPartitionActivity(0)
@@ -90,7 +88,7 @@ class ProcessingEngineTests extends FlatSpec with Matchers {
 
   "handleQueue" should "do fast/full load if there is seq in queue" in {
     val c = new ProcessingEngineOperatorTestImpl()
-    val pe = new ProcessingEngine[String](c, Set[Int](0), q, cb, e)
+    val pe = new ProcessingEngine[String](c, Set[Int](0), qb, cb)
     c.lstTransaction = Option[Transaction[String]](new Transaction(0, UUIDs.timeBased(), 1, -1))
     pe.enqueueLastTransactionFromDB(0)
     val act1 = pe.getLastPartitionActivity(0)
@@ -101,14 +99,14 @@ class ProcessingEngineTests extends FlatSpec with Matchers {
 
   "handleQueue" should "enqueue last transaction to queue if polling interval have been expired" in {
     val c = new ProcessingEngineOperatorTestImpl()
-    val pe = new ProcessingEngine[String](c, Set[Int](0), q, cb, e)
+    val pe = new ProcessingEngine[String](c, Set[Int](0), qb, cb)
     c.lstTransaction = Option[Transaction[String]](new Transaction(0, UUIDs.timeBased(), 1, -1))
     val act1 = pe.getLastPartitionActivity(0)
     val POLLING_DELAY = 5
     Thread.sleep(1)
     pe.handleQueue(POLLING_DELAY)
     pe.enqueueLastTransactionFromDB(0)
-    val elt = q.get(200, TimeUnit.MILLISECONDS)
+    val elt = pe.getQueue().get(200, TimeUnit.MILLISECONDS)
     elt.head.uuid shouldBe c.lstTransaction.get.getTxnUUID()
   }
 
