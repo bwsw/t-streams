@@ -1,4 +1,4 @@
-package agents.producer
+package agents.integration
 
 import com.bwsw.tstreams.agents.consumer.Offset.Oldest
 import com.bwsw.tstreams.agents.producer._

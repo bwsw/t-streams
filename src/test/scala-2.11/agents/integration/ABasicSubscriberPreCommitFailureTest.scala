@@ -1,4 +1,4 @@
-package agents.both
+package agents.integration
 
 import java.util.UUID
 import java.util.concurrent.locks.ReentrantLock

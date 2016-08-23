@@ -1,5 +1,4 @@
-package agents.producer
-
+package agents.integration
 
 import com.bwsw.tstreams.agents.producer._
 import com.bwsw.tstreams.env.TSF_Dictionary

@@ -1,6 +1,7 @@
-package agents.consumer
+package agents.integration
 
 import java.util.UUID
+
 import com.bwsw.tstreams.agents.consumer.Offset.Oldest
 import com.bwsw.tstreams.agents.consumer.Transaction
 import com.bwsw.tstreams.agents.producer.NewTransactionProducerPolicy

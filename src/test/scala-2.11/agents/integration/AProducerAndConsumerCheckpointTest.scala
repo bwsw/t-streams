@@ -1,7 +1,7 @@
-package agents.both
+package agents.integration
 
 import com.bwsw.tstreams.agents.consumer.Offset.Oldest
-import com.bwsw.tstreams.agents.consumer.{Consumer, Transaction}
+import com.bwsw.tstreams.agents.consumer.Transaction
 import com.bwsw.tstreams.agents.producer.NewTransactionProducerPolicy
 import com.bwsw.tstreams.common.TimeTracker
 import com.bwsw.tstreams.env.TSF_Dictionary

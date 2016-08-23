@@ -1,8 +1,8 @@
-package agents.both
+package agents.integration
 
 import com.bwsw.tstreams.agents.consumer.Offset.Oldest
-import com.bwsw.tstreams.agents.consumer.{Transaction}
-import com.bwsw.tstreams.agents.producer.{NewTransactionProducerPolicy}
+import com.bwsw.tstreams.agents.consumer.Transaction
+import com.bwsw.tstreams.agents.producer.NewTransactionProducerPolicy
 import com.bwsw.tstreams.common.CassandraHelper
 import com.bwsw.tstreams.env.TSF_Dictionary
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}

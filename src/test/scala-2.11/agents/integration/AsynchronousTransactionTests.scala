@@ -1,4 +1,4 @@
-package agents.both
+package agents.integration
 
 import java.util.concurrent.CountDownLatch
 

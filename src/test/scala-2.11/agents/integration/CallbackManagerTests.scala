@@ -1,4 +1,4 @@
-package agents.both
+package agents.integration
 
 import com.bwsw.tstreams.coordination.messages.state.{Message, TransactionStatus}
 import com.bwsw.tstreams.coordination.subscriber.CallbackManager
