@@ -1,4 +1,4 @@
-package com.bwsw.tstreams.agents.consumer.subscriber_v2.coordination
+package com.bwsw.tstreams.agents.consumer.subscriber_v2
 
 import java.net.InetSocketAddress
 import java.util.concurrent.atomic.AtomicBoolean
@@ -22,10 +22,10 @@ class Coordinator() {
   def init(agentAddress: String,
            stream: String,
            partitions: Set[Int],
-            zkRootPrefix: String,
-            zkHosts: Set[InetSocketAddress],
-            zkSessionTimeout: Int,
-            zkConnectionTimeout: Int) = this.synchronized {
+           zkRootPath: String,
+           zkHosts: Set[InetSocketAddress],
+           zkSessionTimeout: Int,
+           zkConnectionTimeout: Int) = this.synchronized {
 
     if(isInitialized.getAndSet(true))
       throw new IllegalStateException("Failed to initialize object as it's already initialized.")
@@ -34,7 +34,7 @@ class Coordinator() {
     this.stream = stream
     this.partitions = partitions
 
-    dlm = new ZookeeperDLMService(zkRootPrefix, zkHosts.toList, zkSessionTimeout, zkConnectionTimeout)
+    dlm = new ZookeeperDLMService(zkRootPath, zkHosts.toList, zkSessionTimeout, zkConnectionTimeout)
 
     initializeState()
   }

@@ -33,10 +33,12 @@ class Subscriber[T](val name: String,
 
   val isStarted = new AtomicBoolean(false)
 
+  val coordinator = new Coordinator()
+
   /**
     *  Starts the subscriber
     */
-  def start() = this.synchronized {
+  def start() = {
 
     if(isStarted.getAndSet(true))
       throw new IllegalStateException("Double start is detected. Please stop it first.")
@@ -82,6 +84,15 @@ class Subscriber[T](val name: String,
       processingEngines(thID).getExecutor().submit(new Poller[T](processingEngines(thID), options.pollingFrequencyDelay))
     }
 
+    coordinator.init(
+      agentAddress = options.agentAddress,
+      stream = stream.getName,
+      partitions = Set[Int]().empty ++ options.readPolicy.getUsedPartitions(),
+      zkRootPath = options.zkRootPath,
+      zkHosts = options.zkHosts,
+      zkConnectionTimeout = options.zkConnectionTimeout,
+      zkSessionTimeout = options.zkSessionTimeout)
+
   }
 
   /**
@@ -97,6 +108,7 @@ class Subscriber[T](val name: String,
     txnBufferWorkers foreach (kv => kv._2.stop())
     txnBufferWorkers.clear()
 
+    coordinator.stop()
     consumer.stop()
   }
 
