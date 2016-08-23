@@ -1,4 +1,4 @@
-package com.bwsw.tstreams.coordination.producer.p2p
+package com.bwsw.tstreams.coordination.producer
 
 import java.util.UUID
 import java.util.concurrent.atomic.{AtomicBoolean, AtomicLong}

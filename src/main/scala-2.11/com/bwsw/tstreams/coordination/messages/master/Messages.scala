@@ -4,12 +4,11 @@ import java.util.UUID
 
 import com.bwsw.tstreams.common.ProtocolMessageSerializer
 import com.bwsw.tstreams.coordination.messages.state.{Message, TransactionStatus}
-import com.bwsw.tstreams.coordination.producer.p2p.PeerAgent
+import com.bwsw.tstreams.coordination.producer.PeerAgent
 import io.netty.channel.Channel
 import org.slf4j.LoggerFactory
 
 import scala.util.Random
-import io.netty.channel.socket.SocketChannel
 
 
 object IMessage {
@@ -19,7 +18,7 @@ object IMessage {
 
 /**
   * Messages which used for providing
-  * interaction between [[com.bwsw.tstreams.coordination.producer.p2p.PeerAgent]]]
+  * interaction between [[com.bwsw.tstreams.coordination.producer.PeerAgent]]]
   */
 trait IMessage {
   var msgID: Long = Random.nextLong()

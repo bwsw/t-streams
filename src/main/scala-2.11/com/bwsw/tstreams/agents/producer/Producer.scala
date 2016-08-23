@@ -9,7 +9,7 @@ import com.bwsw.tstreams.agents.producer.NewTransactionProducerPolicy.ProducerPo
 import com.bwsw.tstreams.common._
 import com.bwsw.tstreams.coordination.client.BroadcastCommunicationClient
 import com.bwsw.tstreams.coordination.messages.state.{Message, TransactionStatus}
-import com.bwsw.tstreams.coordination.producer.p2p.{AgentsStateDBService, PeerAgent}
+import com.bwsw.tstreams.coordination.producer.{AgentsStateDBService, PeerAgent}
 import com.bwsw.tstreams.metadata.MetadataStorage
 import com.bwsw.tstreams.streams.TStream
 import org.slf4j.LoggerFactory

@@ -1,4 +1,4 @@
-package com.bwsw.tstreams.coordination.producer.p2p
+package com.bwsw.tstreams.coordination.producer
 
 /**
   * Agent representation of every agent in [/producers/agents/{agent}]

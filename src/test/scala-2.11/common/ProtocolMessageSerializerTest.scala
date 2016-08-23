@@ -5,7 +5,7 @@ import java.util.UUID
 import com.bwsw.tstreams.common.ProtocolMessageSerializer
 import com.bwsw.tstreams.coordination.messages.master._
 import com.bwsw.tstreams.coordination.messages.state.{Message, TransactionStatus}
-import com.bwsw.tstreams.coordination.producer.p2p.AgentSettings
+import com.bwsw.tstreams.coordination.producer.AgentSettings
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import testutils.TestUtils
 

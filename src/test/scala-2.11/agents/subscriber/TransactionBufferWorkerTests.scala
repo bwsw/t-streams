@@ -110,9 +110,6 @@ class TransactionBufferWorkerTests extends FlatSpec with Matchers {
         case e: RuntimeException =>
           false
       }
-      finally {
-        false
-      }
     }
     flag shouldBe true
   }

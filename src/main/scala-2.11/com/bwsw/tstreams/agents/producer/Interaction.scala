@@ -2,7 +2,7 @@ package com.bwsw.tstreams.agents.producer
 
 import java.util.UUID
 
-import com.bwsw.tstreams.coordination.producer.p2p.PeerAgent
+import com.bwsw.tstreams.coordination.producer.PeerAgent
 
 /**
   * Trait for producers

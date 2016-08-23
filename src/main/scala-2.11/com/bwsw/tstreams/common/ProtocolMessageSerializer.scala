@@ -5,7 +5,7 @@ import java.util.UUID
 import ProtocolMessageSerializer.ProtocolMessageSerializerException
 import com.bwsw.tstreams.coordination.messages.master._
 import com.bwsw.tstreams.coordination.messages.state.{Message, TransactionStatus}
-import com.bwsw.tstreams.coordination.producer.p2p.AgentSettings
+import com.bwsw.tstreams.coordination.producer.AgentSettings
 
 import scala.collection.mutable
 import scala.util.control.Breaks._
