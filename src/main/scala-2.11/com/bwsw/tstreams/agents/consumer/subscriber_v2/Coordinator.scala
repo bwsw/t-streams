@@ -53,10 +53,18 @@ class Coordinator() {
   private def initializeState(): Unit = {
     partitions foreach (p => {
       try {
+        dlm.create[String](s"/subscribers/event/$stream/$p",s"$stream/$p", CreateMode.PERSISTENT)
+      } catch {
+        case e: KeeperException =>
+      }
+
+      try {
+
         dlm.delete(getSubscriberMembershipPath(p))
       } catch {
         case e: KeeperException =>
       }
+
       dlm.create(getSubscriberMembershipPath(p), agentAddress, CreateMode.EPHEMERAL)
       dlm.notify(s"/subscribers/event/$stream/$p")
     })

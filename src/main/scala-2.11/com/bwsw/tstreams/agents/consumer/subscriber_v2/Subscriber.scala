@@ -102,10 +102,9 @@ class Subscriber[T](val name: String,
     if(!isStarted.getAndSet(false))
       throw new IllegalStateException("Double stop is detected. Please start it first.")
 
-    processingEngines foreach(kv => kv._2.stop())
-    processingEngines clear()
-
-    txnBufferWorkers foreach (kv => kv._2.stop())
+    processingEngines.foreach(kv => kv._2.stop())
+    processingEngines.clear()
+    txnBufferWorkers.foreach (kv => kv._2.stop())
     txnBufferWorkers.clear()
 
     coordinator.stop()
