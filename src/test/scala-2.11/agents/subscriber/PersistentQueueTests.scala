@@ -3,9 +3,9 @@ package agents.subscriber
 import java.util.UUID
 import java.util.concurrent.TimeUnit
 
-import com.bwsw.tstreams.agents.consumer.subscriber_v2.{TransactionStatePersistentQueue, TransactionState}
+import com.bwsw.tstreams.agents.consumer.subscriber_v2.{TransactionState, TransactionStatePersistentQueue}
 import com.bwsw.tstreams.coordination.messages.state.TransactionStatus
-import org.scalatest.{Matchers, FlatSpec}
+import org.scalatest.{FlatSpec, Matchers}
 
 /**
   * Created by ivan on 19.08.16.

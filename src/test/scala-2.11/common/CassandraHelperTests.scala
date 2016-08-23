@@ -1,7 +1,7 @@
 package common
 
 import com.bwsw.tstreams.common.CassandraHelper
-import org.scalatest.{BeforeAndAfterAll, Matchers, FlatSpec}
+import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import testutils.TestUtils
 
 /**

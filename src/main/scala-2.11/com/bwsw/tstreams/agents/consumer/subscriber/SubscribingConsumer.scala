@@ -3,7 +3,7 @@ package com.bwsw.tstreams.agents.consumer.subscriber
 import java.util.UUID
 import java.util.concurrent.{ExecutorService, Executors}
 
-import com.bwsw.tstreams.agents.consumer.{Consumer, Options, Transaction, SubscriberCoordinationOptions}
+import com.bwsw.tstreams.agents.consumer.{Consumer, Options, SubscriberCoordinationOptions, Transaction}
 import com.bwsw.tstreams.coordination.subscriber.Coordinator
 import com.bwsw.tstreams.streams.TStream
 import com.bwsw.tstreams.txnqueue.PersistentTransactionQueue

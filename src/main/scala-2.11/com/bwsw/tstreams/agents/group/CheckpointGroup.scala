@@ -1,10 +1,9 @@
 package com.bwsw.tstreams.agents.group
 
 import java.util.concurrent.atomic.AtomicBoolean
-import java.util.concurrent.{CountDownLatch, TimeUnit}
 import java.util.concurrent.locks.ReentrantLock
+import java.util.concurrent.{CountDownLatch, TimeUnit}
 
-import com.bwsw.tstreams.agents.producer.Producer
 import com.bwsw.tstreams.common.{FirstFailLockableTaskExecutor, LockUtil}
 import org.slf4j.LoggerFactory
 

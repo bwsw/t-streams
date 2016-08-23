@@ -4,8 +4,8 @@ import java.nio.file.Files
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantLock
 
-import net.openhft.chronicle.queue.{ExcerptTailer, ExcerptAppender, ChronicleQueueBuilder}
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue
+import net.openhft.chronicle.queue.{ChronicleQueueBuilder, ExcerptAppender, ExcerptTailer}
 
 /**
   * Created by ivan on 19.08.16.

@@ -1,7 +1,6 @@
 package com.bwsw.tstreams.agents.consumer.subscriber_v2
 
 import java.util.concurrent.TimeUnit
-import java.util.concurrent.atomic.AtomicBoolean
 
 import com.bwsw.tstreams.common.FirstFailLockableTaskExecutor
 

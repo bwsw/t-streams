@@ -3,9 +3,11 @@ package com.bwsw.tstreams.data.cassandra
 import java.nio.ByteBuffer
 import java.util
 import java.util.UUID
+
 import com.bwsw.tstreams.data.IStorage
 import com.datastax.driver.core._
 import org.slf4j.LoggerFactory
+
 import scala.collection.mutable.ListBuffer
 
 /**

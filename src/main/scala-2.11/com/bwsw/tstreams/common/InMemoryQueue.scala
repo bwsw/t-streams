@@ -1,7 +1,7 @@
 package com.bwsw.tstreams.common
 
-import java.util.concurrent.locks.ReentrantLock
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.locks.ReentrantLock
 
 /**
   * Created by ivan on 19.08.16.

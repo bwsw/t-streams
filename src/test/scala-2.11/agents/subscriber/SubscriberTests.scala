@@ -1,6 +1,6 @@
 package agents.subscriber
 
-import org.scalatest.{Matchers, FlatSpec}
+import org.scalatest.{FlatSpec, Matchers}
 
 /**
   * Created by ivan on 22.08.16.

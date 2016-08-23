@@ -2,7 +2,6 @@ package com.bwsw.tstreams.agents.consumer.subscriber_v2
 
 import java.util.concurrent.atomic.AtomicBoolean
 
-import com.bwsw.tstreams.common.FirstFailLockableTaskExecutor
 import com.bwsw.tstreams.streams.TStream
 import org.slf4j.LoggerFactory
 

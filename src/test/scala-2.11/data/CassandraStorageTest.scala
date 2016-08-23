@@ -1,16 +1,7 @@
 package data
 
-import java.net.InetSocketAddress
-import java.util.UUID
-
-import com.bwsw.tstreams.common.MetadataConnectionPool
-import com.bwsw.tstreams.data.cassandra.Storage
-import com.datastax.driver.core.utils.UUIDs
-import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import testutils.TestUtils
 
-import scala.collection.mutable
-import scala.collection.mutable.ListBuffer
 import scala.language.postfixOps
 
 class CassandraStorageTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {

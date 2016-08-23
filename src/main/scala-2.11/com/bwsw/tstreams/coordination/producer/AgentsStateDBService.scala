@@ -3,7 +3,7 @@ package com.bwsw.tstreams.coordination.producer
 import java.util.concurrent.TimeUnit
 
 import com.bwsw.tstreams.common.{LockUtil, ZookeeperDLMService}
-import org.apache.zookeeper.{Watcher, KeeperException, CreateMode}
+import org.apache.zookeeper.{CreateMode, KeeperException, Watcher}
 
 import scala.collection.mutable
 

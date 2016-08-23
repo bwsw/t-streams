@@ -1,6 +1,6 @@
 package com.bwsw.tstreams.agents.consumer.subscriber_v2
 
-import com.bwsw.tstreams.common.{InMemoryQueue, AbstractQueue}
+import com.bwsw.tstreams.common.{AbstractQueue, InMemoryQueue}
 
 /**
   * Represents factory which generates queues

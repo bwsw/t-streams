@@ -1,7 +1,7 @@
 package com.bwsw.tstreams.agents.consumer.subscriber_v2
 
 
-import com.bwsw.tstreams.agents.consumer.{TransactionOperator, Consumer}
+import com.bwsw.tstreams.agents.consumer.TransactionOperator
 import com.bwsw.tstreams.common.FirstFailLockableTaskExecutor
 
 /**

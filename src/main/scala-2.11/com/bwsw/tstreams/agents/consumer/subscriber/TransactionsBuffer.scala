@@ -2,9 +2,9 @@ package com.bwsw.tstreams.agents.consumer.subscriber
 
 import java.util.UUID
 
-import com.bwsw.tstreams.common.{UUIDComparator, SortedExpiringMap}
-import com.bwsw.tstreams.coordination.messages.state.TransactionStatus._
+import com.bwsw.tstreams.common.{SortedExpiringMap, UUIDComparator}
 import com.bwsw.tstreams.coordination.messages.state.TransactionStatus
+import com.bwsw.tstreams.coordination.messages.state.TransactionStatus._
 
 /**
   * Buffer for maintaining consumed transactions in memory

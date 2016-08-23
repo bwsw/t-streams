@@ -4,7 +4,7 @@ import java.net.InetSocketAddress
 import java.util.concurrent.atomic.AtomicBoolean
 
 import com.bwsw.tstreams.common.ZookeeperDLMService
-import org.apache.zookeeper.{KeeperException, CreateMode}
+import org.apache.zookeeper.{CreateMode, KeeperException}
 
 /**
   * Created by ivan on 23.08.16.

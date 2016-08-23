@@ -4,7 +4,7 @@ import java.io.StringWriter
 
 import com.bwsw.tstreams.common.AbstractPersistentQueue
 import com.fasterxml.jackson.core.`type`.TypeReference
-import com.fasterxml.jackson.databind.{JavaType, ObjectMapper}
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
 
 /**

@@ -1,6 +1,6 @@
 package com.bwsw.tstreams.agents.consumer.subscriber_v2
 
-import com.bwsw.tstreams.agents.consumer.{TransactionOperator, Consumer}
+import com.bwsw.tstreams.agents.consumer.TransactionOperator
 
 /**
   * Trait to implement to handle incoming messages

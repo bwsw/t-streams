@@ -4,9 +4,9 @@ import java.util
 import java.util.UUID
 import java.util.concurrent.Executor
 
+import com.bwsw.tstreams.agents.consumer.Transaction
 import com.datastax.driver.core.{ResultSet, Row, Session}
 import com.google.common.util.concurrent.{FutureCallback, Futures}
-import com.bwsw.tstreams.agents.consumer.Transaction
 
 
 

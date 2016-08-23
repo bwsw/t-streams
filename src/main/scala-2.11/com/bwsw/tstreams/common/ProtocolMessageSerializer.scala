@@ -2,7 +2,6 @@ package com.bwsw.tstreams.common
 
 import java.util.UUID
 
-import ProtocolMessageSerializer.ProtocolMessageSerializerException
 import com.bwsw.tstreams.coordination.messages.master._
 import com.bwsw.tstreams.coordination.messages.state.{Message, TransactionStatus}
 import com.bwsw.tstreams.coordination.producer.AgentSettings

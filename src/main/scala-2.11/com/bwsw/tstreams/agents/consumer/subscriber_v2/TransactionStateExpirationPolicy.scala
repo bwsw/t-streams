@@ -1,6 +1,7 @@
 package com.bwsw.tstreams.agents.consumer.subscriber_v2
 
 import java.util.UUID
+
 import org.apache.commons.collections4.map.PassiveExpiringMap
 
 /**

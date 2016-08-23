@@ -4,8 +4,8 @@ import java.util.UUID
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.locks.ReentrantLock
 
-import com.bwsw.tstreams.coordination.messages.state.TransactionStatus._
 import com.bwsw.tstreams.coordination.messages.state.TransactionStatus
+import com.bwsw.tstreams.coordination.messages.state.TransactionStatus._
 import org.slf4j.LoggerFactory
 
 import scala.collection.mutable

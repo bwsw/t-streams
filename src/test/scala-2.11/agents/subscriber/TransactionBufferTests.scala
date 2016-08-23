@@ -2,6 +2,7 @@ package agents.subscriber
 
 
 import java.util.concurrent.TimeUnit
+
 import com.bwsw.tstreams.agents.consumer.subscriber_v2.{QueueBuilder, TransactionBuffer, TransactionState}
 import com.bwsw.tstreams.coordination.messages.state.TransactionStatus
 import com.datastax.driver.core.utils.UUIDs

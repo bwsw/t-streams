@@ -2,8 +2,6 @@ package com.bwsw.tstreams.common
 
 import java.util.{Comparator, UUID}
 
-import com.datastax.driver.core.utils.UUIDs
-
 /**
   * Comparator which compare two uuid's
   * uuid with greater timestamp will be greater than the second one

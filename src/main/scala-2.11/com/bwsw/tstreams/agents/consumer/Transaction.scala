@@ -2,6 +2,7 @@ package com.bwsw.tstreams.agents.consumer
 
 
 import java.util.UUID
+
 import scala.collection.mutable
 
 /**

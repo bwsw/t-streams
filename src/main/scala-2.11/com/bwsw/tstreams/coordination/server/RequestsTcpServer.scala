@@ -5,10 +5,10 @@ import java.util.concurrent.{CountDownLatch, TimeUnit}
 import com.bwsw.tstreams.common.ProtocolMessageSerializer
 import com.bwsw.tstreams.coordination.messages.master.IMessage
 import io.netty.bootstrap.ServerBootstrap
-import io.netty.channel.{ChannelInitializer, SimpleChannelInboundHandler}
 import io.netty.channel.nio.NioEventLoopGroup
 import io.netty.channel.socket.SocketChannel
 import io.netty.channel.socket.nio.NioServerSocketChannel
+import io.netty.channel.{ChannelInitializer, SimpleChannelInboundHandler}
 import io.netty.handler.codec.string.{StringDecoder, StringEncoder}
 import io.netty.handler.codec.{DelimiterBasedFrameDecoder, Delimiters}
 import io.netty.handler.logging.{LogLevel, LoggingHandler}

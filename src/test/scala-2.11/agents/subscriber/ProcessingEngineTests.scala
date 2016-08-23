@@ -3,11 +3,10 @@ package agents.subscriber
 import java.util.UUID
 import java.util.concurrent.TimeUnit
 
-import com.bwsw.tstreams.agents.consumer.subscriber_v2.{Callback, QueueBuilder, ProcessingEngine}
+import com.bwsw.tstreams.agents.consumer.subscriber_v2.{Callback, ProcessingEngine, QueueBuilder}
 import com.bwsw.tstreams.agents.consumer.{Transaction, TransactionOperator}
-import com.bwsw.tstreams.common.FirstFailLockableTaskExecutor
 import com.datastax.driver.core.utils.UUIDs
-import org.scalatest.{Matchers, FlatSpec}
+import org.scalatest.{FlatSpec, Matchers}
 
 import scala.collection.mutable.ListBuffer
 

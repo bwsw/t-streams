@@ -2,7 +2,7 @@ package com.bwsw.tstreams.agents.consumer.subscriber_v2
 
 import java.util.concurrent.TimeUnit
 
-import com.bwsw.tstreams.agents.consumer.{TransactionOperator, Consumer}
+import com.bwsw.tstreams.agents.consumer.TransactionOperator
 import com.bwsw.tstreams.common.{FirstFailLockableTaskExecutor, UUIDComparator}
 import com.bwsw.tstreams.coordination.messages.state.TransactionStatus
 import org.slf4j.LoggerFactory

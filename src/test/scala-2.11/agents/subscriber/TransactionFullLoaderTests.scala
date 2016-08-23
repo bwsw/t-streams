@@ -1,14 +1,14 @@
 package agents.subscriber
 
 import java.util.UUID
-import java.util.concurrent.{TimeUnit, CountDownLatch}
+import java.util.concurrent.{CountDownLatch, TimeUnit}
 
+import com.bwsw.tstreams.agents.consumer.subscriber_v2.{Callback, TransactionFullLoader, TransactionState}
 import com.bwsw.tstreams.agents.consumer.{Transaction, TransactionOperator}
-import com.bwsw.tstreams.agents.consumer.subscriber_v2.{Callback, TransactionFullLoader, TransactionFastLoader, TransactionState}
 import com.bwsw.tstreams.common.FirstFailLockableTaskExecutor
 import com.bwsw.tstreams.coordination.messages.state.TransactionStatus
 import com.datastax.driver.core.utils.UUIDs
-import org.scalatest.{Matchers, FlatSpec}
+import org.scalatest.{FlatSpec, Matchers}
 
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer

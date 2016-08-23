@@ -1,9 +1,8 @@
 package com.bwsw.tstreams.metadata
 
-import java.net.InetSocketAddress
 import java.util.concurrent.locks.ReentrantLock
 
-import com.bwsw.tstreams.common.{CassandraConnectorConf, MetadataConnectionPool, CassandraHelper}
+import com.bwsw.tstreams.common.{CassandraConnectorConf, CassandraHelper, MetadataConnectionPool}
 import com.bwsw.tstreams.entities._
 import com.datastax.driver.core._
 import org.slf4j.LoggerFactory

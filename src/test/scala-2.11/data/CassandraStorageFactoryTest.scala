@@ -1,7 +1,6 @@
 package data
 
-import com.bwsw.tstreams.data.cassandra.{Storage, Factory}
-import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
+import com.bwsw.tstreams.data.cassandra.Factory
 import testutils.TestUtils
 
 class CassandraStorageFactoryTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
