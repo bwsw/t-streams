@@ -58,3 +58,4 @@ case class Options[T](val transactionsPreload:    Int,
                                 useLastOffset = useLastOffset)
 
 }
+
