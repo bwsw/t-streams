@@ -378,7 +378,12 @@ object TSF_Dictionary {
       /**
         * thread pool size
         */
-      val THREAD_POOL = "consumer.subscriber.thread-pool"
+      val TRANSACTION_BUFFER_THREAD_POOL = "consumer.subscriber.transaction-buffer-thread-pool"
+
+      /**
+        * processing engines pool
+        */
+      val PROCESSING_ENGINES_THREAD_POOL = "consumer.subscriber.processing-engines-thread-pool"
 
       /**
         * thread pool size
@@ -538,10 +543,16 @@ class TStreamsFactory(envname: String = "T-streams") {
   propertyMap += (TSF_Dictionary.Consumer.Subscriber.BIND_PORT -> 18001)
   propertyMap += (TSF_Dictionary.Consumer.Subscriber.PERSISTENT_QUEUE_PATH -> "/tmp")
 
-  val Subscriber_thread_pool_default = 4
-  val Subscriber_thread_pool_min = 1
-  val Subscriber_thread_pool_max = 64
-  propertyMap += (TSF_Dictionary.Consumer.Subscriber.THREAD_POOL -> Subscriber_thread_pool_default)
+  val Subscriber_transaction_buffer_thread_pool_default = 4
+  val Subscriber_transaction_buffer_thread_pool_min = 1
+  val Subscriber_transaction_buffer_thread_pool_max = 64
+  propertyMap += (TSF_Dictionary.Consumer.Subscriber.TRANSACTION_BUFFER_THREAD_POOL -> Subscriber_transaction_buffer_thread_pool_default)
+
+  val Subscriber_processing_engines_thread_pool_default = 4
+  val Subscriber_processing_enginesr_thread_pool_min = 1
+  val Subscriber_processing_engines_thread_pool_max = 64
+  propertyMap += (TSF_Dictionary.Consumer.Subscriber.PROCESSING_ENGINES_THREAD_POOL -> Subscriber_processing_engines_thread_pool_default)
+
 
   val Subscriber_polling_frequency_delay_default = 100
   val Subscriber_polling_frequency_delay_min = 1
@@ -981,9 +992,9 @@ class TStreamsFactory(envname: String = "T-streams") {
       pAssertIntRange(conn_timeout,
         Coordination_connection_timeout_min, Coordination_connection_timeout_max)
 
-      val thread_pool = pAsInt(TSF_Dictionary.Consumer.Subscriber.THREAD_POOL, Subscriber_thread_pool_default)
+      val thread_pool = pAsInt(TSF_Dictionary.Consumer.Subscriber.TRANSACTION_BUFFER_THREAD_POOL, Subscriber_transaction_buffer_thread_pool_default)
       pAssertIntRange(thread_pool,
-        Subscriber_thread_pool_min, Subscriber_thread_pool_max)
+        Subscriber_transaction_buffer_thread_pool_min, Subscriber_transaction_buffer_thread_pool_max)
 
       val polling_frequency = pAsInt(TSF_Dictionary.Consumer.Subscriber.POLLING_FREQUENCY_DELAY, Subscriber_polling_frequency_delay_default)
       pAssertIntRange(polling_frequency,
