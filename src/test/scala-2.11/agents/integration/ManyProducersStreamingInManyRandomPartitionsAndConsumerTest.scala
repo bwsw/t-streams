@@ -7,7 +7,7 @@ import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import testutils._
 
 
-class AManyProducersStreamingInManyRandomPartitionsAndConsumerTest extends FlatSpec
+class ManyProducersStreamingInManyRandomPartitionsAndConsumerTest extends FlatSpec
   with Matchers with BeforeAndAfterAll with TestUtils {
 
   val timeoutForWaiting = 60 * 5

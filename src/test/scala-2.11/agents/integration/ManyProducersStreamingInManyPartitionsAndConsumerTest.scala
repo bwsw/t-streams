@@ -8,7 +8,7 @@ import testutils._
 
 
 
-class AManyProducersStreamingInManyPartitionsAndConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
+class ManyProducersStreamingInManyPartitionsAndConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
   val timeoutForWaiting = 60 * 5
   val totalPartitions = 4
   val totalTxn = 100

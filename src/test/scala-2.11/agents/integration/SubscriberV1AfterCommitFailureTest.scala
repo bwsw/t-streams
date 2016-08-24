@@ -13,7 +13,7 @@ import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import testutils.{LocalGeneratorCreator, TestUtils}
 
 //TODO refactoring
-class ABasicSubscriberAfterCommitFailureTest extends FlatSpec with Matchers
+class SubscriberV1AfterCommitFailureTest extends FlatSpec with Matchers
   with BeforeAndAfterAll with TestUtils {
 
   System.setProperty("DEBUG", "true")

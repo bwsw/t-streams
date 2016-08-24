@@ -7,7 +7,7 @@ import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import testutils._
 
 
-class AManyProducersStreamingInManyPartitionsAndConsumerWithCheckpointsTest extends FlatSpec
+class ManyProducersStreamingInManyPartitionsAndConsumerWithCheckpointsTest extends FlatSpec
   with Matchers with BeforeAndAfterAll with TestUtils {
 
   val totalPartitions = 4

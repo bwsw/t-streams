@@ -1046,8 +1046,10 @@ class TStreamsFactory() {
     assert(bind_host != null)
     val bind_port = pAsString(TSF_Dictionary.Consumer.Subscriber.BIND_PORT)
     assert(bind_port != null)
+
     val endpoints = pAsString(TSF_Dictionary.Coordination.ENDPOINTS)
     assert(endpoints != null)
+
     val root = pAsString(TSF_Dictionary.Coordination.ROOT)
     assert(root != null)
 

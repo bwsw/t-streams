@@ -2,17 +2,21 @@ package agents.integration
 
 import java.util.UUID
 import java.util.concurrent.locks.ReentrantLock
-import java.util.concurrent.{CountDownLatch, TimeUnit}
 
 import com.bwsw.tstreams.agents.consumer.Offset.Oldest
 import com.bwsw.tstreams.agents.consumer.subscriber.{Callback, SubscribingConsumer}
 import com.bwsw.tstreams.agents.producer.NewTransactionProducerPolicy
+import com.bwsw.tstreams.debug.GlobalHooks
 import com.bwsw.tstreams.env.TSF_Dictionary
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
-import testutils._
+import testutils.{LocalGeneratorCreator, TestUtils}
 
-//TODO refactoring
-class ABasicSubscriberTotalAmountTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
+class SubscriberV1PreCommitFailureTest extends FlatSpec with Matchers
+  with BeforeAndAfterAll with TestUtils {
+
+  System.setProperty("DEBUG", "true")
+  GlobalHooks.addHook(GlobalHooks.preCommitFailure, () => throw new RuntimeException)
+
   f.setProperty(TSF_Dictionary.Stream.NAME,"test_stream").
     setProperty(TSF_Dictionary.Stream.PARTITIONS,3).
     setProperty(TSF_Dictionary.Stream.TTL, 60 * 10).
@@ -26,12 +30,9 @@ class ABasicSubscriberTotalAmountTest extends FlatSpec with Matchers with Before
 
   val lock = new ReentrantLock()
   var acc = 0
-  val totalTxns = 5
+  val totalTxns = 30
   val dataInTxn = 10
   val data = randomString
-  val l1 = new CountDownLatch(1)
-  val l2 = new CountDownLatch(1)
-  val l3 = new CountDownLatch(1)
 
   val producer = f.getProducer[String](
     name = "test_producer",
@@ -51,16 +52,6 @@ class ABasicSubscriberTotalAmountTest extends FlatSpec with Matchers with Before
 
       subscriber.setStreamPartitionOffset(partition, transactionUuid)
       subscriber.checkpoint()
-
-      if (acc == totalTxns)
-        l1.countDown()
-
-      if (acc == totalTxns * 2)
-        l2.countDown()
-
-      if (acc == totalTxns * 4)
-        l3.countDown()
-
       lock.unlock()
     }
   }
@@ -83,37 +74,20 @@ class ABasicSubscriberTotalAmountTest extends FlatSpec with Matchers with Before
     offset = Oldest,
     isUseLastOffset = true)
 
-  val s3 = f.getSubscriber[String](
-    name = "test_subscriber-2",
-    txnGenerator = LocalGeneratorCreator.getGen(),
-    converter = arrayByteToStringConverter,
-    partitions = List(0,1,2),
-    callback = callback,
-    offset = Oldest,
-    isUseLastOffset = true)
-
-  "Subscriber consumer with same name" should "retrieve all sent messages without duplicates" in {
+  "subscribe consumer" should "retrieve all sent messages" in {
 
     s1.start()
-    sendTxnsAndWait(totalTxns, dataInTxn, data, l1)
+    sendTxnsAndWait(totalTxns, dataInTxn, data)
     s1.stop()
 
     s2.start()
-    sendTxnsAndWait(totalTxns, dataInTxn, data, l2)
+    sendTxnsAndWait(totalTxns, dataInTxn, data)
     s2.stop()
 
-    acc shouldEqual totalTxns * 2
+    acc shouldEqual 0
   }
 
-  "Subscriber consumer with other name" should "retrieve all sent messages" in {
-    s3.start()
-    val r = l3.await(100000, TimeUnit.MILLISECONDS)
-    r shouldBe true
-    s3.stop()
-    acc shouldEqual totalTxns * 4
-  }
-
-  def sendTxnsAndWait(totalTxns: Int, dataInTxn: Int, data: String, l: CountDownLatch) = {
+  def sendTxnsAndWait(totalTxns: Int, dataInTxn: Int, data: String) = {
     (0 until totalTxns) foreach { x =>
       val txn = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
       (0 until dataInTxn) foreach { _ =>
@@ -125,11 +99,11 @@ class ABasicSubscriberTotalAmountTest extends FlatSpec with Matchers with Before
         case e: RuntimeException =>
       }
     }
-    val r = l.await(100000, TimeUnit.MILLISECONDS)
-    r shouldBe true
   }
 
   override def afterAll(): Unit = {
+    System.clearProperty("DEBUG")
+    GlobalHooks.clear()
     producer.stop()
     onAfterAll()
   }
