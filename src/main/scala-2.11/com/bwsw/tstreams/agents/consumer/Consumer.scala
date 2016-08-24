@@ -228,7 +228,7 @@ class Consumer[T](val name: String,
         moreItems = false
       } else {
         val t = txns.dequeue()
-        if(comparator.compare(to, t.getTxnUUID()) == 1) {
+        if(comparator.compare(to, t.getTxnUUID()) > -1) {
           if (t.getCount() >= 0)
             okList.append(t)
           else
@@ -240,7 +240,7 @@ class Consumer[T](val name: String,
         }
       }
     }
-    if(addFlag && comparator.compare(to, okList.last.getTxnUUID()) == 1)
+    if(okList.size > 0 && addFlag && comparator.compare(to, okList.last.getTxnUUID()) == 1)
       okList.appendAll(if (okList.size > 0) getTransactionsFromTo(partition, okList.last.getTxnUUID(), to) else ListBuffer[Transaction[T]]())
 
     okList

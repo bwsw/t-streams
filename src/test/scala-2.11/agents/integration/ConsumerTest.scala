@@ -69,7 +69,7 @@ class ConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll with Te
 
   "consumer.getLastTransaction" should "return last closed transaction" in {
     val commitEntity = new CommitEntity("commit_log", cluster.connect(randomKeyspace))
-    val txns = for (i <- 0 until 500) yield UUIDs.timeBased()
+    val txns = for (i <- 0 until 100) yield UUIDs.timeBased()
     val txn: UUID = txns.head
     commitEntity.commit("test_stream", 1, txns.head, 1, 120)
     txns.drop(1) foreach { x =>
@@ -79,6 +79,65 @@ class ConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll with Te
     val retrievedTxn = retrievedTxnOpt.get
     retrievedTxn.getTxnUUID shouldEqual txn
   }
+
+  "consumer.getTransactionsFromTo" should "return all transactions if no incomplete" in {
+    val commitEntity = new CommitEntity("commit_log", cluster.connect(randomKeyspace))
+    val ALL = 100
+    val txns = for (i <- 0 until ALL) yield UUIDs.timeBased()
+    val txnFirst = txns.head
+    val txnLast = txns.last
+    txns foreach { x =>
+      commitEntity.commit("test_stream", 1, x, 1, 120)
+    }
+    val res = consumer.getTransactionsFromTo(1, txnFirst, txnLast)
+    res.size shouldBe txns.drop(1).size
+  }
+
+  "consumer.getTransactionsFromTo" should "return only transactions up to 1st incomplete" in {
+    val commitEntity = new CommitEntity("commit_log", cluster.connect(randomKeyspace))
+    val FIRST = 30
+    val LAST = 100
+    val txns1 = for (i <- 0 until FIRST) yield UUIDs.timeBased()
+    txns1 foreach { x =>
+      commitEntity.commit("test_stream", 1, x, 1, 120)
+    }
+    commitEntity.commit("test_stream", 1, UUIDs.timeBased(), -1, 120)
+    val txns2 = for (i <- FIRST until LAST) yield UUIDs.timeBased()
+    txns2 foreach { x =>
+      commitEntity.commit("test_stream", 1, x, 1, 120)
+    }
+    val txns = txns1 ++ txns2
+    val txnFirst = txns.head
+    val txnLast = txns.last
+
+
+    val res = consumer.getTransactionsFromTo(1, txnFirst, txnLast)
+    res.size shouldBe txns1.drop(1).size
+  }
+
+  "consumer.getTransactionsFromTo" should "return none if empty" in {
+    val commitEntity = new CommitEntity("commit_log", cluster.connect(randomKeyspace))
+    val ALL = 100
+    val txns = for (i <- 0 until ALL) yield UUIDs.timeBased()
+    val txnFirst = txns.head
+    val txnLast = txns.last
+    val res = consumer.getTransactionsFromTo(1, txnFirst, txnLast)
+    res.size shouldBe 0
+  }
+
+  "consumer.getTransactionsFromTo" should "return none if to < from" in {
+    val commitEntity = new CommitEntity("commit_log", cluster.connect(randomKeyspace))
+    val ALL = 100
+    val txns = for (i <- 0 until ALL) yield UUIDs.timeBased()
+    val txnFirst = txns.head
+    val txnLast = txns.tail.tail.tail.head
+    txns foreach { x =>
+      commitEntity.commit("test_stream", 1, x, 1, 120)
+    }
+    val res = consumer.getTransactionsFromTo(1, txnLast, txnFirst)
+    res.size shouldBe 0
+  }
+
 
   override def afterAll(): Unit = {
     producer.stop()
