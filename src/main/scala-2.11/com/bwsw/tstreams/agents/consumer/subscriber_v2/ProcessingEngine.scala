@@ -97,6 +97,7 @@ class ProcessingEngine[T](consumer: TransactionOperator[T],
                                     queueOrderID    = 0,
                                     itemCount       = t.get.getCount(), state = TransactionStatus.postCheckpoint,
                                     ttl             = -1))
+    Subscriber.logger.info(s"Enqueued ${tl}")
     queue.put(tl)
   }
 

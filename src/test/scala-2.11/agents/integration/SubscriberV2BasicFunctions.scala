@@ -1,10 +1,12 @@
 package agents.integration
 
 import java.util.UUID
+import java.util.concurrent.{TimeUnit, CountDownLatch}
 
 import com.bwsw.tstreams.agents.consumer.Offset.Oldest
 import com.bwsw.tstreams.agents.consumer.TransactionOperator
 import com.bwsw.tstreams.agents.consumer.subscriber_v2.Callback
+import com.bwsw.tstreams.agents.producer.NewTransactionProducerPolicy
 import com.bwsw.tstreams.env.TSF_Dictionary
 import org.scalatest.{BeforeAndAfterAll, Matchers, FlatSpec}
 import testutils.{LocalGeneratorCreator, TestUtils}
@@ -23,6 +25,13 @@ class SubscriberV2BasicFunctions extends FlatSpec with Matchers with BeforeAndAf
     setProperty(TSF_Dictionary.Producer.Transaction.KEEP_ALIVE, 1).
     setProperty(TSF_Dictionary.Consumer.TRANSACTION_PRELOAD, 10).
     setProperty(TSF_Dictionary.Consumer.DATA_PRELOAD, 10)
+
+  val producer = f.getProducer[String](
+    name = "test_producer",
+    txnGenerator = LocalGeneratorCreator.getGen(),
+    converter = stringToArrayByteConverter,
+    partitions = List(0,1,2),
+    isLowPriority = false)
 
   it should "start and stop with default options" in {
     val s = f.getSubscriberV2[String](name = "sv2",
@@ -95,4 +104,33 @@ class SubscriberV2BasicFunctions extends FlatSpec with Matchers with BeforeAndAf
     }
     flag shouldBe true
   }
+
+  it should "receive all transactions producer by producer previously" in {
+    val l = new CountDownLatch(1)
+    var i: Int = 0
+    val TOTAL = 1000
+    for(it <- 0 until TOTAL) {
+      val txn = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
+      txn.send("test")
+      txn.checkpoint()
+    }
+
+    val s = f.getSubscriberV2[String](name = "sv2",
+      txnGenerator = LocalGeneratorCreator.getGen(),
+      converter = arrayByteToStringConverter, partitions = Set(0,1,2),
+      offset = Oldest,
+      isUseLastOffset = true,
+      callback = new Callback[String] {
+        override def onEvent(consumer: TransactionOperator[String], partition: Int, uuid: UUID, count: Int): Unit = {
+          i += 1
+          if(i == TOTAL)
+            l.countDown()
+        }
+      })
+    s.start()
+    l.await(10, TimeUnit.SECONDS)
+    s.stop()
+    i shouldBe TOTAL
+  }
+
 }
