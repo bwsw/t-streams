@@ -202,7 +202,7 @@ object ProtocolMessageSerializer {
           tokens(3).asInstanceOf[TransactionStatus.ProducerTransactionStatus],
           tokens(4).toString.toInt,
           tokens(5).toString.toInt,
-          tokens(6).toString.toInt)
+          tokens(6).toString.toLong)
       case "AS" =>
         assert(tokens.size == 4)
         AgentSettings(tokens(1).toString, tokens(2).toString.toInt, tokens(3).toString.toInt)
