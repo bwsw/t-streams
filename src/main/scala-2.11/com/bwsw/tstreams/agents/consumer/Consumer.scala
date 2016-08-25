@@ -204,6 +204,7 @@ class Consumer[T](val name: String,
         while (queue.nonEmpty) {
           val txn: Transaction[T] = queue.dequeue()
           if (txn.getCount() != -1) {
+            txn.attach(this)
             return Option[Transaction[T]](txn)
           }
           curUuid = txn.getTxnUUID()
