@@ -82,6 +82,7 @@ class ProcessingEngine[T](consumer: TransactionOperator[T],
     assert(partitions.contains(partition))
 
     val t = consumer.getLastTransaction(partition)
+
     if(!t.isDefined)
       return
 
@@ -97,7 +98,10 @@ class ProcessingEngine[T](consumer: TransactionOperator[T],
                                     queueOrderID    = 0,
                                     itemCount       = t.get.getCount(), state = TransactionStatus.postCheckpoint,
                                     ttl             = -1))
-    Subscriber.logger.info(s"Enqueued ${tl}")
+
+    if(Subscriber.logger.isDebugEnabled())
+      Subscriber.logger.debug(s"Enqueued ${tl}")
+
     queue.put(tl)
   }
 

@@ -25,16 +25,16 @@ class CommitEntity(commitLog: String, session: Session) {
 
 
   private val selectTransactionsMoreThanStatement = session
-    .prepare(s"SELECT transaction,cnt,TTL(cnt) FROM $commitLog WHERE stream = ? AND partition = ? AND transaction > ? LIMIT ?")
+    .prepare(s"SELECT transaction,cnt,TTL(cnt) FROM $commitLog WHERE stream = ? AND partition = ? AND transaction > ? ORDER BY transaction ASC LIMIT ?")
 
   private val selectTransactionsMoreThanStatementWithoutLimit = session
-    .prepare(s"SELECT transaction,cnt,TTL(cnt) FROM $commitLog WHERE stream = ? AND partition = ? AND transaction > ?")
+    .prepare(s"SELECT transaction,cnt,TTL(cnt) FROM $commitLog WHERE stream = ? AND partition = ? AND transaction > ? ORDER BY transaction ASC")
 
   private val selectTransactionsMoreThanAndLessOrEqualThanStatement = session
-    .prepare(s"SELECT transaction,cnt,TTL(cnt) FROM $commitLog WHERE stream = ? AND partition = ? AND transaction > ? AND transaction <= ?")
+    .prepare(s"SELECT transaction,cnt,TTL(cnt) FROM $commitLog WHERE stream = ? AND partition = ? AND transaction > ? AND transaction <= ? ORDER BY transaction ASC")
 
   private val selectTransactionsLessThanStatement = session
-    .prepare(s"SELECT transaction,cnt,TTL(cnt) FROM $commitLog WHERE stream = ? AND partition = ? AND transaction < ? LIMIT ?")
+    .prepare(s"SELECT transaction,cnt,TTL(cnt) FROM $commitLog WHERE stream = ? AND partition = ? AND transaction < ? ORDER BY transaction DESC LIMIT ?")
 
   private val selectTransactionAmountStatement = session
     .prepare(s"SELECT cnt,TTL(cnt) FROM $commitLog WHERE stream = ? AND partition = ? AND transaction = ? LIMIT 1")
@@ -164,7 +164,7 @@ class CommitEntity(commitLog: String, session: Session) {
       val value = it.next()
       q.enqueue(new Transaction(partition, value.getUUID("transaction"), value.getInt("cnt"), value.getInt("ttl(cnt)")))
     }
-    q.reverse
+    q//.reverse
   }
 
 

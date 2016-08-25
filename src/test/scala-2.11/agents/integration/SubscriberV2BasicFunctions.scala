@@ -30,7 +30,7 @@ class SubscriberV2BasicFunctions extends FlatSpec with Matchers with BeforeAndAf
     name = "test_producer",
     txnGenerator = LocalGeneratorCreator.getGen(),
     converter = stringToArrayByteConverter,
-    partitions = List(0,1,2),
+    partitions = List(0),
     isLowPriority = false)
 
   it should "start and stop with default options" in {
@@ -109,15 +109,18 @@ class SubscriberV2BasicFunctions extends FlatSpec with Matchers with BeforeAndAf
     val l = new CountDownLatch(1)
     var i: Int = 0
     val TOTAL = 1000
+    var uuid: UUID = null
     for(it <- 0 until TOTAL) {
       val txn = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
       txn.send("test")
       txn.checkpoint()
+      uuid = txn.getTransactionUUID()
     }
+    producer.stop()
 
     val s = f.getSubscriberV2[String](name = "sv2",
       txnGenerator = LocalGeneratorCreator.getGen(),
-      converter = arrayByteToStringConverter, partitions = Set(0,1,2),
+      converter = arrayByteToStringConverter, partitions = Set(0),
       offset = Oldest,
       isUseLastOffset = true,
       callback = new Callback[String] {

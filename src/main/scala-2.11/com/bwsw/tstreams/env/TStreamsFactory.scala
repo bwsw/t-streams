@@ -555,9 +555,9 @@ class TStreamsFactory() {
   propertyMap += (TSF_Dictionary.Consumer.Subscriber.PROCESSING_ENGINES_THREAD_POOL -> Subscriber_processing_engines_thread_pool_default)
 
 
-  val Subscriber_polling_frequency_delay_default = 100
+  val Subscriber_polling_frequency_delay_default = 1000
   val Subscriber_polling_frequency_delay_min = 1
-  val Subscriber_polling_frequency_delay_max = 1000
+  val Subscriber_polling_frequency_delay_max = 10000
   propertyMap += (TSF_Dictionary.Consumer.Subscriber.POLLING_FREQUENCY_DELAY -> Subscriber_polling_frequency_delay_default)
 
 

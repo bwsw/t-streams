@@ -171,5 +171,10 @@ class Subscriber[T](val name: String,
     return maxThreads
   }
 
+  /**
+    * Returns consumer inner object
+    * @return
+    */
+  def getConsumer() = consumer
 
 }
