@@ -36,4 +36,19 @@ class SubscriberV2BasicFunctions extends FlatSpec with Matchers with BeforeAndAf
     s.start()
     s.stop()
   }
+
+  it should "allow start and stop several times" in {
+    val s = f.getSubscriberV2[String](name = "sv2",
+      txnGenerator = LocalGeneratorCreator.getGen(),
+      converter = arrayByteToStringConverter, partitions = Set(0,1,2),
+      offset = Oldest,
+      isUseLastOffset = true,
+      callback = new Callback[String] {
+        override def onEvent(consumer: TransactionOperator[String], partition: Int, uuid: UUID, count: Int): Unit = {}
+      })
+    s.start()
+    s.stop()
+    s.start()
+    s.stop()
+  }
 }

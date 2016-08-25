@@ -366,5 +366,9 @@ class Consumer[T](val name: String,
   def stop() = {
     if (!isStarted.getAndSet(false))
       throw new IllegalStateException("Consumer is not started. Start consumer first.")
+
+    offsetsForCheckpoint.clear()
+    currentOffsets.clear()
+    transactionBuffer.clear()
   }
 }

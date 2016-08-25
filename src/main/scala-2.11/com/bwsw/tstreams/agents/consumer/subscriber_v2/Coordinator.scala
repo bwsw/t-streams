@@ -56,10 +56,10 @@ class Coordinator() {
         dlm.create[String](s"/subscribers/event/$stream/$p",s"$stream/$p", CreateMode.PERSISTENT)
       } catch {
         case e: KeeperException =>
+        case e: IllegalStateException =>
       }
 
       try {
-
         dlm.delete(getSubscriberMembershipPath(p))
       } catch {
         case e: KeeperException =>

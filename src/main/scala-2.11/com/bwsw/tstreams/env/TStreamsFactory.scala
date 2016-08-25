@@ -549,7 +549,7 @@ class TStreamsFactory() {
   val Subscriber_transaction_buffer_thread_pool_max = 64
   propertyMap += (TSF_Dictionary.Consumer.Subscriber.TRANSACTION_BUFFER_THREAD_POOL -> Subscriber_transaction_buffer_thread_pool_default)
 
-  val Subscriber_processing_engines_thread_pool_default = 4
+  val Subscriber_processing_engines_thread_pool_default = 1
   val Subscriber_processing_engines_thread_pool_min = 1
   val Subscriber_processing_engines_thread_pool_max = 64
   propertyMap += (TSF_Dictionary.Consumer.Subscriber.PROCESSING_ENGINES_THREAD_POOL -> Subscriber_processing_engines_thread_pool_default)
