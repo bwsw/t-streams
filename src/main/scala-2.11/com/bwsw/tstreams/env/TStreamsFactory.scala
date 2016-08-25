@@ -1023,7 +1023,7 @@ class TStreamsFactory() {
   def getSubscriberV2[T](name: String,
                               txnGenerator: IUUIDGenerator,
                               converter: IConverter[Array[Byte], T],
-                              partitions: List[Int],
+                              partitions: Set[Int],
                               callback: com.bwsw.tstreams.agents.consumer.subscriber_v2.Callback[T],
                               offset: IOffset,
                               isUseLastOffset: Boolean = true
@@ -1037,7 +1037,7 @@ class TStreamsFactory() {
 
     val consumerOptions = getBasicConsumerOptions(txnGenerator = txnGenerator,
                                                   stream        = stream,
-                                                  partitions    = partitions,
+                                                  partitions    = partitions.toList,
                                                   converter     = converter,
                                                   offset        = offset,
                                                   isUseLastOffset = isUseLastOffset)

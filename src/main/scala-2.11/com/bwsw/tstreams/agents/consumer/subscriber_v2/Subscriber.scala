@@ -36,6 +36,21 @@ class Subscriber[T](val name: String,
   val coordinator = new Coordinator()
 
   /**
+    * Erathosphene's grating algorithm
+    * @param parts
+    * @param thID
+    * @param total
+    * @return
+    */
+  private def distributeBetweenWorkerThreads(parts: Set[Int], thID: Int, total: Int): Set[Int] = {
+    val array = parts.toArray
+    val set = mutable.Set[Int]()
+    for(i <- thID until array.size by total)
+      set.add(array(i))
+    set.toSet
+  }
+
+  /**
     *  Starts the subscriber
     */
   def start() = {
@@ -45,12 +60,15 @@ class Subscriber[T](val name: String,
 
     val txnBuffers = mutable.Map[Int, TransactionBuffer]()
 
+    consumer.start()
+
     /**
       * Initialize processing engines
       */
 
     for(thID <- 0 until peWorkerThreads) {
-      val parts: Set[Int] = Set[Int]().empty ++ options.readPolicy.getUsedPartitions() filter (p => p % thID == 0)
+      val parts: Set[Int] = distributeBetweenWorkerThreads(Set[Int]().empty ++ options.readPolicy.getUsedPartitions(), thID, peWorkerThreads)
+      Subscriber.logger.warn(s"Worker ${thID} got ${parts}")
       processingEngines(thID) = new ProcessingEngine[T](consumer, parts, options.txnQueueBuilder, callback)
     }
 
@@ -77,8 +95,6 @@ class Subscriber[T](val name: String,
 
       txnBufferWorkers(thID) = worker
     }
-
-    consumer.start()
 
     for(thID <- 0 until peWorkerThreads) {
       processingEngines(thID).getExecutor().submit(new Poller[T](processingEngines(thID), options.pollingFrequencyDelay))
