@@ -53,7 +53,8 @@ class Coordinator() {
   private def initializeState(): Unit = {
     partitions foreach (p => {
       try {
-        dlm.create[String](s"/subscribers/event/$stream/$p",s"$stream/$p", CreateMode.PERSISTENT)
+        if (!dlm.exist(s"/subscribers/event/$stream/$p"))
+          dlm.create[String](s"/subscribers/event/$stream/$p",s"$stream/$p", CreateMode.PERSISTENT)
       } catch {
         case e: KeeperException =>
         case e: IllegalStateException =>
