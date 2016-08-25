@@ -87,7 +87,7 @@ case class NewTransactionRequest(senderID: String, receiverID: String, partition
       agent.submitPipelinedTaskToCassandraExecutor(new Runnable {
           def run(): Unit = agent.getProducer.openTxnLocal(txnUUID, partition,
               onComplete = () => {
-                agent.notifyMaterialize(TransactionStateMessage(txnUUID, -1, TransactionStatus.materialize, partition, agent.getUniqueAgentID(), -1), senderID)
+                agent.notifyMaterialize(TransactionStateMessage(txnUUID, -1, TransactionStatus.materialize, partition, agent.getUniqueAgentID(), -1, 0), senderID)
 
                 if(IMessage.logger.isDebugEnabled)
                   IMessage.logger.debug(s"Responded with complete ready TXN: ${txnUUID}")

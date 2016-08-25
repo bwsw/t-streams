@@ -18,5 +18,6 @@ case class TransactionStateMessage( txnUuid: UUID,
                                     status: ProducerTransactionStatus,
                                     partition: Int,
                                     masterID: Int,
-                                    orderID: Long)
+                                    orderID: Long,
+                                    count: Int)
 

@@ -49,13 +49,13 @@ class ProtocolMessageSerializerTest extends FlatSpec with Matchers {
     clazz shouldEqual req
   }
   "TStreams serializer" should "serialize and deserialize PublishRequest" in {
-    val clazz = PublishRequest("snd", "rcv", TransactionStateMessage(UUID.randomUUID(), 228, TransactionStatus.cancel, 1488, 1, 0))
+    val clazz = PublishRequest("snd", "rcv", TransactionStateMessage(UUID.randomUUID(), 228, TransactionStatus.cancel, 1488, 1, 0, 2))
     val string = ProtocolMessageSerializer.serialize(clazz)
     val req = ProtocolMessageSerializer.deserialize[PublishRequest](string)
     clazz shouldEqual req
   }
   "TStreams serializer" should "serialize and deserialize PublishResponse" in {
-    val clazz = PublishResponse("snd", "rcv", TransactionStateMessage(UUID.randomUUID(), 228, TransactionStatus.cancel, 1488, 1, 0))
+    val clazz = PublishResponse("snd", "rcv", TransactionStateMessage(UUID.randomUUID(), 228, TransactionStatus.cancel, 1488, 1, 0, 2))
     val string = ProtocolMessageSerializer.serialize(clazz)
     val req = ProtocolMessageSerializer.deserialize[PublishResponse](string)
     clazz shouldEqual req
@@ -85,7 +85,7 @@ class ProtocolMessageSerializerTest extends FlatSpec with Matchers {
     clazz shouldEqual req
   }
   "TStreams serializer" should "serialize and deserialize PTM" in {
-    val clazz = TransactionStateMessage(UUID.randomUUID(), 123, TransactionStatus.postCheckpoint, 5, 1, 2)
+    val clazz = TransactionStateMessage(UUID.randomUUID(), 123, TransactionStatus.postCheckpoint, 5, 1, 2, 3)
     val string = ProtocolMessageSerializer.serialize(clazz)
     val req = ProtocolMessageSerializer.deserialize[TransactionStateMessage](string)
     clazz shouldEqual req

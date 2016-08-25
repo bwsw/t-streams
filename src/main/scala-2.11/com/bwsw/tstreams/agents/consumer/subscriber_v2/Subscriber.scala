@@ -20,20 +20,20 @@ class Subscriber[T](val name: String,
                     val options: Options[T],
                     val callback: Callback[T]) {
 
-  val txnBufferWorkers = mutable.Map[Int, TransactionBufferWorker]()
-  val processingEngines = mutable.Map[Int, ProcessingEngine[T]]()
+  private val txnBufferWorkers = mutable.Map[Int, TransactionBufferWorker]()
+  private val processingEngines = mutable.Map[Int, ProcessingEngine[T]]()
 
-  val bufferWorkerThreads = calculateBufferWorkersThreadAmount()
-  val peWorkerThreads     = calculateProcessingEngineWorkersThreadAmount()
+  private val bufferWorkerThreads = calculateBufferWorkersThreadAmount()
+  private val peWorkerThreads     = calculateProcessingEngineWorkersThreadAmount()
 
-  val consumer = new com.bwsw.tstreams.agents.consumer.Consumer[T](
+  private val consumer = new com.bwsw.tstreams.agents.consumer.Consumer[T](
       name,
       stream,
       options.getConsumerOptions())
 
-  val isStarted = new AtomicBoolean(false)
+  private val isStarted = new AtomicBoolean(false)
 
-  val coordinator = new Coordinator()
+  private val coordinator = new Coordinator()
 
   /**
     * Erathosphene's grating algorithm

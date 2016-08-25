@@ -139,7 +139,8 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
           status = TransactionStatus.cancel,
           partition = partition,
           masterID = txnOwner.p2pAgent.getUniqueAgentID(),
-          orderID = -1)
+          orderID = -1,
+          count = 0)
         txnOwner.p2pAgent.publish(msg)
         if(Transaction.logger.isDebugEnabled)
         {
@@ -186,7 +187,8 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
       status = TransactionStatus.postCheckpoint,
       partition = partition,
       masterID = txnOwner.p2pAgent.getUniqueAgentID(),
-      orderID = txnOwner.p2pAgent.getAndIncSequentialID(partition)
+      orderID = txnOwner.p2pAgent.getAndIncSequentialID(partition),
+      count = getDataItemsCount()
     ))
 
     if(Transaction.logger.isDebugEnabled) {
@@ -211,7 +213,8 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
         status = TransactionStatus.preCheckpoint,
         partition = partition,
         masterID = txnOwner.p2pAgent.getUniqueAgentID(),
-        orderID = -1))
+        orderID = -1,
+        count = 0))
 
       //debug purposes only
       {
@@ -244,7 +247,7 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
         status = TransactionStatus.cancel,
         partition = partition,
         masterID = txnOwner.p2pAgent.getUniqueAgentID(),
-        orderID = -1))
+        orderID = -1, count = 0))
     }
   }
 
@@ -277,7 +280,8 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
             status = TransactionStatus.preCheckpoint,
             partition = partition,
             masterID = txnOwner.p2pAgent.getUniqueAgentID(),
-            orderID = -1))
+            orderID = -1,
+            count = 0))
 
           //debug purposes only
           GlobalHooks.invoke(GlobalHooks.preCommitFailure)
@@ -301,7 +305,8 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
             status = TransactionStatus.postCheckpoint,
             partition = partition,
             masterID = txnOwner.p2pAgent.getUniqueAgentID(),
-            orderID = txnOwner.p2pAgent.getAndIncSequentialID(partition)))
+            orderID = txnOwner.p2pAgent.getAndIncSequentialID(partition),
+            count = getDataItemsCount()))
 
           if(Transaction.logger.isDebugEnabled) {
             Transaction.logger.debug("[FINAL CHECKPOINT PARTITION_{}] ts={}", partition, transactionUuid.toString)
@@ -314,7 +319,8 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
             status = TransactionStatus.cancel,
             partition = partition,
             masterID = txnOwner.p2pAgent.getUniqueAgentID(),
-            orderID = -1))
+            orderID = -1,
+            count = 0))
         }
       }
     })
@@ -334,7 +340,8 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
       status = TransactionStatus.update,
       partition = partition,
       masterID = txnOwner.p2pAgent.getUniqueAgentID(),
-      orderID = -1))
+      orderID = -1,
+      count = 0))
 
     if(Transaction.logger.isDebugEnabled) {
       Transaction.logger.debug(s"[KEEP_ALIVE THREAD PARTITION_PARTITION_${partition}] ts=${transactionUuid.toString} status=${TransactionStatus.update}")
@@ -392,7 +399,8 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
       status = TransactionStatus.preCheckpoint,
       partition = partition,
       masterID = txnOwner.p2pAgent.getUniqueAgentID(),
-      orderID = -1)
+      orderID = -1,
+      count = 0)
 
     val finalCheckpoint = TransactionStateMessage(
       txnUuid = getTransactionUUID,
@@ -400,7 +408,8 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
       status = TransactionStatus.postCheckpoint,
       partition = partition,
       masterID = txnOwner.p2pAgent.getUniqueAgentID(),
-      orderID = txnOwner.p2pAgent.getAndIncSequentialID(partition))
+      orderID = txnOwner.p2pAgent.getAndIncSequentialID(partition),
+      count = getDataItemsCount())
 
     ProducerCheckpointInfo(transactionRef = this,
       agent = txnOwner.p2pAgent,

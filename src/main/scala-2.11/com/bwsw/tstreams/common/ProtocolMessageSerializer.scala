@@ -60,9 +60,9 @@ object ProtocolMessageSerializer {
       case x: TransactionResponse =>
         s"{TRs,${x.senderID},${x.receiverID},${x.txnUUID.toString},${x.partition},${x.msgID},${x.remotePeerTimestamp}}"
 
-      case TransactionStateMessage(txnUuid, ttl, status, partition, masterID, orderID) =>
+      case TransactionStateMessage(txnUuid, ttl, status, partition, masterID, orderID, count) =>
         val serializedStatus = serializeInternal(status)
-        s"{PTM,${txnUuid.toString},$ttl,$serializedStatus,$partition,$masterID,$orderID}"
+        s"{PTM,${txnUuid.toString},$ttl,$serializedStatus,$partition,$masterID,$orderID,$count}"
 
       case TransactionStatus.preCheckpoint => s"{P}"
       case TransactionStatus.`postCheckpoint` => "{F}"
@@ -196,13 +196,14 @@ object ProtocolMessageSerializer {
         res.remotePeerTimestamp = tokens(6).toString.toLong
         res
       case "PTM" =>
-        assert(tokens.size == 7)
+        assert(tokens.size == 8)
         TransactionStateMessage(UUID.fromString(tokens(1).toString),
           tokens(2).toString.toInt,
           tokens(3).asInstanceOf[TransactionStatus.ProducerTransactionStatus],
           tokens(4).toString.toInt,
           tokens(5).toString.toInt,
-          tokens(6).toString.toLong)
+          tokens(6).toString.toLong,
+          tokens(7).toString.toInt)
       case "AS" =>
         assert(tokens.size == 4)
         AgentSettings(tokens(1).toString, tokens(2).toString.toInt, tokens(3).toString.toInt)

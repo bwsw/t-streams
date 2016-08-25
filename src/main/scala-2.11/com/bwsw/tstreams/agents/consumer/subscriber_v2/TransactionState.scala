@@ -10,7 +10,7 @@ import com.bwsw.tstreams.coordination.messages.state.TransactionStatus.ProducerT
 case class TransactionState(uuid: UUID,
                             partition: Int,
                             masterSessionID: Int,
-                            queueOrderID: Int,
+                            queueOrderID: Long,
                             itemCount: Int,
                             state: ProducerTransactionStatus,
                             ttl: Int)

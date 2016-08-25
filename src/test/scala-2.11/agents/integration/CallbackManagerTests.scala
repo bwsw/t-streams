@@ -17,7 +17,7 @@ class CallbackManagerTests  extends FlatSpec with Matchers with MockFactory {
   }
 
   "Ensure callback" should "added" in {
-    val m = TransactionStateMessage(txnUuid = UUIDs.timeBased(), ttl = 10, status = TransactionStatus.update, partition = 1, 1, 0)
+    val m = TransactionStateMessage(txnUuid = UUIDs.timeBased(), ttl = 10, status = TransactionStatus.update, partition = 1, 1, 0, 0)
     var cnt = 0
     val mf = (m: TransactionStateMessage) => { cnt +=1 }
     cm.addCallback(mf)

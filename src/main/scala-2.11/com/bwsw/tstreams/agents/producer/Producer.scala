@@ -341,7 +341,8 @@ class Producer[T](var name: String,
               status = TransactionStatus.opened,
               partition = partition,
               masterID = p2pAgent.getUniqueAgentID(),
-              orderID = -1)
+              orderID = -1,
+              count = 0)
             subscriberNotifier.publish(msg, () => ())
             if(logger.isDebugEnabled)
               logger.debug(s"Producer ${name} - [GET_LOCAL_TXN PRODUCER] update with msg partition=$partition uuid=${txnUUID.timestamp()} opened")
