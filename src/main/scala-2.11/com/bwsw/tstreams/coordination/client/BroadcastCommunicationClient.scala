@@ -3,7 +3,7 @@ package com.bwsw.tstreams.coordination.client
 import java.util.concurrent.atomic.AtomicBoolean
 
 import com.bwsw.tstreams.common.ZookeeperDLMService
-import com.bwsw.tstreams.coordination.messages.state.Message
+import com.bwsw.tstreams.coordination.messages.state.TransactionStateMessage
 import com.bwsw.tstreams.coordination.producer.AgentsStateDBService
 import org.apache.zookeeper.{WatchedEvent, Watcher}
 
@@ -56,7 +56,7 @@ class BroadcastCommunicationClient(agentsStateManager: AgentsStateDBService,
     *
     * @param msg Message
     */
-  def publish(msg: Message, onComplete: () => Unit): Unit = {
+  def publish(msg: TransactionStateMessage, onComplete: () => Unit): Unit = {
     if(!isStopped.get) {
       val (set, broadcaster) = partitionSubscribers.get(msg.partition)
       partitionSubscribers.put(msg.partition, (broadcaster.broadcast(set, msg), broadcaster))

@@ -5,7 +5,7 @@ import java.util.concurrent.ExecutorService
 import java.util.concurrent.locks.ReentrantLock
 
 import com.bwsw.tstreams.coordination.messages.state.TransactionStatus._
-import com.bwsw.tstreams.coordination.messages.state.{Message, TransactionStatus}
+import com.bwsw.tstreams.coordination.messages.state.{TransactionStateMessage, TransactionStatus}
 import com.bwsw.tstreams.coordination.subscriber.Coordinator
 import com.bwsw.tstreams.txnqueue.PersistentTransactionQueue
 import org.slf4j.LoggerFactory
@@ -44,7 +44,7 @@ class SubscriberTransactionsRelay[USERTYPE](subscriber: SubscribingConsumer[USER
   /**
     * Transaction buffer updater
     */
-  private val updateCallback = (msg: Message) => {
+  private val updateCallback = (msg: TransactionStateMessage) => {
     if (msg.partition == partition) {
       transactionBufferLock.lock()
       logger.debug(s"[UPDATE_CALLBACK PARTITION_$partition] consumed msg with uuid:{${msg.txnUuid.timestamp()}}," +

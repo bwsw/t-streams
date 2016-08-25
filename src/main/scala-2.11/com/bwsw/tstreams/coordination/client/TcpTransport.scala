@@ -5,7 +5,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 
 import com.bwsw.tstreams.common.FirstFailLockableTaskExecutor
 import com.bwsw.tstreams.coordination.messages.master._
-import com.bwsw.tstreams.coordination.messages.state.Message
+import com.bwsw.tstreams.coordination.messages.state.TransactionStateMessage
 import com.bwsw.tstreams.coordination.server.RequestsTcpServer
 import io.netty.channel.{Channel, ChannelHandler, ChannelHandlerContext, SimpleChannelInboundHandler}
 import io.netty.util.ReferenceCountUtil
@@ -97,7 +97,7 @@ class TcpTransport(address: String, timeoutMs: Int, retryCount: Int = 3, retryDe
     * @param to
     * @param msg     Message
     */
-  def publishRequest(to: String, msg: Message): Unit = {
+  def publishRequest(to: String, msg: TransactionStateMessage): Unit = {
     client.sendAndNoWaitResponse(PublishRequest(address, to, msg) , isExceptionOnFail = true)
   }
 
@@ -107,7 +107,7 @@ class TcpTransport(address: String, timeoutMs: Int, retryCount: Int = 3, retryDe
     * @param to
     * @param msg     Message
     */
-  def materializeRequest(to: String, msg: Message): Unit = {
+  def materializeRequest(to: String, msg: TransactionStateMessage): Unit = {
     client.sendAndNoWaitResponse(MaterializeRequest(address, to , msg), isExceptionOnFail = true)
   }
 

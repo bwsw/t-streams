@@ -10,7 +10,7 @@ import com.bwsw.tstreams.common.ProtocolMessageSerializer.ProtocolMessageSeriali
 import com.bwsw.tstreams.common.{FirstFailLockableTaskExecutor, LockUtil, ProtocolMessageSerializer, ZookeeperDLMService}
 import com.bwsw.tstreams.coordination.client.TcpTransport
 import com.bwsw.tstreams.coordination.messages.master._
-import com.bwsw.tstreams.coordination.messages.state.Message
+import com.bwsw.tstreams.coordination.messages.state.TransactionStateMessage
 import io.netty.channel.Channel
 import org.slf4j.LoggerFactory
 
@@ -78,10 +78,10 @@ class PeerAgent(agentsStateManager: AgentsStateDBService, zkService: ZookeeperDL
   /**
     * this ID is used to track sequential transactions from the same master
     */
-  private val uniqueAgentId = {
-    val v = Random.nextInt()
-    if (v<0) -v else v
-  }
+  private val uniqueAgentId = Math.abs(Random.nextInt())
+
+  def getUniqueAgentID() = uniqueAgentId
+  def getAndIncSequentialID(partition: Int): Long = sequentialIds(partition).getAndIncrement()
 
   /**
     * this ID map is used to track sequential transactions on subscribers
@@ -304,7 +304,7 @@ class PeerAgent(agentsStateManager: AgentsStateDBService, zkService: ZookeeperDL
     })
   }
 
-  def notifyMaterialize(msg: Message, to: String): Unit = {
+  def notifyMaterialize(msg: TransactionStateMessage, to: String): Unit = {
     if (PeerAgent.logger.isDebugEnabled)
     {
       PeerAgent.logger.debug(s"[MATERIALIZE] Send materialize request address\nMe: {$myIPAddress}\nTXN owner: ${to}\nStream: ${streamName}\npartition: ${msg.partition}\nTXN: ${msg.txnUuid}")
@@ -313,7 +313,7 @@ class PeerAgent(agentsStateManager: AgentsStateDBService, zkService: ZookeeperDL
   }
 
   //TODO remove after complex testing
-  def publish(msg: Message): Unit = {
+  def publish(msg: TransactionStateMessage): Unit = {
     LockUtil.withLockOrDieDo[Unit](externalAccessLock, (100, TimeUnit.SECONDS), Some(PeerAgent.logger), () => {
       val master = agentsStateManager.getPartitionMasterLocally(msg.partition, null)
       if (PeerAgent.logger.isDebugEnabled)

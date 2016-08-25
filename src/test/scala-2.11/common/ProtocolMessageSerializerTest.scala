@@ -4,13 +4,13 @@ import java.util.UUID
 
 import com.bwsw.tstreams.common.ProtocolMessageSerializer
 import com.bwsw.tstreams.coordination.messages.master._
-import com.bwsw.tstreams.coordination.messages.state.{Message, TransactionStatus}
+import com.bwsw.tstreams.coordination.messages.state.{TransactionStateMessage, TransactionStatus}
 import com.bwsw.tstreams.coordination.producer.AgentSettings
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import testutils.TestUtils
 
 
-class ProtocolMessageSerializerTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
+class ProtocolMessageSerializerTest extends FlatSpec with Matchers {
 
   "TStreams serializer" should "serialize and deserialize DeleteMasterRequest" in {
     val clazz = DeleteMasterRequest("snd", "rcv", 0)
@@ -49,13 +49,13 @@ class ProtocolMessageSerializerTest extends FlatSpec with Matchers with BeforeAn
     clazz shouldEqual req
   }
   "TStreams serializer" should "serialize and deserialize PublishRequest" in {
-    val clazz = PublishRequest("snd", "rcv", Message(UUID.randomUUID(), 228, TransactionStatus.cancel, 1488))
+    val clazz = PublishRequest("snd", "rcv", TransactionStateMessage(UUID.randomUUID(), 228, TransactionStatus.cancel, 1488, 1, 0))
     val string = ProtocolMessageSerializer.serialize(clazz)
     val req = ProtocolMessageSerializer.deserialize[PublishRequest](string)
     clazz shouldEqual req
   }
   "TStreams serializer" should "serialize and deserialize PublishResponse" in {
-    val clazz = PublishResponse("snd", "rcv", Message(UUID.randomUUID(), 228, TransactionStatus.cancel, 1488))
+    val clazz = PublishResponse("snd", "rcv", TransactionStateMessage(UUID.randomUUID(), 228, TransactionStatus.cancel, 1488, 1, 0))
     val string = ProtocolMessageSerializer.serialize(clazz)
     val req = ProtocolMessageSerializer.deserialize[PublishResponse](string)
     clazz shouldEqual req
@@ -85,9 +85,9 @@ class ProtocolMessageSerializerTest extends FlatSpec with Matchers with BeforeAn
     clazz shouldEqual req
   }
   "TStreams serializer" should "serialize and deserialize PTM" in {
-    val clazz = Message(UUID.randomUUID(), 123, TransactionStatus.postCheckpoint, 5)
+    val clazz = TransactionStateMessage(UUID.randomUUID(), 123, TransactionStatus.postCheckpoint, 5, 1, 2)
     val string = ProtocolMessageSerializer.serialize(clazz)
-    val req = ProtocolMessageSerializer.deserialize[Message](string)
+    val req = ProtocolMessageSerializer.deserialize[TransactionStateMessage](string)
     clazz shouldEqual req
   }
   "TStreams serializer" should "serialize and deserialize PTS" in {

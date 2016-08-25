@@ -53,8 +53,8 @@ class Coordinator() {
   private def initializeState(): Unit = {
     partitions foreach (p => {
       try {
-        if (!dlm.exist(s"/subscribers/event/$stream/$p"))
-          dlm.create[String](s"/subscribers/event/$stream/$p",s"$stream/$p", CreateMode.PERSISTENT)
+        if (!dlm.exist(getSubscriberEventPath(p)))
+          dlm.create[String](getSubscriberEventPath(p),s"$stream/$p", CreateMode.PERSISTENT)
       } catch {
         case e: KeeperException =>
         case e: IllegalStateException =>
@@ -67,9 +67,10 @@ class Coordinator() {
       }
 
       dlm.create(getSubscriberMembershipPath(p), agentAddress, CreateMode.EPHEMERAL)
-      dlm.notify(s"/subscribers/event/$stream/$p")
+      dlm.notify(getSubscriberEventPath(p))
     })
   }
 
+  private def getSubscriberEventPath(p: Int) = s"/subscribers/event/$stream/$p"
   private def getSubscriberMembershipPath(p: Int) = s"/subscribers/agents/$stream/$p/$agentAddress"
 }
