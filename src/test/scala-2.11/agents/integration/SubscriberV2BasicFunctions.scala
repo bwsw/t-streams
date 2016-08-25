@@ -51,4 +51,48 @@ class SubscriberV2BasicFunctions extends FlatSpec with Matchers with BeforeAndAf
     s.start()
     s.stop()
   }
+
+  it should "not allow double start" in {
+    val s = f.getSubscriberV2[String](name = "sv2",
+      txnGenerator = LocalGeneratorCreator.getGen(),
+      converter = arrayByteToStringConverter, partitions = Set(0,1,2),
+      offset = Oldest,
+      isUseLastOffset = true,
+      callback = new Callback[String] {
+        override def onEvent(consumer: TransactionOperator[String], partition: Int, uuid: UUID, count: Int): Unit = {}
+      })
+    s.start()
+    var flag = false
+    flag = try {
+      s.start()
+      false
+    } catch {
+      case e: IllegalStateException =>
+        true
+    }
+    flag shouldBe true
+    s.stop()
+  }
+
+  it should "not allow double stop" in {
+    val s = f.getSubscriberV2[String](name = "sv2",
+      txnGenerator = LocalGeneratorCreator.getGen(),
+      converter = arrayByteToStringConverter, partitions = Set(0,1,2),
+      offset = Oldest,
+      isUseLastOffset = true,
+      callback = new Callback[String] {
+        override def onEvent(consumer: TransactionOperator[String], partition: Int, uuid: UUID, count: Int): Unit = {}
+      })
+    s.start()
+    s.stop()
+    var flag = false
+    flag = try {
+      s.stop()
+      false
+    } catch {
+      case e: IllegalStateException =>
+        true
+    }
+    flag shouldBe true
+  }
 }
