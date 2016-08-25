@@ -20,9 +20,7 @@ class TransactionBufferWorker() {
       throw new IllegalStateException(s"Partition ${partition} is bound already.")
   }
 
-  def isPartitionServed(partition: Int): Boolean = this.synchronized {
-    transactionBufferMap.contains(partition)
-  }
+  def getPartitions() = transactionBufferMap.keySet
 
   /**
     * submits state to executor for offloaded computation
