@@ -30,7 +30,7 @@ class SubscriberV2BasicFunctions extends FlatSpec with Matchers with BeforeAndAf
     name = "test_producer",
     txnGenerator = LocalGeneratorCreator.getGen(),
     converter = stringToArrayByteConverter,
-    partitions = List(0),
+    partitions = List(0,1,2),
     isLowPriority = false)
 
   it should "start and stop with default options" in {
@@ -120,11 +120,11 @@ class SubscriberV2BasicFunctions extends FlatSpec with Matchers with BeforeAndAf
 
     val s = f.getSubscriberV2[String](name = "sv2",
       txnGenerator = LocalGeneratorCreator.getGen(),
-      converter = arrayByteToStringConverter, partitions = Set(0),
+      converter = arrayByteToStringConverter, partitions = Set(0,1,2),
       offset = Oldest,
       isUseLastOffset = true,
       callback = new Callback[String] {
-        override def onEvent(consumer: TransactionOperator[String], partition: Int, uuid: UUID, count: Int): Unit = {
+        override def onEvent(consumer: TransactionOperator[String], partition: Int, uuid: UUID, count: Int): Unit = this.synchronized {
           i += 1
           if(i == TOTAL)
             l.countDown()
@@ -136,4 +136,7 @@ class SubscriberV2BasicFunctions extends FlatSpec with Matchers with BeforeAndAf
     i shouldBe TOTAL
   }
 
+  override def afterAll(): Unit = {
+    onAfterAll()
+  }
 }
