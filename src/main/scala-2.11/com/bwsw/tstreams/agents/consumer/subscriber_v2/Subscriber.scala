@@ -2,6 +2,7 @@ package com.bwsw.tstreams.agents.consumer.subscriber_v2
 
 import java.util.concurrent.atomic.AtomicBoolean
 
+import com.bwsw.tstreams.coordination.server.RequestsTcpServer
 import com.bwsw.tstreams.streams.TStream
 import org.slf4j.LoggerFactory
 
@@ -25,6 +26,11 @@ class Subscriber[T](val name: String,
 
   private val bufferWorkerThreads = calculateBufferWorkersThreadAmount()
   private val peWorkerThreads     = calculateProcessingEngineWorkersThreadAmount()
+
+  val l = options.agentAddress.split(":")
+  val host = l.head
+  val port = l.tail.head
+  private val tcpServer = new RequestsTcpServer(host, Integer.parseInt(port), new TransactionStateMessageChannelHandler(txnBufferWorkers))
 
   private val consumer = new com.bwsw.tstreams.agents.consumer.Consumer[T](
       name,
@@ -61,6 +67,7 @@ class Subscriber[T](val name: String,
     val txnBuffers = mutable.Map[Int, TransactionBuffer]()
 
     consumer.start()
+    tcpServer.start()
 
     /**
       * Initialize processing engines
@@ -123,6 +130,7 @@ class Subscriber[T](val name: String,
     txnBufferWorkers.foreach (kv => kv._2.stop())
     txnBufferWorkers.clear()
 
+    tcpServer.stop()
     coordinator.stop()
     consumer.stop()
   }
