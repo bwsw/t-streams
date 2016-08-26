@@ -4,7 +4,7 @@ import java.util.UUID
 import java.util.concurrent.CountDownLatch
 
 import com.bwsw.tstreams.agents.consumer.TransactionOperator
-import com.bwsw.tstreams.agents.consumer.subscriber_v2.{Callback, TransactionFastLoader, TransactionState}
+import com.bwsw.tstreams.agents.consumer.subscriber.{Callback, TransactionFastLoader, TransactionState}
 import com.bwsw.tstreams.common.FirstFailLockableTaskExecutor
 import com.bwsw.tstreams.coordination.messages.state.TransactionStatus
 import com.datastax.driver.core.utils.UUIDs

@@ -1,4 +1,4 @@
-package com.bwsw.tstreams.agents.consumer.subscriber_v2
+package com.bwsw.tstreams.agents.consumer.subscriber
 
 import java.util.concurrent.TimeUnit
 

@@ -1,4 +1,4 @@
-package com.bwsw.tstreams.agents.consumer.subscriber_v2
+package com.bwsw.tstreams.agents.consumer.subscriber
 
 /**
   * Created by Ivan Kudryavtsev on 22.08.16.
