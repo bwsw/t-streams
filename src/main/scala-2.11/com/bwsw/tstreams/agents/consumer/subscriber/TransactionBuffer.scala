@@ -43,7 +43,7 @@ class TransactionBuffer(queue: QueueBuilder.QueueType) {
     }
 
     if (map.exists(update.uuid)) {
-
+      val orderID = map.get(update.uuid).queueOrderID
       /*
       * finite automata
       * */
@@ -54,10 +54,10 @@ class TransactionBuffer(queue: QueueBuilder.QueueType) {
         case (TransactionStatus.opened, TransactionStatus.opened) =>
 
         case (TransactionStatus.opened, TransactionStatus.update) =>
-          map.put(update.uuid, update.copy(state = TransactionStatus.opened))
+          map.put(update.uuid, update.copy(state = TransactionStatus.opened, queueOrderID = orderID))
 
         case (TransactionStatus.opened, TransactionStatus.preCheckpoint) =>
-          map.put(update.uuid, update.copy(ttl = - 1))
+          map.put(update.uuid, update.copy(ttl = - 1, queueOrderID = orderID))
 
         case (TransactionStatus.opened, TransactionStatus.postCheckpoint) =>
 
@@ -81,7 +81,7 @@ class TransactionBuffer(queue: QueueBuilder.QueueType) {
           map.remove(update.uuid)
 
         case (TransactionStatus.preCheckpoint, TransactionStatus.postCheckpoint) =>
-          map.put(update.uuid, update.copy(ttl = - 1))
+          map.put(update.uuid, update.copy(ttl = - 1, queueOrderID = orderID))
 
         case (TransactionStatus.preCheckpoint, _) =>
 
