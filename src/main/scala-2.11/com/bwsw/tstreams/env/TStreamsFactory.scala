@@ -2,16 +2,13 @@ package com.bwsw.tstreams.env
 
 import java.net.InetSocketAddress
 import java.security.InvalidParameterException
-import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
-import java.util.concurrent.locks.ReentrantLock
 
 import com.aerospike.client.Host
 import com.aerospike.client.policy.{ClientPolicy, Policy, WritePolicy}
 import com.bwsw.tstreams.agents.consumer.Offset.IOffset
-import com.bwsw.tstreams.agents.consumer.subscriber.{Callback, SubscribingConsumer}
 import com.bwsw.tstreams.agents.consumer.subscriber_v2.QueueBuilder.Persistent
-import com.bwsw.tstreams.agents.consumer.subscriber_v2.{QueueBuilder, TransactionStatePersistentQueue, Options, Subscriber}
+import com.bwsw.tstreams.agents.consumer.subscriber_v2.{QueueBuilder, Subscriber}
 import com.bwsw.tstreams.agents.consumer.{Consumer, SubscriberCoordinationOptions}
 import com.bwsw.tstreams.agents.producer.{CoordinationOptions, Producer}
 import com.bwsw.tstreams.common.{RoundRobinPolicy, _}
@@ -931,6 +928,7 @@ class TStreamsFactory() {
     new Consumer(name, stream, consumerOptions)
   }
 
+
   /**
     * returns ready to use subscribing consumer object
     *
@@ -942,91 +940,12 @@ class TStreamsFactory() {
     * @return
     */
   def getSubscriber[T](name: String,
-                              txnGenerator: IUUIDGenerator,
-                              converter: IConverter[Array[Byte], T],
-                              partitions: List[Int],
-                              callback: com.bwsw.tstreams.agents.consumer.subscriber.Callback[T],
-                              offset: IOffset,
-                              isUseLastOffset: Boolean = true
-                             ): SubscribingConsumer[T] = this.synchronized {
-    if (isClosed.get)
-      throw new IllegalStateException("TStreamsFactory is closed. This is the illegal usage of the object.")
-
-    val ds: IStorage[Array[Byte]] = getDataStorage()
-    val ms: MetadataStorage = getMetadataStorage()
-    val stream: TStream[Array[Byte]] = getStreamObject(metadatastorage = ms, datastorage = ds)
-
-    val consumerOptions = getBasicConsumerOptions(txnGenerator = txnGenerator,
-      stream = stream,
-      partitions = partitions,
-      converter = converter,
-      offset = offset,
-      isUseLastOffset = isUseLastOffset)
-
-    //val consumer = new BasicConsumer(name, stream, consumerOptions)
-    val bind_host = pAsString(TSF_Dictionary.Consumer.Subscriber.BIND_HOST)
-    assert(bind_host != null)
-    val bind_port = pAsString(TSF_Dictionary.Consumer.Subscriber.BIND_PORT)
-    assert(bind_port != null)
-    val endpoints = pAsString(TSF_Dictionary.Coordination.ENDPOINTS)
-    assert(endpoints != null)
-    val root = pAsString(TSF_Dictionary.Coordination.ROOT)
-    assert(root != null)
-
-    val ttl = pAsInt(TSF_Dictionary.Coordination.TTL, Coordination_ttl_default)
-    pAssertIntRange(ttl, Coordination_ttl_min, Coordination_ttl_max)
-    val conn_timeout = pAsInt(TSF_Dictionary.Coordination.CONNECTION_TIMEOUT, Coordination_connection_timeout_default)
-    pAssertIntRange(conn_timeout,
-      Coordination_connection_timeout_min, Coordination_connection_timeout_max)
-
-    val thread_pool = pAsInt(TSF_Dictionary.Consumer.Subscriber.TRANSACTION_BUFFER_THREAD_POOL, Subscriber_transaction_buffer_thread_pool_default)
-    pAssertIntRange(thread_pool,
-      Subscriber_transaction_buffer_thread_pool_min, Subscriber_transaction_buffer_thread_pool_max)
-
-    val polling_frequency = pAsInt(TSF_Dictionary.Consumer.Subscriber.POLLING_FREQUENCY_DELAY, Subscriber_polling_frequency_delay_default)
-    pAssertIntRange(polling_frequency,
-      Subscriber_polling_frequency_delay_min, Subscriber_polling_frequency_delay_max)
-
-
-    val coordinationOptions = new SubscriberCoordinationOptions(
-      agentAddress = bind_host + ":" + bind_port,
-      zkRootPath = root,
-      zkHosts = NetworkUtil.getInetSocketAddressCompatibleHostList(endpoints),
-      zkSessionTimeout = ttl,
-      zkConnectionTimeout = conn_timeout,
-      threadPoolAmount = thread_pool)
-
-    val queue_path = pAsString(TSF_Dictionary.Consumer.Subscriber.PERSISTENT_QUEUE_PATH)
-    assert(queue_path != null)
-
-    new SubscribingConsumer[T](
-      name = name,
-      stream = stream,
-      options = consumerOptions,
-      subscriberCoordinationOptions = coordinationOptions,
-      callBack = callback,
-      persistentQueuePath = queue_path,
-      pollingFrequencyMaxDelay = polling_frequency)
-
-  }
-
-  /**
-    * returns ready to use subscribing consumer object
-    *
-    * @param txnGenerator
-    * @param converter
-    * @param partitions
-    * @param callback
-    * @tparam T - type to convert data to
-    * @return
-    */
-  def getSubscriberV2[T](name: String,
-                              txnGenerator: IUUIDGenerator,
-                              converter: IConverter[Array[Byte], T],
-                              partitions: Set[Int],
-                              callback: com.bwsw.tstreams.agents.consumer.subscriber_v2.Callback[T],
-                              offset: IOffset,
-                              isUseLastOffset: Boolean = true
+                       txnGenerator: IUUIDGenerator,
+                       converter: IConverter[Array[Byte], T],
+                       partitions: Set[Int],
+                       callback: com.bwsw.tstreams.agents.consumer.subscriber_v2.Callback[T],
+                       offset: IOffset,
+                       isUseLastOffset: Boolean = true
                              ): Subscriber[T] = this.synchronized {
     if (isClosed.get)
       throw new IllegalStateException("TStreamsFactory is closed. This is the illegal usage of the object.")
