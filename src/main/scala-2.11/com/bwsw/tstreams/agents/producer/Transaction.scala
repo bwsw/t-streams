@@ -187,7 +187,7 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
       status = TransactionStatus.postCheckpoint,
       partition = partition,
       masterID = txnOwner.p2pAgent.getUniqueAgentID(),
-      orderID = txnOwner.p2pAgent.getAndIncSequentialID(partition),
+      orderID = -1,
       count = getDataItemsCount()
     ))
 
@@ -305,7 +305,7 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
             status = TransactionStatus.postCheckpoint,
             partition = partition,
             masterID = txnOwner.p2pAgent.getUniqueAgentID(),
-            orderID = txnOwner.p2pAgent.getAndIncSequentialID(partition),
+            orderID = -1,
             count = getDataItemsCount()))
 
           if(Transaction.logger.isDebugEnabled) {
@@ -408,7 +408,7 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
       status = TransactionStatus.postCheckpoint,
       partition = partition,
       masterID = txnOwner.p2pAgent.getUniqueAgentID(),
-      orderID = txnOwner.p2pAgent.getAndIncSequentialID(partition),
+      orderID = -1,
       count = getDataItemsCount())
 
     ProducerCheckpointInfo(transactionRef = this,

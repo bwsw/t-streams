@@ -341,7 +341,7 @@ class Producer[T](var name: String,
               status = TransactionStatus.opened,
               partition = partition,
               masterID = p2pAgent.getUniqueAgentID(),
-              orderID = -1,
+              orderID = p2pAgent.getAndIncSequentialID(partition),
               count = 0)
             subscriberNotifier.publish(msg, () => ())
             if(logger.isDebugEnabled)
