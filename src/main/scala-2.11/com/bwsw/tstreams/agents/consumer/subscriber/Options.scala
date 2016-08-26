@@ -1,10 +1,10 @@
-package com.bwsw.tstreams.agents.consumer.subscriber_v2
+package com.bwsw.tstreams.agents.consumer.subscriber
 
 import java.net.InetSocketAddress
 
 import com.bwsw.tstreams.agents.consumer
 import com.bwsw.tstreams.agents.consumer.Offset.IOffset
-import com.bwsw.tstreams.agents.consumer.subscriber_v2.QueueBuilder.InMemory
+import com.bwsw.tstreams.agents.consumer.subscriber.QueueBuilder.InMemory
 import com.bwsw.tstreams.common.AbstractPolicy
 import com.bwsw.tstreams.converter.IConverter
 import com.bwsw.tstreams.generator.IUUIDGenerator

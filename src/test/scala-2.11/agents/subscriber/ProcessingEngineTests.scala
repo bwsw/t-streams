@@ -3,7 +3,7 @@ package agents.subscriber
 import java.util.UUID
 import java.util.concurrent.TimeUnit
 
-import com.bwsw.tstreams.agents.consumer.subscriber_v2.{Callback, ProcessingEngine, QueueBuilder}
+import com.bwsw.tstreams.agents.consumer.subscriber.{Callback, ProcessingEngine, QueueBuilder}
 import com.bwsw.tstreams.agents.consumer.{Transaction, TransactionOperator}
 import com.datastax.driver.core.utils.UUIDs
 import org.scalatest.{FlatSpec, Matchers}

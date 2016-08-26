@@ -5,7 +5,7 @@ import java.util.concurrent.{TimeUnit, CountDownLatch}
 
 import com.bwsw.tstreams.agents.consumer.Offset.Oldest
 import com.bwsw.tstreams.agents.consumer.TransactionOperator
-import com.bwsw.tstreams.agents.consumer.subscriber_v2.Callback
+import com.bwsw.tstreams.agents.consumer.subscriber.Callback
 import com.bwsw.tstreams.agents.producer.NewTransactionProducerPolicy
 import com.bwsw.tstreams.env.TSF_Dictionary
 import org.scalatest.{BeforeAndAfterAll, Matchers, FlatSpec}
