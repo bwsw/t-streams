@@ -1,10 +1,10 @@
 package com.bwsw.tstreams.data.hazelcast
 
+import java.util.Map
 import java.util.concurrent.atomic.AtomicBoolean
+
 import com.hazelcast.config.XmlConfigBuilder
-import com.hazelcast.core.Hazelcast
-import com.hazelcast.core.HazelcastInstance
-import java.util.{UUID, Map}
+import com.hazelcast.core.{Hazelcast, HazelcastInstance}
 
 /**
   * Created by ivan on 12.08.16.

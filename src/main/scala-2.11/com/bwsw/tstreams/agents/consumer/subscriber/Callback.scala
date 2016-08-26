@@ -4,7 +4,7 @@ package com.bwsw.tstreams.agents.consumer.subscriber
 /**
   * Trait to implement to handle incoming messages
   */
-trait Callback[USERTYPE] {
+trait Callback[T] {
   /**
     * Callback which is called on every closed transaction
     *
@@ -12,5 +12,5 @@ trait Callback[USERTYPE] {
     * @param transactionUuid time uuid of the incoming transaction
     * @param subscriber      Subscriber ref
     */
-  def onEvent(subscriber: SubscribingConsumer[USERTYPE], partition: Int, transactionUuid: java.util.UUID): Unit
+  def onEvent(subscriber: SubscribingConsumer[T], partition: Int, transactionUuid: java.util.UUID): Unit
 }

@@ -4,7 +4,7 @@ import java.net.InetSocketAddress
 
 import com.aerospike.client.Host
 import com.bwsw.tstreams.common.NetworkUtil
-import org.scalatest.{BeforeAndAfterAll, Matchers, FlatSpec}
+import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 
 /**
   * Created by ivan on 04.08.16.

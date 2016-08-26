@@ -2,10 +2,9 @@ package com.bwsw.tstreams.common
 
 import java.util.UUID
 
-import ProtocolMessageSerializer.ProtocolMessageSerializerException
 import com.bwsw.tstreams.coordination.messages.master._
-import com.bwsw.tstreams.coordination.messages.state.{Message, TransactionStatus}
-import com.bwsw.tstreams.coordination.producer.p2p.AgentSettings
+import com.bwsw.tstreams.coordination.messages.state.{TransactionStateMessage, TransactionStatus}
+import com.bwsw.tstreams.coordination.producer.AgentSettings
 
 import scala.collection.mutable
 import scala.util.control.Breaks._
@@ -61,9 +60,9 @@ object ProtocolMessageSerializer {
       case x: TransactionResponse =>
         s"{TRs,${x.senderID},${x.receiverID},${x.txnUUID.toString},${x.partition},${x.msgID},${x.remotePeerTimestamp}}"
 
-      case Message(txnUuid, ttl, status, partition) =>
+      case TransactionStateMessage(txnUuid, ttl, status, partition, masterID, orderID, count) =>
         val serializedStatus = serializeInternal(status)
-        s"{PTM,${txnUuid.toString},$ttl,$serializedStatus,$partition}"
+        s"{PTM,${txnUuid.toString},$ttl,$serializedStatus,$partition,$masterID,$orderID,$count}"
 
       case TransactionStatus.preCheckpoint => s"{P}"
       case TransactionStatus.`postCheckpoint` => "{F}"
@@ -154,20 +153,20 @@ object ProtocolMessageSerializer {
         res
       case "PuRq" =>
         assert(tokens.size == 6)
-        val res = PublishRequest(tokens(1).toString, tokens(2).toString, tokens(3).asInstanceOf[Message])
+        val res = PublishRequest(tokens(1).toString, tokens(2).toString, tokens(3).asInstanceOf[TransactionStateMessage])
         res.msgID = tokens(4).toString.toLong
         res.remotePeerTimestamp = tokens(5).toString.toLong
         res
       case "MRq" =>
         assert(tokens.size == 6)
-        val res = MaterializeRequest(tokens(1).toString, tokens(2).toString, tokens(3).asInstanceOf[Message])
+        val res = MaterializeRequest(tokens(1).toString, tokens(2).toString, tokens(3).asInstanceOf[TransactionStateMessage])
         res.msgID = tokens(4).toString.toLong
         res.remotePeerTimestamp = tokens(5).toString.toLong
         res
 
       case "PuRs" =>
         assert(tokens.size == 6)
-        val res = PublishResponse(tokens(1).toString, tokens(2).toString, tokens(3).asInstanceOf[Message])
+        val res = PublishResponse(tokens(1).toString, tokens(2).toString, tokens(3).asInstanceOf[TransactionStateMessage])
         res.msgID = tokens(4).toString.toLong
         res.remotePeerTimestamp = tokens(5).toString.toLong
         res
@@ -197,9 +196,14 @@ object ProtocolMessageSerializer {
         res.remotePeerTimestamp = tokens(6).toString.toLong
         res
       case "PTM" =>
-        assert(tokens.size == 5)
-        Message(UUID.fromString(tokens(1).toString), tokens(2).toString.toInt,
-          tokens(3).asInstanceOf[TransactionStatus.ProducerTransactionStatus], tokens(4).toString.toInt)
+        assert(tokens.size == 8)
+        TransactionStateMessage(UUID.fromString(tokens(1).toString),
+          tokens(2).toString.toInt,
+          tokens(3).asInstanceOf[TransactionStatus.ProducerTransactionStatus],
+          tokens(4).toString.toInt,
+          tokens(5).toString.toInt,
+          tokens(6).toString.toLong,
+          tokens(7).toString.toInt)
       case "AS" =>
         assert(tokens.size == 4)
         AgentSettings(tokens(1).toString, tokens(2).toString.toInt, tokens(3).toString.toInt)

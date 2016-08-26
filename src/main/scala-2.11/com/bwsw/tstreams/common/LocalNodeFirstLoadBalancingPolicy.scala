@@ -3,13 +3,12 @@ package com.bwsw.tstreams.common
 /**
   * Created by ivan on 09.08.16.
   */
-import java.nio.ByteBuffer
-
-import java.util.{Iterator => JIterator, Collection => JCollection}
-import com.datastax.driver.core.policies.LoadBalancingPolicy
-import com.datastax.driver.core._
 import java.net.{InetSocketAddress, NetworkInterface}
+import java.nio.ByteBuffer
+import java.util.{Collection => JCollection, Iterator => JIterator}
 
+import com.datastax.driver.core._
+import com.datastax.driver.core.policies.LoadBalancingPolicy
 import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConversions._

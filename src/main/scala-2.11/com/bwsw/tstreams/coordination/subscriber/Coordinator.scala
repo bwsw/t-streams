@@ -4,7 +4,7 @@ import java.net.InetSocketAddress
 import java.util.concurrent.atomic.AtomicBoolean
 
 import com.bwsw.tstreams.common.ZookeeperDLMService
-import com.bwsw.tstreams.coordination.messages.state.Message
+import com.bwsw.tstreams.coordination.messages.state.TransactionStateMessage
 import org.apache.zookeeper.{CreateMode, KeeperException}
 import org.slf4j.LoggerFactory
 
@@ -45,7 +45,7 @@ class Coordinator(agentAddress: String,
     *
     * @param callback Event callback
     */
-  def addCallback(callback: (Message) => Unit) = {
+  def addCallback(callback: (TransactionStateMessage) => Unit) = {
     if(stopped.get)
       throw new IllegalStateException("Subscriber coordinator is closed already.")
 

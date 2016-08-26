@@ -2,6 +2,7 @@ package com.bwsw.tstreams.common
 
 import java.io.StringWriter
 import java.lang.reflect.{ParameterizedType, Type}
+
 import com.fasterxml.jackson.core.`type`.TypeReference
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.scala.DefaultScalaModule

@@ -4,10 +4,13 @@ import java.util.UUID
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.locks.ReentrantLock
 
-import com.bwsw.tstreams.agents.group.{GroupParticipant, CheckpointInfo, ConsumerCheckpointInfo}
+import com.bwsw.tstreams.agents.group.{CheckpointInfo, ConsumerCheckpointInfo, GroupParticipant}
+import com.bwsw.tstreams.common.UUIDComparator
 import com.bwsw.tstreams.metadata.MetadataStorage
 import com.bwsw.tstreams.streams.TStream
 import org.slf4j.LoggerFactory
+
+import scala.collection.mutable.ListBuffer
 
 object Consumer {
   val logger = LoggerFactory.getLogger(this.getClass)
@@ -23,11 +26,19 @@ object Consumer {
   */
 class Consumer[T](val name: String,
                          val stream: TStream[Array[Byte]],
-                         val options: Options[T]) extends GroupParticipant {
+                         val options: Options[T])
+  extends GroupParticipant
+    with TransactionOperator[T] {
+  
   /**
     * agent name
     */
   override def getAgentName = name
+
+  /**
+    * returns partitions
+    */
+  def getPartitions(): Set[Int] = Set[Int]().empty ++ options.readPolicy.getUsedPartitions()
 
   /**
     * Temporary checkpoints (will be cleared after every checkpoint() invokes)
@@ -43,6 +54,8 @@ class Consumer[T](val name: String,
     * Buffer for transactions preload
     */
   private val transactionBuffer = scala.collection.mutable.Map[Int, scala.collection.mutable.Queue[Transaction[T]]]()
+
+  def getCurrentOffset(partition: Int): UUID = currentOffsets(partition)
 
   /**
     * Indicate set offsets or not
@@ -92,7 +105,7 @@ class Consumer[T](val name: String,
       transactionBuffer(i) = stream.metadataStorage.commitEntity.getTransactions[T](
         streamName = stream.getName,
         partition = i,
-        lastTransaction = currentOffsets(i),
+        fromTransaction = currentOffsets(i),
         cnt = options.transactionsPreload)
 
     isStarted.set(true)
@@ -118,7 +131,7 @@ class Consumer[T](val name: String,
       transactionBuffer(partition) = stream.metadataStorage.commitEntity.getTransactions(
         streamName = stream.getName,
         partition = partition,
-        lastTransaction = currentOffsets(partition),
+        fromTransaction = currentOffsets(partition),
         cnt = options.transactionsPreload)
 
       if (transactionBuffer(partition).isEmpty) {
@@ -191,6 +204,7 @@ class Consumer[T](val name: String,
         while (queue.nonEmpty) {
           val txn: Transaction[T] = queue.dequeue()
           if (txn.getCount() != -1) {
+            txn.attach(this)
             return Option[Transaction[T]](txn)
           }
           curUuid = txn.getTxnUUID()
@@ -198,6 +212,39 @@ class Consumer[T](val name: String,
       }
     }
     None
+  }
+
+  def getTransactionsFromTo(partition: Int, from: UUID, to: UUID): ListBuffer[Transaction[T]] = {
+    val comparator = new UUIDComparator()
+    val txns = stream.metadataStorage.commitEntity.getTransactions[T](
+                                          streamName = stream.getName,
+                                          partition = partition,
+                                          fromTransaction = from,
+                                          cnt = options.transactionsPreload)
+    val okList = ListBuffer[Transaction[T]]()
+    var addFlag = true
+    var moreItems = true
+    while(addFlag && moreItems) {
+      if(txns.isEmpty) {
+        moreItems = false
+      } else {
+        val t = txns.dequeue()
+        if(comparator.compare(to, t.getTxnUUID()) > -1) {
+          if (t.getCount() >= 0)
+            okList.append(t)
+          else
+            addFlag = false // we have reached uncompleted transaction, stop
+        } else {
+          // we have reached right end of interval [from, -> to]
+          moreItems = false
+          addFlag = false
+        }
+      }
+    }
+    if(okList.size > 0 && addFlag && comparator.compare(to, okList.last.getTxnUUID()) == 1)
+      okList.appendAll(if (okList.size > 0) getTransactionsFromTo(partition, okList.last.getTxnUUID(), to) else ListBuffer[Transaction[T]]())
+
+    okList
   }
 
   /**
@@ -320,5 +367,9 @@ class Consumer[T](val name: String,
   def stop() = {
     if (!isStarted.getAndSet(false))
       throw new IllegalStateException("Consumer is not started. Start consumer first.")
+
+    offsetsForCheckpoint.clear()
+    currentOffsets.clear()
+    transactionBuffer.clear()
   }
 }

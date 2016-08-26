@@ -3,7 +3,7 @@ package com.bwsw.tstreams.coordination.subscriber
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.{CountDownLatch, TimeUnit}
 
-import com.bwsw.tstreams.coordination.messages.state.Message
+import com.bwsw.tstreams.coordination.messages.state.TransactionStateMessage
 import io.netty.bootstrap.ServerBootstrap
 import io.netty.channel.ChannelInitializer
 import io.netty.channel.nio.NioEventLoopGroup
@@ -43,7 +43,7 @@ class ProducerEventReceiverTcpServer(host: String, port: Int) {
     *
     * @param callback Event callback
     */
-  def addCallbackToChannelHandler(callback: (Message) => Unit): Unit = {
+  def addCallbackToChannelHandler(callback: (TransactionStateMessage) => Unit): Unit = {
     if(isStopped.get)
       throw new IllegalStateException("ProducerEventReceiver is stopped already.")
     callbackManager.addCallback(callback)

@@ -5,8 +5,7 @@ import java.util.UUID
 import com.bwsw.tstreams.data.IStorage
 import org.slf4j.LoggerFactory
 
-import scala.collection.mutable.ListBuffer
-import scala.collection.mutable.Queue
+import scala.collection.mutable.{ListBuffer, Queue}
 
 /**
   * Created by Ivan Kudryavtsev on 12.08.16.

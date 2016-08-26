@@ -1,9 +1,9 @@
 package com.bwsw.tstreams.common
 
-import java.util.concurrent.{Callable, TimeUnit}
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantLock
 
-import com.twitter.common.zookeeper.{DistributedLockImpl, DistributedLock}
+import com.twitter.common.zookeeper.DistributedLockImpl
 import org.slf4j.Logger
 
 import scala.util.Random

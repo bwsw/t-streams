@@ -6,7 +6,7 @@ import java.util.concurrent.locks.ReentrantLock
 
 import com.datastax.driver.core.Cluster.Builder
 import com.datastax.driver.core.policies.ExponentialReconnectionPolicy
-import com.datastax.driver.core.{QueryOptions, SocketOptions, Cluster, Session}
+import com.datastax.driver.core.{Cluster, QueryOptions, Session, SocketOptions}
 import org.slf4j.LoggerFactory
 
 /**
