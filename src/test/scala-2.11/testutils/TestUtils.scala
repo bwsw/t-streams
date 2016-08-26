@@ -3,26 +3,23 @@ package testutils
 import java.io.File
 import java.lang.management.ManagementFactory
 import java.net.InetSocketAddress
-import java.util.UUID
+import java.util.{Properties, UUID}
 import java.util.concurrent.atomic.AtomicInteger
 
 import com.aerospike.client.Host
-import com.bwsw.tstreams.common.{CassandraConnectorConf, ZookeeperDLMService, MetadataConnectionPool, CassandraHelper}
+import com.bwsw.tstreams.common.{CassandraConnectorConf, CassandraHelper, MetadataConnectionPool, ZookeeperDLMService}
 import com.bwsw.tstreams.converter.{ArrayByteToStringConverter, StringToArrayByteConverter}
-import com.bwsw.tstreams.data.aerospike.{Factory, Options}
-import com.bwsw.tstreams.data.cassandra.{Factory, Options}
 import com.bwsw.tstreams.data.hazelcast
 import com.bwsw.tstreams.debug.GlobalHooks
 import com.bwsw.tstreams.env.{TSF_Dictionary, TStreamsFactory}
 import com.bwsw.tstreams.metadata.MetadataStorageFactory
 import com.google.common.io.Files
-import org.apache.zookeeper.server.{ServerConfig, ZooKeeperServerMain}
 import org.apache.zookeeper.server.quorum.QuorumPeerConfig
+import org.apache.zookeeper.server.{ServerConfig, ZooKeeperServerMain}
 import org.cassandraunit.utils.EmbeddedCassandraServerHelper
 import org.slf4j.LoggerFactory
 
 import scala.collection.mutable.ListBuffer
-import java.util.Properties
 /**
   * Test help utils
   */

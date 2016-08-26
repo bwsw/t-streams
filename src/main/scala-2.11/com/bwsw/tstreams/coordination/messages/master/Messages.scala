@@ -3,13 +3,12 @@ package com.bwsw.tstreams.coordination.messages.master
 import java.util.UUID
 
 import com.bwsw.tstreams.common.ProtocolMessageSerializer
-import com.bwsw.tstreams.coordination.messages.state.{Message, TransactionStatus}
-import com.bwsw.tstreams.coordination.producer.p2p.PeerAgent
+import com.bwsw.tstreams.coordination.messages.state.{TransactionStateMessage, TransactionStatus}
+import com.bwsw.tstreams.coordination.producer.PeerAgent
 import io.netty.channel.Channel
 import org.slf4j.LoggerFactory
 
 import scala.util.Random
-import io.netty.channel.socket.SocketChannel
 
 
 object IMessage {
@@ -19,7 +18,7 @@ object IMessage {
 
 /**
   * Messages which used for providing
-  * interaction between [[com.bwsw.tstreams.coordination.producer.p2p.PeerAgent]]]
+  * interaction between [[com.bwsw.tstreams.coordination.producer.PeerAgent]]]
   */
 trait IMessage {
   var msgID: Long = Random.nextLong()
@@ -88,7 +87,7 @@ case class NewTransactionRequest(senderID: String, receiverID: String, partition
       agent.submitPipelinedTaskToCassandraExecutor(new Runnable {
           def run(): Unit = agent.getProducer.openTxnLocal(txnUUID, partition,
               onComplete = () => {
-                agent.notifyMaterialize(Message(txnUUID, -1, TransactionStatus.materialize, partition), senderID)
+                agent.notifyMaterialize(TransactionStateMessage(txnUUID, -1, TransactionStatus.materialize, partition, agent.getUniqueAgentID(), -1, 0), senderID)
 
                 if(IMessage.logger.isDebugEnabled)
                   IMessage.logger.debug(s"Responded with complete ready TXN: ${txnUUID}")
@@ -239,7 +238,7 @@ case class PingResponse(senderID: String, receiverID: String, partition: Int) ex
   * @param receiverID
   * @param msg
   */
-case class PublishRequest(senderID: String, receiverID: String, msg: Message) extends IMessage {
+case class PublishRequest(senderID: String, receiverID: String, msg: TransactionStateMessage) extends IMessage {
   override val partition: Int = msg.partition
 
   override def handleP2PRequest(agent: PeerAgent) = {
@@ -268,7 +267,7 @@ case class PublishRequest(senderID: String, receiverID: String, msg: Message) ex
   * @param receiverID
   * @param msg
   */
-case class PublishResponse(senderID: String, receiverID: String, msg: Message) extends IMessage {
+case class PublishResponse(senderID: String, receiverID: String, msg: TransactionStateMessage) extends IMessage {
   override val partition: Int = msg.partition
 }
 
@@ -298,7 +297,7 @@ case class EmptyResponse(senderID: String, receiverID: String, partition: Int) e
   * @param receiverID
   * @param msg
   */
-case class MaterializeRequest(senderID: String, receiverID: String, msg: Message) extends IMessage {
+case class MaterializeRequest(senderID: String, receiverID: String, msg: TransactionStateMessage) extends IMessage {
   override val partition: Int = msg.partition
   override def handleP2PRequest(agent: PeerAgent) = {
    agent.getProducer.materialize(msg)

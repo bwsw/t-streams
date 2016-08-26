@@ -4,7 +4,7 @@ import java.util
 
 import com.bwsw.tstreams.common.ProtocolMessageSerializer
 import com.bwsw.tstreams.common.ProtocolMessageSerializer.ProtocolMessageSerializerException
-import com.bwsw.tstreams.coordination.messages.state.Message
+import com.bwsw.tstreams.coordination.messages.state.TransactionStateMessage
 import io.netty.channel.ChannelHandler.Sharable
 import io.netty.channel.{ChannelHandlerContext, SimpleChannelInboundHandler}
 import io.netty.handler.codec.MessageToMessageDecoder
@@ -16,7 +16,7 @@ import org.slf4j.LoggerFactory
   * Incoming connections manager
   */
 @Sharable
-class ChannelHandler(subscriberManager: CallbackManager) extends SimpleChannelInboundHandler[Message] {
+class ChannelHandler(subscriberManager: CallbackManager) extends SimpleChannelInboundHandler[TransactionStateMessage] {
   private val logger = LoggerFactory.getLogger(this.getClass)
 
   /**
@@ -34,7 +34,7 @@ class ChannelHandler(subscriberManager: CallbackManager) extends SimpleChannelIn
     * @param ctx Netty ctx
     * @param msg Message
     */
-  override def channelRead0(ctx: ChannelHandlerContext, msg: Message): Unit = {
+  override def channelRead0(ctx: ChannelHandlerContext, msg: TransactionStateMessage): Unit = {
     logger.debug(s"[READ PARTITION_${msg.partition}] ts=${msg.txnUuid.timestamp()} ttl=${msg.ttl} status=${msg.status}")
     subscriberManager.invokeCallbacks(msg)
     ReferenceCountUtil.release(msg)
@@ -60,7 +60,7 @@ class ProducerTopicMessageDecoder extends MessageToMessageDecoder[String] {
   override def decode(ctx: ChannelHandlerContext, msg: String, out: util.List[AnyRef]): Unit = {
     try {
       if (msg != null)
-        out.add(ProtocolMessageSerializer.deserialize[Message](msg))
+        out.add(ProtocolMessageSerializer.deserialize[TransactionStateMessage](msg))
     }
     catch {
       case e: ProtocolMessageSerializerException =>

@@ -4,9 +4,9 @@ import java.util
 import java.util.UUID
 import java.util.concurrent.Executor
 
+import com.bwsw.tstreams.agents.consumer.Transaction
 import com.datastax.driver.core.{ResultSet, Row, Session}
 import com.google.common.util.concurrent.{FutureCallback, Futures}
-import com.bwsw.tstreams.agents.consumer.Transaction
 
 
 
@@ -25,16 +25,16 @@ class CommitEntity(commitLog: String, session: Session) {
 
 
   private val selectTransactionsMoreThanStatement = session
-    .prepare(s"SELECT transaction,cnt,TTL(cnt) FROM $commitLog WHERE stream = ? AND partition = ? AND transaction > ? LIMIT ?")
+    .prepare(s"SELECT transaction,cnt,TTL(cnt) FROM $commitLog WHERE stream = ? AND partition = ? AND transaction > ? ORDER BY transaction ASC LIMIT ?")
 
   private val selectTransactionsMoreThanStatementWithoutLimit = session
-    .prepare(s"SELECT transaction,cnt,TTL(cnt) FROM $commitLog WHERE stream = ? AND partition = ? AND transaction > ?")
+    .prepare(s"SELECT transaction,cnt,TTL(cnt) FROM $commitLog WHERE stream = ? AND partition = ? AND transaction > ? ORDER BY transaction ASC")
 
   private val selectTransactionsMoreThanAndLessOrEqualThanStatement = session
-    .prepare(s"SELECT transaction,cnt,TTL(cnt) FROM $commitLog WHERE stream = ? AND partition = ? AND transaction > ? AND transaction <= ?")
+    .prepare(s"SELECT transaction,cnt,TTL(cnt) FROM $commitLog WHERE stream = ? AND partition = ? AND transaction > ? AND transaction <= ? ORDER BY transaction ASC")
 
   private val selectTransactionsLessThanStatement = session
-    .prepare(s"SELECT transaction,cnt,TTL(cnt) FROM $commitLog WHERE stream = ? AND partition = ? AND transaction < ? LIMIT ?")
+    .prepare(s"SELECT transaction,cnt,TTL(cnt) FROM $commitLog WHERE stream = ? AND partition = ? AND transaction < ? ORDER BY transaction DESC LIMIT ?")
 
   private val selectTransactionAmountStatement = session
     .prepare(s"SELECT cnt,TTL(cnt) FROM $commitLog WHERE stream = ? AND partition = ? AND transaction = ? LIMIT 1")
@@ -118,18 +118,18 @@ class CommitEntity(commitLog: String, session: Session) {
     *
     * @param streamName      Name of the stream
     * @param partition       Number of the partition
-    * @param lastTransaction Transaction from which start to retrieve
+    * @param fromTransaction Transaction from which start to retrieve
     * @param cnt             Amount of retrieved queue (can be less than cnt in case of insufficiency of transactions)
     * @return Queue of selected transactions
     */
-  def getTransactions[T](streamName: String, partition: Int, lastTransaction: UUID, cnt: Int = -1): scala.collection.mutable.Queue[Transaction[T]] = {
+  def getTransactions[T](streamName: String, partition: Int, fromTransaction: UUID, cnt: Int = -1): scala.collection.mutable.Queue[Transaction[T]] = {
     val statementWithBindings =
       if (cnt == -1) {
-        val values: List[AnyRef] = List(streamName, new Integer(partition), lastTransaction)
+        val values: List[AnyRef] = List(streamName, new Integer(partition), fromTransaction)
         selectTransactionsMoreThanStatementWithoutLimit.bind(values: _*)
       }
       else {
-        val values: List[AnyRef] = List(streamName, new Integer(partition), lastTransaction, new Integer(cnt))
+        val values: List[AnyRef] = List(streamName, new Integer(partition), fromTransaction, new Integer(cnt))
         selectTransactionsMoreThanStatement.bind(values: _*)
       }
 
@@ -164,7 +164,7 @@ class CommitEntity(commitLog: String, session: Session) {
       val value = it.next()
       q.enqueue(new Transaction(partition, value.getUUID("transaction"), value.getInt("cnt"), value.getInt("ttl(cnt)")))
     }
-    q.reverse
+    q//.reverse
   }
 
 

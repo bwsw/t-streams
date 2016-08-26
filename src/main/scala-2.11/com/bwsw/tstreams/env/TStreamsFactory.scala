@@ -10,11 +10,13 @@ import com.aerospike.client.Host
 import com.aerospike.client.policy.{ClientPolicy, Policy, WritePolicy}
 import com.bwsw.tstreams.agents.consumer.Offset.IOffset
 import com.bwsw.tstreams.agents.consumer.subscriber.{Callback, SubscribingConsumer}
+import com.bwsw.tstreams.agents.consumer.subscriber_v2.QueueBuilder.Persistent
+import com.bwsw.tstreams.agents.consumer.subscriber_v2.{QueueBuilder, TransactionStatePersistentQueue, Options, Subscriber}
 import com.bwsw.tstreams.agents.consumer.{Consumer, SubscriberCoordinationOptions}
 import com.bwsw.tstreams.agents.producer.{CoordinationOptions, Producer}
 import com.bwsw.tstreams.common.{RoundRobinPolicy, _}
 import com.bwsw.tstreams.converter.IConverter
-import com.bwsw.tstreams.coordination.producer.transport.impl.TcpTransport
+import com.bwsw.tstreams.coordination.client.TcpTransport
 import com.bwsw.tstreams.data.IStorage
 import com.bwsw.tstreams.generator.IUUIDGenerator
 import com.bwsw.tstreams.metadata.{MetadataStorage, MetadataStorageFactory}
@@ -378,7 +380,12 @@ object TSF_Dictionary {
       /**
         * thread pool size
         */
-      val THREAD_POOL = "consumer.subscriber.thread-pool"
+      val TRANSACTION_BUFFER_THREAD_POOL = "consumer.subscriber.transaction-buffer-thread-pool"
+
+      /**
+        * processing engines pool
+        */
+      val PROCESSING_ENGINES_THREAD_POOL = "consumer.subscriber.processing-engines-thread-pool"
 
       /**
         * thread pool size
@@ -394,10 +401,9 @@ object TSF_Dictionary {
 /**
   * Created by ivan on 21.07.16.
   */
-class TStreamsFactory(envname: String = "T-streams") {
+class TStreamsFactory() {
 
   private val logger = LoggerFactory.getLogger(this.getClass)
-  private val lck = new ReentrantLock(true)
   val propertyMap = new HashMap[String, Any]()
   val isClosed = new AtomicBoolean(false)
   val isLocked = new AtomicBoolean(false)
@@ -538,14 +544,20 @@ class TStreamsFactory(envname: String = "T-streams") {
   propertyMap += (TSF_Dictionary.Consumer.Subscriber.BIND_PORT -> 18001)
   propertyMap += (TSF_Dictionary.Consumer.Subscriber.PERSISTENT_QUEUE_PATH -> "/tmp")
 
-  val Subscriber_thread_pool_default = 4
-  val Subscriber_thread_pool_min = 1
-  val Subscriber_thread_pool_max = 64
-  propertyMap += (TSF_Dictionary.Consumer.Subscriber.THREAD_POOL -> Subscriber_thread_pool_default)
+  val Subscriber_transaction_buffer_thread_pool_default = 4
+  val Subscriber_transaction_buffer_thread_pool_min = 1
+  val Subscriber_transaction_buffer_thread_pool_max = 64
+  propertyMap += (TSF_Dictionary.Consumer.Subscriber.TRANSACTION_BUFFER_THREAD_POOL -> Subscriber_transaction_buffer_thread_pool_default)
 
-  val Subscriber_polling_frequency_delay_default = 100
+  val Subscriber_processing_engines_thread_pool_default = 1
+  val Subscriber_processing_engines_thread_pool_min = 1
+  val Subscriber_processing_engines_thread_pool_max = 64
+  propertyMap += (TSF_Dictionary.Consumer.Subscriber.PROCESSING_ENGINES_THREAD_POOL -> Subscriber_processing_engines_thread_pool_default)
+
+
+  val Subscriber_polling_frequency_delay_default = 1000
   val Subscriber_polling_frequency_delay_min = 1
-  val Subscriber_polling_frequency_delay_max = 1000
+  val Subscriber_polling_frequency_delay_max = 10000
   propertyMap += (TSF_Dictionary.Consumer.Subscriber.POLLING_FREQUENCY_DELAY -> Subscriber_polling_frequency_delay_default)
 
 
@@ -560,15 +572,13 @@ class TStreamsFactory(envname: String = "T-streams") {
   /**
     * clones factory
     */
-  def copy(): TStreamsFactory = {
+  def copy(): TStreamsFactory = this.synchronized {
     if (isClosed.get)
       throw new IllegalStateException("TStreamsFactory is closed. This is the illegal usage of the object.")
 
-    LockUtil.withLockOrDieDo[TStreamsFactory](lck, (100, TimeUnit.SECONDS), Some(logger), () => {
       val f = new TStreamsFactory()
       propertyMap.foreach((kv) => f.setProperty(kv._1,kv._2))
       f
-    })
   }
   /**
     *
@@ -576,21 +586,19 @@ class TStreamsFactory(envname: String = "T-streams") {
     * @param value
     * @return
     */
-  def setProperty(key: String, value: Any): TStreamsFactory = {
+  def setProperty(key: String, value: Any): TStreamsFactory = this.synchronized {
     if (isClosed.get)
       throw new IllegalStateException("TStreamsFactory is closed. This is the illegal usage of the object.")
 
     if(isLocked.get)
       throw new IllegalStateException("TStreamsFactory is locked. Use clone() to set properties.")
 
-    LockUtil.withLockOrDieDo[TStreamsFactory](lck, (100, TimeUnit.SECONDS), Some(logger), () => {
-      logger.debug("set property " + key + " = " + value)
-      if (propertyMap contains key)
-        propertyMap += (key -> value)
-      else
-        throw new IllegalArgumentException("Property " + key + " is unknown and can not be altered.")
-      this
-    })
+    logger.debug("set property " + key + " = " + value)
+    if (propertyMap contains key)
+      propertyMap += (key -> value)
+    else
+      throw new IllegalArgumentException("Property " + key + " is unknown and can not be altered.")
+    this
   }
 
   /**
@@ -598,15 +606,13 @@ class TStreamsFactory(envname: String = "T-streams") {
     * @param key
     * @return
     */
-  def getProperty(key: String): Any = {
+  def getProperty(key: String): Any = this.synchronized {
     if (isClosed.get)
       throw new IllegalStateException("TStreamsFactory is closed. This is the illegal usage of the object.")
 
-    LockUtil.withLockOrDieDo[Any](lck, (100, TimeUnit.SECONDS), Some(logger), () => {
-      val v = propertyMap get key
-      logger.debug("get property " + key + " = " + v.getOrElse(null))
-      v.getOrElse(null)
-    })
+    val v = propertyMap get key
+    logger.debug("get property " + key + " = " + v.getOrElse(null))
+    v.getOrElse(null)
   }
 
   /** variant method to get option as int with default value if null
@@ -650,7 +656,7 @@ class TStreamsFactory(envname: String = "T-streams") {
     *
     * @return
     */
-  def getDataStorage(): IStorage[Array[Byte]] = {
+  def getDataStorage(): IStorage[Array[Byte]] = this.synchronized {
     if (pAsString(TSF_Dictionary.Data.Cluster.DRIVER) == TSF_Dictionary.Data.Cluster.Consts.DATA_DRIVER_AEROSPIKE) {
       val dsf = new com.bwsw.tstreams.data.aerospike.Factory
 
@@ -739,7 +745,7 @@ class TStreamsFactory(envname: String = "T-streams") {
     *
     * @return
     */
-  def getMetadataStorage(): MetadataStorage = {
+  def getMetadataStorage(): MetadataStorage = this.synchronized {
     val login = pAsString(TSF_Dictionary.Metadata.Cluster.LOGIN, null)
     val password = pAsString(TSF_Dictionary.Metadata.Cluster.PASSWORD, null)
 
@@ -770,7 +776,7 @@ class TStreamsFactory(envname: String = "T-streams") {
     * @param datastorage
     * @return
     */
-  private def getStreamObject(metadatastorage: MetadataStorage, datastorage: IStorage[Array[Byte]]): TStream[Array[Byte]] = {
+  private def getStreamObject(metadatastorage: MetadataStorage, datastorage: IStorage[Array[Byte]]): TStream[Array[Byte]] = this.synchronized {
     assert(pAsString(TSF_Dictionary.Stream.NAME) != null)
     pAssertIntRange(pAsInt(TSF_Dictionary.Stream.PARTITIONS, Stream_partitions_default), Stream_partitions_min, Stream_partitions_max)
     pAssertIntRange(pAsInt(TSF_Dictionary.Stream.TTL, Stream_ttl_default), Stream_ttl_min, Stream_ttl_max)
@@ -789,19 +795,19 @@ class TStreamsFactory(envname: String = "T-streams") {
   /**
     * reusable method which returns consumer options object
     */
-  private def getBasicConsumerOptions[USERTYPE](stream: TStream[Array[Byte]],
+  private def getBasicConsumerOptions[T](stream: TStream[Array[Byte]],
                                                 partitions: List[Int],
-                                                converter: IConverter[Array[Byte], USERTYPE],
+                                                converter: IConverter[Array[Byte], T],
                                                 txnGenerator: IUUIDGenerator,
                                                 offset: IOffset,
-                                                isUseLastOffset: Boolean = true): com.bwsw.tstreams.agents.consumer.Options[USERTYPE] = {
+                                                isUseLastOffset: Boolean = true): com.bwsw.tstreams.agents.consumer.Options[T] = this.synchronized {
     val consumer_transaction_preload = pAsInt(TSF_Dictionary.Consumer.TRANSACTION_PRELOAD, Consumer_transaction_preload_default)
     pAssertIntRange(consumer_transaction_preload, Consumer_transaction_preload_min, Consumer_transaction_preload_max)
 
     val consumer_data_preload = pAsInt(TSF_Dictionary.Consumer.DATA_PRELOAD, Consumer_data_preload_default)
     pAssertIntRange(consumer_data_preload, Consumer_data_preload_min, Consumer_data_preload_max)
 
-    val consumerOptions = new com.bwsw.tstreams.agents.consumer.Options[USERTYPE](transactionsPreload = consumer_transaction_preload, dataPreload = consumer_data_preload, converter = converter, readPolicy = new RoundRobinPolicy(stream, partitions), offset = offset, txnGenerator = txnGenerator, useLastOffset = isUseLastOffset)
+    val consumerOptions = new com.bwsw.tstreams.agents.consumer.Options[T](transactionsPreload = consumer_transaction_preload, dataPreload = consumer_data_preload, converter = converter, readPolicy = new RoundRobinPolicy(stream, partitions), offset = offset, txnGenerator = txnGenerator, useLastOffset = isUseLastOffset)
 
     consumerOptions
   }
@@ -809,16 +815,14 @@ class TStreamsFactory(envname: String = "T-streams") {
   /**
     * return returns basic scream object
     */
-  def getStream(): TStream[Array[Byte]] = {
+  def getStream(): TStream[Array[Byte]] = this.synchronized {
     if (isClosed.get)
       throw new IllegalStateException("TStreamsFactory is closed. This is the illegal usage of the object.")
 
-    LockUtil.withLockOrDieDo[TStream[Array[Byte]]](lck, (100, TimeUnit.SECONDS), Some(logger), () => {
-      val ds: IStorage[Array[Byte]] = getDataStorage()
-      val ms: MetadataStorage = getMetadataStorage()
-      val stream: TStream[Array[Byte]] = getStreamObject(metadatastorage = ms, datastorage = ds)
-      stream
-    })
+    val ds: IStorage[Array[Byte]] = getDataStorage()
+    val ms: MetadataStorage = getMetadataStorage()
+    val stream: TStream[Array[Byte]] = getStreamObject(metadatastorage = ms, datastorage = ds)
+    stream
 
   }
 
@@ -830,68 +834,66 @@ class TStreamsFactory(envname: String = "T-streams") {
     * @param txnGenerator
     * @param converter
     * @param partitions
-    * @tparam USERTYPE - type convert data from
+    * @tparam T - type convert data from
     * @return
     */
-  def getProducer[USERTYPE](name: String,
+  def getProducer[T](name: String,
                             txnGenerator: IUUIDGenerator,
-                            converter: IConverter[USERTYPE, Array[Byte]],
+                            converter: IConverter[T, Array[Byte]],
                             partitions: List[Int],
                             isLowPriority: Boolean = false
-                           ): Producer[USERTYPE] = {
+                           ): Producer[T] = this.synchronized {
 
     if (isClosed.get)
       throw new IllegalStateException("TStreamsFactory is closed. This is the illegal usage of the object.")
 
-    LockUtil.withLockOrDieDo[Producer[USERTYPE]](lck, (100, TimeUnit.SECONDS), Some(logger), () => {
 
-      val ds: IStorage[Array[Byte]] = getDataStorage()
-      val ms: MetadataStorage = getMetadataStorage()
-      val stream: TStream[Array[Byte]] = getStreamObject(metadatastorage = ms, datastorage = ds)
+    val ds: IStorage[Array[Byte]] = getDataStorage()
+    val ms: MetadataStorage = getMetadataStorage()
+    val stream: TStream[Array[Byte]] = getStreamObject(metadatastorage = ms, datastorage = ds)
 
-      assert(pAsString(TSF_Dictionary.Producer.BIND_PORT) != null)
-      assert(pAsString(TSF_Dictionary.Producer.BIND_HOST) != null)
-      assert(pAsString(TSF_Dictionary.Coordination.ENDPOINTS) != null)
-      assert(pAsString(TSF_Dictionary.Coordination.ROOT) != null)
+    assert(pAsString(TSF_Dictionary.Producer.BIND_PORT) != null)
+    assert(pAsString(TSF_Dictionary.Producer.BIND_HOST) != null)
+    assert(pAsString(TSF_Dictionary.Coordination.ENDPOINTS) != null)
+    assert(pAsString(TSF_Dictionary.Coordination.ROOT) != null)
 
-      pAssertIntRange(pAsInt(TSF_Dictionary.Coordination.TTL, Coordination_ttl_default), Coordination_ttl_min, Coordination_ttl_max)
-      pAssertIntRange(pAsInt(TSF_Dictionary.Producer.TRANSPORT_TIMEOUT, Producer_transport_timeout_default), Producer_transport_timeout_min, Producer_transport_timeout_max)
-      pAssertIntRange(pAsInt(TSF_Dictionary.Coordination.CONNECTION_TIMEOUT, Coordination_connection_timeout_default),
-        Coordination_connection_timeout_min, Coordination_connection_timeout_max)
+    pAssertIntRange(pAsInt(TSF_Dictionary.Coordination.TTL, Coordination_ttl_default), Coordination_ttl_min, Coordination_ttl_max)
+    pAssertIntRange(pAsInt(TSF_Dictionary.Producer.TRANSPORT_TIMEOUT, Producer_transport_timeout_default), Producer_transport_timeout_min, Producer_transport_timeout_max)
+    pAssertIntRange(pAsInt(TSF_Dictionary.Coordination.CONNECTION_TIMEOUT, Coordination_connection_timeout_default),
+      Coordination_connection_timeout_min, Coordination_connection_timeout_max)
 
-      val transport = new TcpTransport(
-        pAsString(TSF_Dictionary.Producer.BIND_HOST) + ":" + pAsString(TSF_Dictionary.Producer.BIND_PORT),
-        pAsInt(TSF_Dictionary.Producer.TRANSPORT_TIMEOUT, Producer_transport_timeout_default) * 1000,
-        pAsInt(TSF_Dictionary.Producer.TRANSPORT_RETRY_COUNT, Producer_transport_retry_count_default),
-        pAsInt(TSF_Dictionary.Producer.TRANSPORT_RETRY_DELAY, Producer_transport_retry_delay_default) * 1000)
+    val transport = new TcpTransport(
+      pAsString(TSF_Dictionary.Producer.BIND_HOST) + ":" + pAsString(TSF_Dictionary.Producer.BIND_PORT),
+      pAsInt(TSF_Dictionary.Producer.TRANSPORT_TIMEOUT, Producer_transport_timeout_default) * 1000,
+      pAsInt(TSF_Dictionary.Producer.TRANSPORT_RETRY_COUNT, Producer_transport_retry_count_default),
+      pAsInt(TSF_Dictionary.Producer.TRANSPORT_RETRY_DELAY, Producer_transport_retry_delay_default) * 1000)
 
-      val cao = new CoordinationOptions(zkHosts = NetworkUtil.getInetSocketAddressCompatibleHostList(pAsString(TSF_Dictionary.Coordination.ENDPOINTS)), zkRootPath = pAsString(TSF_Dictionary.Coordination.ROOT), zkSessionTimeout = pAsInt(TSF_Dictionary.Coordination.TTL, Coordination_ttl_default), zkConnectionTimeout = pAsInt(TSF_Dictionary.Coordination.CONNECTION_TIMEOUT, Coordination_connection_timeout_default), isLowPriorityToBeMaster = isLowPriority, transport = transport)
+    val cao = new CoordinationOptions(zkHosts = NetworkUtil.getInetSocketAddressCompatibleHostList(pAsString(TSF_Dictionary.Coordination.ENDPOINTS)), zkRootPath = pAsString(TSF_Dictionary.Coordination.ROOT), zkSessionTimeout = pAsInt(TSF_Dictionary.Coordination.TTL, Coordination_ttl_default), zkConnectionTimeout = pAsInt(TSF_Dictionary.Coordination.CONNECTION_TIMEOUT, Coordination_connection_timeout_default), isLowPriorityToBeMaster = isLowPriority, transport = transport)
 
 
-      var writePolicy: AbstractPolicy = null
+    var writePolicy: AbstractPolicy = null
 
-      if (pAsString(TSF_Dictionary.Producer.Transaction.DISTRIBUTION_POLICY) ==
-        TSF_Dictionary.Producer.Transaction.Consts.DISTRIBUTION_POLICY_RR) {
-        writePolicy = new RoundRobinPolicy(stream, partitions)
-      }
-      else {
-        throw new InvalidParameterException("Only TSF_Dictionary.Producer.Transaction.Consts.DISTRIBUTION_POLICY_RR policy " +
-          "is supported currently in UniversalFactory.")
-      }
+    if (pAsString(TSF_Dictionary.Producer.Transaction.DISTRIBUTION_POLICY) ==
+      TSF_Dictionary.Producer.Transaction.Consts.DISTRIBUTION_POLICY_RR) {
+      writePolicy = new RoundRobinPolicy(stream, partitions)
+    }
+    else {
+      throw new InvalidParameterException("Only TSF_Dictionary.Producer.Transaction.Consts.DISTRIBUTION_POLICY_RR policy " +
+        "is supported currently in UniversalFactory.")
+    }
 
-      pAssertIntRange(pAsInt(TSF_Dictionary.Producer.Transaction.TTL, Producer_transaction_ttl_default), Producer_transaction_ttl_min, Producer_transaction_ttl_max)
-      pAssertIntRange(pAsInt(TSF_Dictionary.Producer.Transaction.KEEP_ALIVE, Producer_transaction_keep_alive_default), Producer_transaction_keep_alive_min, Producer_transaction_keep_alive_max)
-      assert(pAsInt(TSF_Dictionary.Producer.Transaction.TTL, Producer_transaction_ttl_default) >=
-        pAsInt(TSF_Dictionary.Producer.Transaction.KEEP_ALIVE, Producer_transaction_keep_alive_default) * 3)
+    pAssertIntRange(pAsInt(TSF_Dictionary.Producer.Transaction.TTL, Producer_transaction_ttl_default), Producer_transaction_ttl_min, Producer_transaction_ttl_max)
+    pAssertIntRange(pAsInt(TSF_Dictionary.Producer.Transaction.KEEP_ALIVE, Producer_transaction_keep_alive_default), Producer_transaction_keep_alive_min, Producer_transaction_keep_alive_max)
+    assert(pAsInt(TSF_Dictionary.Producer.Transaction.TTL, Producer_transaction_ttl_default) >=
+      pAsInt(TSF_Dictionary.Producer.Transaction.KEEP_ALIVE, Producer_transaction_keep_alive_default) * 3)
 
-      val insertCnt = pAsInt(TSF_Dictionary.Producer.Transaction.DATA_WRITE_BATCH_SIZE, Producer_transaction_data_write_batch_size_default)
-      pAssertIntRange(insertCnt,
-        Producer_transaction_data_write_batch_size_min, Producer_transaction_data_write_batch_size_max)
+    val insertCnt = pAsInt(TSF_Dictionary.Producer.Transaction.DATA_WRITE_BATCH_SIZE, Producer_transaction_data_write_batch_size_default)
+    pAssertIntRange(insertCnt,
+      Producer_transaction_data_write_batch_size_min, Producer_transaction_data_write_batch_size_max)
 
-      val po = new com.bwsw.tstreams.agents.producer.Options[USERTYPE](transactionTTL = pAsInt(TSF_Dictionary.Producer.Transaction.TTL, Producer_transaction_ttl_default), transactionKeepAliveInterval = pAsInt(TSF_Dictionary.Producer.Transaction.KEEP_ALIVE, Producer_transaction_keep_alive_default), writePolicy = writePolicy, batchSize = insertCnt, txnGenerator = txnGenerator, coordinationOptions = cao, converter = converter)
+    val po = new com.bwsw.tstreams.agents.producer.Options[T](transactionTTL = pAsInt(TSF_Dictionary.Producer.Transaction.TTL, Producer_transaction_ttl_default), transactionKeepAliveInterval = pAsInt(TSF_Dictionary.Producer.Transaction.KEEP_ALIVE, Producer_transaction_keep_alive_default), writePolicy = writePolicy, batchSize = insertCnt, txnGenerator = txnGenerator, coordinationOptions = cao, converter = converter)
 
-      new Producer[USERTYPE](name = name, stream = stream, producerOptions = po)
-    })
+    new Producer[T](name = name, stream = stream, producerOptions = po)
   }
 
   /**
@@ -901,34 +903,32 @@ class TStreamsFactory(envname: String = "T-streams") {
     * @param txnGenerator
     * @param converter
     * @param partitions
-    * @tparam USERTYPE type to convert data to
+    * @tparam T type to convert data to
     * @return
     */
-  def getConsumer[USERTYPE](name: String,
+  def getConsumer[T](name: String,
                             txnGenerator: IUUIDGenerator,
-                            converter: IConverter[Array[Byte], USERTYPE],
+                            converter: IConverter[Array[Byte], T],
                             partitions: List[Int],
                             offset: IOffset,
                             isUseLastOffset: Boolean = true
-                           ): Consumer[USERTYPE] = {
+                           ): Consumer[T] = this.synchronized {
 
     if (isClosed.get)
       throw new IllegalStateException("TStreamsFactory is closed. This is the illegal usage of the object.")
 
-    LockUtil.withLockOrDieDo[Consumer[USERTYPE]](lck, (100, TimeUnit.SECONDS), Some(logger), () => {
 
-      val ds: IStorage[Array[Byte]] = getDataStorage()
-      val ms: MetadataStorage = getMetadataStorage()
-      val stream: TStream[Array[Byte]] = getStreamObject(metadatastorage = ms, datastorage = ds)
-      val consumerOptions = getBasicConsumerOptions(txnGenerator = txnGenerator,
-        stream = stream,
-        partitions = partitions,
-        converter = converter,
-        offset = offset,
-        isUseLastOffset = isUseLastOffset)
+    val ds: IStorage[Array[Byte]] = getDataStorage()
+    val ms: MetadataStorage = getMetadataStorage()
+    val stream: TStream[Array[Byte]] = getStreamObject(metadatastorage = ms, datastorage = ds)
+    val consumerOptions = getBasicConsumerOptions(txnGenerator = txnGenerator,
+      stream = stream,
+      partitions = partitions,
+      converter = converter,
+      offset = offset,
+      isUseLastOffset = isUseLastOffset)
 
-      new Consumer(name, stream, consumerOptions)
-    })
+    new Consumer(name, stream, consumerOptions)
   }
 
   /**
@@ -938,79 +938,154 @@ class TStreamsFactory(envname: String = "T-streams") {
     * @param converter
     * @param partitions
     * @param callback
-    * @tparam USERTYPE - type to convert data to
+    * @tparam T - type to convert data to
     * @return
     */
-  def getSubscriber[USERTYPE](name: String,
+  def getSubscriber[T](name: String,
                               txnGenerator: IUUIDGenerator,
-                              converter: IConverter[Array[Byte], USERTYPE],
+                              converter: IConverter[Array[Byte], T],
                               partitions: List[Int],
-                              callback: Callback[USERTYPE],
+                              callback: com.bwsw.tstreams.agents.consumer.subscriber.Callback[T],
                               offset: IOffset,
                               isUseLastOffset: Boolean = true
-                             ): SubscribingConsumer[USERTYPE] = {
+                             ): SubscribingConsumer[T] = this.synchronized {
     if (isClosed.get)
       throw new IllegalStateException("TStreamsFactory is closed. This is the illegal usage of the object.")
 
-    LockUtil.withLockOrDieDo[SubscribingConsumer[USERTYPE]](lck, (100, TimeUnit.SECONDS), Some(logger), () => {
+    val ds: IStorage[Array[Byte]] = getDataStorage()
+    val ms: MetadataStorage = getMetadataStorage()
+    val stream: TStream[Array[Byte]] = getStreamObject(metadatastorage = ms, datastorage = ds)
 
-      val ds: IStorage[Array[Byte]] = getDataStorage()
-      val ms: MetadataStorage = getMetadataStorage()
-      val stream: TStream[Array[Byte]] = getStreamObject(metadatastorage = ms, datastorage = ds)
+    val consumerOptions = getBasicConsumerOptions(txnGenerator = txnGenerator,
+      stream = stream,
+      partitions = partitions,
+      converter = converter,
+      offset = offset,
+      isUseLastOffset = isUseLastOffset)
 
-      val consumerOptions = getBasicConsumerOptions(txnGenerator = txnGenerator,
-        stream = stream,
-        partitions = partitions,
-        converter = converter,
-        offset = offset,
-        isUseLastOffset = isUseLastOffset)
+    //val consumer = new BasicConsumer(name, stream, consumerOptions)
+    val bind_host = pAsString(TSF_Dictionary.Consumer.Subscriber.BIND_HOST)
+    assert(bind_host != null)
+    val bind_port = pAsString(TSF_Dictionary.Consumer.Subscriber.BIND_PORT)
+    assert(bind_port != null)
+    val endpoints = pAsString(TSF_Dictionary.Coordination.ENDPOINTS)
+    assert(endpoints != null)
+    val root = pAsString(TSF_Dictionary.Coordination.ROOT)
+    assert(root != null)
 
-      //val consumer = new BasicConsumer(name, stream, consumerOptions)
-      val bind_host = pAsString(TSF_Dictionary.Consumer.Subscriber.BIND_HOST)
-      assert(bind_host != null)
-      val bind_port = pAsString(TSF_Dictionary.Consumer.Subscriber.BIND_PORT)
-      assert(bind_port != null)
-      val endpoints = pAsString(TSF_Dictionary.Coordination.ENDPOINTS)
-      assert(endpoints != null)
-      val root = pAsString(TSF_Dictionary.Coordination.ROOT)
-      assert(root != null)
+    val ttl = pAsInt(TSF_Dictionary.Coordination.TTL, Coordination_ttl_default)
+    pAssertIntRange(ttl, Coordination_ttl_min, Coordination_ttl_max)
+    val conn_timeout = pAsInt(TSF_Dictionary.Coordination.CONNECTION_TIMEOUT, Coordination_connection_timeout_default)
+    pAssertIntRange(conn_timeout,
+      Coordination_connection_timeout_min, Coordination_connection_timeout_max)
 
-      val ttl = pAsInt(TSF_Dictionary.Coordination.TTL, Coordination_ttl_default)
-      pAssertIntRange(ttl, Coordination_ttl_min, Coordination_ttl_max)
-      val conn_timeout = pAsInt(TSF_Dictionary.Coordination.CONNECTION_TIMEOUT, Coordination_connection_timeout_default)
-      pAssertIntRange(conn_timeout,
-        Coordination_connection_timeout_min, Coordination_connection_timeout_max)
+    val thread_pool = pAsInt(TSF_Dictionary.Consumer.Subscriber.TRANSACTION_BUFFER_THREAD_POOL, Subscriber_transaction_buffer_thread_pool_default)
+    pAssertIntRange(thread_pool,
+      Subscriber_transaction_buffer_thread_pool_min, Subscriber_transaction_buffer_thread_pool_max)
 
-      val thread_pool = pAsInt(TSF_Dictionary.Consumer.Subscriber.THREAD_POOL, Subscriber_thread_pool_default)
-      pAssertIntRange(thread_pool,
-        Subscriber_thread_pool_min, Subscriber_thread_pool_max)
-
-      val polling_frequency = pAsInt(TSF_Dictionary.Consumer.Subscriber.POLLING_FREQUENCY_DELAY, Subscriber_polling_frequency_delay_default)
-      pAssertIntRange(polling_frequency,
-        Subscriber_polling_frequency_delay_min, Subscriber_polling_frequency_delay_max)
+    val polling_frequency = pAsInt(TSF_Dictionary.Consumer.Subscriber.POLLING_FREQUENCY_DELAY, Subscriber_polling_frequency_delay_default)
+    pAssertIntRange(polling_frequency,
+      Subscriber_polling_frequency_delay_min, Subscriber_polling_frequency_delay_max)
 
 
-      val coordinationOptions = new SubscriberCoordinationOptions(
-        agentAddress = bind_host + ":" + bind_port,
-        zkRootPath = root,
-        zkHosts = NetworkUtil.getInetSocketAddressCompatibleHostList(endpoints),
-        zkSessionTimeout = ttl,
-        zkConnectionTimeout = conn_timeout,
-        threadPoolAmount = thread_pool)
+    val coordinationOptions = new SubscriberCoordinationOptions(
+      agentAddress = bind_host + ":" + bind_port,
+      zkRootPath = root,
+      zkHosts = NetworkUtil.getInetSocketAddressCompatibleHostList(endpoints),
+      zkSessionTimeout = ttl,
+      zkConnectionTimeout = conn_timeout,
+      threadPoolAmount = thread_pool)
 
-      val queue_path = pAsString(TSF_Dictionary.Consumer.Subscriber.PERSISTENT_QUEUE_PATH)
-      assert(queue_path != null)
+    val queue_path = pAsString(TSF_Dictionary.Consumer.Subscriber.PERSISTENT_QUEUE_PATH)
+    assert(queue_path != null)
 
-      new SubscribingConsumer[USERTYPE](
-        name = name,
-        stream = stream,
-        options = consumerOptions,
-        subscriberCoordinationOptions = coordinationOptions,
-        callBack = callback,
-        persistentQueuePath = queue_path,
-        pollingFrequencyMaxDelay = polling_frequency)
+    new SubscribingConsumer[T](
+      name = name,
+      stream = stream,
+      options = consumerOptions,
+      subscriberCoordinationOptions = coordinationOptions,
+      callBack = callback,
+      persistentQueuePath = queue_path,
+      pollingFrequencyMaxDelay = polling_frequency)
 
-    })
+  }
+
+  /**
+    * returns ready to use subscribing consumer object
+    *
+    * @param txnGenerator
+    * @param converter
+    * @param partitions
+    * @param callback
+    * @tparam T - type to convert data to
+    * @return
+    */
+  def getSubscriberV2[T](name: String,
+                              txnGenerator: IUUIDGenerator,
+                              converter: IConverter[Array[Byte], T],
+                              partitions: Set[Int],
+                              callback: com.bwsw.tstreams.agents.consumer.subscriber_v2.Callback[T],
+                              offset: IOffset,
+                              isUseLastOffset: Boolean = true
+                             ): Subscriber[T] = this.synchronized {
+    if (isClosed.get)
+      throw new IllegalStateException("TStreamsFactory is closed. This is the illegal usage of the object.")
+
+    val ds: IStorage[Array[Byte]]     = getDataStorage()
+    val ms: MetadataStorage           = getMetadataStorage()
+    val stream: TStream[Array[Byte]]  = getStreamObject(metadatastorage = ms, datastorage = ds)
+
+    val consumerOptions = getBasicConsumerOptions(txnGenerator = txnGenerator,
+                                                  stream        = stream,
+                                                  partitions    = partitions.toList,
+                                                  converter     = converter,
+                                                  offset        = offset,
+                                                  isUseLastOffset = isUseLastOffset)
+
+    val bind_host = pAsString(TSF_Dictionary.Consumer.Subscriber.BIND_HOST)
+    assert(bind_host != null)
+    val bind_port = pAsString(TSF_Dictionary.Consumer.Subscriber.BIND_PORT)
+    assert(bind_port != null)
+
+    val endpoints = pAsString(TSF_Dictionary.Coordination.ENDPOINTS)
+    assert(endpoints != null)
+
+    val root = pAsString(TSF_Dictionary.Coordination.ROOT)
+    assert(root != null)
+
+    val ttl = pAsInt(TSF_Dictionary.Coordination.TTL, Coordination_ttl_default)
+    pAssertIntRange(ttl, Coordination_ttl_min, Coordination_ttl_max)
+    val conn_timeout = pAsInt(TSF_Dictionary.Coordination.CONNECTION_TIMEOUT, Coordination_connection_timeout_default)
+    pAssertIntRange(conn_timeout,
+      Coordination_connection_timeout_min, Coordination_connection_timeout_max)
+
+    val txn_thread_pool = pAsInt(TSF_Dictionary.Consumer.Subscriber.TRANSACTION_BUFFER_THREAD_POOL, Subscriber_transaction_buffer_thread_pool_default)
+    pAssertIntRange(txn_thread_pool,
+      Subscriber_transaction_buffer_thread_pool_min, Subscriber_transaction_buffer_thread_pool_max)
+
+    val pe_thread_pool = pAsInt(TSF_Dictionary.Consumer.Subscriber.PROCESSING_ENGINES_THREAD_POOL, Subscriber_processing_engines_thread_pool_default)
+    pAssertIntRange(pe_thread_pool,
+      Subscriber_processing_engines_thread_pool_min, Subscriber_processing_engines_thread_pool_max)
+
+    val polling_frequency = pAsInt(TSF_Dictionary.Consumer.Subscriber.POLLING_FREQUENCY_DELAY, Subscriber_polling_frequency_delay_default)
+    pAssertIntRange(polling_frequency,
+      Subscriber_polling_frequency_delay_min, Subscriber_polling_frequency_delay_max)
+
+    val queue_path = pAsString(TSF_Dictionary.Consumer.Subscriber.PERSISTENT_QUEUE_PATH)
+
+    val opts = com.bwsw.tstreams.agents.consumer.subscriber_v2.OptionsBuilder.fromConsumerOptions(consumerOptions,
+      agentAddress    = bind_host + ":" + bind_port,
+      zkRootPath      = root,
+      zkHosts         = Set[InetSocketAddress]().empty ++ NetworkUtil.getInetSocketAddressCompatibleHostList(endpoints),
+      zkSessionTimeout    = ttl,
+      zkConnectionTimeout = conn_timeout,
+      txnBufferWorkersThreadPoolAmount    = txn_thread_pool,
+      processingEngineWorkersThreadAmount = pe_thread_pool,
+      pollingFrequencyDelay = polling_frequency,
+      txnQueueBuilder = if(queue_path == null) new QueueBuilder.InMemory() else new Persistent(queue_path)
+    )
+
+    new Subscriber[T](name, stream, opts, callback)
   }
 
   /**

@@ -4,19 +4,18 @@ import java.util.UUID
 import java.util.concurrent.locks.ReentrantLock
 import java.util.concurrent.{ConcurrentHashMap, CountDownLatch, TimeUnit}
 
-import com.bwsw.tstreams.agents.group.{GroupParticipant, CheckpointInfo, SendingAgent}
+import com.bwsw.tstreams.agents.group.{CheckpointInfo, GroupParticipant, SendingAgent}
 import com.bwsw.tstreams.agents.producer.NewTransactionProducerPolicy.ProducerPolicy
 import com.bwsw.tstreams.common._
-import com.bwsw.tstreams.coordination.messages.state.{Message, TransactionStatus}
-import com.bwsw.tstreams.coordination.producer.p2p.{AgentsStateDBService, PeerAgent}
-import com.bwsw.tstreams.coordination.producer.transport.impl.client.BroadcastCommunicationClient
-import com.bwsw.tstreams.coordination.producer.transport.traits.Interaction
+import com.bwsw.tstreams.coordination.client.BroadcastCommunicationClient
+import com.bwsw.tstreams.coordination.messages.state.{TransactionStateMessage, TransactionStatus}
+import com.bwsw.tstreams.coordination.producer.{AgentsStateDBService, PeerAgent}
 import com.bwsw.tstreams.metadata.MetadataStorage
 import com.bwsw.tstreams.streams.TStream
 import org.slf4j.LoggerFactory
 
+import scala.collection.JavaConversions._
 import scala.util.control.Breaks._
-import collection.JavaConversions._
 
 /**
   * Basic producer class
@@ -336,11 +335,14 @@ class Producer[T](var name: String,
         // submit task for publish notification requests
         p2pAgent.submitPipelinedTaskToPublishExecutors(new Runnable {
           override def run(): Unit = {
-            val msg = Message(
+            val msg = TransactionStateMessage(
               txnUuid = txnUUID,
               ttl = producerOptions.transactionTTL,
               status = TransactionStatus.opened,
-              partition = partition)
+              partition = partition,
+              masterID = p2pAgent.getUniqueAgentID(),
+              orderID = -1,
+              count = 0)
             subscriberNotifier.publish(msg, () => ())
             if(logger.isDebugEnabled)
               logger.debug(s"Producer ${name} - [GET_LOCAL_TXN PRODUCER] update with msg partition=$partition uuid=${txnUUID.timestamp()} opened")
@@ -388,7 +390,7 @@ class Producer[T](var name: String,
  *
     * @param msg
     */
-  def materialize(msg: Message) = {
+  def materialize(msg: TransactionStateMessage) = {
     if(logger.isDebugEnabled)
       logger.debug(s"Start handling MaterializeRequest at partition: ${msg.partition}")
     transactionMaterializationBlockingMap.get(msg.partition).await()

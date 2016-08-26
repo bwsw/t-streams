@@ -6,7 +6,7 @@ import java.util.concurrent.locks.ReentrantLock
 
 import com.bwsw.tstreams.agents.group.ProducerCheckpointInfo
 import com.bwsw.tstreams.common.LockUtil
-import com.bwsw.tstreams.coordination.messages.state.{Message, TransactionStatus}
+import com.bwsw.tstreams.coordination.messages.state.{TransactionStateMessage, TransactionStatus}
 import com.bwsw.tstreams.debug.GlobalHooks
 import org.slf4j.LoggerFactory
 
@@ -134,10 +134,13 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
       transaction = transactionUuid,
       executor    = txnOwner.p2pAgent.getCassandraAsyncExecutor,
       function    = () => {
-        val msg = Message(txnUuid = transactionUuid,
+        val msg = TransactionStateMessage(txnUuid = transactionUuid,
           ttl = -1,
           status = TransactionStatus.cancel,
-          partition = partition)
+          partition = partition,
+          masterID = txnOwner.p2pAgent.getUniqueAgentID(),
+          orderID = -1,
+          count = 0)
         txnOwner.p2pAgent.publish(msg)
         if(Transaction.logger.isDebugEnabled)
         {
@@ -178,11 +181,15 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
         return
     }
 
-    txnOwner.p2pAgent.publish(Message(
+    txnOwner.p2pAgent.publish(TransactionStateMessage(
       txnUuid = transactionUuid,
       ttl = -1,
       status = TransactionStatus.postCheckpoint,
-      partition = partition))
+      partition = partition,
+      masterID = txnOwner.p2pAgent.getUniqueAgentID(),
+      orderID = txnOwner.p2pAgent.getAndIncSequentialID(partition),
+      count = getDataItemsCount()
+    ))
 
     if(Transaction.logger.isDebugEnabled) {
       Transaction.logger.debug("[FINAL CHECKPOINT PARTITION_{}] ts={}", partition, transactionUuid.toString)
@@ -200,11 +207,14 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
         Transaction.logger.debug("[START PRE CHECKPOINT PARTITION_{}] ts={}", partition, transactionUuid.toString)
       }
 
-      txnOwner.p2pAgent.publish(Message(
+      txnOwner.p2pAgent.publish(TransactionStateMessage(
         txnUuid = transactionUuid,
         ttl = -1,
         status = TransactionStatus.preCheckpoint,
-        partition = partition))
+        partition = partition,
+        masterID = txnOwner.p2pAgent.getUniqueAgentID(),
+        orderID = -1,
+        count = 0))
 
       //debug purposes only
       {
@@ -231,11 +241,13 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
         function = checkpointPostEventPart)
     }
     else {
-      txnOwner.p2pAgent.publish(Message(
+      txnOwner.p2pAgent.publish(TransactionStateMessage(
         txnUuid = transactionUuid,
         ttl = -1,
         status = TransactionStatus.cancel,
-        partition = partition))
+        partition = partition,
+        masterID = txnOwner.p2pAgent.getUniqueAgentID(),
+        orderID = -1, count = 0))
     }
   }
 
@@ -262,11 +274,14 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
             Transaction.logger.debug("[START PRE CHECKPOINT PARTITION_{}] ts={}", partition, transactionUuid.toString)
           }
 
-          txnOwner.p2pAgent.publish(Message(
+          txnOwner.p2pAgent.publish(TransactionStateMessage(
             txnUuid = transactionUuid,
             ttl = -1,
             status = TransactionStatus.preCheckpoint,
-            partition = partition))
+            partition = partition,
+            masterID = txnOwner.p2pAgent.getUniqueAgentID(),
+            orderID = -1,
+            count = 0))
 
           //debug purposes only
           GlobalHooks.invoke(GlobalHooks.preCommitFailure)
@@ -284,22 +299,28 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
           //debug purposes only
           GlobalHooks.invoke(GlobalHooks.afterCommitFailure)
 
-          txnOwner.p2pAgent.publish(Message(
+          txnOwner.p2pAgent.publish(TransactionStateMessage(
             txnUuid = transactionUuid,
             ttl = -1,
             status = TransactionStatus.postCheckpoint,
-            partition = partition))
+            partition = partition,
+            masterID = txnOwner.p2pAgent.getUniqueAgentID(),
+            orderID = txnOwner.p2pAgent.getAndIncSequentialID(partition),
+            count = getDataItemsCount()))
 
           if(Transaction.logger.isDebugEnabled) {
             Transaction.logger.debug("[FINAL CHECKPOINT PARTITION_{}] ts={}", partition, transactionUuid.toString)
           }
         }
         else {
-          txnOwner.p2pAgent.publish(Message(
+          txnOwner.p2pAgent.publish(TransactionStateMessage(
             txnUuid = transactionUuid,
             ttl = -1,
             status = TransactionStatus.cancel,
-            partition = partition))
+            partition = partition,
+            masterID = txnOwner.p2pAgent.getUniqueAgentID(),
+            orderID = -1,
+            count = 0))
         }
       }
     })
@@ -313,11 +334,14 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
     }
 
     state.setUpdateFinished
-    txnOwner.p2pAgent.publish(Message(
+    txnOwner.p2pAgent.publish(TransactionStateMessage(
       txnUuid = transactionUuid,
       ttl = txnOwner.producerOptions.transactionTTL,
       status = TransactionStatus.update,
-      partition = partition))
+      partition = partition,
+      masterID = txnOwner.p2pAgent.getUniqueAgentID(),
+      orderID = -1,
+      count = 0))
 
     if(Transaction.logger.isDebugEnabled) {
       Transaction.logger.debug(s"[KEEP_ALIVE THREAD PARTITION_PARTITION_${partition}] ts=${transactionUuid.toString} status=${TransactionStatus.update}")
@@ -369,17 +393,23 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
   def getTransactionInfo(): ProducerCheckpointInfo = {
     state.awaitMaterialization(txnOwner.producerOptions.coordinationOptions.transport.getTimeout())
 
-    val preCheckpoint = Message(
+    val preCheckpoint = TransactionStateMessage(
       txnUuid = getTransactionUUID,
       ttl = -1,
       status = TransactionStatus.preCheckpoint,
-      partition = partition)
+      partition = partition,
+      masterID = txnOwner.p2pAgent.getUniqueAgentID(),
+      orderID = -1,
+      count = 0)
 
-    val finalCheckpoint = Message(
+    val finalCheckpoint = TransactionStateMessage(
       txnUuid = getTransactionUUID,
       ttl = -1,
       status = TransactionStatus.postCheckpoint,
-      partition = partition)
+      partition = partition,
+      masterID = txnOwner.p2pAgent.getUniqueAgentID(),
+      orderID = txnOwner.p2pAgent.getAndIncSequentialID(partition),
+      count = getDataItemsCount())
 
     ProducerCheckpointInfo(transactionRef = this,
       agent = txnOwner.p2pAgent,
