@@ -73,6 +73,6 @@ class InMemoryQueueTests extends FlatSpec with Matchers {
     val start = System.currentTimeMillis()
     q.get(100, TimeUnit.MILLISECONDS)
     val end = System.currentTimeMillis()
-    end - start < 12 shouldBe true
+    end - start < 50 shouldBe true
   }
 }
