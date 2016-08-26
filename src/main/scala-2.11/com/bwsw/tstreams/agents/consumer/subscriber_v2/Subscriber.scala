@@ -67,9 +67,6 @@ class Subscriber[T](val name: String,
 
     consumer.start()
 
-    tcpServer = new RequestsTcpServer(host, Integer.parseInt(port), new TransactionStateMessageChannelHandler(txnBufferWorkers))
-    tcpServer.start()
-
     /**
       * Initialize processing engines
       */
@@ -116,6 +113,9 @@ class Subscriber[T](val name: String,
       zkHosts = options.zkHosts,
       zkConnectionTimeout = options.zkConnectionTimeout,
       zkSessionTimeout = options.zkSessionTimeout)
+
+    tcpServer = new RequestsTcpServer(host, Integer.parseInt(port), new TransactionStateMessageChannelHandler(txnBufferWorkers))
+    tcpServer.start()
 
   }
 

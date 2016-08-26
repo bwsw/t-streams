@@ -105,7 +105,22 @@ class SubscriberV2BasicFunctions extends FlatSpec with Matchers with BeforeAndAf
     flag shouldBe true
   }
 
-  it should "receive all transactions producer by producer previously" in {
+  it should "allow to be created with in memory queues" in {
+    val f1 = f.copy()
+    f1.setProperty(TSF_Dictionary.Consumer.Subscriber.PERSISTENT_QUEUE_PATH, null)
+    val s = f1.getSubscriberV2[String](name = "sv2_inram",
+      txnGenerator = LocalGeneratorCreator.getGen(),
+      converter = arrayByteToStringConverter, partitions = Set(0,1,2),
+      offset = Oldest,
+      isUseLastOffset = true,
+      callback = new Callback[String] {
+        override def onEvent(consumer: TransactionOperator[String], partition: Int, uuid: UUID, count: Int): Unit = {}
+      })
+    s.start()
+    s.stop()
+  }
+
+    it should "receive all transactions producer by producer previously" in {
     val l = new CountDownLatch(1)
     var i: Int = 0
     val TOTAL = 1000

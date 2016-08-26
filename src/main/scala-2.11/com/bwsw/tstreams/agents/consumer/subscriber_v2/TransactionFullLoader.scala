@@ -52,6 +52,6 @@ class TransactionFullLoader(partitions: Set[Int],
         TransactionState(elt.getTxnUUID(), last.partition, -1, -1, elt.getCount(), TransactionStatus.postCheckpoint, -1), callback)))
 
     if (data.size > 0)
-      lastTransactionsMap(last.partition) = TransactionState(data.last.getTxnUUID(), last.partition, -1, -1, data.last.getCount(), TransactionStatus.postCheckpoint, -1)
+      lastTransactionsMap(last.partition) = TransactionState(data.last.getTxnUUID(), last.partition, last.masterSessionID, last.queueOrderID, data.last.getCount(), TransactionStatus.postCheckpoint, -1)
   }
 }
