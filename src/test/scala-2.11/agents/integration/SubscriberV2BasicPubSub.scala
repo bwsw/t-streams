@@ -1,9 +1,8 @@
 package agents.integration
 
 import java.util.UUID
-import java.util.concurrent.TimeUnit
 
-import com.bwsw.tstreams.agents.consumer.Offset.Oldest
+import com.bwsw.tstreams.agents.consumer.Offset.{Oldest,Newest}
 import com.bwsw.tstreams.agents.consumer.TransactionOperator
 import com.bwsw.tstreams.agents.consumer.subscriber_v2.Callback
 import com.bwsw.tstreams.agents.producer.NewTransactionProducerPolicy
@@ -26,15 +25,15 @@ class SubscriberV2BasicPubSub  extends FlatSpec with Matchers with BeforeAndAfte
     setProperty(TSF_Dictionary.Consumer.TRANSACTION_PRELOAD, 10).
     setProperty(TSF_Dictionary.Consumer.DATA_PRELOAD, 10)
 
-  val producer = f.getProducer[String](
-    name = "test_producer",
-    txnGenerator = LocalGeneratorCreator.getGen(),
-    converter = stringToArrayByteConverter,
-    partitions = List(0,1,2),
-    isLowPriority = false)
-
   it should "handle all transactions produced by producer" in {
     var subTxns = 0
+    val producer = f.getProducer[String](
+      name = "test_producer",
+      txnGenerator = LocalGeneratorCreator.getGen(),
+      converter = stringToArrayByteConverter,
+      partitions = List(0,1,2),
+      isLowPriority = false)
+
     val s = f.getSubscriberV2[String](name = "sv2",
       txnGenerator = LocalGeneratorCreator.getGen(),
       converter = arrayByteToStringConverter, partitions = Set(0,1,2),
@@ -46,7 +45,7 @@ class SubscriberV2BasicPubSub  extends FlatSpec with Matchers with BeforeAndAfte
         }
       })
     s.start()
-    val TOTAL = 1000
+    val TOTAL = 100
     for(it <- 0 until TOTAL) {
       val txn = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
       txn.send("test")
@@ -56,6 +55,50 @@ class SubscriberV2BasicPubSub  extends FlatSpec with Matchers with BeforeAndAfte
     Thread.sleep(1000)
     s.stop()
     subTxns shouldBe TOTAL
+  }
+
+  it should "handle all transactions produced by two different producers" in {
+    var subTxns = 0
+    val producer1 = f.getProducer[String](
+      name = "test_producer",
+      txnGenerator = LocalGeneratorCreator.getGen(),
+      converter = stringToArrayByteConverter,
+      partitions = List(0,1,2),
+      isLowPriority = false)
+
+    val s = f.getSubscriberV2[String](name = "sv2",
+      txnGenerator = LocalGeneratorCreator.getGen(),
+      converter = arrayByteToStringConverter, partitions = Set(0,1,2),
+      offset = Newest,
+      isUseLastOffset = true,
+      callback = new Callback[String] {
+        override def onEvent(consumer: TransactionOperator[String], partition: Int, uuid: UUID, count: Int): Unit = this.synchronized {
+          subTxns += 1
+        }
+      })
+    s.start()
+    val TOTAL = 100
+    for(it <- 0 until TOTAL) {
+      val txn = producer1.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
+      txn.send("test")
+      txn.checkpoint()
+    }
+    producer1.stop()
+    val producer2 = f.getProducer[String](
+      name = "test_producer2",
+      txnGenerator = LocalGeneratorCreator.getGen(),
+      converter = stringToArrayByteConverter,
+      partitions = List(0,1,2),
+      isLowPriority = false)
+    for(it <- 0 until TOTAL) {
+      val txn = producer2.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
+      txn.send("test")
+      txn.checkpoint()
+    }
+    producer2.stop()
+    Thread.sleep(1000)
+    s.stop()
+    subTxns shouldBe TOTAL * 2
   }
 
   override def afterAll(): Unit = {
