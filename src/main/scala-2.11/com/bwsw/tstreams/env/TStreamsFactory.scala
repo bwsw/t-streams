@@ -7,8 +7,8 @@ import java.util.concurrent.atomic.AtomicBoolean
 import com.aerospike.client.Host
 import com.aerospike.client.policy.{ClientPolicy, Policy, WritePolicy}
 import com.bwsw.tstreams.agents.consumer.Offset.IOffset
-import com.bwsw.tstreams.agents.consumer.subscriber_v2.QueueBuilder.Persistent
-import com.bwsw.tstreams.agents.consumer.subscriber_v2.{QueueBuilder, Subscriber}
+import com.bwsw.tstreams.agents.consumer.subscriber.QueueBuilder.Persistent
+import com.bwsw.tstreams.agents.consumer.subscriber.{QueueBuilder, Subscriber}
 import com.bwsw.tstreams.agents.consumer.{Consumer, SubscriberCoordinationOptions}
 import com.bwsw.tstreams.agents.producer.{CoordinationOptions, Producer}
 import com.bwsw.tstreams.common.{RoundRobinPolicy, _}
@@ -943,7 +943,7 @@ class TStreamsFactory() {
                        txnGenerator: IUUIDGenerator,
                        converter: IConverter[Array[Byte], T],
                        partitions: Set[Int],
-                       callback: com.bwsw.tstreams.agents.consumer.subscriber_v2.Callback[T],
+                       callback: com.bwsw.tstreams.agents.consumer.subscriber.Callback[T],
                        offset: IOffset,
                        isUseLastOffset: Boolean = true
                              ): Subscriber[T] = this.synchronized {
@@ -992,7 +992,7 @@ class TStreamsFactory() {
 
     val queue_path = pAsString(TSF_Dictionary.Consumer.Subscriber.PERSISTENT_QUEUE_PATH)
 
-    val opts = com.bwsw.tstreams.agents.consumer.subscriber_v2.OptionsBuilder.fromConsumerOptions(consumerOptions,
+    val opts = com.bwsw.tstreams.agents.consumer.subscriber.OptionsBuilder.fromConsumerOptions(consumerOptions,
       agentAddress    = bind_host + ":" + bind_port,
       zkRootPath      = root,
       zkHosts         = Set[InetSocketAddress]().empty ++ NetworkUtil.getInetSocketAddressCompatibleHostList(endpoints),

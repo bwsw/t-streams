@@ -1,9 +1,9 @@
-package com.bwsw.tstreams.agents.consumer.subscriber_v2
+package com.bwsw.tstreams.agents.consumer.subscriber
 
 import java.net.InetSocketAddress
 
 import com.bwsw.tstreams.agents.consumer
-import com.bwsw.tstreams.agents.consumer.subscriber_v2.QueueBuilder.InMemory
+import com.bwsw.tstreams.agents.consumer.subscriber.QueueBuilder.InMemory
 
 object OptionsBuilder {
   def fromConsumerOptions[T](consumerOpts: consumer.Options[T],

@@ -2,7 +2,7 @@ package agents.subscriber
 
 import java.util.UUID
 
-import com.bwsw.tstreams.agents.consumer.subscriber_v2.{QueueBuilder, TransactionState, TransactionStatePersistentQueue}
+import com.bwsw.tstreams.agents.consumer.subscriber.{QueueBuilder, TransactionState, TransactionStatePersistentQueue}
 import com.bwsw.tstreams.common.InMemoryQueue
 import org.scalatest.{FlatSpec, Matchers}
 

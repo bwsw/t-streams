@@ -3,7 +3,7 @@ package agents.subscriber
 import java.util.UUID
 import java.util.concurrent.{CountDownLatch, TimeUnit}
 
-import com.bwsw.tstreams.agents.consumer.subscriber_v2.{Callback, TransactionFullLoader, TransactionState}
+import com.bwsw.tstreams.agents.consumer.subscriber.{Callback, TransactionFullLoader, TransactionState}
 import com.bwsw.tstreams.agents.consumer.{Transaction, TransactionOperator}
 import com.bwsw.tstreams.common.FirstFailLockableTaskExecutor
 import com.bwsw.tstreams.coordination.messages.state.TransactionStatus
