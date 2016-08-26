@@ -13,7 +13,7 @@ import testutils.{LocalGeneratorCreator, TestUtils}
 /**
   * Created by Ivan Kudryavtsev on 26.08.16.
   */
-class SubscriberV2BasicPubSub  extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils  {
+class SubscriberBasicPubSub  extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils  {
   f.setProperty(TSF_Dictionary.Stream.NAME,"test_stream").
     setProperty(TSF_Dictionary.Stream.PARTITIONS,3).
     setProperty(TSF_Dictionary.Stream.TTL, 60 * 10).
@@ -34,7 +34,7 @@ class SubscriberV2BasicPubSub  extends FlatSpec with Matchers with BeforeAndAfte
       partitions = List(0,1,2),
       isLowPriority = false)
 
-    val s = f.getSubscriberV2[String](name = "sv2",
+    val s = f.getSubscriber[String](name = "sv2",
       txnGenerator = LocalGeneratorCreator.getGen(),
       converter = arrayByteToStringConverter, partitions = Set(0,1,2),
       offset = Oldest,
@@ -66,7 +66,7 @@ class SubscriberV2BasicPubSub  extends FlatSpec with Matchers with BeforeAndAfte
       partitions = List(0,1,2),
       isLowPriority = false)
 
-    val s = f.getSubscriberV2[String](name = "sv2",
+    val s = f.getSubscriber[String](name = "sv2",
       txnGenerator = LocalGeneratorCreator.getGen(),
       converter = arrayByteToStringConverter, partitions = Set(0,1,2),
       offset = Newest,
