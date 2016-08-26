@@ -240,7 +240,7 @@ class CommunicationClient(timeoutMs: Int, retryCount: Int = 3, retryDelayMs: Int
     }
     catch {
       case e: IOException =>
-        CommunicationClient.logger.warn(s"exception occurred when receiving response from peer ${sock.getInetAddress.toString}: ${e.getMessage}")
+        CommunicationClient.logger.warn(s"exception occurred when sending response to peer ${sock.getInetAddress.toString}: ${e.getMessage}")
         closeSocketAndCleanPeerMap(sock)
         return false
     }

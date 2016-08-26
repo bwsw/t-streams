@@ -30,8 +30,7 @@ class Subscriber[T](val name: String,
   val l = options.agentAddress.split(":")
   val host = l.head
   val port = l.tail.head
-  private val tcpServer = new RequestsTcpServer(host, Integer.parseInt(port), new TransactionStateMessageChannelHandler(txnBufferWorkers))
-
+  private var tcpServer: RequestsTcpServer = null
   private val consumer = new com.bwsw.tstreams.agents.consumer.Consumer[T](
       name,
       stream,
@@ -67,6 +66,8 @@ class Subscriber[T](val name: String,
     val txnBuffers = mutable.Map[Int, TransactionBuffer]()
 
     consumer.start()
+
+    tcpServer = new RequestsTcpServer(host, Integer.parseInt(port), new TransactionStateMessageChannelHandler(txnBufferWorkers))
     tcpServer.start()
 
     /**
