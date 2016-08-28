@@ -10,8 +10,9 @@ import scala.collection.mutable
 class OpenTransactionsKeeper[T] {
   private val openTransactionsMap     = mutable.Map[Int, Transaction[T]]()
 
+
   def forallKeysDo[RV](f: (Int, Transaction[T]) => RV): Iterable[RV] = this.synchronized {
-    openTransactionsMap.map(kv => f(kv._1, kv._2))
+    openTransactionsMap.filter(kv => !kv._2.isClosed).map(kv => f(kv._1, kv._2))
   }
 
   def getTransactionOptionNaive(partition: Int) = this.synchronized {
