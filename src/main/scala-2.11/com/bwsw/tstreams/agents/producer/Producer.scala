@@ -65,8 +65,6 @@ class Producer[T](var name: String,
 
   logger.info(s"Start new Basic producer with name : $name, streamName : ${stream.getName}, streamPartitions : ${stream.getPartitions}")
 
-
-
   private val agentsStateManager = new AgentsStateDBService(
     zkService,
     producerOptions.coordinationOptions.transport.getIpAddress(),
