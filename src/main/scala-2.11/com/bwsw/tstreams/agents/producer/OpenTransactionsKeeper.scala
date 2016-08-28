@@ -10,11 +10,21 @@ import scala.collection.mutable
 class OpenTransactionsKeeper[T] {
   private val openTransactionsMap     = mutable.Map[Int, Transaction[T]]()
 
-
+  /**
+    * Allows to do smth with all not closed transactions.
+    * @param f
+    * @tparam RV
+    * @return
+    */
   def forallKeysDo[RV](f: (Int, Transaction[T]) => RV): Iterable[RV] = this.synchronized {
     openTransactionsMap.filter(kv => !kv._2.isClosed).map(kv => f(kv._1, kv._2))
   }
 
+  /**
+    * Returns if transaction is in map without checking if it's not closed
+    * @param partition
+    * @return
+    */
   def getTransactionOptionNaive(partition: Int) = this.synchronized {
     if(openTransactionsMap.contains(partition))
       Option(openTransactionsMap(partition))
@@ -22,7 +32,11 @@ class OpenTransactionsKeeper[T] {
       None
   }
 
-
+  /**
+    * Returns if transaction is in map and checks it's state
+    * @param partition
+    * @return
+    */
   def getTransactionOption(partition: Int) = {
     val partOpt = getTransactionOptionNaive(partition)
     val txnOpt = {
@@ -41,6 +55,12 @@ class OpenTransactionsKeeper[T] {
     txnOpt
   }
 
+  /**
+    * Awaits while a transaction for specified partition will be materialized
+    * @param partition
+    * @param policy
+    * @return
+    */
   def awaitOpenTransactionMaterialized(partition: Int, policy: ProducerPolicy): () => Unit = {
     val partOpt = getTransactionOption(partition)
     if (partOpt.isDefined) {
@@ -67,10 +87,19 @@ class OpenTransactionsKeeper[T] {
     action
   }
 
+  /**
+    * Adds new transaction
+    * @param partition
+    * @param transaction
+    * @return
+    */
   def put(partition: Int, transaction: Transaction[T]) = this.synchronized {
     openTransactionsMap.put(partition, transaction)
   }
 
+  /**
+    * Clears all transactions.
+    */
   def clear() = this.synchronized {
     openTransactionsMap.clear()
   }
