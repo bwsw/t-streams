@@ -218,8 +218,8 @@ class Producer[T](var name: String,
   /**
     * Info to commit
     */
-  override def getCheckpointInfoAndClear(): Iterable[CheckpointInfo] = {
-    val checkpointInfo = openTransactions.forallKeysDo((k: Int, v: Transaction[T]) => v.getTransactionInfo())
+  override def getCheckpointInfoAndClear(): List[CheckpointInfo] = {
+    val checkpointInfo = openTransactions.forallKeysDo((k: Int, v: Transaction[T]) => v.getTransactionInfo()).toList
     openTransactions.clear()
     checkpointInfo
   }

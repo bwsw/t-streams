@@ -18,7 +18,7 @@ trait GroupParticipant {
   /**
     * Info to commit
     */
-  def getCheckpointInfoAndClear(): Iterable[CheckpointInfo]
+  def getCheckpointInfoAndClear(): List[CheckpointInfo]
 
   /**
     * Metadata storage link for concrete agent
