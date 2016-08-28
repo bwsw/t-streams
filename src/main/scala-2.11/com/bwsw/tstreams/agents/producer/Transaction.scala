@@ -19,19 +19,18 @@ object Transaction {
 /**
   * Transaction retrieved by BasicProducer.newTransaction method
   *
-  * @param transactionLock Transaction Lock for managing actions which has to do with checkpoints
   * @param partition       Concrete partition for saving this transaction
   * @param txnOwner        Producer class which was invoked newTransaction method
   * @param transactionUuid UUID for this transaction
-  * @tparam USERTYPE User data type
+  * @tparam T User data type
   */
-class Transaction[USERTYPE](transactionLock: ReentrantLock,
-                            partition: Int,
+class Transaction[T](partition: Int,
                             transactionUuid: UUID,
-                            txnOwner: Producer[USERTYPE]) {
+                            txnOwner: Producer[T]) {
 
+  private val transactionLock = new ReentrantLock()
 
-  private val data = new TransactionData[USERTYPE](this, txnOwner.stream.getTTL, txnOwner.stream.dataStorage)
+  private val data = new TransactionData[T](this, txnOwner.stream.getTTL, txnOwner.stream.dataStorage)
 
   /**
     * state of transaction
@@ -105,7 +104,7 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
     *
     * @param obj some user object
     */
-  def send(obj: USERTYPE): Unit = {
+  def send(obj: T): Unit = {
     state.isOpenedOrDie
     val number = data.put(obj, txnOwner.producerOptions.converter)
     val job = {

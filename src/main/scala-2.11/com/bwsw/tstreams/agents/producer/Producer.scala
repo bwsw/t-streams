@@ -65,10 +65,6 @@ class Producer[T](var name: String,
       pcs.threadPoolAmount
   }
 
-  // every transaction reuses lock object from array below
-  val txnLocks = new Array[ReentrantLock](threadPoolSize)
-  (0 until threadPoolSize) foreach { idx => txnLocks(idx) = new ReentrantLock() }
-
   stream.dataStorage.bind() //TODO: fix, probably deprecated
 
   logger.info(s"Start new Basic producer with name : $name, streamName : ${stream.getName}, streamPartitions : ${stream.getPartitions}")
@@ -206,7 +202,7 @@ class Producer[T](var name: String,
     //logger.info(s"Elapsed for TXN ->: {}",delta - tm)
     if(logger.isDebugEnabled)
       logger.debug(s"[NEW_TRANSACTION PARTITION_$partition] uuid=${txnUUID.timestamp()}")
-    val txn = new Transaction[T](txnLocks(partition % threadPoolSize), partition, txnUUID, this)
+    val txn = new Transaction[T](partition, txnUUID, this)
     LockUtil.withLockOrDieDo[Unit](threadLock, (100, TimeUnit.SECONDS), Some(logger), () => {
       openTransactionsMap.put(partition, txn)
     })
