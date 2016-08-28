@@ -158,15 +158,15 @@ class Producer[T](var name: String,
     if (!(partition >= 0 && partition < stream.getPartitions))
       throw new IllegalArgumentException(s"Producer ${name} - invalid partition")
 
-
-    materializationGovernor.protect(partition)
     val previousTransactionAction: () => Unit =
       openTransactions.awaitOpenTransactionMaterialized(partition, policy)
+
+    materializationGovernor.protect(partition)
+
 
     //val tm = getNewTxnUUIDLocal().timestamp()
     val txnUUID = p2pAgent.generateNewTransaction(partition)
     //val delta = txnUUID.timestamp()
-
     //logger.info(s"Elapsed for TXN ->: {}",delta - tm)
     if(logger.isDebugEnabled)
       logger.debug(s"[NEW_TRANSACTION PARTITION_$partition] uuid=${txnUUID.timestamp()}")

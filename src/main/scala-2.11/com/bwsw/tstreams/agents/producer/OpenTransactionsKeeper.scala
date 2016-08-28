@@ -1,15 +1,18 @@
 package com.bwsw.tstreams.agents.producer
 
-import com.bwsw.tstreams.agents.producer.NewTransactionProducerPolicy.ProducerPolicy
-import com.bwsw.tstreams.coordination.producer.PeerAgent
+import java.util.concurrent.ConcurrentHashMap
 
-import scala.collection.mutable
+import com.bwsw.tstreams.agents.producer.NewTransactionProducerPolicy.ProducerPolicy
+
+import scala.collection.mutable.ListBuffer
+import scala.collection.JavaConversions._
+
 
 /**
   * Created by Ivan Kudryavtsev on 28.08.16.
   */
 class OpenTransactionsKeeper[T] {
-  private val openTransactionsMap     = mutable.Map[Int, Transaction[T]]()
+  private val openTransactionsMap     = new ConcurrentHashMap[Int, Transaction[T]]()
 
   /**
     * Allows to do smth with all not closed transactions.
@@ -19,10 +22,15 @@ class OpenTransactionsKeeper[T] {
     * @return
     */
   def forallKeysDo[RV](f: (Int, Transaction[T]) => RV): Iterable[RV] = {
-    PeerAgent.logger.info("forallkeysdo")
-    this.synchronized {
-      openTransactionsMap.filter(kv => !kv._2.isClosed).map(kv => f(kv._1, kv._2))
+    val keys = openTransactionsMap.keys()
+    val res = ListBuffer[RV]()
+    for(k <- keys) {
+      val v = openTransactionsMap.getOrDefault(k, null)
+      if(v != null && !v.isClosed) {
+        res.append(f(k, v))
+      }
     }
+    res
   }
 
   /**
@@ -32,13 +40,11 @@ class OpenTransactionsKeeper[T] {
     * @return
     */
   def getTransactionOptionNaive(partition: Int) = {
-    PeerAgent.logger.info("getTransactionOptionNaive")
-    this.synchronized {
-      if(openTransactionsMap.contains(partition))
-        Option(openTransactionsMap(partition))
-      else
-        None
-    }
+    val itm = openTransactionsMap.getOrDefault(partition, null)
+    if(itm != null)
+      Option(itm)
+    else
+      None
   }
 
   /**
@@ -106,16 +112,13 @@ class OpenTransactionsKeeper[T] {
     * @return
     */
   def put(partition: Int, transaction: Transaction[T]) = {
-    PeerAgent.logger.info("put")
-    this.synchronized {
-      openTransactionsMap.put(partition, transaction)
-    }
+    openTransactionsMap.put(partition, transaction)
   }
 
   /**
     * Clears all transactions.
     */
-  def clear() = this.synchronized {
+  def clear() = {
     openTransactionsMap.clear()
   }
 
