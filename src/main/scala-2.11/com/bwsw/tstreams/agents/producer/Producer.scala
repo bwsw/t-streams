@@ -46,16 +46,13 @@ class Producer[T](var name: String,
   // stores currently opened transactions per partition
   private val openTransactionsMap     = new ConcurrentHashMap[Int, Transaction[T]]()
   // stores latches for materialization await (protects from materialization before main transaction response)
-  private val transactionMaterializationBlockingMap = new ConcurrentHashMap[Int, ResettableCountDownLatch]()
+  private val materializationGovernor = new MaterializationGovernor(producerOptions.writePolicy.getUsedPartitions().toSet)
   private val logger      = LoggerFactory.getLogger(this.getClass)
   private val threadLock  = new ReentrantLock(true)
 
   private val zkRetriesAmount = pcs.zkSessionTimeout * 1000 / PeerAgent.RETRY_SLEEP_TIME + 1
   private val zkService       = new ZookeeperDLMService(pcs.zkRootPath, pcs.zkHosts, pcs.zkSessionTimeout, pcs.zkConnectionTimeout)
 
-  // initialize latches
-  producerOptions.writePolicy.getUsedPartitions()
-    .map(p => transactionMaterializationBlockingMap.put(p, new ResettableCountDownLatch(0)))
 
   // amount of threads which will handle partitions in masters, etc
   val threadPoolSize: Int = {
@@ -176,7 +173,8 @@ class Producer[T](var name: String,
       partOpt.get.awaitMaterialized()
     }
 
-    transactionMaterializationBlockingMap.get(partition).setValue(1)
+    materializationGovernor.protect(partition)
+
     var action: () => Unit = null
     if (partOpt.isDefined) {
       if (!partOpt.get.isClosed) {
@@ -206,7 +204,9 @@ class Producer[T](var name: String,
     LockUtil.withLockOrDieDo[Unit](threadLock, (100, TimeUnit.SECONDS), Some(logger), () => {
       openTransactionsMap.put(partition, txn)
     })
-    transactionMaterializationBlockingMap.get(partition).countDown
+
+    materializationGovernor.unprotect(partition)
+
     if(action != null)
       backendActivityService.submit(new Runnable {
         override def run(): Unit = action() })
@@ -389,7 +389,7 @@ class Producer[T](var name: String,
   def materialize(msg: TransactionStateMessage) = {
     if(logger.isDebugEnabled)
       logger.debug(s"Start handling MaterializeRequest at partition: ${msg.partition}")
-    transactionMaterializationBlockingMap.get(msg.partition).await()
+    materializationGovernor.awaitUnprotected(msg.partition)
     val opt = getOpenedTransactionForPartition(msg.partition)
     assert(opt.isDefined)
     if(logger.isDebugEnabled)
