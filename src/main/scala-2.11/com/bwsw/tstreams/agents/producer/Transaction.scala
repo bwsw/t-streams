@@ -57,7 +57,7 @@ class Transaction[T](partition: Int,
   /**
     * Return transaction partition
     */
-  def getPartition: Int = partition
+  def getPartition(): Int = partition
 
   /**
     * makes transaction materialized
@@ -105,7 +105,7 @@ class Transaction[T](partition: Int,
     * @param obj some user object
     */
   def send(obj: T): Unit = {
-    state.isOpenedOrDie
+    state.isOpenedOrDie()
     val number = data.put(obj, txnOwner.producerOptions.converter)
     val job = {
       if (number % txnOwner.producerOptions.batchSize == 0) {
@@ -152,6 +152,7 @@ class Transaction[T](partition: Int,
     * Canceling current transaction
     */
   def cancel() = {
+    state.isOpenedOrDie()
     state.awaitMaterialization(txnOwner.producerOptions.coordinationOptions.transport.getTimeout())
     LockUtil.withLockOrDieDo[Unit](transactionLock, (100, TimeUnit.SECONDS), Some(Transaction.logger), () => {
       state.awaitUpdateComplete
@@ -254,10 +255,11 @@ class Transaction[T](partition: Int,
     * Submit transaction(transaction will be available by consumer only after closing)
     */
   def checkpoint(isSynchronous: Boolean = true): Unit = {
+    state.isOpenedOrDie()
     state.awaitMaterialization(txnOwner.producerOptions.coordinationOptions.transport.getTimeout())
     LockUtil.withLockOrDieDo[Unit](transactionLock, (100, TimeUnit.SECONDS), Some(Transaction.logger), () => {
-      state.awaitUpdateComplete
-      state.closeOrDie
+      state.awaitUpdateComplete()
+      state.closeOrDie()
       if (!isSynchronous) {
         txnOwner.backendActivityService.submit(new Runnable {
           override def run(): Unit = checkpointAsync()
@@ -348,13 +350,13 @@ class Transaction[T](partition: Int,
   }
 
   def updateTxnKeepAliveState(): Unit = {
-    if(!state.isMaterialized)
+    if(!state.isMaterialized())
       return
     // atomically check state and launch update process
     val stateOnUpdateClosed =
       LockUtil.withLockOrDieDo[Boolean](transactionLock, (100, TimeUnit.SECONDS), Some(Transaction.logger), () => {
-        val s = state.isClosed
-        if (!s) state.setUpdateInProgress
+        val s = state.isClosed()
+        if (!s) state.setUpdateInProgress()
         s })
 
     // if atomic state was closed then update process should be aborted
