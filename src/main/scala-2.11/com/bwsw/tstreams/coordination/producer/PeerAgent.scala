@@ -73,7 +73,7 @@ class PeerAgent(agentsStateManager: AgentsStateDBService, zkService: ZookeeperDL
   def getUsedPartitions()         = usedPartitions
   def getProducer()               = producer
   def getCassandraAsyncExecutor() = cassandraAsyncExecutor
-  def getAgentsStateManager()          = agentsStateManager
+  def getAgentsStateManager()     = agentsStateManager
 
   /**
     * this ID is used to track sequential transactions from the same master

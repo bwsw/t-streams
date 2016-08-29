@@ -4,7 +4,7 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.AbstractQueuedSynchronizer
 
 /**
-  * Created by ivan on 07.08.16.
+  * Created by Ivan Kudryavtsev on 07.08.16.
   */
 class ResettableCountDownLatch(val count: Int) {
 

@@ -1,7 +1,7 @@
 package com.bwsw.tstreams.common
 
 /**
-  * Created by ivan on 09.08.16.
+  * Created by Ivan Kudryavtsev on 09.08.16.
   */
 import java.net.{InetSocketAddress, NetworkInterface}
 import java.nio.ByteBuffer

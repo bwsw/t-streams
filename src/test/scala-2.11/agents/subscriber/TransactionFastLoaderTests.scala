@@ -22,7 +22,7 @@ trait FastLoaderTestContainer {
 }
 
 /**
-  * Created by ivan on 21.08.16.
+  * Created by Ivan Kudryavtsev on 21.08.16.
   */
 class TransactionFastLoaderTests extends FlatSpec with Matchers {
   it should "load fast if next state is after prev state from the same master" in {

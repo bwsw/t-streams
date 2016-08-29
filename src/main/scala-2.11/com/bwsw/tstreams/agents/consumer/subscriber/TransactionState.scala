@@ -5,7 +5,7 @@ import java.util.UUID
 import com.bwsw.tstreams.coordination.messages.state.TransactionStatus.ProducerTransactionStatus
 
 /**
-  * Created by ivan on 19.08.16.
+  * Created by Ivan Kudryavtsev on 19.08.16.
   */
 case class TransactionState(uuid: UUID,
                             partition: Int,

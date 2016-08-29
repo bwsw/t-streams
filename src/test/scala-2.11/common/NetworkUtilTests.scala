@@ -7,7 +7,7 @@ import com.bwsw.tstreams.common.NetworkUtil
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 
 /**
-  * Created by ivan on 04.08.16.
+  * Created by Ivan Kudryavtsev on 04.08.16.
   */
 class NetworkUtilTests extends FlatSpec with Matchers with BeforeAndAfterAll  {
   "Build Aerospike compatible list of three hosts" should "return list of 3 items of type Aerospike host" in {

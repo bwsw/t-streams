@@ -5,7 +5,7 @@ import java.util.UUID
 import com.bwsw.tstreams.agents.group.ProducerCheckpointInfo
 
 /**
-  * Created by ivan on 29.08.16.
+  * Created by Ivan Kudryavtsev on 29.08.16.
   */
 trait IProducerTransaction[T] {
   def awaitMaterialized(): Unit

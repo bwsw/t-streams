@@ -7,7 +7,7 @@ import com.hazelcast.config.XmlConfigBuilder
 import com.hazelcast.core.{Hazelcast, HazelcastInstance}
 
 /**
-  * Created by ivan on 12.08.16.
+  * Created by Ivan Kudryavtsev on 12.08.16.
   */
 class Factory {
   def getInstance(opts: Options): Storage = {

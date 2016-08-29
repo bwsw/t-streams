@@ -7,7 +7,7 @@ import com.bwsw.tstreams.common.LockUtil
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 
 /**
-  * Created by ivan on 03.08.16.
+  * Created by Ivan Kudryavtsev on 03.08.16.
   */
 class LockUtilTests extends FlatSpec with Matchers with BeforeAndAfterAll {
   "After call lockOrDie" should "lock to be received" in {

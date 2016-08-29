@@ -6,7 +6,7 @@ import com.bwsw.tstreams.agents.producer.TransactionState
 import org.scalatest.{FlatSpec, Matchers}
 
 /**
-  * Created by ivan on 06.08.16.
+  * Created by Ivan Kudryavtsev on 06.08.16.
   */
 class TransactionStateTest  extends FlatSpec with Matchers {
   "Proper state update process" should "return ordered results" in {
