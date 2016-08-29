@@ -36,4 +36,12 @@ class MaterializationGovernorTests  extends FlatSpec with Matchers  {
     end - start >= 10 shouldBe true
   }
 
+  it should "complete await unprotection immediately if no protection set" in {
+    val mg = new MaterializationGovernor(Set(0))
+    val start = System.currentTimeMillis()
+    mg.awaitUnprotected(0)
+    val end = System.currentTimeMillis()
+    end - start < 1 shouldBe true
+  }
+
 }
