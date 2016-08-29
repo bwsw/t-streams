@@ -4,7 +4,7 @@ import com.bwsw.tstreams.converter.IConverter
 import com.bwsw.tstreams.data.IStorage
 
 /**
-  * Created by ivan on 15.08.16.
+  * Created by Ivan Kudryavtsev on 15.08.16.
   */
 class TransactionData[USERTYPE](txn: Transaction[USERTYPE], ttl: Int, storage: IStorage[Array[Byte]]) {
   var items = new scala.collection.mutable.ListBuffer[Array[Byte]]()

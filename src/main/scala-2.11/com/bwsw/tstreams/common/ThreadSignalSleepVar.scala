@@ -3,7 +3,7 @@ package com.bwsw.tstreams.common
 import java.util.concurrent.{LinkedBlockingQueue, TimeUnit}
 
 /**
-  * Created by ivan on 25.07.16.
+  * Created by Ivan Kudryavtsev on 25.07.16.
   * Allows wait for external event in thread for specified amount of time (combines sleep and flag)
   */
 class ThreadSignalSleepVar[T](size: Int = 1) {

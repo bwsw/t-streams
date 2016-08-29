@@ -8,7 +8,7 @@ import org.apache.zookeeper.{CreateMode, KeeperException, Watcher}
 import scala.collection.mutable
 
 /**
-  * Created by ivan on 17.08.16.
+  * Created by Ivan Kudryavtsev on 17.08.16.
   */
 class AgentsStateDBService(dlm: ZookeeperDLMService, myIPAddress: String, streamName: String, partitions: Set[Int]) {
 

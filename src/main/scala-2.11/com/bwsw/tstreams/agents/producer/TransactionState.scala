@@ -68,7 +68,7 @@ class TransactionState {
   /**
     * check if the transaction is materialized
     */
-  def isMaterialized: Boolean = materialized.get
+  def isMaterialized(): Boolean = materialized.get
 
   /**
     * Variable for indicating transaction state
@@ -87,18 +87,18 @@ class TransactionState {
   /**
     * changes transaction state to updating
     */
-  def setUpdateInProgress = updateSignalVar.setValue(1)
+  def setUpdateInProgress() = updateSignalVar.setValue(1)
 
   /**
     * changes transaction state to finished updating
     */
-  def setUpdateFinished = updateSignalVar.countDown
+  def setUpdateFinished() = updateSignalVar.countDown
 
   /**
     * awaits while transaction updates
     * @return
     */
-  def awaitUpdateComplete: Unit = {
+  def awaitUpdateComplete(): Unit = {
     if(!updateSignalVar.await(10, TimeUnit.SECONDS))
       throw new IllegalStateException("Update takes too long (> 10 seconds). Probably failure.")
   }
@@ -106,7 +106,7 @@ class TransactionState {
   /**
     * Makes transaction closed
     */
-  def closeOrDie: Unit = {
+  def closeOrDie(): Unit = {
     if (closed.getAndSet(true))
       throw new IllegalStateException("Transaction state is already closed. Wrong operation. Double close.")
   }
@@ -114,7 +114,7 @@ class TransactionState {
   /**
     * Ensures that transaction is still open
     */
-  def isOpenedOrDie: Unit = {
+  def isOpenedOrDie(): Unit = {
     if (closed.get)
       throw new IllegalStateException("Transaction state is already closed. Wrong operation.")
   }
@@ -122,5 +122,5 @@ class TransactionState {
   /**
     * get transaction closed state
     */
-  def isClosed = closed.get()
+  def isClosed() = closed.get()
 }

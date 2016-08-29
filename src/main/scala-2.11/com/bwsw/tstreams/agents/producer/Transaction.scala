@@ -19,19 +19,18 @@ object Transaction {
 /**
   * Transaction retrieved by BasicProducer.newTransaction method
   *
-  * @param transactionLock Transaction Lock for managing actions which has to do with checkpoints
   * @param partition       Concrete partition for saving this transaction
   * @param txnOwner        Producer class which was invoked newTransaction method
   * @param transactionUuid UUID for this transaction
-  * @tparam USERTYPE User data type
+  * @tparam T User data type
   */
-class Transaction[USERTYPE](transactionLock: ReentrantLock,
-                            partition: Int,
+class Transaction[T](partition: Int,
                             transactionUuid: UUID,
-                            txnOwner: Producer[USERTYPE]) {
+                            txnOwner: Producer[T]) extends IProducerTransaction[T] {
 
+  private val transactionLock = new ReentrantLock()
 
-  private val data = new TransactionData[USERTYPE](this, txnOwner.stream.getTTL, txnOwner.stream.dataStorage)
+  private val data = new TransactionData[T](this, txnOwner.stream.getTTL, txnOwner.stream.dataStorage)
 
   /**
     * state of transaction
@@ -58,7 +57,7 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
   /**
     * Return transaction partition
     */
-  def getPartition: Int = partition
+  def getPartition(): Int = partition
 
   /**
     * makes transaction materialized
@@ -105,8 +104,8 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
     *
     * @param obj some user object
     */
-  def send(obj: USERTYPE): Unit = {
-    state.isOpenedOrDie
+  def send(obj: T): Unit = {
+    state.isOpenedOrDie()
     val number = data.put(obj, txnOwner.producerOptions.converter)
     val job = {
       if (number % txnOwner.producerOptions.batchSize == 0) {
@@ -132,7 +131,7 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
       streamName  = txnOwner.stream.getName,
       partition   = partition,
       transaction = transactionUuid,
-      executor    = txnOwner.p2pAgent.getCassandraAsyncExecutor,
+      executor    = txnOwner.backendActivityService,
       function    = () => {
         val msg = TransactionStateMessage(txnUuid = transactionUuid,
           ttl = -1,
@@ -152,7 +151,8 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
   /**
     * Canceling current transaction
     */
-  def cancel() = {
+  def cancel(): Unit = {
+    state.isOpenedOrDie()
     state.awaitMaterialization(txnOwner.producerOptions.coordinationOptions.transport.getTimeout())
     LockUtil.withLockOrDieDo[Unit](transactionLock, (100, TimeUnit.SECONDS), Some(Transaction.logger), () => {
       state.awaitUpdateComplete
@@ -237,7 +237,7 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
         transaction = transactionUuid,
         totalCnt = getDataItemsCount,
         ttl = txnOwner.stream.getTTL,
-        executor = txnOwner.p2pAgent.getCassandraAsyncExecutor,
+        executor = txnOwner.backendActivityService,
         function = checkpointPostEventPart)
     }
     else {
@@ -255,10 +255,11 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
     * Submit transaction(transaction will be available by consumer only after closing)
     */
   def checkpoint(isSynchronous: Boolean = true): Unit = {
+    state.isOpenedOrDie()
     state.awaitMaterialization(txnOwner.producerOptions.coordinationOptions.transport.getTimeout())
     LockUtil.withLockOrDieDo[Unit](transactionLock, (100, TimeUnit.SECONDS), Some(Transaction.logger), () => {
-      state.awaitUpdateComplete
-      state.closeOrDie
+      state.awaitUpdateComplete()
+      state.closeOrDie()
       if (!isSynchronous) {
         txnOwner.backendActivityService.submit(new Runnable {
           override def run(): Unit = checkpointAsync()
@@ -349,13 +350,13 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
   }
 
   def updateTxnKeepAliveState(): Unit = {
-    if(!state.isMaterialized)
+    if(!state.isMaterialized())
       return
     // atomically check state and launch update process
     val stateOnUpdateClosed =
       LockUtil.withLockOrDieDo[Boolean](transactionLock, (100, TimeUnit.SECONDS), Some(Transaction.logger), () => {
-        val s = state.isClosed
-        if (!s) state.setUpdateInProgress
+        val s = state.isClosed()
+        if (!s) state.setUpdateInProgress()
         s })
 
     // if atomic state was closed then update process should be aborted
@@ -378,7 +379,7 @@ class Transaction[USERTYPE](transactionLock: ReentrantLock,
     transaction = transactionUuid,
     totalCnt = -1,
     ttl = txnOwner.producerOptions.transactionTTL,
-    executor = txnOwner.p2pAgent.getCassandraAsyncExecutor,
+    executor = txnOwner.backendActivityService,
     function = doSendUpdateMessage)
   }
 

@@ -8,7 +8,7 @@ import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import testutils.{LocalGeneratorCreator, TestUtils}
 
 /**
-  * Created by ivan on 05.08.16.
+  * Created by Ivan Kudryavtsev on 05.08.16.
   */
 class ProducerUpdateTaskTest  extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils  {
 

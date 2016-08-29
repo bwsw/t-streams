@@ -5,7 +5,7 @@ import org.slf4j.LoggerFactory
 import scala.collection.mutable
 
 /**
-  * Created by ivan on 11.08.16.
+  * Created by Ivan Kudryavtsev on 11.08.16.
   */
 object TimeTracker {
   val isEnabled = true

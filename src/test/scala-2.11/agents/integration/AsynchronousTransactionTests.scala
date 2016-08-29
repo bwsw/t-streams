@@ -10,7 +10,7 @@ import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import testutils.{LocalGeneratorCreator, TestUtils}
 
 /**
-  * Created by ivan on 02.08.16.
+  * Created by Ivan Kudryavtsev on 02.08.16.
   */
 class AsynchronousTransactionTests  extends FlatSpec with Matchers
   with BeforeAndAfterAll with TestUtils {

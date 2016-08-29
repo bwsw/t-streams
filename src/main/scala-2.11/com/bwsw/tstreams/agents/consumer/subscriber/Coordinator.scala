@@ -7,7 +7,7 @@ import com.bwsw.tstreams.common.ZookeeperDLMService
 import org.apache.zookeeper.{CreateMode, KeeperException}
 
 /**
-  * Created by ivan on 23.08.16.
+  * Created by Ivan Kudryavtsev on 23.08.16.
   */
 class Coordinator() {
 

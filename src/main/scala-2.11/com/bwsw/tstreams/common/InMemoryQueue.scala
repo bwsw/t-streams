@@ -4,7 +4,7 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantLock
 
 /**
-  * Created by ivan on 19.08.16.
+  * Created by Ivan Kudryavtsev on 19.08.16.
   */
 class InMemoryQueue[T] extends AbstractQueue[T] {
   /**

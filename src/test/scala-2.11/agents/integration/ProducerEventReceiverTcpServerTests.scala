@@ -5,7 +5,7 @@ import com.bwsw.tstreams.coordination.subscriber.ProducerEventReceiverTcpServer
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 
 /**
-  * Created by ivan on 06.08.16.
+  * Created by Ivan Kudryavtsev on 06.08.16.
   */
 class ProducerEventReceiverTcpServerTests  extends FlatSpec with Matchers with BeforeAndAfterAll {
 

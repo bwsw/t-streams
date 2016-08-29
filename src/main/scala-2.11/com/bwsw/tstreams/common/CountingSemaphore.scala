@@ -1,7 +1,7 @@
 package com.bwsw.tstreams.common
 
 /**
-  * Created by ivan on 15.08.16.
+  * Created by Ivan Kudryavtsev on 15.08.16.
   */
 class CountingSemaphore(initial: Int = 0) {
   private var signals: Int = initial

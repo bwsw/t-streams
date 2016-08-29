@@ -7,7 +7,7 @@ import com.bwsw.tstreams.common.InMemoryQueue
 import org.scalatest.{FlatSpec, Matchers}
 
 /**
-  * Created by ivan on 19.08.16.
+  * Created by Ivan Kudryavtsev on 19.08.16.
   */
 class QueueBuilderTests extends FlatSpec with Matchers {
   it should "Return InMemoryQueue" in {

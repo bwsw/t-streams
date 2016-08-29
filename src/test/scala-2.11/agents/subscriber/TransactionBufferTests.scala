@@ -27,7 +27,7 @@ object TransactionBufferTests {
   }
 }
 /**
-  * Created by ivan on 19.08.16.
+  * Created by Ivan Kudryavtsev on 19.08.16.
   */
 class TransactionBufferTests extends FlatSpec with Matchers {
 

@@ -5,7 +5,7 @@ import java.net.InetSocketAddress
 import com.aerospike.client.Host
 
 /**
-  * Created by ivan on 04.08.16.
+  * Created by Ivan Kudryavtsev on 04.08.16.
   */
 object NetworkUtil {
   /**

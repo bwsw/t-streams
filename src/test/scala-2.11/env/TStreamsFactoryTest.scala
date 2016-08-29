@@ -10,7 +10,7 @@ import com.bwsw.tstreams.env.TSF_Dictionary
 import com.bwsw.tstreams.generator.LocalTimeUUIDGenerator
 
 /**
-  * Created by ivan on 23.07.16.
+  * Created by Ivan Kudryavtsev on 23.07.16.
   */
 
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}

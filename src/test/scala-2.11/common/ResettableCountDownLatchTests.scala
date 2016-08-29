@@ -4,7 +4,7 @@ import com.bwsw.tstreams.common.ResettableCountDownLatch
 import org.scalatest.{FlatSpec, Matchers}
 
 /**
-  * Created by ivan on 07.08.16.
+  * Created by Ivan Kudryavtsev on 07.08.16.
   */
 class ResettableCountDownLatchTests extends FlatSpec with Matchers {
   val l = new ResettableCountDownLatch(1)
