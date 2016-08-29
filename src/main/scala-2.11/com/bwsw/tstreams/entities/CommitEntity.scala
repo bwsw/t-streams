@@ -3,9 +3,10 @@ package com.bwsw.tstreams.entities
 import java.util
 import java.util.UUID
 import java.util.concurrent.Executor
+import java.util.concurrent.atomic.AtomicInteger
 
 import com.bwsw.tstreams.agents.consumer.Transaction
-import com.datastax.driver.core.{ResultSetFuture, ResultSet, Row, Session}
+import com.datastax.driver.core.{ResultSet, ResultSetFuture, Row, Session}
 import com.google.common.util.concurrent.{FutureCallback, Futures}
 
 
@@ -70,13 +71,16 @@ class CommitEntity(commitLog: String, session: Session) {
                   totalCnt: Int,
                   ttl: Int,
                   executor: Executor,
-                  function: () => Unit): ResultSetFuture = {
+                  function: () => Unit,
+                  resourceCounter: AtomicInteger): ResultSetFuture = {
+    resourceCounter.incrementAndGet()
     val values = List(streamName, new Integer(partition), transaction, new Integer(totalCnt), new Integer(ttl))
     val statementWithBindings = commitStatement.bind(values: _*)
     val f = session.executeAsync(statementWithBindings)
     Futures.addCallback(f, new FutureCallback[ResultSet]() {
       override def onSuccess(r: ResultSet) = {
         function()
+        resourceCounter.decrementAndGet()
       }
 
       override def onFailure(r: Throwable) = {
@@ -98,13 +102,16 @@ class CommitEntity(commitLog: String, session: Session) {
                   partition: Int,
                   transaction: UUID,
                   executor: Executor,
-                  function: () => Unit): ResultSetFuture = {
+                  function: () => Unit,
+                  resourceCounter: AtomicInteger): ResultSetFuture = {
+    resourceCounter.incrementAndGet()
     val values = List(streamName, new Integer(partition), transaction)
     val statementWithBindings = deleteStatement.bind(values: _*)
     val f = session.executeAsync(statementWithBindings)
     Futures.addCallback(f, new FutureCallback[ResultSet]() {
       override def onSuccess(r: ResultSet) = {
         function()
+        resourceCounter.decrementAndGet()
       }
 
       override def onFailure(r: Throwable) = {
