@@ -243,15 +243,14 @@ class Producer[T](var name: String,
     * @return UUID
     */
   override def openTxnLocal(txnUUID: UUID, partition: Int, onComplete: () => Unit): Unit = {
-    pendingCassandraTasks.incrementAndGet()
     stream.metadataStorage.commitEntity.commitAsync(
       streamName = stream.getName,
       partition = partition,
       transaction = txnUUID,
       totalCnt = -1,
       ttl = producerOptions.transactionTTL,
+      resourceCounter = pendingCassandraTasks,
       function = () => {
-        pendingCassandraTasks.decrementAndGet()
         // submit task for materialize notification request
         p2pAgent.submitPipelinedTaskToMaterializeExecutor(partition, onComplete)
         // submit task for publish notification requests
