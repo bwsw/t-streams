@@ -12,7 +12,7 @@ import scala.collection.JavaConversions._
   * Created by Ivan Kudryavtsev on 28.08.16.
   */
 class OpenTransactionsKeeper[T] {
-  private val openTransactionsMap     = new ConcurrentHashMap[Int, Transaction[T]]()
+  private val openTransactionsMap     = new ConcurrentHashMap[Int, IProducerTransaction[T]]()
 
   /**
     * Allows to do smth with all not closed transactions.
@@ -21,7 +21,7 @@ class OpenTransactionsKeeper[T] {
     * @tparam RV
     * @return
     */
-  def forallKeysDo[RV](f: (Int, Transaction[T]) => RV): Iterable[RV] = {
+  def forallKeysDo[RV](f: (Int, IProducerTransaction[T]) => RV): Iterable[RV] = {
     val keys = openTransactionsMap.keys()
     val res = ListBuffer[RV]()
     for(k <- keys) {
@@ -44,7 +44,7 @@ class OpenTransactionsKeeper[T] {
     * @param partition
     * @return
     */
-  def getTransactionOptionNaive(partition: Int) = {
+  private def getTransactionOptionNaive(partition: Int) = {
     val itm = openTransactionsMap.getOrDefault(partition, null)
     if(itm != null)
       Option(itm)
@@ -116,7 +116,7 @@ class OpenTransactionsKeeper[T] {
     * @param transaction
     * @return
     */
-  def put(partition: Int, transaction: Transaction[T]) = {
+  def put(partition: Int, transaction: IProducerTransaction[T]) = {
     openTransactionsMap.put(partition, transaction)
   }
 

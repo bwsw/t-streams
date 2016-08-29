@@ -6,7 +6,7 @@ import com.bwsw.tstreams.agents.producer.MaterializationGovernor
 import org.scalatest.{Matchers, FlatSpec}
 
 /**
-  * Created by ivan on 28.08.16.
+  * Created by Ivan Kudryavtsev on 28.08.16.
   */
 class MaterializationGovernorTests  extends FlatSpec with Matchers  {
   it should "init, protect, unprotect, await unprotection in single thread" in {

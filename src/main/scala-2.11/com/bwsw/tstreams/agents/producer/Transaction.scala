@@ -26,7 +26,7 @@ object Transaction {
   */
 class Transaction[T](partition: Int,
                             transactionUuid: UUID,
-                            txnOwner: Producer[T]) {
+                            txnOwner: Producer[T]) extends IProducerTransaction[T] {
 
   private val transactionLock = new ReentrantLock()
 
@@ -151,7 +151,7 @@ class Transaction[T](partition: Int,
   /**
     * Canceling current transaction
     */
-  def cancel() = {
+  def cancel(): Unit = {
     state.isOpenedOrDie()
     state.awaitMaterialization(txnOwner.producerOptions.coordinationOptions.transport.getTimeout())
     LockUtil.withLockOrDieDo[Unit](transactionLock, (100, TimeUnit.SECONDS), Some(Transaction.logger), () => {
