@@ -16,6 +16,7 @@ import org.slf4j.LoggerFactory
 
 import scala.util.control.Breaks._
 
+
 /**
   * Basic producer class
   *
@@ -283,6 +284,10 @@ class Producer[T](var name: String,
     shutdownKeepAliveThread.signal(true)
     txnKeepAliveThread.join()
     // stop executor
+
+    while(backendActivityService.getQueue().size() > 0)
+      Thread.sleep(50)
+
     backendActivityService.shutdownOrDie(100, TimeUnit.SECONDS)
     // stop provide master features to public
     p2pAgent.stop()
