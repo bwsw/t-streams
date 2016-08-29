@@ -5,7 +5,7 @@ import java.util.UUID
 import java.util.concurrent.Executor
 
 import com.bwsw.tstreams.agents.consumer.Transaction
-import com.datastax.driver.core.{ResultSet, Row, Session}
+import com.datastax.driver.core.{ResultSetFuture, ResultSet, Row, Session}
 import com.google.common.util.concurrent.{FutureCallback, Futures}
 
 
@@ -70,7 +70,7 @@ class CommitEntity(commitLog: String, session: Session) {
                   totalCnt: Int,
                   ttl: Int,
                   executor: Executor,
-                  function: () => Unit): Unit = {
+                  function: () => Unit): ResultSetFuture = {
     val values = List(streamName, new Integer(partition), transaction, new Integer(totalCnt), new Integer(ttl))
     val statementWithBindings = commitStatement.bind(values: _*)
     val f = session.executeAsync(statementWithBindings)
@@ -83,6 +83,7 @@ class CommitEntity(commitLog: String, session: Session) {
         throw new IllegalStateException("PostCommit Callback execution failed! Wrong state!")
       }
     }, executor)
+    f
   }
 
   /**
@@ -97,7 +98,7 @@ class CommitEntity(commitLog: String, session: Session) {
                   partition: Int,
                   transaction: UUID,
                   executor: Executor,
-                  function: () => Unit): Unit = {
+                  function: () => Unit): ResultSetFuture = {
     val values = List(streamName, new Integer(partition), transaction)
     val statementWithBindings = deleteStatement.bind(values: _*)
     val f = session.executeAsync(statementWithBindings)
@@ -110,6 +111,7 @@ class CommitEntity(commitLog: String, session: Session) {
         throw new IllegalStateException("Delete Callback execution failed! Wrong state!")
       }
     }, executor)
+    f
   }
 
 
