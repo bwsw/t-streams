@@ -6,7 +6,7 @@ import com.bwsw.tstreams.agents.consumer.subscriber.{QueueBuilder, TransactionBu
 import org.scalatest.{FlatSpec, Matchers}
 
 /**
-  * Created by ivan on 20.08.16.
+  * Created by Ivan Kudryavtsev on 20.08.16.
   */
 class TransactionBufferWorkerTests extends FlatSpec with Matchers {
   val ts0 = TransactionBufferTests.generateAllStates()

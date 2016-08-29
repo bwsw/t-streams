@@ -2,6 +2,7 @@ package com.bwsw.tstreams.agents.consumer.subscriber
 
 import java.util.concurrent.atomic.AtomicBoolean
 
+import com.bwsw.tstreams.common.Functions
 import com.bwsw.tstreams.coordination.server.RequestsTcpServer
 import com.bwsw.tstreams.streams.TStream
 import org.slf4j.LoggerFactory
@@ -42,6 +43,7 @@ class Subscriber[T](val name: String,
 
   /**
     * Erathosphene's grating algorithm
+    *
     * @param parts
     * @param thID
     * @param total
@@ -144,7 +146,7 @@ class Subscriber[T](val name: String,
   private def calculateBufferWorkersThreadAmount(): Int = {
     val maxThreads = options.readPolicy.getUsedPartitions().size
     val minThreads = options.txnBufferWorkersThreadPoolAmount
-    calculateThreadAmount(minThreads, maxThreads)
+    Functions.calculateThreadAmount(minThreads, maxThreads)
   }
 
   /**
@@ -155,33 +157,14 @@ class Subscriber[T](val name: String,
   def calculateProcessingEngineWorkersThreadAmount(): Int = {
     val maxThreads = options.readPolicy.getUsedPartitions().size
     val minThreads = options.processingEngineWorkersThreadAmount
-    calculateThreadAmount(minThreads, maxThreads)
+    Functions.calculateThreadAmount(minThreads, maxThreads)
   }
 
-  private def calculateThreadAmount(minThreads: Int, maxThreads: Int): Int = {
-    if (minThreads >= maxThreads) {
-      Subscriber.logger.warn(s"User requested ${minThreads} worker threads, but total partitions amount is ${maxThreads}. Will use ${maxThreads}")
-      return maxThreads
-    }
 
-    if(minThreads <= 0) {
-      Subscriber.logger.warn(s"User requested ${minThreads} worker threads, but minimal amount is 1. Will use 1 worker thread.")
-      return 1
-    }
-
-    if(maxThreads % minThreads == 0) {
-      return minThreads
-    }
-
-    for(i <- minThreads to maxThreads) {
-      if (maxThreads % i == 0)
-        return i
-    }
-    return maxThreads
-  }
 
   /**
     * Returns consumer inner object
+    *
     * @return
     */
   def getConsumer() = consumer

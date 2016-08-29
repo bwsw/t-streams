@@ -8,7 +8,7 @@ import com.bwsw.tstreams.coordination.messages.state.TransactionStatus
 import org.scalatest.{FlatSpec, Matchers}
 
 /**
-  * Created by ivan on 19.08.16.
+  * Created by Ivan Kudryavtsev on 19.08.16.
   */
 class PersistentQueueTests extends FlatSpec with Matchers {
   it should "created" in {

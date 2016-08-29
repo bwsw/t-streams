@@ -8,7 +8,7 @@ import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue
 import net.openhft.chronicle.queue.{ChronicleQueueBuilder, ExcerptAppender, ExcerptTailer}
 
 /**
-  * Created by ivan on 19.08.16.
+  * Created by Ivan Kudryavtsev on 19.08.16.
   */
 abstract class AbstractPersistentQueue[T](basePath: String) extends AbstractQueue[T] {
   Files.createDirectories(java.nio.file.Paths.get(basePath))

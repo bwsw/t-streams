@@ -10,7 +10,7 @@ import com.bwsw.tstreams.converter.IConverter
 import com.bwsw.tstreams.generator.IUUIDGenerator
 
 /**
-  * Created by ivan on 19.08.16.
+  * Created by Ivan Kudryavtsev on 19.08.16.
   */
 /**
   * Class which represents options for subscriber consumer V2

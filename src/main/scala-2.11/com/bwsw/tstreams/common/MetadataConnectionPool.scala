@@ -12,7 +12,7 @@ import org.slf4j.LoggerFactory
 /**
   * singleton object which maintains shared C* session and cluster objects
   * to follow C* best practices: http://www.datastax.com/dev/blog/4-simple-rules-when-using-the-datastax-drivers-for-cassandra
-  * Created by ivan on 28.07.16.
+  * Created by Ivan Kudryavtsev on 28.07.16.
   */
 object MetadataConnectionPool {
 

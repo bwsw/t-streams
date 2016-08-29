@@ -9,7 +9,7 @@ import org.slf4j.Logger
 import scala.util.Random
 
 /**
-  * Created by ivan on 02.08.16.
+  * Created by Ivan Kudryavtsev on 02.08.16.
   */
 object LockUtil {
   val randomGenerator = new Random

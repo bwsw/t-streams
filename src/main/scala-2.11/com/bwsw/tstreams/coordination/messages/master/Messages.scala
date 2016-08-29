@@ -84,8 +84,8 @@ case class NewTransactionRequest(senderID: String, receiverID: String, partition
       if(IMessage.logger.isDebugEnabled)
         IMessage.logger.debug(s"Responded with early ready virtualized TXN: ${txnUUID}")
 
-      agent.submitPipelinedTaskToCassandraExecutor(new Runnable {
-          def run(): Unit = agent.getProducer.openTxnLocal(txnUUID, partition,
+      agent.submitPipelinedTaskToCassandraExecutor(partition, () => {
+        agent.getProducer.openTxnLocal(txnUUID, partition,
               onComplete = () => {
                 agent.notifyMaterialize(TransactionStateMessage(txnUUID, -1, TransactionStatus.materialize, partition, agent.getUniqueAgentID(), -1, 0), senderID)
 
@@ -249,9 +249,8 @@ case class PublishRequest(senderID: String, receiverID: String, msg: Transaction
     val master = agent.getAgentsStateManager.getPartitionMasterLocally(partition, "")
 
     if(master == agent.getAgentAddress) {
-      agent.submitPipelinedTaskToPublishExecutors(new Runnable {
-        override def run(): Unit = agent.getProducer.subscriberNotifier.publish(msg, onComplete = () => {})
-      }, partition)
+      agent.submitPipelinedTaskToPublishExecutors(partition,
+        () => agent.getProducer.subscriberNotifier.publish(msg, onComplete = () => {}))
     }
 
     if(IMessage.logger.isDebugEnabled)

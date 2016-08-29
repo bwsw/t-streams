@@ -58,11 +58,7 @@ class PeerAgent(agentsStateManager: AgentsStateDBService, zkService: ZookeeperDL
   /**
     * Job Executors
     */
-  private val newTxnExecutors           = mutable.Map[Int, FirstFailLockableTaskExecutor]()
-  private val publishExecutors          = mutable.Map[Int, FirstFailLockableTaskExecutor]()
-  private val materializationExecutors  = mutable.Map[Int, FirstFailLockableTaskExecutor]()
-  private val masterRequestsExecutor    = new FirstFailLockableTaskExecutor(s"${producer.name}-masterRequests")
-  private val cassandraAsyncExecutor    = new FirstFailLockableTaskExecutor(s"${producer.name}-cassandraAsyncRequests")
+  private val executorGraphs           = mutable.Map[Int, ExecutorGraph]()
 
   private val streamName = producer.stream.getName
   private val isRunning = new AtomicBoolean(true)
@@ -72,8 +68,7 @@ class PeerAgent(agentsStateManager: AgentsStateDBService, zkService: ZookeeperDL
   def getTransport()              = transport
   def getUsedPartitions()         = usedPartitions
   def getProducer()               = producer
-  def getCassandraAsyncExecutor() = cassandraAsyncExecutor
-  def getAgentsStateManager()          = agentsStateManager
+  def getAgentsStateManager()     = agentsStateManager
 
   /**
     * this ID is used to track sequential transactions from the same master
@@ -97,9 +92,7 @@ class PeerAgent(agentsStateManager: AgentsStateDBService, zkService: ZookeeperDL
   startSessionKeepAliveThread()
 
   (0 until poolSize) foreach { x =>
-    newTxnExecutors(x) = new FirstFailLockableTaskExecutor(s"${producer.name}-newTxn-${x}")
-    materializationExecutors(x) = new FirstFailLockableTaskExecutor(s"${producer.name}-materialization-${x}")
-    publishExecutors(x) = new FirstFailLockableTaskExecutor(s"${producer.name}-publish-${x}")
+    executorGraphs(x) = new ExecutorGraph(s"id-${x}")
   }
 
   private val partitionsToExecutors = usedPartitions
@@ -336,11 +329,7 @@ class PeerAgent(agentsStateManager: AgentsStateDBService, zkService: ZookeeperDL
     isRunning.set(false)
     zkConnectionValidator.join()
     //to avoid infinite polling block
-    masterRequestsExecutor.shutdownOrDie(100, TimeUnit.SECONDS)
-    newTxnExecutors.foreach(x => { x._2.shutdownOrDie(100, TimeUnit.SECONDS) })
-    materializationExecutors.foreach(x => { x._2.shutdownOrDie(100, TimeUnit.SECONDS) })
-    cassandraAsyncExecutor.shutdownOrDie(100, TimeUnit.SECONDS)
-    publishExecutors.foreach(x => { x._2.shutdownOrDie(100, TimeUnit.SECONDS)})
+    executorGraphs.foreach(g => g._2.shutdown())
     transport.stop()
   }
 
@@ -351,17 +340,14 @@ class PeerAgent(agentsStateManager: AgentsStateDBService, zkService: ZookeeperDL
       request.channel = channel
       if (PeerAgent.logger.isDebugEnabled)
         PeerAgent.logger.debug(s"[HANDLER] Start handle msg:{$request} on agent:{$myIPAddress}")
-      val task: Runnable = new Runnable {
-        override def run(): Unit = request.run(agent)
-      }
-
+      val task = () => request.run(agent)
       assert(partitionsToExecutors.contains(request.partition))
       val execNo = partitionsToExecutors(request.partition)
       request match {
-        case _: PublishRequest => if(!publishExecutors(execNo).isShutdown) publishExecutors(execNo).submit(task)
-        case _: NewTransactionRequest => if(!newTxnExecutors(execNo).isShutdown) newTxnExecutors(execNo).submit(task)
-        case _: MaterializeRequest => if(!materializationExecutors(execNo).isShutdown) materializationExecutors(execNo).submit(task)
-        case _ => if(!masterRequestsExecutor.isShutdown) masterRequestsExecutor.submit(task)
+        case _: PublishRequest =>         executorGraphs(execNo).submitToPublish(task)
+        case _: NewTransactionRequest =>  executorGraphs(execNo).submitToNewTransaction(task)
+        case _: MaterializeRequest =>     executorGraphs(execNo).submitToMaterialize(task)
+        case _ =>                         executorGraphs(execNo).submitToGeneral(task)
       }
 
     } catch {
@@ -376,18 +362,9 @@ class PeerAgent(agentsStateManager: AgentsStateDBService, zkService: ZookeeperDL
     * @param task
     * @param partition
     */
-  def submitPipelinedTaskToPublishExecutors(task: Runnable, partition: Int) = {
+  def submitPipelinedTaskToPublishExecutors(partition: Int, task: () => Unit) = {
     val execNum = partitionsToExecutors(partition)
-    publishExecutors(execNum).execute(task)
-  }
-
-  /**
-    * public method which allows to submit delayed task for execution
-    *
-    * @param task
-    */
-  def submitPipelinedTaskToCassandraExecutor(task: Runnable) = {
-    cassandraAsyncExecutor.execute(task)
+    executorGraphs(execNum).submitToPublish(task)
   }
 
   /**
@@ -396,8 +373,32 @@ class PeerAgent(agentsStateManager: AgentsStateDBService, zkService: ZookeeperDL
     * @param task
     * @param partition
     */
-  def submitPipelinedTaskToNewTxnExecutors(task: Runnable, partition: Int) = {
+  def submitPipelinedTaskToMaterializeExecutor(partition: Int, task: () => Unit) = {
     val execNum = partitionsToExecutors(partition)
-    newTxnExecutors(execNum).execute(task)
+    executorGraphs(execNum).submitToMaterialize(task)
   }
+
+  /**
+    * public method which allows to submit delayed task for execution
+    *
+    * @param task
+    */
+  def submitPipelinedTaskToCassandraExecutor(partition: Int, task: () => Unit) = {
+    val execNum = partitionsToExecutors(partition)
+    executorGraphs(execNum).submitToCassandra(task)
+  }
+
+  /**
+    * public method which allows to submit delayed task for execution
+    *
+    * @param task
+    * @param partition
+    */
+  def submitPipelinedTaskToNewTxnExecutors(partition: Int, task: () => Unit) = {
+    val execNum = partitionsToExecutors(partition)
+    executorGraphs(execNum).submitToNewTransaction(task)
+  }
+
+  def getCassandraAsyncExecutor(partition: Int) =
+    executorGraphs(partitionsToExecutors(partition)).getCassandra()
 }

@@ -2,7 +2,7 @@ package com.bwsw.tstreams.agents.producer
 
 import java.util.UUID
 import java.util.concurrent.locks.ReentrantLock
-import java.util.concurrent.{ConcurrentHashMap, CountDownLatch, TimeUnit}
+import java.util.concurrent.{CountDownLatch, TimeUnit}
 
 import com.bwsw.tstreams.agents.group.{CheckpointInfo, GroupParticipant, SendingAgent}
 import com.bwsw.tstreams.agents.producer.NewTransactionProducerPolicy.ProducerPolicy
@@ -14,7 +14,6 @@ import com.bwsw.tstreams.metadata.MetadataStorage
 import com.bwsw.tstreams.streams.TStream
 import org.slf4j.LoggerFactory
 
-import scala.collection.JavaConversions._
 import scala.util.control.Breaks._
 
 /**
@@ -43,19 +42,15 @@ class Producer[T](var name: String,
   val pcs = producerOptions.coordinationOptions
   var isStop = false
 
-  // stores currently opened transactions per partition
-  private val openTransactionsMap     = new ConcurrentHashMap[Int, Transaction[T]]()
+  private val openTransactions = new OpenTransactionsKeeper[T]()
   // stores latches for materialization await (protects from materialization before main transaction response)
-  private val transactionMaterializationBlockingMap = new ConcurrentHashMap[Int, ResettableCountDownLatch]()
+  private val materializationGovernor = new MaterializationGovernor(producerOptions.writePolicy.getUsedPartitions().toSet)
   private val logger      = LoggerFactory.getLogger(this.getClass)
   private val threadLock  = new ReentrantLock(true)
 
   private val zkRetriesAmount = pcs.zkSessionTimeout * 1000 / PeerAgent.RETRY_SLEEP_TIME + 1
   private val zkService       = new ZookeeperDLMService(pcs.zkRootPath, pcs.zkHosts, pcs.zkSessionTimeout, pcs.zkConnectionTimeout)
 
-  // initialize latches
-  producerOptions.writePolicy.getUsedPartitions()
-    .map(p => transactionMaterializationBlockingMap.put(p, new ResettableCountDownLatch(0)))
 
   // amount of threads which will handle partitions in masters, etc
   val threadPoolSize: Int = {
@@ -65,15 +60,9 @@ class Producer[T](var name: String,
       pcs.threadPoolAmount
   }
 
-  // every transaction reuses lock object from array below
-  val txnLocks = new Array[ReentrantLock](threadPoolSize)
-  (0 until threadPoolSize) foreach { idx => txnLocks(idx) = new ReentrantLock() }
-
   stream.dataStorage.bind() //TODO: fix, probably deprecated
 
   logger.info(s"Start new Basic producer with name : $name, streamName : ${stream.getName}, streamPartitions : ${stream.getPartitions}")
-
-
 
   private val agentsStateManager = new AgentsStateDBService(
     zkService,
@@ -81,8 +70,6 @@ class Producer[T](var name: String,
     stream.getName,
     Set[Int]().empty ++ producerOptions.writePolicy.getUsedPartitions())
 
-  // this client is used to find new subscribers
-  val subscriberNotifier = new BroadcastCommunicationClient(agentsStateManager, usedPartitions = producerOptions.writePolicy.getUsedPartitions())
 
   /**
     * P2P Agent for producers interaction
@@ -98,12 +85,9 @@ class Producer[T](var name: String,
     transport = pcs.transport,
     poolSize = threadPoolSize)
 
-  //used for managing new agents on stream
-
-  {
-    subscriberNotifier.init()
-  }
-
+  // this client is used to find new subscribers
+  val subscriberNotifier = new BroadcastCommunicationClient(agentsStateManager, usedPartitions = producerOptions.writePolicy.getUsedPartitions())
+  subscriberNotifier.init()
 
   /**
     * Queue to figure out moment when transaction is going to close
@@ -144,16 +128,9 @@ class Producer[T](var name: String,
   /**
     * Used to send update event to all opened transactions
     */
-  private def updateOpenedTransactions() = {
+  private def updateOpenedTransactions() = this.synchronized {
     logger.debug(s"Producer ${name} - scheduled for long lasting transactions")
-    LockUtil.withLockOrDieDo[Unit](threadLock, (100, TimeUnit.SECONDS), Some(logger), () => {
-      val keys = openTransactionsMap.keys()
-      for(k <- keys) {
-        val v = openTransactionsMap.getOrDefault(k, null)
-        if(!v.isClosed)
-          v.updateTxnKeepAliveState()
-      }
-    })
+    openTransactions.forallKeysDo((part: Int, txn: IProducerTransaction[T]) => txn.updateTxnKeepAliveState())
   }
 
   /**
@@ -175,45 +152,26 @@ class Producer[T](var name: String,
     if (!(partition >= 0 && partition < stream.getPartitions))
       throw new IllegalArgumentException(s"Producer ${name} - invalid partition")
 
-    val partOpt = Option(openTransactionsMap.getOrDefault(partition, null))
-    if (partOpt.isDefined) {
-      partOpt.get.awaitMaterialized()
-    }
+    val previousTransactionAction: () => Unit =
+      openTransactions.awaitOpenTransactionMaterialized(partition, policy)
 
-    transactionMaterializationBlockingMap.get(partition).setValue(1)
-    var action: () => Unit = null
-    if (partOpt.isDefined) {
-      if (!partOpt.get.isClosed) {
-        policy match {
-          case NewTransactionProducerPolicy.CheckpointIfOpened =>
-            action = () => partOpt.get.checkpoint()
+    materializationGovernor.protect(partition)
 
-          case NewTransactionProducerPolicy.CancelIfOpened =>
-            action = () => partOpt.get.cancel()
 
-          case NewTransactionProducerPolicy.CheckpointAsyncIfOpened =>
-            action = () => partOpt.get.checkpoint(isSynchronous = false)
-
-          case NewTransactionProducerPolicy.ErrorIfOpened =>
-            throw new IllegalStateException(s"Producer ${name} - previous transaction was not closed")
-        }
-      }
-    }
     //val tm = getNewTxnUUIDLocal().timestamp()
     val txnUUID = p2pAgent.generateNewTransaction(partition)
     //val delta = txnUUID.timestamp()
-
     //logger.info(s"Elapsed for TXN ->: {}",delta - tm)
     if(logger.isDebugEnabled)
       logger.debug(s"[NEW_TRANSACTION PARTITION_$partition] uuid=${txnUUID.timestamp()}")
-    val txn = new Transaction[T](txnLocks(partition % threadPoolSize), partition, txnUUID, this)
-    LockUtil.withLockOrDieDo[Unit](threadLock, (100, TimeUnit.SECONDS), Some(logger), () => {
-      openTransactionsMap.put(partition, txn)
-    })
-    transactionMaterializationBlockingMap.get(partition).countDown
-    if(action != null)
+    val txn = new Transaction[T](partition, txnUUID, this)
+
+    openTransactions.put(partition, txn)
+    materializationGovernor.unprotect(partition)
+
+    if(previousTransactionAction != null)
       backendActivityService.submit(new Runnable {
-        override def run(): Unit = action() })
+        override def run(): Unit = previousTransactionAction() })
     txn
   }
 
@@ -223,81 +181,39 @@ class Producer[T](var name: String,
     * @param partition Partition from which transaction will be retrieved
     * @return Transaction reference if it exist and is opened
     */
-  def getOpenedTransactionForPartition(partition: Int): Option[Transaction[T]] = {
+  def getOpenedTransactionForPartition(partition: Int): Option[IProducerTransaction[T]] = {
     if (!(partition >= 0 && partition < stream.getPartitions))
       throw new IllegalArgumentException(s"Producer ${name} - invalid partition")
-    val partOpt = Option(openTransactionsMap.getOrDefault(partition, null))
-    val txnOpt = {
-      if (partOpt.isDefined) {
-        if (partOpt.get.isClosed) {
-          None
-        }
-        else {
-          partOpt
-        }
-      }
-      else {
-        None
-      }
-    }
-    txnOpt
+    openTransactions.getTransactionOption(partition)
   }
 
   /**
     * Checkpoint all opened transactions (not atomic). For atomic use CheckpointGroup.
     */
-  def checkpoint(isAsynchronous: Boolean = false): Unit = {
-    LockUtil.withLockOrDieDo[Unit](threadLock, (100, TimeUnit.SECONDS), Some(logger), () => {
-      val keys = openTransactionsMap.keys()
-      for(k <- keys) {
-        val v = openTransactionsMap.getOrDefault(k, null)
-        if(!v.isClosed)
-          v.checkpoint(isAsynchronous)
-      }
-    })
-  }
+  def checkpoint(isAsynchronous: Boolean = false): Unit =
+    openTransactions.forallKeysDo((k: Int, v: IProducerTransaction[T]) => v.checkpoint(isAsynchronous))
+
 
   /**
     * Cancel all opened transactions (not atomic). For atomic use CheckpointGroup.
     */
-  def cancel(): Unit = {
-    LockUtil.withLockOrDieDo[Unit](threadLock, (100, TimeUnit.SECONDS), Some(logger), () => {
-      val keys = openTransactionsMap.keys()
-      for(k <- keys) {
-        val v = openTransactionsMap.getOrDefault(k, null)
-        if(!v.isClosed)
-          v.cancel()
-      }
-    })
-  }
+  def cancel(): Unit =
+    openTransactions.forallKeysDo((k: Int, v: IProducerTransaction[T]) => v.cancel())
+
 
   /**
     * Finalize all opened transactions (not atomic). For atomic use CheckpointGroup.
     */
   def finalizeDataSend(): Unit = {
-    LockUtil.withLockOrDieDo[Unit](threadLock, (100, TimeUnit.SECONDS), Some(logger), () => {
-      val keys = openTransactionsMap.keys()
-      for(k <- keys) {
-        val v = openTransactionsMap.getOrDefault(k, null)
-        if(!v.isClosed)
-          v.finalizeDataSend()
-      }
-    })
+    openTransactions.forallKeysDo((k: Int, v: IProducerTransaction[T]) => v.finalizeDataSend())
   }
 
   /**
     * Info to commit
     */
   override def getCheckpointInfoAndClear(): List[CheckpointInfo] = {
-    var checkpointInfo = List[CheckpointInfo]()
-
-    val keys = openTransactionsMap.keys()
-    for(k <- keys) {
-      val v = openTransactionsMap.getOrDefault(k, null)
-      if(!v.isClosed)
-        checkpointInfo = v.getTransactionInfo() :: checkpointInfo
-    }
-    openTransactionsMap.clear()
+    val checkpointInfo = openTransactions.forallKeysDo((k: Int, v: IProducerTransaction[T]) => v.getTransactionInfo()).toList
+    openTransactions.clear()
     checkpointInfo
   }
 
@@ -331,10 +247,9 @@ class Producer[T](var name: String,
       ttl = producerOptions.transactionTTL,
       function = () => {
         // submit task for materialize notification request
-        p2pAgent.submitPipelinedTaskToPublishExecutors(new Runnable { override def run(): Unit = onComplete()}, partition)
+        p2pAgent.submitPipelinedTaskToMaterializeExecutor(partition, onComplete)
         // submit task for publish notification requests
-        p2pAgent.submitPipelinedTaskToPublishExecutors(new Runnable {
-          override def run(): Unit = {
+        p2pAgent.submitPipelinedTaskToPublishExecutors(partition, () => {
             val msg = TransactionStateMessage(
               txnUuid = txnUUID,
               ttl = producerOptions.transactionTTL,
@@ -346,10 +261,9 @@ class Producer[T](var name: String,
             subscriberNotifier.publish(msg, () => ())
             if(logger.isDebugEnabled)
               logger.debug(s"Producer ${name} - [GET_LOCAL_TXN PRODUCER] update with msg partition=$partition uuid=${txnUUID.timestamp()} opened")
-          }
-        }, partition)
+          })
       },
-      executor = p2pAgent.getCassandraAsyncExecutor)
+      executor = p2pAgent.getCassandraAsyncExecutor(partition))
 
 
   }
@@ -393,7 +307,7 @@ class Producer[T](var name: String,
   def materialize(msg: TransactionStateMessage) = {
     if(logger.isDebugEnabled)
       logger.debug(s"Start handling MaterializeRequest at partition: ${msg.partition}")
-    transactionMaterializationBlockingMap.get(msg.partition).await()
+    materializationGovernor.awaitUnprotected(msg.partition)
     val opt = getOpenedTransactionForPartition(msg.partition)
     assert(opt.isDefined)
     if(logger.isDebugEnabled)

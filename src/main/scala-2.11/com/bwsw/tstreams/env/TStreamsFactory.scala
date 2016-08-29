@@ -396,7 +396,7 @@ object TSF_Dictionary {
 }
 
 /**
-  * Created by ivan on 21.07.16.
+  * Created by Ivan Kudryavtsev on 21.07.16.
   */
 class TStreamsFactory() {
 
