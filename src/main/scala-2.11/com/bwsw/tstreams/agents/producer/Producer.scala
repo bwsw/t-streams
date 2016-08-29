@@ -1,6 +1,7 @@
 package com.bwsw.tstreams.agents.producer
 
 import java.util.UUID
+import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.locks.ReentrantLock
 import java.util.concurrent.{CountDownLatch, TimeUnit}
 
@@ -96,6 +97,8 @@ class Producer[T](var name: String,
   private val shutdownKeepAliveThread = new ThreadSignalSleepVar[Boolean](1)
   private val txnKeepAliveThread = getTxnKeepAliveThread
   val backendActivityService = new FirstFailLockableTaskExecutor(s"Producer ${name}-BackendWorker")
+  val asyncActivityService = new FirstFailLockableTaskExecutor(s"Producer ${name}-AsyncWorker")
+  val pendingCassandraTasks = new AtomicInteger(0)
 
   /**
     *
@@ -114,7 +117,7 @@ class Producer[T](var name: String,
               logger.info(s"Producer ${name} - object either checkpointed or cancelled. Exit KeepAliveThread.")
               break()
             }
-            backendActivityService.submit(new Runnable {
+            asyncActivityService.submit(new Runnable {
               override def run(): Unit = updateOpenedTransactions()
             }, Option(threadLock))
           }
@@ -171,7 +174,7 @@ class Producer[T](var name: String,
     materializationGovernor.unprotect(partition)
 
     if(previousTransactionAction != null)
-      backendActivityService.submit(new Runnable {
+      asyncActivityService.submit(new Runnable {
         override def run(): Unit = previousTransactionAction() })
     txn
   }
@@ -240,6 +243,7 @@ class Producer[T](var name: String,
     * @return UUID
     */
   override def openTxnLocal(txnUUID: UUID, partition: Int, onComplete: () => Unit): Unit = {
+    pendingCassandraTasks.incrementAndGet()
     stream.metadataStorage.commitEntity.commitAsync(
       streamName = stream.getName,
       partition = partition,
@@ -247,6 +251,7 @@ class Producer[T](var name: String,
       totalCnt = -1,
       ttl = producerOptions.transactionTTL,
       function = () => {
+        pendingCassandraTasks.decrementAndGet()
         // submit task for materialize notification request
         p2pAgent.submitPipelinedTaskToMaterializeExecutor(partition, onComplete)
         // submit task for publish notification requests
@@ -285,10 +290,13 @@ class Producer[T](var name: String,
     txnKeepAliveThread.join()
     // stop executor
 
-    while(backendActivityService.getQueue().size() > 0)
-      Thread.sleep(50)
-
+    asyncActivityService.shutdownOrDie(100, TimeUnit.SECONDS)
+    while(pendingCassandraTasks.get() != 0) {
+      logger.info(s"Waiting for all cassandra async callbacks will be executed. Pending: ${pendingCassandraTasks.get()}.")
+      Thread.sleep(200)
+    }
     backendActivityService.shutdownOrDie(100, TimeUnit.SECONDS)
+
     // stop provide master features to public
     p2pAgent.stop()
     // stop function which works with subscribers
