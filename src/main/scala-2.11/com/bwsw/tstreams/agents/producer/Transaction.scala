@@ -127,14 +127,13 @@ class Transaction[T](partition: Int,
   }
 
   private def cancelAsync() = {
-    txnOwner.pendingCassandraTasks.incrementAndGet()
     txnOwner.stream.metadataStorage.commitEntity.deleteAsync(
       streamName  = txnOwner.stream.getName,
       partition   = partition,
       transaction = transactionUuid,
       executor    = txnOwner.backendActivityService,
+      resourceCounter = txnOwner.pendingCassandraTasks,
       function    = () => {
-        txnOwner.pendingCassandraTasks.decrementAndGet()
         val msg = TransactionStateMessage(txnUuid = transactionUuid,
           ttl = -1,
           status = TransactionStatus.cancel,
@@ -169,8 +168,6 @@ class Transaction[T](partition: Int,
     if(Transaction.logger.isDebugEnabled) {
       Transaction.logger.debug(s"[COMMIT PARTITION_{}] ts={}", partition, transactionUuid.toString)
     }
-
-    txnOwner.pendingCassandraTasks.decrementAndGet()
 
     //debug purposes only
     {
@@ -236,13 +233,13 @@ class Transaction[T](partition: Int,
         }
       }
 
-      txnOwner.pendingCassandraTasks.incrementAndGet()
       txnOwner.stream.metadataStorage.commitEntity.commitAsync(
         streamName = txnOwner.stream.getName,
         partition = partition,
         transaction = transactionUuid,
         totalCnt = getDataItemsCount,
         ttl = txnOwner.stream.getTTL,
+        resourceCounter = txnOwner.pendingCassandraTasks,
         executor = txnOwner.backendActivityService,
         function = checkpointPostEventPart)
 
@@ -341,8 +338,6 @@ class Transaction[T](partition: Int,
       GlobalHooks.invoke(GlobalHooks.transactionUpdateTaskEnd)
     }
 
-    txnOwner.pendingCassandraTasks.decrementAndGet()
-
     state.setUpdateFinished
     txnOwner.p2pAgent.publish(TransactionStateMessage(
       txnUuid = transactionUuid,
@@ -382,12 +377,12 @@ class Transaction[T](partition: Int,
       Transaction.logger.debug("Update event for txn {}, partition: {}", transactionUuid, partition)
     }
 
-    txnOwner.pendingCassandraTasks.incrementAndGet()
     txnOwner.stream.metadataStorage.commitEntity.commitAsync(
                                                     streamName = txnOwner.stream.getName,
                                                     partition = partition,
                                                     transaction = transactionUuid,
                                                     totalCnt = -1,
+                                                    resourceCounter = txnOwner.pendingCassandraTasks,
                                                     ttl = txnOwner.producerOptions.transactionTTL,
                                                     executor = txnOwner.backendActivityService,
                                                     function = doSendUpdateMessage)
