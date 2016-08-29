@@ -2,9 +2,9 @@ package com.bwsw.tstreams.agents.producer
 
 import java.util.UUID
 import java.util.concurrent.locks.ReentrantLock
-import java.util.concurrent.{ConcurrentHashMap, CountDownLatch, TimeUnit}
+import java.util.concurrent.{CountDownLatch, TimeUnit}
 
-import com.bwsw.tstreams.agents.group.{CheckpointGroup, CheckpointInfo, GroupParticipant, SendingAgent}
+import com.bwsw.tstreams.agents.group.{CheckpointInfo, GroupParticipant, SendingAgent}
 import com.bwsw.tstreams.agents.producer.NewTransactionProducerPolicy.ProducerPolicy
 import com.bwsw.tstreams.common._
 import com.bwsw.tstreams.coordination.client.BroadcastCommunicationClient
@@ -14,9 +14,7 @@ import com.bwsw.tstreams.metadata.MetadataStorage
 import com.bwsw.tstreams.streams.TStream
 import org.slf4j.LoggerFactory
 
-import scala.collection.JavaConversions._
 import scala.util.control.Breaks._
-import org.scalatest.FunSuite
 
 /**
   * Basic producer class
@@ -192,9 +190,9 @@ class Producer[T](var name: String,
   /**
     * Checkpoint all opened transactions (not atomic). For atomic use CheckpointGroup.
     */
-  def checkpoint(isAsynchronous: Boolean = false): Unit = {
+  def checkpoint(isAsynchronous: Boolean = false): Unit =
     openTransactions.forallKeysDo((k: Int, v: Transaction[T]) => v.checkpoint(isAsynchronous))
-  }
+
 
   /**
     * Cancel all opened transactions (not atomic). For atomic use CheckpointGroup.
