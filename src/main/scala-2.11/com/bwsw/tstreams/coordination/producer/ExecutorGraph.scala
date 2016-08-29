@@ -8,7 +8,7 @@ import com.bwsw.tstreams.common.FirstFailLockableTaskExecutor
   * Created by Ivan Kudryavtsev on 29.08.16.
   * Incapsulates internal executor relationships and usage logic
   */
-class ExecutorGraph(publisherThreadsCount: Int = 1, name: String = "") {
+class ExecutorGraph(name: String = "", publisherThreadsCount: Int = 1) {
 
   val SHUTDOWN_TIMEOUT = 100
   val SHUTDOWN_UNITS = TimeUnit.SECONDS
@@ -36,7 +36,9 @@ class ExecutorGraph(publisherThreadsCount: Int = 1, name: String = "") {
     List(general, newTransaction, cassandra, materialize, publish)
       .foreach(e => if(e.isFailed.get()) throw new IllegalStateException(s"Executor ${e.toString} is failed. No new tasks are allowed."))
     List(general, newTransaction, cassandra, materialize, publish)
-      .foreach(e => if(ex == e) f())
+      .foreach(e => if(ex == e) e.submit(new Runnable {
+        override def run(): Unit = f()
+      }))
   }
 
   def submitToGeneral(f: () => Unit)        = submitTo(general, f)
@@ -44,5 +46,7 @@ class ExecutorGraph(publisherThreadsCount: Int = 1, name: String = "") {
   def submitToCassandra(f: () => Unit)    = submitTo(cassandra, f)
   def submitToMaterialize(f: () => Unit)  = submitTo(materialize, f)
   def submitToPublish(f: () => Unit)      = submitTo(publish, f)
+
+  def getCassandra() = cassandra
 
 }

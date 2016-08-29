@@ -131,7 +131,7 @@ class Transaction[T](partition: Int,
       streamName  = txnOwner.stream.getName,
       partition   = partition,
       transaction = transactionUuid,
-      executor    = txnOwner.p2pAgent.getCassandraAsyncExecutor,
+      executor    = txnOwner.backendActivityService,
       function    = () => {
         val msg = TransactionStateMessage(txnUuid = transactionUuid,
           ttl = -1,
@@ -237,7 +237,7 @@ class Transaction[T](partition: Int,
         transaction = transactionUuid,
         totalCnt = getDataItemsCount,
         ttl = txnOwner.stream.getTTL,
-        executor = txnOwner.p2pAgent.getCassandraAsyncExecutor,
+        executor = txnOwner.backendActivityService,
         function = checkpointPostEventPart)
     }
     else {
@@ -379,7 +379,7 @@ class Transaction[T](partition: Int,
     transaction = transactionUuid,
     totalCnt = -1,
     ttl = txnOwner.producerOptions.transactionTTL,
-    executor = txnOwner.p2pAgent.getCassandraAsyncExecutor,
+    executor = txnOwner.backendActivityService,
     function = doSendUpdateMessage)
   }
 

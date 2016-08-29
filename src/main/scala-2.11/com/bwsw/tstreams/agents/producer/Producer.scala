@@ -247,10 +247,9 @@ class Producer[T](var name: String,
       ttl = producerOptions.transactionTTL,
       function = () => {
         // submit task for materialize notification request
-        p2pAgent.submitPipelinedTaskToPublishExecutors(new Runnable { override def run(): Unit = onComplete()}, partition)
+        p2pAgent.submitPipelinedTaskToMaterializeExecutor(partition, onComplete)
         // submit task for publish notification requests
-        p2pAgent.submitPipelinedTaskToPublishExecutors(new Runnable {
-          override def run(): Unit = {
+        p2pAgent.submitPipelinedTaskToPublishExecutors(partition, () => {
             val msg = TransactionStateMessage(
               txnUuid = txnUUID,
               ttl = producerOptions.transactionTTL,
@@ -262,10 +261,9 @@ class Producer[T](var name: String,
             subscriberNotifier.publish(msg, () => ())
             if(logger.isDebugEnabled)
               logger.debug(s"Producer ${name} - [GET_LOCAL_TXN PRODUCER] update with msg partition=$partition uuid=${txnUUID.timestamp()} opened")
-          }
-        }, partition)
+          })
       },
-      executor = p2pAgent.getCassandraAsyncExecutor)
+      executor = p2pAgent.getCassandraAsyncExecutor(partition))
 
 
   }
