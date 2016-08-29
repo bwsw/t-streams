@@ -27,7 +27,12 @@ class OpenTransactionsKeeper[T] {
     for(k <- keys) {
       val v = openTransactionsMap.getOrDefault(k, null)
       if(v != null && !v.isClosed) {
-        res.append(f(k, v))
+        try {
+          res.append(f(k, v))
+        } catch {
+          case e: IllegalStateException =>
+            // since forall is not atomic specific transactions can be switched to another state.
+        }
       }
     }
     res

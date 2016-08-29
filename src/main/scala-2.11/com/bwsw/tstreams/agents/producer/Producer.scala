@@ -4,7 +4,7 @@ import java.util.UUID
 import java.util.concurrent.locks.ReentrantLock
 import java.util.concurrent.{ConcurrentHashMap, CountDownLatch, TimeUnit}
 
-import com.bwsw.tstreams.agents.group.{CheckpointInfo, GroupParticipant, SendingAgent}
+import com.bwsw.tstreams.agents.group.{CheckpointGroup, CheckpointInfo, GroupParticipant, SendingAgent}
 import com.bwsw.tstreams.agents.producer.NewTransactionProducerPolicy.ProducerPolicy
 import com.bwsw.tstreams.common._
 import com.bwsw.tstreams.coordination.client.BroadcastCommunicationClient
@@ -16,6 +16,7 @@ import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConversions._
 import scala.util.control.Breaks._
+import org.scalatest.FunSuite
 
 /**
   * Basic producer class
@@ -71,8 +72,6 @@ class Producer[T](var name: String,
     stream.getName,
     Set[Int]().empty ++ producerOptions.writePolicy.getUsedPartitions())
 
-  // this client is used to find new subscribers
-  val subscriberNotifier = new BroadcastCommunicationClient(agentsStateManager, usedPartitions = producerOptions.writePolicy.getUsedPartitions())
 
   /**
     * P2P Agent for producers interaction
@@ -88,12 +87,9 @@ class Producer[T](var name: String,
     transport = pcs.transport,
     poolSize = threadPoolSize)
 
-  //used for managing new agents on stream
-
-  {
-    subscriberNotifier.init()
-  }
-
+  // this client is used to find new subscribers
+  val subscriberNotifier = new BroadcastCommunicationClient(agentsStateManager, usedPartitions = producerOptions.writePolicy.getUsedPartitions())
+  subscriberNotifier.init()
 
   /**
     * Queue to figure out moment when transaction is going to close
@@ -134,7 +130,7 @@ class Producer[T](var name: String,
   /**
     * Used to send update event to all opened transactions
     */
-  private def updateOpenedTransactions() = {
+  private def updateOpenedTransactions() = this.synchronized {
     logger.debug(s"Producer ${name} - scheduled for long lasting transactions")
     openTransactions.forallKeysDo((part: Int, txn: Transaction[T]) => txn.updateTxnKeepAliveState())
   }
@@ -196,8 +192,9 @@ class Producer[T](var name: String,
   /**
     * Checkpoint all opened transactions (not atomic). For atomic use CheckpointGroup.
     */
-  def checkpoint(isAsynchronous: Boolean = false): Unit =
+  def checkpoint(isAsynchronous: Boolean = false): Unit = {
     openTransactions.forallKeysDo((k: Int, v: Transaction[T]) => v.checkpoint(isAsynchronous))
+  }
 
   /**
     * Cancel all opened transactions (not atomic). For atomic use CheckpointGroup.
