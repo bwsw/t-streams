@@ -70,7 +70,7 @@ trait TestUtils {
     .setProperty(TSF_Dictionary.Coordination.ROOT, coordinationRoot)
     .setProperty(TSF_Dictionary.Coordination.ENDPOINTS, s"localhost:${zookeeperPort}")
     .setProperty(TSF_Dictionary.Consumer.Subscriber.BIND_PORT, TestUtils.getPort)
-    .setProperty(TSF_Dictionary.Consumer.Subscriber.PERSISTENT_QUEUE_PATH, randomKeyspace)
+    .setProperty(TSF_Dictionary.Consumer.Subscriber.PERSISTENT_QUEUE_PATH, null)
     .setProperty(TSF_Dictionary.Stream.NAME, "test-stream")
     .setProperty(TSF_Dictionary.Data.Cluster.DRIVER, TSF_Dictionary.Data.Cluster.Consts.DATA_DRIVER_HAZELCAST)
 

@@ -127,12 +127,14 @@ class Transaction[T](partition: Int,
   }
 
   private def cancelAsync() = {
+    txnOwner.pendingCassandraTasks.incrementAndGet()
     txnOwner.stream.metadataStorage.commitEntity.deleteAsync(
       streamName  = txnOwner.stream.getName,
       partition   = partition,
       transaction = transactionUuid,
       executor    = txnOwner.backendActivityService,
       function    = () => {
+        txnOwner.pendingCassandraTasks.decrementAndGet()
         val msg = TransactionStateMessage(txnUuid = transactionUuid,
           ttl = -1,
           status = TransactionStatus.cancel,
@@ -157,7 +159,7 @@ class Transaction[T](partition: Int,
     LockUtil.withLockOrDieDo[Unit](transactionLock, (100, TimeUnit.SECONDS), Some(Transaction.logger), () => {
       state.awaitUpdateComplete
       state.closeOrDie
-      txnOwner.backendActivityService.submit(new Runnable {
+      txnOwner.asyncActivityService.submit(new Runnable {
         override def run(): Unit = cancelAsync()
       }, Option(transactionLock))
     })
@@ -167,6 +169,9 @@ class Transaction[T](partition: Int,
     if(Transaction.logger.isDebugEnabled) {
       Transaction.logger.debug(s"[COMMIT PARTITION_{}] ts={}", partition, transactionUuid.toString)
     }
+
+    txnOwner.pendingCassandraTasks.decrementAndGet()
+
     //debug purposes only
     {
       val interruptExecution: Boolean = try {
@@ -231,6 +236,7 @@ class Transaction[T](partition: Int,
         }
       }
 
+      txnOwner.pendingCassandraTasks.incrementAndGet()
       txnOwner.stream.metadataStorage.commitEntity.commitAsync(
         streamName = txnOwner.stream.getName,
         partition = partition,
@@ -239,6 +245,7 @@ class Transaction[T](partition: Int,
         ttl = txnOwner.stream.getTTL,
         executor = txnOwner.backendActivityService,
         function = checkpointPostEventPart)
+
     }
     else {
       txnOwner.p2pAgent.publish(TransactionStateMessage(
@@ -261,7 +268,7 @@ class Transaction[T](partition: Int,
       state.awaitUpdateComplete()
       state.closeOrDie()
       if (!isSynchronous) {
-        txnOwner.backendActivityService.submit(new Runnable {
+        txnOwner.asyncActivityService.submit(new Runnable {
           override def run(): Unit = checkpointAsync()
         }, Option(transactionLock))
       }
@@ -334,6 +341,8 @@ class Transaction[T](partition: Int,
       GlobalHooks.invoke(GlobalHooks.transactionUpdateTaskEnd)
     }
 
+    txnOwner.pendingCassandraTasks.decrementAndGet()
+
     state.setUpdateFinished
     txnOwner.p2pAgent.publish(TransactionStateMessage(
       txnUuid = transactionUuid,
@@ -373,14 +382,16 @@ class Transaction[T](partition: Int,
       Transaction.logger.debug("Update event for txn {}, partition: {}", transactionUuid, partition)
     }
 
-    val f = txnOwner.stream.metadataStorage.commitEntity.commitAsync(
-    streamName = txnOwner.stream.getName,
-    partition = partition,
-    transaction = transactionUuid,
-    totalCnt = -1,
-    ttl = txnOwner.producerOptions.transactionTTL,
-    executor = txnOwner.backendActivityService,
-    function = doSendUpdateMessage)
+    txnOwner.pendingCassandraTasks.incrementAndGet()
+    txnOwner.stream.metadataStorage.commitEntity.commitAsync(
+                                                    streamName = txnOwner.stream.getName,
+                                                    partition = partition,
+                                                    transaction = transactionUuid,
+                                                    totalCnt = -1,
+                                                    ttl = txnOwner.producerOptions.transactionTTL,
+                                                    executor = txnOwner.backendActivityService,
+                                                    function = doSendUpdateMessage)
+
   }
 
   /**
