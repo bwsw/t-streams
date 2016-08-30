@@ -330,6 +330,7 @@ class PeerAgent(agentsStateManager: AgentsStateDBService, zkService: ZookeeperDL
     zkConnectionValidator.join()
     //to avoid infinite polling block
     executorGraphs.foreach(g => g._2.shutdown())
+    agentsStateManager.shutdown()
     transport.stop()
   }
 
