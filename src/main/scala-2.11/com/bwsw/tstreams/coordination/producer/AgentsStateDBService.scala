@@ -78,6 +78,15 @@ class AgentsStateDBService(dlm: ZookeeperDLMService, myIPAddress: String, stream
   }
 
   /**
+    * removes artifacts
+    */
+  def shutdown() = {
+    partitions foreach { p =>
+      dlm.delete(getMyPath(p))
+    }
+  }
+
+  /**
     * Amend agent priority
     *
     * @param partition Partition to update priority

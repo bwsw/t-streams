@@ -553,8 +553,8 @@ class TStreamsFactory() {
 
 
   val Subscriber_polling_frequency_delay_default = 1000
-  val Subscriber_polling_frequency_delay_min = 1
-  val Subscriber_polling_frequency_delay_max = 10000
+  val Subscriber_polling_frequency_delay_min = 100
+  val Subscriber_polling_frequency_delay_max = 100000
   propertyMap += (TSF_Dictionary.Consumer.Subscriber.POLLING_FREQUENCY_DELAY -> Subscriber_polling_frequency_delay_default)
 
 
