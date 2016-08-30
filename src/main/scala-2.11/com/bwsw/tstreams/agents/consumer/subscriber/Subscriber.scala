@@ -107,7 +107,7 @@ class Subscriber[T](val name: String,
       processingEngines(thID).getExecutor().submit(new Poller[T](processingEngines(thID), options.pollingFrequencyDelay))
     }
 
-    coordinator.init(
+    coordinator.bootstrap(
       agentAddress = options.agentAddress,
       stream = stream.getName,
       partitions = Set[Int]().empty ++ options.readPolicy.getUsedPartitions(),
@@ -134,7 +134,7 @@ class Subscriber[T](val name: String,
     txnBufferWorkers.clear()
 
     tcpServer.stop()
-    coordinator.stop()
+    coordinator.shutdown()
     consumer.stop()
   }
 

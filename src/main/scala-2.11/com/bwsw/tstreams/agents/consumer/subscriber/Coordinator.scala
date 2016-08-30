@@ -19,13 +19,13 @@ class Coordinator() {
 
   val isInitialized = new AtomicBoolean(false)
 
-  def init(agentAddress: String,
-           stream: String,
-           partitions: Set[Int],
-           zkRootPath: String,
-           zkHosts: Set[InetSocketAddress],
-           zkSessionTimeout: Int,
-           zkConnectionTimeout: Int) = this.synchronized {
+  def bootstrap(agentAddress: String,
+                stream: String,
+                partitions: Set[Int],
+                zkRootPath: String,
+                zkHosts: Set[InetSocketAddress],
+                zkSessionTimeout: Int,
+                zkConnectionTimeout: Int) = this.synchronized {
 
     if(isInitialized.getAndSet(true))
       throw new IllegalStateException("Failed to initialize object as it's already initialized.")
@@ -39,10 +39,13 @@ class Coordinator() {
     initializeState()
   }
 
-  def stop() = {
+  /**
+    * shuts down coordinator
+    */
+  def shutdown() = {
     if(!isInitialized.getAndSet(false))
       throw new IllegalStateException("Failed to stop object as it's already stopped.")
-
+    partitions foreach (p => dlm.delete(getSubscriberMembershipPath(p)))
     dlm.close()
   }
 

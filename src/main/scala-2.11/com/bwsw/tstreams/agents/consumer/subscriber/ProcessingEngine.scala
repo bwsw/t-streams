@@ -9,6 +9,7 @@ import org.slf4j.LoggerFactory
 
 import scala.collection.mutable
 import scala.util.Random
+import scala.util.Random
 
 /**
   * Created by Ivan Kudryavtsev on 20.08.16.
@@ -19,12 +20,16 @@ class ProcessingEngine[T](consumer: TransactionOperator[T],
                           queueBuilder: QueueBuilder.Abstract,
                           callback: Callback[T]) {
 
+  private val id = Math.abs(Random.nextInt())
   // keeps last transaction states processed
   private val lastTransactionsMap = mutable.Map[Int, TransactionState]()
   private val lastTransactionsEventsMap = mutable.Map[Int, Long]()
-  private val executor = new FirstFailLockableTaskExecutor(s"pe-${partitions}-executor")
+  private val executor = new FirstFailLockableTaskExecutor(s"pe-${id}-executor")
   private val queue = queueBuilder.generateQueueObject(Math.abs(Random.nextInt()))
+  private var isFirstTime = true
 
+
+  ProcessingEngine.logger.info(s"Processing engine ${id} will serve ${partitions}.")
 
   def getExecutor() = executor
   def getQueue():QueueBuilder.QueueType = queue
@@ -40,7 +45,7 @@ class ProcessingEngine[T](consumer: TransactionOperator[T],
   val consumerPartitions = consumer.getPartitions()
 
   if(!partitions.subsetOf(consumerPartitions))
-    throw new IllegalArgumentException("Partition set which is used in ProcessingEngine is not subset of Consumer's partitions.")
+    throw new IllegalArgumentException("PE ${id} - Partition set which is used in ProcessingEngine is not subset of Consumer's partitions.")
 
   partitions foreach (p => {
     setLastPartitionActivity(p)
@@ -58,18 +63,22 @@ class ProcessingEngine[T](consumer: TransactionOperator[T],
           fastLoader.load[T](seq, consumer, executor, callback)
         }
         else if (fullLoader.checkIfPossible(seq)) {
-          ProcessingEngine.logger.info(s"Load full occured for seq ${seq}")
+          ProcessingEngine.logger.info(s"PE ${id} - Load full occured for seq ${seq}")
           fullLoader.load[T](seq, consumer, executor, callback)
         }
         setLastPartitionActivity(seq.head.partition)
       }
     }
+
+
     partitions
       .foreach(p =>
-        if (System.currentTimeMillis() - getLastPartitionActivity(p) > pollTimeMs) {
-          ProcessingEngine.logger.info(s"No events during polling interval for partition ${p}, will do enqueuing from DB.")
+        if (isFirstTime || (System.currentTimeMillis() - getLastPartitionActivity(p) > pollTimeMs)) {
+          ProcessingEngine.logger.debug(s"PE ${id} - No events during polling interval for partition ${p}, will do enqueuing from DB.")
           enqueueLastTransactionFromDB(p)
         })
+
+    isFirstTime = false
   }
 
 
