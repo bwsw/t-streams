@@ -35,7 +35,7 @@ class AsynchronousTransactionTests  extends FlatSpec with Matchers
     name = "test_producer",
     txnGenerator = LocalGeneratorCreator.getGen(),
     converter = stringToArrayByteConverter,
-    partitions = List(0),
+    partitions = Set(0),
     isLowPriority = false)
 
   "Fire async checkpoint by producer and wait when complete" should "consumer get transaction from DB" in {
@@ -48,7 +48,7 @@ class AsynchronousTransactionTests  extends FlatSpec with Matchers
       name = "test_subscriber",
       txnGenerator = LocalGeneratorCreator.getGen(),
       converter = arrayByteToStringConverter,
-      partitions = List(0),
+      partitions = Set(0),
       offset = Oldest,
       isUseLastOffset = true)
 
@@ -76,7 +76,7 @@ class AsynchronousTransactionTests  extends FlatSpec with Matchers
       name = "test_subscriber",
       txnGenerator = LocalGeneratorCreator.getGen(),
       converter = arrayByteToStringConverter,
-      partitions = List(0),
+      partitions = Set(0),
       offset = Oldest,
       isUseLastOffset = true)
 
@@ -102,7 +102,7 @@ class AsynchronousTransactionTests  extends FlatSpec with Matchers
       name = "test_subscriber",
       txnGenerator = LocalGeneratorCreator.getGen(),
       converter = arrayByteToStringConverter,
-      partitions = List(0),
+      partitions = Set(0),
       offset = Oldest,
       isUseLastOffset = true)
 

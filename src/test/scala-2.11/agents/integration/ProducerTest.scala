@@ -31,7 +31,7 @@ class ProducerTest extends FlatSpec with Matchers with BeforeAndAfterAll with Te
     name = "test_producer",
     txnGenerator = LocalGeneratorCreator.getGen(),
     converter = stringToArrayByteConverter,
-    partitions = List(0,1,2),
+    partitions = Set(0,1,2),
     isLowPriority = false)
 
   "BasicProducer.newTransaction()" should "return BasicProducerTransaction instance" in {
