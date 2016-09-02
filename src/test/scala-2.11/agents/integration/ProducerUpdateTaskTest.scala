@@ -43,7 +43,7 @@ class ProducerUpdateTaskTest  extends FlatSpec with Matchers with BeforeAndAfter
     name = "test_producer",
     txnGenerator = LocalGeneratorCreator.getGen(),
     converter = stringToArrayByteConverter,
-    partitions = List(0,1,2),
+    partitions = Set(0,1,2),
     isLowPriority = false)
 
 

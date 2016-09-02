@@ -28,7 +28,7 @@ class ConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll with Te
     name = "test_consumer",
     txnGenerator = LocalGeneratorCreator.getGen(),
     converter = arrayByteToStringConverter,
-    partitions = List(0,1,2),
+    partitions = Set(0,1,2),
     offset = Oldest,
     isUseLastOffset = true)
 
@@ -36,7 +36,7 @@ class ConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll with Te
     name = "test_producer",
     txnGenerator = LocalGeneratorCreator.getGen(),
     converter = stringToArrayByteConverter,
-    partitions = List(0,1,2),
+    partitions = Set(0,1,2),
     isLowPriority = false)
 
   "consumer.getTransaction" should "return None if nothing was sent" in {
