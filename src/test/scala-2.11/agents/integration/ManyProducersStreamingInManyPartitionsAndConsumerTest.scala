@@ -54,7 +54,7 @@ class ManyProducersStreamingInManyPartitionsAndConsumerTest extends FlatSpec wit
     name = "test_consumer",
     txnGenerator = LocalGeneratorCreator.getGen(),
     converter = arrayByteToStringConverter,
-    partitions = (0 until totalPartitions).toList,
+    partitions = (0 until totalPartitions).toSet,
     offset = Oldest,
     isUseLastOffset = false)
 
@@ -119,7 +119,7 @@ class ManyProducersStreamingInManyPartitionsAndConsumerTest extends FlatSpec wit
       name = "test_producer-" + Thread.currentThread().getName(),
       txnGenerator = LocalGeneratorCreator.getGen(),
       converter = stringToArrayByteConverter,
-      partitions = usedPartitions,
+      partitions = usedPartitions.toSet,
       isLowPriority = false)
   }
 

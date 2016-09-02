@@ -173,7 +173,7 @@ class PeerAgent(agentsStateManager: AgentsStateDBService, zkService: ZookeeperDL
         ans match {
           case null =>
             if (retries == 0)
-              throw new IllegalStateException(s"Agent didn't responded to me.")
+              throw new IllegalStateException(s"Agent didn't respond to me.")
             //assume that if master is not responded it will be deleted by zk
             Thread.sleep(PeerAgent.RETRY_SLEEP_TIME)
             updateMaster(partition, init, retries - 1)
@@ -196,7 +196,7 @@ class PeerAgent(agentsStateManager: AgentsStateDBService, zkService: ZookeeperDL
         transport.pingRequest(master.agentAddress, partition) match {
           case null =>
             if (retries == 0)
-              throw new IllegalStateException(s"Agent didn't responded to me.")
+              throw new IllegalStateException(s"Agent didn't respond to me.")
             //assume that if master is not responded it will be deleted by zk
             Thread.sleep(PeerAgent.RETRY_SLEEP_TIME)
             updateMaster(partition, init, retries - 1)

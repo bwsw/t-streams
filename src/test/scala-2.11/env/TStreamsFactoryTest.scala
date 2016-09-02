@@ -43,7 +43,7 @@ class TStreamsFactoryTest extends FlatSpec with Matchers with BeforeAndAfterAll 
       isLowPriority = false,
       txnGenerator = new LocalTimeUUIDGenerator,
       converter = new StringToArrayByteConverter,
-      partitions = List(0))
+      partitions = Set(0))
 
     p != null shouldEqual true
 
@@ -56,7 +56,7 @@ class TStreamsFactoryTest extends FlatSpec with Matchers with BeforeAndAfterAll 
       name = "test-consumer-1",
       txnGenerator = new LocalTimeUUIDGenerator,
       converter = new ArrayByteToStringConverter,
-      partitions = List(0),
+      partitions = Set(0),
       offset = Oldest)
 
     c != null shouldEqual true

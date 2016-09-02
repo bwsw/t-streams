@@ -343,11 +343,6 @@ object TSF_Dictionary {
     */
   object Consumer {
     /**
-      * name of consumer
-      */
-    val NAME = "producer.name"
-
-    /**
       * amount of transactions to preload from C* to avoid additional select ops
       */
     val TRANSACTION_PRELOAD = "consumer.transaction-preload"
@@ -677,7 +672,7 @@ class TStreamsFactory() {
       // construct write policy
       var rp: Policy = null
       if (getProperty(TSF_Dictionary.Data.Cluster.Aerospike.READ_POLICY) == null)
-        rp = new WritePolicy()
+        rp = new Policy()
       else
         rp = getProperty(TSF_Dictionary.Data.Cluster.Aerospike.READ_POLICY).asInstanceOf[Policy]
 
@@ -837,7 +832,7 @@ class TStreamsFactory() {
   def getProducer[T](name: String,
                             txnGenerator: IUUIDGenerator,
                             converter: IConverter[T, Array[Byte]],
-                            partitions: List[Int],
+                            partitions: Set[Int],
                             isLowPriority: Boolean = false
                            ): Producer[T] = this.synchronized {
 
@@ -872,7 +867,7 @@ class TStreamsFactory() {
 
     if (pAsString(TSF_Dictionary.Producer.Transaction.DISTRIBUTION_POLICY) ==
       TSF_Dictionary.Producer.Transaction.Consts.DISTRIBUTION_POLICY_RR) {
-      writePolicy = new RoundRobinPolicy(stream, partitions)
+      writePolicy = new RoundRobinPolicy(stream, partitions.toList)
     }
     else {
       throw new InvalidParameterException("Only TSF_Dictionary.Producer.Transaction.Consts.DISTRIBUTION_POLICY_RR policy " +
@@ -906,7 +901,7 @@ class TStreamsFactory() {
   def getConsumer[T](name: String,
                             txnGenerator: IUUIDGenerator,
                             converter: IConverter[Array[Byte], T],
-                            partitions: List[Int],
+                            partitions: Set[Int],
                             offset: IOffset,
                             isUseLastOffset: Boolean = true
                            ): Consumer[T] = this.synchronized {
@@ -920,7 +915,7 @@ class TStreamsFactory() {
     val stream: TStream[Array[Byte]] = getStreamObject(metadatastorage = ms, datastorage = ds)
     val consumerOptions = getBasicConsumerOptions(txnGenerator = txnGenerator,
       stream = stream,
-      partitions = partitions,
+      partitions = partitions.toList,
       converter = converter,
       offset = offset,
       isUseLastOffset = isUseLastOffset)

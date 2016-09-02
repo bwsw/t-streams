@@ -27,14 +27,14 @@ class ProducerAndConsumerCheckpointTest extends FlatSpec with Matchers with Befo
     name = "test_producer",
     txnGenerator = LocalGeneratorCreator.getGen(),
     converter = stringToArrayByteConverter,
-    partitions = List(0,1,2),
+    partitions = Set(0,1,2),
     isLowPriority = false)
 
   val consumer = f.getConsumer[String](
     name = "test_consumer",
     txnGenerator = LocalGeneratorCreator.getGen(),
     converter = arrayByteToStringConverter,
-    partitions = List(0,1,2),
+    partitions = Set(0,1,2),
     offset = Oldest,
     isUseLastOffset = true)
 
@@ -42,7 +42,7 @@ class ProducerAndConsumerCheckpointTest extends FlatSpec with Matchers with Befo
     name = "test_consumer",
     txnGenerator = LocalGeneratorCreator.getGen(),
     converter = arrayByteToStringConverter,
-    partitions = List(0,1,2),
+    partitions = Set(0,1,2),
     offset = Oldest,
     isUseLastOffset = true)
 
