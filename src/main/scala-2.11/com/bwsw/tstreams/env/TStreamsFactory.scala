@@ -343,11 +343,6 @@ object TSF_Dictionary {
     */
   object Consumer {
     /**
-      * name of consumer
-      */
-    val NAME = "producer.name"
-
-    /**
       * amount of transactions to preload from C* to avoid additional select ops
       */
     val TRANSACTION_PRELOAD = "consumer.transaction-preload"
@@ -677,7 +672,7 @@ class TStreamsFactory() {
       // construct write policy
       var rp: Policy = null
       if (getProperty(TSF_Dictionary.Data.Cluster.Aerospike.READ_POLICY) == null)
-        rp = new WritePolicy()
+        rp = new Policy()
       else
         rp = getProperty(TSF_Dictionary.Data.Cluster.Aerospike.READ_POLICY).asInstanceOf[Policy]
 
