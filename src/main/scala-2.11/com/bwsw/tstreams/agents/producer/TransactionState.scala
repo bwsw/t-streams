@@ -5,6 +5,10 @@ import java.util.concurrent.{CountDownLatch, TimeUnit}
 
 import com.bwsw.tstreams.common.ResettableCountDownLatch
 
+class MaterializationException(s: String) extends IllegalStateException(s: String) {
+
+}
+
 /**
   * Stores state of transaction
   */
@@ -46,7 +50,7 @@ class TransactionState {
     */
   def awaitMaterialization(masterTimeout: Int) = {
 
-    def throwExc = throw new IllegalStateException(s"Master didn't materialized the transaction during ${masterTimeout}.")
+    def throwExc = throw new MaterializationException(s"Master didn't materialized the transaction during ${masterTimeout}.")
 
     val mtMsecs = masterTimeout * 1000
     val mt = this.synchronized {
