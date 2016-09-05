@@ -118,18 +118,18 @@ class PeerAgent(agentsStateManager: AgentsStateDBService,
 
   partitionWeightDistributionThread = new Thread(new Runnable {
     override def run(): Unit = {
-      val pq = usedPartitions.toIterable
-      val it = pq.iterator
+      val pq = usedPartitions.toList
+      val it = pq.toIterable.iterator
       while (isRunning.get() && it.hasNext) {
-        updateMaster(it.next, init = true)
+        val itm = it.next
+        updateMaster(itm, init = true)
+        PeerAgent.logger.info(s"Update master request for partition ${itm} is completed.")
       }
     }
   })
 
   partitionWeightDistributionThread.start()
-  //usedPartitions foreach { p =>
-  //  updateMaster(p, init = true)
-  //}
+
 
   /**
     * Helper method for new master voting

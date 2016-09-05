@@ -148,7 +148,10 @@ class ZookeeperDLMService(prefix: String, zkHosts: List[InetSocketAddress], zkSe
       None
     else {
       val data = zkClient.getData(p, null, null)
-      Some(ZookeeperDLMService.serializer.deserialize[T](new String(data)))
+      if(data != null)
+        Some(ZookeeperDLMService.serializer.deserialize[T](new String(data)))
+      else
+        None
     }
   }
 
