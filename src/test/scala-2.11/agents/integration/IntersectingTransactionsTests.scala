@@ -15,7 +15,7 @@ import scala.collection.mutable.ListBuffer
 import scala.util.Random
 
 /**
-  * Created by mendelbaum_ma on 02.09.16.
+  * Created by Mikhail Mendelbaum on 02.09.16.
   */
 class IntersectingTransactionsTests extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils{
 
