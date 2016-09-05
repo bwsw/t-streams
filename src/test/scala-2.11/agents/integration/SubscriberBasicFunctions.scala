@@ -30,7 +30,7 @@ class SubscriberBasicFunctions extends FlatSpec with Matchers with BeforeAndAfte
     name = "test_producer",
     txnGenerator = LocalGeneratorCreator.getGen(),
     converter = stringToArrayByteConverter,
-    partitions = List(0,1,2),
+    partitions = Set(0,1,2),
     isLowPriority = false)
 
   it should "start and stop with default options" in {
@@ -120,7 +120,7 @@ class SubscriberBasicFunctions extends FlatSpec with Matchers with BeforeAndAfte
     s.stop()
   }
 
-    it should "receive all transactions producer by producer previously" in {
+  it should "receive all transactions producer by producer previously" in {
     val l = new CountDownLatch(1)
     var i: Int = 0
     val TOTAL = 1000

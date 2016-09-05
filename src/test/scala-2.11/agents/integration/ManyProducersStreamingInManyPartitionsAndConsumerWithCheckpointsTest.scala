@@ -57,7 +57,7 @@ class ManyProducersStreamingInManyPartitionsAndConsumerWithCheckpointsTest exten
       name = "test_consumer",
       txnGenerator = LocalGeneratorCreator.getGen(),
       converter = arrayByteToStringConverter,
-      partitions = (0 until totalPartitions).toList,
+      partitions = (0 until totalPartitions).toSet,
       offset = Oldest,
       isUseLastOffset = true)
 
@@ -65,7 +65,7 @@ class ManyProducersStreamingInManyPartitionsAndConsumerWithCheckpointsTest exten
       name = "test_consumer",
       txnGenerator = LocalGeneratorCreator.getGen(),
       converter = arrayByteToStringConverter,
-      partitions = (0 until totalPartitions).toList,
+      partitions = (0 until totalPartitions).toSet,
       offset = Oldest,
       isUseLastOffset = true)
 
@@ -117,7 +117,7 @@ class ManyProducersStreamingInManyPartitionsAndConsumerWithCheckpointsTest exten
       name = "test_producer",
       txnGenerator = LocalGeneratorCreator.getGen(),
       converter = stringToArrayByteConverter,
-      partitions = usedPartitions,
+      partitions = usedPartitions.toSet,
       isLowPriority = false)
   }
 
