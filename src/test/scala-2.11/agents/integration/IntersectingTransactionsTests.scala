@@ -50,14 +50,14 @@ class IntersectingTransactionsTests extends FlatSpec with Matchers with BeforeAn
       name = "test_producer1",
       txnGenerator = LocalGeneratorCreator.getGen(),
       converter = stringToArrayByteConverter,
-      partitions = List(0),
+      partitions = Set(0),
       isLowPriority = false)
 
     val producer2 = f.getProducer[String](
       name = "test_producer2",
       txnGenerator = LocalGeneratorCreator.getGen(),
       converter = stringToArrayByteConverter,
-      partitions = List(0),
+      partitions = Set(0),
       isLowPriority = false)
 
     val s = f.getSubscriber[String](name = "ss+2",
