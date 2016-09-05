@@ -40,8 +40,8 @@ class IntersectingTransactionsTests extends FlatSpec with Matchers with BeforeAn
   it should "handle all transactions produced by two different producers, the first ends first started " in {
     var subTxns = 0
 
-    var bp = ListBuffer[UUID]()
-    var bs = ListBuffer[UUID]()
+    val bp = ListBuffer[UUID]()
+    val bs = ListBuffer[UUID]()
     val lp1 = new CountDownLatch(1)
     val lp2 = new CountDownLatch(1)
     val ls = new CountDownLatch(1)
