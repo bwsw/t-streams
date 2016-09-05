@@ -93,7 +93,7 @@ class CommunicationClient(timeoutMs: Int, retryCount: Int = 3, retryDelayMs: Int
       val sock = getSocket(msg.receiverID)
       val reqString = ProtocolMessageSerializer.wrapMsg(ProtocolMessageSerializer.serialize(msg))
       val r = writeMsgAndWaitResponse(sock, reqString)
-      if(msg.msgID != r.msgID)
+      if(r != null && msg.msgID != r.msgID)
         throw new IllegalStateException(s"Sent message with ID ${msg.msgID}, received ${r.msgID}. ID must be the same.")
       r}, retryCount, isExceptionOnFail = isExceptionOnFail)
   }
