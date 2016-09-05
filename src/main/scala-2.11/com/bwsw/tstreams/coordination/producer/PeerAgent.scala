@@ -123,6 +123,8 @@ class PeerAgent(agentsStateManager: AgentsStateDBService,
       while (isRunning.get() && it.hasNext) {
         val itm = it.next
         updateMaster(itm, init = true)
+        // TODO: Fix it.
+        Thread.sleep(1000)
         PeerAgent.logger.info(s"Update master request for partition ${itm} is completed.")
       }
     }
@@ -171,8 +173,9 @@ class PeerAgent(agentsStateManager: AgentsStateDBService,
     * @param partition Partition to vote new master
     * @return New master Address
     */
-  private def electPartitionMaster(partition: Int): String =
+  private def electPartitionMaster(partition: Int): String = this.synchronized {
     agentsStateManager.withElectionLockDo(partition, () => electPartitionMasterInternal(partition))
+  }
 
   /**
     * Updating master on concrete partition
@@ -181,7 +184,7 @@ class PeerAgent(agentsStateManager: AgentsStateDBService,
     * @param init      If flag true master will be reselected anyway else old master can stay
     * @param retries   Retries to try to interact with master
     */
-  def updateMaster(partition: Int, init: Boolean, retries: Int = zkRetriesAmount): Unit = {
+  def updateMaster(partition: Int, init: Boolean, retries: Int = zkRetriesAmount): Unit = this.synchronized {
     if (PeerAgent.logger.isDebugEnabled)
     {
       PeerAgent.logger.debug(s"[UPDATER] Updating master with init: {$init} on agent: {$myInetAddress} on stream: {$streamName}, partition: {$partition} with retry=$retries.")
@@ -288,7 +291,7 @@ class PeerAgent(agentsStateManager: AgentsStateDBService,
     * @param partition Transaction partition
     * @return Transaction UUID
     */
-  def generateNewTransaction(partition: Int): UUID = {
+  def generateNewTransaction(partition: Int): UUID = this.synchronized {
     LockUtil.withLockOrDieDo[UUID](externalAccessLock, (100, TimeUnit.SECONDS), Some(PeerAgent.logger), () => {
       val master = agentsStateManager.getPartitionMasterLocally(partition, null)
       if (PeerAgent.logger.isDebugEnabled)
@@ -335,18 +338,16 @@ class PeerAgent(agentsStateManager: AgentsStateDBService,
 
   //TODO remove after complex testing
   def publish(msg: TransactionStateMessage): Unit = {
-    LockUtil.withLockOrDieDo[Unit](externalAccessLock, (100, TimeUnit.SECONDS), Some(PeerAgent.logger), () => {
-      val master = agentsStateManager.getPartitionMasterLocally(msg.partition, null)
-      if (PeerAgent.logger.isDebugEnabled)
-        PeerAgent.logger.debug(s"[PUBLISH] SEND PTM:{$msg} to [MASTER:{$master}] from agent:{$myInetAddress}," +
-          s"stream:{$streamName}")
-      if (master != null) {
-        transport.publishRequest(master, msg)
-      } else {
-        updateMaster(msg.partition, init = false)
-        publish(msg)
-      }
-    })
+    val master = agentsStateManager.getPartitionMasterLocally(msg.partition, null)
+    if (PeerAgent.logger.isDebugEnabled)
+      PeerAgent.logger.debug(s"[PUBLISH] SEND PTM:{$msg} to [MASTER:{$master}] from agent:{$myInetAddress}," +
+        s"stream:{$streamName}")
+    if (master != null) {
+      transport.publishRequest(master, msg)
+    } else {
+      updateMaster(msg.partition, init = false)
+      publish(msg)
+    }
   }
 
   /**
