@@ -17,7 +17,7 @@ class TcpTransport(address: String, timeoutMs: Int, retryCount: Int = 3, retryDe
   val isIgnore = new AtomicBoolean(false)
   var callback: (Channel,String) => Unit = null
 
-  def getIpAddress() = address
+  def getInetAddress() = address
 
   @ChannelHandler.Sharable
   class ChannelHandler extends SimpleChannelInboundHandler[String] {

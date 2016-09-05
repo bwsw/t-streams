@@ -68,7 +68,7 @@ class Producer[T](var name: String,
 
   private val agentsStateManager = new AgentsStateDBService(
     zkService,
-    producerOptions.coordinationOptions.transport.getIpAddress(),
+    producerOptions.coordinationOptions.transport.getInetAddress(),
     stream.getName,
     Set[Int]().empty ++ producerOptions.writePolicy.getUsedPartitions())
 
