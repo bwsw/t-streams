@@ -10,7 +10,10 @@ import scala.collection.mutable
 /**
   * Created by Ivan Kudryavtsev on 17.08.16.
   */
-class AgentsStateDBService(dlm: ZookeeperDLMService, myIPAddress: String, streamName: String, partitions: Set[Int]) {
+class AgentsStateDBService(dlm: ZookeeperDLMService,
+                           myIPAddress: String,
+                           streamName: String,
+                           partitions: Set[Int]) {
 
   private val masterMap = mutable.Map[Int, String]()
   var agentID: Int = 0
@@ -39,14 +42,23 @@ class AgentsStateDBService(dlm: ZookeeperDLMService, myIPAddress: String, stream
     * @return Master address
     */
   def getCurrentMaster(partition: Int): Option[MasterSettings] = this.synchronized {
-      LockUtil.withZkLockOrDieDo[Option[MasterSettings]](dlm.getLock(getPartitionLockPath(partition)), (100, TimeUnit.SECONDS), Some(PeerAgent.logger), () => {
-        val masterOpt = dlm.get[MasterSettings](getPartitionMasterPath(partition))
-        if (PeerAgent.logger.isDebugEnabled)
-        {
-          PeerAgent.logger.debug(s"[REQUEST CURRENT MASTER] Agent: ${masterOpt.getOrElse("None")} is current master on stream: {$streamName}, partition: {$partition}.")
-        }
-        masterOpt
-      })
+      LockUtil.withZkLockOrDieDo[Option[MasterSettings]](dlm.getLock(getPartitionLockPath(partition)), (100, TimeUnit.SECONDS), Some(PeerAgent.logger),
+        () => getCurrentMasterWithoutLock(partition))
+  }
+
+  /**
+    * Receives current master without locking partition
+    *
+    * @param partition
+    * @return
+    */
+  private def getCurrentMasterWithoutLock(partition: Int): Option[MasterSettings] = {
+    val masterOpt = dlm.get[MasterSettings](getPartitionMasterPath(partition))
+    if (PeerAgent.logger.isDebugEnabled)
+    {
+      PeerAgent.logger.debug(s"[REQUEST CURRENT MASTER] Agent: ${masterOpt.getOrElse("None")} is current master on stream: {$streamName}, partition: {$partition}.")
+    }
+    masterOpt
   }
 
   /**
@@ -56,15 +68,17 @@ class AgentsStateDBService(dlm: ZookeeperDLMService, myIPAddress: String, stream
     * @param uniqueAgentId
     */
   def bootstrap(isLowPriorityToBeMaster: Boolean, uniqueAgentId: Int) = this.synchronized {
-    agentID = uniqueAgentId
-
+    // save initial records to zk
     partitions foreach { p =>
-
-      // save initial records to zk
       val penalty = if (isLowPriorityToBeMaster) PeerAgent.LOW_PRIORITY_PENALTY else 0
-
       val settings = AgentSettings(myIPAddress, priority = 0, penalty)
       dlm.create[AgentSettings](getMyPath(p), settings, CreateMode.EPHEMERAL)
+    }
+
+    // assign me as a master on partitions which don't have master yet
+    partitions foreach {
+      p => LockUtil.withZkLockOrDieDo[Unit](dlm.getLock(getPartitionLockPath(p)), (100, TimeUnit.SECONDS), Some(PeerAgent.logger),
+        () => if (!getCurrentMasterWithoutLock(p).isDefined) assignMeAsMasterWithoutLock(p))
     }
 
     if (PeerAgent.logger.isDebugEnabled)
@@ -74,13 +88,16 @@ class AgentsStateDBService(dlm: ZookeeperDLMService, myIPAddress: String, stream
     }
 
     removeLastSessionArtifacts()
-
   }
 
   /**
     * removes artifacts
     */
-  def shutdown() = {
+  def shutdown() = this.synchronized {
+
+    val parts = masterMap.keys
+    parts foreach { p => demoteMeAsMaster(partition = p, isUpdatePriority = false) }
+
     partitions foreach { p =>
       dlm.delete(getMyPath(p))
     }
@@ -159,7 +176,7 @@ class AgentsStateDBService(dlm: ZookeeperDLMService, myIPAddress: String, stream
     })
   }
 
-  def demoteMeAsMaster(partition: Int) = this.synchronized {
+  def demoteMeAsMaster(partition: Int, isUpdatePriority: Boolean = true) = this.synchronized {
     //try to remove old master
     val master = getCurrentMaster(partition)
     master foreach {
@@ -170,7 +187,10 @@ class AgentsStateDBService(dlm: ZookeeperDLMService, myIPAddress: String, stream
             PeerAgent.logger.debug(s"[INIT CLEAN] Delete agent as MASTER on address: {$myIPAddress} from stream: {$streamName}, partition:{$partition} because id was overdue.")
           }
           demoteMaster(partition)
-          partitions foreach { p => updateMyPriority(partition, value = 1) }
+
+          if(isUpdatePriority)
+            partitions foreach { p => updateMyPriority(partition, value = 1) }
+
           masterMap -= partition
       }
     }
@@ -212,17 +232,31 @@ class AgentsStateDBService(dlm: ZookeeperDLMService, myIPAddress: String, stream
     }
   }
 
+  /**
+    * does master assignment with locking
+ *
+    * @param partition
+    */
   def assignMeAsMaster(partition: Int) = {
-      LockUtil.withZkLockOrDieDo[Unit](dlm.getLock(getPartitionLockPath(partition)), (100, TimeUnit.SECONDS), Some(PeerAgent.logger), () => {
-        assert(!dlm.exist(getPartitionMasterPath(partition)))
-        dlm.create[MasterSettings](
-          getPartitionMasterPath(partition),
-          MasterSettings(myIPAddress, agentID),
-          CreateMode.EPHEMERAL)
-        partitions foreach { p => updateMyPriority(partition, value = -1) }
-        masterMap += (partition -> myIPAddress)
-        PeerAgent.logger.info(s"[SET MASTER ANNOUNCE] ($myIPAddress) - I was elected as master for stream/partition: ($streamName,$partition).")
-      })
+    LockUtil.withZkLockOrDieDo[Unit](dlm.getLock(getPartitionLockPath(partition)), (100, TimeUnit.SECONDS), Some(PeerAgent.logger), () => {
+      assignMeAsMasterWithoutLock(partition)
+    })
+  }
+
+  /**
+    * does actual master assignment
+ *
+    * @param partition
+    */
+  def assignMeAsMasterWithoutLock(partition: Int) = {
+    assert(!dlm.exist(getPartitionMasterPath(partition)))
+    dlm.create[MasterSettings](
+      getPartitionMasterPath(partition),
+      MasterSettings(myIPAddress, agentID),
+      CreateMode.EPHEMERAL)
+    partitions foreach { p => updateMyPriority(partition, value = -1) }
+    masterMap += (partition -> myIPAddress)
+    PeerAgent.logger.info(s"[SET MASTER ANNOUNCE] ($myIPAddress) - I was elected as master for stream/partition: ($streamName,$partition).")
   }
 
   def withElectionLockDo(partition: Int, f: () => String): String = {
