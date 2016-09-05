@@ -14,7 +14,7 @@ import testutils.{LocalGeneratorCreator, TestUtils}
 import scala.collection.mutable.ListBuffer
 
 /**
-  * Created by mendelbaum_ma on 02.09.16.
+  * Created by Mikhail Mendelbaum on 02.09.16.
   */
 class IntersectingTransactionsTests extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils{
 
