@@ -10,10 +10,10 @@ import testutils._
 class ManyProducersStreamingInManyPartitionsAndConsumerWithCheckpointsTest extends FlatSpec
   with Matchers with BeforeAndAfterAll with TestUtils {
 
-  val totalPartitions = 4
-  val totalTxn = 10
+  val totalPartitions = 20
+  val totalTxn = 1000
   val totalElementsInTxn = 3
-  val producersAmount = 10
+  val producersAmount = 20
   val dataToSend = (for (part <- 0 until totalElementsInTxn) yield randomString).sorted
 
   f.setProperty(TSF_Dictionary.Stream.NAME, "test_stream").
