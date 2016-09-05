@@ -118,8 +118,8 @@ class PeerAgent(agentsStateManager: AgentsStateDBService,
 
   partitionWeightDistributionThread = new Thread(new Runnable {
     override def run(): Unit = {
-      val pq = usedPartitions.toList
-      val it = pq.toIterable.iterator
+      val pq = usedPartitions
+      val it = pq.iterator
       while (isRunning.get() && it.hasNext) {
         val itm = it.next
         updateMaster(itm, init = true)
