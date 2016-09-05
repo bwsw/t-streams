@@ -32,7 +32,6 @@ class IntersectingTransactionsTests extends FlatSpec with Matchers with BeforeAn
 
 
 
-
 it should "handle all transactions produced by two different producers, the first ends first started " in {
   var subTxns = 0
 
