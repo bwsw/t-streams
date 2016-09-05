@@ -40,6 +40,11 @@ class Producer[T](var name: String,
     this.name = name
   }
 
+  /**
+    * Allows to get if the producer is master for the partition.
+    * @param partition
+    * @return
+    */
   def isMeAMasterOfPartition(partition: Int): Boolean = {
     val masterOpt = agentsStateManager.getCurrentMaster(partition)
     masterOpt.fold(false){ m => producerOptions.coordinationOptions.transport.getInetAddress() == m.agentAddress }
