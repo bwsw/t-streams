@@ -42,7 +42,7 @@ class Transaction[T](partition: Int,
     *
     * @return Closed transaction or not
     */
-  def isClosed = state.isClosed
+  def isClosed() = state.isClosed
 
   /**
     * BasicProducerTransaction logger for logging
