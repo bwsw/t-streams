@@ -53,7 +53,6 @@ class PeerAgent(agentsStateManager: AgentsStateDBService, zkService: ZookeeperDL
     * locks
     */
   private val externalAccessLock = new ReentrantLock(true)
-  private val lockManagingMaster = new ReentrantLock(true)
 
   /**
     * Job Executors
@@ -62,7 +61,9 @@ class PeerAgent(agentsStateManager: AgentsStateDBService, zkService: ZookeeperDL
 
   private val streamName = producer.stream.getName
   private val isRunning = new AtomicBoolean(true)
+
   private var zkConnectionValidator: Thread = null
+  private var partitionWeightDistributionThread: Thread = null
 
   def getAgentAddress()           = myIPAddress
   def getTransport()              = transport
@@ -107,9 +108,21 @@ class PeerAgent(agentsStateManager: AgentsStateDBService, zkService: ZookeeperDL
 
   agentsStateManager.bootstrap(isLowPriorityToBeMaster, uniqueAgentId)
 
-  usedPartitions foreach { p =>
-    updateMaster(p, init = true)
-  }
+
+  partitionWeightDistributionThread = new Thread(new Runnable {
+    override def run(): Unit = {
+      val pq = usedPartitions.toIterable
+      val it = pq.iterator
+      while (isRunning.get() && it.hasNext) {
+        updateMaster(it.next, init = true)
+      }
+    }
+  })
+
+  partitionWeightDistributionThread.start()
+  //usedPartitions foreach { p =>
+  //  updateMaster(p, init = true)
+  //}
 
   /**
     * Helper method for new master voting
@@ -327,6 +340,7 @@ class PeerAgent(agentsStateManager: AgentsStateDBService, zkService: ZookeeperDL
   def stop() = {
     PeerAgent.logger.info(s"P2PAgent of ${producer.name} is shutting down.")
     isRunning.set(false)
+    partitionWeightDistributionThread.join()
     zkConnectionValidator.join()
     //to avoid infinite polling block
     executorGraphs.foreach(g => g._2.shutdown())
