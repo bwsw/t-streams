@@ -17,7 +17,7 @@ class ProducerTest extends FlatSpec with Matchers with BeforeAndAfterAll with Te
   System.setProperty("log4j.appender.STDOUT.layout.ConversionPattern","%5p [%t] (%F:%L) – %m%n")
 
   f.setProperty(TSF_Dictionary.Stream.NAME,"test_stream").
-    setProperty(TSF_Dictionary.Stream.PARTITIONS,3).
+    setProperty(TSF_Dictionary.Stream.PARTITIONS,1000).
     setProperty(TSF_Dictionary.Stream.TTL, 60 * 10).
     setProperty(TSF_Dictionary.Coordination.CONNECTION_TIMEOUT, 7).
     setProperty(TSF_Dictionary.Coordination.TTL, 7).
@@ -31,7 +31,7 @@ class ProducerTest extends FlatSpec with Matchers with BeforeAndAfterAll with Te
     name = "test_producer",
     txnGenerator = LocalGeneratorCreator.getGen(),
     converter = stringToArrayByteConverter,
-    partitions = Set(0,1,2),
+    partitions = (0 until 1000).toSet,
     isLowPriority = false)
 
   "BasicProducer.newTransaction()" should "return BasicProducerTransaction instance" in {

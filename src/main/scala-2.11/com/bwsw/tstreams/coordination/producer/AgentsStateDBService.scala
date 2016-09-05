@@ -18,6 +18,12 @@ class AgentsStateDBService(dlm: ZookeeperDLMService,
   private val masterMap = mutable.Map[Int, String]()
   var agentID: Int = 0
 
+  /**
+    * Returns local information about partition master
+    * @param partition
+    * @param default
+    * @return
+    */
   def getPartitionMasterLocally(partition: Int, default: String): String = {
     val opt = masterMap get partition
     if(opt.isDefined)
@@ -77,8 +83,9 @@ class AgentsStateDBService(dlm: ZookeeperDLMService,
 
     // assign me as a master on partitions which don't have master yet
     partitions foreach {
-      p => LockUtil.withZkLockOrDieDo[Unit](dlm.getLock(getPartitionLockPath(p)), (100, TimeUnit.SECONDS), Some(PeerAgent.logger),
-        () => if (!getCurrentMasterWithoutLock(p).isDefined) assignMeAsMasterWithoutLock(p))
+      p => if (!getCurrentMasterWithoutLock(p).isDefined) assignMeAsMasterWithoutLock(p)
+      /*p => LockUtil.withZkLockOrDieDo[Unit](dlm.getLock(getPartitionLockPath(p)), (100, TimeUnit.SECONDS), Some(PeerAgent.logger),
+        () => */
     }
 
     if (PeerAgent.logger.isDebugEnabled)
