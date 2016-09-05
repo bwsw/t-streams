@@ -11,7 +11,7 @@ import testutils._
 class ManyProducersStreamingInManyPartitionsAndConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
   val timeoutForWaiting = 60 * 5
   val totalPartitions = 4
-  val totalTxn = 100
+  val totalTxn = 10
   val totalElementsInTxn = 10
   val producersAmount = 5
   val dataToSend = (for (part <- 0 until totalElementsInTxn) yield randomString).sorted
@@ -77,11 +77,11 @@ class ManyProducersStreamingInManyPartitionsAndConsumerTest extends FlatSpec wit
               checkVal &= txn.get.getAll().sorted == dataToSend
               i += 1
             }
-            if(System.currentTimeMillis() - startTime > 5000)
+            if(System.currentTimeMillis() - startTime > 50000)
               {
                 logger.info(s"I: ${i}, expected: ${totalTxn * producersAmount}")
                 i = totalTxn * producersAmount
-                false shouldBe true
+                checkVal = false
               }
           }
         }
