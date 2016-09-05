@@ -16,8 +16,11 @@ class ProducerTest extends FlatSpec with Matchers with BeforeAndAfterAll with Te
   System.setProperty("log4j.appender.STDOUT.layout","org.apache.log4j.PatternLayout")
   System.setProperty("log4j.appender.STDOUT.layout.ConversionPattern","%5p [%t] (%F:%L) – %m%n")
 
+  // keep it greater than 3
+  val ALL_PARTITIONS = 10
+
   f.setProperty(TSF_Dictionary.Stream.NAME,"test_stream").
-    setProperty(TSF_Dictionary.Stream.PARTITIONS,3).
+    setProperty(TSF_Dictionary.Stream.PARTITIONS, ALL_PARTITIONS).
     setProperty(TSF_Dictionary.Stream.TTL, 60 * 10).
     setProperty(TSF_Dictionary.Coordination.CONNECTION_TIMEOUT, 7).
     setProperty(TSF_Dictionary.Coordination.TTL, 7).
@@ -31,11 +34,18 @@ class ProducerTest extends FlatSpec with Matchers with BeforeAndAfterAll with Te
     name = "test_producer",
     txnGenerator = LocalGeneratorCreator.getGen(),
     converter = stringToArrayByteConverter,
-    partitions = (0 until 3).toSet,
+    partitions = (0 until ALL_PARTITIONS).toSet,
     isLowPriority = false)
 
-  "BasicProducer.newTransaction()" should "return BasicProducerTransaction instance" in {
+  "Producer.isMeAMasterOfPartition" should "return true" in {
+    (0 until ALL_PARTITIONS).foreach(p => producer.isMeAMasterOfPartition(p) shouldBe true)
+  }
 
+  "Producer.isMeAMasterOfPartition" should "return false" in {
+    (ALL_PARTITIONS until ALL_PARTITIONS + 1).foreach(p => producer.isMeAMasterOfPartition(p) shouldBe false)
+  }
+
+  "BasicProducer.newTransaction()" should "return BasicProducerTransaction instance" in {
     val txn: Transaction[String] = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
     txn.checkpoint()
     txn.isInstanceOf[Transaction[_]] shouldEqual true

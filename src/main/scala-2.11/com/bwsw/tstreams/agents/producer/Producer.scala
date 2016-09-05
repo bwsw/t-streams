@@ -40,6 +40,11 @@ class Producer[T](var name: String,
     this.name = name
   }
 
+  def isMeAMasterOfPartition(partition: Int): Boolean = {
+    val masterOpt = agentsStateManager.getCurrentMaster(partition)
+    masterOpt.fold(false){ m => producerOptions.coordinationOptions.transport.getInetAddress() == m.agentAddress }
+  }
+
   // shortkey
   val pcs = producerOptions.coordinationOptions
   var isStop = false
