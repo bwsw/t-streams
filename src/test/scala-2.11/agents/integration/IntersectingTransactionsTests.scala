@@ -51,7 +51,6 @@ it should "handle all transactions produced by two different producers, the firs
     partitions = Set(0),
     isLowPriority = false)
 
-
   f.setProperty(TSF_Dictionary.Producer.BIND_PORT, TestUtils.getPort())
 
   val producer2 = f.getProducer[String](
