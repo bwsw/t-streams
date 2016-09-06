@@ -485,7 +485,7 @@ class TStreamsFactory() {
 
   // producer scope
   propertyMap += (TSF_Dictionary.Producer.BIND_HOST -> "localhost")
-  propertyMap += (TSF_Dictionary.Producer.BIND_PORT -> 18000)
+  propertyMap += (TSF_Dictionary.Producer.BIND_PORT -> (40000,50000))
   val Producer_transport_timeout_default = 5
   val Producer_transport_timeout_min = 1
   val Producer_transport_timeout_max = 10
@@ -533,7 +533,7 @@ class TStreamsFactory() {
   val Consumer_data_preload_max = 200
   propertyMap += (TSF_Dictionary.Consumer.DATA_PRELOAD -> Consumer_data_preload_default)
   propertyMap += (TSF_Dictionary.Consumer.Subscriber.BIND_HOST -> "localhost")
-  propertyMap += (TSF_Dictionary.Consumer.Subscriber.BIND_PORT -> 18001)
+  propertyMap += (TSF_Dictionary.Consumer.Subscriber.BIND_PORT -> (40000,50000))
   propertyMap += (TSF_Dictionary.Consumer.Subscriber.PERSISTENT_QUEUE_PATH -> "/tmp")
 
   val Subscriber_transaction_buffer_thread_pool_default = 4
@@ -849,13 +849,18 @@ class TStreamsFactory() {
     assert(pAsString(TSF_Dictionary.Coordination.ENDPOINTS) != null)
     assert(pAsString(TSF_Dictionary.Coordination.ROOT) != null)
 
+    val port = getProperty(TSF_Dictionary.Producer.BIND_PORT) match {
+      case (p: Int) => p
+      case (pFrom: Int, pTo: Int) => SpareServerSocketLookupUtility.findSparePort(pAsString(TSF_Dictionary.Producer.BIND_HOST), pFrom, pTo).get
+    }
+
     pAssertIntRange(pAsInt(TSF_Dictionary.Coordination.TTL, Coordination_ttl_default), Coordination_ttl_min, Coordination_ttl_max)
     pAssertIntRange(pAsInt(TSF_Dictionary.Producer.TRANSPORT_TIMEOUT, Producer_transport_timeout_default), Producer_transport_timeout_min, Producer_transport_timeout_max)
     pAssertIntRange(pAsInt(TSF_Dictionary.Coordination.CONNECTION_TIMEOUT, Coordination_connection_timeout_default),
       Coordination_connection_timeout_min, Coordination_connection_timeout_max)
 
     val transport = new TcpTransport(
-      pAsString(TSF_Dictionary.Producer.BIND_HOST) + ":" + pAsString(TSF_Dictionary.Producer.BIND_PORT),
+      pAsString(TSF_Dictionary.Producer.BIND_HOST) + ":" + port.toString,
       pAsInt(TSF_Dictionary.Producer.TRANSPORT_TIMEOUT, Producer_transport_timeout_default) * 1000,
       pAsInt(TSF_Dictionary.Producer.TRANSPORT_RETRY_COUNT, Producer_transport_retry_count_default),
       pAsInt(TSF_Dictionary.Producer.TRANSPORT_RETRY_DELAY, Producer_transport_retry_delay_default) * 1000)
@@ -958,8 +963,12 @@ class TStreamsFactory() {
 
     val bind_host = pAsString(TSF_Dictionary.Consumer.Subscriber.BIND_HOST)
     assert(bind_host != null)
-    val bind_port = pAsString(TSF_Dictionary.Consumer.Subscriber.BIND_PORT)
-    assert(bind_port != null)
+    assert(TSF_Dictionary.Consumer.Subscriber.BIND_PORT != null)
+
+    val bind_port = getProperty(TSF_Dictionary.Consumer.Subscriber.BIND_PORT) match {
+      case (p: Int) => p
+      case (pFrom: Int, pTo: Int) => SpareServerSocketLookupUtility.findSparePort(pAsString(TSF_Dictionary.Producer.BIND_HOST), pFrom, pTo).get
+    }
 
     val endpoints = pAsString(TSF_Dictionary.Coordination.ENDPOINTS)
     assert(endpoints != null)

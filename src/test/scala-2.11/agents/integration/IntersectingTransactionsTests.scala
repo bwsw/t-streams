@@ -40,8 +40,6 @@ it should "handle all transactions produced by two different producers, the firs
   val lp2 = new CountDownLatch(1)
   val ls = new CountDownLatch(1)
 
-  f.setProperty(TSF_Dictionary.Producer.BIND_PORT, TestUtils.getPort())
-
   val producer1 = f.getProducer[String](
     name = "test_producer1",
     txnGenerator = LocalGeneratorCreator.getGen(),
@@ -49,16 +47,12 @@ it should "handle all transactions produced by two different producers, the firs
     partitions = Set(0),
     isLowPriority = false)
 
-  f.setProperty(TSF_Dictionary.Producer.BIND_PORT, TestUtils.getPort())
-
   val producer2 = f.getProducer[String](
     name = "test_producer2",
     txnGenerator = LocalGeneratorCreator.getGen(),
     converter = stringToArrayByteConverter,
     partitions = Set(0),
     isLowPriority = false)
-
-  f.setProperty(TSF_Dictionary.Consumer.Subscriber.BIND_PORT, TestUtils.getPort())
 
   val s = f.getSubscriber[String](name = "ss+2",
     txnGenerator = LocalGeneratorCreator.getGen(),

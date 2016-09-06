@@ -40,6 +40,16 @@ class Producer[T](var name: String,
     this.name = name
   }
 
+  /**
+    * Allows to get if the producer is master for the partition.
+    * @param partition
+    * @return
+    */
+  def isMeAMasterOfPartition(partition: Int): Boolean = {
+    val masterOpt = agentsStateManager.getCurrentMaster(partition)
+    masterOpt.fold(false){ m => producerOptions.coordinationOptions.transport.getInetAddress() == m.agentAddress }
+  }
+
   // shortkey
   val pcs = producerOptions.coordinationOptions
   var isStop = false
@@ -139,39 +149,39 @@ class Producer[T](var name: String,
 
   /**
     * @param policy        Policy for previous transaction on concrete partition
-    * @param nextPartition Next partition to use for transaction (default -1 which mean that write policy will be used)
+    * @param partition Next partition to use for transaction (default -1 which mean that write policy will be used)
     * @return BasicProducerTransaction instance
     */
-  def newTransaction(policy: ProducerPolicy, nextPartition: Int = -1): Transaction[T] = {
+  def newTransaction(policy: ProducerPolicy, partition: Int = -1): Transaction[T] = {
     if (isStop)
       throw new IllegalStateException(s"Producer ${this.name} is already stopped. Unable to get new transaction.")
 
-    val partition = {
-      if (nextPartition == -1)
+    val p = {
+      if (partition == -1)
         producerOptions.writePolicy.getNextPartition
       else
-        nextPartition
+        partition
     }
 
-    if (!(partition >= 0 && partition < stream.getPartitions))
+    if (!(p >= 0 && p < stream.getPartitions))
       throw new IllegalArgumentException(s"Producer ${name} - invalid partition")
 
     val previousTransactionAction: () => Unit =
-      openTransactions.awaitOpenTransactionMaterialized(partition, policy)
+      openTransactions.awaitOpenTransactionMaterialized(p, policy)
 
-    materializationGovernor.protect(partition)
+    materializationGovernor.protect(p)
 
 
     //val tm = getNewTxnUUIDLocal().timestamp()
-    val txnUUID = p2pAgent.generateNewTransaction(partition)
+    val txnUUID = p2pAgent.generateNewTransaction(p)
     //val delta = txnUUID.timestamp()
     //logger.info(s"Elapsed for TXN ->: {}",delta - tm)
     if(logger.isDebugEnabled)
-      logger.debug(s"[NEW_TRANSACTION PARTITION_$partition] uuid=${txnUUID.timestamp()}")
-    val txn = new Transaction[T](partition, txnUUID, this)
+      logger.debug(s"[NEW_TRANSACTION PARTITION_$p] uuid=${txnUUID.timestamp()}")
+    val txn = new Transaction[T](p, txnUUID, this)
 
-    openTransactions.put(partition, txn)
-    materializationGovernor.unprotect(partition)
+    openTransactions.put(p, txn)
+    materializationGovernor.unprotect(p)
 
     if(previousTransactionAction != null)
       asyncActivityService.submit(new Runnable {

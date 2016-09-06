@@ -69,7 +69,6 @@ trait TestUtils {
     .setProperty(TSF_Dictionary.Data.Cluster.NAMESPACE, "test")
     .setProperty(TSF_Dictionary.Coordination.ROOT, coordinationRoot)
     .setProperty(TSF_Dictionary.Coordination.ENDPOINTS, s"localhost:${zookeeperPort}")
-    .setProperty(TSF_Dictionary.Consumer.Subscriber.BIND_PORT, TestUtils.getPort)
     .setProperty(TSF_Dictionary.Consumer.Subscriber.PERSISTENT_QUEUE_PATH, null)
     .setProperty(TSF_Dictionary.Stream.NAME, "test-stream")
     .setProperty(TSF_Dictionary.Data.Cluster.DRIVER, TSF_Dictionary.Data.Cluster.Consts.DATA_DRIVER_HAZELCAST)
@@ -152,7 +151,6 @@ object TestUtils {
   val cassandraPort = 9142
 
   private val id: AtomicInteger = new AtomicInteger(0)
-  private val port = new AtomicInteger(28000)
 
   EmbeddedCassandraServerHelper.startEmbeddedCassandra(60000L)
   System.getProperty("java.io.tmpdir","./target/")
@@ -166,12 +164,6 @@ object TestUtils {
   def getKeyspace(id: Int): String = "tk_" + id.toString
 
   def getCoordinationRoot(id: Int): String = "/" + getKeyspace(id)
-
-
-  def getPort(): Int = {
-    val rport = port.incrementAndGet()
-    rport
-  }
 
 }
 
