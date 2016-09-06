@@ -14,6 +14,7 @@ import com.bwsw.tstreams.env.TSF_Dictionary
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import testutils.{LocalGeneratorCreator, TestUtils}
 import scala.collection.mutable.ListBuffer
+
 /**
   * Created by mendelbaum_ma on 05.09.16.
   */
