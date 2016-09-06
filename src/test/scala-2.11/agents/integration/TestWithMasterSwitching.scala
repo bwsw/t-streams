@@ -3,6 +3,7 @@ package agents.integration
 /**
   * Created by mendelbaum_ma on 06.09.16.
   */
+
 import java.util.UUID
 import java.util.concurrent.{CountDownLatch, TimeUnit}
 import com.bwsw.tstreams.agents.consumer.Offset.Newest
