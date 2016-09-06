@@ -18,7 +18,7 @@ import scala.collection.mutable.ListBuffer
 /**
   * Created by mendelbaum_ma on 05.09.16.
   */
-class TestWithMasterSwitching extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
+class ProducerMasterChangeTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
   f.setProperty(TSF_Dictionary.Stream.NAME, "test_stream").
     setProperty(TSF_Dictionary.Stream.PARTITIONS, 3).
     setProperty(TSF_Dictionary.Stream.TTL, 60 * 10).
@@ -29,10 +29,12 @@ class TestWithMasterSwitching extends FlatSpec with Matchers with BeforeAndAfter
     setProperty(TSF_Dictionary.Producer.Transaction.KEEP_ALIVE, 1).
     setProperty(TSF_Dictionary.Consumer.TRANSACTION_PRELOAD, 10).
     setProperty(TSF_Dictionary.Consumer.DATA_PRELOAD, 10)
-  it should "switching the master after his hundred transactions " in {
+
+  it should "switching the master after 100 transactions " in {
 
     val bp = ListBuffer[UUID]()
-    var bs = ListBuffer[UUID]()
+    val bs = ListBuffer[UUID]()
+
     val lp2 = new CountDownLatch(1)
     val  ls = new  CountDownLatch(1)
 
@@ -95,7 +97,7 @@ class TestWithMasterSwitching extends FlatSpec with Matchers with BeforeAndAfter
     t1.join()
     t2.join()
 
-    ls.await(20, TimeUnit.SECONDS)
+    ls.await(60, TimeUnit.SECONDS)
     producer2.stop()
     s.stop()
     bs.size shouldBe 1100

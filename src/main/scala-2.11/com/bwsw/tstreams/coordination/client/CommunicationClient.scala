@@ -87,15 +87,21 @@ class CommunicationClient(timeoutMs: Int, retryCount: Int = 3, retryDelayMs: Int
     * @return Response message
     */
   def sendAndWaitResponse(msg: IMessage, isExceptionOnFail: Boolean): IMessage = {
-    if(isClosed.get)
+    if (isClosed.get)
       throw new IllegalStateException("Communication Client is closed. Unable to operate.")
     withRetryDo[IMessage](null, () => {
-      val sock = getSocket(msg.receiverID)
-      val reqString = ProtocolMessageSerializer.wrapMsg(ProtocolMessageSerializer.serialize(msg))
-      val r = writeMsgAndWaitResponse(sock, reqString)
-      if(r != null && msg.msgID != r.msgID)
-        throw new IllegalStateException(s"Sent message with ID ${msg.msgID}, received ${r.msgID}. ID must be the same.")
-      r}, retryCount, isExceptionOnFail = isExceptionOnFail)
+      try {
+        val sock = getSocket(msg.receiverID)
+        val reqString = ProtocolMessageSerializer.wrapMsg(ProtocolMessageSerializer.serialize(msg))
+        val r = writeMsgAndWaitResponse(sock, reqString)
+        if (r != null && msg.msgID != r.msgID)
+          throw new IllegalStateException(s"Sent message with ID ${msg.msgID}, received ${r.msgID}. ID must be the same.")
+        r
+      } catch {
+        case e@(_: ConnectException | _: IOException) =>
+          null
+      }
+    }, retryCount, isExceptionOnFail = isExceptionOnFail)
   }
 
 
@@ -108,9 +114,14 @@ class CommunicationClient(timeoutMs: Int, retryCount: Int = 3, retryDelayMs: Int
     if(isClosed.get)
       throw new IllegalStateException("Communication Client is closed. Unable to operate.")
     withRetryDo[Boolean](false, () => {
-      val sock = getSocket(msg.receiverID)
-      val reqString = ProtocolMessageSerializer.wrapMsg(ProtocolMessageSerializer.serialize(msg))
-      writeMsgAndNoWaitResponse(sock, reqString)
+      try {
+        val sock = getSocket(msg.receiverID)
+        val reqString = ProtocolMessageSerializer.wrapMsg(ProtocolMessageSerializer.serialize(msg))
+        writeMsgAndNoWaitResponse(sock, reqString)
+      } catch {
+        case e@(_: ConnectException | _: IOException) =>
+          false
+      }
     }, retryCount, isExceptionOnFail = isExceptionOnFail)
   }
 
