@@ -86,7 +86,7 @@ class CommunicationClient(timeoutMs: Int, retryCount: Int = 3, retryDelayMs: Int
     * @param msg     Message to send
     * @return Response message
     */
-  def sendAndWaitResponse(msg: IMessage, isExceptionOnFail: Boolean): IMessage = {
+  def sendAndWaitResponse(msg: IMessage, isExceptionIfFails: Boolean, onFailCallback: () => IMessage): IMessage = {
     if (isClosed.get)
       throw new IllegalStateException("Communication Client is closed. Unable to operate.")
     withRetryDo[IMessage](null, () => {
@@ -99,9 +99,10 @@ class CommunicationClient(timeoutMs: Int, retryCount: Int = 3, retryDelayMs: Int
         r
       } catch {
         case e@(_: ConnectException | _: IOException) =>
+          onFailCallback()
           null
       }
-    }, retryCount, isExceptionOnFail = isExceptionOnFail)
+    }, retryCount, isExceptionOnFail = isExceptionIfFails)
   }
 
 
@@ -110,7 +111,7 @@ class CommunicationClient(timeoutMs: Int, retryCount: Int = 3, retryDelayMs: Int
     * @param msg     Message to send
     * @return Response message
     */
-  def sendAndNoWaitResponse(msg: IMessage, isExceptionOnFail: Boolean):Unit = {
+  def sendAndNoWaitResponse(msg: IMessage, isExceptionIfFails: Boolean, onFailCallback: () => Boolean): Boolean = {
     if(isClosed.get)
       throw new IllegalStateException("Communication Client is closed. Unable to operate.")
     withRetryDo[Boolean](false, () => {
@@ -119,10 +120,10 @@ class CommunicationClient(timeoutMs: Int, retryCount: Int = 3, retryDelayMs: Int
         val reqString = ProtocolMessageSerializer.wrapMsg(ProtocolMessageSerializer.serialize(msg))
         writeMsgAndNoWaitResponse(sock, reqString)
       } catch {
-        case e@(_: ConnectException | _: IOException) =>
-          false
+        case e @ (_: ConnectException | _: IOException) =>
+          onFailCallback()
       }
-    }, retryCount, isExceptionOnFail = isExceptionOnFail)
+    }, retryCount, isExceptionOnFail = isExceptionIfFails)
   }
 
   /**
