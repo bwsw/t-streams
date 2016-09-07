@@ -87,7 +87,8 @@ class TcpTransport(address: String, timeoutMs: Int, retryCount: Int = 3, retryDe
     * @return TransactionResponse or null
     */
   def transactionRequest(to: String, partition: Int): IMessage = {
-    val response: IMessage = client.sendAndWaitResponse(NewTransactionRequest(address, to, partition), isExceptionOnFail = false)
+    val r = NewTransactionRequest(address, to, partition)
+    val response: IMessage = client.sendAndWaitResponse(r, isExceptionOnFail = false)
     response
   }
 
@@ -122,12 +123,18 @@ class TcpTransport(address: String, timeoutMs: Int, retryCount: Int = 3, retryDe
   /**
     * Stop transport listen incoming messages
     */
-  def stop(): Unit = {
-    IMessage.logger.info(s"Transport is shutting down.")
+  def stopClient(): Unit = {
+    IMessage.logger.info(s"Transport (for client) is shutting down.")
     client.close()
+  }
+
+  /**
+    * Stops server
+    */
+  def stopServer(): Unit = {
+    IMessage.logger.info(s"Transport (for server) is shutting down.")
     server.stop()
     executor.shutdownOrDie(100, TimeUnit.SECONDS)
   }
-
 
 }

@@ -188,7 +188,7 @@ class Transaction[T](partition: Int,
       ttl = -1,
       status = TransactionStatus.postCheckpoint,
       partition = partition,
-      masterID = txnOwner.p2pAgent.getUniqueAgentID(),
+      masterID = txnOwner.getPartitionMasterID(partition),
       orderID = -1,
       count = getDataItemsCount()
     ))
@@ -214,7 +214,7 @@ class Transaction[T](partition: Int,
         ttl = -1,
         status = TransactionStatus.preCheckpoint,
         partition = partition,
-        masterID = txnOwner.p2pAgent.getUniqueAgentID(),
+        masterID = txnOwner.getPartitionMasterID(partition),
         orderID = -1,
         count = 0))
 
@@ -284,7 +284,7 @@ class Transaction[T](partition: Int,
             ttl = -1,
             status = TransactionStatus.preCheckpoint,
             partition = partition,
-            masterID = txnOwner.p2pAgent.getUniqueAgentID(),
+            masterID = txnOwner.getPartitionMasterID(partition),
             orderID = -1,
             count = 0))
 
@@ -309,7 +309,7 @@ class Transaction[T](partition: Int,
             ttl = -1,
             status = TransactionStatus.postCheckpoint,
             partition = partition,
-            masterID = txnOwner.p2pAgent.getUniqueAgentID(),
+            masterID = txnOwner.getPartitionMasterID(partition),
             orderID = -1,
             count = getDataItemsCount()))
 
@@ -405,7 +405,7 @@ class Transaction[T](partition: Int,
       ttl = -1,
       status = TransactionStatus.preCheckpoint,
       partition = partition,
-      masterID = txnOwner.p2pAgent.getUniqueAgentID(),
+      masterID = txnOwner.getPartitionMasterID(partition),
       orderID = -1,
       count = 0)
 
@@ -414,7 +414,7 @@ class Transaction[T](partition: Int,
       ttl = -1,
       status = TransactionStatus.postCheckpoint,
       partition = partition,
-      masterID = txnOwner.p2pAgent.getUniqueAgentID(),
+      masterID = txnOwner.getPartitionMasterID(partition),
       orderID = -1,
       count = getDataItemsCount())
 

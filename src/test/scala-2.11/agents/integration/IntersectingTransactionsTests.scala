@@ -3,16 +3,15 @@ package agents.integration
 import java.util.UUID
 import java.util.concurrent.CountDownLatch
 
-import com.bwsw.tstreams.agents.consumer.Offset.{Newest, Oldest}
+import com.bwsw.tstreams.agents.consumer.Offset.Newest
 import com.bwsw.tstreams.agents.consumer.TransactionOperator
 import com.bwsw.tstreams.agents.consumer.subscriber.Callback
-import com.bwsw.tstreams.agents.producer.{NewTransactionProducerPolicy, Transaction}
+import com.bwsw.tstreams.agents.producer.NewTransactionProducerPolicy
 import com.bwsw.tstreams.env.TSF_Dictionary
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import testutils.{LocalGeneratorCreator, TestUtils}
 
 import scala.collection.mutable.ListBuffer
-import scala.util.Random
 
 /**
   * Created by Mikhail Mendelbaum on 02.09.16.
