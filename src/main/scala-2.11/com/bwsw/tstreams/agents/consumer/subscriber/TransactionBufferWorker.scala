@@ -40,6 +40,7 @@ class TransactionBufferWorker() {
     */
   def stop() = {
     executor.shutdownOrDie(100, TimeUnit.SECONDS)
+    transactionBufferMap.foreach(kv => kv._2.counters.dump(kv._1))
     transactionBufferMap.clear()
   }
 }

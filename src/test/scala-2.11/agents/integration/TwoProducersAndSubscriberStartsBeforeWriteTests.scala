@@ -29,7 +29,7 @@ class TwoProducersAndSubscriberStartsBeforeWriteTests extends FlatSpec with Matc
     setProperty(TSF_Dictionary.Consumer.TRANSACTION_PRELOAD, 10).
     setProperty(TSF_Dictionary.Consumer.DATA_PRELOAD, 10)
 
-  val COUNT=100
+  val COUNT=1000
 
   it should s"Two producers send ${COUNT} transactions each, subscriber receives ${2 * COUNT} when started after." in {
 
@@ -101,7 +101,7 @@ class TwoProducersAndSubscriberStartsBeforeWriteTests extends FlatSpec with Matc
     t1.join()
     t2.join()
 
-    ls.await(60, TimeUnit.SECONDS)
+    ls.await(10, TimeUnit.SECONDS)
     producer1.stop()
     producer2.stop()
     s.stop()

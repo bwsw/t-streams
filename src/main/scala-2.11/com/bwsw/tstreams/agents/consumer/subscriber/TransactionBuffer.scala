@@ -1,17 +1,39 @@
 package com.bwsw.tstreams.agents.consumer.subscriber
 
 import java.util.UUID
+import java.util.concurrent.atomic.AtomicLong
 
 import com.bwsw.tstreams.common.{SortedExpiringMap, UUIDComparator}
 import com.bwsw.tstreams.coordination.messages.state.TransactionStatus
 
 import scala.collection.mutable
 
+case class TransactionBufferCounters(openEvents: AtomicLong,
+                                     cancelEvents: AtomicLong,
+                                     updateEvents: AtomicLong,
+                                     preCheckpointEvents: AtomicLong,
+                                     postCheckpointEvents: AtomicLong) {
+  def dump(partition: Int): Unit = {
+    Subscriber.logger.info(s"Partitions ${partition} - Open Events received: ${openEvents.get()}")
+    Subscriber.logger.info(s"Partitions ${partition} - Cancel Events received: ${cancelEvents.get()}")
+    Subscriber.logger.info(s"Partitions ${partition} - Update Events received: ${updateEvents.get()}")
+    Subscriber.logger.info(s"Partitions ${partition} - PreCheckpoint Events received: ${preCheckpointEvents.get()}")
+    Subscriber.logger.info(s"Partitions ${partition} - PostCheckpoint Events received: ${postCheckpointEvents.get()}")
+  }
+}
+
 /**
   * Created by Ivan Kudryavtsev on 19.08.16.
   * Class is used to store states of all transactions at subscribing consumer
   */
 class TransactionBuffer(queue: QueueBuilder.QueueType) {
+
+
+  val counters = TransactionBufferCounters(new AtomicLong(0),
+    new AtomicLong(0),
+    new AtomicLong(0),
+    new AtomicLong(0),
+    new AtomicLong(0))
 
   var lastTransaction: UUID = null
   val comparator = new UUIDComparator()
@@ -23,6 +45,7 @@ class TransactionBuffer(queue: QueueBuilder.QueueType) {
 
   /**
     * Returnes current state by transaction uuid
+    *
     * @param uuid
     * @return
     */
@@ -31,16 +54,29 @@ class TransactionBuffer(queue: QueueBuilder.QueueType) {
 
   /**
     * This method updates buffer with new state
+    *
     * @param update
     */
   def update(update: TransactionState): Unit = this.synchronized {
 
+    update.state match {
+      case TransactionStatus.opened => counters.openEvents.incrementAndGet()
+      case TransactionStatus.cancel => counters.cancelEvents.incrementAndGet()
+      case TransactionStatus.update => counters.updateEvents.incrementAndGet()
+      case TransactionStatus.preCheckpoint => counters.preCheckpointEvents.incrementAndGet()
+      case TransactionStatus.postCheckpoint => counters.postCheckpointEvents.incrementAndGet()
+    }
+
     // avoid transactions which are delayed
     if (update.state == TransactionStatus.opened) {
       if(lastTransaction != null
-        && comparator.compare(update.uuid, lastTransaction) != 1)
+        && comparator.compare(update.uuid, lastTransaction) != 1) {
+        Subscriber.logger.warn(s"Unexpected transaction comparison result ${update.uuid} vs ${lastTransaction} detected.")
         return
+      }
+      lastTransaction = update.uuid
     }
+
 
     if (map.exists(update.uuid)) {
       val orderID = map.get(update.uuid).queueOrderID
@@ -94,7 +130,6 @@ class TransactionBuffer(queue: QueueBuilder.QueueType) {
     } else {
       if (update.state == TransactionStatus.opened) {
         map.put(update.uuid, update)
-        lastTransaction = update.uuid
       }
     }
 
