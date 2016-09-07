@@ -4,7 +4,7 @@ import java.util.UUID
 
 import com.bwsw.tstreams.coordination.messages.master._
 import com.bwsw.tstreams.coordination.messages.state.{TransactionStateMessage, TransactionStatus}
-import com.bwsw.tstreams.coordination.producer.AgentSettings
+import com.bwsw.tstreams.coordination.producer.AgentConfiguration
 
 import scala.collection.mutable
 import scala.util.control.Breaks._
@@ -15,8 +15,8 @@ import scala.util.control.Breaks._
 object ProtocolMessageSerializer {
   private def serializeInternal(value: Any): String = {
     value match {
-      case AgentSettings(id, prior, penalty) =>
-        s"{AS,$id,$prior,$penalty}"
+      case AgentConfiguration(id, prior, penalty, uniqueID) =>
+        s"{AS,$id,$prior,$penalty,$uniqueID}"
 
       case x: DeleteMasterRequest =>
         s"{DMRq,${x.senderID},${x.receiverID},${x.partition},${x.msgID},${x.remotePeerTimestamp}}"
@@ -205,8 +205,8 @@ object ProtocolMessageSerializer {
           tokens(6).toString.toLong,
           tokens(7).toString.toInt)
       case "AS" =>
-        assert(tokens.size == 4)
-        AgentSettings(tokens(1).toString, tokens(2).toString.toInt, tokens(3).toString.toInt)
+        assert(tokens.size == 5)
+        AgentConfiguration(tokens(1).toString, tokens(2).toString.toInt, tokens(3).toString.toInt, tokens(4).toString.toInt)
       case "P" =>
         assert(tokens.size == 1)
         TransactionStatus.preCheckpoint

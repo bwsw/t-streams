@@ -5,7 +5,7 @@ import java.util.UUID
 import com.bwsw.tstreams.common.ProtocolMessageSerializer
 import com.bwsw.tstreams.coordination.messages.master._
 import com.bwsw.tstreams.coordination.messages.state.{TransactionStateMessage, TransactionStatus}
-import com.bwsw.tstreams.coordination.producer.AgentSettings
+import com.bwsw.tstreams.coordination.producer.AgentConfiguration
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import testutils.TestUtils
 
@@ -103,9 +103,9 @@ class ProtocolMessageSerializerTest extends FlatSpec with Matchers {
     assert(ProtocolMessageSerializer.deserialize[TransactionStatus.ProducerTransactionStatus](ProtocolMessageSerializer.serialize(opened)) == opened)
   }
   "TStreams serializer" should "serialize and deserialize AgentSettings" in {
-    val clazz = new AgentSettings("agent", 21212, 12121212)
+    val clazz = new AgentConfiguration("agent", 21212, 12121212, 22)
     val string = ProtocolMessageSerializer.serialize(clazz)
-    val req = ProtocolMessageSerializer.deserialize[AgentSettings](string)
+    val req = ProtocolMessageSerializer.deserialize[AgentConfiguration](string)
     clazz shouldEqual req
   }
 }

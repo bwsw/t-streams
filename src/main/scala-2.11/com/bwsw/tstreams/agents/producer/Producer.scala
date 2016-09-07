@@ -50,6 +50,11 @@ class Producer[T](var name: String,
     masterOpt.fold(false){ m => producerOptions.coordinationOptions.transport.getInetAddress() == m.agentAddress }
   }
 
+  def getPartitionMasterID(partition: Int): Int = {
+    val masterOpt = agentsStateManager.getCurrentMasterLocal(partition)
+    return masterOpt.get.uniqueAgentId
+  }
+
   // shortkey
   val pcs = producerOptions.coordinationOptions
   var isStop = false
@@ -253,6 +258,22 @@ class Producer[T](var name: String,
     * @return UUID
     */
   override def openTxnLocal(txnUUID: UUID, partition: Int, onComplete: () => Unit): Unit = {
+    //logger.info(s"Started TXN: ${txnUUID}")
+
+    p2pAgent.submitPipelinedTaskToPublishExecutors(partition, () => {
+      val msg = TransactionStateMessage(
+        txnUuid = txnUUID,
+        ttl = producerOptions.transactionTTL,
+        status = TransactionStatus.opened,
+        partition = partition,
+        masterID = p2pAgent.getUniqueAgentID(),
+        orderID = p2pAgent.getAndIncSequentialID(partition),
+        count = 0)
+      subscriberNotifier.publish(msg, () => ())
+      if(logger.isDebugEnabled)
+        logger.debug(s"Producer ${name} - [GET_LOCAL_TXN PRODUCER] update with msg partition=$partition uuid=${txnUUID.timestamp()} opened")
+    })
+
     stream.metadataStorage.commitEntity.commitAsync(
       streamName = stream.getName,
       partition = partition,
@@ -264,19 +285,6 @@ class Producer[T](var name: String,
         // submit task for materialize notification request
         p2pAgent.submitPipelinedTaskToMaterializeExecutor(partition, onComplete)
         // submit task for publish notification requests
-        p2pAgent.submitPipelinedTaskToPublishExecutors(partition, () => {
-            val msg = TransactionStateMessage(
-              txnUuid = txnUUID,
-              ttl = producerOptions.transactionTTL,
-              status = TransactionStatus.opened,
-              partition = partition,
-              masterID = p2pAgent.getUniqueAgentID(),
-              orderID = p2pAgent.getAndIncSequentialID(partition),
-              count = 0)
-            subscriberNotifier.publish(msg, () => ())
-            if(logger.isDebugEnabled)
-              logger.debug(s"Producer ${name} - [GET_LOCAL_TXN PRODUCER] update with msg partition=$partition uuid=${txnUUID.timestamp()} opened")
-          })
       },
       executor = p2pAgent.getCassandraAsyncExecutor(partition))
 

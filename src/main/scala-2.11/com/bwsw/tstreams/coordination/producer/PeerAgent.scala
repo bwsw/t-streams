@@ -140,7 +140,7 @@ class PeerAgent(agentsStateManager: AgentsStateDBService,
     * @param retries   Retries to try to set new master
     * @return Selected master address
     */
-  private def electPartitionMasterInternal(partition: Int, retries: Int = zkRetriesAmount): String = {
+  private def electPartitionMasterInternal(partition: Int, retries: Int = zkRetriesAmount): MasterConfiguration = {
     if (PeerAgent.logger.isDebugEnabled)
     {
       PeerAgent.logger.debug(s"[VOTING] Start voting new agent on address: {$myInetAddress} on stream: {$streamName}, partition:{$partition}")
@@ -148,7 +148,7 @@ class PeerAgent(agentsStateManager: AgentsStateDBService,
     val master = agentsStateManager.getCurrentMaster(partition)
     master.fold {
       val bestCandidate = agentsStateManager.getBestMasterCandidate(partition)
-      transport.setMasterRequest(bestCandidate, partition) match {
+      transport.setMasterRequest(bestCandidate.agentAddress, partition) match {
         case null =>
           if (retries == 0)
             throw new IllegalStateException(s"Expected mastre didn't occure in ${zkRetriesAmount} trials.")
@@ -164,7 +164,7 @@ class PeerAgent(agentsStateManager: AgentsStateDBService,
           assert(p == partition)
           bestCandidate
       }
-    }(master => master.agentAddress)
+    }(master => master)
   }
 
   /**
@@ -173,7 +173,7 @@ class PeerAgent(agentsStateManager: AgentsStateDBService,
     * @param partition Partition to vote new master
     * @return New master Address
     */
-  private def electPartitionMaster(partition: Int): String = this.synchronized {
+  private def electPartitionMaster(partition: Int): MasterConfiguration = this.synchronized {
     agentsStateManager.withElectionLockDo(partition, () => electPartitionMasterInternal(partition))
   }
 
@@ -243,7 +243,7 @@ class PeerAgent(agentsStateManager: AgentsStateDBService,
             {
               PeerAgent.logger.debug(s"[UPDATER] Finish updating master with init: {$init} on agent: {$myInetAddress} on stream: {$streamName}, partition: {$partition} with retry=$retries; old master: {$master} is alive now.")
             }
-            agentsStateManager.putPartitionMasterLocally(partition, master.agentAddress)
+            agentsStateManager.putPartitionMasterLocally(partition, master)
         }
       }
     }
@@ -293,7 +293,7 @@ class PeerAgent(agentsStateManager: AgentsStateDBService,
     */
   def generateNewTransaction(partition: Int): UUID = this.synchronized {
     LockUtil.withLockOrDieDo[UUID](externalAccessLock, (100, TimeUnit.SECONDS), Some(PeerAgent.logger), () => {
-      val master = agentsStateManager.getPartitionMasterLocally(partition, null)
+      val master = agentsStateManager.getPartitionMasterInetAddressLocal(partition, null)
       if (PeerAgent.logger.isDebugEnabled)
       {
         PeerAgent.logger.debug(s"[GETTXN] Start retrieve txn for agent with address: {$myInetAddress}, stream: {$streamName}, partition: {$partition} from [MASTER: {$master}].")
@@ -338,7 +338,7 @@ class PeerAgent(agentsStateManager: AgentsStateDBService,
 
   //TODO remove after complex testing
   def publish(msg: TransactionStateMessage): Unit = {
-    val master = agentsStateManager.getPartitionMasterLocally(msg.partition, null)
+    val master = agentsStateManager.getPartitionMasterInetAddressLocal(msg.partition, null)
     if (PeerAgent.logger.isDebugEnabled)
       PeerAgent.logger.debug(s"[PUBLISH] SEND PTM:{$msg} to [MASTER:{$master}] from agent:{$myInetAddress}," +
         s"stream:{$streamName}")
@@ -356,12 +356,13 @@ class PeerAgent(agentsStateManager: AgentsStateDBService,
   def stop() = {
     PeerAgent.logger.info(s"P2PAgent of ${producer.name} is shutting down.")
     isRunning.set(false)
+    transport.stopServer()
     partitionWeightDistributionThread.join()
     zkConnectionValidator.join()
     //to avoid infinite polling block
     executorGraphs.foreach(g => g._2.shutdown())
     agentsStateManager.shutdown()
-    transport.stop()
+    transport.stopClient()
   }
 
   def handleMessage(channel: Channel, rawMessage: String): Unit = {
