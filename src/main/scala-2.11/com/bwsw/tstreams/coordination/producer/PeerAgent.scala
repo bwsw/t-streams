@@ -336,22 +336,27 @@ class PeerAgent(agentsStateManager: AgentsStateDBService,
     transport.materializeRequest(to, msg)
   }
 
-  //TODO remove after complex testing
-  def publish(msg: TransactionStateMessage): Unit = {
+  /**
+    * Allows to publish update/pre/post/cancel messages.
+    * @param msg
+    * @param isUpdateMaster
+    * @return
+    */
+  def publish(msg: TransactionStateMessage, isUpdateMaster: Boolean = false): Boolean = {
+    if(isUpdateMaster) {
+      PeerAgent.logger.warn(s"Master update is requested for ${msg.partition}.")
+      updateMaster(msg.partition, init = false)
+    }
     val master = agentsStateManager.getPartitionMasterInetAddressLocal(msg.partition, null)
+
     if (PeerAgent.logger.isDebugEnabled)
       PeerAgent.logger.debug(s"[PUBLISH] SEND PTM:{$msg} to [MASTER:{$master}] from agent:{$myInetAddress}," +
         s"stream:{$streamName}")
+
     if (master != null) {
-      transport.publishRequest(master, msg, () => {
-        PeerAgent.logger.warn(s"Master update is requested for ${msg.partition}.")
-        updateMaster(msg.partition, init = false)
-        val master = agentsStateManager.getPartitionMasterInetAddressLocal(msg.partition, null)
-        transport.publishRequest(master, msg, () => false)
-      })
+      transport.publishRequest(master, msg, onFailCallback = () => publish(msg, true))
     } else {
-      updateMaster(msg.partition, init = false)
-      publish(msg)
+      publish(msg, true)
     }
   }
 

@@ -459,14 +459,14 @@ class TStreamsFactory() {
   propertyMap += (TSF_Dictionary.Coordination.ENDPOINTS -> "localhost:2181")
   propertyMap += (TSF_Dictionary.Coordination.ROOT -> "/t-streams")
 
-  val Coordination_ttl_default = 7
+  val Coordination_ttl_default = 5
   val Coordination_ttl_min = 1
-  val Coordination_ttl_max = 30
+  val Coordination_ttl_max = 10
   propertyMap += (TSF_Dictionary.Coordination.TTL -> Coordination_ttl_default)
 
-  val Coordination_connection_timeout_default = 7
+  val Coordination_connection_timeout_default = 5
   val Coordination_connection_timeout_min = 1
-  val Coordination_connection_timeout_max = 30
+  val Coordination_connection_timeout_max = 10
   propertyMap += (TSF_Dictionary.Coordination.CONNECTION_TIMEOUT -> Coordination_connection_timeout_default)
 
   // stream scope
@@ -492,14 +492,14 @@ class TStreamsFactory() {
   propertyMap += (TSF_Dictionary.Producer.TRANSPORT_TIMEOUT -> Producer_transport_timeout_default)
 
   val Producer_transport_retry_count_default = 3
-  val Producer_transport_retry_delay_default = 5
+  val Producer_transport_retry_delay_default = 1
 
   propertyMap += (TSF_Dictionary.Producer.TRANSPORT_RETRY_COUNT -> Producer_transport_retry_count_default)
   propertyMap += (TSF_Dictionary.Producer.TRANSPORT_RETRY_DELAY -> Producer_transport_retry_delay_default)
 
-  val Producer_transaction_ttl_default = 6
+  val Producer_transaction_ttl_default = 30
   val Producer_transaction_ttl_min = 3
-  val Producer_transaction_ttl_max = 15
+  val Producer_transaction_ttl_max = 120
   propertyMap += (TSF_Dictionary.Producer.Transaction.TTL -> Producer_transaction_ttl_default)
 
   val Producer_transaction_open_maxwait_default = 5
