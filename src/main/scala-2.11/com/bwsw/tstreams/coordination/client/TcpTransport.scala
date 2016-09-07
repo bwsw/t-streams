@@ -49,7 +49,7 @@ class TcpTransport(address: String, timeoutMs: Int, retryCount: Int = 3, retryDe
     * @return DeleteMasterResponse or null
     */
   def deleteMasterRequest(to: String, partition: Int): IMessage = {
-    val response = client.sendAndWaitResponse(DeleteMasterRequest(address, to, partition), isExceptionOnFail = false)
+    val response = client.sendAndWaitResponse(DeleteMasterRequest(address, to, partition), isExceptionIfFails = false, () => null)
     response
   }
 
@@ -63,7 +63,7 @@ class TcpTransport(address: String, timeoutMs: Int, retryCount: Int = 3, retryDe
     * @return PingResponse or null
     */
   def pingRequest(to: String, partition: Int): IMessage = {
-    val response = client.sendAndWaitResponse(PingRequest(address, to, partition), isExceptionOnFail = false)
+    val response = client.sendAndWaitResponse(PingRequest(address, to, partition), isExceptionIfFails = false, () => null)
     response
   }
 
@@ -75,7 +75,7 @@ class TcpTransport(address: String, timeoutMs: Int, retryCount: Int = 3, retryDe
     * @return SetMasterResponse or null
     */
   def setMasterRequest(to: String, partition: Int): IMessage = {
-    val response: IMessage = client.sendAndWaitResponse(SetMasterRequest(address, to, partition), isExceptionOnFail = false)
+    val response: IMessage = client.sendAndWaitResponse(SetMasterRequest(address, to, partition), isExceptionIfFails = false, () => null)
     response
   }
 
@@ -88,7 +88,7 @@ class TcpTransport(address: String, timeoutMs: Int, retryCount: Int = 3, retryDe
     */
   def transactionRequest(to: String, partition: Int): IMessage = {
     val r = NewTransactionRequest(address, to, partition)
-    val response: IMessage = client.sendAndWaitResponse(r, isExceptionOnFail = false)
+    val response: IMessage = client.sendAndWaitResponse(r, isExceptionIfFails = false, () => null)
     response
   }
 
@@ -98,8 +98,8 @@ class TcpTransport(address: String, timeoutMs: Int, retryCount: Int = 3, retryDe
     * @param to
     * @param msg     Message
     */
-  def publishRequest(to: String, msg: TransactionStateMessage): Unit = {
-    client.sendAndNoWaitResponse(PublishRequest(address, to, msg) , isExceptionOnFail = true)
+  def publishRequest(to: String, msg: TransactionStateMessage, onFailCallback: () => Boolean): Boolean = {
+    client.sendAndNoWaitResponse(PublishRequest(address, to, msg) , true, onFailCallback)
   }
 
   /**
@@ -109,7 +109,7 @@ class TcpTransport(address: String, timeoutMs: Int, retryCount: Int = 3, retryDe
     * @param msg     Message
     */
   def materializeRequest(to: String, msg: TransactionStateMessage): Unit = {
-    client.sendAndNoWaitResponse(MaterializeRequest(address, to , msg), isExceptionOnFail = true)
+    client.sendAndNoWaitResponse(MaterializeRequest(address, to , msg), true, () => false)
   }
 
   /**
