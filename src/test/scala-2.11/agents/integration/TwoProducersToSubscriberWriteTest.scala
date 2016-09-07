@@ -1,24 +1,22 @@
 package agents.integration
 
-/**
-  * Created by mendelbaum_ma on 06.09.16.
-  */
-
 import java.util.UUID
-import java.util.concurrent.{CountDownLatch, TimeUnit}
+import java.util.concurrent.{TimeUnit, CountDownLatch}
+
 import com.bwsw.tstreams.agents.consumer.Offset.Newest
 import com.bwsw.tstreams.agents.consumer.TransactionOperator
 import com.bwsw.tstreams.agents.consumer.subscriber.Callback
 import com.bwsw.tstreams.agents.producer.NewTransactionProducerPolicy
 import com.bwsw.tstreams.env.TSF_Dictionary
-import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
+import org.scalatest.{BeforeAndAfterAll, Matchers, FlatSpec}
 import testutils.{LocalGeneratorCreator, TestUtils}
+
 import scala.collection.mutable.ListBuffer
 
 /**
-  * Created by mendelbaum_ma on 05.09.16.
+  * Created by ivan on 07.09.16.
   */
-class ProducerMasterChangeTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
+class TwoProducersToSubscriberWriteTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
   f.setProperty(TSF_Dictionary.Stream.NAME, "test_stream").
     setProperty(TSF_Dictionary.Stream.PARTITIONS, 3).
     setProperty(TSF_Dictionary.Stream.TTL, 60 * 10).
@@ -31,6 +29,8 @@ class ProducerMasterChangeTest extends FlatSpec with Matchers with BeforeAndAfte
     setProperty(TSF_Dictionary.Consumer.DATA_PRELOAD, 10)
 
   it should "switching the master after 100 transactions " in {
+
+    val COUNT=1000
 
     val bp = ListBuffer[UUID]()
     val bs = ListBuffer[UUID]()
@@ -62,7 +62,7 @@ class ProducerMasterChangeTest extends FlatSpec with Matchers with BeforeAndAfte
       callback = new Callback[String] {
         override def onEvent(consumer: TransactionOperator[String], partition: Int, uuid: UUID, count: Int): Unit = this.synchronized {
           bs.append(uuid)
-          if (bs.size == 1100) {
+          if (bs.size == 2 * COUNT) {
             ls.countDown()
           }
         }
@@ -70,20 +70,19 @@ class ProducerMasterChangeTest extends FlatSpec with Matchers with BeforeAndAfte
     val t1 = new Thread(new Runnable {
       override def run(): Unit = {
         logger.info(s"Producer-1 is master of partition: ${producer1.isMeAMasterOfPartition(0)}")
-        for (i <- 0 until 100) {
+        for (i <- 0 until COUNT) {
           val t = producer1.newTransaction(policy = NewTransactionProducerPolicy.CheckpointIfOpened)
           bp.append(t.getTransactionUUID())
           lp2.countDown()
           t.send("test")
           t.checkpoint()
         }
-        producer1.stop()
       }
     })
     val t2 = new Thread(new Runnable {
       override def run(): Unit = {
         logger.info(s"Producer-2 is master of partition: ${producer2.isMeAMasterOfPartition(0)}")
-        for (i <- 0 until 1000) {
+        for (i <- 0 until COUNT) {
           lp2.await()
           val t = producer2.newTransaction(policy = NewTransactionProducerPolicy.CheckpointIfOpened)
           bp.append(t.getTransactionUUID())
@@ -92,7 +91,9 @@ class ProducerMasterChangeTest extends FlatSpec with Matchers with BeforeAndAfte
         }
       }
     })
+
     s.start()
+
     t1.start()
     t2.start()
 
@@ -100,12 +101,12 @@ class ProducerMasterChangeTest extends FlatSpec with Matchers with BeforeAndAfte
     t2.join()
 
     ls.await(60, TimeUnit.SECONDS)
+    producer1.stop()
     producer2.stop()
     s.stop()
-    bs.size shouldBe 1100
+    bs.size shouldBe 2 * COUNT
   }
   override def afterAll(): Unit = {
     onAfterAll()
   }
 }
-

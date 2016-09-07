@@ -73,7 +73,7 @@ case class NewTransactionRequest(senderID: String, receiverID: String, partition
   override def handleP2PRequest(agent: PeerAgent) = {
     assert(receiverID == agent.getAgentAddress)
 
-    val master = agent.getAgentsStateManager.getPartitionMasterLocally(partition, "")
+    val master = agent.getAgentsStateManager.getPartitionMasterInetAddressLocal(partition, "")
 
     if (master == agent.getAgentAddress) {
       val txnUUID: UUID = agent.getProducer.getNewTxnUUIDLocal()
@@ -125,7 +125,7 @@ case class DeleteMasterRequest(senderID: String, receiverID: String, partition: 
 
     assert(receiverID == agent.getAgentAddress)
 
-    val master = agent.getAgentsStateManager.getPartitionMasterLocally(partition, "")
+    val master = agent.getAgentsStateManager.getPartitionMasterInetAddressLocal(partition, "")
     val response = {
       if (master == agent.getAgentAddress) {
         agent.getAgentsStateManager().demoteMeAsMaster(partition)
@@ -164,7 +164,7 @@ case class SetMasterRequest(senderID: String, receiverID: String, partition: Int
       IMessage.logger.debug("Start handling SetMasterRequest")
 
     assert(receiverID == agent.getAgentAddress)
-    val master = agent.getAgentsStateManager.getPartitionMasterLocally(partition, "")
+    val master = agent.getAgentsStateManager.getPartitionMasterInetAddressLocal(partition, "")
 
     val response = {
       if (master == agent.getAgentAddress)
@@ -205,7 +205,7 @@ case class PingRequest(senderID: String, receiverID: String, partition: Int) ext
       IMessage.logger.debug("Start handling PingRequest")
 
     assert(receiverID == agent.getAgentAddress)
-    val master = agent.getAgentsStateManager.getPartitionMasterLocally(partition, "")
+    val master = agent.getAgentsStateManager.getPartitionMasterInetAddressLocal(partition, "")
 
     val response = {
       if (master == agent.getAgentAddress)
@@ -246,7 +246,7 @@ case class PublishRequest(senderID: String, receiverID: String, msg: Transaction
     if(IMessage.logger.isDebugEnabled)
       IMessage.logger.debug("Start handling PublishRequest")
 
-    val master = agent.getAgentsStateManager.getPartitionMasterLocally(partition, "")
+    val master = agent.getAgentsStateManager.getPartitionMasterInetAddressLocal(partition, "")
 
     if(master == agent.getAgentAddress) {
       agent.submitPipelinedTaskToPublishExecutors(partition,
