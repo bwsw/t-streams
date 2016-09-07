@@ -45,7 +45,7 @@ class TransactionBuffer(queue: QueueBuilder.QueueType) {
     if (map.exists(update.uuid)) {
       val orderID = map.get(update.uuid).queueOrderID
       /*
-      * finite automata
+      * state switching system (almost finite automate)
       * */
       (map.get(update.uuid).state, update.state) match {
           /*

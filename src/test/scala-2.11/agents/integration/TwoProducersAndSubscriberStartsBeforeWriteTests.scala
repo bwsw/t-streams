@@ -1,22 +1,23 @@
 package agents.integration
 
 import java.util.UUID
-import java.util.concurrent.{TimeUnit, CountDownLatch}
+import java.util.concurrent.{CountDownLatch, TimeUnit}
 
 import com.bwsw.tstreams.agents.consumer.Offset.Newest
 import com.bwsw.tstreams.agents.consumer.TransactionOperator
 import com.bwsw.tstreams.agents.consumer.subscriber.Callback
 import com.bwsw.tstreams.agents.producer.NewTransactionProducerPolicy
 import com.bwsw.tstreams.env.TSF_Dictionary
-import org.scalatest.{BeforeAndAfterAll, Matchers, FlatSpec}
+import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import testutils.{LocalGeneratorCreator, TestUtils}
 
 import scala.collection.mutable.ListBuffer
 
 /**
-  * Created by ivan on 07.09.16.
+  * Created by Ivan Kudryavtsev on 07.09.16.
   */
-class TwoProducersToSubscriberWriteTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
+class TwoProducersAndSubscriberStartsBeforeWriteTests extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils  {
+
   f.setProperty(TSF_Dictionary.Stream.NAME, "test_stream").
     setProperty(TSF_Dictionary.Stream.PARTITIONS, 3).
     setProperty(TSF_Dictionary.Stream.TTL, 60 * 10).
@@ -28,9 +29,9 @@ class TwoProducersToSubscriberWriteTest extends FlatSpec with Matchers with Befo
     setProperty(TSF_Dictionary.Consumer.TRANSACTION_PRELOAD, 10).
     setProperty(TSF_Dictionary.Consumer.DATA_PRELOAD, 10)
 
-  it should "switching the master after 100 transactions " in {
+  val COUNT=100
 
-    val COUNT=1000
+  it should s"Two producers send ${COUNT} transactions each, subscriber receives ${2 * COUNT} when started after." in {
 
     val bp = ListBuffer[UUID]()
     val bs = ListBuffer[UUID]()
@@ -67,6 +68,7 @@ class TwoProducersToSubscriberWriteTest extends FlatSpec with Matchers with Befo
           }
         }
       })
+
     val t1 = new Thread(new Runnable {
       override def run(): Unit = {
         logger.info(s"Producer-1 is master of partition: ${producer1.isMeAMasterOfPartition(0)}")
@@ -91,7 +93,6 @@ class TwoProducersToSubscriberWriteTest extends FlatSpec with Matchers with Befo
         }
       }
     })
-
     s.start()
 
     t1.start()
@@ -106,6 +107,9 @@ class TwoProducersToSubscriberWriteTest extends FlatSpec with Matchers with Befo
     s.stop()
     bs.size shouldBe 2 * COUNT
   }
+
+
+
   override def afterAll(): Unit = {
     onAfterAll()
   }
