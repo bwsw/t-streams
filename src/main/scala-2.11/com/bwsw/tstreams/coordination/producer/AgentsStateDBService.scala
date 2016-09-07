@@ -160,9 +160,11 @@ class AgentsStateDBService(dlm: ZookeeperDLMService,
     * @param f
     */
   private def updateMySettings(partition: Int, f: (AgentConfiguration) => Unit) = this.synchronized {
-    val mySettings = dlm.get[AgentConfiguration](getMyPath(partition)).get
-    f(mySettings)
-    dlm.setData(getMyPath(partition), mySettings)
+    val mySettings = dlm.get[AgentConfiguration](getMyPath(partition))
+    mySettings.map(s => {
+      f(s)
+      dlm.setData(getMyPath(partition), s)
+    })
   }
 
   /**
