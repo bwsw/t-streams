@@ -343,7 +343,12 @@ class PeerAgent(agentsStateManager: AgentsStateDBService,
       PeerAgent.logger.debug(s"[PUBLISH] SEND PTM:{$msg} to [MASTER:{$master}] from agent:{$myInetAddress}," +
         s"stream:{$streamName}")
     if (master != null) {
-      transport.publishRequest(master, msg)
+      transport.publishRequest(master, msg, () => {
+        PeerAgent.logger.warn(s"Master update is requested for ${msg.partition}.")
+        updateMaster(msg.partition, init = false)
+        val master = agentsStateManager.getPartitionMasterInetAddressLocal(msg.partition, null)
+        transport.publishRequest(master, msg, () => false)
+      })
     } else {
       updateMaster(msg.partition, init = false)
       publish(msg)
