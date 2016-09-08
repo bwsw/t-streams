@@ -65,8 +65,8 @@ class SubscriberWithTwoProducersFirstCancelSecondCheckpoint extends FlatSpec wit
       })
     val t1 = new Thread(new Runnable {
       override def run(): Unit = {
-        lp2.countDown()
         val t = producer1.newTransaction(policy = NewTransactionProducerPolicy.CheckpointIfOpened)
+        lp2.countDown()
           bp.append(t.getTransactionUUID())
           t.send("test")
           t.cancel()
