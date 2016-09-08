@@ -50,7 +50,7 @@ class Subscriber[T](val name: String,
     * @return
     */
   private def distributeBetweenWorkerThreads(parts: Set[Int], thID: Int, total: Int): Set[Int] = {
-    val array = parts.toArray
+    val array = parts.toArray.sorted
     val set = mutable.Set[Int]()
     for(i <- thID until array.size by total)
       set.add(array(i))
@@ -73,8 +73,10 @@ class Subscriber[T](val name: String,
       * Initialize processing engines
       */
 
+    val usedPartitionsSet = options.readPolicy.getUsedPartitions().toSet
+
     for(thID <- 0 until peWorkerThreads) {
-      val parts: Set[Int] = distributeBetweenWorkerThreads(Set[Int]().empty ++ options.readPolicy.getUsedPartitions(), thID, peWorkerThreads)
+      val parts: Set[Int] = distributeBetweenWorkerThreads(usedPartitionsSet, thID, peWorkerThreads)
       Subscriber.logger.warn(s"Worker ${thID} got ${parts}")
       processingEngines(thID) = new ProcessingEngine[T](consumer, parts, options.txnQueueBuilder, callback)
     }
