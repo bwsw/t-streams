@@ -273,6 +273,11 @@ object TSF_Dictionary {
     val THREAD_POOL = "producer.thread-pool"
 
     /**
+      * amount of publisher threads in a thread pool (default 1)
+      */
+    val THREAD_POOL_PUBLISHER_TREADS_AMOUNT = "producer.thread-pool.publisher-threads-amount"
+
+    /**
       * hostname or ip of producer master listener
       */
     val BIND_HOST = "producer.bind-host"
@@ -522,6 +527,13 @@ class TStreamsFactory() {
   val Producer_thread_pool_min = 1
   val Producer_thread_pool_max = 64
   propertyMap += (TSF_Dictionary.Producer.THREAD_POOL -> Producer_thread_pool_default)
+
+  val Producer_thread_pool_publisher_threads_amount_default = 1
+  val Producer_thread_pool_publisher_threads_amount_min     = 1
+  val Producer_thread_pool_publisher_threads_amount_max            = 32
+
+  propertyMap += (TSF_Dictionary.Producer.THREAD_POOL_PUBLISHER_TREADS_AMOUNT -> Producer_thread_pool_publisher_threads_amount_default)
+
 
   // consumer scope
   val Consumer_transaction_preload_default = 10
@@ -855,9 +867,16 @@ class TStreamsFactory() {
     }
 
     pAssertIntRange(pAsInt(TSF_Dictionary.Coordination.TTL, Coordination_ttl_default), Coordination_ttl_min, Coordination_ttl_max)
+
     pAssertIntRange(pAsInt(TSF_Dictionary.Producer.TRANSPORT_TIMEOUT, Producer_transport_timeout_default), Producer_transport_timeout_min, Producer_transport_timeout_max)
+
     pAssertIntRange(pAsInt(TSF_Dictionary.Coordination.CONNECTION_TIMEOUT, Coordination_connection_timeout_default),
       Coordination_connection_timeout_min, Coordination_connection_timeout_max)
+
+    pAssertIntRange(pAsInt(TSF_Dictionary.Producer.THREAD_POOL, Producer_thread_pool_default), Producer_thread_pool_min, Producer_thread_pool_max)
+
+    pAssertIntRange(pAsInt(TSF_Dictionary.Producer.THREAD_POOL_PUBLISHER_TREADS_AMOUNT, Producer_thread_pool_publisher_threads_amount_default),
+      Producer_thread_pool_publisher_threads_amount_min, Producer_thread_pool_publisher_threads_amount_max)
 
     val transport = new TcpTransport(
       pAsString(TSF_Dictionary.Producer.BIND_HOST) + ":" + port.toString,
@@ -865,10 +884,18 @@ class TStreamsFactory() {
       pAsInt(TSF_Dictionary.Producer.TRANSPORT_RETRY_COUNT, Producer_transport_retry_count_default),
       pAsInt(TSF_Dictionary.Producer.TRANSPORT_RETRY_DELAY, Producer_transport_retry_delay_default) * 1000)
 
-    val cao = new CoordinationOptions(zkHosts = NetworkUtil.getInetSocketAddressCompatibleHostList(pAsString(TSF_Dictionary.Coordination.ENDPOINTS)), zkRootPath = pAsString(TSF_Dictionary.Coordination.ROOT), zkSessionTimeout = pAsInt(TSF_Dictionary.Coordination.TTL, Coordination_ttl_default), zkConnectionTimeout = pAsInt(TSF_Dictionary.Coordination.CONNECTION_TIMEOUT, Coordination_connection_timeout_default), isLowPriorityToBeMaster = isLowPriority, transport = transport)
+    val cao = new CoordinationOptions(
+      zkHosts                           = NetworkUtil.getInetSocketAddressCompatibleHostList(pAsString(TSF_Dictionary.Coordination.ENDPOINTS)),
+      zkRootPath                        = pAsString(TSF_Dictionary.Coordination.ROOT),
+      zkSessionTimeout                  = pAsInt(TSF_Dictionary.Coordination.TTL, Coordination_ttl_default),
+      zkConnectionTimeout               = pAsInt(TSF_Dictionary.Coordination.CONNECTION_TIMEOUT, Coordination_connection_timeout_default),
+      isLowPriorityToBeMaster           = isLowPriority,
+      transport                         = transport,
+      threadPoolAmount                  = pAsInt(TSF_Dictionary.Producer.THREAD_POOL, Producer_thread_pool_default),
+      threadPoolPublisherThreadsAmount  = pAsInt(TSF_Dictionary.Producer.THREAD_POOL_PUBLISHER_TREADS_AMOUNT, Producer_thread_pool_publisher_threads_amount_default))
 
 
-    var writePolicy: AbstractPolicy = null
+    var writePolicy: AbstractPolicy     = null
 
     if (pAsString(TSF_Dictionary.Producer.Transaction.DISTRIBUTION_POLICY) ==
       TSF_Dictionary.Producer.Transaction.Consts.DISTRIBUTION_POLICY_RR) {
@@ -888,7 +915,14 @@ class TStreamsFactory() {
     pAssertIntRange(insertCnt,
       Producer_transaction_data_write_batch_size_min, Producer_transaction_data_write_batch_size_max)
 
-    val po = new com.bwsw.tstreams.agents.producer.Options[T](transactionTTL = pAsInt(TSF_Dictionary.Producer.Transaction.TTL, Producer_transaction_ttl_default), transactionKeepAliveInterval = pAsInt(TSF_Dictionary.Producer.Transaction.KEEP_ALIVE, Producer_transaction_keep_alive_default), writePolicy = writePolicy, batchSize = insertCnt, txnGenerator = txnGenerator, coordinationOptions = cao, converter = converter)
+    val po = new com.bwsw.tstreams.agents.producer.Options[T](
+      transactionTTL                = pAsInt(TSF_Dictionary.Producer.Transaction.TTL, Producer_transaction_ttl_default),
+      transactionKeepAliveInterval  = pAsInt(TSF_Dictionary.Producer.Transaction.KEEP_ALIVE, Producer_transaction_keep_alive_default),
+      writePolicy         = writePolicy,
+      batchSize           = insertCnt,
+      txnGenerator        = txnGenerator,
+      coordinationOptions = cao,
+      converter           = converter)
 
     new Producer[T](name = name, stream = stream, producerOptions = po)
   }

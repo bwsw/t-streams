@@ -93,14 +93,15 @@ class Producer[T](var name: String,
     * (getNewTxn uuid; publish openTxn event; publish closeTxn event)
     */
   override val p2pAgent: PeerAgent = new PeerAgent(
-    agentsStateManager = agentsStateManager,
-    zkService = zkService,
-    zkRetriesAmount = zkRetriesAmount,
-    producer = this,
-    usedPartitions = producerOptions.writePolicy.getUsedPartitions(),
-    isLowPriorityToBeMaster = pcs.isLowPriorityToBeMaster,
-    transport = pcs.transport,
-    poolSize = threadPoolSize)
+    agentsStateManager              = agentsStateManager,
+    zkService                       = zkService,
+    zkRetriesAmount                 = zkRetriesAmount,
+    producer                        = this,
+    usedPartitions                  = producerOptions.writePolicy.getUsedPartitions(),
+    isLowPriorityToBeMaster         = pcs.isLowPriorityToBeMaster,
+    transport                       = pcs.transport,
+    threadPoolAmount                = threadPoolSize,
+    threadPoolPublisherThreadsAmount = pcs.threadPoolPublisherThreadsAmount)
 
   // this client is used to find new subscribers
   val subscriberNotifier = new BroadcastCommunicationClient(agentsStateManager, usedPartitions = producerOptions.writePolicy.getUsedPartitions())
@@ -110,10 +111,10 @@ class Producer[T](var name: String,
     * Queue to figure out moment when transaction is going to close
     */
   private val shutdownKeepAliveThread = new ThreadSignalSleepVar[Boolean](1)
-  private val txnKeepAliveThread = getTxnKeepAliveThread
-  val backendActivityService = new FirstFailLockableTaskExecutor(s"Producer ${name}-BackendWorker")
-  val asyncActivityService = new FirstFailLockableTaskExecutor(s"Producer ${name}-AsyncWorker")
-  val pendingCassandraTasks = new AtomicInteger(0)
+  private val txnKeepAliveThread      = getTxnKeepAliveThread
+  val backendActivityService          = new FirstFailLockableTaskExecutor(s"Producer ${name}-BackendWorker")
+  val asyncActivityService            = new FirstFailLockableTaskExecutor(s"Producer ${name}-AsyncWorker")
+  val pendingCassandraTasks           = new AtomicInteger(0)
 
   /**
     *
