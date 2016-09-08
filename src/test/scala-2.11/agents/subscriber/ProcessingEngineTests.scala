@@ -80,7 +80,7 @@ class ProcessingEngineTests extends FlatSpec with Matchers {
     val c = new ProcessingEngineOperatorTestImpl()
     val pe = new ProcessingEngine[String](c, Set[Int](0), qb, cb)
     val act1 = pe.getLastPartitionActivity(0)
-    pe.handleQueue(100)
+    pe.handleQueue(300)
     val act2 = pe.getLastPartitionActivity(0)
     act1 shouldBe act2
   }
@@ -91,7 +91,7 @@ class ProcessingEngineTests extends FlatSpec with Matchers {
     c.lstTransaction = Option[Transaction[String]](new Transaction(0, UUIDs.timeBased(), 1, -1))
     pe.enqueueLastTransactionFromDB(0)
     val act1 = pe.getLastPartitionActivity(0)
-    pe.handleQueue(100)
+    pe.handleQueue(300)
     val act2 = pe.getLastPartitionActivity(0)
     act2 - act1 > 0 shouldBe true
   }
