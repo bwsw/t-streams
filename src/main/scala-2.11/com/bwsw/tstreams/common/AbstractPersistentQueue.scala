@@ -2,6 +2,7 @@ package com.bwsw.tstreams.common
 
 import java.nio.file.Files
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.locks.ReentrantLock
 
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue
@@ -19,8 +20,6 @@ abstract class AbstractPersistentQueue[T](basePath: String) extends AbstractQueu
   private val appender: ExcerptAppender = q.createAppender()
   private val getter: ExcerptTailer     = q.createTailer()
 
-
-
   /**
     * Queue blocking stuff
     */
@@ -31,7 +30,14 @@ abstract class AbstractPersistentQueue[T](basePath: String) extends AbstractQueu
     LockUtil.withLockOrDieDo[Unit](mutex, (100, TimeUnit.SECONDS), None, () => {
       appender.writeText(serialize(elt.asInstanceOf[Object]))
       cond.signal()
+      inFlight.incrementAndGet()
     })
+  }
+
+  private def doGetItemFromQueue[T](raw: String): T = {
+    val v = deserialize(raw).asInstanceOf[T]
+    inFlight.decrementAndGet()
+    v
   }
 
   override def get(delay: Long, units: TimeUnit): T = {
@@ -39,11 +45,11 @@ abstract class AbstractPersistentQueue[T](basePath: String) extends AbstractQueu
       val raw = getter.readText()
       if(raw == null) {
         if(cond.await(delay, units))
-          deserialize(getter.readText()).asInstanceOf[T]
+          doGetItemFromQueue[T](getter.readText())
         else
           null.asInstanceOf[T]
       } else
-        deserialize(raw).asInstanceOf[T]
+        doGetItemFromQueue[T](raw)
     })
   }
 
