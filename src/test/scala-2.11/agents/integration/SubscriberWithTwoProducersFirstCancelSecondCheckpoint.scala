@@ -88,7 +88,7 @@ class SubscriberWithTwoProducersFirstCancelSecondCheckpoint extends FlatSpec wit
     t1.join()
     t2.join()
 
-    ls.await(10, TimeUnit.SECONDS)
+    producer1.stop()
     producer2.stop()
     s.stop()
     bs.size shouldBe 1
