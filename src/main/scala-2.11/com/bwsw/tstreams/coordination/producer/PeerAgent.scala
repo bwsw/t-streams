@@ -48,13 +48,14 @@ object PeerAgent {
  * @param transport Transport to provide interaction
  */
 class PeerAgent(agentsStateManager: AgentsStateDBService,
-                zkService: ZookeeperDLMService,
-                zkRetriesAmount: Int,
-                producer: Producer[_],
-                usedPartitions: List[Int],
-                isLowPriorityToBeMaster: Boolean,
-                transport: TcpTransport,
-                poolSize: Int) {
+                zkService:                ZookeeperDLMService,
+                zkRetriesAmount:          Int,
+                producer:                 Producer[_],
+                usedPartitions:           List[Int],
+                isLowPriorityToBeMaster:  Boolean,
+                transport:                TcpTransport,
+                threadPoolAmount:         Int,
+                threadPoolPublisherThreadsAmount: Int) {
   val myInetAddress: String = producer.producerOptions.coordinationOptions.transport.getInetAddress()
   /**
     * locks
@@ -99,13 +100,13 @@ class PeerAgent(agentsStateManager: AgentsStateDBService,
 
   startSessionKeepAliveThread()
 
-  (0 until poolSize) foreach { x =>
-    executorGraphs(x) = new ExecutorGraph(s"id-${x}")
+  (0 until threadPoolAmount) foreach { x =>
+    executorGraphs(x) = new ExecutorGraph(s"id-${x}", publisherThreadsAmount = threadPoolPublisherThreadsAmount)
   }
 
   private val partitionsToExecutors = usedPartitions
     .zipWithIndex
-    .map { case (partition, execNum) => (partition, execNum % poolSize) }
+    .map { case (partition, execNum) => (partition, execNum % threadPoolAmount) }
     .toMap
 
 
@@ -338,6 +339,7 @@ class PeerAgent(agentsStateManager: AgentsStateDBService,
 
   /**
     * Allows to publish update/pre/post/cancel messages.
+ *
     * @param msg
     * @param isUpdateMaster
     * @return

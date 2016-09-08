@@ -8,7 +8,7 @@ import com.bwsw.tstreams.common.FirstFailLockableTaskExecutor
   * Created by Ivan Kudryavtsev on 29.08.16.
   * Incapsulates internal executor relationships and usage logic
   */
-class ExecutorGraph(name: String = "", publisherThreadsCount: Int = 1) {
+class ExecutorGraph(name: String = "", publisherThreadsAmount: Int = 1) {
 
   val SHUTDOWN_TIMEOUT = 100
   val SHUTDOWN_UNITS = TimeUnit.SECONDS
@@ -17,7 +17,7 @@ class ExecutorGraph(name: String = "", publisherThreadsCount: Int = 1) {
   val newTransaction  = new FirstFailLockableTaskExecutor(s"ExecutorGraph-newTransaction-${name}")
   val cassandra     = new FirstFailLockableTaskExecutor(s"ExecutorGraph-cassandra-${name}")
   val materialize   = new FirstFailLockableTaskExecutor(s"ExecutorGraph-materialize-${name}")
-  val publish       = new FirstFailLockableTaskExecutor(s"ExecutorGraph-publish-${name}", publisherThreadsCount)
+  val publish       = new FirstFailLockableTaskExecutor(s"ExecutorGraph-publish-${name}", publisherThreadsAmount)
 
   /**
     * Closes all
@@ -29,6 +29,7 @@ class ExecutorGraph(name: String = "", publisherThreadsCount: Int = 1) {
 
   /**
     * submits task for execution
+ *
     * @param ex
     * @param f
     */
