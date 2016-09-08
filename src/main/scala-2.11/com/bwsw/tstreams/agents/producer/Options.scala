@@ -18,7 +18,13 @@ import scala.language.existentials
   * @param txnGenerator                 Generator for generating UUIDs
   * @tparam USERTYPE User object type
   */
-class Options[USERTYPE](val transactionTTL: Int, val transactionKeepAliveInterval: Int, val writePolicy: AbstractPolicy, val batchSize: Int, val txnGenerator: IUUIDGenerator, val coordinationOptions: CoordinationOptions, val converter: IConverter[USERTYPE, Array[Byte]]) {
+class Options[USERTYPE](val transactionTTL: Int,
+                        val transactionKeepAliveInterval: Int,
+                        val writePolicy: AbstractPolicy,
+                        val batchSize: Int,
+                        val txnGenerator: IUUIDGenerator,
+                        val coordinationOptions: CoordinationOptions,
+                        val converter: IConverter[USERTYPE, Array[Byte]]) {
 
   /**
     * Transaction minimum ttl time
@@ -60,4 +66,5 @@ class CoordinationOptions(val zkHosts: List[InetSocketAddress],
                           val zkConnectionTimeout: Int,
                           val isLowPriorityToBeMaster: Boolean,
                           val transport: TcpTransport,
-                          val threadPoolAmount: Int = -1)
+                          val threadPoolAmount: Int = -1,
+                          val threadPoolPublisherThreadsAmount: Int = 1)
