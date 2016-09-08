@@ -27,7 +27,7 @@ class SubscriberWithTwoProducersFirstCancelSecondCheckpoint extends FlatSpec wit
     setProperty(TSF_Dictionary.Producer.Transaction.KEEP_ALIVE, 1).
     setProperty(TSF_Dictionary.Consumer.TRANSACTION_PRELOAD, 10).
     setProperty(TSF_Dictionary.Consumer.DATA_PRELOAD, 10)
-  it should "switching the master after his hundred transactions " in {
+  it should "Integration MixIn checkpoint and cancel must be correctly processed on Subscriber" in {
 
     val bp = ListBuffer[UUID]()
     var bs = ListBuffer[UUID]()
@@ -40,7 +40,6 @@ class SubscriberWithTwoProducersFirstCancelSecondCheckpoint extends FlatSpec wit
       converter = stringToArrayByteConverter,
       partitions = Set(0),
       isLowPriority = false)
-
 
     val producer2 = f.getProducer[String](
       name = "test_producer2",
