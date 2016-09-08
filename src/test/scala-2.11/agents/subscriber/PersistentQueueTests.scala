@@ -79,4 +79,21 @@ class PersistentQueueTests extends FlatSpec with Matchers {
     println(end - start)
     end - start < 100 shouldBe true
   }
+
+  it should "correctly work with inFlight count" in {
+    val q = new TransactionStatePersistentQueue(s"target/${UUID.randomUUID().toString}")
+    val N = 1000
+    for(i <- 0 until N) {
+      q.put(Nil)
+    }
+    q.getInFlight() shouldBe 1000
+    for(i <- 0 until N) {
+      q.get(1, TimeUnit.MILLISECONDS)
+    }
+    q.getInFlight() shouldBe 0
+
+    q.get(1, TimeUnit.MILLISECONDS)
+    q.getInFlight() shouldBe 0
+
+  }
 }

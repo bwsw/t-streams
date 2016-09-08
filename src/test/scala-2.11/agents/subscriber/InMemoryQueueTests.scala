@@ -61,6 +61,23 @@ class InMemoryQueueTests extends FlatSpec with Matchers {
     ctr shouldBe N
   }
 
+  it should "correctly work with inFlight count" in {
+    val q = new InMemoryQueue[List[TransactionState]]()
+    val N = 1000
+    for(i <- 0 until N) {
+      q.put(Nil)
+    }
+    q.getInFlight() shouldBe 1000
+    for(i <- 0 until N) {
+      q.get(1, TimeUnit.MILLISECONDS)
+    }
+    q.getInFlight() shouldBe 0
+
+    q.get(1, TimeUnit.MILLISECONDS)
+    q.getInFlight() shouldBe 0
+
+  }
+
   it should "be signalled" in {
     val q = new InMemoryQueue[List[TransactionState]]()
     val t = new Thread(new Runnable {
