@@ -33,6 +33,8 @@ class SubscriberWithTwoProducersFirstCancelSecondCheckpoint extends FlatSpec wit
     var bs = ListBuffer[UUID]()
     val lp2 = new CountDownLatch(1)
     val  ls = new  CountDownLatch(1)
+    var signProd1 = true
+    var signProd2 = false
 
     val producer1 = f.getProducer[String](
       name = "test_producer1",
@@ -64,20 +66,24 @@ class SubscriberWithTwoProducersFirstCancelSecondCheckpoint extends FlatSpec wit
       })
     val t1 = new Thread(new Runnable {
       override def run(): Unit = {
+
         val t = producer1.newTransaction(policy = NewTransactionProducerPolicy.CheckpointIfOpened)
         lp2.countDown()
           bp.append(t.getTransactionUUID())
           t.send("test")
           t.cancel()
+          signProd1= false
       }
     })
     val t2 = new Thread(new Runnable {
       override def run(): Unit = {
+
         lp2.await()
         val t = producer2.newTransaction(policy = NewTransactionProducerPolicy.CheckpointIfOpened)
           bp.append(t.getTransactionUUID())
           t.send("test")
           t.checkpoint()
+          signProd2 = true
       }
     })
     s.start()
@@ -90,7 +96,10 @@ class SubscriberWithTwoProducersFirstCancelSecondCheckpoint extends FlatSpec wit
     producer1.stop()
     producer2.stop()
     s.stop()
+
     bs.size shouldBe 1
+    signProd1 shouldBe false
+    signProd2 shouldBe true
   }
   override def afterAll(): Unit = {
     onAfterAll()
