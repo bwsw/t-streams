@@ -210,8 +210,8 @@ class Producer[T](var name: String,
   /**
     * Checkpoint all opened transactions (not atomic). For atomic use CheckpointGroup.
     */
-  def checkpoint(isAsynchronous: Boolean = false): Unit =
-    openTransactions.forallKeysDo((k: Int, v: IProducerTransaction[T]) => v.checkpoint(isAsynchronous))
+  def checkpoint(isSynchronous: Boolean = true): Unit =
+    openTransactions.forallKeysDo((k: Int, v: IProducerTransaction[T]) => v.checkpoint(isSynchronous))
 
 
   /**

@@ -131,6 +131,7 @@ class Consumer[T](val name: String,
     * @return
     */
   def getTransaction(partition: Int): Option[Transaction[T]] = this.synchronized {
+
     if(!isStarted.get())
       throw new IllegalStateException(s"Consumer ${name} is not started. Start it first.")
 
@@ -152,14 +153,15 @@ class Consumer[T](val name: String,
     val txn = transactionBuffer(partition).head
 
     if (txn.getCount() != -1) {
-      updateOffsets(partition, txn.getTxnUUID())
+      updateOffsets(partition, txn.getTransactionUUID())
       transactionBuffer(partition).dequeue()
       txn.attach(this)
       return Some(txn)
     }
 
-    getTransactionById(partition, txn.getTxnUUID()).foreach { txn =>
-      updateOffsets(partition, txn.getTxnUUID())
+    val txnUpdatedOpt = getTransactionById(partition, txn.getTransactionUUID())
+    if(txnUpdatedOpt.isDefined) {
+      updateOffsets(partition, txnUpdatedOpt.get.getTransactionUUID())
       transactionBuffer(partition).dequeue()
       return Some(txn)
     }
@@ -198,7 +200,7 @@ class Consumer[T](val name: String,
             txn.attach(this)
             return Option[Transaction[T]](txn)
           }
-          uuid = txn.getTxnUUID()
+          uuid = txn.getTransactionUUID()
         }
       }
     }
@@ -220,7 +222,7 @@ class Consumer[T](val name: String,
         moreItems = false
       } else {
         val t = txns.dequeue()
-        if(comparator.compare(to, t.getTxnUUID()) > -1) {
+        if(comparator.compare(to, t.getTransactionUUID()) > -1) {
           if (t.getCount() >= 0)
             okList.append(t)
           else
@@ -232,8 +234,8 @@ class Consumer[T](val name: String,
         }
       }
     }
-    if(okList.size > 0 && addFlag && comparator.compare(to, okList.last.getTxnUUID()) == 1)
-      okList.appendAll(if (okList.size > 0) getTransactionsFromTo(partition, okList.last.getTxnUUID(), to) else ListBuffer[Transaction[T]]())
+    if(okList.size > 0 && addFlag && comparator.compare(to, okList.last.getTransactionUUID()) == 1)
+      okList.appendAll(if (okList.size > 0) getTransactionsFromTo(partition, okList.last.getTransactionUUID(), to) else ListBuffer[Transaction[T]]())
 
     okList
   }
