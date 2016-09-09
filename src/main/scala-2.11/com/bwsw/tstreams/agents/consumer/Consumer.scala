@@ -29,16 +29,7 @@ class Consumer[T](val name: String,
                          val options: Options[T])
   extends GroupParticipant
     with TransactionOperator[T] {
-  
-  /**
-    * agent name
-    */
-  override def getAgentName() = name
 
-  /**
-    * returns partitions
-    */
-  def getPartitions(): Set[Int] = Set[Int]().empty ++ options.readPolicy.getUsedPartitions()
 
   /**
     * Temporary checkpoints (will be cleared after every checkpoint() invokes)
@@ -55,18 +46,40 @@ class Consumer[T](val name: String,
     */
   private val transactionBuffer = scala.collection.mutable.Map[Int, scala.collection.mutable.Queue[Transaction[T]]]()
 
-  def getCurrentOffset(partition: Int): UUID = currentOffsets(partition)
-
   /**
     * Indicate set offsets or not
     */
   private var isReadOffsetsAreSet = false
 
+  /**
+    * Flag which defines either object is running or not
+    */
   val isStarted = new AtomicBoolean(false)
 
-  stream.dataStorage.bind()
+  /**
+    * agent name
+    */
+  override def getAgentName() = name
 
+  /**
+    * returns partitions
+    */
+  def getPartitions(): Set[Int] = options.readPolicy.getUsedPartitions().toSet
+
+  /**
+    * returns current read offset
+    * @param partition
+    * @return
+    */
+  def getCurrentOffset(partition: Int): UUID = currentOffsets(partition)
+
+
+  /**
+    * Starts the operation.
+    */
   def start(): Unit = this.synchronized {
+    stream.dataStorage.bind()
+
     Consumer.logger.info(s"Start a new consumer with name: ${name}, streamName : ${stream.getName}, streamPartitions : ${stream.getPartitions}")
 
     if(isStarted.get())
@@ -129,10 +142,10 @@ class Consumer[T](val name: String,
 
     if (transactionBuffer(partition).isEmpty) {
       transactionBuffer(partition) = stream.metadataStorage.commitEntity.getTransactions(
-        streamName = stream.getName,
-        partition = partition,
-        fromTransaction = currentOffsets(partition),
-        cnt = options.transactionsPreload)
+                                                    streamName      = stream.getName,
+                                                    partition       = partition,
+                                                    fromTransaction = currentOffsets(partition),
+                                                    cnt             = options.transactionsPreload)
 
       if (transactionBuffer(partition).isEmpty) {
         return getNextTransaction()
@@ -148,13 +161,13 @@ class Consumer[T](val name: String,
       transactionBuffer(partition).dequeue()
       return Some(txn)
     } else {
-      val updatedTxnOpt: Option[Transaction[T]] = updateTransactionInfoFromDB(txn.getTxnUUID(), partition)
+      val updatedTxnOpt: Option[Transaction[T]] = updateTransactionInfoFromDB(partition, txn.getTxnUUID())
       if (updatedTxnOpt.isDefined) {
         val updatedTxn = updatedTxnOpt.get
 
         if (updatedTxn.getCount() != -1) {
           offsetsForCheckpoint(partition) = txn.getTxnUUID()
-          currentOffsets(partition) = txn.getTxnUUID()
+          currentOffsets(partition)       = txn.getTxnUUID()
           updatedTxn.attach(this)
           transactionBuffer(partition).dequeue()
           return Some(updatedTxn)
@@ -263,7 +276,7 @@ class Consumer[T](val name: String,
         s" name : $name, streamName : ${stream.getName}, streamPartitions : ${stream.getPartitions}")
     }
 
-    val txnOpt = updateTransactionInfoFromDB(uuid, partition)
+    val txnOpt = updateTransactionInfoFromDB(partition, uuid)
     if (txnOpt.isDefined) {
       val txn = txnOpt.get
       if (txn.getCount() != -1) {
@@ -304,7 +317,7 @@ class Consumer[T](val name: String,
     * @param txn Transaction to update
     * @return Updated transaction
     */
-  def updateTransactionInfoFromDB(txn: UUID, partition: Int): Option[Transaction[T]] = this.synchronized {
+  def updateTransactionInfoFromDB(partition: Int, txn: UUID): Option[Transaction[T]] = this.synchronized {
     if(!isStarted.get())
       throw new IllegalStateException("Consumer is not started. Start consumer first.")
 

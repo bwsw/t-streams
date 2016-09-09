@@ -24,7 +24,7 @@ class ProcessingEngineOperatorTestImpl extends TransactionOperator[String] {
 
   override def setStreamPartitionOffset(partition: Int, uuid: UUID): Unit = {}
 
-  override def updateTransactionInfoFromDB(txn: UUID, partition: Int): Option[Transaction[String]] = None
+  override def updateTransactionInfoFromDB(partition: Int, txn: UUID): Option[Transaction[String]] = None
 
   override def getTransactionsFromTo(partition: Int, from: UUID, to: UUID): ListBuffer[Transaction[String]] =
     txns
