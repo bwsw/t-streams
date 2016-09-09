@@ -33,7 +33,7 @@ class Consumer[T](val name: String,
   /**
     * agent name
     */
-  override def getAgentName = name
+  override def getAgentName() = name
 
   /**
     * returns partitions
