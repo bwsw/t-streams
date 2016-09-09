@@ -41,7 +41,7 @@ class ConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll with Te
 
   "consumer.getTransaction" should "return None if nothing was sent" in {
     consumer.start
-    val txn = consumer.getTransaction
+    val txn = consumer.getTransaction(0)
     txn.isEmpty shouldBe true
   }
 
@@ -63,7 +63,7 @@ class ConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll with Te
   }
 
   "consumer.getTransaction" should "return sent transaction" in {
-    val txn = consumer.getTransaction
+    val txn = consumer.getTransaction(1)
     txn.isDefined shouldEqual true
   }
 

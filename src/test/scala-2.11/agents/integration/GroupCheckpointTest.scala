@@ -28,14 +28,22 @@ class GroupCheckpointTest extends FlatSpec with Matchers with BeforeAndAfterAll 
     name = "test_producer",
     txnGenerator = LocalGeneratorCreator.getGen(),
     converter = stringToArrayByteConverter,
-    partitions = Set(0,1,2),
+    partitions = Set(0, 1, 2),
     isLowPriority = false)
 
   val consumer = f.getConsumer[String](
     name = "test_consumer",
     txnGenerator = LocalGeneratorCreator.getGen(),
     converter = arrayByteToStringConverter,
-    partitions = Set(0,1,2),
+    partitions = Set(0, 1, 2),
+    offset = Oldest,
+    isUseLastOffset = true)
+
+  val consumer2 = f.getConsumer[String](
+    name = "test_consumer",
+    txnGenerator = LocalGeneratorCreator.getGen(),
+    converter = arrayByteToStringConverter,
+    partitions = Set(0, 1, 2),
     offset = Oldest,
     isUseLastOffset = true)
 
@@ -52,25 +60,19 @@ class GroupCheckpointTest extends FlatSpec with Matchers with BeforeAndAfterAll 
     txn1.checkpoint()
 
     //move consumer offsets
-    consumer.getTransaction.get
+    consumer.getTransaction(0).get
 
     //open transaction without close
-    val txn2 = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
+    val txn2 = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened, 1)
     logger.info("TXN2 is " + txn2.getTransactionUUID.toString)
     txn2.send("info2")
 
     group.checkpoint()
 
-    val consumer2 = f.getConsumer[String](
-      name = "test_consumer",
-      txnGenerator = LocalGeneratorCreator.getGen(),
-      converter = arrayByteToStringConverter,
-      partitions = Set(0,1,2),
-      offset = Oldest,
-      isUseLastOffset = true)
-    consumer2.start
+
+    consumer2.start()
     //assert that the second transaction was closed and consumer offsets was moved
-    assert(consumer2.getTransaction.get.getAll().head == "info2")
+    assert(consumer2.getTransaction(1).get.getAll().head == "info2")
   }
 
   override def afterAll(): Unit = {

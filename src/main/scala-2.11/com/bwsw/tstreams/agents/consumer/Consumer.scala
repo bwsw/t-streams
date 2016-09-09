@@ -34,7 +34,7 @@ class Consumer[T](val name: String,
   /**
     * Temporary checkpoints (will be cleared after every checkpoint() invokes)
     */
-  private val offsetsForCheckpoint = scala.collection.mutable.Map[Int, UUID]()
+  private val checkpointOffsets = scala.collection.mutable.Map[Int, UUID]()
 
   /**
     * Local offsets
@@ -102,15 +102,14 @@ class Consumer[T](val name: String,
           case _ =>
             throw new IllegalStateException(s"Offset option for consumer ${name} cannot be resolved to known Offset.* object.")
         }
-        offsetsForCheckpoint(i) =  currentOffsets(i)
+        checkpointOffsets(i) =  currentOffsets(i)
       }
     }
 
     if (!isReadOffsetsAreSet) {
       for (i <- options.readPolicy.getUsedPartitions()) {
         val offset = stream.metadataStorage.consumerEntity.getLastSavedOffset(name, stream.getName, i)
-        currentOffsets(i)       = offset
-        offsetsForCheckpoint(i) = offset
+        updateOffsets(i, offset)
       }
     }
 
@@ -125,70 +124,50 @@ class Consumer[T](val name: String,
   }
 
   /**
-    * Helper function for getTransaction() method
-    *
-    * @return BasicConsumerTransaction or None
+    * Receives new transaction from the partition
+    * @param partition
+    * @return
     */
-  private def getNextTransaction(): Option[Transaction[T]] = this.synchronized {
-
+  def getTransaction(partition: Int): Option[Transaction[T]] = this.synchronized {
     if(!isStarted.get())
       throw new IllegalStateException(s"Consumer ${name} is not started. Start it first.")
 
-    if (options.readPolicy.isRoundFinished()) {
-      return None
-    }
-
-    val partition = options.readPolicy.getNextPartition()
+    if(!getPartitions().contains(partition))
+      throw new IllegalStateException(s"Consumer doesn't work on partition=${partition}.")
 
     if (transactionBuffer(partition).isEmpty) {
       transactionBuffer(partition) = stream.metadataStorage.commitEntity.getTransactions(
-                                                    streamName      = stream.getName,
-                                                    partition       = partition,
-                                                    fromTransaction = currentOffsets(partition),
-                                                    cnt             = options.transactionsPreload)
+        streamName      = stream.getName,
+        partition       = partition,
+        fromTransaction = currentOffsets(partition),
+        cnt             = options.transactionsPreload)
 
       if (transactionBuffer(partition).isEmpty) {
-        return getNextTransaction()
+        return None
       }
     }
 
     val txn = transactionBuffer(partition).head
 
     if (txn.getCount() != -1) {
-      offsetsForCheckpoint(partition) = txn.getTxnUUID()
-      currentOffsets(partition)       = txn.getTxnUUID()
+      updateOffsets(partition, txn.getTxnUUID())
+      transactionBuffer(partition).dequeue()
       txn.attach(this)
+      return Some(txn)
+    }
+
+    getTransactionById(partition, txn.getTxnUUID()).foreach { txn =>
+      updateOffsets(partition, txn.getTxnUUID())
       transactionBuffer(partition).dequeue()
       return Some(txn)
-    } else {
-      val updatedTxnOpt: Option[Transaction[T]] = loadTransactionFromDB(partition, txn.getTxnUUID())
-      if (updatedTxnOpt.isDefined) {
-        val updatedTxn = updatedTxnOpt.get
-
-        if (updatedTxn.getCount() != -1) {
-          offsetsForCheckpoint(partition) = txn.getTxnUUID()
-          currentOffsets(partition)       = txn.getTxnUUID()
-          updatedTxn.attach(this)
-          transactionBuffer(partition).dequeue()
-          return Some(updatedTxn)
-        }
-      }
     }
-    getNextTransaction()
+
+    return None
   }
 
-  /**
-    * @return Consumed transaction or None if nothing to consume
-    */
-  def getTransaction(): Option[Transaction[T]] = {
-
-    if(!isStarted.get())
-      throw new IllegalStateException(s"Consumer ${name} is not started. Start it first.")
-
-    Consumer.logger.debug(s"Start new transaction for consumer with name : $name, streamName : ${stream.getName}, streamPartitions : ${stream.getPartitions}")
-    options.readPolicy.startNewRound()
-    val txn: Option[Transaction[T]] = getNextTransaction
-    txn
+  private def updateOffsets(partition: Int, uuid: UUID) = {
+    checkpointOffsets(partition)    = uuid
+    currentOffsets(partition)       = uuid
   }
 
   /**
@@ -301,8 +280,7 @@ class Consumer[T](val name: String,
     if(!isStarted.get())
       throw new IllegalStateException(s"Consumer ${name} is not started. Start it first.")
 
-    offsetsForCheckpoint(partition) = uuid
-    currentOffsets(partition)       = uuid
+    updateOffsets(partition, uuid)
 
     transactionBuffer(partition) = stream.metadataStorage.commitEntity.getTransactions(
                                                                             stream.getName,
@@ -344,8 +322,8 @@ class Consumer[T](val name: String,
       Consumer.logger.debug(s"Start saving checkpoints for " +
         s"consumer with name : $name, streamName : ${stream.getName}, streamPartitions : ${stream.getPartitions}")
     }
-    stream.metadataStorage.consumerEntity.saveBatchOffset(name, stream.getName, offsetsForCheckpoint)
-    offsetsForCheckpoint.clear()
+    stream.metadataStorage.consumerEntity.saveBatchOffset(name, stream.getName, checkpointOffsets)
+    checkpointOffsets.clear()
   }
 
   /**
@@ -356,10 +334,10 @@ class Consumer[T](val name: String,
     if(!isStarted.get())
       throw new IllegalStateException("Consumer is not started. Start consumer first.")
 
-    val checkpointData = offsetsForCheckpoint.map { case (partition, lastTxn) =>
+    val checkpointData = checkpointOffsets.map { case (partition, lastTxn) =>
       ConsumerCheckpointInfo(name, stream.getName, partition, lastTxn)
     }.toList
-    offsetsForCheckpoint.clear()
+    checkpointOffsets.clear()
     checkpointData
   }
 
@@ -378,7 +356,7 @@ class Consumer[T](val name: String,
     if (!isStarted.getAndSet(false))
       throw new IllegalStateException("Consumer is not started. Start consumer first.")
 
-    offsetsForCheckpoint.clear()
+    checkpointOffsets.clear()
     currentOffsets.clear()
     transactionBuffer.clear()
   }

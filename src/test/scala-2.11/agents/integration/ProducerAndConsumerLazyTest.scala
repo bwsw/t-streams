@@ -26,21 +26,21 @@ class ProducerAndConsumerLazyTest extends FlatSpec with Matchers with BeforeAndA
     name = "test_producer",
     txnGenerator = LocalGeneratorCreator.getGen(),
     converter = stringToArrayByteConverter,
-    partitions = Set(0,1,2),
+    partitions = Set(0),
     isLowPriority = false)
 
   val producer2 = f.getProducer[String](
     name = "test_producer",
     txnGenerator = LocalGeneratorCreator.getGen(),
     converter = stringToArrayByteConverter,
-    partitions = Set(0,1,2),
+    partitions = Set(0),
     isLowPriority = false)
 
   val consumer = f.getConsumer[String](
     name = "test_consumer",
     txnGenerator = LocalGeneratorCreator.getGen(),
     converter = arrayByteToStringConverter,
-    partitions = Set(0,1,2),
+    partitions = Set(0),
     offset = Oldest,
     isUseLastOffset = true)
 
@@ -84,7 +84,7 @@ class ProducerAndConsumerLazyTest extends FlatSpec with Matchers with BeforeAndA
         var isFirstProducerFinished = true
         breakable {
           while (true) {
-            val txnOpt = consumer.getTransaction
+            val txnOpt = consumer.getTransaction(0)
             if (txnOpt.isDefined) {
               val data = txnOpt.get.getAll().sorted
               if (isFirstProducerFinished) {
@@ -115,7 +115,7 @@ class ProducerAndConsumerLazyTest extends FlatSpec with Matchers with BeforeAndA
 
     //assert that is nothing to read
     (0 until consumer.stream.getPartitions) foreach { _ =>
-      checkVal &= consumer.getTransaction.isEmpty
+      checkVal &= consumer.getTransaction(0).isEmpty
     }
 
     checkVal shouldEqual true
