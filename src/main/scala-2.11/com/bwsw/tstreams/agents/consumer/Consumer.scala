@@ -73,14 +73,16 @@ class Consumer[T](val name: String,
     */
   def getCurrentOffset(partition: Int): UUID = currentOffsets(partition)
 
+  stream.dataStorage.bind()
 
   /**
     * Starts the operation.
     */
   def start(): Unit = this.synchronized {
-    stream.dataStorage.bind()
-
     Consumer.logger.info(s"Start a new consumer with name: ${name}, streamName : ${stream.getName}, streamPartitions : ${stream.getPartitions}")
+
+
+
 
     if(isStarted.get())
       throw new IllegalStateException(s"Consumer ${name} is started already. Double start is detected.")
