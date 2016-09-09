@@ -64,7 +64,7 @@ class ProcessingEngineTests extends FlatSpec with Matchers {
     c.lstTransaction = Option[Transaction[String]](new Transaction(0, UUIDs.timeBased(), 1, -1))
     pe.enqueueLastTransactionFromDB(0)
     val elt = pe.getQueue().get(200, TimeUnit.MILLISECONDS)
-    elt.head.uuid shouldBe c.lstTransaction.get.getTxnUUID()
+    elt.head.uuid shouldBe c.lstTransaction.get.getTransactionUUID()
   }
 
   "enqueueLastTransactionFromDB" should "not enqueue last transaction state to Queue if it's older than we have in our database" in {
@@ -106,7 +106,7 @@ class ProcessingEngineTests extends FlatSpec with Matchers {
     pe.handleQueue(POLLING_DELAY)
     pe.enqueueLastTransactionFromDB(0)
     val elt = pe.getQueue().get(200, TimeUnit.MILLISECONDS)
-    elt.head.uuid shouldBe c.lstTransaction.get.getTxnUUID()
+    elt.head.uuid shouldBe c.lstTransaction.get.getTransactionUUID()
   }
 
 }

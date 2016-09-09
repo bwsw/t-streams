@@ -91,7 +91,7 @@ class TransactionFullLoaderTests extends FlatSpec with Matchers {
       lastTransactionsMap(0) = TransactionState(UUIDs.timeBased(), partition, masterID, orderID, 1, TransactionStatus.postCheckpoint, -1)
       val fullLoader2 = new TransactionFullLoader(partitions(), lastTransactionsMap)
       val consumerOuter = new FullLoaderOperatorTestImpl()
-      val nextTxnState = List(TransactionState(consumerOuter.txns.last.getTxnUUID(), partition, masterID, orderID + 1, 1, TransactionStatus.postCheckpoint, -1))
+      val nextTxnState = List(TransactionState(consumerOuter.txns.last.getTransactionUUID(), partition, masterID, orderID + 1, 1, TransactionStatus.postCheckpoint, -1))
 
       override def test(): Unit = {
         var ctr: Int = 0
@@ -122,7 +122,7 @@ class TransactionFullLoaderTests extends FlatSpec with Matchers {
       lastTransactionsMap(0) = TransactionState(UUIDs.timeBased(), partition, masterID, orderID, 1, TransactionStatus.postCheckpoint, -1)
       val fullLoader2 = new TransactionFullLoader(partitions(), lastTransactionsMap)
       val consumerOuter = new FullLoaderOperatorTestImpl()
-      val nextTxnState = List(TransactionState(consumerOuter.txns.last.getTxnUUID(), partition, masterID, orderID + 1, 1, TransactionStatus.postCheckpoint, -1))
+      val nextTxnState = List(TransactionState(consumerOuter.txns.last.getTransactionUUID(), partition, masterID, orderID + 1, 1, TransactionStatus.postCheckpoint, -1))
 
       override def test(): Unit = {
         var ctr: Int = 0
@@ -139,7 +139,7 @@ class TransactionFullLoaderTests extends FlatSpec with Matchers {
           })
         l.await(1, TimeUnit.SECONDS)
         ctr shouldBe consumerOuter.TOTAL
-        lastTransactionsMap(0).uuid shouldBe consumerOuter.txns.last.getTxnUUID()
+        lastTransactionsMap(0).uuid shouldBe consumerOuter.txns.last.getTransactionUUID()
       }
     }
 

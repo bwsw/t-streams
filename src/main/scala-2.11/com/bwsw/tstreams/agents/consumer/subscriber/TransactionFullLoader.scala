@@ -49,9 +49,9 @@ class TransactionFullLoader(partitions: Set[Int],
 
     data foreach(elt =>
       executor.submit(new ProcessingEngine.CallbackTask[T](consumer,
-        TransactionState(elt.getTxnUUID(), last.partition, -1, -1, elt.getCount(), TransactionStatus.postCheckpoint, -1), callback)))
+        TransactionState(elt.getTransactionUUID(), last.partition, -1, -1, elt.getCount(), TransactionStatus.postCheckpoint, -1), callback)))
 
     if (data.size > 0)
-      lastTransactionsMap(last.partition) = TransactionState(data.last.getTxnUUID(), last.partition, last.masterSessionID, last.queueOrderID, data.last.getCount(), TransactionStatus.postCheckpoint, -1)
+      lastTransactionsMap(last.partition) = TransactionState(data.last.getTransactionUUID(), last.partition, last.masterSessionID, last.queueOrderID, data.last.getCount(), TransactionStatus.postCheckpoint, -1)
   }
 }
