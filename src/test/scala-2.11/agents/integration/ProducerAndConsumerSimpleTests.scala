@@ -29,14 +29,14 @@ class ProducerAndConsumerSimpleTests extends FlatSpec with Matchers with BeforeA
     name = "test_producer",
     txnGenerator = LocalGeneratorCreator.getGen(),
     converter = stringToArrayByteConverter,
-    partitions = Set(0,1,2),
+    partitions = Set(0),
     isLowPriority = false)
 
   val consumer = f.getConsumer[String](
     name = "test_consumer",
     txnGenerator = LocalGeneratorCreator.getGen(),
     converter = arrayByteToStringConverter,
-    partitions = Set(0,1,2),
+    partitions = Set(0),
     offset = Oldest,
     isUseLastOffset = true)
 
@@ -53,14 +53,14 @@ class ProducerAndConsumerSimpleTests extends FlatSpec with Matchers with BeforeA
     }
     producerTransaction.checkpoint()
     Thread.sleep(100)
-    val txnOpt = consumer.getTransaction
+    val txnOpt = consumer.getTransaction(0)
     val txn = txnOpt.get
 
     var checkVal = txn.getAll().sorted == sendData
 
     //assert that is nothing to read
     (0 until consumer.stream.getPartitions) foreach { _ =>
-      checkVal &= consumer.getTransaction.isEmpty
+      checkVal &= consumer.getTransaction(0).isEmpty
     }
 
     checkVal shouldEqual true
@@ -75,7 +75,7 @@ class ProducerAndConsumerSimpleTests extends FlatSpec with Matchers with BeforeA
       producerTransaction.send(x)
     }
     producerTransaction.checkpoint()
-    val txnOpt = consumer.getTransaction
+    val txnOpt = consumer.getTransaction(0)
     assert(txnOpt.isDefined)
     val txn = txnOpt.get
     var dataToAssert = ListBuffer[String]()
@@ -87,7 +87,7 @@ class ProducerAndConsumerSimpleTests extends FlatSpec with Matchers with BeforeA
 
     //assert that is nothing to read
     (0 until consumer.stream.getPartitions) foreach { _ =>
-      checkVal &= consumer.getTransaction.isEmpty
+      checkVal &= consumer.getTransaction(0).isEmpty
     }
 
     checkVal &= dataToAssert.toList.sorted == sendData
@@ -112,14 +112,14 @@ class ProducerAndConsumerSimpleTests extends FlatSpec with Matchers with BeforeA
     var checkVal = true
 
     (0 until totalTxn).foreach { _ =>
-      val txn = consumer.getTransaction
+      val txn = consumer.getTransaction(0)
       checkVal &= txn.nonEmpty
       checkVal &= txn.get.getAll().sorted == sendData
     }
 
     //assert that is nothing to read
     (0 until consumer.stream.getPartitions) foreach { _ =>
-      checkVal &= consumer.getTransaction.isEmpty
+      checkVal &= consumer.getTransaction(0).isEmpty
     }
 
     checkVal shouldBe true
@@ -148,7 +148,7 @@ class ProducerAndConsumerSimpleTests extends FlatSpec with Matchers with BeforeA
       def run() {
         breakable {
           while (true) {
-            val consumedTxn: Option[Transaction[String]] = consumer.getTransaction
+            val consumedTxn: Option[Transaction[String]] = consumer.getTransaction(0)
             if (consumedTxn.isDefined) {
               checkVal &= consumedTxn.get.getAll().sorted == sendData
               break()
@@ -169,7 +169,7 @@ class ProducerAndConsumerSimpleTests extends FlatSpec with Matchers with BeforeA
 
     //assert that is nothing to read
     (0 until consumer.stream.getPartitions) foreach { _ =>
-      checkVal &= consumer.getTransaction.isEmpty
+      checkVal &= consumer.getTransaction(0).isEmpty
     }
 
     checkVal shouldEqual true
