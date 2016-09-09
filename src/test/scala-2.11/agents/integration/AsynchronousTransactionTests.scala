@@ -57,10 +57,10 @@ class AsynchronousTransactionTests  extends FlatSpec with Matchers
     ptxn.checkpoint(isSynchronous = false)
     l.await()
     c.start()
-    val ctxn = c.getTransaction
+    val ctxn = c.getTransaction(0)
 
     ctxn.isDefined shouldBe true
-    ptxn.getTransactionUUID shouldBe ctxn.get.getTxnUUID
+    ptxn.getTransactionUUID shouldBe ctxn.get.getTransactionUUID
     if(ctxn.isDefined)
       c.checkpoint()
   }
@@ -85,7 +85,7 @@ class AsynchronousTransactionTests  extends FlatSpec with Matchers
     ptxn.checkpoint(isSynchronous = false)
     l.await()
     c.start()
-    val ctxn = c.getTransaction
+    val ctxn = c.getTransaction(0)
 
     ctxn.isDefined shouldBe false
   }
@@ -110,7 +110,7 @@ class AsynchronousTransactionTests  extends FlatSpec with Matchers
     ptxn.send("test")
     ptxn.checkpoint(isSynchronous = false)
     c.start()
-    val ctxn = c.getTransaction
+    val ctxn = c.getTransaction(0)
     l.countDown()
     ctxn.isDefined shouldBe false
   }

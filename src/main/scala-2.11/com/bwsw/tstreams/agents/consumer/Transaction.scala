@@ -36,7 +36,7 @@ class Transaction[T](partition:  Int,
   /**
     * Return transaction UUID
     */
-  def getTxnUUID(): UUID = uuid
+  def getTransactionUUID(): UUID = uuid
 
   /**
     * Return transaction partition

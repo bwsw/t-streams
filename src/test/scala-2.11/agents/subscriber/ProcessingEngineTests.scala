@@ -24,7 +24,7 @@ class ProcessingEngineOperatorTestImpl extends TransactionOperator[String] {
 
   override def setStreamPartitionOffset(partition: Int, uuid: UUID): Unit = {}
 
-  override def updateTransactionInfoFromDB(txn: UUID, partition: Int): Option[Transaction[String]] = None
+  override def loadTransactionFromDB(partition: Int, txn: UUID): Option[Transaction[String]] = None
 
   override def getTransactionsFromTo(partition: Int, from: UUID, to: UUID): ListBuffer[Transaction[String]] =
     txns
@@ -64,7 +64,7 @@ class ProcessingEngineTests extends FlatSpec with Matchers {
     c.lstTransaction = Option[Transaction[String]](new Transaction(0, UUIDs.timeBased(), 1, -1))
     pe.enqueueLastTransactionFromDB(0)
     val elt = pe.getQueue().get(200, TimeUnit.MILLISECONDS)
-    elt.head.uuid shouldBe c.lstTransaction.get.getTxnUUID()
+    elt.head.uuid shouldBe c.lstTransaction.get.getTransactionUUID()
   }
 
   "enqueueLastTransactionFromDB" should "not enqueue last transaction state to Queue if it's older than we have in our database" in {
@@ -106,7 +106,7 @@ class ProcessingEngineTests extends FlatSpec with Matchers {
     pe.handleQueue(POLLING_DELAY)
     pe.enqueueLastTransactionFromDB(0)
     val elt = pe.getQueue().get(200, TimeUnit.MILLISECONDS)
-    elt.head.uuid shouldBe c.lstTransaction.get.getTxnUUID()
+    elt.head.uuid shouldBe c.lstTransaction.get.getTransactionUUID()
   }
 
 }

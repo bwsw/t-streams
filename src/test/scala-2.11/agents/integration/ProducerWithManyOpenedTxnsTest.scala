@@ -50,10 +50,11 @@ class ProducerWithManyOpenedTxnsTest extends FlatSpec with Matchers with BeforeA
     txn2.checkpoint()
     txn1.checkpoint()
 
-    assert(consumer.getTransaction.get.getAll().sorted == data1)
-    assert(consumer.getTransaction.get.getAll().sorted == data2)
-    assert(consumer.getTransaction.get.getAll().sorted == data3)
-    assert(consumer.getTransaction.isEmpty)
+    assert(consumer.getTransaction(0).get.getAll().sorted == data1)
+    assert(consumer.getTransaction(1).get.getAll().sorted == data2)
+    assert(consumer.getTransaction(2).get.getAll().sorted == data3)
+
+    (0 to 2).foreach (p => assert(consumer.getTransaction(p).isEmpty))
   }
 
   "BasicProducer.newTransaction()" should "return error if try to open more than 3 txns for 3 partitions if ProducerPolicies.errorIfOpened" in {

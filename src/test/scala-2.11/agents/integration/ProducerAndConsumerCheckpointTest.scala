@@ -27,14 +27,14 @@ class ProducerAndConsumerCheckpointTest extends FlatSpec with Matchers with Befo
     name = "test_producer",
     txnGenerator = LocalGeneratorCreator.getGen(),
     converter = stringToArrayByteConverter,
-    partitions = Set(0,1,2),
+    partitions = Set(0),
     isLowPriority = false)
 
   val consumer = f.getConsumer[String](
     name = "test_consumer",
     txnGenerator = LocalGeneratorCreator.getGen(),
     converter = arrayByteToStringConverter,
-    partitions = Set(0,1,2),
+    partitions = Set(0),
     offset = Oldest,
     isUseLastOffset = true)
 
@@ -42,7 +42,7 @@ class ProducerAndConsumerCheckpointTest extends FlatSpec with Matchers with Befo
     name = "test_consumer",
     txnGenerator = LocalGeneratorCreator.getGen(),
     converter = arrayByteToStringConverter,
-    partitions = Set(0,1,2),
+    partitions = Set(0),
     offset = Oldest,
     isUseLastOffset = true)
 
@@ -69,7 +69,7 @@ class ProducerAndConsumerCheckpointTest extends FlatSpec with Matchers with Befo
 
     consumer.start
     (0 until firstPart) foreach { _ =>
-      val txn: Transaction[String] = consumer.getTransaction.get
+      val txn: Transaction[String] = consumer.getTransaction(0).get
       val data = txn.getAll().sorted
       consumer.checkpoint()
       checkVal &= data == dataToSend
@@ -77,14 +77,14 @@ class ProducerAndConsumerCheckpointTest extends FlatSpec with Matchers with Befo
 
     consumer2.start
     (0 until secondPart) foreach { _ =>
-      val txn: Transaction[String] = consumer2.getTransaction.get
+      val txn: Transaction[String] = consumer2.getTransaction(0).get
       val data = txn.getAll().sorted
       checkVal &= data == dataToSend
     }
 
     //assert that is nothing to read
     (0 until Integer.parseInt(f.getProperty(TSF_Dictionary.Stream.PARTITIONS).toString)) foreach { _ =>
-      checkVal &= consumer2.getTransaction.isEmpty
+      checkVal &= consumer2.getTransaction(0).isEmpty
     }
 
     checkVal shouldBe true
