@@ -29,12 +29,11 @@ class SubscriberWithTwoProducersFirstCancelSecondCheckpoint extends FlatSpec wit
     setProperty(TSF_Dictionary.Consumer.DATA_PRELOAD, 10)
   it should "Integration MixIn checkpoint and cancel must be correctly processed on Subscriber " in {
 
-    val bp = ListBuffer[UUID]()
+    val bp1 = ListBuffer[UUID]()
+    val bp2 = ListBuffer[UUID]()
     var bs = ListBuffer[UUID]()
     val lp2 = new CountDownLatch(1)
     val  ls = new  CountDownLatch(1)
-    var signProd1 = true
-    var signProd2 = false
 
     val producer1 = f.getProducer[String](
       name = "test_producer1",
@@ -59,31 +58,27 @@ class SubscriberWithTwoProducersFirstCancelSecondCheckpoint extends FlatSpec wit
       callback = new Callback[String] {
         override def onEvent(consumer: TransactionOperator[String], partition: Int, uuid: UUID, count: Int): Unit = this.synchronized {
           bs.append(uuid)
-          if (bs.size == 1) {
+          if (bp1.size + bp2.size == 2) {
             ls.countDown()
           }
         }
       })
     val t1 = new Thread(new Runnable {
       override def run(): Unit = {
-
         val t = producer1.newTransaction(policy = NewTransactionProducerPolicy.CheckpointIfOpened)
-        lp2.countDown()
-          bp.append(t.getTransactionUUID())
+          lp2.countDown()
+          bp1.append(t.getTransactionUUID())
           t.send("test")
           t.cancel()
-          signProd1= false
       }
     })
     val t2 = new Thread(new Runnable {
       override def run(): Unit = {
-
         lp2.await()
         val t = producer2.newTransaction(policy = NewTransactionProducerPolicy.CheckpointIfOpened)
-          bp.append(t.getTransactionUUID())
+          bp2.append(t.getTransactionUUID())
           t.send("test")
           t.checkpoint()
-          signProd2 = true
       }
     })
     s.start()
@@ -93,13 +88,14 @@ class SubscriberWithTwoProducersFirstCancelSecondCheckpoint extends FlatSpec wit
     t1.join()
     t2.join()
 
+    ls.await(10, TimeUnit.SECONDS)
+
     producer1.stop()
     producer2.stop()
     s.stop()
 
-    bs.size shouldBe 1
-    signProd1 shouldBe false
-    signProd2 shouldBe true
+    bs.size shouldBe 1 // Adopted by only one and it is from second
+    bp2 shouldBe bs
   }
   override def afterAll(): Unit = {
     onAfterAll()
