@@ -161,7 +161,7 @@ class Consumer[T](val name: String,
       transactionBuffer(partition).dequeue()
       return Some(txn)
     } else {
-      val updatedTxnOpt: Option[Transaction[T]] = updateTransactionInfoFromDB(partition, txn.getTxnUUID())
+      val updatedTxnOpt: Option[Transaction[T]] = loadTransactionFromDB(partition, txn.getTxnUUID())
       if (updatedTxnOpt.isDefined) {
         val updatedTxn = updatedTxnOpt.get
 
@@ -276,7 +276,7 @@ class Consumer[T](val name: String,
         s" name : $name, streamName : ${stream.getName}, streamPartitions : ${stream.getPartitions}")
     }
 
-    val txnOpt = updateTransactionInfoFromDB(partition, uuid)
+    val txnOpt = loadTransactionFromDB(partition, uuid)
     if (txnOpt.isDefined) {
       val txn = txnOpt.get
       if (txn.getCount() != -1) {
@@ -317,15 +317,12 @@ class Consumer[T](val name: String,
     * @param txn Transaction to update
     * @return Updated transaction
     */
-  def updateTransactionInfoFromDB(partition: Int, txn: UUID): Option[Transaction[T]] = this.synchronized {
+  def loadTransactionFromDB(partition: Int, txn: UUID): Option[Transaction[T]] = this.synchronized {
     if(!isStarted.get())
       throw new IllegalStateException("Consumer is not started. Start consumer first.")
 
     val data: Option[(Int, Int)] =
-      stream.metadataStorage.commitEntity.getTransactionItemCountAndTTL(
-        stream.getName,
-        partition,
-        txn)
+      stream.metadataStorage.commitEntity.getTransactionItemCountAndTTL(stream.getName, partition, txn)
 
     if (data.isDefined) {
       val (cnt, ttl) = data.get
