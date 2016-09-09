@@ -163,7 +163,7 @@ class Consumer[T](val name: String,
     if(txnUpdatedOpt.isDefined) {
       updateOffsets(partition, txnUpdatedOpt.get.getTransactionUUID())
       transactionBuffer(partition).dequeue()
-      return Some(txn)
+      return txnUpdatedOpt
     }
 
     return None
