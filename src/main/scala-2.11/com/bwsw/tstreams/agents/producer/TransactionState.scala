@@ -5,9 +5,8 @@ import java.util.concurrent.{CountDownLatch, TimeUnit}
 
 import com.bwsw.tstreams.common.ResettableCountDownLatch
 
-class MaterializationException(s: String) extends IllegalStateException(s: String) {
-
-}
+class MaterializationException(s: String = "")
+  extends IllegalStateException(s: String)
 
 /**
   * Stores state of transaction
@@ -31,9 +30,8 @@ class TransactionState {
     */
   val materialized = new AtomicBoolean(false)
 
-  //TODO clarify comment
   /**
-    * Makes transaction materialized (which means that
+    * Makes transaction materialized (which means that the transaction now can be updated, cancelled, checkpointed)
     */
   def makeMaterialized() = {
     if(materialized.getAndSet(true))
