@@ -14,7 +14,7 @@ import testutils.{LocalGeneratorCreator, TestUtils}
 /**
   * Created by Ivan Kudryavtsev on 24.08.16.
   */
-class SubscriberBasicFunctions extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils  {
+class SubscriberBasicFunctionsTests extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils  {
   f.setProperty(TSF_Dictionary.Stream.NAME,"test_stream").
     setProperty(TSF_Dictionary.Stream.PARTITIONS,3).
     setProperty(TSF_Dictionary.Stream.TTL, 60 * 10).
