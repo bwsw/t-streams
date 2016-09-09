@@ -16,7 +16,7 @@ import testutils.{LocalGeneratorCreator, TestUtils}
 import scala.collection.mutable.ListBuffer
 
 
-class SubscriberWithTwoProducersFirstCancelSecondCheckpoint extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils{
+class SubscriberWithTwoProducersFirstCancelSecondCheckpointTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils{
   f.setProperty(TSF_Dictionary.Stream.NAME, "test_stream").
     setProperty(TSF_Dictionary.Stream.PARTITIONS, 3).
     setProperty(TSF_Dictionary.Stream.TTL, 60 * 10).
@@ -31,7 +31,8 @@ class SubscriberWithTwoProducersFirstCancelSecondCheckpoint extends FlatSpec wit
 
     val bp1 = ListBuffer[UUID]()
     val bp2 = ListBuffer[UUID]()
-    var bs = ListBuffer[UUID]()
+    val bs = ListBuffer[UUID]()
+
     val lp2 = new CountDownLatch(1)
     val  ls = new  CountDownLatch(1)
 
@@ -49,7 +50,7 @@ class SubscriberWithTwoProducersFirstCancelSecondCheckpoint extends FlatSpec wit
       partitions = Set(0),
       isLowPriority = false)
 
-    val s = f.getSubscriber[String](name = "ss+2",
+    val subscriber = f.getSubscriber[String](name = "ss+2",
       txnGenerator = LocalGeneratorCreator.getGen(),
       converter = arrayByteToStringConverter,
       partitions = Set(0),
@@ -58,11 +59,10 @@ class SubscriberWithTwoProducersFirstCancelSecondCheckpoint extends FlatSpec wit
       callback = new Callback[String] {
         override def onEvent(consumer: TransactionOperator[String], partition: Int, uuid: UUID, count: Int): Unit = this.synchronized {
           bs.append(uuid)
-          if (bp1.size + bp2.size == 2) {
-            ls.countDown()
-          }
+          ls.countDown()
         }
       })
+
     val t1 = new Thread(new Runnable {
       override def run(): Unit = {
         val t = producer1.newTransaction(policy = NewTransactionProducerPolicy.CheckpointIfOpened)
@@ -72,6 +72,7 @@ class SubscriberWithTwoProducersFirstCancelSecondCheckpoint extends FlatSpec wit
           t.cancel()
       }
     })
+
     val t2 = new Thread(new Runnable {
       override def run(): Unit = {
         lp2.await()
@@ -81,7 +82,9 @@ class SubscriberWithTwoProducersFirstCancelSecondCheckpoint extends FlatSpec wit
           t.checkpoint()
       }
     })
-    s.start()
+
+    subscriber.start()
+
     t1.start()
     t2.start()
 
@@ -92,11 +95,13 @@ class SubscriberWithTwoProducersFirstCancelSecondCheckpoint extends FlatSpec wit
 
     producer1.stop()
     producer2.stop()
-    s.stop()
+
+    subscriber.stop()
 
     bs.size shouldBe 1 // Adopted by only one and it is from second
-    bp2 shouldBe bs
+    bp2.head shouldBe bs.head
   }
+
   override def afterAll(): Unit = {
     onAfterAll()
   }
