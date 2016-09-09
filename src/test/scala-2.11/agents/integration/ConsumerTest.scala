@@ -56,7 +56,7 @@ class ConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll with Te
 
     val consumedTxn = consumer.getTransactionById(1, txnUuid).get
     checkVal = consumedTxn.getPartition == txn.getPartition
-    checkVal = consumedTxn.getTxnUUID == txnUuid
+    checkVal = consumedTxn.getTransactionUUID == txnUuid
     checkVal = consumedTxn.getAll().sorted == data
 
     checkVal shouldEqual true
@@ -77,7 +77,7 @@ class ConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll with Te
     }
     val retrievedTxnOpt: Option[Transaction[String]] = consumer.getLastTransaction(partition = 1)
     val retrievedTxn = retrievedTxnOpt.get
-    retrievedTxn.getTxnUUID shouldEqual txn
+    retrievedTxn.getTransactionUUID shouldEqual txn
   }
 
   "consumer.getTransactionsFromTo" should "return all transactions if no incomplete" in {
