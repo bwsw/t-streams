@@ -181,14 +181,11 @@ class Consumer[T](val name: String,
     if(!isStarted.get())
       throw new IllegalStateException(s"Consumer ${name} is not started. Start it first.")
 
-    var curUuid = options.txnGenerator.getTimeUUID()
+    var uuid = options.txnGenerator.getTimeUUID()
     var isFinished = false
     while (!isFinished) {
 
-      val queue = stream.metadataStorage.commitEntity.getLastTransactionHelper[T](
-        stream.getName,
-        partition,
-        curUuid)
+      val queue = stream.metadataStorage.commitEntity.getLastTransactionHelper[T](stream.getName, partition, uuid)
 
       if (queue.isEmpty)
         isFinished = true
@@ -199,7 +196,7 @@ class Consumer[T](val name: String,
             txn.attach(this)
             return Option[Transaction[T]](txn)
           }
-          curUuid = txn.getTxnUUID()
+          uuid = txn.getTxnUUID()
         }
       }
     }
