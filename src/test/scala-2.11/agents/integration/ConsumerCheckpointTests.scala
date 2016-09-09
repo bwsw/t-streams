@@ -22,6 +22,9 @@ class ConsumerCheckpointTests extends FlatSpec with Matchers with BeforeAndAfter
     setProperty(TSF_Dictionary.Consumer.DATA_PRELOAD, 10)
 
   it should "handle checkpoints correctly" in {
+
+    val CONSUMER_NAME = "test_consumer"
+
     val producer = f.getProducer[String](
       name = "test_producer",
       txnGenerator = LocalGeneratorCreator.getGen(),
@@ -30,7 +33,7 @@ class ConsumerCheckpointTests extends FlatSpec with Matchers with BeforeAndAfter
       isLowPriority = false)
 
     val c1 = f.getConsumer[String](
-      name = "test_consumer",
+      name = CONSUMER_NAME,
       txnGenerator = LocalGeneratorCreator.getGen(),
       converter = arrayByteToStringConverter,
       partitions = Set(0),
@@ -38,7 +41,7 @@ class ConsumerCheckpointTests extends FlatSpec with Matchers with BeforeAndAfter
       isUseLastOffset = false)
 
     val c2 = f.getConsumer[String](
-      name = "test_consumer",
+      name = CONSUMER_NAME,
       txnGenerator = LocalGeneratorCreator.getGen(),
       converter = arrayByteToStringConverter,
       partitions = Set(0),
