@@ -4,7 +4,7 @@ import java.util.UUID
 import java.util.concurrent.CountDownLatch
 
 import com.bwsw.tstreams.agents.consumer.Offset.Newest
-import com.bwsw.tstreams.agents.consumer.TransactionOperator
+import com.bwsw.tstreams.agents.consumer.{Transaction, TransactionOperator}
 import com.bwsw.tstreams.agents.consumer.subscriber.Callback
 import com.bwsw.tstreams.agents.producer.NewTransactionProducerPolicy
 import com.bwsw.tstreams.env.TSF_Dictionary
@@ -61,8 +61,8 @@ it should "handle all transactions produced by two different producers, the firs
     offset = Newest,
     isUseLastOffset = true,
     callback = new Callback[String] {
-      override def onEvent(consumer: TransactionOperator[String], partition: Int, uuid: UUID, count: Int): Unit = this.synchronized {
-        bs.append(uuid)
+      override def onEvent(consumer: TransactionOperator[String], txn: Transaction[String]): Unit = this.synchronized {
+        bs.append(txn.getTransactionUUID())
         if(bs.size == 2) {
           ls.countDown()
         }

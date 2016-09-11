@@ -12,6 +12,7 @@ trait TransactionOperator[T] {
   def getLastTransaction(partition: Int): Option[Transaction[T]]
   def getTransactionsFromTo(partition: Int, from: UUID, to: UUID): ListBuffer[Transaction[T]]
   def getTransactionById(partition: Int, uuid: UUID): Option[Transaction[T]]
+  def buildTransactionObject(partition: Int, uuid: UUID, count: Int): Option[Transaction[T]]
   def setStreamPartitionOffset(partition: Int, uuid: UUID): Unit
   def loadTransactionFromDB(partition: Int, txn: UUID): Option[Transaction[T]]
   def checkpoint(): Unit

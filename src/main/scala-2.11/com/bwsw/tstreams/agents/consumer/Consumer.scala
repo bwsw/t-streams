@@ -4,6 +4,7 @@ import java.util.UUID
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.locks.ReentrantLock
 
+import com.bwsw.tstreams.agents.consumer.subscriber.Subscriber
 import com.bwsw.tstreams.agents.group.{CheckpointInfo, ConsumerCheckpointInfo, GroupParticipant}
 import com.bwsw.tstreams.common.UUIDComparator
 import com.bwsw.tstreams.metadata.MetadataStorage
@@ -360,5 +361,18 @@ class Consumer[T](val name: String,
     checkpointOffsets.clear()
     currentOffsets.clear()
     transactionBuffer.clear()
+  }
+
+  /**
+    * Allows to build Transaction without accessing DB
+    * @param partition
+    * @param uuid
+    * @param count
+    * @return
+    */
+  def buildTransactionObject(partition: Int, uuid: UUID, count: Int): Option[Transaction[T]] = {
+    val txn = new Transaction[T](partition, uuid, count, -1)
+    txn.attach(this)
+    Some(txn)
   }
 }
