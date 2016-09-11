@@ -3,7 +3,7 @@ package agents.subscriber
 import java.util.UUID
 import java.util.concurrent.CountDownLatch
 
-import com.bwsw.tstreams.agents.consumer.TransactionOperator
+import com.bwsw.tstreams.agents.consumer.{Transaction, TransactionOperator}
 import com.bwsw.tstreams.agents.consumer.subscriber.{Callback, TransactionFastLoader, TransactionState}
 import com.bwsw.tstreams.common.FirstFailLockableTaskExecutor
 import com.bwsw.tstreams.coordination.messages.state.TransactionStatus
@@ -163,7 +163,7 @@ class TransactionFastLoaderTests extends FlatSpec with Matchers {
       val l = new CountDownLatch(1)
       override def test(): Unit = {
         fastLoader.load[String](nextTxnState, null, new FirstFailLockableTaskExecutor("lf"), new Callback[String] {
-           override def onEvent(consumer: TransactionOperator[String], partition: Int, uuid: UUID, count: Int): Unit = {
+           override def onEvent(consumer: TransactionOperator[String], txn: Transaction[String]): Unit = {
              ctr += 1
              l.countDown()
            }
@@ -191,7 +191,7 @@ class TransactionFastLoaderTests extends FlatSpec with Matchers {
       val l = new CountDownLatch(1)
       override def test(): Unit = {
         fastLoader.load[String](nextTxnState, null, new FirstFailLockableTaskExecutor("lf"), new Callback[String] {
-          override def onEvent(consumer: TransactionOperator[String], partition: Int, uuid: UUID, count: Int): Unit = {
+          override def onEvent(consumer: TransactionOperator[String], txn: Transaction[String]): Unit = {
             ctr += 1
             if(ctr == 3)
               l.countDown()

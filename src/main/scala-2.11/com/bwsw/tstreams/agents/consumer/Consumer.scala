@@ -361,4 +361,17 @@ class Consumer[T](val name: String,
     currentOffsets.clear()
     transactionBuffer.clear()
   }
+
+  /**
+    * Allows to build Transaction without accessing DB
+    * @param partition
+    * @param uuid
+    * @param count
+    * @return
+    */
+  def buildTransactionObject(partition: Int, uuid: UUID, count: Int): Option[Transaction[T]] = {
+    val txn = new Transaction[T](partition, uuid, count, -1)
+    txn.attach(this)
+    Some(txn)
+  }
 }

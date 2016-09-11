@@ -1,16 +1,16 @@
 package agents.integration
 
 import java.util.UUID
-import java.util.concurrent.{TimeUnit, CountDownLatch}
+import java.util.concurrent.{CountDownLatch, TimeUnit}
 
 import com.bwsw.tstreams.agents.consumer.Offset.Newest
-import com.bwsw.tstreams.agents.consumer.TransactionOperator
+import com.bwsw.tstreams.agents.consumer.{Transaction, TransactionOperator}
 import com.bwsw.tstreams.agents.consumer.subscriber.Callback
 import com.bwsw.tstreams.agents.producer.NewTransactionProducerPolicy
-import com.bwsw.tstreams.converter.{StringToArrayByteConverter, ArrayByteToStringConverter}
+import com.bwsw.tstreams.converter.{ArrayByteToStringConverter, StringToArrayByteConverter}
 import com.bwsw.tstreams.env.TSF_Dictionary
 import com.bwsw.tstreams.generator.LocalTimeUUIDGenerator
-import org.scalatest.{BeforeAndAfterAll, Matchers, FlatSpec}
+import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import testutils.TestUtils
 
 import scala.util.Random
@@ -49,8 +49,7 @@ class SubscriberWithManyProcessingEnginesThreadsTest  extends FlatSpec with Matc
       offset        = Newest,                         // it will start from newest available partitions
       isUseLastOffset = false,                        // will ignore history
       callback = new Callback[String] {
-        override def onEvent(op: TransactionOperator[String], partition: Int, transactionUuid: UUID, count: Int): Unit = this.synchronized {
-          val txn = op.getTransactionById(partition, transactionUuid) // get transaction
+        override def onEvent(op: TransactionOperator[String], txn: Transaction[String]): Unit = this.synchronized {
           transactionsCounter += 1
           if (transactionsCounter % 100 == 0) {
             logger.info(s"I have read ${transactionsCounter} transactions up to now.")
