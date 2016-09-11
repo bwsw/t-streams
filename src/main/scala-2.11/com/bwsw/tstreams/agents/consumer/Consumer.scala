@@ -371,11 +371,8 @@ class Consumer[T](val name: String,
     * @return
     */
   def buildTransactionObject(partition: Int, uuid: UUID, count: Int): Option[Transaction[T]] = {
-    Subscriber.logger.info("1=1")
     val txn = new Transaction[T](partition, uuid, count, -1)
-    Subscriber.logger.info("1=2")
     txn.attach(this)
-    Subscriber.logger.info("1=3")
     Some(txn)
   }
 }
