@@ -34,6 +34,8 @@ class ProcessingEngineOperatorTestImpl extends TransactionOperator[String] {
   override def getPartitions(): Set[Int] = Set[Int](0)
 
   override def getCurrentOffset(partition: Int): UUID = UUIDs.timeBased()
+
+  override def buildTransactionObject(partition: Int, uuid: UUID, count: Int): Option[Transaction[String]] = None
 }
 
 /**
@@ -42,7 +44,7 @@ class ProcessingEngineOperatorTestImpl extends TransactionOperator[String] {
 class ProcessingEngineTests extends FlatSpec with Matchers {
 
   val cb = new Callback[String] {
-    override def onEvent(consumer: TransactionOperator[String], partition: Int, uuid: UUID, count: Int): Unit = {}
+    override def onEvent(consumer: TransactionOperator[String], txn: Transaction[String]): Unit = {}
   }
   val qb = new QueueBuilder.InMemory()
 
@@ -91,7 +93,7 @@ class ProcessingEngineTests extends FlatSpec with Matchers {
     c.lstTransaction = Option[Transaction[String]](new Transaction(0, UUIDs.timeBased(), 1, -1))
     pe.enqueueLastTransactionFromDB(0)
     val act1 = pe.getLastPartitionActivity(0)
-    pe.handleQueue(300)
+    pe.handleQueue(500)
     val act2 = pe.getLastPartitionActivity(0)
     act2 - act1 > 0 shouldBe true
   }

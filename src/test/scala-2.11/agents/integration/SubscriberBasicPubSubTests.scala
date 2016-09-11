@@ -2,12 +2,12 @@ package agents.integration
 
 import java.util.UUID
 
-import com.bwsw.tstreams.agents.consumer.Offset.{Oldest,Newest}
-import com.bwsw.tstreams.agents.consumer.TransactionOperator
+import com.bwsw.tstreams.agents.consumer.Offset.{Newest, Oldest}
+import com.bwsw.tstreams.agents.consumer.{Transaction, TransactionOperator}
 import com.bwsw.tstreams.agents.consumer.subscriber.Callback
 import com.bwsw.tstreams.agents.producer.NewTransactionProducerPolicy
 import com.bwsw.tstreams.env.TSF_Dictionary
-import org.scalatest.{BeforeAndAfterAll, Matchers, FlatSpec}
+import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import testutils.{LocalGeneratorCreator, TestUtils}
 
 /**
@@ -40,7 +40,7 @@ class SubscriberBasicPubSubTests  extends FlatSpec with Matchers with BeforeAndA
       offset = Oldest,
       isUseLastOffset = true,
       callback = new Callback[String] {
-        override def onEvent(consumer: TransactionOperator[String], partition: Int, uuid: UUID, count: Int): Unit = this.synchronized {
+        override def onEvent(consumer: TransactionOperator[String], txn: Transaction[String]): Unit = this.synchronized {
           subTxns += 1
         }
       })
@@ -72,7 +72,7 @@ class SubscriberBasicPubSubTests  extends FlatSpec with Matchers with BeforeAndA
       offset = Newest,
       isUseLastOffset = true,
       callback = new Callback[String] {
-        override def onEvent(consumer: TransactionOperator[String], partition: Int, uuid: UUID, count: Int): Unit = this.synchronized {
+        override def onEvent(consumer: TransactionOperator[String], txn: Transaction[String]): Unit = this.synchronized {
           subTxns += 1
         }
       })

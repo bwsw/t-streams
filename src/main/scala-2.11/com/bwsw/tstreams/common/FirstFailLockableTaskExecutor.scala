@@ -42,6 +42,7 @@ class FirstFailLockableTaskExecutor(name: String, cnt: Int = 1)
       failureExc = throwable
       isFailed.set(true)
       throwable.getStackTrace.foreach(ste => logger.error(ste.toString))
+      //throw throwable
     }
   }
 

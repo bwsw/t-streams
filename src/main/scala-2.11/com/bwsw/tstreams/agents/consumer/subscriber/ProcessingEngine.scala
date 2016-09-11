@@ -128,7 +128,7 @@ object ProcessingEngine {
   type LastTransactionStateMapType = mutable.Map[Int, TransactionState]
   class CallbackTask[T](consumer: TransactionOperator[T], transactionState: TransactionState, callback: Callback[T]) extends Runnable {
     override def run(): Unit = {
-      callback.onEvent(consumer = consumer, partition = transactionState.partition, uuid = transactionState.uuid, count = transactionState.itemCount)
+      callback.onEventCall(consumer = consumer, partition = transactionState.partition, uuid = transactionState.uuid, count = transactionState.itemCount)
     }
   }
 }

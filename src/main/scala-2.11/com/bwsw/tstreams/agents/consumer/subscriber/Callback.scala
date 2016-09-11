@@ -1,6 +1,6 @@
 package com.bwsw.tstreams.agents.consumer.subscriber
 
-import com.bwsw.tstreams.agents.consumer.TransactionOperator
+import com.bwsw.tstreams.agents.consumer.{Consumer, Transaction, TransactionOperator}
 
 /**
   * Trait to implement to handle incoming messages
@@ -9,12 +9,24 @@ trait Callback[T] {
   /**
     * Callback which is called on every closed transaction
     *
-    * @param partition       partition of the incoming transaction
-    * @param uuid time uuid of the incoming transaction
     * @param consumer        associated Consumer
+    * @param transaction
     */
   def onEvent(consumer: TransactionOperator[T],
-              partition: Int,
-              uuid: java.util.UUID,
-              count: Int): Unit
+              transaction: Transaction[T]): Unit
+
+  /**
+    *
+    * @param consumer
+    * @param partition
+    * @param uuid
+    * @param count
+    */
+  def onEventCall(consumer: TransactionOperator[T],
+                  partition: Int,
+                  uuid: java.util.UUID,
+                  count: Int) = {
+    val txnOpt = consumer.buildTransactionObject(partition, uuid, count)
+    onEvent(consumer, transaction = txnOpt.get)
+  }
 }
