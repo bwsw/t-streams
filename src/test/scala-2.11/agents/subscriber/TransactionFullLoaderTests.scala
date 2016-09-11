@@ -36,7 +36,7 @@ class FullLoaderOperatorTestImpl extends TransactionOperator[String] {
 
   override def getCurrentOffset(partition: Int): UUID = UUIDs.timeBased()
 
-  override def buildTransactionObject(partition: Int, uuid: UUID, count: Int): Option[Transaction[String]] = None
+  override def buildTransactionObject(partition: Int, uuid: UUID, count: Int): Option[Transaction[String]] = Some(new Transaction[String](0, UUIDs.timeBased(), 1, -1))
 }
 
 trait FullLoaderTestContainer {

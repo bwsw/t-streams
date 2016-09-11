@@ -93,7 +93,7 @@ class ProcessingEngineTests extends FlatSpec with Matchers {
     c.lstTransaction = Option[Transaction[String]](new Transaction(0, UUIDs.timeBased(), 1, -1))
     pe.enqueueLastTransactionFromDB(0)
     val act1 = pe.getLastPartitionActivity(0)
-    pe.handleQueue(300)
+    pe.handleQueue(500)
     val act2 = pe.getLastPartitionActivity(0)
     act2 - act1 > 0 shouldBe true
   }

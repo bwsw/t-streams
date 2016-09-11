@@ -94,4 +94,8 @@ class SubscriberWithManyProcessingEnginesThreadsTest  extends FlatSpec with Matc
     transactionsCounter shouldBe TOTAL_TRANSACTIONS
   }
 
+  override def afterAll(): Unit = {
+    onAfterAll()
+  }
+
 }

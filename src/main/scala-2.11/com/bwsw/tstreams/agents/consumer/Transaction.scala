@@ -23,7 +23,7 @@ class Transaction[T](partition:  Int,
   }
 
   var consumer: Consumer[T] = null
-  def attach(c: Consumer[T]) = this.synchronized {
+  def attach(c: Consumer[T]) = {
     if(c == null)
       throw new IllegalArgumentException("Argument must be not null.")
 
