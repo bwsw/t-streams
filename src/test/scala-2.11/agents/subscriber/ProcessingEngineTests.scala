@@ -56,7 +56,7 @@ class ProcessingEngineTests extends FlatSpec with Matchers {
   "enqueueLastTransactionFromDB" should "not Enqueue last transaction state to Queue if it's not defined" in {
     val pe = new ProcessingEngine[String](new ProcessingEngineOperatorTestImpl(), Set[Int](0), qb, cb)
     pe.enqueueLastTransactionFromDB(0)
-    val elt = pe.getQueue().get(200, TimeUnit.MILLISECONDS)
+    val elt = pe.getQueue().get(500, TimeUnit.MILLISECONDS)
     elt shouldBe null
   }
 
@@ -65,7 +65,7 @@ class ProcessingEngineTests extends FlatSpec with Matchers {
     val pe = new ProcessingEngine[String](c, Set[Int](0), qb, cb)
     c.lstTransaction = Option[Transaction[String]](new Transaction(0, UUIDs.timeBased(), 1, -1))
     pe.enqueueLastTransactionFromDB(0)
-    val elt = pe.getQueue().get(200, TimeUnit.MILLISECONDS)
+    val elt = pe.getQueue().get(500, TimeUnit.MILLISECONDS)
     elt.head.uuid shouldBe c.lstTransaction.get.getTransactionUUID()
   }
 
@@ -74,7 +74,7 @@ class ProcessingEngineTests extends FlatSpec with Matchers {
     c.lstTransaction = Option[Transaction[String]](new Transaction(0, UUIDs.timeBased(), 1, -1))
     val pe = new ProcessingEngine[String](c, Set[Int](0), qb, cb)
     pe.enqueueLastTransactionFromDB(0)
-    val elt = pe.getQueue().get(200, TimeUnit.MILLISECONDS)
+    val elt = pe.getQueue().get(500, TimeUnit.MILLISECONDS)
     elt shouldBe null
   }
 
@@ -82,7 +82,7 @@ class ProcessingEngineTests extends FlatSpec with Matchers {
     val c = new ProcessingEngineOperatorTestImpl()
     val pe = new ProcessingEngine[String](c, Set[Int](0), qb, cb)
     val act1 = pe.getLastPartitionActivity(0)
-    pe.handleQueue(300)
+    pe.handleQueue(500)
     val act2 = pe.getLastPartitionActivity(0)
     act1 shouldBe act2
   }
@@ -107,7 +107,7 @@ class ProcessingEngineTests extends FlatSpec with Matchers {
     Thread.sleep(1)
     pe.handleQueue(POLLING_DELAY)
     pe.enqueueLastTransactionFromDB(0)
-    val elt = pe.getQueue().get(200, TimeUnit.MILLISECONDS)
+    val elt = pe.getQueue().get(500, TimeUnit.MILLISECONDS)
     elt.head.uuid shouldBe c.lstTransaction.get.getTransactionUUID()
   }
 

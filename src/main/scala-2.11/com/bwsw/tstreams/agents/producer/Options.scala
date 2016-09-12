@@ -66,5 +66,7 @@ class CoordinationOptions(val zkHosts: List[InetSocketAddress],
                           val zkConnectionTimeout: Int,
                           val isLowPriorityToBeMaster: Boolean,
                           val transport: TcpTransport,
-                          val threadPoolAmount: Int = -1,
-                          val threadPoolPublisherThreadsAmount: Int = 1)
+                          val threadPoolAmount: Int,
+                          val threadPoolPublisherThreadsAmount: Int,
+                          val partitionRedistributionDelay: Int,
+                          val isMasterBootstrapModeFull: Boolean)
