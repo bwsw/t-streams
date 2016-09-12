@@ -57,7 +57,8 @@ class PeerAgent(agentsStateManager: AgentsStateDBService,
                 threadPoolAmount:                 Int,
                 threadPoolPublisherThreadsAmount: Int,
                 partitionRedistributionDelay:     Int,
-                isMasterBootstrapModeFull:        Boolean) {
+                isMasterBootstrapModeFull:        Boolean,
+                isMasterProcessVote:              Boolean) {
 
   val myInetAddress: String = producer.producerOptions.coordinationOptions.transport.getInetAddress()
   /**
@@ -132,7 +133,8 @@ class PeerAgent(agentsStateManager: AgentsStateDBService,
       }
     }
   })
-  partitionWeightDistributionThread.start()
+  if(isMasterProcessVote)
+    partitionWeightDistributionThread.start()
 
 
   /**
@@ -370,7 +372,10 @@ class PeerAgent(agentsStateManager: AgentsStateDBService,
     PeerAgent.logger.info(s"P2PAgent of ${producer.name} is shutting down.")
     isRunning.set(false)
     transport.stopServer()
-    partitionWeightDistributionThread.join()
+
+    if(isMasterProcessVote)
+      partitionWeightDistributionThread.join()
+
     zkConnectionValidator.join()
     //to avoid infinite polling block
     executorGraphs.foreach(g => g._2.shutdown())

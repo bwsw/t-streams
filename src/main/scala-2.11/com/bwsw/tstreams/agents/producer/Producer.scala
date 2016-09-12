@@ -103,7 +103,8 @@ class Producer[T](var name: String,
     threadPoolAmount                = threadPoolSize,
     threadPoolPublisherThreadsAmount  = pcs.threadPoolPublisherThreadsAmount,
     partitionRedistributionDelay      = pcs.partitionRedistributionDelay,
-    isMasterBootstrapModeFull         = pcs.isMasterBootstrapModeFull)
+    isMasterBootstrapModeFull         = pcs.isMasterBootstrapModeFull,
+    isMasterProcessVote               = pcs.isMasterProcessVote)
 
   // this client is used to find new subscribers
   val subscriberNotifier = new BroadcastCommunicationClient(agentsStateManager, usedPartitions = producerOptions.writePolicy.getUsedPartitions())
