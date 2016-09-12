@@ -48,14 +48,17 @@ object PeerAgent {
  * @param transport Transport to provide interaction
  */
 class PeerAgent(agentsStateManager: AgentsStateDBService,
-                zkService:                ZookeeperDLMService,
-                zkRetriesAmount:          Int,
-                producer:                 Producer[_],
-                usedPartitions:           List[Int],
-                isLowPriorityToBeMaster:  Boolean,
-                transport:                TcpTransport,
-                threadPoolAmount:         Int,
-                threadPoolPublisherThreadsAmount: Int) {
+                zkService:                        ZookeeperDLMService,
+                zkRetriesAmount:                  Int,
+                producer:                         Producer[_],
+                usedPartitions:                   List[Int],
+                isLowPriorityToBeMaster:          Boolean,
+                transport:                        TcpTransport,
+                threadPoolAmount:                 Int,
+                threadPoolPublisherThreadsAmount: Int,
+                partitionRedistributionDelay:     Int,
+                isMasterBootstrapModeFull:        Boolean) {
+
   val myInetAddress: String = producer.producerOptions.coordinationOptions.transport.getInetAddress()
   /**
     * locks
@@ -114,7 +117,7 @@ class PeerAgent(agentsStateManager: AgentsStateDBService,
   // fill initial sequential counters
   usedPartitions foreach { p =>sequentialIds += (p -> new AtomicLong(0)) }
 
-  agentsStateManager.bootstrap(isLowPriorityToBeMaster, uniqueAgentId)
+  agentsStateManager.bootstrap(isLowPriorityToBeMaster, uniqueAgentId, isMasterBootstrapModeFull)
 
 
   partitionWeightDistributionThread = new Thread(new Runnable {
@@ -122,15 +125,13 @@ class PeerAgent(agentsStateManager: AgentsStateDBService,
       val pq = usedPartitions
       val it = pq.iterator
       while (isRunning.get() && it.hasNext) {
+        Thread.sleep(partitionRedistributionDelay)
         val itm = it.next
         updateMaster(itm, init = true)
-        // TODO: Fix it.
-        Thread.sleep(1000)
         PeerAgent.logger.info(s"Update master request for partition ${itm} is completed.")
       }
     }
   })
-
   partitionWeightDistributionThread.start()
 
 
