@@ -32,24 +32,22 @@ class BroadcastCommunicationClient(agentsStateManager: AgentsStateDBService,
     * init itself
     */
   def initInternal(): Unit = {
-    LockUtil.withZkLockOrDieDo[Unit](agentsStateManager.getDLM().getLock(ZookeeperDLMService.WATCHER_LOCK), (100, TimeUnit.SECONDS), Some(ZookeeperDLMService.logger), () => {
-      usedPartitions foreach { p =>
-        partitionSubscribers
-          .put(p, (Set[String]().empty, new CommunicationClient(10, 1, 0)))
-        val watcher = new Watcher {
-          override def process(event: WatchedEvent): Unit = {
-            val wo = this
-            ZookeeperDLMService.executor.submit(new Runnable {
-              override def run(): Unit = {
-                updateSubscribers(p)
-                agentsStateManager.setSubscriberStateWatcher(p, wo)
-              }
-            })
-          }
+    usedPartitions foreach { p =>
+      partitionSubscribers
+        .put(p, (Set[String]().empty, new CommunicationClient(10, 1, 0)))
+      val watcher = new Watcher {
+        override def process(event: WatchedEvent): Unit = {
+          val wo = this
+          ZookeeperDLMService.executor.submit(new Runnable {
+            override def run(): Unit = {
+              updateSubscribers(p)
+              agentsStateManager.setSubscriberStateWatcher(p, wo)
+            }
+          })
         }
-        watcher.process(null)
       }
-    })
+      watcher.process(null)
+    }
   }
 
   /**
