@@ -31,7 +31,7 @@ class BroadcastCommunicationClient(agentsStateManager: AgentsStateDBService,
     * init itself
     */
   def initInternal(): Unit = {
-      usedPartitions foreach { p =>
+    usedPartitions foreach { p =>
 
       partitionSubscribers
         .put(p,(Set[String]().empty, new CommunicationClient(10,1,0)))
