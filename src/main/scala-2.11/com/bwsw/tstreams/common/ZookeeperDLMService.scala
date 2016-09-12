@@ -80,16 +80,14 @@ class ZookeeperDLMService(prefix: String, zkHosts: List[InetSocketAddress], zkSe
   def create[T](path: String, data: T, createMode: CreateMode) = this.synchronized {
     val serialized = ZookeeperDLMService.serializer.serialize(data)
     val initPath = java.nio.file.Paths.get(prefix,path).toFile.getParentFile().getPath()
-    LockUtil.withZkLockOrDieDo[Unit](getLock(ZookeeperDLMService.CREATE_PATH_LOCK), (100, TimeUnit.SECONDS), Some(ZookeeperDLMService.logger), () => {
-      if (zkClient.exists(initPath, null) == null)
-        createPathRecursive(initPath, CreateMode.PERSISTENT)
-      val p = java.nio.file.Paths.get(prefix, path).toString
-      if (zkClient.exists(p, null) == null)
-        zkClient.create(p, serialized.getBytes, Ids.OPEN_ACL_UNSAFE, createMode)
-      else {
-        throw new IllegalStateException(s"Requested path ${p} already exists.")
-      }
-    })
+    if (zkClient.exists(initPath, null) == null)
+      createPathRecursive(initPath, CreateMode.PERSISTENT)
+    val p = java.nio.file.Paths.get(prefix, path).toString
+    if (zkClient.exists(p, null) == null)
+      zkClient.create(p, serialized.getBytes, Ids.OPEN_ACL_UNSAFE, createMode)
+    else {
+      throw new IllegalStateException(s"Requested path ${p} already exists.")
+    }
   }
 
   /**
@@ -105,11 +103,9 @@ class ZookeeperDLMService(prefix: String, zkHosts: List[InetSocketAddress], zkSe
     */
   def setWatcher(path: String, watcher: Watcher): Unit = this.synchronized {
     val p = java.nio.file.Paths.get(prefix, path).toString
-    LockUtil.withZkLockOrDieDo[Unit](getLock(ZookeeperDLMService.WATCHER_LOCK), (100, TimeUnit.SECONDS), Some(ZookeeperDLMService.logger), () => {
-      if (zkClient.exists(p, null) == null)
-        createPathRecursive(p, CreateMode.PERSISTENT)
-      zkClient.getData(p, watcher, null)
-    })
+    if (zkClient.exists(p, null) == null)
+      createPathRecursive(p, CreateMode.PERSISTENT)
+    zkClient.getData(p, watcher, null)
   }
 
   /**
