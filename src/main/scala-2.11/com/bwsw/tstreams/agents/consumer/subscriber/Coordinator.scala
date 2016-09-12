@@ -71,11 +71,12 @@ class Coordinator() {
         } catch {
           case e: KeeperException =>
         }
-
         dlm.create(getSubscriberMembershipPath(p), agentAddress, CreateMode.EPHEMERAL)
-        dlm.notify(getSubscriberEventPath(p))
       })
     })
+
+    partitions foreach (p => dlm.notify(getSubscriberEventPath(p)))
+
   }
 
   private def getSubscriberEventPath(p: Int) = s"/subscribers/event/$stream/$p"

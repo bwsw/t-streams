@@ -304,9 +304,10 @@ class AgentsStateDBService(dlm: ZookeeperDLMService,
     LockUtil.withZkLockOrDieDo[T](dlm.getLock(getStreamLockPath()), (100, TimeUnit.SECONDS), Some(PeerAgent.logger), f)
   }
 
-  def setSubscriberStateWatcher(partition: Int, watcher: Watcher) = {
-    dlm.setWatcher(getSubscribersEventPath(partition), watcher)
-  }
+  def setSubscriberStateWatcher(partition: Int, watcher: Watcher) =
+    LockUtil.withZkLockOrDieDo[Unit](dlm.getLock(ZookeeperDLMService.WATCHER_LOCK), (100, TimeUnit.SECONDS), Some(ZookeeperDLMService.logger), () => {
+      dlm.setWatcher(getSubscribersEventPath(partition), watcher)
+    })
 
   def getPartitionSubscribers(partition: Int) = {
     val subscribersPathOpt = dlm.getAllSubNodesData[String](getSubscribersDataPath(partition))
