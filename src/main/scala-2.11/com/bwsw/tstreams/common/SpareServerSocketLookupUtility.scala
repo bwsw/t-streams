@@ -3,6 +3,8 @@ package com.bwsw.tstreams.common
 import java.io.IOException
 import java.net.{InetAddress, ServerSocket}
 
+import scala.util.Random
+
 /**
   * Created by Ivan Kudryavtsev on 05.09.16.
   */
@@ -25,6 +27,6 @@ object SpareServerSocketLookupUtility {
   }
 
   def findSparePort(hostOrIp: String, fromPort: Int, toPort: Int): Option[Int] = synchronized {
-    (fromPort to toPort).find(port => checkIfAvailable(hostOrIp, port))
+    Random.shuffle(fromPort to toPort).find(port => checkIfAvailable(hostOrIp, port))
   }
 }
