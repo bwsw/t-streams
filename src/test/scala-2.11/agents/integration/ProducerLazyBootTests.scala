@@ -28,7 +28,7 @@ class ProducerLazyBootTests extends FlatSpec with Matchers with BeforeAndAfterAl
     .setProperty(TSF_Dictionary.Coordination.PARTITION_REDISTRIBUTION_DELAY, 5000)
 
 
-  it should "distribute partitions in a right way" in {
+  it should "distribute partitions in a right way with lazy mode" in {
     val producer1 = f.getProducer[String](
       name = "test_producer",
       txnGenerator = LocalGeneratorCreator.getGen(),
@@ -59,6 +59,67 @@ class ProducerLazyBootTests extends FlatSpec with Matchers with BeforeAndAfterAl
     producer1.isMeAMasterOfPartition(1) shouldBe true
 
     producer1.stop()
+
+  }
+
+  it should "become a master if lazy+vote" in {
+    f.setProperty(TSF_Dictionary.Producer.MASTER_BOOTSTRAP_MODE, TSF_Dictionary.Producer.Consts.MASTER_BOOTSTRAP_MODE_LAZY_VOTE)
+      .setProperty(TSF_Dictionary.Coordination.PARTITION_REDISTRIBUTION_DELAY, 1000)
+
+    val producer = f.getProducer[String](
+      name = "test_producer",
+      txnGenerator = LocalGeneratorCreator.getGen(),
+      converter = stringToArrayByteConverter,
+      partitions = (0 until ALL_PARTITIONS).toSet,
+      isLowPriority = false)
+
+    Thread.sleep(3000)
+
+    producer.isMeAMasterOfPartition(0) shouldBe true
+    producer.isMeAMasterOfPartition(1) shouldBe true
+
+    producer.stop()
+
+  }
+
+  it should "not become a master if lazy" in {
+    f.setProperty(TSF_Dictionary.Producer.MASTER_BOOTSTRAP_MODE, TSF_Dictionary.Producer.Consts.MASTER_BOOTSTRAP_MODE_LAZY)
+      .setProperty(TSF_Dictionary.Coordination.PARTITION_REDISTRIBUTION_DELAY, 1000)
+
+    val producer = f.getProducer[String](
+      name = "test_producer",
+      txnGenerator = LocalGeneratorCreator.getGen(),
+      converter = stringToArrayByteConverter,
+      partitions = (0 until ALL_PARTITIONS).toSet,
+      isLowPriority = false)
+
+    Thread.sleep(3000)
+
+    producer.isMeAMasterOfPartition(0) shouldBe false
+    producer.isMeAMasterOfPartition(1) shouldBe false
+
+    producer.stop()
+
+  }
+
+
+  it should "become a master if lazy and does transaction" in {
+    f.setProperty(TSF_Dictionary.Producer.MASTER_BOOTSTRAP_MODE, TSF_Dictionary.Producer.Consts.MASTER_BOOTSTRAP_MODE_LAZY)
+      .setProperty(TSF_Dictionary.Coordination.PARTITION_REDISTRIBUTION_DELAY, 1000)
+
+    val producer = f.getProducer[String](
+      name = "test_producer",
+      txnGenerator = LocalGeneratorCreator.getGen(),
+      converter = stringToArrayByteConverter,
+      partitions = (0 until ALL_PARTITIONS).toSet,
+      isLowPriority = false)
+
+    producer.newTransaction(NewTransactionProducerPolicy.CheckpointIfOpened, 0)
+    producer.isMeAMasterOfPartition(0) shouldBe true
+    producer.newTransaction(NewTransactionProducerPolicy.CheckpointIfOpened, 1)
+    producer.isMeAMasterOfPartition(1) shouldBe true
+
+    producer.stop()
 
   }
 
