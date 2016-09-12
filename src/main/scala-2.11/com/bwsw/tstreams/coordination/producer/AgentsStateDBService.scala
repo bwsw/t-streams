@@ -86,7 +86,7 @@ class AgentsStateDBService(dlm: ZookeeperDLMService,
     * @param isLowPriorityToBeMaster
     * @param uniqueAgentId
     */
-  def bootstrap(isLowPriorityToBeMaster: Boolean, uniqueAgentId: Int) = this.synchronized {
+  def bootstrap(isLowPriorityToBeMaster: Boolean, uniqueAgentId: Int, isFull: Boolean) = this.synchronized {
     agentID = uniqueAgentId
     // save initial records to zk
     LockUtil.withZkLockOrDieDo[Unit](dlm.getLock(ZookeeperDLMService.CREATE_PATH_LOCK), (100, TimeUnit.SECONDS), Some(ZookeeperDLMService.logger), () => {
@@ -103,7 +103,8 @@ class AgentsStateDBService(dlm: ZookeeperDLMService,
 
     removeLastSessionArtifacts()
     // assign me as a master on partitions which don't have master yet
-    bootstrapBrokenPartitionsMasters()
+    if(isFull)
+      bootstrapBrokenPartitionsMasters()
   }
 
   def bootstrapBrokenPartitionsMasters(): Unit = {

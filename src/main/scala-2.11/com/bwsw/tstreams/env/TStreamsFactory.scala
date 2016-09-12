@@ -238,6 +238,11 @@ object TSF_Dictionary {
       * ZK connection timeout
       */
     val CONNECTION_TIMEOUT = "coordination.connection-timeout"
+
+    /**
+      * partition redistribution delay
+      */
+    val PARTITION_REDISTRIBUTION_DELAY  = "coordination.partition-redistribution-delay"
   }
 
   /**
@@ -260,6 +265,7 @@ object TSF_Dictionary {
       * random string description
       */
     val DESCRIPTION = "stream.description"
+
   }
 
   /**
@@ -300,6 +306,15 @@ object TSF_Dictionary {
       */
     val TRANSPORT_RETRY_DELAY = "producer.transport-retry-delay"
 
+    /**
+      * Lazy bootstrap or not
+      */
+    val MASTER_BOOTSTRAP_MODE = "producer.master-bootstrap-mode"
+
+    object Consts {
+      val MASTER_BOOTSTRAP_MODE_FULL = "full"
+      val MASTER_BOOTSTRAP_MODE_LAZY = "lazy"
+    }
 
     //TODO: fix internals transport->master
 
@@ -474,6 +489,12 @@ class TStreamsFactory() {
   val Coordination_connection_timeout_max = 10
   propertyMap += (TSF_Dictionary.Coordination.CONNECTION_TIMEOUT -> Coordination_connection_timeout_default)
 
+  val Coordination_partition_redistribution_delay_default = 2000
+  val Coordination_partition_redistribution_delay_min = 1000
+  val Coordination_partition_redistribution_delay_max = 100000
+  propertyMap += (TSF_Dictionary.Coordination.PARTITION_REDISTRIBUTION_DELAY -> Coordination_partition_redistribution_delay_default)
+
+
   // stream scope
   propertyMap += (TSF_Dictionary.Stream.NAME -> "test")
 
@@ -534,6 +555,7 @@ class TStreamsFactory() {
 
   propertyMap += (TSF_Dictionary.Producer.THREAD_POOL_PUBLISHER_TREADS_AMOUNT -> Producer_thread_pool_publisher_threads_amount_default)
 
+  propertyMap += (TSF_Dictionary.Producer.MASTER_BOOTSTRAP_MODE -> TSF_Dictionary.Producer.Consts.MASTER_BOOTSTRAP_MODE_FULL)
 
   // consumer scope
   val Consumer_transaction_preload_default = 10
@@ -873,6 +895,9 @@ class TStreamsFactory() {
     pAssertIntRange(pAsInt(TSF_Dictionary.Coordination.CONNECTION_TIMEOUT, Coordination_connection_timeout_default),
       Coordination_connection_timeout_min, Coordination_connection_timeout_max)
 
+    pAssertIntRange(pAsInt(TSF_Dictionary.Coordination.PARTITION_REDISTRIBUTION_DELAY, Coordination_partition_redistribution_delay_default),
+      Coordination_partition_redistribution_delay_min, Coordination_partition_redistribution_delay_max)
+
     pAssertIntRange(pAsInt(TSF_Dictionary.Producer.THREAD_POOL, Producer_thread_pool_default), Producer_thread_pool_min, Producer_thread_pool_max)
 
     pAssertIntRange(pAsInt(TSF_Dictionary.Producer.THREAD_POOL_PUBLISHER_TREADS_AMOUNT, Producer_thread_pool_publisher_threads_amount_default),
@@ -884,6 +909,13 @@ class TStreamsFactory() {
       pAsInt(TSF_Dictionary.Producer.TRANSPORT_RETRY_COUNT, Producer_transport_retry_count_default),
       pAsInt(TSF_Dictionary.Producer.TRANSPORT_RETRY_DELAY, Producer_transport_retry_delay_default) * 1000)
 
+    val isMasterBootstrapModeFull =
+      if (pAsString(TSF_Dictionary.Producer.MASTER_BOOTSTRAP_MODE) == TSF_Dictionary.Producer.Consts.MASTER_BOOTSTRAP_MODE_FULL)
+        true
+      else
+        false
+
+
     val cao = new CoordinationOptions(
       zkHosts                           = NetworkUtil.getInetSocketAddressCompatibleHostList(pAsString(TSF_Dictionary.Coordination.ENDPOINTS)),
       zkRootPath                        = pAsString(TSF_Dictionary.Coordination.ROOT),
@@ -892,7 +924,9 @@ class TStreamsFactory() {
       isLowPriorityToBeMaster           = isLowPriority,
       transport                         = transport,
       threadPoolAmount                  = pAsInt(TSF_Dictionary.Producer.THREAD_POOL, Producer_thread_pool_default),
-      threadPoolPublisherThreadsAmount  = pAsInt(TSF_Dictionary.Producer.THREAD_POOL_PUBLISHER_TREADS_AMOUNT, Producer_thread_pool_publisher_threads_amount_default))
+      threadPoolPublisherThreadsAmount  = pAsInt(TSF_Dictionary.Producer.THREAD_POOL_PUBLISHER_TREADS_AMOUNT, Producer_thread_pool_publisher_threads_amount_default),
+      partitionRedistributionDelay      = pAsInt(TSF_Dictionary.Coordination.PARTITION_REDISTRIBUTION_DELAY, Coordination_partition_redistribution_delay_default),
+      isMasterBootstrapModeFull          = isMasterBootstrapModeFull)
 
 
     var writePolicy: AbstractPolicy     = null
