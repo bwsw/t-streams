@@ -314,6 +314,7 @@ object TSF_Dictionary {
     object Consts {
       val MASTER_BOOTSTRAP_MODE_FULL = "full"
       val MASTER_BOOTSTRAP_MODE_LAZY = "lazy"
+      val MASTER_BOOTSTRAP_MODE_LAZY_VOTE = "lazy+vote"
     }
 
     //TODO: fix internals transport->master
@@ -915,6 +916,17 @@ class TStreamsFactory() {
       else
         false
 
+    val isMasterProcessVote =
+      if(isMasterBootstrapModeFull)
+        true
+      else {
+        if (pAsString(TSF_Dictionary.Producer.MASTER_BOOTSTRAP_MODE) == TSF_Dictionary.Producer.Consts.MASTER_BOOTSTRAP_MODE_LAZY_VOTE)
+          true
+        else
+          false
+      }
+
+
 
     val cao = new CoordinationOptions(
       zkHosts                           = NetworkUtil.getInetSocketAddressCompatibleHostList(pAsString(TSF_Dictionary.Coordination.ENDPOINTS)),
@@ -926,7 +938,8 @@ class TStreamsFactory() {
       threadPoolAmount                  = pAsInt(TSF_Dictionary.Producer.THREAD_POOL, Producer_thread_pool_default),
       threadPoolPublisherThreadsAmount  = pAsInt(TSF_Dictionary.Producer.THREAD_POOL_PUBLISHER_TREADS_AMOUNT, Producer_thread_pool_publisher_threads_amount_default),
       partitionRedistributionDelay      = pAsInt(TSF_Dictionary.Coordination.PARTITION_REDISTRIBUTION_DELAY, Coordination_partition_redistribution_delay_default),
-      isMasterBootstrapModeFull          = isMasterBootstrapModeFull)
+      isMasterBootstrapModeFull         = isMasterBootstrapModeFull,
+      isMasterProcessVote               = isMasterProcessVote)
 
 
     var writePolicy: AbstractPolicy     = null

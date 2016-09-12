@@ -69,4 +69,5 @@ class CoordinationOptions(val zkHosts: List[InetSocketAddress],
                           val threadPoolAmount: Int,
                           val threadPoolPublisherThreadsAmount: Int,
                           val partitionRedistributionDelay: Int,
-                          val isMasterBootstrapModeFull: Boolean)
+                          val isMasterBootstrapModeFull: Boolean,
+                          val isMasterProcessVote: Boolean)
