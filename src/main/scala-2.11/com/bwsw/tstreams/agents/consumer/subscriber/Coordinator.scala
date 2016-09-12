@@ -1,9 +1,10 @@
 package com.bwsw.tstreams.agents.consumer.subscriber
 
 import java.net.InetSocketAddress
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 
-import com.bwsw.tstreams.common.ZookeeperDLMService
+import com.bwsw.tstreams.common.{LockUtil, ZookeeperDLMService}
 import org.apache.zookeeper.{CreateMode, KeeperException}
 
 /**
@@ -54,23 +55,26 @@ class Coordinator() {
     *
     */
   private def initializeState(): Unit = {
-    partitions foreach (p => {
-      try {
-        if (!dlm.exist(getSubscriberEventPath(p)))
-          dlm.create[String](getSubscriberEventPath(p),s"$stream/$p", CreateMode.PERSISTENT)
-      } catch {
-        case e: KeeperException =>
-        case e: IllegalStateException =>
-      }
+    LockUtil.withZkLockOrDieDo[Unit](dlm.getLock(ZookeeperDLMService.CREATE_PATH_LOCK), (100, TimeUnit.SECONDS), Some(ZookeeperDLMService.logger), () => {
 
-      try {
-        dlm.delete(getSubscriberMembershipPath(p))
-      } catch {
-        case e: KeeperException =>
-      }
+      partitions foreach (p => {
+        try {
+          if (!dlm.exist(getSubscriberEventPath(p)))
+            dlm.create[String](getSubscriberEventPath(p), s"$stream/$p", CreateMode.PERSISTENT)
+        } catch {
+          case e: KeeperException =>
+          case e: IllegalStateException =>
+        }
 
-      dlm.create(getSubscriberMembershipPath(p), agentAddress, CreateMode.EPHEMERAL)
-      dlm.notify(getSubscriberEventPath(p))
+        try {
+          dlm.delete(getSubscriberMembershipPath(p))
+        } catch {
+          case e: KeeperException =>
+        }
+
+        dlm.create(getSubscriberMembershipPath(p), agentAddress, CreateMode.EPHEMERAL)
+        dlm.notify(getSubscriberEventPath(p))
+      })
     })
   }
 
