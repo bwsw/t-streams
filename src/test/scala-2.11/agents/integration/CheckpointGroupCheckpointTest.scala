@@ -8,7 +8,7 @@ import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import testutils._
 
 
-class GroupCheckpointTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
+class CheckpointGroupCheckpointTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
 
   System.setProperty("DEBUG", "true")
   System.setProperty(org.slf4j.impl.SimpleLogger.DEFAULT_LOG_LEVEL_KEY, "DEBUG");
