@@ -61,4 +61,5 @@ class TransactionFastLoader(partitions: Set[Int],
     val last = seq.last
     lastTransactionsMap(last.partition) = last
   }
+
 }

@@ -125,13 +125,6 @@ class Subscriber[T](val name: String,
     }
 
     Subscriber.logger.info(s"[INIT] Subscriber ${name}: has created TransactionBufferWorkers.")
-    Subscriber.logger.info(s"[INIT] Subscriber ${name}: is about to launch Polling tasks to executors.")
-
-    for(thID <- 0 until peWorkerThreads) {
-      processingEngines(thID).getExecutor().submit(new Poller[T](processingEngines(thID), options.pollingFrequencyDelay))
-    }
-
-    Subscriber.logger.info(s"[INIT] Subscriber ${name}: has launched Polling tasks to executors.")
     Subscriber.logger.info(s"[INIT] Subscriber ${name}: is about to launch the coordinator.")
 
     coordinator.bootstrap(
@@ -150,6 +143,13 @@ class Subscriber[T](val name: String,
     tcpServer.start()
 
     Subscriber.logger.info(s"[INIT] Subscriber ${name}: has launched the tcp server.")
+    Subscriber.logger.info(s"[INIT] Subscriber ${name}: is about to launch Polling tasks to executors.")
+
+    for(thID <- 0 until peWorkerThreads) {
+      processingEngines(thID).getExecutor().submit(new Poller[T](processingEngines(thID), options.pollingFrequencyDelay))
+    }
+
+    Subscriber.logger.info(s"[INIT] Subscriber ${name}: has launched Polling tasks to executors.")
     Subscriber.logger.info(s"[INIT] Subscriber ${name}: END INIT.")
 
   }
