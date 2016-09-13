@@ -371,10 +371,11 @@ class PeerAgent(agentsStateManager: AgentsStateDBService,
   def stop() = {
     PeerAgent.logger.info(s"P2PAgent of ${producer.name} is shutting down.")
     isRunning.set(false)
-    transport.stopServer()
 
     if(isMasterProcessVote)
       partitionWeightDistributionThread.join()
+
+    transport.stopServer()
 
     zkConnectionValidator.join()
     //to avoid infinite polling block
