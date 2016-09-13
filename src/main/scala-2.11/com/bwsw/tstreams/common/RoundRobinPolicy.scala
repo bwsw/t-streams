@@ -8,8 +8,8 @@ import com.bwsw.tstreams.streams.TStream
   * @param usedPartitions Partitions from which agent will interact
   */
 
-class RoundRobinPolicy(stream: TStream[_], usedPartitions: List[Int])
-  extends AbstractPolicy(usedPartitions = usedPartitions, stream = stream) {
+class RoundRobinPolicy(stream: TStream[_], usedPartitions: Set[Int])
+  extends AbstractPolicy(stream = stream, usedPartitions = usedPartitions) {
 
   /**
     * Get next partition to interact and update round value
@@ -17,13 +17,13 @@ class RoundRobinPolicy(stream: TStream[_], usedPartitions: List[Int])
     * @return Next partition
     */
   override def getNextPartition(): Int = this.synchronized {
-    val partition = usedPartitions(currentPos)
+    val partition = usedPartitionsList(currentPos)
 
-    if (roundPos < usedPartitions.size)
+    if (roundPos < usedPartitionsList.size)
       roundPos += 1
 
     currentPos += 1
-    currentPos %= usedPartitions.size
+    currentPos %= usedPartitionsList.size
 
     partition
   }

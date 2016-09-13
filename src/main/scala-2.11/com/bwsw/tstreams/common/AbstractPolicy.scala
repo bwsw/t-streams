@@ -6,7 +6,9 @@ import com.bwsw.tstreams.streams.TStream
   * Basic interface for policies
   * Class is not thread safe. User must create separate instance for every producer/consumer
   */
-abstract class AbstractPolicy(stream: TStream[_], usedPartitions: List[Int]) {
+abstract class AbstractPolicy(stream: TStream[_], usedPartitions: Set[Int]) {
+
+  protected val usedPartitionsList = usedPartitions.toList
 
   /**
     * Used by classes that implement policy logic to determine current partition
@@ -21,10 +23,10 @@ abstract class AbstractPolicy(stream: TStream[_], usedPartitions: List[Int]) {
   /**
     * Partitions validation
     */
-  if (usedPartitions.isEmpty)
+  if (usedPartitionsList.isEmpty)
     throw new IllegalArgumentException("UsedPartitions can't be empty")
 
-  usedPartitions.foreach { x =>
+  usedPartitionsList.foreach { x =>
     if (x < 0 || x >= stream.getPartitions)
       throw new IllegalArgumentException(s"Invalid partition:{$x} in usedPartitions")
   }
@@ -38,7 +40,7 @@ abstract class AbstractPolicy(stream: TStream[_], usedPartitions: List[Int]) {
     * @return Current partition
     */
   def getCurrentPartition(): Int = this.synchronized {
-    usedPartitions(currentPos)
+    usedPartitionsList(currentPos)
   }
 
 
@@ -54,7 +56,7 @@ abstract class AbstractPolicy(stream: TStream[_], usedPartitions: List[Int]) {
     * @return Finished round or not
     */
   def isRoundFinished(): Boolean = this.synchronized {
-    roundPos >= usedPartitions.size
+    roundPos >= usedPartitionsList.size
   }
 
   /**
@@ -63,6 +65,6 @@ abstract class AbstractPolicy(stream: TStream[_], usedPartitions: List[Int]) {
     * @return Used partitions
     */
   def getUsedPartitions(): List[Int] = this.synchronized {
-    usedPartitions
+    usedPartitionsList
   }
 }
