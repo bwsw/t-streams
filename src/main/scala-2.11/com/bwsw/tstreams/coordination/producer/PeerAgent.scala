@@ -126,10 +126,10 @@ class PeerAgent(agentsStateManager: AgentsStateDBService,
       val pq = usedPartitions
       val it = pq.iterator
       while (isRunning.get() && it.hasNext) {
-        Thread.sleep(partitionRedistributionDelay)
+        Thread.sleep(partitionRedistributionDelay * 1000)
         val itm = it.next
         updateMaster(itm, init = true)
-        PeerAgent.logger.info(s"Update master request for partition ${itm} is completed.")
+        PeerAgent.logger.info(s"Master update request for partition ${itm} is complete.")
       }
     }
   })

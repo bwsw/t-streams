@@ -490,9 +490,9 @@ class TStreamsFactory() {
   val Coordination_connection_timeout_max = 10
   propertyMap += (TSF_Dictionary.Coordination.CONNECTION_TIMEOUT -> Coordination_connection_timeout_default)
 
-  val Coordination_partition_redistribution_delay_default = 2000
-  val Coordination_partition_redistribution_delay_min = 1000
-  val Coordination_partition_redistribution_delay_max = 100000
+  val Coordination_partition_redistribution_delay_default = 2
+  val Coordination_partition_redistribution_delay_min = 1
+  val Coordination_partition_redistribution_delay_max = 100
   propertyMap += (TSF_Dictionary.Coordination.PARTITION_REDISTRIBUTION_DELAY -> Coordination_partition_redistribution_delay_default)
 
 

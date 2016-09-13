@@ -25,7 +25,7 @@ class ProducerLazyBootTests extends FlatSpec with Matchers with BeforeAndAfterAl
     .setProperty(TSF_Dictionary.Consumer.TRANSACTION_PRELOAD, 10)
     .setProperty(TSF_Dictionary.Consumer.DATA_PRELOAD, 10)
     .setProperty(TSF_Dictionary.Producer.MASTER_BOOTSTRAP_MODE, TSF_Dictionary.Producer.Consts.MASTER_BOOTSTRAP_MODE_LAZY)
-    .setProperty(TSF_Dictionary.Coordination.PARTITION_REDISTRIBUTION_DELAY, 5000)
+    .setProperty(TSF_Dictionary.Coordination.PARTITION_REDISTRIBUTION_DELAY, 5)
 
 
   it should "distribute partitions in a right way with lazy mode" in {
@@ -37,7 +37,7 @@ class ProducerLazyBootTests extends FlatSpec with Matchers with BeforeAndAfterAl
       isLowPriority = false)
 
     f.setProperty(TSF_Dictionary.Producer.MASTER_BOOTSTRAP_MODE, TSF_Dictionary.Producer.Consts.MASTER_BOOTSTRAP_MODE_FULL)
-      .setProperty(TSF_Dictionary.Coordination.PARTITION_REDISTRIBUTION_DELAY, 1000)
+      .setProperty(TSF_Dictionary.Coordination.PARTITION_REDISTRIBUTION_DELAY, 1)
 
     val producer2 = f.getProducer[String](
       name = "test_producer",
@@ -64,7 +64,7 @@ class ProducerLazyBootTests extends FlatSpec with Matchers with BeforeAndAfterAl
 
   it should "become a master if lazy+vote" in {
     f.setProperty(TSF_Dictionary.Producer.MASTER_BOOTSTRAP_MODE, TSF_Dictionary.Producer.Consts.MASTER_BOOTSTRAP_MODE_LAZY_VOTE)
-      .setProperty(TSF_Dictionary.Coordination.PARTITION_REDISTRIBUTION_DELAY, 1000)
+      .setProperty(TSF_Dictionary.Coordination.PARTITION_REDISTRIBUTION_DELAY, 1)
 
     val producer = f.getProducer[String](
       name = "test_producer",
@@ -84,7 +84,7 @@ class ProducerLazyBootTests extends FlatSpec with Matchers with BeforeAndAfterAl
 
   it should "not become a master if lazy" in {
     f.setProperty(TSF_Dictionary.Producer.MASTER_BOOTSTRAP_MODE, TSF_Dictionary.Producer.Consts.MASTER_BOOTSTRAP_MODE_LAZY)
-      .setProperty(TSF_Dictionary.Coordination.PARTITION_REDISTRIBUTION_DELAY, 1000)
+      .setProperty(TSF_Dictionary.Coordination.PARTITION_REDISTRIBUTION_DELAY, 1)
 
     val producer = f.getProducer[String](
       name = "test_producer",
@@ -105,7 +105,7 @@ class ProducerLazyBootTests extends FlatSpec with Matchers with BeforeAndAfterAl
 
   it should "become a master if lazy and does transaction" in {
     f.setProperty(TSF_Dictionary.Producer.MASTER_BOOTSTRAP_MODE, TSF_Dictionary.Producer.Consts.MASTER_BOOTSTRAP_MODE_LAZY)
-      .setProperty(TSF_Dictionary.Coordination.PARTITION_REDISTRIBUTION_DELAY, 1000)
+      .setProperty(TSF_Dictionary.Coordination.PARTITION_REDISTRIBUTION_DELAY, 1)
 
     val producer = f.getProducer[String](
       name = "test_producer",
