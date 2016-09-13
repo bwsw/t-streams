@@ -76,7 +76,7 @@ class ProcessingEngine[T](consumer: TransactionOperator[T],
         if (isFirstTime
           || (System.currentTimeMillis() - getLastPartitionActivity(p) > pollTimeMs && queue.getInFlight() == 0)
           || (System.currentTimeMillis() - getLastPartitionActivity(p) > pollTimeMs * 10)) {
-          ProcessingEngine.logger.debug(s"PE ${id} - No events during polling interval for partition ${p}, will do enqueuing from DB.")
+          ProcessingEngine.logger.info(s"PE ${id} - No events during polling interval for partition ${p}, will do enqueuing from DB.")
           enqueueLastTransactionFromDB(p)
         })
 
