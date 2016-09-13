@@ -823,7 +823,7 @@ class TStreamsFactory() {
     * reusable method which returns consumer options object
     */
   private def getBasicConsumerOptions[T](stream: TStream[Array[Byte]],
-                                                partitions: List[Int],
+                                                partitions: Set[Int],
                                                 converter: IConverter[Array[Byte], T],
                                                 txnGenerator: IUUIDGenerator,
                                                 offset: IOffset,
@@ -946,7 +946,7 @@ class TStreamsFactory() {
 
     if (pAsString(TSF_Dictionary.Producer.Transaction.DISTRIBUTION_POLICY) ==
       TSF_Dictionary.Producer.Transaction.Consts.DISTRIBUTION_POLICY_RR) {
-      writePolicy = new RoundRobinPolicy(stream, partitions.toList)
+      writePolicy = new RoundRobinPolicy(stream, partitions)
     }
     else {
       throw new InvalidParameterException("Only TSF_Dictionary.Producer.Transaction.Consts.DISTRIBUTION_POLICY_RR policy " +
@@ -1001,7 +1001,7 @@ class TStreamsFactory() {
     val stream: TStream[Array[Byte]] = getStreamObject(metadatastorage = ms, datastorage = ds)
     val consumerOptions = getBasicConsumerOptions(txnGenerator = txnGenerator,
       stream = stream,
-      partitions = partitions.toList,
+      partitions = partitions,
       converter = converter,
       offset = offset,
       isUseLastOffset = isUseLastOffset)
@@ -1037,7 +1037,7 @@ class TStreamsFactory() {
 
     val consumerOptions = getBasicConsumerOptions(txnGenerator = txnGenerator,
                                                   stream        = stream,
-                                                  partitions    = partitions.toList,
+                                                  partitions    = partitions,
                                                   converter     = converter,
                                                   offset        = offset,
                                                   isUseLastOffset = isUseLastOffset)
