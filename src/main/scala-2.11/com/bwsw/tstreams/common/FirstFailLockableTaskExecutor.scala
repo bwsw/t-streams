@@ -27,7 +27,21 @@ class FirstFailLockableTaskExecutor(name: String, cnt: Int = 1)
     * @param lock Lock
     */
   class RunnableWithLock(r: Runnable, lock: ReentrantLock) extends Runnable {
-    override def run(): Unit = LockUtil.withLockOrDieDo[Unit](lock, (100, TimeUnit.SECONDS), Some(logger), () => r.run())
+    override def run(): Unit = {
+      LockUtil.withLockOrDieDo[Unit](lock, (100, TimeUnit.SECONDS), Some(logger), () => r.run())
+    }
+  }
+
+  class RunnableWithoutLock(r: Runnable) extends Runnable {
+    override def run(): Unit = {
+      try {
+        r.run()
+      } catch {
+        case e: Exception =>
+          e.printStackTrace()
+          throw e
+      }
+    }
   }
 
   /**
@@ -57,19 +71,19 @@ class FirstFailLockableTaskExecutor(name: String, cnt: Int = 1)
     if (l.isDefined)
       super.execute(new RunnableWithLock(runnable, l.get))
     else
-      super.execute(runnable)
+      super.execute(new RunnableWithoutLock(runnable))
   }
 
   override def submit(runnable: Runnable): Future[_] = {
     if(isShutdown)
       throw new IllegalStateException(s"Executor ${name} is no longer online. Unable to execute.")
-    super.submit(runnable)
+    super.submit(new RunnableWithoutLock(runnable))
   }
 
   override def execute(runnable: Runnable) = {
     if(isShutdown)
       throw new IllegalStateException(s"Executor ${name} is no longer online. Unable to execute.")
-    super.execute(runnable)
+    super.execute(new RunnableWithoutLock(runnable))
   }
 
   /**
