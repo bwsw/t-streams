@@ -155,7 +155,7 @@ class PeerAgent(agentsStateManager: AgentsStateDBService,
       transport.setMasterRequest(bestCandidate.agentAddress, partition) match {
         case null =>
           if (retries == 0)
-            throw new IllegalStateException(s"Expected mastre didn't occure in ${zkRetriesAmount} trials.")
+            throw new IllegalStateException(s"Expected master hasn't occured in ${zkRetriesAmount} trials.")
           //assume that if master is not responded it will be deleted by zk
           Thread.sleep(PeerAgent.RETRY_SLEEP_TIME)
           electPartitionMasterInternal(partition, retries - 1)
