@@ -27,6 +27,6 @@ trait Callback[T] {
                   uuid: java.util.UUID,
                   count: Int) = {
     val txnOpt = consumer.buildTransactionObject(partition, uuid, count)
-    onEvent(consumer, transaction = txnOpt.get)
+    txnOpt.foreach(txn => onEvent(consumer, transaction = txn))
   }
 }

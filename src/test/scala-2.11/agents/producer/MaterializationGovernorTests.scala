@@ -41,7 +41,7 @@ class MaterializationGovernorTests  extends FlatSpec with Matchers  {
     val start = System.currentTimeMillis()
     mg.awaitUnprotected(0)
     val end = System.currentTimeMillis()
-    end - start < 1 shouldBe true
+    end - start < 5 shouldBe true
   }
 
 }
