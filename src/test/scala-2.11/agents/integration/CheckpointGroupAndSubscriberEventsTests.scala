@@ -73,6 +73,7 @@ class CheckpointGroupAndSubscriberEventsTests  extends FlatSpec with Matchers wi
 
     val end = System.currentTimeMillis()
 
+    logger.info(s"End - start = ${end - start}")
     end - start < 2000 shouldBe true
 
     s.stop()
