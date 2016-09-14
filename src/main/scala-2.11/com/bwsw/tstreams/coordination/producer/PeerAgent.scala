@@ -395,10 +395,10 @@ class PeerAgent(agentsStateManager: AgentsStateDBService,
       assert(partitionsToExecutors.contains(request.partition))
       val execNo = partitionsToExecutors(request.partition)
       request match {
-        case _: PublishRequest =>         executorGraphs(execNo).submitToPublish(task)
-        case _: NewTransactionRequest =>  executorGraphs(execNo).submitToNewTransaction(task)
-        case _: MaterializeRequest =>     executorGraphs(execNo).submitToMaterialize(task)
-        case _ =>                         executorGraphs(execNo).submitToGeneral(task)
+        case _: PublishRequest =>         executorGraphs(execNo).submitToPublish("<PublishTask>", task)
+        case _: NewTransactionRequest =>  executorGraphs(execNo).submitToNewTransaction("<NewTransactionTask>", task)
+        case _: MaterializeRequest =>     executorGraphs(execNo).submitToMaterialize("<MaterializeTask>", task)
+        case _ =>                         executorGraphs(execNo).submitToGeneral("<GeneralTask>", task)
       }
 
     } catch {
@@ -415,7 +415,7 @@ class PeerAgent(agentsStateManager: AgentsStateDBService,
     */
   def submitPipelinedTaskToPublishExecutors(partition: Int, task: () => Unit) = {
     val execNum = partitionsToExecutors(partition)
-    executorGraphs(execNum).submitToPublish(task)
+    executorGraphs(execNum).submitToPublish("<PublishTask>", task)
   }
 
   /**
@@ -426,7 +426,7 @@ class PeerAgent(agentsStateManager: AgentsStateDBService,
     */
   def submitPipelinedTaskToMaterializeExecutor(partition: Int, task: () => Unit) = {
     val execNum = partitionsToExecutors(partition)
-    executorGraphs(execNum).submitToMaterialize(task)
+    executorGraphs(execNum).submitToMaterialize("<MaterializeTask>", task)
   }
 
   /**
@@ -436,7 +436,7 @@ class PeerAgent(agentsStateManager: AgentsStateDBService,
     */
   def submitPipelinedTaskToCassandraExecutor(partition: Int, task: () => Unit) = {
     val execNum = partitionsToExecutors(partition)
-    executorGraphs(execNum).submitToCassandra(task)
+    executorGraphs(execNum).submitToCassandra("<CassandraTask>", task)
   }
 
   /**
@@ -447,7 +447,7 @@ class PeerAgent(agentsStateManager: AgentsStateDBService,
     */
   def submitPipelinedTaskToNewTxnExecutors(partition: Int, task: () => Unit) = {
     val execNum = partitionsToExecutors(partition)
-    executorGraphs(execNum).submitToNewTransaction(task)
+    executorGraphs(execNum).submitToNewTransaction("<NewTransactionTask>", task)
   }
 
   def getCassandraAsyncExecutor(partition: Int) =

@@ -22,10 +22,11 @@ class ProcessingEngine[T](consumer: TransactionOperator[T],
 
   private val id = Math.abs(Random.nextInt())
   // keeps last transaction states processed
-  private val lastTransactionsMap = mutable.Map[Int, TransactionState]()
+  private val lastTransactionsMap       = mutable.Map[Int, TransactionState]()
   private val lastTransactionsEventsMap = mutable.Map[Int, Long]()
-  private val executor = new FirstFailLockableTaskExecutor(s"pe-${id}-executor")
-  private val queue = queueBuilder.generateQueueObject(Math.abs(Random.nextInt()))
+  private val executor      = new FirstFailLockableTaskExecutor(s"pe-${id}-executor")
+  private val loadExecutor  = new FirstFailLockableTaskExecutor(s"pe-${id}-loadExecutor")
+  private val queue       = queueBuilder.generateQueueObject(Math.abs(Random.nextInt()))
   private var isFirstTime = true
 
 
@@ -60,11 +61,11 @@ class ProcessingEngine[T](consumer: TransactionOperator[T],
     if(seq != null) {
       if(seq.size > 0) {
         if(fastLoader.checkIfPossible(seq)) {
-          fastLoader.load[T](seq, consumer, executor, callback)
+          fastLoader.load[T](seq, consumer, loadExecutor, callback)
         }
         else if (fullLoader.checkIfPossible(seq)) {
           ProcessingEngine.logger.info(s"PE ${id} - Load full occured for seq ${seq}")
-          fullLoader.load[T](seq, consumer, executor, callback)
+          fullLoader.load[T](seq, consumer, loadExecutor, callback)
         }
         setLastPartitionActivity(seq.head.partition)
       }
@@ -126,6 +127,9 @@ object ProcessingEngine {
 
   type LastTransactionStateMapType = mutable.Map[Int, TransactionState]
   class CallbackTask[T](consumer: TransactionOperator[T], transactionState: TransactionState, callback: Callback[T]) extends Runnable {
+
+    override def toString() = s"CallbackTask(${transactionState})"
+
     override def run(): Unit = {
       callback.onEventCall(consumer = consumer, partition = transactionState.partition, uuid = transactionState.uuid, count = transactionState.itemCount)
     }

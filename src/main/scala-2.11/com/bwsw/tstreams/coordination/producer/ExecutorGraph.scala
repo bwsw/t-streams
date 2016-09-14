@@ -33,20 +33,20 @@ class ExecutorGraph(name: String = "", publisherThreadsAmount: Int = 1) {
     * @param ex
     * @param f
     */
-  private def submitTo(ex: FirstFailLockableTaskExecutor, f: () => Unit) = this.synchronized {
+  private def submitTo(name: String, ex: FirstFailLockableTaskExecutor, f: () => Unit) = this.synchronized {
     List(general, newTransaction, cassandra, materialize, publish)
       .foreach(e => if(e.isFailed.get()) throw new IllegalStateException(s"Executor ${e.toString} is failed. No new tasks are allowed."))
     List(general, newTransaction, cassandra, materialize, publish)
-      .foreach(e => if(ex == e) e.submit(new Runnable {
+      .foreach(e => if(ex == e) e.submit(s"<ExecutorGraphTask> :: $name", new Runnable {
         override def run(): Unit = f()
       }))
   }
 
-  def submitToGeneral(f: () => Unit)        = submitTo(general, f)
-  def submitToNewTransaction(f: () => Unit) = submitTo(newTransaction, f)
-  def submitToCassandra(f: () => Unit)    = submitTo(cassandra, f)
-  def submitToMaterialize(f: () => Unit)  = submitTo(materialize, f)
-  def submitToPublish(f: () => Unit)      = submitTo(publish, f)
+  def submitToGeneral(name: String, f: () => Unit)        = submitTo(name, general, f)
+  def submitToNewTransaction(name: String, f: () => Unit) = submitTo(name, newTransaction, f)
+  def submitToCassandra(name: String, f: () => Unit)    = submitTo(name, cassandra, f)
+  def submitToMaterialize(name: String, f: () => Unit)  = submitTo(name, materialize, f)
+  def submitToPublish(name: String, f: () => Unit)      = submitTo(name, publish, f)
 
   def getCassandra() = cassandra
 

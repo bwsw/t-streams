@@ -48,7 +48,7 @@ class TransactionFullLoader(partitions: Set[Int],
     val data = consumer.getTransactionsFromTo(last.partition, first, last.uuid)
 
     data foreach(elt =>
-      executor.submit(new ProcessingEngine.CallbackTask[T](consumer,
+      executor.submit(s"<CallbackTask#Full>", new ProcessingEngine.CallbackTask[T](consumer,
         TransactionState(elt.getTransactionUUID(), last.partition, -1, -1, elt.getCount(), TransactionStatus.postCheckpoint, -1), callback)))
 
     if (data.size > 0)

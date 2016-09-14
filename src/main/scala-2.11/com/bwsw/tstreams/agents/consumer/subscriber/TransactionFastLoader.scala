@@ -57,7 +57,7 @@ class TransactionFastLoader(partitions: Set[Int],
               executor: FirstFailLockableTaskExecutor,
               callback: Callback[T]) = {
     seq foreach(elt =>
-      executor.submit(new ProcessingEngine.CallbackTask[T](consumer, elt, callback)))
+      executor.submit(s"<CallbackTask#Fast>", new ProcessingEngine.CallbackTask[T](consumer, elt, callback)))
     val last = seq.last
     lastTransactionsMap(last.partition) = last
   }
