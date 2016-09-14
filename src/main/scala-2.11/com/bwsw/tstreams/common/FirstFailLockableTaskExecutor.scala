@@ -66,6 +66,7 @@ class FirstFailLockableTaskExecutor(name: String, cnt: Int = 1)
     val now           = System.currentTimeMillis()
     val thresholdFull = FirstFailLockableExecutor.taskFullDelayThresholdMs.get()
     val threshold     = FirstFailLockableExecutor.taskDelayThresholdMs.get()
+    val thresholdRun  = FirstFailLockableExecutor.taskRunDelayThresholdMs.get()
 
     if(now - myRunnable.submitTime > thresholdFull) {
       logger.warn(s"Task ${myRunnable} has delayed Full in executor ${name} for ${now - myRunnable.submitTime} msecs. Threshold is: ${thresholdFull} msecs.")
@@ -74,6 +75,11 @@ class FirstFailLockableTaskExecutor(name: String, cnt: Int = 1)
     if(myRunnable.runTime - myRunnable.submitTime > threshold) {
       logger.warn(s"Task ${myRunnable} has delayed in Queue before run in executor ${name} for ${myRunnable.runTime - myRunnable.submitTime} msecs. Threshold is: ${threshold} msecs.")
     }
+
+    if(now - myRunnable.runTime > thresholdRun) {
+      logger.warn(s"Task ${myRunnable} has run in executor ${name} for ${now - myRunnable.runTime} msecs. Threshold is: ${thresholdRun} msecs.")
+    }
+
 
     if(throwable != null) {
       this.shutdownNow()
@@ -149,4 +155,5 @@ object FirstFailLockableExecutor {
   val queueLengthThreshold        = new AtomicInteger(100)
   val taskFullDelayThresholdMs    = new AtomicInteger(110)
   val taskDelayThresholdMs        = new AtomicInteger(100)
+  val taskRunDelayThresholdMs     = new AtomicInteger(10)
 }
