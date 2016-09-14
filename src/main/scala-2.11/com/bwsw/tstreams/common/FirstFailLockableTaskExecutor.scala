@@ -33,14 +33,20 @@ class FirstFailLockableTaskExecutor(name: String, cnt: Int = 1)
     * @param r Runnable to run wrapped
     * @param lock Lock
     */
-  class RunnableWithLock(r: Runnable, lock: ReentrantLock) extends FirstFailExecutorRunnable {
+  class RunnableWithLock(r: Runnable, lock: ReentrantLock, name: String) extends FirstFailExecutorRunnable {
+
+    override def toString() = name
+
     override def run(): Unit = {
       runTime = System.currentTimeMillis()
       LockUtil.withLockOrDieDo[Unit](lock, (100, TimeUnit.SECONDS), Some(logger), () => r.run())
     }
   }
 
-  class RunnableWithoutLock(r: Runnable) extends FirstFailExecutorRunnable {
+  class RunnableWithoutLock(r: Runnable, name: String) extends FirstFailExecutorRunnable {
+
+    override def toString() = name
+
     override def run(): Unit = {
       try {
         runTime = System.currentTimeMillis()
@@ -62,24 +68,29 @@ class FirstFailLockableTaskExecutor(name: String, cnt: Int = 1)
   override def afterExecute(runnable: Runnable, throwable: Throwable): Unit =  {
     super.afterExecute(runnable, throwable)
 
-    val myRunnable    = runnable.asInstanceOf[FirstFailExecutorRunnable]
-    val now           = System.currentTimeMillis()
-    val thresholdFull = FirstFailLockableExecutor.taskFullDelayThresholdMs.get()
-    val threshold     = FirstFailLockableExecutor.taskDelayThresholdMs.get()
-    val thresholdRun  = FirstFailLockableExecutor.taskRunDelayThresholdMs.get()
+    try {
+      val myRunnable = runnable.asInstanceOf[FirstFailExecutorRunnable]
 
-    if(now - myRunnable.submitTime > thresholdFull) {
-      logger.warn(s"Task ${myRunnable} has delayed Full in executor ${name} for ${now - myRunnable.submitTime} msecs. Threshold is: ${thresholdFull} msecs.")
+      val now           = System.currentTimeMillis()
+      val thresholdFull = FirstFailLockableExecutor.taskFullDelayThresholdMs.get()
+      val threshold     = FirstFailLockableExecutor.taskDelayThresholdMs.get()
+      val thresholdRun  = FirstFailLockableExecutor.taskRunDelayThresholdMs.get()
+
+      if(now - myRunnable.submitTime > thresholdFull) {
+        logger.warn(s"Task ${myRunnable} has delayed Full in executor ${name} for ${now - myRunnable.submitTime} msecs. Threshold is: ${thresholdFull} msecs.")
+      }
+
+      if(myRunnable.runTime - myRunnable.submitTime > threshold) {
+        logger.warn(s"Task ${myRunnable} has delayed in Queue before run in executor ${name} for ${myRunnable.runTime - myRunnable.submitTime} msecs. Threshold is: ${threshold} msecs.")
+      }
+
+      if(now - myRunnable.runTime > thresholdRun) {
+        logger.warn(s"Task ${myRunnable} has run in executor ${name} for ${now - myRunnable.runTime} msecs. Threshold is: ${thresholdRun} msecs.")
+      }
+
+    } catch {
+      case e: ClassCastException =>
     }
-
-    if(myRunnable.runTime - myRunnable.submitTime > threshold) {
-      logger.warn(s"Task ${myRunnable} has delayed in Queue before run in executor ${name} for ${myRunnable.runTime - myRunnable.submitTime} msecs. Threshold is: ${threshold} msecs.")
-    }
-
-    if(now - myRunnable.runTime > thresholdRun) {
-      logger.warn(s"Task ${myRunnable} has run in executor ${name} for ${now - myRunnable.runTime} msecs. Threshold is: ${thresholdRun} msecs.")
-    }
-
 
     if(throwable != null) {
       this.shutdownNow()
@@ -102,34 +113,16 @@ class FirstFailLockableTaskExecutor(name: String, cnt: Int = 1)
     * @param runnable
     * @param l
     */
-  def submit(runnable : Runnable, l : Option[ReentrantLock] = None) = {
+  def submit(name: String, runnable : Runnable, l : Option[ReentrantLock] = None) = {
     if(isShutdown)
       throw new IllegalStateException(s"Executor ${name} is no longer online. Unable to execute.")
 
     checkQueueSize()
 
     if (l.isDefined)
-      super.execute(new RunnableWithLock(runnable, l.get))
+      super.execute(new RunnableWithLock(runnable, l.get, name))
     else
-      super.execute(new RunnableWithoutLock(runnable))
-  }
-
-  override def submit(runnable: Runnable): Future[_] = {
-    if(isShutdown)
-      throw new IllegalStateException(s"Executor ${name} is no longer online. Unable to execute.")
-
-    checkQueueSize()
-
-    super.submit(new RunnableWithoutLock(runnable))
-  }
-
-  override def execute(runnable: Runnable) = {
-    if(isShutdown)
-      throw new IllegalStateException(s"Executor ${name} is no longer online. Unable to execute.")
-
-    checkQueueSize()
-
-    super.execute(new RunnableWithoutLock(runnable))
+      super.execute(new RunnableWithoutLock(runnable, name))
   }
 
   /**
@@ -153,7 +146,7 @@ class FirstFailLockableTaskExecutor(name: String, cnt: Int = 1)
 
 object FirstFailLockableExecutor {
   val queueLengthThreshold        = new AtomicInteger(100)
-  val taskFullDelayThresholdMs    = new AtomicInteger(110)
+  val taskFullDelayThresholdMs    = new AtomicInteger(120)
   val taskDelayThresholdMs        = new AtomicInteger(100)
-  val taskRunDelayThresholdMs     = new AtomicInteger(10)
+  val taskRunDelayThresholdMs     = new AtomicInteger(20)
 }

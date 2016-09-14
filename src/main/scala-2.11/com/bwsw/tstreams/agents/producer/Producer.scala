@@ -136,7 +136,7 @@ class Producer[T](var name: String,
               logger.info(s"Producer ${name} - object either checkpointed or cancelled. Exit KeepAliveThread.")
               break()
             }
-            asyncActivityService.submit(new Runnable {
+            asyncActivityService.submit("<UpdateOpenedTransactionsTask>", new Runnable {
               override def run(): Unit = updateOpenedTransactions()
             }, Option(threadLock))
           }
@@ -193,7 +193,7 @@ class Producer[T](var name: String,
     materializationGovernor.unprotect(p)
 
     if(previousTransactionAction != null)
-      asyncActivityService.submit(new Runnable {
+      asyncActivityService.submit("<PreviousTransactionActionTask>", new Runnable {
         override def run(): Unit = previousTransactionAction() })
     txn
   }

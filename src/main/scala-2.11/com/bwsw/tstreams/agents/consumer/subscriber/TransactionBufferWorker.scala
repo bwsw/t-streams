@@ -27,7 +27,7 @@ class TransactionBufferWorker() {
     * @param transactionState
     */
   def updateAndNotify(transactionState: TransactionState) = {
-    executor.submit(new Runnable {
+    executor.submit(s"<UpdateAndNotifyTask(${transactionState})>", new Runnable {
       override def run(): Unit = {
         transactionBufferMap(transactionState.partition).update(transactionState)
         transactionBufferMap(transactionState.partition).signalCompleteTransactions()

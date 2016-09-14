@@ -141,7 +141,7 @@ class CheckpointGroup(val executors: Int = 1) {
     val l = new CountDownLatch(producers.size)
     producers foreach {
       case ProducerCheckpointInfo(txn, agent, preCheckpointEvent, _, _, _, _, _, _) =>
-        executorPool.execute(new Runnable {
+        executorPool.submit("<PreCheckpointEvent>", new Runnable {
           override def run(): Unit = {
             agent.publish(preCheckpointEvent)
             logger.info("PRE event sent for " + txn.getTransactionUUID.toString)
@@ -156,7 +156,7 @@ class CheckpointGroup(val executors: Int = 1) {
   private def publishPostCheckpointEventForAllProducers(producers: List[CheckpointInfo]) = {
     producers foreach {
       case ProducerCheckpointInfo(_, agent, _, postCheckpointEvent, _, _, _, _, _) =>
-        executorPool.execute(new Runnable {
+        executorPool.submit("<PostCheckpointEvent>", new Runnable {
           override def run(): Unit = agent.publish(postCheckpointEvent)
         })
       case _ =>
