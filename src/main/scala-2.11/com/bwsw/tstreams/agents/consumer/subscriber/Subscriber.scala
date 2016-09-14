@@ -146,7 +146,7 @@ class Subscriber[T](val name: String,
     Subscriber.logger.info(s"[INIT] Subscriber ${name}: is about to launch Polling tasks to executors.")
 
     for(thID <- 0 until peWorkerThreads) {
-      processingEngines(thID).getExecutor().submit(new Poller[T](processingEngines(thID), options.pollingFrequencyDelay))
+      processingEngines(thID).getExecutor().submit(s"<Poller ${processingEngines(thID)}>", new Poller[T](processingEngines(thID), options.pollingFrequencyDelay))
     }
 
     Subscriber.logger.info(s"[INIT] Subscriber ${name}: has launched Polling tasks to executors.")

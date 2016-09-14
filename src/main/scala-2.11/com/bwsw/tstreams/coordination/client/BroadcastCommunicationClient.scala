@@ -38,7 +38,7 @@ class BroadcastCommunicationClient(agentsStateManager: AgentsStateDBService,
       val watcher = new Watcher {
         override def process(event: WatchedEvent): Unit = {
           val wo = this
-          ZookeeperDLMService.executor.submit(new Runnable {
+          ZookeeperDLMService.executor.submit("<UpdateSubscribersTask>", new Runnable {
             override def run(): Unit = {
               updateSubscribers(p)
               agentsStateManager.setSubscriberStateWatcher(p, wo)

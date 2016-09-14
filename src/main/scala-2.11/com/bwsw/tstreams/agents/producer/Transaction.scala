@@ -158,7 +158,7 @@ class Transaction[T](partition: Int,
     LockUtil.withLockOrDieDo[Unit](transactionLock, (100, TimeUnit.SECONDS), Some(Transaction.logger), () => {
       state.awaitUpdateComplete
       state.closeOrDie
-      txnOwner.asyncActivityService.submit(new Runnable {
+      txnOwner.asyncActivityService.submit("<CancelAsyncTask>", new Runnable {
         override def run(): Unit = cancelAsync()
       }, Option(transactionLock))
     })
@@ -265,7 +265,7 @@ class Transaction[T](partition: Int,
       state.awaitUpdateComplete()
       state.closeOrDie()
       if (!isSynchronous) {
-        txnOwner.asyncActivityService.submit(new Runnable {
+        txnOwner.asyncActivityService.submit("<CheckpointAsyncTask>", new Runnable {
           override def run(): Unit = checkpointAsync()
         }, Option(transactionLock))
       }
