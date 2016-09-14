@@ -1,6 +1,7 @@
 package com.bwsw.tstreams.agents.consumer.subscriber
 
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 
 import com.bwsw.tstreams.agents.consumer.TransactionOperator
 import com.bwsw.tstreams.common.{FirstFailLockableTaskExecutor, UUIDComparator}
@@ -25,6 +26,9 @@ class ProcessingEngine[T](consumer: TransactionOperator[T],
   private val lastTransactionsMap       = mutable.Map[Int, TransactionState]()
   private val lastTransactionsEventsMap = mutable.Map[Int, Long]()
   private val executor      = new FirstFailLockableTaskExecutor(s"pe-${id}-executor")
+
+  val isThresholdsSet = new AtomicBoolean(false)
+
   private val loadExecutor  = new FirstFailLockableTaskExecutor(s"pe-${id}-loadExecutor")
   private val queue       = queueBuilder.generateQueueObject(Math.abs(Random.nextInt()))
   private var isFirstTime = true
@@ -54,9 +58,20 @@ class ProcessingEngine[T](consumer: TransactionOperator[T],
 
   /**
     * Reads transactions from database or fast and does self-kick if no events.
+    *
     * @param pollTimeMs
     */
   def handleQueue(pollTimeMs: Int) = {
+
+    if(!isThresholdsSet.get()) {
+      isThresholdsSet.set(true)
+      executor.setThresholds(
+        queueLengthThreshold      = 10,
+        taskFullDelayThresholdMs  = pollTimeMs + 25,
+        taskDelayThresholdMs      = pollTimeMs + 5,
+        taskRunDelayThresholdMs   = 20)
+    }
+
     val seq = queue.get(pollTimeMs, TimeUnit.MILLISECONDS)
     if(seq != null) {
       if(seq.size > 0) {
