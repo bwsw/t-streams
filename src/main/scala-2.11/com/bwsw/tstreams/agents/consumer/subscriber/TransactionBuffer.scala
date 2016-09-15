@@ -1,47 +1,28 @@
 package com.bwsw.tstreams.agents.consumer.subscriber
 
 import java.util.UUID
-import java.util.concurrent.atomic.AtomicLong
 
-import com.bwsw.tstreams.common.{SortedExpiringMap, UUIDComparator}
+import com.bwsw.tstreams.common.UUIDComparator
 import com.bwsw.tstreams.coordination.messages.state.TransactionStatus
 
 import scala.collection.mutable
-
-case class TransactionBufferCounters(openEvents: AtomicLong,
-                                     cancelEvents: AtomicLong,
-                                     updateEvents: AtomicLong,
-                                     preCheckpointEvents: AtomicLong,
-                                     postCheckpointEvents: AtomicLong) {
-  def dump(partition: Int): Unit = {
-    Subscriber.logger.info(s"Partitions $partition - Open Events received: ${openEvents.get()}")
-    Subscriber.logger.info(s"Partitions $partition - Cancel Events received: ${cancelEvents.get()}")
-    Subscriber.logger.info(s"Partitions $partition - Update Events received: ${updateEvents.get()}")
-    Subscriber.logger.info(s"Partitions $partition - PreCheckpoint Events received: ${preCheckpointEvents.get()}")
-    Subscriber.logger.info(s"Partitions $partition - PostCheckpoint Events received: ${postCheckpointEvents.get()}")
-  }
-}
+import scala.collection.mutable.ListBuffer
 
 /**
-  * Created by Ivan Kudryavtsev on 19.08.16.
-  * Class is used to store states of all transactions at subscribing consumer
+  * Created by ivan on 15.09.16.
   */
 class TransactionBuffer(queue: QueueBuilder.QueueType) {
 
+  val MAX_POSTCHECKPOINT_WAIT = 2000
 
-  val counters = TransactionBufferCounters(new AtomicLong(0),
-    new AtomicLong(0),
-    new AtomicLong(0),
-    new AtomicLong(0),
-    new AtomicLong(0))
-
+  val counters = TransactionBufferCounters()
   var lastTransaction: UUID = null
   val comparator = new UUIDComparator()
 
-  def getQueue(): QueueBuilder.QueueType = queue
+  var stateList = ListBuffer[TransactionState]()
+  val stateMap = mutable.Map[UUID, TransactionState]()
 
-  private val map: SortedExpiringMap[UUID, TransactionState] =
-    new SortedExpiringMap(new UUIDComparator, new TransactionStateExpirationPolicy)
+  def getQueue(): QueueBuilder.QueueType = queue
 
   /**
     * Returns current state by transaction uuid
@@ -49,15 +30,16 @@ class TransactionBuffer(queue: QueueBuilder.QueueType) {
     * @param uuid
     * @return
     */
-  def getState(uuid: UUID): Option[TransactionState] =
-    if (map.exists(uuid)) Option(map.get(uuid)) else None
+  def getState(uuid: UUID): Option[TransactionState] = this.synchronized(stateMap.get(uuid))
 
   /**
     * This method updates buffer with new state
     *
-    * @param update
+    * @param updateState
     */
-  def update(update: TransactionState): Unit = this.synchronized {
+  def update(updateState: TransactionState): Unit = this.synchronized {
+
+    val update = updateState.copy()
 
     update.state match {
       case TransactionStatus.opened => counters.openEvents.incrementAndGet()
@@ -78,32 +60,45 @@ class TransactionBuffer(queue: QueueBuilder.QueueType) {
     }
 
 
-    if (map.exists(update.uuid)) {
-      val orderID = map.get(update.uuid).queueOrderID
+    if (stateMap.contains(update.uuid)) {
+      val orderID = stateMap.get(update.uuid).get.queueOrderID
+      val ts = stateMap.get(update.uuid).get
       /*
       * state switching system (almost finite automate)
       * */
-      (map.get(update.uuid).state, update.state) match {
+      (ts.state, update.state) match {
         /*
         from opened to *
          */
         case (TransactionStatus.opened, TransactionStatus.opened) =>
 
         case (TransactionStatus.opened, TransactionStatus.update) =>
-          map.put(update.uuid, update.copy(state = TransactionStatus.opened, queueOrderID = orderID))
+          ts.queueOrderID = orderID
+          ts.state = TransactionStatus.opened
+          ts.ttl = System.currentTimeMillis() + update.ttl * 1000
 
         case (TransactionStatus.opened, TransactionStatus.preCheckpoint) =>
-          map.put(update.uuid, update.copy(ttl = -1, queueOrderID = orderID))
+          ts.queueOrderID = orderID
+          ts.state = TransactionStatus.preCheckpoint
+          ts.itemCount = update.itemCount
+          ts.ttl = System.currentTimeMillis() + MAX_POSTCHECKPOINT_WAIT // TODO: fixit
 
         case (TransactionStatus.opened, TransactionStatus.postCheckpoint) =>
 
         case (TransactionStatus.opened, TransactionStatus.cancel) =>
-          map.remove(update.uuid)
+          ts.state = TransactionStatus.invalid
+          ts.ttl = 0L
+          stateMap.remove(update.uuid)
 
         /*
         from update -> * no implement because opened
          */
         case (TransactionStatus.update, _) =>
+
+        /*
+
+           */
+        case (TransactionStatus.invalid, _) =>
 
         /*
         from cancel -> * no implement because removed
@@ -114,10 +109,15 @@ class TransactionBuffer(queue: QueueBuilder.QueueType) {
         from pre -> *
          */
         case (TransactionStatus.preCheckpoint, TransactionStatus.cancel) =>
-          map.remove(update.uuid)
+          ts.state = TransactionStatus.invalid
+          ts.ttl = 0L
+          stateMap.remove(update.uuid)
 
         case (TransactionStatus.preCheckpoint, TransactionStatus.postCheckpoint) =>
-          map.put(update.uuid, update.copy(ttl = -1, queueOrderID = orderID))
+          ts.queueOrderID = orderID
+          ts.state = TransactionStatus.postCheckpoint
+          ts.ttl = Long.MaxValue
+          //stateMap.remove(update.uuid)
 
         case (TransactionStatus.preCheckpoint, _) =>
 
@@ -129,29 +129,30 @@ class TransactionBuffer(queue: QueueBuilder.QueueType) {
 
     } else {
       if (update.state == TransactionStatus.opened) {
-        map.put(update.uuid, update)
+        stateMap.put(update.uuid, update)
+        update.ttl = System.currentTimeMillis() + update.ttl * 1000
+        stateList.append(update)
       }
     }
 
   }
 
-  /**
-    * This method throws ready sequences of [[TransactionState]] to [[com.bwsw.tstreams.common.AbstractQueue]]
-    */
   def signalCompleteTransactions() = this.synchronized {
-    val it = map.entrySetIterator()
-    val completeList = mutable.ListBuffer[TransactionState]()
-    var continue = true
-    while (it.hasNext && continue) {
-      val entry = it.next()
-      entry.getValue.state match {
-        case TransactionStatus.postCheckpoint => completeList.append(entry.getValue)
-        case _ => continue = false
-      }
-    }
-    if (completeList.nonEmpty) {
-      queue.put(completeList.toList)
-      completeList foreach (i => map.remove(i.uuid))
+    val time = System.currentTimeMillis()
+
+    val meet = stateList.takeWhile(ts =>
+      (ts.state == TransactionStatus.postCheckpoint
+        || ts.state == TransactionStatus.invalid
+        || ts.ttl < time))
+
+    if(meet.nonEmpty) {
+      stateList.remove(0, meet.size)
+
+      meet.foreach(ts => stateMap.remove(ts.uuid))
+
+      queue.put(meet.filter(ts =>
+        (ts.state == TransactionStatus.postCheckpoint)
+          || (ts.state == TransactionStatus.preCheckpoint && ts.ttl < time)).toList)
     }
   }
 }
