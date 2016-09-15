@@ -149,7 +149,6 @@ class TransactionBuffer(queue: QueueBuilder.QueueType) {
         || ts.ttl < time))
 
     if(meet.nonEmpty) {
-      println(meet)
       stateList.remove(0, meet.size)
 
       meet.foreach(ts => stateMap.remove(ts.uuid))

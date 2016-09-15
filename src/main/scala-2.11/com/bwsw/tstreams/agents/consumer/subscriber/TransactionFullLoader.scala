@@ -48,7 +48,6 @@ class TransactionFullLoader(partitions: Set[Int],
     val last = seq.last
     val first: UUID = lastTransactionsMap(last.partition).uuid
     val data = consumer.getTransactionsFromTo(last.partition, first, last.uuid)
-
     data.foreach(elt =>
       executor.submit(s"<CallbackTask#Full>", new ProcessingEngine.CallbackTask[T](consumer,
         TransactionState(elt.getTransactionUUID(), last.partition, -1, -1, elt.getCount(), TransactionStatus.postCheckpoint, -1), callback)))

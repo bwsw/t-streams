@@ -80,6 +80,7 @@ class ProcessingEngine[T](consumer: TransactionOperator[T],
 
     val seq = queue.get(pollTimeMs, TimeUnit.MILLISECONDS)
     if (seq != null) {
+      isFirstTime = false
       if (seq.nonEmpty) {
         if (fastLoader.checkIfTransactionLoadingIsPossible(seq)) {
           fastLoader.load[T](seq, consumer, loadExecutor, callback)
