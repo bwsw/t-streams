@@ -36,4 +36,9 @@ object TransactionStatus extends Enumeration {
     */
   val materialize = Value
 
+  /**
+    * Transaction is invalid
+    */
+  val invalid = Value
+
 }

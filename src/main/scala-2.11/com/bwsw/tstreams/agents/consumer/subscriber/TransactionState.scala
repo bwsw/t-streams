@@ -9,11 +9,11 @@ import com.bwsw.tstreams.coordination.messages.state.TransactionStatus.ProducerT
   */
 case class TransactionState(uuid: UUID,
                             partition: Int,
-                            masterSessionID: Int,
-                            queueOrderID: Long,
-                            itemCount: Int,
-                            state: ProducerTransactionStatus,
-                            ttl: Int) {
+                            var masterSessionID: Int,
+                            var queueOrderID: Long,
+                            var itemCount: Int,
+                            var state: ProducerTransactionStatus,
+                            var ttl: Long) {
   override def toString() = {
     s"TransactionState($uuid, $partition, $masterSessionID, $queueOrderID, $itemCount, $state, $ttl)"
   }
