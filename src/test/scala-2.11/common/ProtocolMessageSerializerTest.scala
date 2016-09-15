@@ -95,12 +95,14 @@ class ProtocolMessageSerializerTest extends FlatSpec with Matchers {
     val canceled = TransactionStatus.cancel
     val updated = TransactionStatus.update
     val opened = TransactionStatus.opened
-    assert(ProtocolMessageSerializer.deserialize[TransactionStatus.ProducerTransactionStatus](ProtocolMessageSerializer.serialize(pre)) == pre)
-    assert(ProtocolMessageSerializer.deserialize[TransactionStatus.ProducerTransactionStatus](ProtocolMessageSerializer.serialize(fin)) == fin)
-    assert(ProtocolMessageSerializer.deserialize[TransactionStatus.ProducerTransactionStatus](ProtocolMessageSerializer.serialize(canceled)) == canceled)
-    assert(ProtocolMessageSerializer.deserialize[TransactionStatus.ProducerTransactionStatus](ProtocolMessageSerializer.serialize(updated)) == updated)
-    assert(ProtocolMessageSerializer.deserialize[TransactionStatus.ProducerTransactionStatus](ProtocolMessageSerializer.serialize(opened)) == opened)
+    val materialize = TransactionStatus.materialize
+    val invalid = TransactionStatus.invalid
+
+    List(pre, fin, canceled, updated, opened, materialize, invalid).foreach(i =>
+      assert(ProtocolMessageSerializer
+        .deserialize[TransactionStatus.ProducerTransactionStatus](ProtocolMessageSerializer.serialize(i)) == i))
   }
+
   "TStreams serializer" should "serialize and deserialize AgentSettings" in {
     val clazz = new AgentConfiguration("agent", 21212, 12121212, 22)
     val string = ProtocolMessageSerializer.serialize(clazz)

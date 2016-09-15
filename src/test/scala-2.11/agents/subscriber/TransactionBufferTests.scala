@@ -3,7 +3,7 @@ package agents.subscriber
 
 import java.util.concurrent.TimeUnit
 
-import com.bwsw.tstreams.agents.consumer.subscriber.{QueueBuilder, TransactionBuffer, TransactionState}
+import com.bwsw.tstreams.agents.consumer.subscriber.{TransactionBuffer, QueueBuilder, TransactionState}
 import com.bwsw.tstreams.coordination.messages.state.TransactionStatus
 import com.datastax.driver.core.utils.UUIDs
 import org.scalatest.{FlatSpec, Matchers}
@@ -100,7 +100,7 @@ class TransactionBufferTests extends FlatSpec with Matchers {
     b.update(ts0(OPENED))
     b.update(ts0(UPDATE))
     b.getState(ts0(UPDATE).uuid).isDefined shouldBe true
-    b.getState(ts0(UPDATE).uuid).get.ttl shouldBe UPDATE_TTL
+    Math.abs(b.getState(ts0(UPDATE).uuid).get.ttl - UPDATE_TTL * 1000 - System.currentTimeMillis()) < 20 shouldBe true
     b.getState(ts0(UPDATE).uuid).get.state shouldBe TransactionStatus.opened
   }
 
@@ -116,10 +116,11 @@ class TransactionBufferTests extends FlatSpec with Matchers {
     val b = new TransactionBuffer(new QueueBuilder.InMemory().generateQueueObject(0))
     val ts0 = generateAllStates()
     b.update(ts0(OPENED))
+    val shouldBeTime = b.MAX_POSTCHECKPOINT_WAIT + System.currentTimeMillis()
     b.update(ts0(PRE))
     b.getState(ts0(PRE).uuid).isDefined shouldBe true
     b.getState(ts0(PRE).uuid).get.state shouldBe TransactionStatus.preCheckpoint
-    b.getState(ts0(PRE).uuid).get.ttl shouldBe -1
+    Math.abs(b.getState(ts0(PRE).uuid).get.ttl - shouldBeTime) < 20 shouldBe true
     b.update(ts0(CANCEL))
     b.getState(ts0(CANCEL).uuid).isDefined shouldBe false
   }
@@ -128,27 +129,29 @@ class TransactionBufferTests extends FlatSpec with Matchers {
     val b = new TransactionBuffer(new QueueBuilder.InMemory().generateQueueObject(0))
     val ts0 = generateAllStates()
     b.update(ts0(OPENED))
+    val shouldBeTime = b.MAX_POSTCHECKPOINT_WAIT + System.currentTimeMillis()
     b.update(ts0(PRE))
     b.getState(ts0(PRE).uuid).isDefined shouldBe true
     b.getState(ts0(PRE).uuid).get.state shouldBe TransactionStatus.preCheckpoint
-    b.getState(ts0(PRE).uuid).get.ttl shouldBe -1
+    Math.abs(b.getState(ts0(PRE).uuid).get.ttl - shouldBeTime) < 20 shouldBe true
     b.update(ts0(POST))
     b.getState(ts0(POST).uuid).isDefined shouldBe true
-    b.getState(ts0(POST).uuid).get.ttl shouldBe -1
+    b.getState(ts0(POST).uuid).get.ttl shouldBe Long.MaxValue
   }
 
   it should "move from opened to preCheckpoint update stay in preCheckpoint" in {
     val b = new TransactionBuffer(new QueueBuilder.InMemory().generateQueueObject(0))
     val ts0 = generateAllStates()
     b.update(ts0(OPENED))
+    val shouldBeTime = b.MAX_POSTCHECKPOINT_WAIT + System.currentTimeMillis()
     b.update(ts0(PRE))
     b.getState(ts0(PRE).uuid).isDefined shouldBe true
     b.getState(ts0(PRE).uuid).get.state shouldBe TransactionStatus.preCheckpoint
-    b.getState(ts0(PRE).uuid).get.ttl shouldBe -1
+    Math.abs(b.getState(ts0(PRE).uuid).get.ttl - shouldBeTime) < 20 shouldBe true
     b.update(ts0(UPDATE))
     b.getState(ts0(PRE).uuid).isDefined shouldBe true
     b.getState(ts0(PRE).uuid).get.state shouldBe TransactionStatus.preCheckpoint
-    b.getState(ts0(PRE).uuid).get.ttl shouldBe -1
+    Math.abs(b.getState(ts0(PRE).uuid).get.ttl - shouldBeTime) < 20 shouldBe true
   }
 
   it should "move to preCheckpoint impossible" in {
@@ -273,16 +276,4 @@ class TransactionBufferTests extends FlatSpec with Matchers {
     r.head.uuid shouldBe ts0(OPENED).uuid
     r.tail.head.uuid shouldBe ts1(OPENED).uuid
   }
-
-  it should "expire" in {
-    val q = new QueueBuilder.InMemory().generateQueueObject(0)
-    val b = new TransactionBuffer(q)
-    val uuid = UUIDs.timeBased()
-    b.update(TransactionState(uuid, 0, 0, 0, -1, TransactionStatus.opened, 1))
-    Thread.sleep(500)
-    b.getState(uuid).isDefined shouldBe true
-    Thread.sleep(500)
-    b.getState(uuid).isDefined shouldBe false
-  }
-
 }

@@ -65,11 +65,12 @@ object ProtocolMessageSerializer {
         s"{PTM,${transactionUUID.toString},$ttl,$serializedStatus,$partition,$masterID,$orderID,$count}"
 
       case TransactionStatus.preCheckpoint => s"{P}"
-      case TransactionStatus.`postCheckpoint` => "{F}"
-      case TransactionStatus.`update` => "{U}"
-      case TransactionStatus.`cancel` => "{C}"
+      case TransactionStatus.postCheckpoint => "{F}"
+      case TransactionStatus.update => "{U}"
+      case TransactionStatus.cancel => "{C}"
       case TransactionStatus.opened => "{O}"
       case TransactionStatus.materialize => "{M}"
+      case TransactionStatus.invalid => "{I}"
     }
   }
 
@@ -225,6 +226,9 @@ object ProtocolMessageSerializer {
       case "M" =>
         assert(tokens.size == 1)
         TransactionStatus.materialize
+      case "I" =>
+        assert(tokens.size == 1)
+        TransactionStatus.invalid
     }
   }
 
