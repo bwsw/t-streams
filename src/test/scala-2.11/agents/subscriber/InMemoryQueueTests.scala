@@ -49,12 +49,12 @@ class InMemoryQueueTests extends FlatSpec with Matchers {
   it should "keep all items" in {
     val q = new InMemoryQueue[List[TransactionState]]()
     val N = 1000
-    for(i <- 0 until N) {
+    for (i <- 0 until N) {
       q.put(Nil)
     }
     var ctr: Int = 0
     var elt: List[TransactionState] = q.get(1, TimeUnit.MILLISECONDS)
-    while(elt != null) {
+    while (elt != null) {
       ctr += 1
       elt = q.get(1, TimeUnit.MILLISECONDS)
     }
@@ -64,11 +64,11 @@ class InMemoryQueueTests extends FlatSpec with Matchers {
   it should "correctly work with inFlight count" in {
     val q = new InMemoryQueue[List[TransactionState]]()
     val N = 1000
-    for(i <- 0 until N) {
+    for (i <- 0 until N) {
       q.put(Nil)
     }
     q.getInFlight() shouldBe 1000
-    for(i <- 0 until N) {
+    for (i <- 0 until N) {
       q.get(1, TimeUnit.MILLISECONDS)
     }
     q.getInFlight() shouldBe 0

@@ -95,8 +95,8 @@ class MetadataStorageFactory {
   /**
     * Fabric method which returns new MetadataStorage
     *
-    * @param conf List of hosts to connect in C* cluster
-    * @param keyspace       Keyspace to use for metadata storage
+    * @param conf     List of hosts to connect in C* cluster
+    * @param keyspace Keyspace to use for metadata storage
     * @return Instance of MetadataStorage
     */
   def getInstance(conf: CassandraConnectorConf, keyspace: String): MetadataStorage = {

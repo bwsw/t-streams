@@ -46,14 +46,14 @@ class ConsumerEntity(entityName: String, session: Session) {
   /**
     * Saving offset batch
     *
-    * @param name                Name of the consumer
-    * @param stream              Name of the specific stream
-    * @param partitionAndLastTxn Set of partition and last transaction pairs to save
+    * @param name                        Name of the consumer
+    * @param stream                      Name of the specific stream
+    * @param partitionAndLastTransaction Set of partition and last transaction pairs to save
     */
-  def saveBatchOffset(name: String, stream: String, partitionAndLastTxn: scala.collection.mutable.Map[Int, UUID]): Unit = {
+  def saveBatchOffset(name: String, stream: String, partitionAndLastTransaction: scala.collection.mutable.Map[Int, UUID]): Unit = {
     val batchStatement = new BatchStatement()
-    partitionAndLastTxn.map { case (partition, lastTxn) =>
-      val values: List[AnyRef] = List(name, stream, new Integer(partition), lastTxn)
+    partitionAndLastTransaction.map { case (partition, lastTransaction) =>
+      val values: List[AnyRef] = List(name, stream, new Integer(partition), lastTransaction)
       val statementWithBindings = saveSingleOffsetStatement.bind(values: _*)
       batchStatement.add(statementWithBindings)
     }

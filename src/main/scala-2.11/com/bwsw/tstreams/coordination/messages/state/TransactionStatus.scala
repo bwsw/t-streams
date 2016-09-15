@@ -32,7 +32,7 @@ object TransactionStatus extends Enumeration {
   val update = Value
 
   /**
-    * Tranzaction to be materialized
+    * Transaction to be materialized
     */
   val materialize = Value
 

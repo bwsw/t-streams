@@ -10,23 +10,23 @@ object Functions {
 
   def calculateThreadAmount(minThreads: Int, maxThreads: Int): Int = {
     if (minThreads >= maxThreads) {
-      logger.warn(s"User requested ${minThreads} worker threads, but total partitions amount is ${maxThreads}. Will use ${maxThreads}")
+      logger.warn(s"User requested $minThreads worker threads, but total partitions amount is $maxThreads. Will use $maxThreads")
       return maxThreads
     }
 
-    if(minThreads <= 0) {
-      logger.warn(s"User requested ${minThreads} worker threads, but minimal amount is 1. Will use 1 worker thread.")
+    if (minThreads <= 0) {
+      logger.warn(s"User requested $minThreads worker threads, but minimal amount is 1. Will use 1 worker thread.")
       return 1
     }
 
-    if(maxThreads % minThreads == 0) {
+    if (maxThreads % minThreads == 0) {
       return minThreads
     }
 
-    for(i <- minThreads to maxThreads) {
+    for (i <- minThreads to maxThreads) {
       if (maxThreads % i == 0)
         return i
     }
-    return maxThreads
+    maxThreads
   }
 }

@@ -4,7 +4,7 @@ import java.util.UUID
 import java.util.concurrent.CountDownLatch
 
 import com.bwsw.tstreams.agents.consumer.subscriber.{Callback, TransactionFastLoader, TransactionState}
-import com.bwsw.tstreams.agents.consumer.{Transaction, TransactionOperator}
+import com.bwsw.tstreams.agents.consumer.{ConsumerTransaction, TransactionOperator}
 import com.bwsw.tstreams.common.FirstFailLockableTaskExecutor
 import com.bwsw.tstreams.coordination.messages.state.TransactionStatus
 import com.datastax.driver.core.utils.UUIDs
@@ -24,20 +24,20 @@ trait FastLoaderTestContainer {
 
 class FastLoaderOperatorTestImpl extends TransactionOperator[String] {
   val TOTAL = 10
-  val txns = new ListBuffer[Transaction[String]]()
-  for(i <- 0 until TOTAL)
-    txns += new Transaction[String](0, UUIDs.timeBased(), 1, -1)
+  val transactions = new ListBuffer[ConsumerTransaction[String]]()
+  for (i <- 0 until TOTAL)
+    transactions += new ConsumerTransaction[String](0, UUIDs.timeBased(), 1, -1)
 
-  override def getLastTransaction(partition: Int): Option[Transaction[String]] = None
+  override def getLastTransaction(partition: Int): Option[ConsumerTransaction[String]] = None
 
-  override def getTransactionById(partition: Int, uuid: UUID): Option[Transaction[String]] = None
+  override def getTransactionById(partition: Int, uuid: UUID): Option[ConsumerTransaction[String]] = None
 
   override def setStreamPartitionOffset(partition: Int, uuid: UUID): Unit = {}
 
-  override def loadTransactionFromDB(partition: Int, txn: UUID): Option[Transaction[String]] = None
+  override def loadTransactionFromDB(partition: Int, transaction: UUID): Option[ConsumerTransaction[String]] = None
 
-  override def getTransactionsFromTo(partition: Int, from: UUID, to: UUID): ListBuffer[Transaction[String]] =
-    txns
+  override def getTransactionsFromTo(partition: Int, from: UUID, to: UUID): ListBuffer[ConsumerTransaction[String]] =
+    transactions
 
   override def checkpoint(): Unit = {}
 
@@ -45,7 +45,7 @@ class FastLoaderOperatorTestImpl extends TransactionOperator[String] {
 
   override def getCurrentOffset(partition: Int): UUID = UUIDs.timeBased()
 
-  override def buildTransactionObject(partition: Int, uuid: UUID, count: Int): Option[Transaction[String]] = Some(new Transaction[String](0, UUIDs.timeBased(), 1, -1))
+  override def buildTransactionObject(partition: Int, uuid: UUID, count: Int): Option[ConsumerTransaction[String]] = Some(new ConsumerTransaction[String](0, UUIDs.timeBased(), 1, -1))
 }
 
 /**
@@ -58,10 +58,10 @@ class TransactionFastLoaderTests extends FlatSpec with Matchers {
       val masterID = 0
       val orderID = 0
       lastTransactionsMap(0) = TransactionState(UUIDs.timeBased(), partition, masterID, orderID, 1, TransactionStatus.postCheckpoint, -1)
-      val nextTxnState = List(TransactionState(UUIDs.timeBased(), partition, masterID, orderID + 1, 1, TransactionStatus.postCheckpoint, -1))
+      val nextTransactionState = List(TransactionState(UUIDs.timeBased(), partition, masterID, orderID + 1, 1, TransactionStatus.postCheckpoint, -1))
 
       override def test(): Unit = {
-        fastLoader.checkIfPossible(nextTxnState) shouldBe true
+        fastLoader.checkIfTransactionLoadingIsPossible(nextTransactionState) shouldBe true
       }
     }
 
@@ -74,13 +74,13 @@ class TransactionFastLoaderTests extends FlatSpec with Matchers {
       val masterID = 0
       val orderID = 0
       lastTransactionsMap(0) = TransactionState(UUIDs.timeBased(), partition, masterID, orderID, 1, TransactionStatus.postCheckpoint, -1)
-      val nextTxnState = List(
+      val nextTransactionState = List(
         TransactionState(UUIDs.timeBased(), partition, masterID, orderID + 1, 1, TransactionStatus.postCheckpoint, -1),
         TransactionState(UUIDs.timeBased(), partition, masterID, orderID + 2, 1, TransactionStatus.postCheckpoint, -1),
         TransactionState(UUIDs.timeBased(), partition, masterID, orderID + 3, 1, TransactionStatus.postCheckpoint, -1))
 
       override def test(): Unit = {
-        fastLoader.checkIfPossible(nextTxnState) shouldBe true
+        fastLoader.checkIfTransactionLoadingIsPossible(nextTransactionState) shouldBe true
       }
     }
 
@@ -93,13 +93,13 @@ class TransactionFastLoaderTests extends FlatSpec with Matchers {
       val masterID = 0
       val orderID = 0
       lastTransactionsMap(0) = TransactionState(UUIDs.timeBased(), partition, masterID, orderID, 1, TransactionStatus.postCheckpoint, -1)
-      val nextTxnState = List(
+      val nextTransactionState = List(
         TransactionState(UUIDs.timeBased(), partition, masterID, orderID + 1, 1, TransactionStatus.postCheckpoint, -1),
         TransactionState(UUIDs.timeBased(), partition, masterID, orderID + 2, 1, TransactionStatus.postCheckpoint, -1),
         TransactionState(UUIDs.timeBased(), partition, masterID, orderID + 2, 1, TransactionStatus.postCheckpoint, -1))
 
       override def test(): Unit = {
-        fastLoader.checkIfPossible(nextTxnState) shouldBe false
+        fastLoader.checkIfTransactionLoadingIsPossible(nextTransactionState) shouldBe false
       }
     }
 
@@ -112,11 +112,11 @@ class TransactionFastLoaderTests extends FlatSpec with Matchers {
       val masterID = 0
       val orderID = 0
       lastTransactionsMap(0) = TransactionState(UUIDs.timeBased(), partition, masterID, orderID, 1, TransactionStatus.postCheckpoint, -1)
-      val nextTxnState = List(
+      val nextTransactionState = List(
         TransactionState(UUIDs.timeBased(), partition, masterID, orderID, 1, TransactionStatus.postCheckpoint, -1))
 
       override def test(): Unit = {
-        fastLoader.checkIfPossible(nextTxnState) shouldBe false
+        fastLoader.checkIfTransactionLoadingIsPossible(nextTransactionState) shouldBe false
       }
     }
 
@@ -129,11 +129,11 @@ class TransactionFastLoaderTests extends FlatSpec with Matchers {
       val masterID = 0
       val orderID = 0
       lastTransactionsMap(0) = TransactionState(UUIDs.timeBased(), partition, masterID, orderID, 1, TransactionStatus.postCheckpoint, -1)
-      val nextTxnState = List(
-        TransactionState(UUIDs.timeBased(), partition, masterID+1, orderID+1, 1, TransactionStatus.postCheckpoint, -1))
+      val nextTransactionState = List(
+        TransactionState(UUIDs.timeBased(), partition, masterID + 1, orderID + 1, 1, TransactionStatus.postCheckpoint, -1))
 
       override def test(): Unit = {
-        fastLoader.checkIfPossible(nextTxnState) shouldBe false
+        fastLoader.checkIfTransactionLoadingIsPossible(nextTransactionState) shouldBe false
       }
     }
 
@@ -145,14 +145,14 @@ class TransactionFastLoaderTests extends FlatSpec with Matchers {
       val partition = 0
       val masterID = 0
       val orderID = 0
-      lastTransactionsMap(0) = TransactionState(UUIDs.timeBased(), partition, masterID+1, orderID, 1, TransactionStatus.postCheckpoint, -1)
-      val nextTxnState = List(
+      lastTransactionsMap(0) = TransactionState(UUIDs.timeBased(), partition, masterID + 1, orderID, 1, TransactionStatus.postCheckpoint, -1)
+      val nextTransactionState = List(
         TransactionState(UUIDs.timeBased(), partition, masterID, orderID + 1, 1, TransactionStatus.postCheckpoint, -1),
         TransactionState(UUIDs.timeBased(), partition, masterID, orderID + 2, 1, TransactionStatus.postCheckpoint, -1),
         TransactionState(UUIDs.timeBased(), partition, masterID, orderID + 2, 1, TransactionStatus.postCheckpoint, -1))
 
       override def test(): Unit = {
-        fastLoader.checkIfPossible(nextTxnState) shouldBe false
+        fastLoader.checkIfTransactionLoadingIsPossible(nextTransactionState) shouldBe false
       }
     }
 
@@ -165,13 +165,13 @@ class TransactionFastLoaderTests extends FlatSpec with Matchers {
       val masterID = 0
       val orderID = 0
       lastTransactionsMap(0) = TransactionState(UUIDs.timeBased(), partition, masterID, orderID, 1, TransactionStatus.postCheckpoint, -1)
-      val nextTxnState = List(
-        TransactionState(UUIDs.timeBased(), partition, masterID, orderID+1, 1, TransactionStatus.postCheckpoint, -1),
-        TransactionState(UUIDs.timeBased(), partition, masterID, orderID+2, 1, TransactionStatus.postCheckpoint, -1),
-        TransactionState(UUIDs.timeBased(), partition, masterID+1, orderID+3, 1, TransactionStatus.postCheckpoint, -1))
+      val nextTransactionState = List(
+        TransactionState(UUIDs.timeBased(), partition, masterID, orderID + 1, 1, TransactionStatus.postCheckpoint, -1),
+        TransactionState(UUIDs.timeBased(), partition, masterID, orderID + 2, 1, TransactionStatus.postCheckpoint, -1),
+        TransactionState(UUIDs.timeBased(), partition, masterID + 1, orderID + 3, 1, TransactionStatus.postCheckpoint, -1))
 
       override def test(): Unit = {
-        fastLoader.checkIfPossible(nextTxnState) shouldBe false
+        fastLoader.checkIfTransactionLoadingIsPossible(nextTransactionState) shouldBe false
       }
     }
 
@@ -184,20 +184,21 @@ class TransactionFastLoaderTests extends FlatSpec with Matchers {
       val masterID = 0
       val orderID = 0
       lastTransactionsMap(0) = TransactionState(UUIDs.timeBased(), partition, masterID, orderID, 1, TransactionStatus.postCheckpoint, -1)
-      val nextTxnState = List(
-        TransactionState(UUIDs.timeBased(), partition, masterID, orderID+1, 1, TransactionStatus.postCheckpoint, -1))
+      val nextTransactionState = List(
+        TransactionState(UUIDs.timeBased(), partition, masterID, orderID + 1, 1, TransactionStatus.postCheckpoint, -1))
       var ctr: Int = 0
       val l = new CountDownLatch(1)
+
       override def test(): Unit = {
-        fastLoader.load[String](nextTxnState, new FastLoaderOperatorTestImpl, new FirstFailLockableTaskExecutor("lf"), new Callback[String] {
-           override def onEvent(consumer: TransactionOperator[String], txn: Transaction[String]): Unit = {
-             ctr += 1
-             l.countDown()
-           }
+        fastLoader.load[String](nextTransactionState, new FastLoaderOperatorTestImpl, new FirstFailLockableTaskExecutor("lf"), new Callback[String] {
+          override def onTransaction(consumer: TransactionOperator[String], transaction: ConsumerTransaction[String]): Unit = {
+            ctr += 1
+            l.countDown()
+          }
         })
         l.await()
         ctr shouldBe 1
-        lastTransactionsMap(0).uuid shouldBe nextTxnState.head.uuid
+        lastTransactionsMap(0).uuid shouldBe nextTransactionState.head.uuid
       }
     }
 
@@ -210,23 +211,24 @@ class TransactionFastLoaderTests extends FlatSpec with Matchers {
       val masterID = 0
       val orderID = 0
       lastTransactionsMap(0) = TransactionState(UUIDs.timeBased(), partition, masterID, orderID, 1, TransactionStatus.postCheckpoint, -1)
-      val nextTxnState = List(
-        TransactionState(UUIDs.timeBased(), partition, masterID, orderID+1, 1, TransactionStatus.postCheckpoint, -1),
-        TransactionState(UUIDs.timeBased(), partition, masterID, orderID+2, 1, TransactionStatus.postCheckpoint, -1),
-        TransactionState(UUIDs.timeBased(), partition, masterID, orderID+3, 1, TransactionStatus.postCheckpoint, -1))
+      val nextTransactionState = List(
+        TransactionState(UUIDs.timeBased(), partition, masterID, orderID + 1, 1, TransactionStatus.postCheckpoint, -1),
+        TransactionState(UUIDs.timeBased(), partition, masterID, orderID + 2, 1, TransactionStatus.postCheckpoint, -1),
+        TransactionState(UUIDs.timeBased(), partition, masterID, orderID + 3, 1, TransactionStatus.postCheckpoint, -1))
       var ctr: Int = 0
       val l = new CountDownLatch(1)
+
       override def test(): Unit = {
-        fastLoader.load[String](nextTxnState, new FastLoaderOperatorTestImpl, new FirstFailLockableTaskExecutor("lf"), new Callback[String] {
-          override def onEvent(consumer: TransactionOperator[String], txn: Transaction[String]): Unit = {
+        fastLoader.load[String](nextTransactionState, new FastLoaderOperatorTestImpl, new FirstFailLockableTaskExecutor("lf"), new Callback[String] {
+          override def onTransaction(consumer: TransactionOperator[String], transaction: ConsumerTransaction[String]): Unit = {
             ctr += 1
-            if(ctr == 3)
+            if (ctr == 3)
               l.countDown()
           }
         })
         l.await()
         ctr shouldBe 3
-        lastTransactionsMap(0).uuid shouldBe nextTxnState.last.uuid
+        lastTransactionsMap(0).uuid shouldBe nextTransactionState.last.uuid
       }
     }
 

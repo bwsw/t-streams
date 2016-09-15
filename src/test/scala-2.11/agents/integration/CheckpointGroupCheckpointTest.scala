@@ -11,10 +11,10 @@ import testutils._
 class CheckpointGroupCheckpointTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
 
   System.setProperty("DEBUG", "true")
-  System.setProperty(org.slf4j.impl.SimpleLogger.DEFAULT_LOG_LEVEL_KEY, "DEBUG");
+  System.setProperty(org.slf4j.impl.SimpleLogger.DEFAULT_LOG_LEVEL_KEY, "DEBUG")
 
-  f.setProperty(TSF_Dictionary.Stream.NAME,"test_stream").
-    setProperty(TSF_Dictionary.Stream.PARTITIONS,3).
+  f.setProperty(TSF_Dictionary.Stream.NAME, "test_stream").
+    setProperty(TSF_Dictionary.Stream.PARTITIONS, 3).
     setProperty(TSF_Dictionary.Stream.TTL, 60 * 10).
     setProperty(TSF_Dictionary.Coordination.CONNECTION_TIMEOUT, 7).
     setProperty(TSF_Dictionary.Coordination.TTL, 7).
@@ -26,14 +26,14 @@ class CheckpointGroupCheckpointTest extends FlatSpec with Matchers with BeforeAn
 
   val producer = f.getProducer[String](
     name = "test_producer",
-    txnGenerator = LocalGeneratorCreator.getGen(),
+    transactionGenerator = LocalGeneratorCreator.getGen(),
     converter = stringToArrayByteConverter,
     partitions = Set(0, 1, 2),
     isLowPriority = false)
 
   val consumer = f.getConsumer[String](
     name = "test_consumer",
-    txnGenerator = LocalGeneratorCreator.getGen(),
+    transactionGenerator = LocalGeneratorCreator.getGen(),
     converter = arrayByteToStringConverter,
     partitions = Set(0, 1, 2),
     offset = Oldest,
@@ -41,7 +41,7 @@ class CheckpointGroupCheckpointTest extends FlatSpec with Matchers with BeforeAn
 
   val consumer2 = f.getConsumer[String](
     name = "test_consumer",
-    txnGenerator = LocalGeneratorCreator.getGen(),
+    transactionGenerator = LocalGeneratorCreator.getGen(),
     converter = arrayByteToStringConverter,
     partitions = Set(0, 1, 2),
     offset = Oldest,
@@ -54,18 +54,18 @@ class CheckpointGroupCheckpointTest extends FlatSpec with Matchers with BeforeAn
     group.add(producer)
     group.add(consumer)
 
-    val txn1 = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
-    logger.info("TXN1 is " + txn1.getTransactionUUID.toString)
-    txn1.send("info1")
-    txn1.checkpoint()
+    val transaction1 = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
+    logger.info("Transaction 1 is " + transaction1.getTransactionUUID.toString)
+    transaction1.send("info1")
+    transaction1.checkpoint()
 
     //move consumer offsets
     consumer.getTransaction(0).get
 
     //open transaction without close
-    val txn2 = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened, 1)
-    logger.info("TXN2 is " + txn2.getTransactionUUID.toString)
-    txn2.send("info2")
+    val transaction2 = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened, 1)
+    logger.info("Transaction 2 is " + transaction2.getTransactionUUID.toString)
+    transaction2.send("info2")
 
     group.checkpoint()
 

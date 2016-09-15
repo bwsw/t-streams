@@ -18,14 +18,16 @@ class InMemoryQueue[T] extends AbstractQueue[T] {
     LockUtil.withLockOrDieDo[Unit](mutex, (100, TimeUnit.SECONDS), None, () => {
       q enqueue elt
       cond.signal()
-      inFlight.incrementAndGet() })
+      inFlight.incrementAndGet()
+    })
   }
 
   override def get(delay: Long, units: TimeUnit): T =
-  LockUtil.withLockOrDieDo[T](mutex, (100, TimeUnit.SECONDS), None, () => {
-    if(q.isEmpty && !cond.await(delay, units))
-      return null.asInstanceOf[T]
-    val r = q dequeue()
-    inFlight.decrementAndGet()
-    r })
+    LockUtil.withLockOrDieDo[T](mutex, (100, TimeUnit.SECONDS), None, () => {
+      if (q.isEmpty && !cond.await(delay, units))
+        return null.asInstanceOf[T]
+      val r = q dequeue()
+      inFlight.decrementAndGet()
+      r
+    })
 }

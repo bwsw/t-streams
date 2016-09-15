@@ -10,7 +10,9 @@ trait AbstractQueue[T] {
 
   protected val inFlight = new AtomicInteger(0)
 
-  def put(elt: T): Unit = ???
-  def get(delay: Long, units: TimeUnit): T = ???
+  def put(elt: T): Unit
+
+  def get(delay: Long, units: TimeUnit): T
+
   def getInFlight(): Int = inFlight.get()
 }

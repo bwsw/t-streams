@@ -1,6 +1,6 @@
 package agents.integration
 
-import com.bwsw.tstreams.agents.producer.{NewTransactionProducerPolicy, Transaction}
+import com.bwsw.tstreams.agents.producer.NewTransactionProducerPolicy
 import com.bwsw.tstreams.env.TSF_Dictionary
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import testutils.{LocalGeneratorCreator, TestUtils}
@@ -14,7 +14,7 @@ class ProducerLazyBootTests extends FlatSpec with Matchers with BeforeAndAfterAl
   // keep it greater than 3
   val ALL_PARTITIONS = 2
 
-  f.setProperty(TSF_Dictionary.Stream.NAME,"test_stream")
+  f.setProperty(TSF_Dictionary.Stream.NAME, "test_stream")
     .setProperty(TSF_Dictionary.Stream.PARTITIONS, ALL_PARTITIONS)
     .setProperty(TSF_Dictionary.Stream.TTL, 60 * 10)
     .setProperty(TSF_Dictionary.Coordination.CONNECTION_TIMEOUT, 7)
@@ -31,7 +31,7 @@ class ProducerLazyBootTests extends FlatSpec with Matchers with BeforeAndAfterAl
   it should "distribute partitions in a right way with lazy mode" in {
     val producer1 = f.getProducer[String](
       name = "test_producer",
-      txnGenerator = LocalGeneratorCreator.getGen(),
+      transactionGenerator = LocalGeneratorCreator.getGen(),
       converter = stringToArrayByteConverter,
       partitions = (0 until ALL_PARTITIONS).toSet,
       isLowPriority = false)
@@ -41,7 +41,7 @@ class ProducerLazyBootTests extends FlatSpec with Matchers with BeforeAndAfterAl
 
     val producer2 = f.getProducer[String](
       name = "test_producer",
-      txnGenerator = LocalGeneratorCreator.getGen(),
+      transactionGenerator = LocalGeneratorCreator.getGen(),
       converter = stringToArrayByteConverter,
       partitions = (0 until ALL_PARTITIONS).toSet,
       isLowPriority = false)
@@ -68,7 +68,7 @@ class ProducerLazyBootTests extends FlatSpec with Matchers with BeforeAndAfterAl
 
     val producer = f.getProducer[String](
       name = "test_producer",
-      txnGenerator = LocalGeneratorCreator.getGen(),
+      transactionGenerator = LocalGeneratorCreator.getGen(),
       converter = stringToArrayByteConverter,
       partitions = (0 until ALL_PARTITIONS).toSet,
       isLowPriority = false)
@@ -88,7 +88,7 @@ class ProducerLazyBootTests extends FlatSpec with Matchers with BeforeAndAfterAl
 
     val producer = f.getProducer[String](
       name = "test_producer",
-      txnGenerator = LocalGeneratorCreator.getGen(),
+      transactionGenerator = LocalGeneratorCreator.getGen(),
       converter = stringToArrayByteConverter,
       partitions = (0 until ALL_PARTITIONS).toSet,
       isLowPriority = false)
@@ -109,7 +109,7 @@ class ProducerLazyBootTests extends FlatSpec with Matchers with BeforeAndAfterAl
 
     val producer = f.getProducer[String](
       name = "test_producer",
-      txnGenerator = LocalGeneratorCreator.getGen(),
+      transactionGenerator = LocalGeneratorCreator.getGen(),
       converter = stringToArrayByteConverter,
       partitions = (0 until ALL_PARTITIONS).toSet,
       isLowPriority = false)

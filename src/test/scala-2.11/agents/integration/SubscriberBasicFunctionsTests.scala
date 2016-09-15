@@ -4,8 +4,8 @@ import java.util.UUID
 import java.util.concurrent.{CountDownLatch, TimeUnit}
 
 import com.bwsw.tstreams.agents.consumer.Offset.Oldest
-import com.bwsw.tstreams.agents.consumer.{Transaction, TransactionOperator}
 import com.bwsw.tstreams.agents.consumer.subscriber.Callback
+import com.bwsw.tstreams.agents.consumer.{ConsumerTransaction, TransactionOperator}
 import com.bwsw.tstreams.agents.producer.NewTransactionProducerPolicy
 import com.bwsw.tstreams.env.TSF_Dictionary
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
@@ -14,9 +14,9 @@ import testutils.{LocalGeneratorCreator, TestUtils}
 /**
   * Created by Ivan Kudryavtsev on 24.08.16.
   */
-class SubscriberBasicFunctionsTests extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils  {
-  f.setProperty(TSF_Dictionary.Stream.NAME,"test_stream").
-    setProperty(TSF_Dictionary.Stream.PARTITIONS,3).
+class SubscriberBasicFunctionsTests extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
+  f.setProperty(TSF_Dictionary.Stream.NAME, "test_stream").
+    setProperty(TSF_Dictionary.Stream.PARTITIONS, 3).
     setProperty(TSF_Dictionary.Stream.TTL, 60 * 10).
     setProperty(TSF_Dictionary.Coordination.CONNECTION_TIMEOUT, 7).
     setProperty(TSF_Dictionary.Coordination.TTL, 7).
@@ -28,19 +28,19 @@ class SubscriberBasicFunctionsTests extends FlatSpec with Matchers with BeforeAn
 
   val producer = f.getProducer[String](
     name = "test_producer",
-    txnGenerator = LocalGeneratorCreator.getGen(),
+    transactionGenerator = LocalGeneratorCreator.getGen(),
     converter = stringToArrayByteConverter,
-    partitions = Set(0,1,2),
+    partitions = Set(0, 1, 2),
     isLowPriority = false)
 
   it should "start and stop with default options" in {
     val s = f.getSubscriber[String](name = "sv2",
-      txnGenerator = LocalGeneratorCreator.getGen(),
-      converter = arrayByteToStringConverter, partitions = Set(0,1,2),
+      transactionGenerator = LocalGeneratorCreator.getGen(),
+      converter = arrayByteToStringConverter, partitions = Set(0, 1, 2),
       offset = Oldest,
       isUseLastOffset = true,
       callback = new Callback[String] {
-        override def onEvent(consumer: TransactionOperator[String], txn: Transaction[String]): Unit = {}
+        override def onTransaction(consumer: TransactionOperator[String], transaction: ConsumerTransaction[String]): Unit = {}
       })
     s.start()
     s.stop()
@@ -48,12 +48,12 @@ class SubscriberBasicFunctionsTests extends FlatSpec with Matchers with BeforeAn
 
   it should "allow start and stop several times" in {
     val s = f.getSubscriber[String](name = "sv2",
-      txnGenerator = LocalGeneratorCreator.getGen(),
-      converter = arrayByteToStringConverter, partitions = Set(0,1,2),
+      transactionGenerator = LocalGeneratorCreator.getGen(),
+      converter = arrayByteToStringConverter, partitions = Set(0, 1, 2),
       offset = Oldest,
       isUseLastOffset = true,
       callback = new Callback[String] {
-        override def onEvent(consumer: TransactionOperator[String], txn: Transaction[String]): Unit = {}
+        override def onTransaction(consumer: TransactionOperator[String], transaction: ConsumerTransaction[String]): Unit = {}
       })
     s.start()
     s.stop()
@@ -63,12 +63,12 @@ class SubscriberBasicFunctionsTests extends FlatSpec with Matchers with BeforeAn
 
   it should "not allow double start" in {
     val s = f.getSubscriber[String](name = "sv2",
-      txnGenerator = LocalGeneratorCreator.getGen(),
-      converter = arrayByteToStringConverter, partitions = Set(0,1,2),
+      transactionGenerator = LocalGeneratorCreator.getGen(),
+      converter = arrayByteToStringConverter, partitions = Set(0, 1, 2),
       offset = Oldest,
       isUseLastOffset = true,
       callback = new Callback[String] {
-        override def onEvent(consumer: TransactionOperator[String], txn: Transaction[String]): Unit = {}
+        override def onTransaction(consumer: TransactionOperator[String], transaction: ConsumerTransaction[String]): Unit = {}
       })
     s.start()
     var flag = false
@@ -85,12 +85,12 @@ class SubscriberBasicFunctionsTests extends FlatSpec with Matchers with BeforeAn
 
   it should "not allow double stop" in {
     val s = f.getSubscriber[String](name = "sv2",
-      txnGenerator = LocalGeneratorCreator.getGen(),
-      converter = arrayByteToStringConverter, partitions = Set(0,1,2),
+      transactionGenerator = LocalGeneratorCreator.getGen(),
+      converter = arrayByteToStringConverter, partitions = Set(0, 1, 2),
       offset = Oldest,
       isUseLastOffset = true,
       callback = new Callback[String] {
-        override def onEvent(consumer: TransactionOperator[String], txn: Transaction[String]): Unit = {}
+        override def onTransaction(consumer: TransactionOperator[String], transaction: ConsumerTransaction[String]): Unit = {}
       })
     s.start()
     s.stop()
@@ -109,12 +109,12 @@ class SubscriberBasicFunctionsTests extends FlatSpec with Matchers with BeforeAn
     val f1 = f.copy()
     f1.setProperty(TSF_Dictionary.Consumer.Subscriber.PERSISTENT_QUEUE_PATH, null)
     val s = f1.getSubscriber[String](name = "sv2_inram",
-      txnGenerator = LocalGeneratorCreator.getGen(),
-      converter = arrayByteToStringConverter, partitions = Set(0,1,2),
+      transactionGenerator = LocalGeneratorCreator.getGen(),
+      converter = arrayByteToStringConverter, partitions = Set(0, 1, 2),
       offset = Oldest,
       isUseLastOffset = true,
       callback = new Callback[String] {
-        override def onEvent(consumer: TransactionOperator[String], txn: Transaction[String]): Unit = {}
+        override def onTransaction(consumer: TransactionOperator[String], transaction: ConsumerTransaction[String]): Unit = {}
       })
     s.start()
     s.stop()
@@ -125,23 +125,23 @@ class SubscriberBasicFunctionsTests extends FlatSpec with Matchers with BeforeAn
     var i: Int = 0
     val TOTAL = 1000
     var uuid: UUID = null
-    for(it <- 0 until TOTAL) {
-      val txn = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
-      txn.send("test")
-      txn.checkpoint()
-      uuid = txn.getTransactionUUID()
+    for (it <- 0 until TOTAL) {
+      val transaction = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
+      transaction.send("test")
+      transaction.checkpoint()
+      uuid = transaction.getTransactionUUID()
     }
     producer.stop()
 
     val s = f.getSubscriber[String](name = "sv2",
-      txnGenerator = LocalGeneratorCreator.getGen(),
-      converter = arrayByteToStringConverter, partitions = Set(0,1,2),
+      transactionGenerator = LocalGeneratorCreator.getGen(),
+      converter = arrayByteToStringConverter, partitions = Set(0, 1, 2),
       offset = Oldest,
       isUseLastOffset = true,
       callback = new Callback[String] {
-        override def onEvent(consumer: TransactionOperator[String], txn: Transaction[String]): Unit = this.synchronized {
+        override def onTransaction(consumer: TransactionOperator[String], transaction: ConsumerTransaction[String]): Unit = this.synchronized {
           i += 1
-          if(i == TOTAL)
+          if (i == TOTAL)
             l.countDown()
         }
       })

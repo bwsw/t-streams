@@ -10,26 +10,26 @@ import testutils.{LocalGeneratorCreator, TestUtils}
 /**
   * Created by Ivan Kudryavtsev on 05.08.16.
   */
-class ProducerUpdateTaskTest  extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils  {
+class ProducerUpdateTaskTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
 
   val blockCheckpoint1 = new ResettableCountDownLatch(1)
   val blockCheckpoint2 = new ResettableCountDownLatch(1)
   var flag: Int = 0
 
   System.setProperty("DEBUG", "true")
-  GlobalHooks.addHook(GlobalHooks.transactionUpdateTaskBegin, () =>{
+  GlobalHooks.addHook(GlobalHooks.transactionUpdateTaskBegin, () => {
     flag = 2
     blockCheckpoint1.countDown
   })
 
-  GlobalHooks.addHook(GlobalHooks.transactionUpdateTaskEnd, () =>{
+  GlobalHooks.addHook(GlobalHooks.transactionUpdateTaskEnd, () => {
     flag = 3
     blockCheckpoint2.countDown
   })
 
 
-  f.setProperty(TSF_Dictionary.Stream.NAME,"test_stream").
-    setProperty(TSF_Dictionary.Stream.PARTITIONS,3).
+  f.setProperty(TSF_Dictionary.Stream.NAME, "test_stream").
+    setProperty(TSF_Dictionary.Stream.PARTITIONS, 3).
     setProperty(TSF_Dictionary.Stream.TTL, 60 * 10).
     setProperty(TSF_Dictionary.Coordination.CONNECTION_TIMEOUT, 7).
     setProperty(TSF_Dictionary.Coordination.TTL, 7).
@@ -41,9 +41,9 @@ class ProducerUpdateTaskTest  extends FlatSpec with Matchers with BeforeAndAfter
 
   val producer = f.getProducer[String](
     name = "test_producer",
-    txnGenerator = LocalGeneratorCreator.getGen(),
+    transactionGenerator = LocalGeneratorCreator.getGen(),
     converter = stringToArrayByteConverter,
-    partitions = Set(0,1,2),
+    partitions = Set(0, 1, 2),
     isLowPriority = false)
 
 

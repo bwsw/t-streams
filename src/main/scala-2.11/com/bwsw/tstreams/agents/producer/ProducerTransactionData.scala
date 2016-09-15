@@ -6,11 +6,11 @@ import com.bwsw.tstreams.data.IStorage
 /**
   * Created by Ivan Kudryavtsev on 15.08.16.
   */
-class TransactionData[USERTYPE](txn: Transaction[USERTYPE], ttl: Int, storage: IStorage[Array[Byte]]) {
+class ProducerTransactionData[T](transaction: ProducerTransaction[T], ttl: Int, storage: IStorage[Array[Byte]]) {
   var items = new scala.collection.mutable.ListBuffer[Array[Byte]]()
   var lastOffset: Int = 0
 
-  def put(elt: USERTYPE, converter: IConverter[USERTYPE, Array[Byte]]): Int = this.synchronized {
+  def put(elt: T, converter: IConverter[T, Array[Byte]]): Int = this.synchronized {
     items += converter.convert(elt)
     lastOffset += 1
     return lastOffset
@@ -18,9 +18,9 @@ class TransactionData[USERTYPE](txn: Transaction[USERTYPE], ttl: Int, storage: I
 
   def save(): () => Unit = this.synchronized {
     val job = storage.save(
-      txn.getTransactionUUID(),
-      txn.getTransactionOwner().stream.name,
-      txn.getPartition,
+      transaction.getTransactionUUID(),
+      transaction.getTransactionOwner().stream.name,
+      transaction.getPartition,
       ttl,
       lastOffset,
       items)

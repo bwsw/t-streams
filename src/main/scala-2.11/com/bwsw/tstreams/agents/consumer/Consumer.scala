@@ -4,7 +4,6 @@ import java.util.UUID
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.locks.ReentrantLock
 
-import com.bwsw.tstreams.agents.consumer.subscriber.Subscriber
 import com.bwsw.tstreams.agents.group.{CheckpointInfo, ConsumerCheckpointInfo, GroupParticipant}
 import com.bwsw.tstreams.common.UUIDComparator
 import com.bwsw.tstreams.metadata.MetadataStorage
@@ -26,8 +25,8 @@ object Consumer {
   * @tparam T User data type
   */
 class Consumer[T](val name: String,
-                         val stream: TStream[Array[Byte]],
-                         val options: Options[T])
+                  val stream: TStream[Array[Byte]],
+                  val options: ConsumerOptions[T])
   extends GroupParticipant
     with TransactionOperator[T] {
 
@@ -45,7 +44,7 @@ class Consumer[T](val name: String,
   /**
     * Buffer for transactions preload
     */
-  private val transactionBuffer = scala.collection.mutable.Map[Int, scala.collection.mutable.Queue[Transaction[T]]]()
+  private val transactionBuffer = scala.collection.mutable.Map[Int, scala.collection.mutable.Queue[ConsumerTransaction[T]]]()
 
   /**
     * Indicate set offsets or not
@@ -69,6 +68,7 @@ class Consumer[T](val name: String,
 
   /**
     * returns current read offset
+    *
     * @param partition
     * @return
     */
@@ -80,13 +80,13 @@ class Consumer[T](val name: String,
     * Starts the operation.
     */
   def start(): Unit = this.synchronized {
-    Consumer.logger.info(s"Start a new consumer with name: ${name}, streamName : ${stream.getName}, streamPartitions : ${stream.getPartitions}")
+    Consumer.logger.info(s"Start a new consumer with name: $name, streamName : ${stream.getName}, streamPartitions : ${stream.getPartitions}")
 
 
 
 
-    if(isStarted.get())
-      throw new IllegalStateException(s"Consumer ${name} is started already. Double start is detected.")
+    if (isStarted.get())
+      throw new IllegalStateException(s"Consumer $name is started already. Double start is detected.")
 
     //set consumer offsets
     if (!stream.metadataStorage.consumerEntity.exists(name) || !options.useLastOffset) {
@@ -95,17 +95,17 @@ class Consumer[T](val name: String,
       for (i <- 0 until stream.getPartitions) {
         currentOffsets(i) = options.offset match {
           case Offset.Oldest =>
-            options.txnGenerator.getTimeUUID(0)
+            options.transactionGenerator.getTimeUUID(0)
           case Offset.Newest =>
-            options.txnGenerator.getTimeUUID()
+            options.transactionGenerator.getTimeUUID()
           case dateTime: Offset.DateTime =>
-            options.txnGenerator.getTimeUUID(dateTime.startTime.getTime)
+            options.transactionGenerator.getTimeUUID(dateTime.startTime.getTime)
           case offset: Offset.UUID =>
             offset.startUUID
           case _ =>
-            throw new IllegalStateException(s"Offset option for consumer ${name} cannot be resolved to known Offset.* object.")
+            throw new IllegalStateException(s"Offset option for consumer $name cannot be resolved to known Offset.* object.")
         }
-        checkpointOffsets(i) =  currentOffsets(i)
+        checkpointOffsets(i) = currentOffsets(i)
       }
     }
 
@@ -128,65 +128,66 @@ class Consumer[T](val name: String,
 
   /**
     * Receives new transaction from the partition
+    *
     * @param partition
     * @return
     */
-  def getTransaction(partition: Int): Option[Transaction[T]] = this.synchronized {
+  def getTransaction(partition: Int): Option[ConsumerTransaction[T]] = this.synchronized {
 
-    if(!isStarted.get())
-      throw new IllegalStateException(s"Consumer ${name} is not started. Start it first.")
+    if (!isStarted.get())
+      throw new IllegalStateException(s"Consumer $name is not started. Start it first.")
 
-    if(!getPartitions().contains(partition))
-      throw new IllegalStateException(s"Consumer doesn't work on partition=${partition}.")
+    if (!getPartitions().contains(partition))
+      throw new IllegalStateException(s"Consumer doesn't work on partition=$partition.")
 
     if (transactionBuffer(partition).isEmpty) {
       transactionBuffer(partition) = stream.metadataStorage.commitEntity.getTransactions(
-        streamName      = stream.getName,
-        partition       = partition,
+        streamName = stream.getName,
+        partition = partition,
         fromTransaction = currentOffsets(partition),
-        cnt             = options.transactionsPreload)
+        cnt = options.transactionsPreload)
 
       if (transactionBuffer(partition).isEmpty) {
         return None
       }
     }
 
-    val txn = transactionBuffer(partition).head
+    val transaction = transactionBuffer(partition).head
 
-    if (txn.getCount() != -1) {
-      updateOffsets(partition, txn.getTransactionUUID())
+    if (transaction.getCount() != -1) {
+      updateOffsets(partition, transaction.getTransactionUUID())
       transactionBuffer(partition).dequeue()
-      txn.attach(this)
-      return Some(txn)
+      transaction.attach(this)
+      return Some(transaction)
     }
 
-    val txnUpdatedOpt = getTransactionById(partition, txn.getTransactionUUID())
-    if(txnUpdatedOpt.isDefined) {
-      updateOffsets(partition, txnUpdatedOpt.get.getTransactionUUID())
+    val transactionUpdatedOpt = getTransactionById(partition, transaction.getTransactionUUID())
+    if (transactionUpdatedOpt.isDefined) {
+      updateOffsets(partition, transactionUpdatedOpt.get.getTransactionUUID())
       transactionBuffer(partition).dequeue()
-      return txnUpdatedOpt
+      return transactionUpdatedOpt
     }
 
     return None
   }
 
   private def updateOffsets(partition: Int, uuid: UUID) = {
-    checkpointOffsets(partition)    = uuid
-    currentOffsets(partition)       = uuid
+    checkpointOffsets(partition) = uuid
+    currentOffsets(partition) = uuid
   }
 
   /**
     * Getting last transaction from concrete partition
     *
     * @param partition Partition to get last transaction
-    * @return Last txn
+    * @return Last transaction
     */
-  def getLastTransaction(partition: Int): Option[Transaction[T]] = this.synchronized {
+  def getLastTransaction(partition: Int): Option[ConsumerTransaction[T]] = this.synchronized {
 
-    if(!isStarted.get())
-      throw new IllegalStateException(s"Consumer ${name} is not started. Start it first.")
+    if (!isStarted.get())
+      throw new IllegalStateException(s"Consumer $name is not started. Start it first.")
 
-    var uuid = options.txnGenerator.getTimeUUID()
+    var uuid = options.transactionGenerator.getTimeUUID()
     var isFinished = false
     while (!isFinished) {
 
@@ -196,34 +197,34 @@ class Consumer[T](val name: String,
         isFinished = true
       else {
         while (queue.nonEmpty) {
-          val txn: Transaction[T] = queue.dequeue()
-          if (txn.getCount() != -1) {
-            txn.attach(this)
-            return Option[Transaction[T]](txn)
+          val transaction: ConsumerTransaction[T] = queue.dequeue()
+          if (transaction.getCount() != -1) {
+            transaction.attach(this)
+            return Option[ConsumerTransaction[T]](transaction)
           }
-          uuid = txn.getTransactionUUID()
+          uuid = transaction.getTransactionUUID()
         }
       }
     }
     None
   }
 
-  def getTransactionsFromTo(partition: Int, from: UUID, to: UUID): ListBuffer[Transaction[T]] = {
+  def getTransactionsFromTo(partition: Int, from: UUID, to: UUID): ListBuffer[ConsumerTransaction[T]] = {
     val comparator = new UUIDComparator()
-    val txns = stream.metadataStorage.commitEntity.getTransactions[T](
-                                          streamName = stream.getName,
-                                          partition = partition,
-                                          fromTransaction = from,
-                                          cnt = options.transactionsPreload)
-    val okList = ListBuffer[Transaction[T]]()
+    val transactions = stream.metadataStorage.commitEntity.getTransactions[T](
+      streamName = stream.getName,
+      partition = partition,
+      fromTransaction = from,
+      cnt = options.transactionsPreload)
+    val okList = ListBuffer[ConsumerTransaction[T]]()
     var addFlag = true
     var moreItems = true
-    while(addFlag && moreItems) {
-      if(txns.isEmpty) {
+    while (addFlag && moreItems) {
+      if (transactions.isEmpty) {
         moreItems = false
       } else {
-        val t = txns.dequeue()
-        if(comparator.compare(to, t.getTransactionUUID()) > -1) {
+        val t = transactions.dequeue()
+        if (comparator.compare(to, t.getTransactionUUID()) > -1) {
           if (t.getCount() >= 0)
             okList.append(t)
           else
@@ -235,8 +236,8 @@ class Consumer[T](val name: String,
         }
       }
     }
-    if(okList.size > 0 && addFlag && comparator.compare(to, okList.last.getTransactionUUID()) == 1)
-      okList.appendAll(if (okList.size > 0) getTransactionsFromTo(partition, okList.last.getTransactionUUID(), to) else ListBuffer[Transaction[T]]())
+    if (okList.nonEmpty && addFlag && comparator.compare(to, okList.last.getTransactionUUID()) == 1)
+      okList.appendAll(if (okList.nonEmpty) getTransactionsFromTo(partition, okList.last.getTransactionUUID(), to) else ListBuffer[ConsumerTransaction[T]]())
 
     okList
   }
@@ -247,22 +248,22 @@ class Consumer[T](val name: String,
     * @param uuid      Uuid for this transaction
     * @return BasicConsumerTransaction
     */
-  def getTransactionById(partition: Int, uuid: UUID): Option[Transaction[T]] = this.synchronized {
+  def getTransactionById(partition: Int, uuid: UUID): Option[ConsumerTransaction[T]] = this.synchronized {
 
-    if(!isStarted.get())
-      throw new IllegalStateException(s"Consumer ${name} is not started. Start it first.")
+    if (!isStarted.get())
+      throw new IllegalStateException(s"Consumer $name is not started. Start it first.")
 
-    if(Consumer.logger.isDebugEnabled) {
+    if (Consumer.logger.isDebugEnabled) {
       Consumer.logger.debug(s"Start retrieving new historic transaction for consumer with" +
         s" name : $name, streamName : ${stream.getName}, streamPartitions : ${stream.getPartitions}")
     }
 
-    val txnOpt = loadTransactionFromDB(partition, uuid)
-    if (txnOpt.isDefined) {
-      val txn = txnOpt.get
-      if (txn.getCount() != -1) {
-        txnOpt.get.attach(this)
-        txnOpt
+    val transactionOpt = loadTransactionFromDB(partition, uuid)
+    if (transactionOpt.isDefined) {
+      val transaction = transactionOpt.get
+      if (transaction.getCount() != -1) {
+        transactionOpt.get.attach(this)
+        transactionOpt
       }
       else
         None
@@ -279,34 +280,34 @@ class Consumer[T](val name: String,
     * @param uuid      offset value
     */
   def setStreamPartitionOffset(partition: Int, uuid: UUID): Unit = this.synchronized {
-    if(!isStarted.get())
-      throw new IllegalStateException(s"Consumer ${name} is not started. Start it first.")
+    if (!isStarted.get())
+      throw new IllegalStateException(s"Consumer $name is not started. Start it first.")
 
     updateOffsets(partition, uuid)
 
     transactionBuffer(partition) = stream.metadataStorage.commitEntity.getTransactions(
-                                                                            stream.getName,
-                                                                            partition,
-                                                                            uuid,
-                                                                            options.transactionsPreload)
+      stream.getName,
+      partition,
+      uuid,
+      options.transactionsPreload)
   }
 
   /**
     * Update transaction (if transaction is not closed it will have total packets value -1)
     *
-    * @param txn Transaction to update
+    * @param transactionUUID Transaction to update
     * @return Updated transaction
     */
-  def loadTransactionFromDB(partition: Int, txn: UUID): Option[Transaction[T]] = this.synchronized {
-    if(!isStarted.get())
+  def loadTransactionFromDB(partition: Int, transactionUUID: UUID): Option[ConsumerTransaction[T]] = this.synchronized {
+    if (!isStarted.get())
       throw new IllegalStateException("Consumer is not started. Start consumer first.")
 
     val data: Option[(Int, Int)] =
-      stream.metadataStorage.commitEntity.getTransactionItemCountAndTTL(stream.getName, partition, txn)
+      stream.metadataStorage.commitEntity.getTransactionItemCountAndTTL(stream.getName, partition, transactionUUID)
 
     if (data.isDefined) {
       val (cnt, ttl) = data.get
-      Some(new Transaction(partition, txn, cnt, ttl))
+      Some(new ConsumerTransaction(partition, transactionUUID, cnt, ttl))
     }
     else
       None
@@ -317,7 +318,7 @@ class Consumer[T](val name: String,
     * to read later from them (in case of system stop/failure)
     */
   def checkpoint(): Unit = this.synchronized {
-    if(!isStarted.get())
+    if (!isStarted.get())
       throw new IllegalStateException("Consumer is not started. Start consumer first.")
 
     if (Consumer.logger.isDebugEnabled) {
@@ -333,11 +334,11 @@ class Consumer[T](val name: String,
     */
   override def getCheckpointInfoAndClear(): List[CheckpointInfo] = this.synchronized {
 
-    if(!isStarted.get())
+    if (!isStarted.get())
       throw new IllegalStateException("Consumer is not started. Start consumer first.")
 
-    val checkpointData = checkpointOffsets.map { case (partition, lastTxn) =>
-      ConsumerCheckpointInfo(name, stream.getName, partition, lastTxn)
+    val checkpointData = checkpointOffsets.map { case (partition, lastTransaction) =>
+      ConsumerCheckpointInfo(name, stream.getName, partition, lastTransaction)
     }.toList
     checkpointOffsets.clear()
     checkpointData
@@ -365,14 +366,15 @@ class Consumer[T](val name: String,
 
   /**
     * Allows to build Transaction without accessing DB
+    *
     * @param partition
     * @param uuid
     * @param count
     * @return
     */
-  def buildTransactionObject(partition: Int, uuid: UUID, count: Int): Option[Transaction[T]] = {
-    val txn = new Transaction[T](partition, uuid, count, -1)
-    txn.attach(this)
-    Some(txn)
+  def buildTransactionObject(partition: Int, uuid: UUID, count: Int): Option[ConsumerTransaction[T]] = {
+    val transaction = new ConsumerTransaction[T](partition, uuid, count, -1)
+    transaction.attach(this)
+    Some(transaction)
   }
 }

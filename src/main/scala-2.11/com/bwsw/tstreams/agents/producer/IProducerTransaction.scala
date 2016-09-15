@@ -9,13 +9,22 @@ import com.bwsw.tstreams.agents.group.ProducerCheckpointInfo
   */
 trait IProducerTransaction[T] {
   def awaitMaterialized(): Unit
+
   def send(obj: T): Unit
+
   def finalizeDataSend(): Unit
+
   def cancel(): Unit
+
   def checkpoint(isSynchronous: Boolean = true): Unit
+
   def getTransactionInfo(): ProducerCheckpointInfo
-  def updateTxnKeepAliveState(): Unit
+
+  def updateTransactionKeepAliveState(): Unit
+
   def isClosed(): Boolean
+
   def getTransactionUUID(): UUID
+
   def makeMaterialized(): Unit
 }

@@ -11,8 +11,8 @@ import scala.util.control.Breaks._
 
 class ProducerAndConsumerLongLastingTransactionsTests extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
 
-  f.setProperty(TSF_Dictionary.Stream.NAME,"test_stream").
-    setProperty(TSF_Dictionary.Stream.PARTITIONS,3).
+  f.setProperty(TSF_Dictionary.Stream.NAME, "test_stream").
+    setProperty(TSF_Dictionary.Stream.PARTITIONS, 3).
     setProperty(TSF_Dictionary.Stream.TTL, 60 * 10).
     setProperty(TSF_Dictionary.Coordination.CONNECTION_TIMEOUT, 7).
     setProperty(TSF_Dictionary.Coordination.TTL, 7).
@@ -24,21 +24,21 @@ class ProducerAndConsumerLongLastingTransactionsTests extends FlatSpec with Matc
 
   val producer1 = f.getProducer[String](
     name = "test_producer",
-    txnGenerator = LocalGeneratorCreator.getGen(),
+    transactionGenerator = LocalGeneratorCreator.getGen(),
     converter = stringToArrayByteConverter,
     partitions = Set(0),
     isLowPriority = false)
 
   val producer2 = f.getProducer[String](
     name = "test_producer",
-    txnGenerator = LocalGeneratorCreator.getGen(),
+    transactionGenerator = LocalGeneratorCreator.getGen(),
     converter = stringToArrayByteConverter,
     partitions = Set(0),
     isLowPriority = false)
 
   val consumer = f.getConsumer[String](
     name = "test_consumer",
-    txnGenerator = LocalGeneratorCreator.getGen(),
+    transactionGenerator = LocalGeneratorCreator.getGen(),
     converter = arrayByteToStringConverter,
     partitions = Set(0),
     offset = Oldest,
@@ -49,29 +49,29 @@ class ProducerAndConsumerLongLastingTransactionsTests extends FlatSpec with Matc
   "two producers, consumer" should "first producer - generate transactions lazily, second producer - generate transactions faster" +
     " than the first one but with pause at the very beginning, consumer - retrieve all transactions which was sent" in {
     val timeoutForWaiting = 120
-    val totalElementsInTxn = 10
-    val dataToSend1: List[String] = (for (part <- 0 until totalElementsInTxn) yield "data_to_send_pr1_" + randomString).toList.sorted
-    val dataToSend2: List[String] = (for (part <- 0 until totalElementsInTxn) yield "data_to_send_pr2_" + randomString).toList.sorted
+    val totalElementsInTransaction = 10
+    val dataToSend1: List[String] = (for (part <- 0 until totalElementsInTransaction) yield "data_to_send_pr1_" + randomString).toList.sorted
+    val dataToSend2: List[String] = (for (part <- 0 until totalElementsInTransaction) yield "data_to_send_pr2_" + randomString).toList.sorted
 
     val producer1Thread = new Thread(new Runnable {
       def run() {
-        val txn = producer1.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
+        val transaction = producer1.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
         dataToSend1.foreach { x =>
-          txn.send(x)
+          transaction.send(x)
           Thread.sleep(2000)
         }
-        txn.checkpoint()
+        transaction.checkpoint()
       }
     })
 
     val producer2Thread = new Thread(new Runnable {
       def run() {
         Thread.sleep(2000)
-        val txn = producer2.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
+        val transaction = producer2.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
         dataToSend2.foreach { x =>
-          txn.send(x)
+          transaction.send(x)
         }
-        txn.checkpoint()
+        transaction.checkpoint()
       }
     })
 
@@ -84,9 +84,9 @@ class ProducerAndConsumerLongLastingTransactionsTests extends FlatSpec with Matc
         var isFirstProducerFinished = true
         breakable {
           while (true) {
-            val txnOpt = consumer.getTransaction(0)
-            if (txnOpt.isDefined) {
-              val data = txnOpt.get.getAll().sorted
+            val transactionOpt = consumer.getTransaction(0)
+            if (transactionOpt.isDefined) {
+              val data = transactionOpt.get.getAll().sorted
               if (isFirstProducerFinished) {
                 checkVal &= data == dataToSend1
                 isFirstProducerFinished = false

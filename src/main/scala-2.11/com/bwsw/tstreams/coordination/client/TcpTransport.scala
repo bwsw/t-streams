@@ -15,14 +15,14 @@ import io.netty.util.ReferenceCountUtil
   */
 class TcpTransport(address: String, timeoutMs: Int, retryCount: Int = 3, retryDelayMs: Int = 5000) {
   val isIgnore = new AtomicBoolean(false)
-  var callback: (Channel,String) => Unit = null
+  var callback: (Channel, String) => Unit = null
 
   def getInetAddress() = address
 
   @ChannelHandler.Sharable
   class ChannelHandler extends SimpleChannelInboundHandler[String] {
     override def channelRead0(ctx: ChannelHandlerContext, msg: String): Unit = {
-      if(!isIgnore.get)
+      if (!isIgnore.get)
         executor.submit("<NettyNewMessageTask>", new Runnable {
           override def run(): Unit = {
             callback(ctx.channel, msg)
@@ -80,7 +80,7 @@ class TcpTransport(address: String, timeoutMs: Int, retryCount: Int = 3, retryDe
   }
 
   /**
-    * Request to get Txn
+    * Request to get Transaction
     *
     * @param to
     * @param partition
@@ -93,29 +93,29 @@ class TcpTransport(address: String, timeoutMs: Int, retryCount: Int = 3, retryDe
   }
 
   /**
-    * Request to publish event about Txn
+    * Request to publish event about Transaction
     *
     * @param to
-    * @param msg     Message
+    * @param msg Message
     */
   def publishRequest(to: String, msg: TransactionStateMessage, onFailCallback: () => Boolean): Boolean = {
-    client.sendAndNoWaitResponse(PublishRequest(address, to, msg) , true, onFailCallback)
+    client.sendAndNoWaitResponse(PublishRequest(address, to, msg), isExceptionIfFails = true, onFailCallback)
   }
 
   /**
-    * Request to publish event about Txn
+    * Request to publish event about Transaction
     *
     * @param to
-    * @param msg     Message
+    * @param msg Message
     */
   def materializeRequest(to: String, msg: TransactionStateMessage): Unit = {
-    client.sendAndNoWaitResponse(MaterializeRequest(address, to , msg), true, () => false)
+    client.sendAndNoWaitResponse(MaterializeRequest(address, to, msg), isExceptionIfFails = true, () => false)
   }
 
   /**
     * Bind local agent address in transport
     */
-  def start(callback: (Channel,String) => Unit): Unit = {
+  def start(callback: (Channel, String) => Unit): Unit = {
     this.callback = callback
     server.start()
   }

@@ -9,9 +9,9 @@ import testutils.{LocalGeneratorCreator, TestUtils}
 /**
   * Created by Ivan Kudryavtsev on 09.09.16.
   */
-class ConsumerCheckpointTests extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils  {
-  f.setProperty(TSF_Dictionary.Stream.NAME,"test_stream").
-    setProperty(TSF_Dictionary.Stream.PARTITIONS,1).
+class ConsumerCheckpointTests extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
+  f.setProperty(TSF_Dictionary.Stream.NAME, "test_stream").
+    setProperty(TSF_Dictionary.Stream.PARTITIONS, 1).
     setProperty(TSF_Dictionary.Stream.TTL, 60 * 10).
     setProperty(TSF_Dictionary.Coordination.CONNECTION_TIMEOUT, 7).
     setProperty(TSF_Dictionary.Coordination.TTL, 7).
@@ -27,14 +27,14 @@ class ConsumerCheckpointTests extends FlatSpec with Matchers with BeforeAndAfter
 
     val producer = f.getProducer[String](
       name = "test_producer",
-      txnGenerator = LocalGeneratorCreator.getGen(),
+      transactionGenerator = LocalGeneratorCreator.getGen(),
       converter = stringToArrayByteConverter,
       partitions = Set(0),
       isLowPriority = false)
 
     val c1 = f.getConsumer[String](
       name = CONSUMER_NAME,
-      txnGenerator = LocalGeneratorCreator.getGen(),
+      transactionGenerator = LocalGeneratorCreator.getGen(),
       converter = arrayByteToStringConverter,
       partitions = Set(0),
       offset = Oldest,
@@ -42,7 +42,7 @@ class ConsumerCheckpointTests extends FlatSpec with Matchers with BeforeAndAfter
 
     val c2 = f.getConsumer[String](
       name = CONSUMER_NAME,
-      txnGenerator = LocalGeneratorCreator.getGen(),
+      transactionGenerator = LocalGeneratorCreator.getGen(),
       converter = arrayByteToStringConverter,
       partitions = Set(0),
       offset = Oldest,
