@@ -1,5 +1,7 @@
 package agents.integration
 
+import java.util.concurrent.{TimeUnit, CountDownLatch}
+
 import com.bwsw.tstreams.agents.consumer.Offset.Oldest
 import com.bwsw.tstreams.agents.consumer.subscriber.Callback
 import com.bwsw.tstreams.agents.consumer.{ConsumerTransaction, TransactionOperator}
@@ -23,6 +25,9 @@ class ProducerWritesToOneSubscriberReadsFromAllTests extends FlatSpec with Match
     setProperty(TSF_Dictionary.Consumer.TRANSACTION_PRELOAD, 10).
     setProperty(TSF_Dictionary.Consumer.DATA_PRELOAD, 10)
 
+  val TOTAL = 10000
+  val l = new CountDownLatch(1)
+
   it should "handle all transactions produced by producer" in {
     var subscriberTransactionsAmount = 0
     val producer = f.getProducer[String](
@@ -34,23 +39,25 @@ class ProducerWritesToOneSubscriberReadsFromAllTests extends FlatSpec with Match
 
     val s = f.getSubscriber[String](name = "sv2",
       transactionGenerator = LocalGeneratorCreator.getGen(),
-      converter = arrayByteToStringConverter, partitions = Set(0, 1, 2),
+      converter = arrayByteToStringConverter,
+      partitions = Set(0, 1, 2),
       offset = Oldest,
       isUseLastOffset = true,
       callback = new Callback[String] {
         override def onTransaction(consumer: TransactionOperator[String], transaction: ConsumerTransaction[String]): Unit = this.synchronized {
           subscriberTransactionsAmount += 1
+          if(subscriberTransactionsAmount == TOTAL)
+            l.countDown()
         }
       })
     s.start()
-    val TOTAL = 10000
     for (it <- 0 until TOTAL) {
       val transaction = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
       transaction.send("test")
       transaction.checkpoint()
     }
     producer.stop()
-    Thread.sleep(1000)
+    l.await(1000, TimeUnit.MILLISECONDS)
     s.stop()
     subscriberTransactionsAmount shouldBe TOTAL
   }
