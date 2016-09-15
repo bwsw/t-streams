@@ -14,11 +14,11 @@ case class TransactionBufferCounters(openEvents: AtomicLong,
                                      preCheckpointEvents: AtomicLong,
                                      postCheckpointEvents: AtomicLong) {
   def dump(partition: Int): Unit = {
-    Subscriber.logger.info(s"Partitions ${partition} - Open Events received: ${openEvents.get()}")
-    Subscriber.logger.info(s"Partitions ${partition} - Cancel Events received: ${cancelEvents.get()}")
-    Subscriber.logger.info(s"Partitions ${partition} - Update Events received: ${updateEvents.get()}")
-    Subscriber.logger.info(s"Partitions ${partition} - PreCheckpoint Events received: ${preCheckpointEvents.get()}")
-    Subscriber.logger.info(s"Partitions ${partition} - PostCheckpoint Events received: ${postCheckpointEvents.get()}")
+    Subscriber.logger.info(s"Partitions $partition - Open Events received: ${openEvents.get()}")
+    Subscriber.logger.info(s"Partitions $partition - Cancel Events received: ${cancelEvents.get()}")
+    Subscriber.logger.info(s"Partitions $partition - Update Events received: ${updateEvents.get()}")
+    Subscriber.logger.info(s"Partitions $partition - PreCheckpoint Events received: ${preCheckpointEvents.get()}")
+    Subscriber.logger.info(s"Partitions $partition - PostCheckpoint Events received: ${postCheckpointEvents.get()}")
   }
 }
 
@@ -44,7 +44,7 @@ class TransactionBuffer(queue: QueueBuilder.QueueType) {
     new SortedExpiringMap(new UUIDComparator, new TransactionStateExpirationPolicy)
 
   /**
-    * Returnes current state by transaction uuid
+    * Returns current state by transaction uuid
     *
     * @param uuid
     * @return
@@ -69,9 +69,9 @@ class TransactionBuffer(queue: QueueBuilder.QueueType) {
 
     // avoid transactions which are delayed
     if (update.state == TransactionStatus.opened) {
-      if(lastTransaction != null
+      if (lastTransaction != null
         && comparator.compare(update.uuid, lastTransaction) != 1) {
-        Subscriber.logger.warn(s"Unexpected transaction comparison result ${update.uuid} vs ${lastTransaction} detected.")
+        Subscriber.logger.warn(s"Unexpected transaction comparison result ${update.uuid} vs $lastTransaction detected.")
         return
       }
       lastTransaction = update.uuid
@@ -84,46 +84,46 @@ class TransactionBuffer(queue: QueueBuilder.QueueType) {
       * state switching system (almost finite automate)
       * */
       (map.get(update.uuid).state, update.state) match {
-          /*
-          from opened to *
-           */
+        /*
+        from opened to *
+         */
         case (TransactionStatus.opened, TransactionStatus.opened) =>
 
         case (TransactionStatus.opened, TransactionStatus.update) =>
           map.put(update.uuid, update.copy(state = TransactionStatus.opened, queueOrderID = orderID))
 
         case (TransactionStatus.opened, TransactionStatus.preCheckpoint) =>
-          map.put(update.uuid, update.copy(ttl = - 1, queueOrderID = orderID))
+          map.put(update.uuid, update.copy(ttl = -1, queueOrderID = orderID))
 
         case (TransactionStatus.opened, TransactionStatus.postCheckpoint) =>
 
         case (TransactionStatus.opened, TransactionStatus.cancel) =>
           map.remove(update.uuid)
 
-          /*
-          from update -> * no implement because opened
-           */
+        /*
+        from update -> * no implement because opened
+         */
         case (TransactionStatus.update, _) =>
 
-          /*
-          from cancel -> * no implement because removed
-          */
+        /*
+        from cancel -> * no implement because removed
+        */
         case (TransactionStatus.cancel, _) =>
 
-          /*
-          from pre -> *
-           */
+        /*
+        from pre -> *
+         */
         case (TransactionStatus.preCheckpoint, TransactionStatus.cancel) =>
           map.remove(update.uuid)
 
         case (TransactionStatus.preCheckpoint, TransactionStatus.postCheckpoint) =>
-          map.put(update.uuid, update.copy(ttl = - 1, queueOrderID = orderID))
+          map.put(update.uuid, update.copy(ttl = -1, queueOrderID = orderID))
 
         case (TransactionStatus.preCheckpoint, _) =>
 
-          /*
-          from post -> *
-           */
+        /*
+        from post -> *
+         */
         case (TransactionStatus.postCheckpoint, _) =>
       }
 
@@ -149,7 +149,7 @@ class TransactionBuffer(queue: QueueBuilder.QueueType) {
         case _ => continue = false
       }
     }
-    if(completeList.size > 0) {
+    if (completeList.nonEmpty) {
       queue.put(completeList.toList)
       completeList foreach (i => map.remove(i.uuid))
     }

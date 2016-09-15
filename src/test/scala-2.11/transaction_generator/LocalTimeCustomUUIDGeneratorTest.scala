@@ -1,4 +1,4 @@
-package txngenerator
+package transaction_generator
 
 import java.util.UUID
 
@@ -9,14 +9,14 @@ import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 class LocalTimeCustomUUIDGeneratorTest extends FlatSpec with Matchers with BeforeAndAfterAll {
   "LocalTimeUUIDGenerator.getTimeUUID()" should "return unique UUID" in {
     val gen = new LocalTimeUUIDGenerator
-    var uniqElements = Set[UUID]()
+    var uniqueElements = Set[UUID]()
     for (i <- 0 until 100) {
-      val prevSize = uniqElements.size
+      val prevSize = uniqueElements.size
 
       val uuid: UUID = gen.getTimeUUID()
-      uniqElements += uuid
+      uniqueElements += uuid
 
-      prevSize shouldEqual uniqElements.size - 1
+      prevSize shouldEqual uniqueElements.size - 1
     }
   }
 }

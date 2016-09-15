@@ -8,8 +8,8 @@ import java.util.UUID
 import java.util.concurrent.{CountDownLatch, TimeUnit}
 
 import com.bwsw.tstreams.agents.consumer.Offset.Newest
-import com.bwsw.tstreams.agents.consumer.{Transaction, TransactionOperator}
 import com.bwsw.tstreams.agents.consumer.subscriber.Callback
+import com.bwsw.tstreams.agents.consumer.{ConsumerTransaction, TransactionOperator}
 import com.bwsw.tstreams.agents.producer.NewTransactionProducerPolicy
 import com.bwsw.tstreams.env.TSF_Dictionary
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
@@ -38,11 +38,11 @@ class ProducerMasterChangeTest extends FlatSpec with Matchers with BeforeAndAfte
     val bs = ListBuffer[UUID]()
 
     val lp2 = new CountDownLatch(1)
-    val  ls = new  CountDownLatch(1)
+    val ls = new CountDownLatch(1)
 
     val producer1 = f.getProducer[String](
       name = "test_producer1",
-      txnGenerator = LocalGeneratorCreator.getGen(),
+      transactionGenerator = LocalGeneratorCreator.getGen(),
       converter = stringToArrayByteConverter,
       partitions = Set(0),
       isLowPriority = false)
@@ -50,20 +50,20 @@ class ProducerMasterChangeTest extends FlatSpec with Matchers with BeforeAndAfte
 
     val producer2 = f.getProducer[String](
       name = "test_producer2",
-      txnGenerator = LocalGeneratorCreator.getGen(),
+      transactionGenerator = LocalGeneratorCreator.getGen(),
       converter = stringToArrayByteConverter,
       partitions = Set(0),
       isLowPriority = false)
 
     val s = f.getSubscriber[String](name = "ss+2",
-      txnGenerator = LocalGeneratorCreator.getGen(),
+      transactionGenerator = LocalGeneratorCreator.getGen(),
       converter = arrayByteToStringConverter,
       partitions = Set(0),
       offset = Newest,
       isUseLastOffset = true,
       callback = new Callback[String] {
-        override def onEvent(consumer: TransactionOperator[String], txn: Transaction[String]): Unit = this.synchronized {
-          bs.append(txn.getTransactionUUID())
+        override def onTransaction(consumer: TransactionOperator[String], transaction: ConsumerTransaction[String]): Unit = this.synchronized {
+          bs.append(transaction.getTransactionUUID())
           if (bs.size == 1100) {
             ls.countDown()
           }
@@ -106,6 +106,7 @@ class ProducerMasterChangeTest extends FlatSpec with Matchers with BeforeAndAfte
     s.stop()
     bs.size shouldBe 1100
   }
+
   override def afterAll(): Unit = {
     onAfterAll()
   }

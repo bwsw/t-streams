@@ -64,15 +64,15 @@ object MetadataConnectionPool {
             .setReadTimeoutMillis(conf.readTimeoutMillis)
 
           builder.addContactPointsWithPorts(conf.hosts.toSeq: _*)
-                 .withRetryPolicy(new MultipleRetryPolicy(conf.queryRetryCount))
-                  .withReconnectionPolicy(new ExponentialReconnectionPolicy(conf.minReconnectionDelayMillis, conf.maxReconnectionDelayMillis))
-                  .withLoadBalancingPolicy(new LocalNodeFirstLoadBalancingPolicy(conf.hosts, conf.localDC))
-                  .withSocketOptions(options)
-                  .withQueryOptions(
-                      new QueryOptions()
-                        .setRefreshNodeIntervalMillis(0)
-                        .setRefreshNodeListIntervalMillis(0)
-                        .setRefreshSchemaIntervalMillis(0))
+            .withRetryPolicy(new MultipleRetryPolicy(conf.queryRetryCount))
+            .withReconnectionPolicy(new ExponentialReconnectionPolicy(conf.minReconnectionDelayMillis, conf.maxReconnectionDelayMillis))
+            .withLoadBalancingPolicy(new LocalNodeFirstLoadBalancingPolicy(conf.hosts, conf.localDC))
+            .withSocketOptions(options)
+            .withQueryOptions(
+              new QueryOptions()
+                .setRefreshNodeIntervalMillis(0)
+                .setRefreshNodeListIntervalMillis(0)
+                .setRefreshSchemaIntervalMillis(0))
           val cluster = builder.build()
           clusterMap(conf.hosts) = cluster
           cluster

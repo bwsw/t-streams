@@ -31,7 +31,9 @@ class JsonSerializer {
     }
     else new ParameterizedType {
       def getRawType = m.runtimeClass
+
       def getActualTypeArguments = m.typeArguments.map(typeFromManifest).toArray
+
       def getOwnerType = null
     }
   }

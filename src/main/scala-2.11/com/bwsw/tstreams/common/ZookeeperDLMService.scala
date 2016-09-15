@@ -1,7 +1,6 @@
 package com.bwsw.tstreams.common
 
 import java.net.InetSocketAddress
-import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 
 import com.twitter.common.quantity.Amount
@@ -42,11 +41,11 @@ class ZookeeperDLMService(prefix: String, zkHosts: List[InetSocketAddress], zkSe
   private val lockMap = scala.collection.mutable.Map[String, DistributedLockImpl]()
 
   private val twitterZkClient = new ZooKeeperClient(st, zkHosts.asJava)
-  private val zkClient        = twitterZkClient.get(ct)
+  private val zkClient = twitterZkClient.get(ct)
 
   ZookeeperDLMService.logger.info("Starting DLM service")
 
-  if(ZookeeperDLMService.logger.isDebugEnabled) {
+  if (ZookeeperDLMService.logger.isDebugEnabled) {
     ZookeeperDLMService.logger.debug("Zookeeper session timeout is set to " + st)
     ZookeeperDLMService.logger.debug("Zookeeper connection timeout is set to " + ct)
   }
@@ -79,14 +78,14 @@ class ZookeeperDLMService(prefix: String, zkHosts: List[InetSocketAddress], zkSe
     */
   def create[T](path: String, data: T, createMode: CreateMode) = this.synchronized {
     val serialized = ZookeeperDLMService.serializer.serialize(data)
-    val initPath = java.nio.file.Paths.get(prefix,path).toFile.getParentFile().getPath()
+    val initPath = java.nio.file.Paths.get(prefix, path).toFile.getParentFile().getPath()
     if (zkClient.exists(initPath, null) == null)
       createPathRecursive(initPath, CreateMode.PERSISTENT)
     val p = java.nio.file.Paths.get(prefix, path).toString
     if (zkClient.exists(p, null) == null)
       zkClient.create(p, serialized.getBytes, Ids.OPEN_ACL_UNSAFE, createMode)
     else {
-      throw new IllegalStateException(s"Requested path ${p} already exists.")
+      throw new IllegalStateException(s"Requested path $p already exists.")
     }
   }
 
@@ -149,7 +148,7 @@ class ZookeeperDLMService(prefix: String, zkHosts: List[InetSocketAddress], zkSe
       None
     else {
       val data = zkClient.getData(p, null, null)
-      if(data != null)
+      if (data != null)
         Some(ZookeeperDLMService.serializer.deserialize[T](new String(data)))
       else
         None
@@ -226,7 +225,7 @@ class ZookeeperDLMService(prefix: String, zkHosts: List[InetSocketAddress], zkSe
   private def createPathRecursive(path: String, mode: CreateMode): Unit = this.synchronized {
     if (zkClient.exists(path, null) == null) {
       val parent = java.nio.file.Paths.get(path).getParent.toString
-      if(parent != "/")
+      if (parent != "/")
         createPathRecursive(parent, mode)
       zkClient.create(path, null, Ids.OPEN_ACL_UNSAFE, mode)
     }

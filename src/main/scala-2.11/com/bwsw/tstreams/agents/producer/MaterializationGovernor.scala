@@ -3,7 +3,6 @@ package com.bwsw.tstreams.agents.producer
 import java.util.concurrent.ConcurrentHashMap
 
 import com.bwsw.tstreams.common.ResettableCountDownLatch
-import com.bwsw.tstreams.coordination.producer.PeerAgent
 
 /**
   * Created by Ivan Kudryavtsev on 28.08.16.
@@ -15,23 +14,23 @@ class MaterializationGovernor(partitions: Set[Int]) {
 
   /**
     * protects from operations
- *
+    *
     * @param partition
     */
-  def protect(partition: Int)          = {
+  def protect(partition: Int) = {
     transactionMaterializationBlockingMap.get(partition).setValue(1)
   }
 
   /**
     * Disables the protection
- *
+    *
     * @param partition
     */
-  def unprotect(partition: Int)        = transactionMaterializationBlockingMap.get(partition).countDown()
+  def unprotect(partition: Int) = transactionMaterializationBlockingMap.get(partition).countDown()
 
   /**
     * Waits until the protection is unset
- *
+    *
     * @param partition
     */
   def awaitUnprotected(partition: Int) = transactionMaterializationBlockingMap.get(partition).await()

@@ -27,14 +27,14 @@ import scala.util.control.Breaks._
   * @tparam T User data type
   */
 class Producer[T](var name: String,
-                         val stream: TStream[Array[Byte]],
-                         val producerOptions: Options[T])
+                  val stream: TStream[Array[Byte]],
+                  val producerOptions: ProducerOptions[T])
   extends GroupParticipant with SendingAgent with Interaction {
 
   /**
     * agent name
     */
-  override def getAgentName = name
+  override def getAgentName() = name
 
   def setAgentName(name: String) = {
     this.name = name
@@ -42,31 +42,32 @@ class Producer[T](var name: String,
 
   /**
     * Allows to get if the producer is master for the partition.
+    *
     * @param partition
     * @return
     */
   def isMeAMasterOfPartition(partition: Int): Boolean = {
     val masterOpt = agentsStateManager.getCurrentMaster(partition)
-    masterOpt.fold(false){ m => producerOptions.coordinationOptions.transport.getInetAddress() == m.agentAddress }
+    masterOpt.fold(false) { m => producerOptions.coordinationOptions.transport.getInetAddress() == m.agentAddress }
   }
 
   def getPartitionMasterID(partition: Int): Int = {
     val masterOpt = agentsStateManager.getCurrentMasterLocal(partition)
-    return masterOpt.get.uniqueAgentId
+    masterOpt.get.uniqueAgentId
   }
 
-  // shortkey
+  // short key
   val pcs = producerOptions.coordinationOptions
   var isStop = false
 
   private val openTransactions = new OpenTransactionsKeeper[T]()
   // stores latches for materialization await (protects from materialization before main transaction response)
   private val materializationGovernor = new MaterializationGovernor(producerOptions.writePolicy.getUsedPartitions().toSet)
-  private val logger      = LoggerFactory.getLogger(this.getClass)
-  private val threadLock  = new ReentrantLock(true)
+  private val logger = LoggerFactory.getLogger(this.getClass)
+  private val threadLock = new ReentrantLock(true)
 
   private val zkRetriesAmount = pcs.zkSessionTimeout * 1000 / PeerAgent.RETRY_SLEEP_TIME + 1
-  private val zkService       = new ZookeeperDLMService(pcs.zkRootPath, pcs.zkHosts, pcs.zkSessionTimeout, pcs.zkConnectionTimeout)
+  private val zkService = new ZookeeperDLMService(pcs.zkRootPath, pcs.zkHosts, pcs.zkSessionTimeout, pcs.zkConnectionTimeout)
 
 
   // amount of threads which will handle partitions in masters, etc
@@ -90,21 +91,21 @@ class Producer[T](var name: String,
 
   /**
     * P2P Agent for producers interaction
-    * (getNewTxn uuid; publish openTxn event; publish closeTxn event)
+    * (getNewTransaction uuid; publish openTransaction event; publish closeTransaction event)
     */
   override val p2pAgent: PeerAgent = new PeerAgent(
-    agentsStateManager              = agentsStateManager,
-    zkService                       = zkService,
-    zkRetriesAmount                 = zkRetriesAmount,
-    producer                        = this,
-    usedPartitions                  = producerOptions.writePolicy.getUsedPartitions(),
-    isLowPriorityToBeMaster         = pcs.isLowPriorityToBeMaster,
-    transport                       = pcs.transport,
-    threadPoolAmount                = threadPoolSize,
-    threadPoolPublisherThreadsAmount  = pcs.threadPoolPublisherThreadsAmount,
-    partitionRedistributionDelay      = pcs.partitionRedistributionDelay,
-    isMasterBootstrapModeFull         = pcs.isMasterBootstrapModeFull,
-    isMasterProcessVote               = pcs.isMasterProcessVote)
+    agentsStateManager = agentsStateManager,
+    zkService = zkService,
+    zkRetriesAmount = zkRetriesAmount,
+    producer = this,
+    usedPartitions = producerOptions.writePolicy.getUsedPartitions(),
+    isLowPriorityToBeMaster = pcs.isLowPriorityToBeMaster,
+    transport = pcs.transport,
+    threadPoolAmount = threadPoolSize,
+    threadPoolPublisherThreadsAmount = pcs.threadPoolPublisherThreadsAmount,
+    partitionRedistributionDelay = pcs.partitionRedistributionDelay,
+    isMasterBootstrapModeFull = pcs.isMasterBootstrapModeFull,
+    isMasterProcessVote = pcs.isMasterProcessVote)
 
   // this client is used to find new subscribers
   val subscriberNotifier = new BroadcastCommunicationClient(agentsStateManager, usedPartitions = producerOptions.writePolicy.getUsedPartitions())
@@ -114,26 +115,26 @@ class Producer[T](var name: String,
     * Queue to figure out moment when transaction is going to close
     */
   private val shutdownKeepAliveThread = new ThreadSignalSleepVar[Boolean](1)
-  private val txnKeepAliveThread      = getTxnKeepAliveThread
-  val backendActivityService          = new FirstFailLockableTaskExecutor(s"Producer ${name}-BackendWorker")
-  val asyncActivityService            = new FirstFailLockableTaskExecutor(s"Producer ${name}-AsyncWorker")
-  val pendingCassandraTasks           = new AtomicInteger(0)
+  private val transactionKeepAliveThread = getTransactionKeepAliveThread
+  val backendActivityService = new FirstFailLockableTaskExecutor(s"Producer $name-BackendWorker")
+  val asyncActivityService = new FirstFailLockableTaskExecutor(s"Producer $name-AsyncWorker")
+  val pendingCassandraTasks = new AtomicInteger(0)
 
   /**
     *
     */
-  def getTxnKeepAliveThread: Thread = {
+  def getTransactionKeepAliveThread: Thread = {
     val latch = new CountDownLatch(1)
-    val txnKeepAliveThread = new Thread(new Runnable {
+    val transactionKeepAliveThread = new Thread(new Runnable {
       override def run(): Unit = {
-        Thread.currentThread().setName(s"Producer-${name}-KeepAlive")
+        Thread.currentThread().setName(s"Producer-$name-KeepAlive")
         latch.countDown()
-        logger.info(s"Producer ${name} - object is started, launched open transaction update thread")
+        logger.info(s"Producer $name - object is started, launched open transaction update thread")
         breakable {
           while (true) {
             val value: Boolean = shutdownKeepAliveThread.wait(producerOptions.transactionKeepAliveInterval * 1000)
             if (value) {
-              logger.info(s"Producer ${name} - object either checkpointed or cancelled. Exit KeepAliveThread.")
+              logger.info(s"Producer $name - object either checkpointed or cancelled. Exit KeepAliveThread.")
               break()
             }
             asyncActivityService.submit("<UpdateOpenedTransactionsTask>", new Runnable {
@@ -143,25 +144,25 @@ class Producer[T](var name: String,
         }
       }
     })
-    txnKeepAliveThread.start()
+    transactionKeepAliveThread.start()
     latch.await()
-    txnKeepAliveThread
+    transactionKeepAliveThread
   }
 
   /**
     * Used to send update event to all opened transactions
     */
   private def updateOpenedTransactions() = this.synchronized {
-    logger.debug(s"Producer ${name} - scheduled for long lasting transactions")
-    openTransactions.forallKeysDo((part: Int, txn: IProducerTransaction[T]) => txn.updateTxnKeepAliveState())
+    logger.debug(s"Producer $name - scheduled for long lasting transactions")
+    openTransactions.forallKeysDo((part: Int, transaction: IProducerTransaction[T]) => transaction.updateTransactionKeepAliveState())
   }
 
   /**
-    * @param policy        Policy for previous transaction on concrete partition
+    * @param policy    Policy for previous transaction on concrete partition
     * @param partition Next partition to use for transaction (default -1 which mean that write policy will be used)
     * @return BasicProducerTransaction instance
     */
-  def newTransaction(policy: ProducerPolicy, partition: Int = -1): Transaction[T] = {
+  def newTransaction(policy: ProducerPolicy, partition: Int = -1): ProducerTransaction[T] = {
     if (isStop)
       throw new IllegalStateException(s"Producer ${this.name} is already stopped. Unable to get new transaction.")
 
@@ -173,7 +174,7 @@ class Producer[T](var name: String,
     }
 
     if (!(p >= 0 && p < stream.getPartitions))
-      throw new IllegalArgumentException(s"Producer ${name} - invalid partition")
+      throw new IllegalArgumentException(s"Producer $name - invalid partition")
 
     val previousTransactionAction: () => Unit =
       openTransactions.awaitOpenTransactionMaterialized(p, policy)
@@ -181,21 +182,19 @@ class Producer[T](var name: String,
     materializationGovernor.protect(p)
 
 
-    //val tm = getNewTxnUUIDLocal().timestamp()
-    val txnUUID = p2pAgent.generateNewTransaction(p)
-    //val delta = txnUUID.timestamp()
-    //logger.info(s"Elapsed for TXN ->: {}",delta - tm)
-    if(logger.isDebugEnabled)
-      logger.debug(s"[NEW_TRANSACTION PARTITION_$p] uuid=${txnUUID.timestamp()}")
-    val txn = new Transaction[T](p, txnUUID, this)
+    val transactionUUID = p2pAgent.generateNewTransaction(p)
+    if (logger.isDebugEnabled)
+      logger.debug(s"[NEW_TRANSACTION PARTITION_$p] uuid=${transactionUUID.timestamp()}")
+    val transaction = new ProducerTransaction[T](p, transactionUUID, this)
 
-    openTransactions.put(p, txn)
+    openTransactions.put(p, transaction)
     materializationGovernor.unprotect(p)
 
-    if(previousTransactionAction != null)
+    if (previousTransactionAction != null)
       asyncActivityService.submit("<PreviousTransactionActionTask>", new Runnable {
-        override def run(): Unit = previousTransactionAction() })
-    txn
+        override def run(): Unit = previousTransactionAction()
+      })
+    transaction
   }
 
   /**
@@ -206,7 +205,7 @@ class Producer[T](var name: String,
     */
   def getOpenedTransactionForPartition(partition: Int): Option[IProducerTransaction[T]] = {
     if (!(partition >= 0 && partition < stream.getPartitions))
-      throw new IllegalArgumentException(s"Producer ${name} - invalid partition")
+      throw new IllegalArgumentException(s"Producer $name - invalid partition")
     openTransactions.getTransactionOption(partition)
   }
 
@@ -250,8 +249,8 @@ class Producer[T](var name: String,
     *
     * @return
     */
-  def getNewTxnUUIDLocal(): UUID = {
-    val transactionUuid = producerOptions.txnGenerator.getTimeUUID()
+  def getNewTransactionUUIDLocal(): UUID = {
+    val transactionUuid = producerOptions.transactionGenerator.getTimeUUID()
     transactionUuid
   }
 
@@ -261,12 +260,11 @@ class Producer[T](var name: String,
     *
     * @return UUID
     */
-  override def openTxnLocal(txnUUID: UUID, partition: Int, onComplete: () => Unit): Unit = {
-    //logger.info(s"Started TXN: ${txnUUID}")
+  override def openTransactionLocal(transactionUUID: UUID, partition: Int, onComplete: () => Unit): Unit = {
 
     p2pAgent.submitPipelinedTaskToPublishExecutors(partition, () => {
       val msg = TransactionStateMessage(
-        txnUuid = txnUUID,
+        transactionUUID = transactionUUID,
         ttl = producerOptions.transactionTTL,
         status = TransactionStatus.opened,
         partition = partition,
@@ -274,14 +272,14 @@ class Producer[T](var name: String,
         orderID = p2pAgent.getAndIncSequentialID(partition),
         count = 0)
       subscriberNotifier.publish(msg, () => ())
-      if(logger.isDebugEnabled)
-        logger.debug(s"Producer ${name} - [GET_LOCAL_TXN PRODUCER] update with msg partition=$partition uuid=${txnUUID.timestamp()} opened")
+      if (logger.isDebugEnabled)
+        logger.debug(s"Producer $name - [GET_LOCAL_TRANSACTION] update with message partition=$partition uuid=${transactionUUID.timestamp()} opened")
     })
 
     stream.metadataStorage.commitEntity.commitAsync(
       streamName = stream.getName,
       partition = partition,
-      transaction = txnUUID,
+      transaction = transactionUUID,
       totalCnt = -1,
       ttl = producerOptions.transactionTTL,
       resourceCounter = pendingCassandraTasks,
@@ -300,19 +298,20 @@ class Producer[T](var name: String,
     * Stop this agent
     */
   def stop() = {
-    logger.info(s"Producer ${name} is shutting down.")
+    logger.info(s"Producer $name is shutting down.")
     LockUtil.withLockOrDieDo[Unit](threadLock, (100, TimeUnit.SECONDS), Some(logger), () => {
       if (isStop)
         throw new IllegalStateException(s"Producer ${this.name} is already stopped. Duplicate action.")
-      isStop = true })
+      isStop = true
+    })
 
     // stop update state of all open transactions
     shutdownKeepAliveThread.signal(true)
-    txnKeepAliveThread.join()
+    transactionKeepAliveThread.join()
     // stop executor
 
     asyncActivityService.shutdownOrDie(100, TimeUnit.SECONDS)
-    while(pendingCassandraTasks.get() != 0) {
+    while (pendingCassandraTasks.get() != 0) {
       logger.info(s"Waiting for all cassandra async callbacks will be executed. Pending: ${pendingCassandraTasks.get()}.")
       Thread.sleep(200)
     }
@@ -335,21 +334,21 @@ class Producer[T](var name: String,
     * Special method which waits until newTransaction method will be completed and after
     * does materialization. It's called from another thread (p2pAgent), not from thread of
     * Producer.
- *
+    *
     * @param msg
     */
   def materialize(msg: TransactionStateMessage) = {
-    if(logger.isDebugEnabled)
+    if (logger.isDebugEnabled)
       logger.debug(s"Start handling MaterializeRequest at partition: ${msg.partition}")
     materializationGovernor.awaitUnprotected(msg.partition)
     val opt = getOpenedTransactionForPartition(msg.partition)
     assert(opt.isDefined)
-    if(logger.isDebugEnabled)
-      logger.debug(s"In Map TXN: ${opt.get.getTransactionUUID.toString}\nIn Request TXN: ${msg.txnUuid}")
-    assert(opt.get.getTransactionUUID == msg.txnUuid)
+    if (logger.isDebugEnabled)
+      logger.debug(s"In Map Transaction: ${opt.get.getTransactionUUID.toString}\nIn Request Transaction: ${msg.transactionUUID}")
+    assert(opt.get.getTransactionUUID == msg.transactionUUID)
     assert(msg.status == TransactionStatus.materialize)
     opt.get.makeMaterialized()
-    if(logger.isDebugEnabled)
+    if (logger.isDebugEnabled)
       logger.debug("End handling MaterializeRequest")
 
   }

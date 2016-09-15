@@ -15,13 +15,13 @@ class RefreshEntityTest extends FlatSpec with Matchers with BeforeAndAfterAll wi
   "After dropping metadata tables and creating them again commit entity" should "work" in {
     val commitEntity = new CommitEntity("commit_log", connectedSession)
     val stream = randomVal
-    val txn = UUIDs.timeBased()
+    val transaction = UUIDs.timeBased()
     val partition = 10
     val totalCnt = 123
     val ttl = 3
 
-    commitEntity.commit(stream, partition, txn, totalCnt, ttl)
+    commitEntity.commit(stream, partition, transaction, totalCnt, ttl)
     CassandraHelper.clearMetadataTables(session, randomKeyspace)
-    commitEntity.commit(stream, partition, txn, totalCnt, ttl)
+    commitEntity.commit(stream, partition, transaction, totalCnt, ttl)
   }
 }

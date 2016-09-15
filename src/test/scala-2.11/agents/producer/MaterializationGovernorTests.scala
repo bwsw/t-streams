@@ -3,12 +3,12 @@ package agents.producer
 import java.util.concurrent.CountDownLatch
 
 import com.bwsw.tstreams.agents.producer.MaterializationGovernor
-import org.scalatest.{Matchers, FlatSpec}
+import org.scalatest.{FlatSpec, Matchers}
 
 /**
   * Created by Ivan Kudryavtsev on 28.08.16.
   */
-class MaterializationGovernorTests  extends FlatSpec with Matchers  {
+class MaterializationGovernorTests extends FlatSpec with Matchers {
   it should "init, protect, unprotect, await unprotection in single thread" in {
     val mg = new MaterializationGovernor(Set(0))
     mg.protect(0)

@@ -23,9 +23,9 @@ class TransactionFullLoader(partitions: Set[Int],
     * @param seq
     * @return
     */
-  override def checkIfPossible(seq: QueueItemType): Boolean = {
+  override def checkIfTransactionLoadingIsPossible(seq: QueueItemType): Boolean = {
     val last = seq.last
-    if(uuidComparator.compare(last.uuid, lastTransactionsMap(last.partition).uuid) != 1)
+    if (uuidComparator.compare(last.uuid, lastTransactionsMap(last.partition).uuid) != 1)
       return false
     true
   }
@@ -47,11 +47,11 @@ class TransactionFullLoader(partitions: Set[Int],
     val first: UUID = lastTransactionsMap(last.partition).uuid
     val data = consumer.getTransactionsFromTo(last.partition, first, last.uuid)
 
-    data foreach(elt =>
+    data foreach (elt =>
       executor.submit(s"<CallbackTask#Full>", new ProcessingEngine.CallbackTask[T](consumer,
         TransactionState(elt.getTransactionUUID(), last.partition, -1, -1, elt.getCount(), TransactionStatus.postCheckpoint, -1), callback)))
 
-    if (data.size > 0)
+    if (data.nonEmpty)
       lastTransactionsMap(last.partition) = TransactionState(data.last.getTransactionUUID(), last.partition, last.masterSessionID, last.queueOrderID, data.last.getCount(), TransactionStatus.postCheckpoint, -1)
   }
 }

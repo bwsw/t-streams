@@ -16,6 +16,7 @@ class ResettableCountDownLatch(val count: Int) {
     setState(startCount)
 
     def getCount = getState
+
     override def tryAcquireShared(acquires: Int): Int = if (getState == 0) 1 else -1
 
     override def tryReleaseShared(releases: Int): Boolean = {
@@ -31,15 +32,20 @@ class ResettableCountDownLatch(val count: Int) {
     }
 
     def setValue(value: Int) = setState(value)
+
     def reset() = setState(startCount)
   }
 
   private val sync: Sync = new Sync(count)
 
   override def toString = super.toString + "[Count = " + sync.getCount + "]"
+
   def reset = sync.reset()
+
   def setValue(value: Int) = sync.setValue(value)
+
   def countDown(): Unit = sync.releaseShared(1)
+
   def getCount() = sync.getCount
 
   @throws[InterruptedException]

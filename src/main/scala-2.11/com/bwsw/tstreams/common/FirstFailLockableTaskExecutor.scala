@@ -1,7 +1,7 @@
 package com.bwsw.tstreams.common
 
 import java.util.concurrent._
-import java.util.concurrent.atomic.{AtomicInteger, AtomicBoolean}
+import java.util.concurrent.atomic.{AtomicBoolean, AtomicInteger}
 import java.util.concurrent.locks.ReentrantLock
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder
@@ -16,20 +16,21 @@ import org.slf4j.LoggerFactory
 class FirstFailLockableTaskExecutor(name: String, cnt: Int = 1)
   extends ThreadPoolExecutor(cnt, cnt, 0, TimeUnit.MILLISECONDS,
     new LinkedBlockingQueue[Runnable],
-    new ThreadFactoryBuilder().setNameFormat(s"${name}-%d").build()) {
+    new ThreadFactoryBuilder().setNameFormat(s"$name-%d").build()) {
 
-  val queueLengthThreshold        = new AtomicInteger(100)
-  val taskFullDelayThresholdMs    = new AtomicInteger(120)
-  val taskDelayThresholdMs        = new AtomicInteger(100)
-  val taskRunDelayThresholdMs     = new AtomicInteger(20)
+  val queueLengthThreshold = new AtomicInteger(100)
+  val taskFullDelayThresholdMs = new AtomicInteger(120)
+  val taskDelayThresholdMs = new AtomicInteger(100)
+  val taskRunDelayThresholdMs = new AtomicInteger(20)
 
-  queueLengthThreshold      .set(FirstFailLockableExecutor.queueLengthThreshold.get)
-  taskFullDelayThresholdMs  .set(FirstFailLockableExecutor.taskFullDelayThresholdMs.get)
-  taskDelayThresholdMs      .set(FirstFailLockableExecutor.taskDelayThresholdMs.get)
-  taskRunDelayThresholdMs   .set(FirstFailLockableExecutor.taskRunDelayThresholdMs.get)
+  queueLengthThreshold.set(FirstFailLockableExecutor.queueLengthThreshold.get)
+  taskFullDelayThresholdMs.set(FirstFailLockableExecutor.taskFullDelayThresholdMs.get)
+  taskDelayThresholdMs.set(FirstFailLockableExecutor.taskDelayThresholdMs.get)
+  taskRunDelayThresholdMs.set(FirstFailLockableExecutor.taskRunDelayThresholdMs.get)
 
   /**
     * Allows to define thresholds in custom way
+    *
     * @param queueLengthThreshold
     * @param taskFullDelayThresholdMs
     * @param taskDelayThresholdMs
@@ -39,10 +40,10 @@ class FirstFailLockableTaskExecutor(name: String, cnt: Int = 1)
                     taskFullDelayThresholdMs: Int,
                     taskDelayThresholdMs: Int,
                     taskRunDelayThresholdMs: Int): Unit = {
-    this.queueLengthThreshold     .set(queueLengthThreshold)
-    this.taskFullDelayThresholdMs .set(taskFullDelayThresholdMs)
-    this.taskDelayThresholdMs     .set(taskDelayThresholdMs)
-    this.taskRunDelayThresholdMs  .set(taskRunDelayThresholdMs)
+    this.queueLengthThreshold.set(queueLengthThreshold)
+    this.taskFullDelayThresholdMs.set(taskFullDelayThresholdMs)
+    this.taskDelayThresholdMs.set(taskDelayThresholdMs)
+    this.taskRunDelayThresholdMs.set(taskRunDelayThresholdMs)
   }
 
   val isFailed = new AtomicBoolean(false)
@@ -54,10 +55,11 @@ class FirstFailLockableTaskExecutor(name: String, cnt: Int = 1)
     val submitTime = System.currentTimeMillis()
     var runTime = 0L
   }
+
   /**
     * if lock is provided this class wraps runnable with lock
     *
-    * @param r Runnable to run wrapped
+    * @param r    Runnable to run wrapped
     * @param lock Lock
     */
   class RunnableWithLock(r: Runnable, lock: ReentrantLock, name: String) extends FirstFailExecutorRunnable {
@@ -92,34 +94,34 @@ class FirstFailLockableTaskExecutor(name: String, cnt: Int = 1)
     * @param runnable
     * @param throwable
     */
-  override def afterExecute(runnable: Runnable, throwable: Throwable): Unit =  {
+  override def afterExecute(runnable: Runnable, throwable: Throwable): Unit = {
     super.afterExecute(runnable, throwable)
 
     try {
       val myRunnable = runnable.asInstanceOf[FirstFailExecutorRunnable]
 
-      val now           = System.currentTimeMillis()
+      val now = System.currentTimeMillis()
       val thresholdFull = taskFullDelayThresholdMs.get()
-      val threshold     = taskDelayThresholdMs.get()
-      val thresholdRun  = taskRunDelayThresholdMs.get()
+      val threshold = taskDelayThresholdMs.get()
+      val thresholdRun = taskRunDelayThresholdMs.get()
 
-      if(now - myRunnable.submitTime > thresholdFull) {
-        logger.warn(s"Task ${myRunnable} has delayed Full in executor ${name} for ${now - myRunnable.submitTime} msecs. Threshold is: ${thresholdFull} msecs.")
+      if (now - myRunnable.submitTime > thresholdFull) {
+        logger.warn(s"Task $myRunnable has delayed Full in executor $name for ${now - myRunnable.submitTime} msecs. Threshold is: $thresholdFull msecs.")
       }
 
-      if(myRunnable.runTime - myRunnable.submitTime > threshold) {
-        logger.warn(s"Task ${myRunnable} has delayed in Queue before run in executor ${name} for ${myRunnable.runTime - myRunnable.submitTime} msecs. Threshold is: ${threshold} msecs.")
+      if (myRunnable.runTime - myRunnable.submitTime > threshold) {
+        logger.warn(s"Task $myRunnable has delayed in Queue before run in executor $name for ${myRunnable.runTime - myRunnable.submitTime} msecs. Threshold is: $threshold msecs.")
       }
 
-      if(now - myRunnable.runTime > thresholdRun) {
-        logger.warn(s"Task ${myRunnable} has run in executor ${name} for ${now - myRunnable.runTime} msecs. Threshold is: ${thresholdRun} msecs.")
+      if (now - myRunnable.runTime > thresholdRun) {
+        logger.warn(s"Task $myRunnable has run in executor $name for ${now - myRunnable.runTime} msecs. Threshold is: $thresholdRun msecs.")
       }
 
     } catch {
       case e: ClassCastException =>
     }
 
-    if(throwable != null) {
+    if (throwable != null) {
       this.shutdownNow()
       failureExc = throwable
       isFailed.set(true)
@@ -130,8 +132,8 @@ class FirstFailLockableTaskExecutor(name: String, cnt: Int = 1)
 
   private def checkQueueSize() = {
     val qSize = this.getQueue.size()
-    if(qSize > queueLengthThreshold.get())
-      logger.warn(s"Executor ${name} achieved queue length ${qSize}, threshold is ${queueLengthThreshold.get()}")
+    if (qSize > queueLengthThreshold.get())
+      logger.warn(s"Executor $name achieved queue length $qSize, threshold is ${queueLengthThreshold.get()}")
   }
 
   /**
@@ -140,9 +142,9 @@ class FirstFailLockableTaskExecutor(name: String, cnt: Int = 1)
     * @param runnable
     * @param l
     */
-  def submit(name: String, runnable : Runnable, l : Option[ReentrantLock] = None) = {
-    if(isShutdown)
-      throw new IllegalStateException(s"Executor ${name} is no longer online. Unable to execute.")
+  def submit(name: String, runnable: Runnable, l: Option[ReentrantLock] = None) = {
+    if (isShutdown)
+      throw new IllegalStateException(s"Executor $name is no longer online. Unable to execute.")
 
     checkQueueSize()
 
@@ -166,14 +168,14 @@ class FirstFailLockableTaskExecutor(name: String, cnt: Int = 1)
 
   def shutdownOrDie(amount: Long, tu: TimeUnit) = {
     this.shutdown()
-    if(!this.awaitTermination(amount, tu))
-      throw new IllegalStateException(s"Executor service with ${name} was unable to shut down in ${amount} ${tu}")
+    if (!this.awaitTermination(amount, tu))
+      throw new IllegalStateException(s"Executor service with $name was unable to shut down in $amount $tu")
   }
 }
 
 object FirstFailLockableExecutor {
-  val queueLengthThreshold        = new AtomicInteger(100)
-  val taskFullDelayThresholdMs    = new AtomicInteger(120)
-  val taskDelayThresholdMs        = new AtomicInteger(100)
-  val taskRunDelayThresholdMs     = new AtomicInteger(20)
+  val queueLengthThreshold = new AtomicInteger(100)
+  val taskFullDelayThresholdMs = new AtomicInteger(120)
+  val taskDelayThresholdMs = new AtomicInteger(100)
+  val taskRunDelayThresholdMs = new AtomicInteger(20)
 }

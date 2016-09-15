@@ -2,7 +2,6 @@ package com.bwsw.tstreams.debug
 
 import org.slf4j.LoggerFactory
 
-//TODO reengineering
 /**
   * ONLY FOR DEBUGGING PURPOSES
   * Used for injecting events in runtime
@@ -18,7 +17,7 @@ object GlobalHooks {
   def invoke(name: String): Unit = {
     if (System.getProperty("DEBUG") == "true" && hooks.contains(name)) {
       val event = hooks(name)
-      logger.debug(s"[GLOBALHOOK] called hook name:{$name}")
+      logger.debug(s"[GLOBAL HOOK] called hook name:{$name}")
       event()
     }
   }
@@ -28,7 +27,10 @@ object GlobalHooks {
   }
 
   def preCommitFailure = "PreCommitFailure"
+
   def afterCommitFailure = "AfterCommitFailure"
+
   def transactionUpdateTaskBegin = "TransactionUpdateTaskBegin"
+
   def transactionUpdateTaskEnd = "TransactionUpdateTaskEnd"
 }

@@ -3,6 +3,7 @@ package com.bwsw.tstreams.common
 /**
   * Created by Ivan Kudryavtsev on 09.08.16.
   */
+
 import com.datastax.driver.core.exceptions.DriverException
 import com.datastax.driver.core.policies.RetryPolicy
 import com.datastax.driver.core.policies.RetryPolicy.RetryDecision
@@ -21,7 +22,8 @@ class MultipleRetryPolicy(maxRetryCount: Int)
   }
 
   override def init(cluster: com.datastax.driver.core.Cluster): Unit = {}
-  override def close(): Unit = { }
+
+  override def close(): Unit = {}
 
   private def retryOnceOrThrow(cl: ConsistencyLevel, nbRetry: Int): RetryDecision = {
     if (nbRetry == 0) {

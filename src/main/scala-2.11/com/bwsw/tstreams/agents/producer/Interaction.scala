@@ -14,7 +14,7 @@ trait Interaction {
     *
     * @return UUID
     */
-  def openTxnLocal(txnUUID: UUID, partition: Int, onComplete: () => Unit): Unit
+  def openTransactionLocal(transactionUUID: UUID, partition: Int, onComplete: () => Unit): Unit
 
   /**
     * Agent for producer to provide producers communication

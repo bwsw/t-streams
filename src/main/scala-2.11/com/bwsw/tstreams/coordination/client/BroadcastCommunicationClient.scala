@@ -1,9 +1,8 @@
 package com.bwsw.tstreams.coordination.client
 
-import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 
-import com.bwsw.tstreams.common.{LockUtil, ZookeeperDLMService}
+import com.bwsw.tstreams.common.ZookeeperDLMService
 import com.bwsw.tstreams.coordination.messages.state.TransactionStateMessage
 import com.bwsw.tstreams.coordination.producer.AgentsStateDBService
 import org.apache.zookeeper.{WatchedEvent, Watcher}
@@ -56,7 +55,7 @@ class BroadcastCommunicationClient(agentsStateManager: AgentsStateDBService,
     * @param msg Message
     */
   def publish(msg: TransactionStateMessage, onComplete: () => Unit): Unit = {
-    if(!isStopped.get) {
+    if (!isStopped.get) {
       val (set, broadcaster) = partitionSubscribers.get(msg.partition)
       partitionSubscribers.put(msg.partition, (broadcaster.broadcast(set, msg), broadcaster))
     }
@@ -67,7 +66,7 @@ class BroadcastCommunicationClient(agentsStateManager: AgentsStateDBService,
     * Update subscribers on specific partition
     */
   private def updateSubscribers(partition: Int) = {
-    if(!isStopped.get) {
+    if (!isStopped.get) {
       val (_, broadcaster) = partitionSubscribers.get(partition)
       val endpoints = agentsStateManager.getPartitionSubscribers(partition)
       broadcaster.initConnections(endpoints)
@@ -80,7 +79,7 @@ class BroadcastCommunicationClient(agentsStateManager: AgentsStateDBService,
     * Stop this Subscriber client
     */
   def stop() = {
-    if(isStopped.getAndSet(true))
+    if (isStopped.getAndSet(true))
       throw new IllegalStateException("Producer->Subscriber notifier was stopped second time.")
 
     usedPartitions foreach { p => partitionSubscribers.get(p)._2.close() }

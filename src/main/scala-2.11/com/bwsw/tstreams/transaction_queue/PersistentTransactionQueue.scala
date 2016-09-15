@@ -1,4 +1,4 @@
-package com.bwsw.tstreams.txnqueue
+package com.bwsw.tstreams.transaction_queue
 
 import java.util.UUID
 import java.util.concurrent.locks._

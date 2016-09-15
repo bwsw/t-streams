@@ -15,6 +15,7 @@ import io.netty.handler.logging.{LogLevel, LoggingHandler}
 
 /**
   * Event listener which receives events from Producers.
+  *
   * @param host Listener host bind address
   * @param port Listener port bind address
   */
@@ -31,7 +32,7 @@ class ProducerEventReceiverTcpServer(host: String, port: Int) {
     * Stop to listen incoming messages from Producers
     */
   def stop(): Unit = {
-    if(isStopped.getAndSet(true))
+    if (isStopped.getAndSet(true))
       throw new IllegalStateException("ProducerEventReceiver is stopped already. Second try to stop.")
 
     workerGroup.shutdownGracefully(0, 0, TimeUnit.SECONDS).await()
@@ -44,7 +45,7 @@ class ProducerEventReceiverTcpServer(host: String, port: Int) {
     * @param callback Event callback
     */
   def addCallbackToChannelHandler(callback: (TransactionStateMessage) => Unit): Unit = {
-    if(isStopped.get)
+    if (isStopped.get)
       throw new IllegalStateException("ProducerEventReceiver is stopped already.")
     callbackManager.addCallback(callback)
   }
@@ -53,13 +54,13 @@ class ProducerEventReceiverTcpServer(host: String, port: Int) {
     * Retrieve amount of connections
     */
   def getConnectionsAmount(): Int = {
-    if(isStopped.get)
+    if (isStopped.get)
       throw new IllegalStateException("ProducerEventReceiver is stopped already.")
     callbackManager.getCount()
   }
 
   def resetConnectionsAmount(): Unit = {
-    if(isStopped.get)
+    if (isStopped.get)
       throw new IllegalStateException("ProducerEventReceiver is stopped already.")
     callbackManager.resetCount()
   }
@@ -68,7 +69,7 @@ class ProducerEventReceiverTcpServer(host: String, port: Int) {
     * Start this listener
     */
   def start(): Unit = {
-    if(isStopped.get)
+    if (isStopped.get)
       throw new IllegalStateException("ProducerEventReceiver is stopped already.")
 
     val syncPoint = new CountDownLatch(1)

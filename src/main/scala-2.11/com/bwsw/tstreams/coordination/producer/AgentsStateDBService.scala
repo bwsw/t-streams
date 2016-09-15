@@ -30,7 +30,7 @@ class AgentsStateDBService(dlm: ZookeeperDLMService,
     */
   def getPartitionMasterInetAddressLocal(partition: Int, default: String): String = {
     val opt = masterMap get partition
-    if(opt.isDefined)
+    if (opt.isDefined)
       opt.get.agentAddress
     else
       default
@@ -73,8 +73,7 @@ class AgentsStateDBService(dlm: ZookeeperDLMService,
       case e: Exception =>
         None
     }
-    if (PeerAgent.logger.isDebugEnabled)
-    {
+    if (PeerAgent.logger.isDebugEnabled) {
       PeerAgent.logger.debug(s"[REQUEST CURRENT MASTER] Agent: ${masterOpt.getOrElse("None")} is current master on stream: {$streamName}, partition: {$partition}.")
     }
     masterOpt
@@ -103,7 +102,7 @@ class AgentsStateDBService(dlm: ZookeeperDLMService,
 
     removeLastSessionArtifacts()
     // assign me as a master on partitions which don't have master yet
-    if(isFull)
+    if (isFull)
       bootstrapBrokenPartitionsMasters()
   }
 
@@ -111,7 +110,7 @@ class AgentsStateDBService(dlm: ZookeeperDLMService,
     var ctr: Int = 0
     LockUtil.withZkLockOrDieDo[Unit](dlm.getLock(ZookeeperDLMService.CREATE_PATH_LOCK), (100, TimeUnit.SECONDS), Some(ZookeeperDLMService.logger), () => {
       partitions foreach {
-        p => if (!getCurrentMasterWithoutLock(p).isDefined) {
+        p => if (getCurrentMasterWithoutLock(p).isEmpty) {
           val mc = MasterConfiguration(myInetAddress, agentID)
           dlm.create[MasterConfiguration](
             getPartitionMasterPath(p),
@@ -145,13 +144,11 @@ class AgentsStateDBService(dlm: ZookeeperDLMService,
     * @param value     Value which will be added to current priority
     */
   private def updateMyPriority(partition: Int, value: Int) = {
-    if (PeerAgent.logger.isDebugEnabled)
-    {
+    if (PeerAgent.logger.isDebugEnabled) {
       PeerAgent.logger.debug(s"[PRIOR] Start amend agent priority with value:{$value} with address: {$myInetAddress} on stream: {$streamName}, partition: {$partition}")
     }
     updateMySettings(partition, (s: AgentConfiguration) => s.priority += value)
-    if (PeerAgent.logger.isDebugEnabled)
-    {
+    if (PeerAgent.logger.isDebugEnabled) {
       PeerAgent.logger.debug(s"[PRIOR] Finish amend agent priority with value:{$value} with address: {$myInetAddress} on stream: {$streamName}, partition: {$partition}")
     }
   }
@@ -164,7 +161,7 @@ class AgentsStateDBService(dlm: ZookeeperDLMService,
     */
   private def updateMySettings(partition: Int, f: (AgentConfiguration) => Unit) = this.synchronized {
     val mySettings = dlm.get[AgentConfiguration](getMyPath(partition))
-    mySettings.map(s => {
+    mySettings.foreach(s => {
       f(s)
       dlm.setData(getMyPath(partition), s)
     })
@@ -178,7 +175,7 @@ class AgentsStateDBService(dlm: ZookeeperDLMService,
     */
   def getStreamPartitionParticipants(partition: Int): List[String] = this.synchronized {
     val agentsOpt = dlm.getAllSubPath(getPartitionPath(partition))
-    if(agentsOpt.isDefined)
+    if (agentsOpt.isDefined)
       agentsOpt.get
     else
       Nil
@@ -186,7 +183,7 @@ class AgentsStateDBService(dlm: ZookeeperDLMService,
 
   def getStreamPartitionParticipantsData(partition: Int): List[AgentConfiguration] = this.synchronized {
     val agentsDataOpt = dlm.getAllSubNodesData[AgentConfiguration](getPartitionPath(partition))
-    if(agentsDataOpt.isDefined)
+    if (agentsDataOpt.isDefined)
       agentsDataOpt.get
     else
       Nil
@@ -208,7 +205,7 @@ class AgentsStateDBService(dlm: ZookeeperDLMService,
     withGlobalStreamLockDo(() => {
       dlm.delete(getPartitionMasterPath(partition))
       if (PeerAgent.logger.isDebugEnabled) {
-        PeerAgent.logger.debug(s"[USET MASTER ANNOUNCE] Agent ($myInetAddress) - I'm no longer the master for stream/partition: ($streamName,$partition).")
+        PeerAgent.logger.debug(s"[UNSET MASTER ANNOUNCE] Agent ($myInetAddress) - I'm no longer the master for stream/partition: ($streamName,$partition).")
       }
     })
   }
@@ -219,17 +216,16 @@ class AgentsStateDBService(dlm: ZookeeperDLMService,
     master foreach {
       masterSettings =>
         if (masterSettings.agentAddress == myInetAddress && masterSettings.uniqueAgentId != agentID) {
-          if (PeerAgent.logger.isDebugEnabled)
-          {
+          if (PeerAgent.logger.isDebugEnabled) {
             PeerAgent.logger.debug(s"[INIT CLEAN] Delete agent as MASTER on address: {$myInetAddress} from stream: {$streamName}, partition:{$partition} because id was overdue.")
           }
           demoteMaster(partition)
 
-          if(isUpdatePriority)
+          if (isUpdatePriority)
             partitions foreach { p => updateMyPriority(partition, value = 1) }
 
           masterMap -= partition
-      }
+        }
     }
   }
 
@@ -237,7 +233,7 @@ class AgentsStateDBService(dlm: ZookeeperDLMService,
     * removes stalled artifacts
     */
   private def removeLastSessionArtifacts() = {
-    partitions foreach { p => removeLastSessionArtifact(p)}
+    partitions foreach { p => removeLastSessionArtifact(p) }
   }
 
   /**
@@ -248,9 +244,8 @@ class AgentsStateDBService(dlm: ZookeeperDLMService,
   private def removeLastSessionArtifact(partition: Int) = this.synchronized {
     val agents = getStreamPartitionParticipants(partition)
     agents foreach { agent =>
-      if(agent.contains("agent_" + myInetAddress + "_") && !agent.contains(agentID.toString)) {
-        if (PeerAgent.logger.isDebugEnabled)
-        {
+      if (agent.contains("agent_" + myInetAddress + "_") && !agent.contains(agentID.toString)) {
+        if (PeerAgent.logger.isDebugEnabled) {
           PeerAgent.logger.debug(s"[INIT CLEAN] Delete agent on address:{$agent} from stream:{$streamName}, partition:{$partition}.")
         }
         try {
@@ -263,15 +258,14 @@ class AgentsStateDBService(dlm: ZookeeperDLMService,
 
     demoteMeAsMaster(partition)
 
-    if (PeerAgent.logger.isDebugEnabled)
-    {
+    if (PeerAgent.logger.isDebugEnabled) {
       PeerAgent.logger.debug(s"[INIT CLEAN FINISHED] Delete agent on address:{$myInetAddress} from stream: {$streamName}, partition: {$partition}")
     }
   }
 
   /**
     * does master assignment with locking
- *
+    *
     * @param partition
     */
   def assignMeAsMaster(partition: Int) = {
@@ -280,7 +274,7 @@ class AgentsStateDBService(dlm: ZookeeperDLMService,
 
   /**
     * does actual master assignment
- *
+    *
     * @param partition
     */
   def assignMeAsMasterWithoutLock(partition: Int) = {
@@ -313,16 +307,26 @@ class AgentsStateDBService(dlm: ZookeeperDLMService,
   def getPartitionSubscribers(partition: Int) = {
     val subscribersPathOpt = dlm.getAllSubNodesData[String](getSubscribersDataPath(partition))
     val s = Set[String]().empty
-    s ++ { if (subscribersPathOpt.isDefined) subscribersPathOpt.get else Nil }
+    s ++ {
+      if (subscribersPathOpt.isDefined) subscribersPathOpt.get else Nil
+    }
   }
 
-  def getStream()                             = streamName
-  def getPartitionPath(partition: Int)        = s"/producers/agents/$streamName/$partition"
-  def getMyPath(partition: Int)               = s"${getPartitionPath(partition)}/agent_${myInetAddress}_$agentID"
-  def getPartitionLockPath(partition: Int)    = s"/producers/lock_master/$streamName/$partition"
-  def getPartitionMasterPath(partition: Int)  = s"/producers/master/$streamName/$partition"
-  def getLockVotingPath(partition: Int)       = s"/producers/lock_voting/$streamName/$partition"
+  def getStream() = streamName
+
+  def getPartitionPath(partition: Int) = s"/producers/agents/$streamName/$partition"
+
+  def getMyPath(partition: Int) = s"${getPartitionPath(partition)}/agent_${myInetAddress}_$agentID"
+
+  def getPartitionLockPath(partition: Int) = s"/producers/lock_master/$streamName/$partition"
+
+  def getPartitionMasterPath(partition: Int) = s"/producers/master/$streamName/$partition"
+
+  def getLockVotingPath(partition: Int) = s"/producers/lock_voting/$streamName/$partition"
+
   def getSubscribersEventPath(partition: Int) = s"/subscribers/event/$streamName/$partition"
-  def getSubscribersDataPath(partition: Int)  = s"/subscribers/agents/$streamName/$partition"
-  def getStreamLockPath()                     = s"/global/stream/$streamName"
+
+  def getSubscribersDataPath(partition: Int) = s"/subscribers/agents/$streamName/$partition"
+
+  def getStreamLockPath() = s"/global/stream/$streamName"
 }

@@ -13,29 +13,29 @@ import scala.language.existentials
   * @param transactionTTL               Single transaction live time
   * @param transactionKeepAliveInterval Update transaction interval which is used to keep alive transaction in time when it is opened
   * @param writePolicy                  Strategy for selecting next partition
-  * @param converter                    User defined or basic converter for converting USERTYPE objects to DATATYPE objects(storage object type)
+  * @param converter                    User defined or basic converter for converting T objects to Array[Byte] objects(storage object type)
   * @param batchSize                    Insertion Type (only BatchInsert and SingleElementInsert are allowed now)
-  * @param txnGenerator                 Generator for generating UUIDs
-  * @tparam USERTYPE User object type
+  * @param transactionGenerator         Generator for generating UUIDs
+  * @tparam T User object type
   */
-class Options[USERTYPE](val transactionTTL: Int,
-                        val transactionKeepAliveInterval: Int,
-                        val writePolicy: AbstractPolicy,
-                        val batchSize: Int,
-                        val txnGenerator: IUUIDGenerator,
-                        val coordinationOptions: CoordinationOptions,
-                        val converter: IConverter[USERTYPE, Array[Byte]]) {
+class ProducerOptions[T](val transactionTTL: Int,
+                                val transactionKeepAliveInterval: Int,
+                                val writePolicy: AbstractPolicy,
+                                val batchSize: Int,
+                                val transactionGenerator: IUUIDGenerator,
+                                val coordinationOptions: CoordinationOptions,
+                                val converter: IConverter[T, Array[Byte]]) {
 
   /**
     * Transaction minimum ttl time
     */
-  private val minTxnTTL = 3
+  private val minTransactionTTL = 3
 
   /**
     * Options validating
     */
-  if (transactionTTL < minTxnTTL)
-    throw new IllegalArgumentException(s"Option transactionTTL must be greater or equal than $minTxnTTL")
+  if (transactionTTL < minTransactionTTL)
+    throw new IllegalArgumentException(s"Option transactionTTL must be greater or equal than $minTransactionTTL")
 
   if (transactionKeepAliveInterval < 1)
     throw new IllegalArgumentException(s"Option transactionKeepAliveInterval must be greater or equal than 1")

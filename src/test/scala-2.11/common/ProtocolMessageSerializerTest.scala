@@ -6,8 +6,7 @@ import com.bwsw.tstreams.common.ProtocolMessageSerializer
 import com.bwsw.tstreams.coordination.messages.master._
 import com.bwsw.tstreams.coordination.messages.state.{TransactionStateMessage, TransactionStatus}
 import com.bwsw.tstreams.coordination.producer.AgentConfiguration
-import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
-import testutils.TestUtils
+import org.scalatest.{FlatSpec, Matchers}
 
 
 class ProtocolMessageSerializerTest extends FlatSpec with Matchers {

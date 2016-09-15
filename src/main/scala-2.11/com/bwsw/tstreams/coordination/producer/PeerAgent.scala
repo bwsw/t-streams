@@ -7,7 +7,7 @@ import java.util.concurrent.{CountDownLatch, TimeUnit}
 
 import com.bwsw.tstreams.agents.producer.Producer
 import com.bwsw.tstreams.common.ProtocolMessageSerializer.ProtocolMessageSerializerException
-import com.bwsw.tstreams.common.{FirstFailLockableTaskExecutor, LockUtil, ProtocolMessageSerializer, ZookeeperDLMService}
+import com.bwsw.tstreams.common.{LockUtil, ProtocolMessageSerializer, ZookeeperDLMService}
 import com.bwsw.tstreams.coordination.client.TcpTransport
 import com.bwsw.tstreams.coordination.messages.master._
 import com.bwsw.tstreams.coordination.messages.state.TransactionStateMessage
@@ -25,40 +25,40 @@ object PeerAgent {
     * For making low priority masters
     *
     */
-  val LOW_PRIORITY_PENALTY  = 1000 * 1000
+  val LOW_PRIORITY_PENALTY = 1000 * 1000
   /**
     * How long to sleep during master elections actions
     */
-  val RETRY_SLEEP_TIME      = 1000
+  val RETRY_SLEEP_TIME = 1000
   /**
     * Generic logger object
     */
-  val logger                = LoggerFactory.getLogger(this.getClass)
+  val logger = LoggerFactory.getLogger(this.getClass)
 
 }
 
 /**
- * Agent for providing peer to peer interaction between Producers
- *
- * @param zkService
- * @param zkRetriesAmount
- * @param producer Producer reference
- * @param usedPartitions List of used producer partitions
- * @param isLowPriorityToBeMaster Flag which indicate to have low priority to be master
- * @param transport Transport to provide interaction
- */
+  * Agent for providing peer to peer interaction between Producers
+  *
+  * @param zkService
+  * @param zkRetriesAmount
+  * @param producer                Producer reference
+  * @param usedPartitions          List of used producer partitions
+  * @param isLowPriorityToBeMaster Flag which indicate to have low priority to be master
+  * @param transport               Transport to provide interaction
+  */
 class PeerAgent(agentsStateManager: AgentsStateDBService,
-                zkService:                        ZookeeperDLMService,
-                zkRetriesAmount:                  Int,
-                producer:                         Producer[_],
-                usedPartitions:                   List[Int],
-                isLowPriorityToBeMaster:          Boolean,
-                transport:                        TcpTransport,
-                threadPoolAmount:                 Int,
+                zkService: ZookeeperDLMService,
+                zkRetriesAmount: Int,
+                producer: Producer[_],
+                usedPartitions: List[Int],
+                isLowPriorityToBeMaster: Boolean,
+                transport: TcpTransport,
+                threadPoolAmount: Int,
                 threadPoolPublisherThreadsAmount: Int,
-                partitionRedistributionDelay:     Int,
-                isMasterBootstrapModeFull:        Boolean,
-                isMasterProcessVote:              Boolean) {
+                partitionRedistributionDelay: Int,
+                isMasterBootstrapModeFull: Boolean,
+                isMasterProcessVote: Boolean) {
 
   val myInetAddress: String = producer.producerOptions.coordinationOptions.transport.getInetAddress()
   /**
@@ -69,7 +69,7 @@ class PeerAgent(agentsStateManager: AgentsStateDBService,
   /**
     * Job Executors
     */
-  private val executorGraphs           = mutable.Map[Int, ExecutorGraph]()
+  private val executorGraphs = mutable.Map[Int, ExecutorGraph]()
 
   private val streamName = producer.stream.getName
   private val isRunning = new AtomicBoolean(true)
@@ -77,11 +77,15 @@ class PeerAgent(agentsStateManager: AgentsStateDBService,
   private var zkConnectionValidator: Thread = null
   private var partitionWeightDistributionThread: Thread = null
 
-  def getAgentAddress()           = myInetAddress
-  def getTransport()              = transport
-  def getUsedPartitions()         = usedPartitions
-  def getProducer()               = producer
-  def getAgentsStateManager()     = agentsStateManager
+  def getAgentAddress() = myInetAddress
+
+  def getTransport() = transport
+
+  def getUsedPartitions() = usedPartitions
+
+  def getProducer() = producer
+
+  def getAgentsStateManager() = agentsStateManager
 
   /**
     * this ID is used to track sequential transactions from the same master
@@ -89,6 +93,7 @@ class PeerAgent(agentsStateManager: AgentsStateDBService,
   private val uniqueAgentId = Math.abs(Random.nextInt())
 
   def getUniqueAgentID() = uniqueAgentId
+
   def getAndIncSequentialID(partition: Int): Long = sequentialIds(partition).getAndIncrement()
 
   /**
@@ -100,12 +105,12 @@ class PeerAgent(agentsStateManager: AgentsStateDBService,
   PeerAgent.logger.info(s"[INIT] Stream: {$streamName}, partitions: [${usedPartitions.mkString(",")}]")
   PeerAgent.logger.info(s"[INIT] Master Unique random ID: $uniqueAgentId")
 
-  transport.start((s: Channel, m: String) => this.handleMessage(s,m))
+  transport.start((s: Channel, m: String) => this.handleMessage(s, m))
 
   startSessionKeepAliveThread()
 
   (0 until threadPoolAmount) foreach { x =>
-    executorGraphs(x) = new ExecutorGraph(s"id-${x}", publisherThreadsAmount = threadPoolPublisherThreadsAmount)
+    executorGraphs(x) = new ExecutorGraph(s"id-$x", publisherThreadsAmount = threadPoolPublisherThreadsAmount)
   }
 
   private val partitionsToExecutors = usedPartitions
@@ -114,9 +119,8 @@ class PeerAgent(agentsStateManager: AgentsStateDBService,
     .toMap
 
 
-
   // fill initial sequential counters
-  usedPartitions foreach { p =>sequentialIds += (p -> new AtomicLong(0)) }
+  usedPartitions foreach { p => sequentialIds += (p -> new AtomicLong(0)) }
 
   agentsStateManager.bootstrap(isLowPriorityToBeMaster, uniqueAgentId, isMasterBootstrapModeFull)
 
@@ -127,13 +131,13 @@ class PeerAgent(agentsStateManager: AgentsStateDBService,
       val it = pq.iterator
       while (isRunning.get() && it.hasNext) {
         Thread.sleep(partitionRedistributionDelay * 1000)
-        val itm = it.next
-        updateMaster(itm, init = true)
-        PeerAgent.logger.info(s"Master update request for partition ${itm} is complete.")
+        val item = it.next
+        updateMaster(item, init = true)
+        PeerAgent.logger.info(s"Master update request for partition $item is complete.")
       }
     }
   })
-  if(isMasterProcessVote)
+  if (isMasterProcessVote)
     partitionWeightDistributionThread.start()
 
 
@@ -145,8 +149,7 @@ class PeerAgent(agentsStateManager: AgentsStateDBService,
     * @return Selected master address
     */
   private def electPartitionMasterInternal(partition: Int, retries: Int = zkRetriesAmount): MasterConfiguration = {
-    if (PeerAgent.logger.isDebugEnabled)
-    {
+    if (PeerAgent.logger.isDebugEnabled) {
       PeerAgent.logger.debug(s"[VOTING] Start voting new agent on address: {$myInetAddress} on stream: {$streamName}, partition:{$partition}")
     }
     val master = agentsStateManager.getCurrentMaster(partition)
@@ -155,7 +158,7 @@ class PeerAgent(agentsStateManager: AgentsStateDBService,
       transport.setMasterRequest(bestCandidate.agentAddress, partition) match {
         case null =>
           if (retries == 0)
-            throw new IllegalStateException(s"Expected master hasn't occured in ${zkRetriesAmount} trials.")
+            throw new IllegalStateException(s"Expected master hasn't occurred in $zkRetriesAmount trials.")
           //assume that if master is not responded it will be deleted by zk
           Thread.sleep(PeerAgent.RETRY_SLEEP_TIME)
           electPartitionMasterInternal(partition, retries - 1)
@@ -189,16 +192,15 @@ class PeerAgent(agentsStateManager: AgentsStateDBService,
     * @param retries   Retries to try to interact with master
     */
   def updateMaster(partition: Int, init: Boolean, retries: Int = zkRetriesAmount): Unit = this.synchronized {
-    if (PeerAgent.logger.isDebugEnabled)
-    {
+    if (PeerAgent.logger.isDebugEnabled) {
       PeerAgent.logger.debug(s"[UPDATER] Updating master with init: {$init} on agent: {$myInetAddress} on stream: {$streamName}, partition: {$partition} with retry=$retries.")
     }
 
     // nothing to do if I'm the master already
     // I don't vote for NOT being master.
     val masterOpt = agentsStateManager.getCurrentMaster(partition)
-    if(masterOpt.isDefined) {
-      if(masterOpt.get.agentAddress == myInetAddress)
+    if (masterOpt.isDefined) {
+      if (masterOpt.get.agentAddress == myInetAddress)
         return
     }
 
@@ -221,9 +223,8 @@ class PeerAgent(agentsStateManager: AgentsStateDBService,
           case DeleteMasterResponse(_, _, p) =>
             assert(p == partition)
             val newMaster = electPartitionMaster(partition)
-            if (PeerAgent.logger.isDebugEnabled)
-            {
-              PeerAgent.logger.debug(s"[UPDATER] Finish updating master with init: {$init} on agent: {$myInetAddress} on stream: {$streamName}, partition: {$partition} with retry=$retries; revoted master: {$newMaster}.")
+            if (PeerAgent.logger.isDebugEnabled) {
+              PeerAgent.logger.debug(s"[UPDATER] Finish updating master with init: {$init} on agent: {$myInetAddress} on stream: {$streamName}, partition: {$partition} with retry=$retries; re-voted master: {$newMaster}.")
             }
             agentsStateManager.putPartitionMasterLocally(partition, newMaster)
         }
@@ -243,8 +244,7 @@ class PeerAgent(agentsStateManager: AgentsStateDBService,
 
           case PingResponse(_, _, p) =>
             assert(p == partition)
-            if (PeerAgent.logger.isDebugEnabled)
-            {
+            if (PeerAgent.logger.isDebugEnabled) {
               PeerAgent.logger.debug(s"[UPDATER] Finish updating master with init: {$init} on agent: {$myInetAddress} on stream: {$streamName}, partition: {$partition} with retry=$retries; old master: {$master} is alive now.")
             }
             agentsStateManager.putPartitionMasterLocally(partition, master)
@@ -252,7 +252,6 @@ class PeerAgent(agentsStateManager: AgentsStateDBService,
       }
     }
   }
-
 
 
   /**
@@ -273,14 +272,14 @@ class PeerAgent(agentsStateManager: AgentsStateDBService,
             else
               retries = 0
             if (retries >= 3) {
-              PeerAgent.logger.error(s"Agent ${agent.getProducer.name} ${myInetAddress} - Zk connection Lost. Immediately shutdown.")
+              PeerAgent.logger.error(s"Agent ${agent.getProducer.name} $myInetAddress - Zk connection Lost. Immediately shutdown.")
               System.exit(1)
             }
             Thread.sleep(PeerAgent.RETRY_SLEEP_TIME)
           }
         } catch {
           case e: Exception =>
-            PeerAgent.logger.error(s"Agent ${agent.getProducer.name} ${myInetAddress} - Zk connection Lost. Immediately shutdown.")
+            PeerAgent.logger.error(s"Agent ${agent.getProducer.name} $myInetAddress - Zk connection Lost. Immediately shutdown.")
             System.exit(1)
         }
       }
@@ -298,15 +297,14 @@ class PeerAgent(agentsStateManager: AgentsStateDBService,
   def generateNewTransaction(partition: Int): UUID = this.synchronized {
     LockUtil.withLockOrDieDo[UUID](externalAccessLock, (100, TimeUnit.SECONDS), Some(PeerAgent.logger), () => {
       val master = agentsStateManager.getPartitionMasterInetAddressLocal(partition, null)
-      if (PeerAgent.logger.isDebugEnabled)
-      {
-        PeerAgent.logger.debug(s"[GETTXN] Start retrieve txn for agent with address: {$myInetAddress}, stream: {$streamName}, partition: {$partition} from [MASTER: {$master}].")
+      if (PeerAgent.logger.isDebugEnabled) {
+        PeerAgent.logger.debug(s"[GET TRANSACTION] Start retrieve transaction for agent with address: {$myInetAddress}, stream: {$streamName}, partition: {$partition} from [MASTER: {$master}].")
       }
 
       val res =
         if (master != null) {
-          val txnResponse = transport.transactionRequest(master, partition)
-          txnResponse match {
+          val transactionResponse = transport.transactionRequest(master, partition)
+          transactionResponse match {
             case null =>
               updateMaster(partition, init = false)
               generateNewTransaction(partition)
@@ -318,9 +316,8 @@ class PeerAgent(agentsStateManager: AgentsStateDBService,
 
             case TransactionResponse(snd, rcv, uuid, p) =>
               assert(p == partition)
-              if (PeerAgent.logger.isDebugEnabled)
-              {
-                PeerAgent.logger.debug(s"[GETTXN] Finish retrieve txn for agent with address: {$myInetAddress}, stream: {$streamName}, partition: {$partition} with timeuuid: {${uuid.timestamp()}} from [MASTER: {$master}]s")
+              if (PeerAgent.logger.isDebugEnabled) {
+                PeerAgent.logger.debug(s"[GET TRANSACTION] Finish retrieve transaction for agent with address: {$myInetAddress}, stream: {$streamName}, partition: {$partition} with timeuuid: {${uuid.timestamp()}} from [MASTER: {$master}]s")
               }
               uuid
           }
@@ -333,22 +330,21 @@ class PeerAgent(agentsStateManager: AgentsStateDBService,
   }
 
   def notifyMaterialize(msg: TransactionStateMessage, to: String): Unit = {
-    if (PeerAgent.logger.isDebugEnabled)
-    {
-      PeerAgent.logger.debug(s"[MATERIALIZE] Send materialize request address\nMe: {$myInetAddress}\nTXN owner: ${to}\nStream: ${streamName}\npartition: ${msg.partition}\nTXN: ${msg.txnUuid}")
+    if (PeerAgent.logger.isDebugEnabled) {
+      PeerAgent.logger.debug(s"[MATERIALIZE] Send materialize request address\nMe: {$myInetAddress}\nTransaction owner: $to\nStream: $streamName\npartition: ${msg.partition}\nTransaction: ${msg.transactionUUID}")
     }
     transport.materializeRequest(to, msg)
   }
 
   /**
     * Allows to publish update/pre/post/cancel messages.
- *
+    *
     * @param msg
     * @param isUpdateMaster
     * @return
     */
   def publish(msg: TransactionStateMessage, isUpdateMaster: Boolean = false): Boolean = {
-    if(isUpdateMaster) {
+    if (isUpdateMaster) {
       PeerAgent.logger.warn(s"Master update is requested for ${msg.partition}.")
       updateMaster(msg.partition, init = false)
     }
@@ -359,9 +355,9 @@ class PeerAgent(agentsStateManager: AgentsStateDBService,
         s"stream:{$streamName}")
 
     if (master != null) {
-      transport.publishRequest(master, msg, onFailCallback = () => publish(msg, true))
+      transport.publishRequest(master, msg, onFailCallback = () => publish(msg, isUpdateMaster = true))
     } else {
-      publish(msg, true)
+      publish(msg, isUpdateMaster = true)
     }
   }
 
@@ -372,7 +368,7 @@ class PeerAgent(agentsStateManager: AgentsStateDBService,
     PeerAgent.logger.info(s"P2PAgent of ${producer.name} is shutting down.")
     isRunning.set(false)
 
-    if(isMasterProcessVote)
+    if (isMasterProcessVote)
       partitionWeightDistributionThread.join()
 
     transport.stopServer()
@@ -395,15 +391,15 @@ class PeerAgent(agentsStateManager: AgentsStateDBService,
       assert(partitionsToExecutors.contains(request.partition))
       val execNo = partitionsToExecutors(request.partition)
       request match {
-        case _: PublishRequest =>         executorGraphs(execNo).submitToPublish("<PublishTask>", task)
-        case _: NewTransactionRequest =>  executorGraphs(execNo).submitToNewTransaction("<NewTransactionTask>", task)
-        case _: MaterializeRequest =>     executorGraphs(execNo).submitToMaterialize("<MaterializeTask>", task)
-        case _ =>                         executorGraphs(execNo).submitToGeneral("<GeneralTask>", task)
+        case _: PublishRequest => executorGraphs(execNo).submitToPublish("<PublishTask>", task)
+        case _: NewTransactionRequest => executorGraphs(execNo).submitToNewTransaction("<NewTransactionTask>", task)
+        case _: MaterializeRequest => executorGraphs(execNo).submitToMaterialize("<MaterializeTask>", task)
+        case _ => executorGraphs(execNo).submitToGeneral("<GeneralTask>", task)
       }
 
     } catch {
       case e: ProtocolMessageSerializerException =>
-        PeerAgent.logger.warn(s"Message '${rawMessage}' cannot be deserialized. Exception is: ${e.getMessage}")
+        PeerAgent.logger.warn(s"Message '$rawMessage' cannot be deserialized. Exception is: ${e.getMessage}")
     }
   }
 
@@ -445,7 +441,7 @@ class PeerAgent(agentsStateManager: AgentsStateDBService,
     * @param task
     * @param partition
     */
-  def submitPipelinedTaskToNewTxnExecutors(partition: Int, task: () => Unit) = {
+  def submitPipelinedTaskToNewTransactionExecutors(partition: Int, task: () => Unit) = {
     val execNum = partitionsToExecutors(partition)
     executorGraphs(execNum).submitToNewTransaction("<NewTransactionTask>", task)
   }

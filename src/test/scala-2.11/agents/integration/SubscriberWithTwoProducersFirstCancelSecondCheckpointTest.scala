@@ -8,8 +8,8 @@ import java.util.UUID
 import java.util.concurrent.{CountDownLatch, TimeUnit}
 
 import com.bwsw.tstreams.agents.consumer.Offset.Newest
-import com.bwsw.tstreams.agents.consumer.{Transaction, TransactionOperator}
 import com.bwsw.tstreams.agents.consumer.subscriber.Callback
+import com.bwsw.tstreams.agents.consumer.{ConsumerTransaction, TransactionOperator}
 import com.bwsw.tstreams.agents.producer.NewTransactionProducerPolicy
 import com.bwsw.tstreams.env.TSF_Dictionary
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
@@ -18,7 +18,7 @@ import testutils.{LocalGeneratorCreator, TestUtils}
 import scala.collection.mutable.ListBuffer
 
 
-class SubscriberWithTwoProducersFirstCancelSecondCheckpointTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils{
+class SubscriberWithTwoProducersFirstCancelSecondCheckpointTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
   f.setProperty(TSF_Dictionary.Stream.NAME, "test_stream").
     setProperty(TSF_Dictionary.Stream.PARTITIONS, 3).
     setProperty(TSF_Dictionary.Stream.TTL, 60 * 10).
@@ -36,42 +36,42 @@ class SubscriberWithTwoProducersFirstCancelSecondCheckpointTest extends FlatSpec
     val bs = ListBuffer[UUID]()
 
     val lp2 = new CountDownLatch(1)
-    val  ls = new  CountDownLatch(1)
+    val ls = new CountDownLatch(1)
 
     val producer1 = f.getProducer[String](
       name = "test_producer1",
-      txnGenerator = LocalGeneratorCreator.getGen(),
+      transactionGenerator = LocalGeneratorCreator.getGen(),
       converter = stringToArrayByteConverter,
       partitions = Set(0),
       isLowPriority = false)
 
     val producer2 = f.getProducer[String](
       name = "test_producer2",
-      txnGenerator = LocalGeneratorCreator.getGen(),
+      transactionGenerator = LocalGeneratorCreator.getGen(),
       converter = stringToArrayByteConverter,
       partitions = Set(0),
       isLowPriority = false)
 
     val subscriber = f.getSubscriber[String](name = "ss+2",
-      txnGenerator = LocalGeneratorCreator.getGen(),
+      transactionGenerator = LocalGeneratorCreator.getGen(),
       converter = arrayByteToStringConverter,
       partitions = Set(0),
       offset = Newest,
       isUseLastOffset = true,
       callback = new Callback[String] {
-        override def onEvent(consumer: TransactionOperator[String], txn: Transaction[String]): Unit = this.synchronized {
-          bs.append(txn.getTransactionUUID())
+        override def onTransaction(consumer: TransactionOperator[String], transaction: ConsumerTransaction[String]): Unit = this.synchronized {
+          bs.append(transaction.getTransactionUUID())
           ls.countDown()
         }
       })
 
     val t1 = new Thread(new Runnable {
       override def run(): Unit = {
-        val t = producer1.newTransaction(policy = NewTransactionProducerPolicy.CheckpointIfOpened)
-          lp2.countDown()
-          bp1.append(t.getTransactionUUID())
-          t.send("test")
-          t.cancel()
+        val transaction = producer1.newTransaction(policy = NewTransactionProducerPolicy.CheckpointIfOpened)
+        lp2.countDown()
+        bp1.append(transaction.getTransactionUUID())
+        transaction.send("test")
+        transaction.cancel()
       }
     })
 
@@ -79,9 +79,9 @@ class SubscriberWithTwoProducersFirstCancelSecondCheckpointTest extends FlatSpec
       override def run(): Unit = {
         lp2.await()
         val t = producer2.newTransaction(policy = NewTransactionProducerPolicy.CheckpointIfOpened)
-          bp2.append(t.getTransactionUUID())
-          t.send("test")
-          t.checkpoint()
+        bp2.append(t.getTransactionUUID())
+        t.send("test")
+        t.checkpoint()
       }
     })
 

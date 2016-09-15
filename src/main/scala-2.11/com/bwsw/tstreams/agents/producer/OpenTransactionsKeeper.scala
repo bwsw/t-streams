@@ -4,18 +4,18 @@ import java.util.concurrent.ConcurrentHashMap
 
 import com.bwsw.tstreams.agents.producer.NewTransactionProducerPolicy.ProducerPolicy
 
-import scala.collection.mutable.ListBuffer
 import scala.collection.JavaConversions._
+import scala.collection.mutable.ListBuffer
 
 
 /**
   * Created by Ivan Kudryavtsev on 28.08.16.
   */
 class OpenTransactionsKeeper[T] {
-  private val openTransactionsMap     = new ConcurrentHashMap[Int, IProducerTransaction[T]]()
+  private val openTransactionsMap = new ConcurrentHashMap[Int, IProducerTransaction[T]]()
 
   /**
-    * Allows to do smth with all not closed transactions.
+    * Allows to do something with all not closed transactions.
     *
     * @param f
     * @tparam RV
@@ -24,14 +24,14 @@ class OpenTransactionsKeeper[T] {
   def forallKeysDo[RV](f: (Int, IProducerTransaction[T]) => RV): Iterable[RV] = {
     val keys = openTransactionsMap.keys()
     val res = ListBuffer[RV]()
-    for(k <- keys) {
+    for (k <- keys) {
       val v = openTransactionsMap.getOrDefault(k, null)
-      if(v != null && !v.isClosed) {
+      if (v != null && !v.isClosed) {
         try {
           res.append(f(k, v))
         } catch {
           case e: IllegalStateException =>
-            // since forall is not atomic specific transactions can be switched to another state.
+          // since forall is not atomic specific transactions can be switched to another state.
         }
       }
     }
@@ -46,7 +46,7 @@ class OpenTransactionsKeeper[T] {
     */
   private def getTransactionOptionNaive(partition: Int) = {
     val itm = openTransactionsMap.getOrDefault(partition, null)
-    if(itm != null)
+    if (itm != null)
       Option(itm)
     else
       None
@@ -54,13 +54,13 @@ class OpenTransactionsKeeper[T] {
 
   /**
     * Returns if transaction is in map and checks it's state
- *
+    *
     * @param partition
     * @return
     */
   def getTransactionOption(partition: Int) = {
     val partOpt = getTransactionOptionNaive(partition)
-    val txnOpt = {
+    val transactionOpt = {
       if (partOpt.isDefined) {
         if (partOpt.get.isClosed) {
           None
@@ -73,12 +73,12 @@ class OpenTransactionsKeeper[T] {
         None
       }
     }
-    txnOpt
+    transactionOpt
   }
 
   /**
     * Awaits while a transaction for specified partition will be materialized
- *
+    *
     * @param partition
     * @param policy
     * @return
@@ -111,7 +111,7 @@ class OpenTransactionsKeeper[T] {
 
   /**
     * Adds new transaction
- *
+    *
     * @param partition
     * @param transaction
     * @return

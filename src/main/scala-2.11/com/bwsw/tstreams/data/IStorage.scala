@@ -13,7 +13,7 @@ import scala.collection.mutable.ListBuffer
 trait IStorage[T] {
 
   /**
-    * Flag indicating binded this IStorage or not
+    * Flag indicating is this IStorage bound or not
     */
   private val isBound = new AtomicBoolean(false)
 
@@ -48,5 +48,5 @@ trait IStorage[T] {
   /**
     * Saves data to storage
     */
-  def save(txn: UUID, stream: String, partition: Int, ttl: Int, lastItm: Int, data: ListBuffer[Array[Byte]]): () => Unit
+  def save(transaction: UUID, stream: String, partition: Int, ttl: Int, lastItm: Int, data: ListBuffer[Array[Byte]]): () => Unit
 }

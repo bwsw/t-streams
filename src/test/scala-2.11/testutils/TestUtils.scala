@@ -3,8 +3,8 @@ package testutils
 import java.io.File
 import java.lang.management.ManagementFactory
 import java.net.InetSocketAddress
-import java.util.{Properties, UUID}
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.{Properties, UUID}
 
 import com.aerospike.client.Host
 import com.bwsw.tstreams.common.{CassandraConnectorConf, CassandraHelper, MetadataConnectionPool, ZookeeperDLMService}
@@ -20,6 +20,7 @@ import org.cassandraunit.utils.EmbeddedCassandraServerHelper
 import org.slf4j.LoggerFactory
 
 import scala.collection.mutable.ListBuffer
+
 /**
   * Test help utils
   */
@@ -43,7 +44,7 @@ trait TestUtils {
 
   logger.info("-------------------------------------------------------")
   logger.info("Test suite " + this.getClass.toString + " started")
-  logger.info("Test Suite uptime is " + ((System.currentTimeMillis - uptime)/1000L).toString + " seconds")
+  logger.info("Test Suite uptime is " + ((System.currentTimeMillis - uptime) / 1000L).toString + " seconds")
   logger.info("-------------------------------------------------------")
 
 
@@ -68,7 +69,7 @@ trait TestUtils {
     .setProperty(TSF_Dictionary.Metadata.Cluster.ENDPOINTS, s"localhost:${TestUtils.cassandraPort}")
     .setProperty(TSF_Dictionary.Data.Cluster.NAMESPACE, "test")
     .setProperty(TSF_Dictionary.Coordination.ROOT, coordinationRoot)
-    .setProperty(TSF_Dictionary.Coordination.ENDPOINTS, s"localhost:${zookeeperPort}")
+    .setProperty(TSF_Dictionary.Coordination.ENDPOINTS, s"localhost:$zookeeperPort")
     .setProperty(TSF_Dictionary.Consumer.Subscriber.PERSISTENT_QUEUE_PATH, null)
     .setProperty(TSF_Dictionary.Stream.NAME, "test-stream")
     .setProperty(TSF_Dictionary.Data.Cluster.DRIVER, TSF_Dictionary.Data.Cluster.Consts.DATA_DRIVER_HAZELCAST)
@@ -88,7 +89,7 @@ trait TestUtils {
   val hosts = Set(new Host("localhost", 3000))
 
   val aerospikeOptions = new com.bwsw.tstreams.data.aerospike.Options("test", hosts)
-  val hazelcastOptions = new hazelcast.Options("test", 0,0)
+  val hazelcastOptions = new hazelcast.Options("test", 0, 0)
   val zkService = new ZookeeperDLMService("", List(new InetSocketAddress("127.0.0.1", zookeeperPort)), 7, 7)
 
   removeZkMetadata(f.getProperty(TSF_Dictionary.Coordination.ROOT).toString)
@@ -153,7 +154,7 @@ object TestUtils {
   private val id: AtomicInteger = new AtomicInteger(0)
 
   EmbeddedCassandraServerHelper.startEmbeddedCassandra(60000L)
-  System.getProperty("java.io.tmpdir","./target/")
+  System.getProperty("java.io.tmpdir", "./target/")
   private val zk = new ZooKeeperLocal(zookeperPort, Files.createTempDir().toString)
 
   def moveId(): Int = {
@@ -170,11 +171,11 @@ object TestUtils {
 class ZooKeeperLocal(zookeperPort: Int, tmp: String) {
 
   val properties = new Properties()
-  properties.setProperty("tickTime","2000")
-  properties.setProperty("initLimit","10")
-  properties.setProperty("syncLimit","5")
-  properties.setProperty("dataDir",s"${tmp}")
-  properties.setProperty("clientPort",s"${zookeperPort}")
+  properties.setProperty("tickTime", "2000")
+  properties.setProperty("initLimit", "10")
+  properties.setProperty("syncLimit", "5")
+  properties.setProperty("dataDir", s"$tmp")
+  properties.setProperty("clientPort", s"$zookeperPort")
 
   val zooKeeperServer = new ZooKeeperServerMain
   val quorumConfiguration = new QuorumPeerConfig()
@@ -185,8 +186,8 @@ class ZooKeeperLocal(zookeperPort: Int, tmp: String) {
   configuration.readFrom(quorumConfiguration)
 
   new Thread() {
-      override def run() = {
-          zooKeeperServer.runFromConfig(configuration)
-      }
-    }.start()
+    override def run() = {
+      zooKeeperServer.runFromConfig(configuration)
+    }
+  }.start()
 }

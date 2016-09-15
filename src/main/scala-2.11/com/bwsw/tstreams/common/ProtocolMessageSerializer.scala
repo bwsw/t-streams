@@ -58,11 +58,11 @@ object ProtocolMessageSerializer {
         s"{TRq,${x.senderID},${x.receiverID},${x.partition},${x.msgID},${x.remotePeerTimestamp}}"
 
       case x: TransactionResponse =>
-        s"{TRs,${x.senderID},${x.receiverID},${x.txnUUID.toString},${x.partition},${x.msgID},${x.remotePeerTimestamp}}"
+        s"{TRs,${x.senderID},${x.receiverID},${x.transactionUUID.toString},${x.partition},${x.msgID},${x.remotePeerTimestamp}}"
 
-      case TransactionStateMessage(txnUuid, ttl, status, partition, masterID, orderID, count) =>
+      case TransactionStateMessage(transactionUUID, ttl, status, partition, masterID, orderID, count) =>
         val serializedStatus = serializeInternal(status)
-        s"{PTM,${txnUuid.toString},$ttl,$serializedStatus,$partition,$masterID,$orderID,$count}"
+        s"{PTM,${transactionUUID.toString},$ttl,$serializedStatus,$partition,$masterID,$orderID,$count}"
 
       case TransactionStatus.preCheckpoint => s"{P}"
       case TransactionStatus.`postCheckpoint` => "{F}"
@@ -260,6 +260,7 @@ object ProtocolMessageSerializer {
   }
 
   class ProtocolMessageSerializerException(msg: String) extends Exception(msg)
+
 }
 
 

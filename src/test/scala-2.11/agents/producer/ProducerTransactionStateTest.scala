@@ -2,15 +2,15 @@ package agents.producer
 
 import java.util.concurrent.CountDownLatch
 
-import com.bwsw.tstreams.agents.producer.TransactionState
+import com.bwsw.tstreams.agents.producer.ProducerTransactionState
 import org.scalatest.{FlatSpec, Matchers}
 
 /**
   * Created by Ivan Kudryavtsev on 06.08.16.
   */
-class TransactionStateTest  extends FlatSpec with Matchers {
+class ProducerTransactionStateTest extends FlatSpec with Matchers {
   "Proper state update process" should "return ordered results" in {
-    val s = new TransactionState
+    val s = new ProducerTransactionState
     val v = new Array[Int](3)
     v.foreach(i => v(i) = -1)
     var idx = 0
@@ -37,7 +37,7 @@ class TransactionStateTest  extends FlatSpec with Matchers {
   }
 
   "Call closeOrDie twice" should "return ok first time, exception second time" in {
-    val s = new TransactionState
+    val s = new ProducerTransactionState
     s.closeOrDie
     var f = false
     try {
@@ -50,12 +50,12 @@ class TransactionStateTest  extends FlatSpec with Matchers {
   }
 
   "Call isClosed on fresh object" should "return false" in {
-    val s = new TransactionState
+    val s = new ProducerTransactionState
     s.isClosed shouldBe false
   }
 
   "Call isOpenedOrDie" should "return ok before close, exception second time" in {
-    val s = new TransactionState
+    val s = new ProducerTransactionState
     s.isOpenedOrDie
     s.closeOrDie
     var f = false
@@ -69,7 +69,7 @@ class TransactionStateTest  extends FlatSpec with Matchers {
   }
 
   "Transaction state materialization" should "work in ordered way" in {
-    val s = new TransactionState
+    val s = new ProducerTransactionState
     val v = new Array[Int](2)
     v.foreach(i => v(i) = -1)
     var idx = 0

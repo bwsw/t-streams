@@ -3,21 +3,21 @@ package agents.integration
 import java.util.concurrent.CountDownLatch
 
 import com.bwsw.tstreams.agents.consumer.Offset.Newest
-import com.bwsw.tstreams.agents.consumer.{Transaction, TransactionOperator}
 import com.bwsw.tstreams.agents.consumer.subscriber.Callback
+import com.bwsw.tstreams.agents.consumer.{ConsumerTransaction, TransactionOperator}
 import com.bwsw.tstreams.agents.group.CheckpointGroup
 import com.bwsw.tstreams.agents.producer.NewTransactionProducerPolicy
 import com.bwsw.tstreams.env.TSF_Dictionary
-import org.scalatest.{BeforeAndAfterAll, Matchers, FlatSpec}
+import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import testutils.{LocalGeneratorCreator, TestUtils}
 
 /**
   * Created by ivan on 13.09.16.
   */
-class CheckpointGroupAndSubscriberEventsTests  extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
+class CheckpointGroupAndSubscriberEventsTests extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
 
   System.setProperty("DEBUG", "true")
-  System.setProperty(org.slf4j.impl.SimpleLogger.DEFAULT_LOG_LEVEL_KEY, "DEBUG");
+  System.setProperty(org.slf4j.impl.SimpleLogger.DEFAULT_LOG_LEVEL_KEY, "DEBUG")
 
   f.setProperty(TSF_Dictionary.Stream.NAME, "test_stream")
     .setProperty(TSF_Dictionary.Stream.PARTITIONS, 3)
@@ -33,7 +33,7 @@ class CheckpointGroupAndSubscriberEventsTests  extends FlatSpec with Matchers wi
 
   val producer = f.getProducer[String](
     name = "test_producer",
-    txnGenerator = LocalGeneratorCreator.getGen(),
+    transactionGenerator = LocalGeneratorCreator.getGen(),
     converter = stringToArrayByteConverter,
     partitions = Set(0),
     isLowPriority = false)
@@ -46,13 +46,13 @@ class CheckpointGroupAndSubscriberEventsTests  extends FlatSpec with Matchers wi
     group.add(producer)
 
     val s = f.getSubscriber[String](name = "ss+2",
-      txnGenerator = LocalGeneratorCreator.getGen(),
+      transactionGenerator = LocalGeneratorCreator.getGen(),
       converter = arrayByteToStringConverter,
       partitions = Set(0),
       offset = Newest,
       isUseLastOffset = true,
       callback = new Callback[String] {
-        override def onEvent(consumer: TransactionOperator[String], txn: Transaction[String]): Unit = this.synchronized {
+        override def onTransaction(consumer: TransactionOperator[String], transaction: ConsumerTransaction[String]): Unit = this.synchronized {
           ctr += 1
           if (ctr == 2) {
             l.countDown()
