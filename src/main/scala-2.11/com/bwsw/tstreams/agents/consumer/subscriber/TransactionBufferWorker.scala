@@ -1,8 +1,10 @@
 package com.bwsw.tstreams.agents.consumer.subscriber
 
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 
-import com.bwsw.tstreams.common.FirstFailLockableTaskExecutor
+import com.bwsw.tstreams.common.{ResettableCountDownLatch, FirstFailLockableTaskExecutor}
+import com.bwsw.tstreams.coordination.messages.state.TransactionStatus
 
 import scala.collection.mutable
 
@@ -10,14 +12,30 @@ import scala.collection.mutable
   * Created by Ivan Kudryavtsev at 20.08.2016
   */
 class TransactionBufferWorker() {
-  private val executor = new FirstFailLockableTaskExecutor("TransactionBufferWorker-Executor")
+  private val updateExecutor = new FirstFailLockableTaskExecutor("TransactionBufferWorker-updateExecutor")
   val transactionBufferMap = mutable.Map[Int, TransactionBuffer]()
+  val isComplete = new AtomicBoolean(false)
 
-  def assign(partition: Int, transactionBuffer: TransactionBuffer) = {
+  val signalThread = new Thread(new Runnable {
+    override def run(): Unit = {
+      while(!isComplete.get) {
+        signalTransactionStateSequences()
+        Thread.sleep(TransactionBuffer.MAX_POSTCHECKPOINT_WAIT * 2)
+      }
+    }
+  })
+
+  signalThread.start()
+
+  def assign(partition: Int, transactionBuffer: TransactionBuffer) = this.synchronized {
     if (!transactionBufferMap.contains(partition))
       transactionBufferMap(partition) = transactionBuffer
     else
       throw new IllegalStateException(s"Partition $partition is bound already.")
+  }
+
+  def signalTransactionStateSequences() = this.synchronized {
+    transactionBufferMap.foreach(kv => kv._2.signalCompleteTransactions())
   }
 
   def getPartitions() = transactionBufferMap.keySet
@@ -27,11 +45,12 @@ class TransactionBufferWorker() {
     *
     * @param transactionState
     */
-  def updateAndNotify(transactionState: TransactionState) = {
-    executor.submit(s"<UpdateAndNotifyTask($transactionState)>", new Runnable {
+  def update(transactionState: TransactionState) = {
+    updateExecutor.submit(s"<UpdateAndNotifyTask($transactionState)>", new Runnable {
       override def run(): Unit = {
         transactionBufferMap(transactionState.partition).update(transactionState)
-        transactionBufferMap(transactionState.partition).signalCompleteTransactions()
+        if(transactionState.state == TransactionStatus.postCheckpoint)
+          transactionBufferMap(transactionState.partition).signalCompleteTransactions()
       }
     })
   }
@@ -40,7 +59,9 @@ class TransactionBufferWorker() {
     * stops executor
     */
   def stop() = {
-    executor.shutdownOrDie(100, TimeUnit.SECONDS)
+    isComplete.set(true)
+    signalThread.join()
+    updateExecutor.shutdownOrDie(100, TimeUnit.SECONDS)
     transactionBufferMap.foreach(kv => kv._2.counters.dump(kv._1))
     transactionBufferMap.clear()
   }
