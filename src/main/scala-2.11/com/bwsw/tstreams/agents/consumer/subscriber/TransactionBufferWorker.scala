@@ -3,7 +3,8 @@ package com.bwsw.tstreams.agents.consumer.subscriber
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 
-import com.bwsw.tstreams.common.FirstFailLockableTaskExecutor
+import com.bwsw.tstreams.common.{ResettableCountDownLatch, FirstFailLockableTaskExecutor}
+import com.bwsw.tstreams.coordination.messages.state.TransactionStatus
 
 import scala.collection.mutable
 
@@ -17,8 +18,10 @@ class TransactionBufferWorker() {
 
   val signalThread = new Thread(new Runnable {
     override def run(): Unit = {
-      while(!isComplete.get)
+      while(!isComplete.get) {
         signalTransactionStateSequences()
+        Thread.sleep(TransactionBuffer.MAX_POSTCHECKPOINT_WAIT * 2)
+      }
     }
   })
 
@@ -46,6 +49,8 @@ class TransactionBufferWorker() {
     updateExecutor.submit(s"<UpdateAndNotifyTask($transactionState)>", new Runnable {
       override def run(): Unit = {
         transactionBufferMap(transactionState.partition).update(transactionState)
+        if(transactionState.state == TransactionStatus.postCheckpoint)
+          transactionBufferMap(transactionState.partition).signalCompleteTransactions()
       }
     })
   }

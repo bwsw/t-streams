@@ -8,12 +8,16 @@ import com.bwsw.tstreams.coordination.messages.state.TransactionStatus
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 
+object TransactionBuffer {
+  val MAX_POSTCHECKPOINT_WAIT = 2000
+
+}
+
 /**
   * Created by ivan on 15.09.16.
   */
 class TransactionBuffer(queue: QueueBuilder.QueueType) {
 
-  val MAX_POSTCHECKPOINT_WAIT = 2000
 
   val counters = TransactionBufferCounters()
   var lastTransaction: UUID = null
@@ -81,7 +85,7 @@ class TransactionBuffer(queue: QueueBuilder.QueueType) {
           ts.queueOrderID = orderID
           ts.state = TransactionStatus.preCheckpoint
           ts.itemCount = update.itemCount
-          ts.ttl = System.currentTimeMillis() + MAX_POSTCHECKPOINT_WAIT // TODO: fixit
+          ts.ttl = System.currentTimeMillis() + TransactionBuffer.MAX_POSTCHECKPOINT_WAIT // TODO: fixit
 
         case (TransactionStatus.opened, TransactionStatus.postCheckpoint) =>
 

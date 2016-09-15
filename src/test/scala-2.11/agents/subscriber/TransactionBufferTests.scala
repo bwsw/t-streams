@@ -116,7 +116,7 @@ class TransactionBufferTests extends FlatSpec with Matchers {
     val b = new TransactionBuffer(new QueueBuilder.InMemory().generateQueueObject(0))
     val ts0 = generateAllStates()
     b.update(ts0(OPENED))
-    val shouldBeTime = b.MAX_POSTCHECKPOINT_WAIT + System.currentTimeMillis()
+    val shouldBeTime = TransactionBuffer.MAX_POSTCHECKPOINT_WAIT + System.currentTimeMillis()
     b.update(ts0(PRE))
     b.getState(ts0(PRE).uuid).isDefined shouldBe true
     b.getState(ts0(PRE).uuid).get.state shouldBe TransactionStatus.preCheckpoint
@@ -129,7 +129,7 @@ class TransactionBufferTests extends FlatSpec with Matchers {
     val b = new TransactionBuffer(new QueueBuilder.InMemory().generateQueueObject(0))
     val ts0 = generateAllStates()
     b.update(ts0(OPENED))
-    val shouldBeTime = b.MAX_POSTCHECKPOINT_WAIT + System.currentTimeMillis()
+    val shouldBeTime = TransactionBuffer.MAX_POSTCHECKPOINT_WAIT + System.currentTimeMillis()
     b.update(ts0(PRE))
     b.getState(ts0(PRE).uuid).isDefined shouldBe true
     b.getState(ts0(PRE).uuid).get.state shouldBe TransactionStatus.preCheckpoint
@@ -143,7 +143,7 @@ class TransactionBufferTests extends FlatSpec with Matchers {
     val b = new TransactionBuffer(new QueueBuilder.InMemory().generateQueueObject(0))
     val ts0 = generateAllStates()
     b.update(ts0(OPENED))
-    val shouldBeTime = b.MAX_POSTCHECKPOINT_WAIT + System.currentTimeMillis()
+    val shouldBeTime = TransactionBuffer.MAX_POSTCHECKPOINT_WAIT + System.currentTimeMillis()
     b.update(ts0(PRE))
     b.getState(ts0(PRE).uuid).isDefined shouldBe true
     b.getState(ts0(PRE).uuid).get.state shouldBe TransactionStatus.preCheckpoint
