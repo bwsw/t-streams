@@ -71,8 +71,11 @@ class ProcessingEngine[T](consumer: TransactionOperator[T],
 
     if (!isThresholdsSet.get()) {
       isThresholdsSet.set(true)
-      executor.setThresholds(queueLengthThreshold = 10, taskFullDelayThresholdMs = pollTimeMs + 25,
-        taskDelayThresholdMs = pollTimeMs + 5, taskRunDelayThresholdMs = 20)
+      executor.setThresholds(queueLengthThreshold = 10, taskFullDelayThresholdMs = pollTimeMs + 50,
+        taskDelayThresholdMs = pollTimeMs + 5, taskRunDelayThresholdMs = 50)
+
+      loadExecutor.setThresholds(queueLengthThreshold = 1000, taskFullDelayThresholdMs = 150,
+        taskDelayThresholdMs = 100, taskRunDelayThresholdMs = 50)
     }
 
     val seq = queue.get(pollTimeMs, TimeUnit.MILLISECONDS)

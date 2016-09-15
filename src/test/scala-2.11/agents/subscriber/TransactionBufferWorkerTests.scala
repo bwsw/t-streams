@@ -18,14 +18,14 @@ class TransactionBufferWorkerTests extends FlatSpec with Matchers {
     val w = new TransactionBufferWorker()
     w.assign(0, b)
 
-    w.updateAndNotify(ts0(TransactionBufferTests.OPENED))
-    w.updateAndNotify(ts1(TransactionBufferTests.OPENED))
+    w.update(ts0(TransactionBufferTests.OPENED))
+    w.update(ts1(TransactionBufferTests.OPENED))
 
-    w.updateAndNotify(ts0(TransactionBufferTests.PRE))
-    w.updateAndNotify(ts1(TransactionBufferTests.PRE))
+    w.update(ts0(TransactionBufferTests.PRE))
+    w.update(ts1(TransactionBufferTests.PRE))
 
-    w.updateAndNotify(ts0(TransactionBufferTests.POST))
-    w.updateAndNotify(ts1(TransactionBufferTests.POST))
+    w.update(ts0(TransactionBufferTests.POST))
+    w.update(ts1(TransactionBufferTests.POST))
 
     val itm0 = q.get(100, TimeUnit.MILLISECONDS)
     itm0.size shouldBe 1
@@ -42,14 +42,14 @@ class TransactionBufferWorkerTests extends FlatSpec with Matchers {
     val w = new TransactionBufferWorker()
     w.assign(0, b)
 
-    w.updateAndNotify(ts0(TransactionBufferTests.OPENED))
-    w.updateAndNotify(ts1(TransactionBufferTests.OPENED))
+    w.update(ts0(TransactionBufferTests.OPENED))
+    w.update(ts1(TransactionBufferTests.OPENED))
 
-    w.updateAndNotify(ts0(TransactionBufferTests.PRE))
-    w.updateAndNotify(ts1(TransactionBufferTests.PRE))
+    w.update(ts0(TransactionBufferTests.PRE))
+    w.update(ts1(TransactionBufferTests.PRE))
 
-    w.updateAndNotify(ts1(TransactionBufferTests.POST))
-    w.updateAndNotify(ts0(TransactionBufferTests.POST))
+    w.update(ts1(TransactionBufferTests.POST))
+    w.update(ts0(TransactionBufferTests.POST))
 
     val itm0 = q.get(100, TimeUnit.MILLISECONDS)
     itm0.size shouldBe 2
@@ -66,11 +66,11 @@ class TransactionBufferWorkerTests extends FlatSpec with Matchers {
     val b = new TransactionBuffer(q)
     val w = new TransactionBufferWorker()
     w.assign(0, b)
-    w.updateAndNotify(ts0(TransactionBufferTests.OPENED))
+    w.update(ts0(TransactionBufferTests.OPENED))
     w.stop()
     val flag: Boolean = {
       try {
-        w.updateAndNotify(ts0(TransactionBufferTests.UPDATE))
+        w.update(ts0(TransactionBufferTests.UPDATE))
         false
       } catch {
         case e: RuntimeException =>
