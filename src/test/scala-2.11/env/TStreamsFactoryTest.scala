@@ -1,10 +1,8 @@
 package env
 
-import java.util.UUID
-
 import com.bwsw.tstreams.agents.consumer.Offset.Oldest
-import com.bwsw.tstreams.agents.consumer.{Transaction, TransactionOperator}
 import com.bwsw.tstreams.agents.consumer.subscriber.Callback
+import com.bwsw.tstreams.agents.consumer.{ConsumerTransaction, TransactionOperator}
 import com.bwsw.tstreams.converter.{ArrayByteToStringConverter, StringToArrayByteConverter}
 import com.bwsw.tstreams.env.TSF_Dictionary
 import com.bwsw.tstreams.generator.LocalTimeUUIDGenerator
@@ -33,7 +31,7 @@ class TStreamsFactoryTest extends FlatSpec with Matchers with BeforeAndAfterAll 
       false shouldBe true
     } catch {
       case e: IllegalStateException =>
-      true shouldBe true
+        true shouldBe true
     }
   }
 
@@ -41,7 +39,7 @@ class TStreamsFactoryTest extends FlatSpec with Matchers with BeforeAndAfterAll 
     val p = f.getProducer[String](
       name = "test-producer-1",
       isLowPriority = false,
-      txnGenerator = new LocalTimeUUIDGenerator,
+      transactionGenerator = new LocalTimeUUIDGenerator,
       converter = new StringToArrayByteConverter,
       partitions = Set(0))
 
@@ -54,7 +52,7 @@ class TStreamsFactoryTest extends FlatSpec with Matchers with BeforeAndAfterAll 
   "UniversalFactory.getConsumer" should "return consumer object" in {
     val c = f.getConsumer[String](
       name = "test-consumer-1",
-      txnGenerator = new LocalTimeUUIDGenerator,
+      transactionGenerator = new LocalTimeUUIDGenerator,
       converter = new ArrayByteToStringConverter,
       partitions = Set(0),
       offset = Oldest)
@@ -66,12 +64,12 @@ class TStreamsFactoryTest extends FlatSpec with Matchers with BeforeAndAfterAll 
   "UniversalFactory.getSubscriber" should "return subscriber object" in {
     val sub = f.getSubscriber[String](
       name = "test-subscriber",
-      txnGenerator = new LocalTimeUUIDGenerator,
+      transactionGenerator = new LocalTimeUUIDGenerator,
       converter = new ArrayByteToStringConverter,
       partitions = Set(0),
       offset = Oldest,
       callback = new Callback[String] {
-        override def onEvent(consumer: TransactionOperator[String], txn: Transaction[String]): Unit = {}
+        override def onTransaction(consumer: TransactionOperator[String], transaction: ConsumerTransaction[String]): Unit = {}
       })
 
     sub != null shouldEqual true

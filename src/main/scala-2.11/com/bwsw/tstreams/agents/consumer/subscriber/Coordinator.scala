@@ -12,10 +12,10 @@ import org.apache.zookeeper.{CreateMode, KeeperException}
   */
 class Coordinator() {
 
-  var agentAddress: String              = null
-  var stream: String                    = null
-  var dlm: ZookeeperDLMService          = null
-  var partitions: Set[Int]              = null
+  var agentAddress: String = null
+  var stream: String = null
+  var dlm: ZookeeperDLMService = null
+  var partitions: Set[Int] = null
 
 
   val isInitialized = new AtomicBoolean(false)
@@ -28,7 +28,7 @@ class Coordinator() {
                 zkSessionTimeout: Int,
                 zkConnectionTimeout: Int) = this.synchronized {
 
-    if(isInitialized.getAndSet(true))
+    if (isInitialized.getAndSet(true))
       throw new IllegalStateException("Failed to initialize object as it's already initialized.")
 
     this.agentAddress = agentAddress
@@ -44,7 +44,7 @@ class Coordinator() {
     * shuts down coordinator
     */
   def shutdown() = {
-    if(!isInitialized.getAndSet(false))
+    if (!isInitialized.getAndSet(false))
       throw new IllegalStateException("Failed to stop object as it's already stopped.")
     partitions foreach (p => dlm.delete(getSubscriberMembershipPath(p)))
     dlm.close()
@@ -80,5 +80,6 @@ class Coordinator() {
   }
 
   private def getSubscriberEventPath(p: Int) = s"/subscribers/event/$stream/$p"
+
   private def getSubscriberMembershipPath(p: Int) = s"/subscribers/agents/$stream/$p/$agentAddress"
 }

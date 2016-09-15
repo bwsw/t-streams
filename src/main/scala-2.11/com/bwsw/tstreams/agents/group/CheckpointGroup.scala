@@ -42,7 +42,7 @@ class CheckpointGroup(val executors: Int = 1) {
     */
   def add(agent: GroupParticipant): Unit = {
     LockUtil.withLockOrDieDo[Unit](lock, lockTimeout, Some(logger), () => {
-      if(isStopped.get)
+      if (isStopped.get)
         throw new IllegalStateException("Group is stopped. No longer operations are possible.")
       if (agents.contains(agent.getAgentName)) {
         throw new IllegalArgumentException(s"Agent with specified name ${agent.getAgentName} is already in the group. Names of added agents must be unique.")
@@ -57,9 +57,10 @@ class CheckpointGroup(val executors: Int = 1) {
     */
   def clear(): Unit = {
     LockUtil.withLockOrDieDo[Unit](lock, lockTimeout, Some(logger), () => {
-      if(isStopped.get)
+      if (isStopped.get)
         throw new IllegalStateException("Group is stopped. No longer operations are possible.")
-      agents.clear()})
+      agents.clear()
+    })
   }
 
   /**
@@ -69,12 +70,13 @@ class CheckpointGroup(val executors: Int = 1) {
     */
   def remove(name: String): Unit = {
     LockUtil.withLockOrDieDo[Unit](lock, lockTimeout, Some(logger), () => {
-      if(isStopped.get)
+      if (isStopped.get)
         throw new IllegalStateException("Group is stopped. No longer operations are possible.")
       if (!agents.contains(name)) {
-        throw new IllegalArgumentException(s"Agent with specified name ${name} is not in the group.")
+        throw new IllegalArgumentException(s"Agent with specified name $name is not in the group.")
       }
-      agents.remove(name) })
+      agents.remove(name)
+    })
   }
 
   /**
@@ -82,26 +84,27 @@ class CheckpointGroup(val executors: Int = 1) {
     */
   def exists(name: String): Boolean = {
     LockUtil.withLockOrDieDo[Boolean](lock, lockTimeout, Some(logger), () => {
-      if(isStopped.get)
+      if (isStopped.get)
         throw new IllegalStateException("Group is stopped. No longer operations are possible.")
-      agents.contains(name) })
+      agents.contains(name)
+    })
   }
 
   /**
     * Commit all agents state
     */
   def checkpoint(): Unit = {
-    if(isStopped.get)
+    if (isStopped.get)
       throw new IllegalStateException("Group is stopped. No longer operations are possible.")
 
     LockUtil.lockOrDie(lock, lockTimeout, Some(logger))
 
     agents.foreach { case (name, agent) =>
-      if(agent.getThreadLock() != null)
+      if (agent.getThreadLock() != null)
         LockUtil.lockOrDie(agent.getThreadLock(), lockTimeout, Some(logger))
     }
 
-    agents.foreach { case (name, agent) => if(agent.isInstanceOf[SendingAgent]) agent.asInstanceOf[SendingAgent].finalizeDataSend() }
+    agents.foreach { case (name, agent) => if (agent.isInstanceOf[SendingAgent]) agent.asInstanceOf[SendingAgent].finalizeDataSend() }
 
     var exc: Exception = null
 
@@ -129,7 +132,7 @@ class CheckpointGroup(val executors: Int = 1) {
 
     // unlock all agents
     agents.foreach { case (name, agent) =>
-      if(agent.getThreadLock() != null)
+      if (agent.getThreadLock() != null)
         agent.getThreadLock().unlock()
     }
 
@@ -140,11 +143,11 @@ class CheckpointGroup(val executors: Int = 1) {
   private def publishPreCheckpointEventForAllProducers(producers: List[CheckpointInfo]) = {
     val l = new CountDownLatch(producers.size)
     producers foreach {
-      case ProducerCheckpointInfo(txn, agent, preCheckpointEvent, _, _, _, _, _, _) =>
+      case ProducerCheckpointInfo(transaction, agent, preCheckpointEvent, _, _, _, _, _, _) =>
         executorPool.submit("<PreCheckpointEvent>", new Runnable {
           override def run(): Unit = {
             agent.publish(preCheckpointEvent)
-            logger.info("PRE event sent for " + txn.getTransactionUUID.toString)
+            logger.info("PRE event sent for " + transaction.getTransactionUUID.toString)
             l.countDown()
           }
         })
@@ -167,7 +170,7 @@ class CheckpointGroup(val executors: Int = 1) {
     * Stop group when it's no longer required
     */
   def stop(): Unit = {
-    if(isStopped.getAndSet(true))
+    if (isStopped.getAndSet(true))
       throw new IllegalStateException("Group is stopped. No longer operations are possible.")
     executorPool.shutdownOrDie(100, TimeUnit.SECONDS)
     clear()

@@ -23,7 +23,7 @@ object SpareServerSocketLookupUtility {
     } finally {
       if (ss != null) ss.close()
     }
-    return false
+    false
   }
 
   def findSparePort(hostOrIp: String, fromPort: Int, toPort: Int): Option[Int] = synchronized {

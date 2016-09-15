@@ -2,7 +2,6 @@ package com.bwsw.tstreams.agents.consumer.subscriber
 
 import com.bwsw.tstreams.common.ProtocolMessageSerializer
 import com.bwsw.tstreams.common.ProtocolMessageSerializer.ProtocolMessageSerializerException
-import com.bwsw.tstreams.coordination.messages.master.IMessage
 import com.bwsw.tstreams.coordination.messages.state.TransactionStateMessage
 import io.netty.channel.{ChannelHandler, ChannelHandlerContext, SimpleChannelInboundHandler}
 import io.netty.util.ReferenceCountUtil
@@ -14,11 +13,11 @@ import scala.collection.mutable
   * Handler for netty which handles updates from producers.
   */
 @ChannelHandler.Sharable
-class TransactionStateMessageChannelHandler(txnBufferWorkers: mutable.Map[Int, TransactionBufferWorker]) extends SimpleChannelInboundHandler[String] {
+class TransactionStateMessageChannelHandler(transactionsBufferWorkers: mutable.Map[Int, TransactionBufferWorker]) extends SimpleChannelInboundHandler[String] {
 
   private val partitionCache = mutable.Map[Int, TransactionBufferWorker]()
 
-  txnBufferWorkers
+  transactionsBufferWorkers
     .foreach(id_w => id_w._2.getPartitions().foreach(p => partitionCache(p) = id_w._2))
 
   override def channelRead0(ctx: ChannelHandlerContext, msg: String): Unit = {
@@ -26,15 +25,15 @@ class TransactionStateMessageChannelHandler(txnBufferWorkers: mutable.Map[Int, T
       val m = ProtocolMessageSerializer.deserialize[TransactionStateMessage](msg)
       if (partitionCache.contains(m.partition))
         partitionCache(m.partition)
-          .updateAndNotify(TransactionState(uuid              = m.txnUuid,
-            partition         = m.partition,
-            masterSessionID   = m.masterID,
-            queueOrderID      = m.orderID,
-            itemCount         = m.count,
-            state             = m.status,
-            ttl               = m.ttl))
+          .updateAndNotify(TransactionState(uuid = m.transactionUUID,
+            partition = m.partition,
+            masterSessionID = m.masterID,
+            queueOrderID = m.orderID,
+            itemCount = m.count,
+            state = m.status,
+            ttl = m.ttl))
       else
-        Subscriber.logger.warn(s"Unknown partition ${m.partition} found in Message: ${msg}.")
+        Subscriber.logger.warn(s"Unknown partition ${m.partition} found in Message: $msg.")
     } catch {
       case e: ProtocolMessageSerializerException =>
     }

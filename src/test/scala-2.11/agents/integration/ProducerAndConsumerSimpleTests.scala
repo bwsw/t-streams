@@ -1,7 +1,7 @@
 package agents.integration
 
+import com.bwsw.tstreams.agents.consumer.ConsumerTransaction
 import com.bwsw.tstreams.agents.consumer.Offset.Oldest
-import com.bwsw.tstreams.agents.consumer.Transaction
 import com.bwsw.tstreams.agents.producer.NewTransactionProducerPolicy
 import com.bwsw.tstreams.common.CassandraHelper
 import com.bwsw.tstreams.env.TSF_Dictionary
@@ -14,8 +14,8 @@ import scala.util.control.Breaks._
 
 class ProducerAndConsumerSimpleTests extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
 
-  f.setProperty(TSF_Dictionary.Stream.NAME,"test_stream").
-    setProperty(TSF_Dictionary.Stream.PARTITIONS,3).
+  f.setProperty(TSF_Dictionary.Stream.NAME, "test_stream").
+    setProperty(TSF_Dictionary.Stream.PARTITIONS, 3).
     setProperty(TSF_Dictionary.Stream.TTL, 60 * 10).
     setProperty(TSF_Dictionary.Coordination.CONNECTION_TIMEOUT, 7).
     setProperty(TSF_Dictionary.Coordination.TTL, 7).
@@ -27,14 +27,14 @@ class ProducerAndConsumerSimpleTests extends FlatSpec with Matchers with BeforeA
 
   val producer = f.getProducer[String](
     name = "test_producer",
-    txnGenerator = LocalGeneratorCreator.getGen(),
+    transactionGenerator = LocalGeneratorCreator.getGen(),
     converter = stringToArrayByteConverter,
     partitions = Set(0),
     isLowPriority = false)
 
   val consumer = f.getConsumer[String](
     name = "test_consumer",
-    txnGenerator = LocalGeneratorCreator.getGen(),
+    transactionGenerator = LocalGeneratorCreator.getGen(),
     converter = arrayByteToStringConverter,
     partitions = Set(0),
     offset = Oldest,
@@ -45,18 +45,17 @@ class ProducerAndConsumerSimpleTests extends FlatSpec with Matchers with BeforeA
 
   "producer, consumer" should "producer - generate one transaction, consumer - retrieve it with getAll method" in {
     CassandraHelper.clearMetadataTables(session, randomKeyspace)
-    val totalDataInTxn = 10
+    val totalDataInTransaction = 10
     val producerTransaction = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
-    val sendData = (for (part <- 0 until totalDataInTxn) yield "data_part_" + randomString).sorted
+    val sendData = (for (part <- 0 until totalDataInTransaction) yield "data_part_" + randomString).sorted
     sendData.foreach { x =>
       producerTransaction.send(x)
     }
     producerTransaction.checkpoint()
     Thread.sleep(100)
-    val txnOpt = consumer.getTransaction(0)
-    val txn = txnOpt.get
+    val transaction = consumer.getTransaction(0).get
 
-    var checkVal = txn.getAll().sorted == sendData
+    var checkVal = transaction.getAll().sorted == sendData
 
     //assert that is nothing to read
     (0 until consumer.stream.getPartitions) foreach { _ =>
@@ -68,19 +67,19 @@ class ProducerAndConsumerSimpleTests extends FlatSpec with Matchers with BeforeA
 
   "producer, consumer" should "producer - generate one transaction, consumer - retrieve it using iterator" in {
     CassandraHelper.clearMetadataTables(session, randomKeyspace)
-    val totalDataInTxn = 10
+    val totalDataInTransaction = 10
     val producerTransaction = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
-    val sendData = (for (part <- 0 until totalDataInTxn) yield "data_part_" + randomString).sorted
+    val sendData = (for (part <- 0 until totalDataInTransaction) yield "data_part_" + randomString).sorted
     sendData.foreach { x =>
       producerTransaction.send(x)
     }
     producerTransaction.checkpoint()
-    val txnOpt = consumer.getTransaction(0)
-    assert(txnOpt.isDefined)
-    val txn = txnOpt.get
+    val transactionOpt = consumer.getTransaction(0)
+    assert(transactionOpt.isDefined)
+    val transaction = transactionOpt.get
     var dataToAssert = ListBuffer[String]()
-    while (txn.hasNext()) {
-      dataToAssert += txn.next()
+    while (transaction.hasNext()) {
+      dataToAssert += transaction.next()
     }
 
     var checkVal = true
@@ -97,11 +96,11 @@ class ProducerAndConsumerSimpleTests extends FlatSpec with Matchers with BeforeA
 
   "producer, consumer" should "producer - generate some set of transactions, consumer - retrieve them all" in {
     CassandraHelper.clearMetadataTables(session, randomKeyspace)
-    val totalTxn = 100
-    val totalDataInTxn = 10
-    val sendData = (for (part <- 0 until totalDataInTxn) yield "data_part_" + randomString).sorted
+    val transactionsAmount = 100
+    val totalDataInTransaction = 10
+    val sendData = (for (part <- 0 until totalDataInTransaction) yield "data_part_" + randomString).sorted
 
-    (0 until totalTxn).foreach { _ =>
+    (0 until transactionsAmount).foreach { _ =>
       val producerTransaction = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
       sendData.foreach { x =>
         producerTransaction.send(x)
@@ -111,10 +110,10 @@ class ProducerAndConsumerSimpleTests extends FlatSpec with Matchers with BeforeA
 
     var checkVal = true
 
-    (0 until totalTxn).foreach { _ =>
-      val txn = consumer.getTransaction(0)
-      checkVal &= txn.nonEmpty
-      checkVal &= txn.get.getAll().sorted == sendData
+    (0 until transactionsAmount).foreach { _ =>
+      val transaction = consumer.getTransaction(0)
+      checkVal &= transaction.nonEmpty
+      checkVal &= transaction.get.getAll().sorted == sendData
     }
 
     //assert that is nothing to read
@@ -128,17 +127,17 @@ class ProducerAndConsumerSimpleTests extends FlatSpec with Matchers with BeforeA
   "producer, consumer" should "producer - generate transaction, consumer retrieve it (both start async)" in {
     CassandraHelper.clearMetadataTables(session, randomKeyspace)
     val timeoutForWaiting = 120
-    val totalDataInTxn = 10
-    val sendData = (for (part <- 0 until totalDataInTxn) yield "data_part_" + part).sorted
+    val totalDataInTransaction = 10
+    val sendData = (for (part <- 0 until totalDataInTransaction) yield "data_part_" + part).sorted
 
     val producerThread = new Thread(new Runnable {
       def run() {
-        val txn = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
+        val transaction = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
         sendData.foreach { x =>
-          txn.send(x)
+          transaction.send(x)
           Thread.sleep(1000)
         }
-        txn.checkpoint()
+        transaction.checkpoint()
       }
     })
 
@@ -148,9 +147,9 @@ class ProducerAndConsumerSimpleTests extends FlatSpec with Matchers with BeforeA
       def run() {
         breakable {
           while (true) {
-            val consumedTxn: Option[Transaction[String]] = consumer.getTransaction(0)
-            if (consumedTxn.isDefined) {
-              checkVal &= consumedTxn.get.getAll().sorted == sendData
+            val consumedTransaction: Option[ConsumerTransaction[String]] = consumer.getTransaction(0)
+            if (consumedTransaction.isDefined) {
+              checkVal &= consumedTransaction.get.getAll().sorted == sendData
               break()
             }
             Thread.sleep(1000)

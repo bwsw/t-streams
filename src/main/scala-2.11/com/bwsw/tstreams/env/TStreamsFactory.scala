@@ -6,10 +6,10 @@ import java.util.concurrent.atomic.AtomicBoolean
 
 import com.aerospike.client.Host
 import com.aerospike.client.policy.{ClientPolicy, Policy, WritePolicy}
+import com.bwsw.tstreams.agents.consumer.Consumer
 import com.bwsw.tstreams.agents.consumer.Offset.IOffset
 import com.bwsw.tstreams.agents.consumer.subscriber.QueueBuilder.Persistent
 import com.bwsw.tstreams.agents.consumer.subscriber.{QueueBuilder, Subscriber}
-import com.bwsw.tstreams.agents.consumer.{Consumer, SubscriberCoordinationOptions}
 import com.bwsw.tstreams.agents.producer.{CoordinationOptions, Producer}
 import com.bwsw.tstreams.common.{RoundRobinPolicy, _}
 import com.bwsw.tstreams.converter.IConverter
@@ -20,7 +20,8 @@ import com.bwsw.tstreams.metadata.{MetadataStorage, MetadataStorageFactory}
 import com.bwsw.tstreams.streams.TStream
 import org.slf4j.LoggerFactory
 
-import scala.collection.mutable.HashMap
+import scala.collection.mutable
+
 
 /**
   * Class which holds definitions for UniversalFactory
@@ -112,7 +113,7 @@ object TSF_Dictionary {
         */
       val ENDPOINTS = "data.cluster.endpoints"
       /**
-        * endpoints list of the database where txn data is stored, comma separated: host1:port1,host2:port2,host3:port3,...
+        * endpoints list of the database where transaction data is stored, comma separated: host1:port1,host2:port2,host3:port3,...
         */
       val NAMESPACE = "data.cluster.namespace"
       /**
@@ -156,7 +157,7 @@ object TSF_Dictionary {
           */
         val ASYNCHRONOUS_REPLICAS = "data.cluster.hazelcast.asynchronous-replicas"
       }
-      
+
       /**
         * scope TSF_Dictionary.Data.Cluster aerospike engine
         */
@@ -242,7 +243,7 @@ object TSF_Dictionary {
     /**
       * partition redistribution delay
       */
-    val PARTITION_REDISTRIBUTION_DELAY  = "coordination.partition-redistribution-delay"
+    val PARTITION_REDISTRIBUTION_DELAY = "coordination.partition-redistribution-delay"
   }
 
   /**
@@ -334,7 +335,7 @@ object TSF_Dictionary {
         */
       val KEEP_ALIVE = "producer.transaction.keep-alive"
       /**
-        * amount of data items to batch when write data into txn
+        * amount of data items to batch when write data into transaction
         */
       val DATA_WRITE_BATCH_SIZE = "producer.transaction.data-write-batch-size"
       /**
@@ -417,7 +418,7 @@ object TSF_Dictionary {
 class TStreamsFactory() {
 
   private val logger = LoggerFactory.getLogger(this.getClass)
-  val propertyMap = new HashMap[String, Any]()
+  val propertyMap = mutable.HashMap[String, Any]()
   val isClosed = new AtomicBoolean(false)
   val isLocked = new AtomicBoolean(false)
 
@@ -455,21 +456,21 @@ class TStreamsFactory() {
   val Cluster_cassandra_read_timeout_ms_min = 10000
   val Cluster_cassandra_read_timeout_ms_max = 600000
 
-  propertyMap += (TSF_Dictionary.Metadata.Cluster.LOCAL_DC                        -> null)
-  propertyMap += (TSF_Dictionary.Metadata.Cluster.KEEP_ALIVE_MS                   -> Cluster_cassandra_keep_alive_ms_default)
-  propertyMap += (TSF_Dictionary.Metadata.Cluster.MIN_RECONNECTION_DELAY_MS       -> Cluster_cassandra_min_reconnection_delay_ms_default)
-  propertyMap += (TSF_Dictionary.Metadata.Cluster.MAX_RECONNECTION_DELAY_MS       -> Cluster_cassandra_max_reconnection_delay_ms_default)
-  propertyMap += (TSF_Dictionary.Metadata.Cluster.QUERY_RETRY_COUNT               -> Cluster_cassandra_query_retry_count_default)
-  propertyMap += (TSF_Dictionary.Metadata.Cluster.CONNECTION_TIMEOUT_MS           -> Cluster_cassandra_connection_timeout_ms_default)
-  propertyMap += (TSF_Dictionary.Metadata.Cluster.READ_TIMEOUT_MS                 -> Cluster_cassandra_read_timeout_ms_default)
+  propertyMap += (TSF_Dictionary.Metadata.Cluster.LOCAL_DC -> null)
+  propertyMap += (TSF_Dictionary.Metadata.Cluster.KEEP_ALIVE_MS -> Cluster_cassandra_keep_alive_ms_default)
+  propertyMap += (TSF_Dictionary.Metadata.Cluster.MIN_RECONNECTION_DELAY_MS -> Cluster_cassandra_min_reconnection_delay_ms_default)
+  propertyMap += (TSF_Dictionary.Metadata.Cluster.MAX_RECONNECTION_DELAY_MS -> Cluster_cassandra_max_reconnection_delay_ms_default)
+  propertyMap += (TSF_Dictionary.Metadata.Cluster.QUERY_RETRY_COUNT -> Cluster_cassandra_query_retry_count_default)
+  propertyMap += (TSF_Dictionary.Metadata.Cluster.CONNECTION_TIMEOUT_MS -> Cluster_cassandra_connection_timeout_ms_default)
+  propertyMap += (TSF_Dictionary.Metadata.Cluster.READ_TIMEOUT_MS -> Cluster_cassandra_read_timeout_ms_default)
 
-  propertyMap += (TSF_Dictionary.Data.Cluster.Cassandra.LOCAL_DC                  -> null)
-  propertyMap += (TSF_Dictionary.Data.Cluster.Cassandra.KEEP_ALIVE_MS             -> Cluster_cassandra_keep_alive_ms_default)
+  propertyMap += (TSF_Dictionary.Data.Cluster.Cassandra.LOCAL_DC -> null)
+  propertyMap += (TSF_Dictionary.Data.Cluster.Cassandra.KEEP_ALIVE_MS -> Cluster_cassandra_keep_alive_ms_default)
   propertyMap += (TSF_Dictionary.Data.Cluster.Cassandra.MIN_RECONNECTION_DELAY_MS -> Cluster_cassandra_min_reconnection_delay_ms_default)
   propertyMap += (TSF_Dictionary.Data.Cluster.Cassandra.MAX_RECONNECTION_DELAY_MS -> Cluster_cassandra_max_reconnection_delay_ms_default)
-  propertyMap += (TSF_Dictionary.Data.Cluster.Cassandra.QUERY_RETRY_COUNT         -> Cluster_cassandra_query_retry_count_default)
-  propertyMap += (TSF_Dictionary.Data.Cluster.Cassandra.CONNECTION_TIMEOUT_MS     -> Cluster_cassandra_connection_timeout_ms_default)
-  propertyMap += (TSF_Dictionary.Data.Cluster.Cassandra.READ_TIMEOUT_MS           -> Cluster_cassandra_read_timeout_ms_default)
+  propertyMap += (TSF_Dictionary.Data.Cluster.Cassandra.QUERY_RETRY_COUNT -> Cluster_cassandra_query_retry_count_default)
+  propertyMap += (TSF_Dictionary.Data.Cluster.Cassandra.CONNECTION_TIMEOUT_MS -> Cluster_cassandra_connection_timeout_ms_default)
+  propertyMap += (TSF_Dictionary.Data.Cluster.Cassandra.READ_TIMEOUT_MS -> Cluster_cassandra_read_timeout_ms_default)
 
   val Cluster_hazelcast_synchronous_replicas_default = 0
   val Cluster_hazelcast_asynchronous_replicas_default = 0
@@ -512,7 +513,7 @@ class TStreamsFactory() {
 
   // producer scope
   propertyMap += (TSF_Dictionary.Producer.BIND_HOST -> "localhost")
-  propertyMap += (TSF_Dictionary.Producer.BIND_PORT -> (40000,50000))
+  propertyMap += (TSF_Dictionary.Producer.BIND_PORT ->(40000, 50000))
   val Producer_transport_timeout_default = 5
   val Producer_transport_timeout_min = 1
   val Producer_transport_timeout_max = 10
@@ -551,8 +552,8 @@ class TStreamsFactory() {
   propertyMap += (TSF_Dictionary.Producer.THREAD_POOL -> Producer_thread_pool_default)
 
   val Producer_thread_pool_publisher_threads_amount_default = 1
-  val Producer_thread_pool_publisher_threads_amount_min     = 1
-  val Producer_thread_pool_publisher_threads_amount_max            = 32
+  val Producer_thread_pool_publisher_threads_amount_min = 1
+  val Producer_thread_pool_publisher_threads_amount_max = 32
 
   propertyMap += (TSF_Dictionary.Producer.THREAD_POOL_PUBLISHER_TREADS_AMOUNT -> Producer_thread_pool_publisher_threads_amount_default)
 
@@ -568,7 +569,7 @@ class TStreamsFactory() {
   val Consumer_data_preload_max = 200
   propertyMap += (TSF_Dictionary.Consumer.DATA_PRELOAD -> Consumer_data_preload_default)
   propertyMap += (TSF_Dictionary.Consumer.Subscriber.BIND_HOST -> "localhost")
-  propertyMap += (TSF_Dictionary.Consumer.Subscriber.BIND_PORT -> (40000,50000))
+  propertyMap += (TSF_Dictionary.Consumer.Subscriber.BIND_PORT ->(40000, 50000))
   propertyMap += (TSF_Dictionary.Consumer.Subscriber.PERSISTENT_QUEUE_PATH -> "/tmp")
 
   val Subscriber_transaction_buffer_thread_pool_default = 4
@@ -594,7 +595,7 @@ class TStreamsFactory() {
   /**
     * locks factory, after lock setProperty leads to exception.
     */
-  def lock():Unit = isLocked.set(true)
+  def lock(): Unit = isLocked.set(true)
 
   /**
     * clones factory
@@ -603,10 +604,11 @@ class TStreamsFactory() {
     if (isClosed.get)
       throw new IllegalStateException("TStreamsFactory is closed. This is the illegal usage of the object.")
 
-      val f = new TStreamsFactory()
-      propertyMap.foreach((kv) => f.setProperty(kv._1,kv._2))
-      f
+    val f = new TStreamsFactory()
+    propertyMap.foreach((kv) => f.setProperty(kv._1, kv._2))
+    f
   }
+
   /**
     *
     * @param key
@@ -617,7 +619,7 @@ class TStreamsFactory() {
     if (isClosed.get)
       throw new IllegalStateException("TStreamsFactory is closed. This is the illegal usage of the object.")
 
-    if(isLocked.get)
+    if (isLocked.get)
       throw new IllegalStateException("TStreamsFactory is locked. Use clone() to set properties.")
 
     logger.debug("set property " + key + " = " + value)
@@ -638,8 +640,8 @@ class TStreamsFactory() {
       throw new IllegalStateException("TStreamsFactory is closed. This is the illegal usage of the object.")
 
     val v = propertyMap get key
-    logger.debug("get property " + key + " = " + v.getOrElse(null))
-    v.getOrElse(null)
+    logger.debug("get property " + key + " = " + v.orNull)
+    v.orNull
   }
 
   /** variant method to get option as int with default value if null
@@ -737,16 +739,16 @@ class TStreamsFactory() {
       assert(pAsString(TSF_Dictionary.Data.Cluster.ENDPOINTS) != null)
 
       val opts = new CassandraConnectorConf(
-        hosts     = scala.Predef.Set.empty[InetSocketAddress] ++ NetworkUtil.getInetSocketAddressCompatibleHostList(pAsString(TSF_Dictionary.Data.Cluster.ENDPOINTS)),
-        login     = login,
-        password  = password,
-        localDC   = Option(pAsString(TSF_Dictionary.Data.Cluster.Cassandra.LOCAL_DC, null)),
-        keepAliveMillis             = pAsInt(TSF_Dictionary.Data.Cluster.Cassandra.KEEP_ALIVE_MS, Cluster_cassandra_keep_alive_ms_default),
-        minReconnectionDelayMillis  = pAsInt(TSF_Dictionary.Data.Cluster.Cassandra.MIN_RECONNECTION_DELAY_MS, Cluster_cassandra_min_reconnection_delay_ms_default),
-        maxReconnectionDelayMillis  = pAsInt(TSF_Dictionary.Data.Cluster.Cassandra.MAX_RECONNECTION_DELAY_MS, Cluster_cassandra_max_reconnection_delay_ms_default),
-        queryRetryCount             = pAsInt(TSF_Dictionary.Data.Cluster.Cassandra.QUERY_RETRY_COUNT, Cluster_cassandra_query_retry_count_default),
-        connectTimeoutMillis        = pAsInt(TSF_Dictionary.Data.Cluster.Cassandra.CONNECTION_TIMEOUT_MS, Cluster_cassandra_connection_timeout_ms_default),
-        readTimeoutMillis           = pAsInt(TSF_Dictionary.Data.Cluster.Cassandra.READ_TIMEOUT_MS, Cluster_cassandra_read_timeout_ms_default)
+        hosts = scala.Predef.Set.empty[InetSocketAddress] ++ NetworkUtil.getInetSocketAddressCompatibleHostList(pAsString(TSF_Dictionary.Data.Cluster.ENDPOINTS)),
+        login = login,
+        password = password,
+        localDC = Option(pAsString(TSF_Dictionary.Data.Cluster.Cassandra.LOCAL_DC, null)),
+        keepAliveMillis = pAsInt(TSF_Dictionary.Data.Cluster.Cassandra.KEEP_ALIVE_MS, Cluster_cassandra_keep_alive_ms_default),
+        minReconnectionDelayMillis = pAsInt(TSF_Dictionary.Data.Cluster.Cassandra.MIN_RECONNECTION_DELAY_MS, Cluster_cassandra_min_reconnection_delay_ms_default),
+        maxReconnectionDelayMillis = pAsInt(TSF_Dictionary.Data.Cluster.Cassandra.MAX_RECONNECTION_DELAY_MS, Cluster_cassandra_max_reconnection_delay_ms_default),
+        queryRetryCount = pAsInt(TSF_Dictionary.Data.Cluster.Cassandra.QUERY_RETRY_COUNT, Cluster_cassandra_query_retry_count_default),
+        connectTimeoutMillis = pAsInt(TSF_Dictionary.Data.Cluster.Cassandra.CONNECTION_TIMEOUT_MS, Cluster_cassandra_connection_timeout_ms_default),
+        readTimeoutMillis = pAsInt(TSF_Dictionary.Data.Cluster.Cassandra.READ_TIMEOUT_MS, Cluster_cassandra_read_timeout_ms_default)
       )
 
       return dsf.getInstance(opts, pAsString(TSF_Dictionary.Data.Cluster.NAMESPACE))
@@ -780,20 +782,20 @@ class TStreamsFactory() {
     assert(pAsString(TSF_Dictionary.Metadata.Cluster.ENDPOINTS) != null)
 
     val opts = new CassandraConnectorConf(
-      hosts     = scala.Predef.Set.empty[InetSocketAddress] ++ NetworkUtil.getInetSocketAddressCompatibleHostList(pAsString(TSF_Dictionary.Metadata.Cluster.ENDPOINTS)),
-      login     = login,
-      password  = password,
-      localDC   = Option(pAsString(TSF_Dictionary.Metadata.Cluster.LOCAL_DC, null)),
-      keepAliveMillis             = pAsInt(TSF_Dictionary.Metadata.Cluster.KEEP_ALIVE_MS, Cluster_cassandra_keep_alive_ms_default),
-      minReconnectionDelayMillis  = pAsInt(TSF_Dictionary.Metadata.Cluster.MIN_RECONNECTION_DELAY_MS, Cluster_cassandra_min_reconnection_delay_ms_default),
-      maxReconnectionDelayMillis  = pAsInt(TSF_Dictionary.Metadata.Cluster.MAX_RECONNECTION_DELAY_MS, Cluster_cassandra_max_reconnection_delay_ms_default),
-      queryRetryCount             = pAsInt(TSF_Dictionary.Metadata.Cluster.QUERY_RETRY_COUNT, Cluster_cassandra_query_retry_count_default),
-      connectTimeoutMillis        = pAsInt(TSF_Dictionary.Metadata.Cluster.CONNECTION_TIMEOUT_MS, Cluster_cassandra_connection_timeout_ms_default),
-      readTimeoutMillis           = pAsInt(TSF_Dictionary.Metadata.Cluster.READ_TIMEOUT_MS, Cluster_cassandra_read_timeout_ms_default)
+      hosts = scala.Predef.Set.empty[InetSocketAddress] ++ NetworkUtil.getInetSocketAddressCompatibleHostList(pAsString(TSF_Dictionary.Metadata.Cluster.ENDPOINTS)),
+      login = login,
+      password = password,
+      localDC = Option(pAsString(TSF_Dictionary.Metadata.Cluster.LOCAL_DC, null)),
+      keepAliveMillis = pAsInt(TSF_Dictionary.Metadata.Cluster.KEEP_ALIVE_MS, Cluster_cassandra_keep_alive_ms_default),
+      minReconnectionDelayMillis = pAsInt(TSF_Dictionary.Metadata.Cluster.MIN_RECONNECTION_DELAY_MS, Cluster_cassandra_min_reconnection_delay_ms_default),
+      maxReconnectionDelayMillis = pAsInt(TSF_Dictionary.Metadata.Cluster.MAX_RECONNECTION_DELAY_MS, Cluster_cassandra_max_reconnection_delay_ms_default),
+      queryRetryCount = pAsInt(TSF_Dictionary.Metadata.Cluster.QUERY_RETRY_COUNT, Cluster_cassandra_query_retry_count_default),
+      connectTimeoutMillis = pAsInt(TSF_Dictionary.Metadata.Cluster.CONNECTION_TIMEOUT_MS, Cluster_cassandra_connection_timeout_ms_default),
+      readTimeoutMillis = pAsInt(TSF_Dictionary.Metadata.Cluster.READ_TIMEOUT_MS, Cluster_cassandra_read_timeout_ms_default)
     )
 
     // construct metadata storage
-    return msFactory.getInstance(opts,pAsString(TSF_Dictionary.Metadata.Cluster.NAMESPACE))
+    return msFactory.getInstance(opts, pAsString(TSF_Dictionary.Metadata.Cluster.NAMESPACE))
   }
 
   /**
@@ -823,18 +825,18 @@ class TStreamsFactory() {
     * reusable method which returns consumer options object
     */
   private def getBasicConsumerOptions[T](stream: TStream[Array[Byte]],
-                                                partitions: Set[Int],
-                                                converter: IConverter[Array[Byte], T],
-                                                txnGenerator: IUUIDGenerator,
-                                                offset: IOffset,
-                                                isUseLastOffset: Boolean = true): com.bwsw.tstreams.agents.consumer.Options[T] = this.synchronized {
+                                         partitions: Set[Int],
+                                         converter: IConverter[Array[Byte], T],
+                                         transactionGenerator: IUUIDGenerator,
+                                         offset: IOffset,
+                                         isUseLastOffset: Boolean = true): com.bwsw.tstreams.agents.consumer.ConsumerOptions[T] = this.synchronized {
     val consumer_transaction_preload = pAsInt(TSF_Dictionary.Consumer.TRANSACTION_PRELOAD, Consumer_transaction_preload_default)
     pAssertIntRange(consumer_transaction_preload, Consumer_transaction_preload_min, Consumer_transaction_preload_max)
 
     val consumer_data_preload = pAsInt(TSF_Dictionary.Consumer.DATA_PRELOAD, Consumer_data_preload_default)
     pAssertIntRange(consumer_data_preload, Consumer_data_preload_min, Consumer_data_preload_max)
 
-    val consumerOptions = new com.bwsw.tstreams.agents.consumer.Options[T](transactionsPreload = consumer_transaction_preload, dataPreload = consumer_data_preload, converter = converter, readPolicy = new RoundRobinPolicy(stream, partitions), offset = offset, txnGenerator = txnGenerator, useLastOffset = isUseLastOffset)
+    val consumerOptions = new com.bwsw.tstreams.agents.consumer.ConsumerOptions[T](transactionsPreload = consumer_transaction_preload, dataPreload = consumer_data_preload, converter = converter, readPolicy = new RoundRobinPolicy(stream, partitions), offset = offset, transactionGenerator = transactionGenerator, useLastOffset = isUseLastOffset)
 
     consumerOptions
   }
@@ -858,18 +860,18 @@ class TStreamsFactory() {
     *
     * @param name Producer name
     * @param isLowPriority
-    * @param txnGenerator
+    * @param transactionGenerator
     * @param converter
     * @param partitions
     * @tparam T - type convert data from
     * @return
     */
   def getProducer[T](name: String,
-                            txnGenerator: IUUIDGenerator,
-                            converter: IConverter[T, Array[Byte]],
-                            partitions: Set[Int],
-                            isLowPriority: Boolean = false
-                           ): Producer[T] = this.synchronized {
+                     transactionGenerator: IUUIDGenerator,
+                     converter: IConverter[T, Array[Byte]],
+                     partitions: Set[Int],
+                     isLowPriority: Boolean = false
+                    ): Producer[T] = this.synchronized {
 
     if (isClosed.get)
       throw new IllegalStateException("TStreamsFactory is closed. This is the illegal usage of the object.")
@@ -917,7 +919,7 @@ class TStreamsFactory() {
         false
 
     val isMasterProcessVote =
-      if(isMasterBootstrapModeFull)
+      if (isMasterBootstrapModeFull)
         true
       else {
         if (pAsString(TSF_Dictionary.Producer.MASTER_BOOTSTRAP_MODE) == TSF_Dictionary.Producer.Consts.MASTER_BOOTSTRAP_MODE_LAZY_VOTE)
@@ -929,20 +931,20 @@ class TStreamsFactory() {
 
 
     val cao = new CoordinationOptions(
-      zkHosts                           = NetworkUtil.getInetSocketAddressCompatibleHostList(pAsString(TSF_Dictionary.Coordination.ENDPOINTS)),
-      zkRootPath                        = pAsString(TSF_Dictionary.Coordination.ROOT),
-      zkSessionTimeout                  = pAsInt(TSF_Dictionary.Coordination.TTL, Coordination_ttl_default),
-      zkConnectionTimeout               = pAsInt(TSF_Dictionary.Coordination.CONNECTION_TIMEOUT, Coordination_connection_timeout_default),
-      isLowPriorityToBeMaster           = isLowPriority,
-      transport                         = transport,
-      threadPoolAmount                  = pAsInt(TSF_Dictionary.Producer.THREAD_POOL, Producer_thread_pool_default),
-      threadPoolPublisherThreadsAmount  = pAsInt(TSF_Dictionary.Producer.THREAD_POOL_PUBLISHER_TREADS_AMOUNT, Producer_thread_pool_publisher_threads_amount_default),
-      partitionRedistributionDelay      = pAsInt(TSF_Dictionary.Coordination.PARTITION_REDISTRIBUTION_DELAY, Coordination_partition_redistribution_delay_default),
-      isMasterBootstrapModeFull         = isMasterBootstrapModeFull,
-      isMasterProcessVote               = isMasterProcessVote)
+      zkHosts = NetworkUtil.getInetSocketAddressCompatibleHostList(pAsString(TSF_Dictionary.Coordination.ENDPOINTS)),
+      zkRootPath = pAsString(TSF_Dictionary.Coordination.ROOT),
+      zkSessionTimeout = pAsInt(TSF_Dictionary.Coordination.TTL, Coordination_ttl_default),
+      zkConnectionTimeout = pAsInt(TSF_Dictionary.Coordination.CONNECTION_TIMEOUT, Coordination_connection_timeout_default),
+      isLowPriorityToBeMaster = isLowPriority,
+      transport = transport,
+      threadPoolAmount = pAsInt(TSF_Dictionary.Producer.THREAD_POOL, Producer_thread_pool_default),
+      threadPoolPublisherThreadsAmount = pAsInt(TSF_Dictionary.Producer.THREAD_POOL_PUBLISHER_TREADS_AMOUNT, Producer_thread_pool_publisher_threads_amount_default),
+      partitionRedistributionDelay = pAsInt(TSF_Dictionary.Coordination.PARTITION_REDISTRIBUTION_DELAY, Coordination_partition_redistribution_delay_default),
+      isMasterBootstrapModeFull = isMasterBootstrapModeFull,
+      isMasterProcessVote = isMasterProcessVote)
 
 
-    var writePolicy: AbstractPolicy     = null
+    var writePolicy: AbstractPolicy = null
 
     if (pAsString(TSF_Dictionary.Producer.Transaction.DISTRIBUTION_POLICY) ==
       TSF_Dictionary.Producer.Transaction.Consts.DISTRIBUTION_POLICY_RR) {
@@ -962,14 +964,14 @@ class TStreamsFactory() {
     pAssertIntRange(insertCnt,
       Producer_transaction_data_write_batch_size_min, Producer_transaction_data_write_batch_size_max)
 
-    val po = new com.bwsw.tstreams.agents.producer.Options[T](
-      transactionTTL                = pAsInt(TSF_Dictionary.Producer.Transaction.TTL, Producer_transaction_ttl_default),
-      transactionKeepAliveInterval  = pAsInt(TSF_Dictionary.Producer.Transaction.KEEP_ALIVE, Producer_transaction_keep_alive_default),
-      writePolicy         = writePolicy,
-      batchSize           = insertCnt,
-      txnGenerator        = txnGenerator,
+    val po = new com.bwsw.tstreams.agents.producer.ProducerOptions[T](
+      transactionTTL = pAsInt(TSF_Dictionary.Producer.Transaction.TTL, Producer_transaction_ttl_default),
+      transactionKeepAliveInterval = pAsInt(TSF_Dictionary.Producer.Transaction.KEEP_ALIVE, Producer_transaction_keep_alive_default),
+      writePolicy = writePolicy,
+      batchSize = insertCnt,
+      transactionGenerator = transactionGenerator,
       coordinationOptions = cao,
-      converter           = converter)
+      converter = converter)
 
     new Producer[T](name = name, stream = stream, producerOptions = po)
   }
@@ -978,19 +980,18 @@ class TStreamsFactory() {
     * returns ready to use consumer object
     *
     * @param name Consumer name
-    * @param txnGenerator
+    * @param transactionGenerator
     * @param converter
     * @param partitions
     * @tparam T type to convert data to
     * @return
     */
   def getConsumer[T](name: String,
-                            txnGenerator: IUUIDGenerator,
-                            converter: IConverter[Array[Byte], T],
-                            partitions: Set[Int],
-                            offset: IOffset,
-                            isUseLastOffset: Boolean = true
-                           ): Consumer[T] = this.synchronized {
+                     transactionGenerator: IUUIDGenerator,
+                     converter: IConverter[Array[Byte], T],
+                     partitions: Set[Int],
+                     offset: IOffset,
+                     isUseLastOffset: Boolean = true): Consumer[T] = this.synchronized {
 
     if (isClosed.get)
       throw new IllegalStateException("TStreamsFactory is closed. This is the illegal usage of the object.")
@@ -999,7 +1000,7 @@ class TStreamsFactory() {
     val ds: IStorage[Array[Byte]] = getDataStorage()
     val ms: MetadataStorage = getMetadataStorage()
     val stream: TStream[Array[Byte]] = getStreamObject(metadatastorage = ms, datastorage = ds)
-    val consumerOptions = getBasicConsumerOptions(txnGenerator = txnGenerator,
+    val consumerOptions = getBasicConsumerOptions(transactionGenerator = transactionGenerator,
       stream = stream,
       partitions = partitions,
       converter = converter,
@@ -1013,7 +1014,7 @@ class TStreamsFactory() {
   /**
     * returns ready to use subscribing consumer object
     *
-    * @param txnGenerator
+    * @param transactionGenerator
     * @param converter
     * @param partitions
     * @param callback
@@ -1021,26 +1022,26 @@ class TStreamsFactory() {
     * @return
     */
   def getSubscriber[T](name: String,
-                       txnGenerator: IUUIDGenerator,
+                       transactionGenerator: IUUIDGenerator,
                        converter: IConverter[Array[Byte], T],
                        partitions: Set[Int],
                        callback: com.bwsw.tstreams.agents.consumer.subscriber.Callback[T],
                        offset: IOffset,
                        isUseLastOffset: Boolean = true
-                             ): Subscriber[T] = this.synchronized {
+                      ): Subscriber[T] = this.synchronized {
     if (isClosed.get)
       throw new IllegalStateException("TStreamsFactory is closed. This is the illegal usage of the object.")
 
-    val ds: IStorage[Array[Byte]]     = getDataStorage()
-    val ms: MetadataStorage           = getMetadataStorage()
-    val stream: TStream[Array[Byte]]  = getStreamObject(metadatastorage = ms, datastorage = ds)
+    val ds: IStorage[Array[Byte]] = getDataStorage()
+    val ms: MetadataStorage = getMetadataStorage()
+    val stream: TStream[Array[Byte]] = getStreamObject(metadatastorage = ms, datastorage = ds)
 
-    val consumerOptions = getBasicConsumerOptions(txnGenerator = txnGenerator,
-                                                  stream        = stream,
-                                                  partitions    = partitions,
-                                                  converter     = converter,
-                                                  offset        = offset,
-                                                  isUseLastOffset = isUseLastOffset)
+    val consumerOptions = getBasicConsumerOptions(transactionGenerator = transactionGenerator,
+      stream = stream,
+      partitions = partitions,
+      converter = converter,
+      offset = offset,
+      isUseLastOffset = isUseLastOffset)
 
     val bind_host = pAsString(TSF_Dictionary.Consumer.Subscriber.BIND_HOST)
     assert(bind_host != null)
@@ -1063,8 +1064,8 @@ class TStreamsFactory() {
     pAssertIntRange(conn_timeout,
       Coordination_connection_timeout_min, Coordination_connection_timeout_max)
 
-    val txn_thread_pool = pAsInt(TSF_Dictionary.Consumer.Subscriber.TRANSACTION_BUFFER_THREAD_POOL, Subscriber_transaction_buffer_thread_pool_default)
-    pAssertIntRange(txn_thread_pool,
+    val transaction_thread_pool = pAsInt(TSF_Dictionary.Consumer.Subscriber.TRANSACTION_BUFFER_THREAD_POOL, Subscriber_transaction_buffer_thread_pool_default)
+    pAssertIntRange(transaction_thread_pool,
       Subscriber_transaction_buffer_thread_pool_min, Subscriber_transaction_buffer_thread_pool_max)
 
     val pe_thread_pool = pAsInt(TSF_Dictionary.Consumer.Subscriber.PROCESSING_ENGINES_THREAD_POOL, Subscriber_processing_engines_thread_pool_default)
@@ -1077,16 +1078,16 @@ class TStreamsFactory() {
 
     val queue_path = pAsString(TSF_Dictionary.Consumer.Subscriber.PERSISTENT_QUEUE_PATH)
 
-    val opts = com.bwsw.tstreams.agents.consumer.subscriber.OptionsBuilder.fromConsumerOptions(consumerOptions,
-      agentAddress    = bind_host + ":" + bind_port,
-      zkRootPath      = root,
-      zkHosts         = Set[InetSocketAddress]().empty ++ NetworkUtil.getInetSocketAddressCompatibleHostList(endpoints),
-      zkSessionTimeout    = ttl,
+    val opts = com.bwsw.tstreams.agents.consumer.subscriber.SubscriberOptionsBuilder.fromConsumerOptions(consumerOptions,
+      agentAddress = bind_host + ":" + bind_port,
+      zkRootPath = root,
+      zkHosts = Set[InetSocketAddress]().empty ++ NetworkUtil.getInetSocketAddressCompatibleHostList(endpoints),
+      zkSessionTimeout = ttl,
       zkConnectionTimeout = conn_timeout,
-      txnBufferWorkersThreadPoolAmount    = txn_thread_pool,
+      transactionsBufferWorkersThreadPoolAmount = transaction_thread_pool,
       processingEngineWorkersThreadAmount = pe_thread_pool,
       pollingFrequencyDelay = polling_frequency,
-      txnQueueBuilder = if(queue_path == null) new QueueBuilder.InMemory() else new Persistent(queue_path)
+      transactionsQueueBuilder = if (queue_path == null) new QueueBuilder.InMemory() else new Persistent(queue_path)
     )
 
     new Subscriber[T](name, stream, opts, callback)

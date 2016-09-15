@@ -24,11 +24,12 @@ object Factory {
 
   /**
     * Initialization method itself. Works only one time, after returns created object
+    *
     * @param opts
     * @return
     */
   def init(opts: Options): HazelcastInstance = {
-    if(isInitialized.getAndSet(true))
+    if (isInitialized.getAndSet(true))
       return hazelcastInstance
 
     val config = new XmlConfigBuilder().build()

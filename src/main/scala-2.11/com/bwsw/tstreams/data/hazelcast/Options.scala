@@ -3,6 +3,7 @@ package com.bwsw.tstreams.data.hazelcast
 /**
   * Created by Ivan Kudryavtsev on 12.08.16.
   * Hazelcast storage options
+  *
   * @param keyspace
   * @param synchronousReplicas
   * @param asynchronousReplicas

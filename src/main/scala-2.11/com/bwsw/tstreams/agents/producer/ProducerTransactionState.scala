@@ -11,7 +11,7 @@ class MaterializationException(s: String = "")
 /**
   * Stores state of transaction
   */
-class TransactionState {
+class ProducerTransactionState {
   /**
     * Start time is when State object (Transaction object) was created.
     * This value is used to do delayed transaction materialization.
@@ -34,7 +34,7 @@ class TransactionState {
     * Makes transaction materialized (which means that the transaction now can be updated, cancelled, checkpointed)
     */
   def makeMaterialized() = {
-    if(materialized.getAndSet(true))
+    if (materialized.getAndSet(true))
       throw new IllegalStateException("State is materialized already. Wrong operation")
     materialize.countDown()
     this.synchronized {
@@ -48,11 +48,11 @@ class TransactionState {
     */
   def awaitMaterialization(masterTimeout: Int) = {
 
-    def throwExc = throw new MaterializationException(s"Master didn't materialized the transaction during ${masterTimeout}.")
+    def throwExc = throw new MaterializationException(s"Master didn't materialized the transaction during $masterTimeout.")
 
-    val mtMsecs = masterTimeout * 1000
+    val mtMs = masterTimeout * 1000
     val mt = this.synchronized {
-      if(0 == materializationTime)
+      if (0 == materializationTime)
         System.currentTimeMillis()
       else
         materializationTime
@@ -60,10 +60,10 @@ class TransactionState {
 
     val materializationSpent = mt - startTime
 
-    if (mtMsecs <= materializationSpent)
+    if (mtMs <= materializationSpent)
       throwExc
 
-    if(!materialize.await(mtMsecs - materializationSpent, TimeUnit.MILLISECONDS))
+    if (!materialize.await(mtMs - materializationSpent, TimeUnit.MILLISECONDS))
       throwExc
   }
 
@@ -79,7 +79,7 @@ class TransactionState {
 
   /**
     * This special trigger is used to avoid a very specific race, which could happen if
-    * checkpoint/cancel will be called same time when update will do update. So, we actully
+    * checkpoint/cancel will be called same time when update will do update. So, we actually
     * must protect from this situation, that's why during update, latch must be set to make
     * cancel/checkpoint wait until update will complete
     * We also need special test for it.
@@ -98,10 +98,11 @@ class TransactionState {
 
   /**
     * awaits while transaction updates
+    *
     * @return
     */
   def awaitUpdateComplete(): Unit = {
-    if(!updateSignalVar.await(10, TimeUnit.SECONDS))
+    if (!updateSignalVar.await(10, TimeUnit.SECONDS))
       throw new IllegalStateException("Update takes too long (> 10 seconds). Probably failure.")
   }
 

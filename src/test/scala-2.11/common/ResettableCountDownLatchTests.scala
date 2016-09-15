@@ -12,6 +12,7 @@ class ResettableCountDownLatchTests extends FlatSpec with Matchers {
   "Countdown/await" should "work properly" in {
     val t = new Thread(new Runnable {
       override def run(): Unit = l.await()
+
       v *= 2
     })
     v = 0
@@ -23,6 +24,7 @@ class ResettableCountDownLatchTests extends FlatSpec with Matchers {
     l.setValue(2)
     val t = new Thread(new Runnable {
       override def run(): Unit = l.await()
+
       v *= 2
     })
     v = 1

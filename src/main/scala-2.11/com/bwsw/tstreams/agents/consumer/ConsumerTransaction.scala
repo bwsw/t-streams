@@ -13,21 +13,22 @@ import scala.collection.mutable
   * @param ttl
   * @tparam T
   */
-class Transaction[T](partition:  Int,
-                            uuid:       UUID,
-                            count:      Int,
-                            ttl:        Int) {
+class ConsumerTransaction[T](partition: Int,
+                             uuid: UUID,
+                             count: Int,
+                             ttl: Int) {
 
   override def toString(): String = {
-    s"consumer.Transaction(uuid=${uuid},partition=${partition}, count=${count}, ttl=${ttl})"
+    s"consumer.Transaction(uuid=$uuid,partition=$partition, count=$count, ttl=$ttl)"
   }
 
   var consumer: Consumer[T] = null
+
   def attach(c: Consumer[T]) = {
-    if(c == null)
+    if (c == null)
       throw new IllegalArgumentException("Argument must be not null.")
 
-    if(consumer == null)
+    if (consumer == null)
       consumer = c
     else
       throw new IllegalStateException("The transaction is already attached to consumer")
@@ -54,8 +55,8 @@ class Transaction[T](partition:  Int,
   def getTTL(): Int = ttl
 
   /**
-  * Transaction data pointer
-  */
+    * Transaction data pointer
+    */
   private var cnt = 0
 
   /**
@@ -68,7 +69,7 @@ class Transaction[T](partition:  Int,
     */
   def next(): T = this.synchronized {
 
-    if(consumer == null)
+    if (consumer == null)
       throw new IllegalArgumentException("Transaction is not yet attached to consumer. Attach it first.")
 
     if (!hasNext())
@@ -76,9 +77,9 @@ class Transaction[T](partition:  Int,
 
     //try to update buffer
     if (buffer == null || buffer.isEmpty) {
-      val newcnt = min2(cnt + consumer.options.dataPreload, count - 1)
-      buffer = consumer.stream.dataStorage.get(consumer.stream.getName, partition, uuid, cnt, newcnt)
-      cnt = newcnt + 1
+      val newCount = min2(cnt + consumer.options.dataPreload, count - 1)
+      buffer = consumer.stream.dataStorage.get(consumer.stream.getName, partition, uuid, cnt, newCount)
+      cnt = newCount + 1
     }
 
     consumer.options.converter.convert(buffer.dequeue())
@@ -106,7 +107,7 @@ class Transaction[T](partition:  Int,
     */
   def getAll(): List[T] = this.synchronized {
 
-    if(consumer == null)
+    if (consumer == null)
       throw new IllegalArgumentException("Transaction is not yet attached to consumer. Attach it first.")
 
     val data: mutable.Queue[Array[Byte]] = consumer.stream.dataStorage.get(consumer.stream.getName, partition, uuid, cnt, count - 1)

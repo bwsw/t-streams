@@ -11,14 +11,16 @@ class ThreadSignalSleepVar[T](size: Int = 1) {
 
   /**
     * waits for event for specified amount of time
+    *
     * @param timeout timeout to wait
-    * @param unit TimeUnit information
+    * @param unit    TimeUnit information
     * @return
     */
   def wait(timeout: Int, unit: TimeUnit = TimeUnit.MILLISECONDS): T = signalQ.poll(timeout, unit)
 
   /**
     * signals about new event
+    *
     * @param value
     */
   def signal(value: T) = signalQ.put(value)

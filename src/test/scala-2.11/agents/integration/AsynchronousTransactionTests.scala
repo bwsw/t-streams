@@ -12,15 +12,15 @@ import testutils.{LocalGeneratorCreator, TestUtils}
 /**
   * Created by Ivan Kudryavtsev on 02.08.16.
   */
-class AsynchronousTransactionTests  extends FlatSpec with Matchers
+class AsynchronousTransactionTests extends FlatSpec with Matchers
   with BeforeAndAfterAll with TestUtils {
 
   // required for hooks to work
   System.setProperty("DEBUG", "true")
-  System.setProperty(org.slf4j.impl.SimpleLogger.DEFAULT_LOG_LEVEL_KEY, "DEBUG");
+  System.setProperty(org.slf4j.impl.SimpleLogger.DEFAULT_LOG_LEVEL_KEY, "DEBUG")
 
-  f.setProperty(TSF_Dictionary.Stream.NAME,"test_stream").
-    setProperty(TSF_Dictionary.Stream.PARTITIONS,3).
+  f.setProperty(TSF_Dictionary.Stream.NAME, "test_stream").
+    setProperty(TSF_Dictionary.Stream.PARTITIONS, 3).
     setProperty(TSF_Dictionary.Stream.TTL, 60 * 10).
     setProperty(TSF_Dictionary.Coordination.CONNECTION_TIMEOUT, 7).
     setProperty(TSF_Dictionary.Coordination.TTL, 7).
@@ -33,7 +33,7 @@ class AsynchronousTransactionTests  extends FlatSpec with Matchers
 
   val producer = f.getProducer[String](
     name = "test_producer",
-    txnGenerator = LocalGeneratorCreator.getGen(),
+    transactionGenerator = LocalGeneratorCreator.getGen(),
     converter = stringToArrayByteConverter,
     partitions = Set(0),
     isLowPriority = false)
@@ -46,22 +46,22 @@ class AsynchronousTransactionTests  extends FlatSpec with Matchers
 
     val c = f.getConsumer[String](
       name = "test_subscriber",
-      txnGenerator = LocalGeneratorCreator.getGen(),
+      transactionGenerator = LocalGeneratorCreator.getGen(),
       converter = arrayByteToStringConverter,
       partitions = Set(0),
       offset = Oldest,
       isUseLastOffset = true)
 
-    val ptxn = producer.newTransaction(policy = NewTransactionProducerPolicy.ErrorIfOpened)
-    ptxn.send("test")
-    ptxn.checkpoint(isSynchronous = false)
+    val pTransaction = producer.newTransaction(policy = NewTransactionProducerPolicy.ErrorIfOpened)
+    pTransaction.send("test")
+    pTransaction.checkpoint(isSynchronous = false)
     l.await()
     c.start()
-    val ctxn = c.getTransaction(0)
+    val cTransaction = c.getTransaction(0)
 
-    ctxn.isDefined shouldBe true
-    ptxn.getTransactionUUID shouldBe ctxn.get.getTransactionUUID
-    if(ctxn.isDefined)
+    cTransaction.isDefined shouldBe true
+    pTransaction.getTransactionUUID shouldBe cTransaction.get.getTransactionUUID
+    if (cTransaction.isDefined)
       c.checkpoint()
   }
 
@@ -74,20 +74,20 @@ class AsynchronousTransactionTests  extends FlatSpec with Matchers
 
     val c = f.getConsumer[String](
       name = "test_subscriber",
-      txnGenerator = LocalGeneratorCreator.getGen(),
+      transactionGenerator = LocalGeneratorCreator.getGen(),
       converter = arrayByteToStringConverter,
       partitions = Set(0),
       offset = Oldest,
       isUseLastOffset = true)
 
-    val ptxn = producer.newTransaction(policy = NewTransactionProducerPolicy.ErrorIfOpened)
-    ptxn.send("test")
-    ptxn.checkpoint(isSynchronous = false)
+    val pTransaction = producer.newTransaction(policy = NewTransactionProducerPolicy.ErrorIfOpened)
+    pTransaction.send("test")
+    pTransaction.checkpoint(isSynchronous = false)
     l.await()
     c.start()
-    val ctxn = c.getTransaction(0)
+    val cTransaction = c.getTransaction(0)
 
-    ctxn.isDefined shouldBe false
+    cTransaction.isDefined shouldBe false
   }
 
 
@@ -100,19 +100,19 @@ class AsynchronousTransactionTests  extends FlatSpec with Matchers
 
     val c = f.getConsumer[String](
       name = "test_subscriber",
-      txnGenerator = LocalGeneratorCreator.getGen(),
+      transactionGenerator = LocalGeneratorCreator.getGen(),
       converter = arrayByteToStringConverter,
       partitions = Set(0),
       offset = Oldest,
       isUseLastOffset = true)
 
-    val ptxn = producer.newTransaction(policy = NewTransactionProducerPolicy.ErrorIfOpened)
-    ptxn.send("test")
-    ptxn.checkpoint(isSynchronous = false)
+    val pTransaction = producer.newTransaction(policy = NewTransactionProducerPolicy.ErrorIfOpened)
+    pTransaction.send("test")
+    pTransaction.checkpoint(isSynchronous = false)
     c.start()
-    val ctxn = c.getTransaction(0)
+    val cTransaction = c.getTransaction(0)
     l.countDown()
-    ctxn.isDefined shouldBe false
+    cTransaction.isDefined shouldBe false
   }
 
   override def afterAll() = {

@@ -4,8 +4,8 @@ import java.util.UUID
 import java.util.concurrent.CountDownLatch
 
 import com.bwsw.tstreams.agents.consumer.Offset.Newest
-import com.bwsw.tstreams.agents.consumer.{Transaction, TransactionOperator}
 import com.bwsw.tstreams.agents.consumer.subscriber.Callback
+import com.bwsw.tstreams.agents.consumer.{ConsumerTransaction, TransactionOperator}
 import com.bwsw.tstreams.agents.producer.NewTransactionProducerPolicy
 import com.bwsw.tstreams.env.TSF_Dictionary
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
@@ -16,10 +16,10 @@ import scala.collection.mutable.ListBuffer
 /**
   * Created by Mikhail Mendelbaum on 02.09.16.
   */
-class IntersectingTransactionsTests extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils{
+class IntersectingTransactionsTests extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
 
-  f.setProperty(TSF_Dictionary.Stream.NAME,"test_stream").
-    setProperty(TSF_Dictionary.Stream.PARTITIONS,3).
+  f.setProperty(TSF_Dictionary.Stream.NAME, "test_stream").
+    setProperty(TSF_Dictionary.Stream.PARTITIONS, 3).
     setProperty(TSF_Dictionary.Stream.TTL, 60 * 10).
     setProperty(TSF_Dictionary.Coordination.CONNECTION_TIMEOUT, 7).
     setProperty(TSF_Dictionary.Coordination.TTL, 7).
@@ -31,86 +31,83 @@ class IntersectingTransactionsTests extends FlatSpec with Matchers with BeforeAn
 
 
 
-it should "handle all transactions produced by two different producers, the first ends first started " in {
-  var subTxns = 0
+  it should "handle all transactions produced by two different producers, the first ends first started " in {
+    val bp = ListBuffer[UUID]()
+    val bs = ListBuffer[UUID]()
+    val lp1 = new CountDownLatch(1)
+    val lp2 = new CountDownLatch(1)
+    val ls = new CountDownLatch(1)
 
-  val bp = ListBuffer[UUID]()
-  val bs = ListBuffer[UUID]()
-  val lp1 = new CountDownLatch(1)
-  val lp2 = new CountDownLatch(1)
-  val ls = new CountDownLatch(1)
+    val producer1 = f.getProducer[String](
+      name = "test_producer1",
+      transactionGenerator = LocalGeneratorCreator.getGen(),
+      converter = stringToArrayByteConverter,
+      partitions = Set(0),
+      isLowPriority = false)
 
-  val producer1 = f.getProducer[String](
-    name = "test_producer1",
-    txnGenerator = LocalGeneratorCreator.getGen(),
-    converter = stringToArrayByteConverter,
-    partitions = Set(0),
-    isLowPriority = false)
+    val producer2 = f.getProducer[String](
+      name = "test_producer2",
+      transactionGenerator = LocalGeneratorCreator.getGen(),
+      converter = stringToArrayByteConverter,
+      partitions = Set(0),
+      isLowPriority = false)
 
-  val producer2 = f.getProducer[String](
-    name = "test_producer2",
-    txnGenerator = LocalGeneratorCreator.getGen(),
-    converter = stringToArrayByteConverter,
-    partitions = Set(0),
-    isLowPriority = false)
-
-  val s = f.getSubscriber[String](name = "ss+2",
-    txnGenerator = LocalGeneratorCreator.getGen(),
-    converter = arrayByteToStringConverter,
-    partitions = Set(0),
-    offset = Newest,
-    isUseLastOffset = true,
-    callback = new Callback[String] {
-      override def onEvent(consumer: TransactionOperator[String], txn: Transaction[String]): Unit = this.synchronized {
-        bs.append(txn.getTransactionUUID())
-        if(bs.size == 2) {
-          ls.countDown()
+    val s = f.getSubscriber[String](name = "ss+2",
+      transactionGenerator = LocalGeneratorCreator.getGen(),
+      converter = arrayByteToStringConverter,
+      partitions = Set(0),
+      offset = Newest,
+      isUseLastOffset = true,
+      callback = new Callback[String] {
+        override def onTransaction(consumer: TransactionOperator[String], transaction: ConsumerTransaction[String]): Unit = this.synchronized {
+          bs.append(transaction.getTransactionUUID())
+          if (bs.size == 2) {
+            ls.countDown()
+          }
         }
+      })
+
+    val t1 = new Thread(new Runnable {
+      override def run(): Unit = {
+        val t = producer1.newTransaction(policy = NewTransactionProducerPolicy.CheckpointIfOpened)
+        bp.append(t.getTransactionUUID())
+        lp2.countDown()
+        lp1.await()
+        t.send("test")
+        t.checkpoint()
       }
     })
 
-  val t1 = new Thread(new Runnable {
-    override def run(): Unit = {
-      val t = producer1.newTransaction(policy = NewTransactionProducerPolicy.CheckpointIfOpened)
-      bp.append(t.getTransactionUUID())
-      lp2.countDown()
-      lp1.await()
-      t.send("test")
-      t.checkpoint()
-    }
-  })
+    val t2 = new Thread(new Runnable {
+      override def run(): Unit = {
+        lp2.await()
+        val t = producer2.newTransaction(policy = NewTransactionProducerPolicy.CheckpointIfOpened)
+        bp.append(t.getTransactionUUID())
+        t.send("test")
+        t.checkpoint()
+        lp1.countDown()
+      }
+    })
 
-  val t2 = new Thread(new Runnable {
-    override def run(): Unit = {
-      lp2.await()
-      val t = producer2.newTransaction(policy = NewTransactionProducerPolicy.CheckpointIfOpened)
-      bp.append(t.getTransactionUUID())
-      t.send("test")
-      t.checkpoint()
-      lp1.countDown()
-    }
-  })
+    s.start()
 
-  s.start()
+    t1.start()
+    t2.start()
 
-  t1.start()
-  t2.start()
+    t1.join()
+    t2.join()
 
-  t1.join()
-  t2.join()
+    ls.await()
 
-  ls.await()
+    producer1.stop()
+    producer2.stop()
+    s.stop()
 
-  producer1.stop()
-  producer2.stop()
-  s.stop()
+    bp.head shouldBe bs.head
+    bp.tail.head shouldBe bs.tail.head
+  }
 
-  bp.head shouldBe bs.head
-  bp.tail.head shouldBe bs.tail.head
-}
-
-  override  def afterAll(): Unit =
-  {
+  override def afterAll(): Unit = {
     onAfterAll()
   }
 

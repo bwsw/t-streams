@@ -14,20 +14,21 @@ class TransactionBufferWorker() {
   val transactionBufferMap = mutable.Map[Int, TransactionBuffer]()
 
   def assign(partition: Int, transactionBuffer: TransactionBuffer) = {
-    if(!transactionBufferMap.contains(partition))
+    if (!transactionBufferMap.contains(partition))
       transactionBufferMap(partition) = transactionBuffer
     else
-      throw new IllegalStateException(s"Partition ${partition} is bound already.")
+      throw new IllegalStateException(s"Partition $partition is bound already.")
   }
 
   def getPartitions() = transactionBufferMap.keySet
 
   /**
     * submits state to executor for offloaded computation
+    *
     * @param transactionState
     */
   def updateAndNotify(transactionState: TransactionState) = {
-    executor.submit(s"<UpdateAndNotifyTask(${transactionState})>", new Runnable {
+    executor.submit(s"<UpdateAndNotifyTask($transactionState)>", new Runnable {
       override def run(): Unit = {
         transactionBufferMap(transactionState.partition).update(transactionState)
         transactionBufferMap(transactionState.partition).signalCompleteTransactions()

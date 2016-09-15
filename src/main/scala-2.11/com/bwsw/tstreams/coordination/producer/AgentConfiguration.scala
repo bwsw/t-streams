@@ -9,7 +9,7 @@ package com.bwsw.tstreams.coordination.producer
   */
 case class AgentConfiguration(agentAddress: String, var priority: Int, penalty: Int, uniqueAgentID: Int) {
   override def toString(): String =
-    s"AgentSettings(agentAddress='${agentAddress}',priority='${priority}', penalty='${penalty}', uniqueAgentID='${uniqueAgentID}')"
+    s"AgentSettings(agentAddress='$agentAddress',priority='$priority', penalty='$penalty', uniqueAgentID='$uniqueAgentID')"
 }
 
 
@@ -18,6 +18,6 @@ case class AgentConfiguration(agentAddress: String, var priority: Int, penalty: 
   * @param agentAddress
   * @param uniqueAgentId
   */
-case class MasterConfiguration(agentAddress : String, uniqueAgentId : Int)
+case class MasterConfiguration(agentAddress: String, uniqueAgentId: Int)
 
 

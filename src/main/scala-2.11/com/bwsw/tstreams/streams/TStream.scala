@@ -22,10 +22,10 @@ class TStream[T](val name: String,
   /**
     * Transaction minimum ttl time
     */
-  private val minTxnTTL = 3
+  private val minTransactionTTL = 3
 
-  if (ttl < minTxnTTL)
-    throw new IllegalArgumentException(s"ttl should be greater or equal than $minTxnTTL")
+  if (ttl < minTransactionTTL)
+    throw new IllegalArgumentException(s"TTL must be greater or equal than $minTransactionTTL.")
 
   /**
     * @return Name

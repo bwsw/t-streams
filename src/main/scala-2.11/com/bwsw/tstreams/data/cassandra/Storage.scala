@@ -24,13 +24,13 @@ class Storage(cluster: Cluster, session: Session, keyspace: String) extends ISto
     * Prepared C* statement for data insertion
     */
   private val insertStatement = session
-    .prepare(s"INSERT INTO ${keyspace}.data_queue (stream,partition,transaction,seq,data) values(?,?,?,?,?) USING TTL ?")
+    .prepare(s"INSERT INTO $keyspace.data_queue (stream,partition,transaction,seq,data) values(?,?,?,?,?) USING TTL ?")
 
   /**
     * Prepared C* statement for select queries
     */
   private val selectStatement = session
-    .prepare(s"SELECT data FROM ${keyspace}.data_queue WHERE stream=? AND partition=? AND transaction=? AND seq>=? AND seq<=? LIMIT ?")
+    .prepare(s"SELECT data FROM $keyspace.data_queue WHERE stream=? AND partition=? AND transaction=? AND seq>=? AND seq<=? LIMIT ?")
 
   /**
     * Get data from cassandra storage
@@ -73,7 +73,7 @@ class Storage(cluster: Cluster, session: Session, keyspace: String) extends ISto
     */
   override def isClosed(): Boolean = session.isClosed
 
-  override def save(txn: UUID,
+  override def save(transaction: UUID,
                     stream: String,
                     partition: Int,
                     ttl: Int,
@@ -83,18 +83,17 @@ class Storage(cluster: Cluster, session: Session, keyspace: String) extends ISto
     val batchStatement = new BatchStatement()
     var i = lastItm - data.size
 
-    data foreach { x =>
-      {
-        val statementWithBindings = insertStatement.bind(
-          stream,
-          new Integer(partition),
-          txn,
-          new Integer(i),
-          ByteBuffer.wrap(x),
-          new Integer(ttl))
-        batchStatement.add(statementWithBindings)
-        i += 1
-      }
+    data foreach { x => {
+      val statementWithBindings = insertStatement.bind(
+        stream,
+        new Integer(partition),
+        transaction,
+        new Integer(i),
+        ByteBuffer.wrap(x),
+        new Integer(ttl))
+      batchStatement.add(statementWithBindings)
+      i += 1
+    }
     }
     session.execute(batchStatement)
     null

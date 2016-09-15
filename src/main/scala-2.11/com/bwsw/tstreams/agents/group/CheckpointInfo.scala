@@ -2,7 +2,7 @@ package com.bwsw.tstreams.agents.group
 
 import java.util.UUID
 
-import com.bwsw.tstreams.agents.producer.Transaction
+import com.bwsw.tstreams.agents.producer.ProducerTransaction
 import com.bwsw.tstreams.coordination.messages.state.TransactionStateMessage
 import com.bwsw.tstreams.coordination.producer.PeerAgent
 
@@ -20,9 +20,9 @@ sealed trait CheckpointInfo
   * @param transactionRef Reference on transaction (used for obliterate update thread)
   * @param agent          Producer agent for sending events
   *                       every transaction followed with three actions
-  *                       first - do precheckpoint event for all subscribers
-  *                       second - commit txn metadata in cassandra
-  *                       third - do finalcheckpoint event for all subscribers
+  *                       first - do pre checkpoint event for all subscribers
+  *                       second - commit transaction metadata in cassandra
+  *                       third - do final checkpoint event for all subscribers
   * @param preCheckpointEvent
   * @param finalCheckpointEvent
   * @param streamName     Stream name
@@ -31,7 +31,7 @@ sealed trait CheckpointInfo
   * @param totalCnt       Total info in transaction
   * @param ttl            Transaction time to live in seconds
   */
-case class ProducerCheckpointInfo(transactionRef: Transaction[_],
+case class ProducerCheckpointInfo(transactionRef: ProducerTransaction[_],
                                   agent: PeerAgent,
                                   preCheckpointEvent: TransactionStateMessage,
                                   finalCheckpointEvent: TransactionStateMessage,

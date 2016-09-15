@@ -16,6 +16,7 @@ object TransactionBufferTests {
   val CANCEL = 4
   val UPDATE_TTL = 20
   val OPEN_TTL = 10
+
   def generateAllStates(): Array[TransactionState] = {
     val uuid = UUIDs.timeBased()
     Array[TransactionState](
@@ -26,18 +27,19 @@ object TransactionBufferTests {
       TransactionState(uuid, 0, 0, 0, -1, TransactionStatus.cancel, 10))
   }
 }
+
 /**
   * Created by Ivan Kudryavtsev on 19.08.16.
   */
 class TransactionBufferTests extends FlatSpec with Matchers {
 
-  val OPENED  = TransactionBufferTests.OPENED
-  val UPDATE  = TransactionBufferTests.UPDATE
-  val PRE     = TransactionBufferTests.PRE
-  val POST    = TransactionBufferTests.POST
-  val CANCEL  = TransactionBufferTests.CANCEL
-  val UPDATE_TTL  = TransactionBufferTests.UPDATE_TTL
-  val OPEN_TTL    = TransactionBufferTests.OPEN_TTL
+  val OPENED = TransactionBufferTests.OPENED
+  val UPDATE = TransactionBufferTests.UPDATE
+  val PRE = TransactionBufferTests.PRE
+  val POST = TransactionBufferTests.POST
+  val CANCEL = TransactionBufferTests.CANCEL
+  val UPDATE_TTL = TransactionBufferTests.UPDATE_TTL
+  val OPEN_TTL = TransactionBufferTests.OPEN_TTL
 
   def generateAllStates() = TransactionBufferTests.generateAllStates()
 
@@ -177,7 +179,7 @@ class TransactionBufferTests extends FlatSpec with Matchers {
     b.getState(ts0(UPDATE).uuid).isDefined shouldBe false
   }
 
-  it should "signal for one completed txn" in {
+  it should "signal for one completed transaction" in {
     val q = new QueueBuilder.InMemory().generateQueueObject(0)
     val b = new TransactionBuffer(q)
     val ts0 = generateAllStates()
@@ -193,7 +195,7 @@ class TransactionBufferTests extends FlatSpec with Matchers {
   }
 
 
-  it should "signal for two completed txn" in {
+  it should "signal for two completed transactions" in {
     val q = new QueueBuilder.InMemory().generateQueueObject(0)
     val b = new TransactionBuffer(q)
     val ts0 = generateAllStates()

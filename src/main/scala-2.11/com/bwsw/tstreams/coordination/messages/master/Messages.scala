@@ -43,22 +43,20 @@ trait IMessage {
 
   def run(agent: PeerAgent) = {
     val start = System.currentTimeMillis()
-    if(IMessage.isDebugMessages)
-    {
-      IMessage.logger.info(s"${getClass.toString} / ${msgID.toString} - Start handling at ${start}, was-sent-at ${remotePeerTimestamp}, re-created ${localPeerTimestamp}")
+    if (IMessage.isDebugMessages) {
+      IMessage.logger.info(s"${getClass.toString} / ${msgID.toString} - Start handling at $start, was-sent-at $remotePeerTimestamp, re-created $localPeerTimestamp")
       IMessage.logger.info(s"${getClass.toString} / ${msgID.toString} - Waiting to be run time: ${start - remotePeerTimestamp}")
     }
 
     handleP2PRequest(agent)
 
-    if(IMessage.isDebugMessages)
-    {
+    if (IMessage.isDebugMessages) {
       IMessage.logger.info(s"${getClass.toString} / ${msgID.toString} - Execution delta: ${System.currentTimeMillis() - start}")
     }
   }
 
   override def toString(): String = {
-    s"Type: ${this.getClass}\nID: ${msgID}\nSender: ${senderID}\nReceiver: ${receiverID}\nPartition: ${partition}"
+    s"Type: ${this.getClass}\nID: $msgID\nSender: $senderID\nReceiver: $receiverID\nPartition: $partition"
   }
 }
 
@@ -76,23 +74,23 @@ case class NewTransactionRequest(senderID: String, receiverID: String, partition
     val master = agent.getAgentsStateManager.getPartitionMasterInetAddressLocal(partition, "")
 
     if (master == agent.getAgentAddress) {
-      val txnUUID: UUID = agent.getProducer.getNewTxnUUIDLocal()
-      val response = TransactionResponse(receiverID, senderID, txnUUID, partition)
+      val transactionUUID: UUID = agent.getProducer.getNewTransactionUUIDLocal()
+      val response = TransactionResponse(receiverID, senderID, transactionUUID, partition)
       response.msgID = msgID
       this.respond(response)
 
-      if(IMessage.logger.isDebugEnabled)
-        IMessage.logger.debug(s"Responded with early ready virtualized TXN: ${txnUUID}")
+      if (IMessage.logger.isDebugEnabled)
+        IMessage.logger.debug(s"Responded with early ready virtual transaction: $transactionUUID")
 
       agent.submitPipelinedTaskToCassandraExecutor(partition, () => {
-        agent.getProducer.openTxnLocal(txnUUID, partition,
-              onComplete = () => {
-                agent.notifyMaterialize(TransactionStateMessage(txnUUID, -1, TransactionStatus.materialize, partition, agent.getUniqueAgentID(), -1, 0), senderID)
+        agent.getProducer.openTransactionLocal(transactionUUID, partition,
+          onComplete = () => {
+            agent.notifyMaterialize(TransactionStateMessage(transactionUUID, -1, TransactionStatus.materialize, partition, agent.getUniqueAgentID(), -1, 0), senderID)
 
-                if(IMessage.logger.isDebugEnabled)
-                  IMessage.logger.debug(s"Responded with complete ready TXN: ${txnUUID}")
-              })
-        })
+            if (IMessage.logger.isDebugEnabled)
+              IMessage.logger.debug(s"Responded with complete ready transaction: $transactionUUID")
+          })
+      })
     } else {
       val response = EmptyResponse(receiverID, senderID, partition)
       response.msgID = msgID
@@ -106,10 +104,10 @@ case class NewTransactionRequest(senderID: String, receiverID: String, partition
   *
   * @param senderID
   * @param receiverID
-  * @param txnUUID
+  * @param transactionUUID
   * @param partition
   */
-case class TransactionResponse(senderID: String, receiverID: String, txnUUID: UUID, partition: Int) extends IMessage
+case class TransactionResponse(senderID: String, receiverID: String, transactionUUID: UUID, partition: Int) extends IMessage
 
 /**
   * Message which is received when due to voting master must be revoked from current agent for certain partition
@@ -120,7 +118,7 @@ case class TransactionResponse(senderID: String, receiverID: String, txnUUID: UU
   */
 case class DeleteMasterRequest(senderID: String, receiverID: String, partition: Int) extends IMessage {
   override def handleP2PRequest(agent: PeerAgent) = {
-    if(IMessage.logger.isDebugEnabled)
+    if (IMessage.logger.isDebugEnabled)
       IMessage.logger.debug("Start handling DeleteMasterRequest")
 
     assert(receiverID == agent.getAgentAddress)
@@ -137,13 +135,13 @@ case class DeleteMasterRequest(senderID: String, receiverID: String, partition: 
     response.msgID = msgID
     this.respond(response)
 
-    if(IMessage.logger.isDebugEnabled)
-      IMessage.logger.debug(s"sEnd handling DeleteMasterRequest ${response}")
+    if (IMessage.logger.isDebugEnabled)
+      IMessage.logger.debug(s"sEnd handling DeleteMasterRequest $response")
   }
 }
 
 /**
-  * Response message on master revokation from this agent for certain partition
+  * Response message on master revocation from this agent for certain partition
   *
   * @param senderID
   * @param receiverID
@@ -160,7 +158,7 @@ case class DeleteMasterResponse(senderID: String, receiverID: String, partition:
   */
 case class SetMasterRequest(senderID: String, receiverID: String, partition: Int) extends IMessage {
   override def handleP2PRequest(agent: PeerAgent) = {
-    if(IMessage.logger.isDebugEnabled)
+    if (IMessage.logger.isDebugEnabled)
       IMessage.logger.debug("Start handling SetMasterRequest")
 
     assert(receiverID == agent.getAgentAddress)
@@ -178,8 +176,8 @@ case class SetMasterRequest(senderID: String, receiverID: String, partition: Int
     response.msgID = msgID
     this.respond(response)
 
-    if(IMessage.logger.isDebugEnabled)
-      IMessage.logger.debug(s"End handling SetMasterRequest ${response}")
+    if (IMessage.logger.isDebugEnabled)
+      IMessage.logger.debug(s"End handling SetMasterRequest $response")
   }
 }
 
@@ -201,7 +199,7 @@ case class SetMasterResponse(senderID: String, receiverID: String, partition: In
   */
 case class PingRequest(senderID: String, receiverID: String, partition: Int) extends IMessage {
   override def handleP2PRequest(agent: PeerAgent) = {
-    if(IMessage.logger.isDebugEnabled)
+    if (IMessage.logger.isDebugEnabled)
       IMessage.logger.debug("Start handling PingRequest")
 
     assert(receiverID == agent.getAgentAddress)
@@ -217,8 +215,8 @@ case class PingRequest(senderID: String, receiverID: String, partition: Int) ext
     response.msgID = msgID
     this.respond(response)
 
-    if(IMessage.logger.isDebugEnabled)
-      IMessage.logger.debug(s"End handling SetMasterRequest: ${response}")
+    if (IMessage.logger.isDebugEnabled)
+      IMessage.logger.debug(s"End handling SetMasterRequest: $response")
   }
 }
 
@@ -232,7 +230,7 @@ case class PingRequest(senderID: String, receiverID: String, partition: Int) ext
 case class PingResponse(senderID: String, receiverID: String, partition: Int) extends IMessage
 
 /**
-  * Request which is received when producer does publish operation thru master and master proxies it to subscribers
+  * Request which is received when producer does publish operation through master and master proxies it to subscribers
   *
   * @param senderID
   * @param receiverID
@@ -243,17 +241,17 @@ case class PublishRequest(senderID: String, receiverID: String, msg: Transaction
 
   override def handleP2PRequest(agent: PeerAgent) = {
 
-    if(IMessage.logger.isDebugEnabled)
+    if (IMessage.logger.isDebugEnabled)
       IMessage.logger.debug("Start handling PublishRequest")
 
     val master = agent.getAgentsStateManager.getPartitionMasterInetAddressLocal(partition, "")
 
-    if(master == agent.getAgentAddress) {
+    if (master == agent.getAgentAddress) {
       agent.submitPipelinedTaskToPublishExecutors(partition,
         () => agent.getProducer.subscriberNotifier.publish(msg, onComplete = () => {}))
     }
 
-    if(IMessage.logger.isDebugEnabled)
+    if (IMessage.logger.isDebugEnabled)
       IMessage.logger.debug("End handling PublishRequest")
 
   }
@@ -298,7 +296,8 @@ case class EmptyResponse(senderID: String, receiverID: String, partition: Int) e
   */
 case class MaterializeRequest(senderID: String, receiverID: String, msg: TransactionStateMessage) extends IMessage {
   override val partition: Int = msg.partition
+
   override def handleP2PRequest(agent: PeerAgent) = {
-   agent.getProducer.materialize(msg)
+    agent.getProducer.materialize(msg)
   }
 }

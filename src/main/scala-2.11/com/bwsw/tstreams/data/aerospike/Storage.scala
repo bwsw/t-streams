@@ -53,21 +53,21 @@ class Storage(client: AerospikeClient, options: Options) extends IStorage[Array[
   }
 
 
-  override def save(txn: UUID,
+  override def save(transaction: UUID,
                     stream: String,
                     partition: Int,
                     ttl: Int,
                     lastItm: Int,
                     data: ListBuffer[Array[Byte]]): () => Unit = {
 
-    val key: Key = new Key(options.namespace, s"${stream}/${partition}", txn.toString)
-    if(data.size == 0)
+    val key: Key = new Key(options.namespace, s"$stream/$partition", transaction.toString)
+    if (data.isEmpty)
       return null
     var i = lastItm - data.size
     val mapped = data map {
       el => {
         val b = new Bin(i.toString, el)
-        i+=1
+        i += 1
         b
       }
     }

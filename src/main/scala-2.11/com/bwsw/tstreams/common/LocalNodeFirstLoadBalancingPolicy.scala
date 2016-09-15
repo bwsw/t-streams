@@ -3,6 +3,7 @@ package com.bwsw.tstreams.common
 /**
   * Created by Ivan Kudryavtsev on 09.08.16.
   */
+
 import java.net.{InetSocketAddress, NetworkInterface}
 import java.nio.ByteBuffer
 import java.util.{Collection => JCollection, Iterator => JIterator}
@@ -77,7 +78,7 @@ class LocalNodeFirstLoadBalancingPolicy(contactPoints: Set[InetSocketAddress], l
     (localReplica.iterator #:: maybeShuffled.iterator #:: otherHosts #:: Stream.empty).flatten.iterator
   }
 
-  override def newQueryPlan (loggedKeyspace: String, statement: Statement): JIterator[Host] = {
+  override def newQueryPlan(loggedKeyspace: String, statement: Statement): JIterator[Host] = {
     val keyspace = if (statement.getKeyspace == null) loggedKeyspace else statement.getKeyspace
 
     if (statement.getRoutingKey(ProtocolVersion.NEWEST_SUPPORTED, CodecRegistry.DEFAULT_INSTANCE) == null || keyspace == null)
@@ -94,14 +95,17 @@ class LocalNodeFirstLoadBalancingPolicy(contactPoints: Set[InetSocketAddress], l
     nodes += host
     logger.info(s"Added host ${host.getAddress.getHostAddress} (${host.getDatacenter})")
   }
+
   override def onRemove(host: Host) {
     nodes -= host
     logger.info(s"Removed host ${host.getAddress.getHostAddress} (${host.getDatacenter})")
   }
 
-  override def close() = { }
-  override def onUp(host: Host) = { }
-  override def onDown(host: Host) = { }
+  override def close() = {}
+
+  override def onUp(host: Host) = {}
+
+  override def onDown(host: Host) = {}
 
   private def sameDCHostDistance(host: Host) =
     if (isLocalHost(host))
@@ -110,7 +114,7 @@ class LocalNodeFirstLoadBalancingPolicy(contactPoints: Set[InetSocketAddress], l
       HostDistance.REMOTE
 
   private def dcs(hosts: Set[Host]) =
-    hosts.filter(_.getDatacenter != null).map(_.getDatacenter).toSet
+    hosts.filter(_.getDatacenter != null).map(_.getDatacenter)
 }
 
 object LocalNodeFirstLoadBalancingPolicy {
@@ -129,10 +133,10 @@ object LocalNodeFirstLoadBalancingPolicy {
 
   /** Finds the DCs of the contact points and returns hosts in those DC(s) from `allHosts`.
     * It guarantees to return at least the hosts pointed by `contactPoints`, even if their
-    * DC information is missing. Other hosts with missing DC information are not considered.*/
+    * DC information is missing. Other hosts with missing DC information are not considered. */
   def nodesInTheSameDC(contactPoints: Set[InetSocketAddress], allHosts: Set[Host]): Set[Host] = {
     val contactNodes = allHosts.filter(h => contactPoints.contains(h.getSocketAddress()))
-    val contactDCs = contactNodes.map(_.getDatacenter).filter(_ != null).toSet
+    val contactDCs = contactNodes.map(_.getDatacenter).filter(_ != null)
     contactNodes ++ allHosts.filter(h => contactDCs.contains(h.getDatacenter))
   }
 

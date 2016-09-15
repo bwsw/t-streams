@@ -35,7 +35,7 @@ class ChannelHandler(subscriberManager: CallbackManager) extends SimpleChannelIn
     * @param msg Message
     */
   override def channelRead0(ctx: ChannelHandlerContext, msg: TransactionStateMessage): Unit = {
-    logger.debug(s"[READ PARTITION_${msg.partition}] ts=${msg.txnUuid.timestamp()} ttl=${msg.ttl} status=${msg.status}")
+    logger.debug(s"[READ PARTITION_${msg.partition}] ts=${msg.transactionUUID.timestamp()} ttl=${msg.ttl} status=${msg.status}")
     subscriberManager.invokeCallbacks(msg)
     ReferenceCountUtil.release(msg)
   }
