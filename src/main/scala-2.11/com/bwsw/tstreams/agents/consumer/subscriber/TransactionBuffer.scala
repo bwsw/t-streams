@@ -24,7 +24,7 @@ class TransactionBuffer(queue: QueueBuilder.QueueType) {
   val comparator = new UUIDComparator()
 
   var stateList = ListBuffer[TransactionState]()
-  val stateMap = mutable.Map[UUID, TransactionState]()
+  val stateMap = mutable.HashMap[UUID, TransactionState]()
 
   def getQueue(): QueueBuilder.QueueType = queue
 
@@ -121,7 +121,6 @@ class TransactionBuffer(queue: QueueBuilder.QueueType) {
           ts.queueOrderID = orderID
           ts.state = TransactionStatus.postCheckpoint
           ts.ttl = Long.MaxValue
-          //stateMap.remove(update.uuid)
 
         case (TransactionStatus.preCheckpoint, _) =>
 
@@ -133,8 +132,8 @@ class TransactionBuffer(queue: QueueBuilder.QueueType) {
 
     } else {
       if (update.state == TransactionStatus.opened) {
-        stateMap.put(update.uuid, update)
         update.ttl = System.currentTimeMillis() + update.ttl * 1000
+        stateMap.put(update.uuid, update)
         stateList.append(update)
       }
     }
@@ -150,6 +149,7 @@ class TransactionBuffer(queue: QueueBuilder.QueueType) {
         || ts.ttl < time))
 
     if(meet.nonEmpty) {
+      println(meet)
       stateList.remove(0, meet.size)
 
       meet.foreach(ts => stateMap.remove(ts.uuid))

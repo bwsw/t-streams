@@ -84,11 +84,13 @@ class ProcessingEngine[T](consumer: TransactionOperator[T],
         if (fastLoader.checkIfTransactionLoadingIsPossible(seq)) {
           fastLoader.load[T](seq, consumer, loadExecutor, callback)
         }
-        else if (fullLoader.checkIfTransactionLoadingIsPossible(seq)) {
-          ProcessingEngine.logger.info(s"PE $id - Load full occurred for seq $seq")
-          fullLoader.load[T](seq, consumer, loadExecutor, callback)
-        } else {
-          Subscriber.logger.warn(s"Fast and Full loading failed for $seq.")
+        else {
+          if (fullLoader.checkIfTransactionLoadingIsPossible(seq)) {
+            ProcessingEngine.logger.info(s"PE $id - Load full occurred for seq $seq")
+            fullLoader.load[T](seq, consumer, loadExecutor, callback)
+          } else {
+            Subscriber.logger.warn(s"Fast and Full loading failed for $seq.")
+          }
         }
         setLastPartitionActivity(seq.head.partition)
       }
