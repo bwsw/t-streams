@@ -16,5 +16,11 @@ case class CassandraConnectorConf(
                                    connectTimeoutMillis: Int = 5000,
                                    readTimeoutMillis: Int = 120000,
                                    login: String = null,
-                                   password: String = null
-                                 )
+                                   password: String = null,
+                                   localCoreConnectionsPerHost: Int = 4,
+                                   localMaxConnectionsPerHost: Int = 32,
+                                   remoteCoreConnectionsPerHost: Int = 2,
+                                   remoteMaxConnectionsPerHost: Int = 8,
+                                   localMaxRequestsPerConnection: Int = 32768,
+                                   remoteMaxRequestsPerConnection: Int =  8192,
+                                   heartBeatIntervalSeconds: Int = 10)
