@@ -6,7 +6,7 @@ import java.util.concurrent.locks.ReentrantLock
 
 import com.datastax.driver.core.Cluster.Builder
 import com.datastax.driver.core.policies.ExponentialReconnectionPolicy
-import com.datastax.driver.core.{Cluster, QueryOptions, Session, SocketOptions}
+import com.datastax.driver.core._
 import org.slf4j.LoggerFactory
 
 /**
@@ -63,11 +63,21 @@ object MetadataConnectionPool {
             .setConnectTimeoutMillis(conf.connectTimeoutMillis)
             .setReadTimeoutMillis(conf.readTimeoutMillis)
 
+          val poolingOptions = new PoolingOptions()
+
+          poolingOptions
+            .setConnectionsPerHost(HostDistance.LOCAL, conf.localCoreConnectionsPerHost, conf.localMaxConnectionsPerHost)
+            .setConnectionsPerHost(HostDistance.REMOTE, conf.remoteCoreConnectionsPerHost, conf.remoteMaxConnectionsPerHost)
+            .setHeartbeatIntervalSeconds(conf.heartBeatIntervalSeconds)
+            .setMaxRequestsPerConnection(HostDistance.LOCAL, conf.localMaxRequestsPerConnection)
+            .setMaxRequestsPerConnection(HostDistance.REMOTE, conf.remoteMaxRequestsPerConnection)
+
           builder.addContactPointsWithPorts(conf.hosts.toSeq: _*)
             .withRetryPolicy(new MultipleRetryPolicy(conf.queryRetryCount))
             .withReconnectionPolicy(new ExponentialReconnectionPolicy(conf.minReconnectionDelayMillis, conf.maxReconnectionDelayMillis))
             .withLoadBalancingPolicy(new LocalNodeFirstLoadBalancingPolicy(conf.hosts, conf.localDC))
             .withSocketOptions(options)
+            .withPoolingOptions(poolingOptions)
             .withQueryOptions(
               new QueryOptions()
                 .setRefreshNodeIntervalMillis(0)

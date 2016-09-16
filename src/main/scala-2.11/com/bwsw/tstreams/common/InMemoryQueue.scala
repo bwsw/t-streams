@@ -1,7 +1,7 @@
 package com.bwsw.tstreams.common
 
 import java.util.concurrent.TimeUnit
-import java.util.concurrent.locks.ReentrantLock
+import java.util.concurrent.LinkedBlockingQueue
 
 /**
   * Created by Ivan Kudryavtsev on 19.08.16.
@@ -10,24 +10,16 @@ class InMemoryQueue[T] extends AbstractQueue[T] {
   /**
     * Queue blocking stuff
     */
-  private val mutex = new ReentrantLock(true)
-  private val cond = mutex.newCondition()
-  val q = new scala.collection.mutable.Queue[T]()
+  val q = new LinkedBlockingQueue[T]()
 
   override def put(elt: T) = {
-    LockUtil.withLockOrDieDo[Unit](mutex, (100, TimeUnit.SECONDS), None, () => {
-      q enqueue elt
-      cond.signal()
-      inFlight.incrementAndGet()
-    })
+    q.put(elt)
+    inFlight.incrementAndGet()
   }
 
-  override def get(delay: Long, units: TimeUnit): T =
-    LockUtil.withLockOrDieDo[T](mutex, (100, TimeUnit.SECONDS), None, () => {
-      if (q.isEmpty && !cond.await(delay, units))
-        return null.asInstanceOf[T]
-      val r = q dequeue()
-      inFlight.decrementAndGet()
-      r
-    })
+  override def get(delay: Long, units: TimeUnit): T = {
+    val r = q.poll(delay, units)
+    if(r != null) inFlight.decrementAndGet()
+    r
+}
 }
