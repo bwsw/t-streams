@@ -119,6 +119,7 @@ class TransactionBuffer(queue: QueueBuilder.QueueType) {
         case (TransactionStatus.preCheckpoint, TransactionStatus.postCheckpoint) =>
           ts.queueOrderID = orderID
           ts.state = TransactionStatus.postCheckpoint
+          ts.itemCount = update.itemCount
           ts.ttl = Long.MaxValue
 
         case (TransactionStatus.preCheckpoint, _) =>
