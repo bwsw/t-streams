@@ -21,7 +21,6 @@ class TransactionBuffer(queue: QueueBuilder.QueueType) {
 
   val counters = TransactionBufferCounters()
   var lastTransaction: UUID = null
-  val comparator = new UUIDComparator()
 
   var stateList = ListBuffer[TransactionState]()
   val stateMap = mutable.HashMap[UUID, TransactionState]()
@@ -56,7 +55,7 @@ class TransactionBuffer(queue: QueueBuilder.QueueType) {
     // avoid transactions which are delayed
     if (update.state == TransactionStatus.opened) {
       if (lastTransaction != null
-        && comparator.compare(update.uuid, lastTransaction) != 1) {
+        && UUIDComparator.compare(update.uuid, lastTransaction) != 1) {
         Subscriber.logger.warn(s"Unexpected transaction comparison result ${update.uuid} vs $lastTransaction detected.")
         return
       }
@@ -120,6 +119,7 @@ class TransactionBuffer(queue: QueueBuilder.QueueType) {
         case (TransactionStatus.preCheckpoint, TransactionStatus.postCheckpoint) =>
           ts.queueOrderID = orderID
           ts.state = TransactionStatus.postCheckpoint
+          ts.itemCount = update.itemCount
           ts.ttl = Long.MaxValue
 
         case (TransactionStatus.preCheckpoint, _) =>

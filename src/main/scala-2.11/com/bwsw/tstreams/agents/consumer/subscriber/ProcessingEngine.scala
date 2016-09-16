@@ -121,10 +121,8 @@ class ProcessingEngine[T](consumer: TransactionOperator[T],
     if (transactionOpt.isEmpty)
       return
 
-    val uuidComparator = new UUIDComparator()
-
     // if current last transaction is newer than from db
-    if (uuidComparator.compare(transactionOpt.get.getTransactionUUID(), lastTransactionsMap(partition).uuid) != 1)
+    if (UUIDComparator.compare(transactionOpt.get.getTransactionUUID(), lastTransactionsMap(partition).uuid) != 1)
       return
 
     val transactionStateList = List(TransactionState(uuid = transactionOpt.get.getTransactionUUID(),

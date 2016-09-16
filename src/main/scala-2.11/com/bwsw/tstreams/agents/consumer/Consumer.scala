@@ -210,7 +210,6 @@ class Consumer[T](val name: String,
   }
 
   def getTransactionsFromTo(partition: Int, from: UUID, to: UUID): ListBuffer[ConsumerTransaction[T]] = {
-    val comparator = new UUIDComparator()
     val transactions = stream.metadataStorage.commitEntity.getTransactions[T](
       streamName = stream.getName,
       partition = partition,
@@ -224,7 +223,7 @@ class Consumer[T](val name: String,
         moreItems = false
       } else {
         val t = transactions.dequeue()
-        if (comparator.compare(to, t.getTransactionUUID()) > -1) {
+        if (UUIDComparator.compare(to, t.getTransactionUUID()) > -1) {
           if (t.getCount() >= 0)
             okList.append(t)
           else
@@ -236,7 +235,7 @@ class Consumer[T](val name: String,
         }
       }
     }
-    if (okList.nonEmpty && addFlag && comparator.compare(to, okList.last.getTransactionUUID()) == 1)
+    if (okList.nonEmpty && addFlag && UUIDComparator.compare(to, okList.last.getTransactionUUID()) == 1)
       okList.appendAll(if (okList.nonEmpty) getTransactionsFromTo(partition, okList.last.getTransactionUUID(), to) else ListBuffer[ConsumerTransaction[T]]())
 
     okList

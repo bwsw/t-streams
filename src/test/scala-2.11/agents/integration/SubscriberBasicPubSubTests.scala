@@ -40,6 +40,7 @@ class SubscriberBasicPubSubTests extends FlatSpec with Matchers with BeforeAndAf
       callback = new Callback[String] {
         override def onTransaction(consumer: TransactionOperator[String], transaction: ConsumerTransaction[String]): Unit = this.synchronized {
           subsciberTransactionsAmount += 1
+          transaction.getAll()
         }
       })
     s.start()

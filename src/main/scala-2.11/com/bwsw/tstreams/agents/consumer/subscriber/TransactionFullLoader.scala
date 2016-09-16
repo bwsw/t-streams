@@ -15,8 +15,6 @@ class TransactionFullLoader(partitions: Set[Int],
                             lastTransactionsMap: ProcessingEngine.LastTransactionStateMapType)
   extends AbstractTransactionLoader {
 
-  val uuidComparator = new UUIDComparator()
-
   /**
     * checks if possible to do full loading
     *
@@ -25,7 +23,7 @@ class TransactionFullLoader(partitions: Set[Int],
     */
   override def checkIfTransactionLoadingIsPossible(seq: QueueItemType): Boolean = {
     val last = seq.last
-    if (uuidComparator.compare(last.uuid, lastTransactionsMap(last.partition).uuid) != 1) {
+    if (UUIDComparator.compare(last.uuid, lastTransactionsMap(last.partition).uuid) != 1) {
       Subscriber.logger.warn(s"Last UUID: ${last.uuid}, In DB UUID: ${lastTransactionsMap(last.partition).uuid}")
       return false
     }
