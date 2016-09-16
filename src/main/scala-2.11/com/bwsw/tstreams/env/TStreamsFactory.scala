@@ -91,6 +91,31 @@ object TSF_Dictionary {
         */
       val READ_TIMEOUT_MS = "metadata.cluster.read-timeout-ms"
 
+      /**
+        * Local host connections
+        */
+      val LOCAL_CONNECTIONS_PER_HOST = "metadata.cluster.local-connections-per-host"
+
+      /**
+        * Remote host connections
+        */
+      val REMOTE_CONNECTIONS_PER_HOST = "metadata.cluster.remote-connections-per-host"
+
+      /**
+        * Local requests per connection
+        */
+      val LOCAL_REQUESTS_PER_CONNECTION = "metadata.cluster.local-requests-per-connection"
+
+      /**
+        * Remote requests per connection
+        */
+      val REMOTE_REQUESTS_PER_CONNECTION = "metadata.cluster.remote-requests-per-connection"
+
+      /**
+        * Heartbeat interval
+        */
+      val HEARTBEAT_INTERVAL_SECONDS = "metadata.cluster.heartbeat-interval-seconds"
+
     }
 
   }
@@ -212,6 +237,32 @@ object TSF_Dictionary {
           * Read timeout
           */
         val READ_TIMEOUT_MS = "data.cluster.casandra.read-timeout-ms"
+
+        /**
+          * Local host connections
+          */
+        val LOCAL_CONNECTIONS_PER_HOST = "data.cluster.local-connections-per-host"
+
+        /**
+          * Remote host connections
+          */
+        val REMOTE_CONNECTIONS_PER_HOST = "data.cluster.remote-connections-per-host"
+
+        /**
+          * Local requests per connection
+          */
+        val LOCAL_REQUESTS_PER_CONNECTION = "data.cluster.local-requests-per-connection"
+
+        /**
+          * Remote requests per connection
+          */
+        val REMOTE_REQUESTS_PER_CONNECTION = "data.cluster.remote-requests-per-connection"
+
+        /**
+          * Heartbeat interval
+          */
+        val HEARTBEAT_INTERVAL_SECONDS = "data.cluster.heartbeat-interval-seconds"
+
       }
 
     }
@@ -463,6 +514,12 @@ class TStreamsFactory() {
   propertyMap += (TSF_Dictionary.Metadata.Cluster.QUERY_RETRY_COUNT -> Cluster_cassandra_query_retry_count_default)
   propertyMap += (TSF_Dictionary.Metadata.Cluster.CONNECTION_TIMEOUT_MS -> Cluster_cassandra_connection_timeout_ms_default)
   propertyMap += (TSF_Dictionary.Metadata.Cluster.READ_TIMEOUT_MS -> Cluster_cassandra_read_timeout_ms_default)
+  propertyMap += (TSF_Dictionary.Metadata.Cluster.LOCAL_CONNECTIONS_PER_HOST -> (4, 32))
+  propertyMap += (TSF_Dictionary.Metadata.Cluster.REMOTE_CONNECTIONS_PER_HOST -> (2, 16))
+  propertyMap += (TSF_Dictionary.Metadata.Cluster.LOCAL_REQUESTS_PER_CONNECTION -> 32576)
+  propertyMap += (TSF_Dictionary.Metadata.Cluster.REMOTE_REQUESTS_PER_CONNECTION -> 8192)
+  propertyMap += (TSF_Dictionary.Metadata.Cluster.HEARTBEAT_INTERVAL_SECONDS -> 10)
+
 
   propertyMap += (TSF_Dictionary.Data.Cluster.Cassandra.LOCAL_DC -> null)
   propertyMap += (TSF_Dictionary.Data.Cluster.Cassandra.KEEP_ALIVE_MS -> Cluster_cassandra_keep_alive_ms_default)
@@ -471,6 +528,11 @@ class TStreamsFactory() {
   propertyMap += (TSF_Dictionary.Data.Cluster.Cassandra.QUERY_RETRY_COUNT -> Cluster_cassandra_query_retry_count_default)
   propertyMap += (TSF_Dictionary.Data.Cluster.Cassandra.CONNECTION_TIMEOUT_MS -> Cluster_cassandra_connection_timeout_ms_default)
   propertyMap += (TSF_Dictionary.Data.Cluster.Cassandra.READ_TIMEOUT_MS -> Cluster_cassandra_read_timeout_ms_default)
+  propertyMap += (TSF_Dictionary.Data.Cluster.Cassandra.LOCAL_CONNECTIONS_PER_HOST -> (4, 32))
+  propertyMap += (TSF_Dictionary.Data.Cluster.Cassandra.REMOTE_CONNECTIONS_PER_HOST -> (2, 16))
+  propertyMap += (TSF_Dictionary.Data.Cluster.Cassandra.LOCAL_REQUESTS_PER_CONNECTION -> 32576)
+  propertyMap += (TSF_Dictionary.Data.Cluster.Cassandra.REMOTE_REQUESTS_PER_CONNECTION -> 8192)
+  propertyMap += (TSF_Dictionary.Data.Cluster.Cassandra.HEARTBEAT_INTERVAL_SECONDS -> 10)
 
   val Cluster_hazelcast_synchronous_replicas_default = 0
   val Cluster_hazelcast_asynchronous_replicas_default = 0
@@ -738,6 +800,9 @@ class TStreamsFactory() {
       assert(pAsString(TSF_Dictionary.Data.Cluster.NAMESPACE) != null)
       assert(pAsString(TSF_Dictionary.Data.Cluster.ENDPOINTS) != null)
 
+      val localConnections = getProperty(TSF_Dictionary.Data.Cluster.Cassandra.LOCAL_CONNECTIONS_PER_HOST).asInstanceOf[(Int, Int)]
+      val remoteConnections = getProperty(TSF_Dictionary.Data.Cluster.Cassandra.REMOTE_CONNECTIONS_PER_HOST).asInstanceOf[(Int, Int)]
+
       val opts = new CassandraConnectorConf(
         hosts = scala.Predef.Set.empty[InetSocketAddress] ++ NetworkUtil.getInetSocketAddressCompatibleHostList(pAsString(TSF_Dictionary.Data.Cluster.ENDPOINTS)),
         login = login,
@@ -748,7 +813,14 @@ class TStreamsFactory() {
         maxReconnectionDelayMillis = pAsInt(TSF_Dictionary.Data.Cluster.Cassandra.MAX_RECONNECTION_DELAY_MS, Cluster_cassandra_max_reconnection_delay_ms_default),
         queryRetryCount = pAsInt(TSF_Dictionary.Data.Cluster.Cassandra.QUERY_RETRY_COUNT, Cluster_cassandra_query_retry_count_default),
         connectTimeoutMillis = pAsInt(TSF_Dictionary.Data.Cluster.Cassandra.CONNECTION_TIMEOUT_MS, Cluster_cassandra_connection_timeout_ms_default),
-        readTimeoutMillis = pAsInt(TSF_Dictionary.Data.Cluster.Cassandra.READ_TIMEOUT_MS, Cluster_cassandra_read_timeout_ms_default)
+        readTimeoutMillis = pAsInt(TSF_Dictionary.Data.Cluster.Cassandra.READ_TIMEOUT_MS, Cluster_cassandra_read_timeout_ms_default),
+        localCoreConnectionsPerHost = localConnections._1,
+        localMaxConnectionsPerHost  = localConnections._2,
+        remoteCoreConnectionsPerHost = remoteConnections._1,
+        remoteMaxConnectionsPerHost = remoteConnections._2,
+        localMaxRequestsPerConnection = pAsInt(TSF_Dictionary.Data.Cluster.Cassandra.LOCAL_REQUESTS_PER_CONNECTION, 32768),
+        remoteMaxRequestsPerConnection = pAsInt(TSF_Dictionary.Data.Cluster.Cassandra.REMOTE_REQUESTS_PER_CONNECTION, 8192),
+        heartBeatIntervalSeconds = pAsInt(TSF_Dictionary.Data.Cluster.Cassandra.HEARTBEAT_INTERVAL_SECONDS, 10)
       )
 
       return dsf.getInstance(opts, pAsString(TSF_Dictionary.Data.Cluster.NAMESPACE))
@@ -781,6 +853,9 @@ class TStreamsFactory() {
     assert(pAsString(TSF_Dictionary.Metadata.Cluster.NAMESPACE) != null)
     assert(pAsString(TSF_Dictionary.Metadata.Cluster.ENDPOINTS) != null)
 
+    val localConnections = getProperty(TSF_Dictionary.Metadata.Cluster.LOCAL_CONNECTIONS_PER_HOST).asInstanceOf[(Int, Int)]
+    val remoteConnections = getProperty(TSF_Dictionary.Metadata.Cluster.REMOTE_CONNECTIONS_PER_HOST).asInstanceOf[(Int, Int)]
+
     val opts = new CassandraConnectorConf(
       hosts = scala.Predef.Set.empty[InetSocketAddress] ++ NetworkUtil.getInetSocketAddressCompatibleHostList(pAsString(TSF_Dictionary.Metadata.Cluster.ENDPOINTS)),
       login = login,
@@ -791,7 +866,14 @@ class TStreamsFactory() {
       maxReconnectionDelayMillis = pAsInt(TSF_Dictionary.Metadata.Cluster.MAX_RECONNECTION_DELAY_MS, Cluster_cassandra_max_reconnection_delay_ms_default),
       queryRetryCount = pAsInt(TSF_Dictionary.Metadata.Cluster.QUERY_RETRY_COUNT, Cluster_cassandra_query_retry_count_default),
       connectTimeoutMillis = pAsInt(TSF_Dictionary.Metadata.Cluster.CONNECTION_TIMEOUT_MS, Cluster_cassandra_connection_timeout_ms_default),
-      readTimeoutMillis = pAsInt(TSF_Dictionary.Metadata.Cluster.READ_TIMEOUT_MS, Cluster_cassandra_read_timeout_ms_default)
+      readTimeoutMillis = pAsInt(TSF_Dictionary.Metadata.Cluster.READ_TIMEOUT_MS, Cluster_cassandra_read_timeout_ms_default),
+      localCoreConnectionsPerHost = localConnections._1,
+      localMaxConnectionsPerHost  = localConnections._2,
+      remoteCoreConnectionsPerHost = remoteConnections._1,
+      remoteMaxConnectionsPerHost = remoteConnections._2,
+      localMaxRequestsPerConnection = pAsInt(TSF_Dictionary.Metadata.Cluster.LOCAL_REQUESTS_PER_CONNECTION, 32768),
+      remoteMaxRequestsPerConnection = pAsInt(TSF_Dictionary.Metadata.Cluster.REMOTE_REQUESTS_PER_CONNECTION, 8192),
+      heartBeatIntervalSeconds = pAsInt(TSF_Dictionary.Metadata.Cluster.HEARTBEAT_INTERVAL_SECONDS, 10)
     )
 
     // construct metadata storage
