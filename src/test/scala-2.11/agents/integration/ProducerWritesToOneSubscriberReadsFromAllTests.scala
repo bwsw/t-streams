@@ -25,7 +25,7 @@ class ProducerWritesToOneSubscriberReadsFromAllTests extends FlatSpec with Match
     setProperty(TSF_Dictionary.Consumer.TRANSACTION_PRELOAD, 10).
     setProperty(TSF_Dictionary.Consumer.DATA_PRELOAD, 10)
 
-  val TOTAL = 10000
+  val TOTAL = 1000
   val l = new CountDownLatch(1)
 
   it should "handle all transactions produced by producer" in {
@@ -54,7 +54,7 @@ class ProducerWritesToOneSubscriberReadsFromAllTests extends FlatSpec with Match
     for (it <- 0 until TOTAL) {
       val transaction = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
       transaction.send("test")
-      transaction.checkpoint()
+      transaction.checkpoint(false)
     }
     producer.stop()
     l.await(1000, TimeUnit.MILLISECONDS)
