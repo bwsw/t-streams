@@ -39,7 +39,7 @@ class Storage(client: AerospikeClient, options: Options) extends IStorage[Array[
     * @return Queue of object which have storage type
     */
   override def get(streamName: String, partition: Int, transaction: UUID, from: Int, to: Int): mutable.Queue[Array[Byte]] = {
-    val key: Key = new Key(options.namespace, s"$streamName/$partition", transaction.toString)
+    val key = new Key(options.namespace, s"$streamName/$partition", transaction.toString)
     val names = (from to to).toList.map(x => x.toString)
     //    logger.debug(s"Start retrieving data from aerospike for streamName: {$streamName}, partition: {$partition}")
     val record: Record = client.get(options.readPolicy, key, names: _*)

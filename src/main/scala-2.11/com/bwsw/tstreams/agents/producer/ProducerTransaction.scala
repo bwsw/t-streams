@@ -215,7 +215,7 @@ class ProducerTransaction[T](partition: Int,
         partition = partition,
         masterID = transactionOwner.getPartitionMasterID(partition),
         orderID = -1,
-        count = 0))
+        count = getDataItemsCount()))
 
       //debug purposes only
       {
@@ -285,7 +285,7 @@ class ProducerTransaction[T](partition: Int,
             partition = partition,
             masterID = transactionOwner.getPartitionMasterID(partition),
             orderID = -1,
-            count = 0))
+            count = getDataItemsCount()))
 
           //debug purposes only
           GlobalHooks.invoke(GlobalHooks.preCommitFailure)
@@ -405,10 +405,10 @@ class ProducerTransaction[T](partition: Int,
       partition = partition,
       masterID = transactionOwner.getPartitionMasterID(partition),
       orderID = -1,
-      count = 0)
+      count = getDataItemsCount())
 
-    val finalCheckpoint = TransactionStateMessage(
-      transactionUUID = getTransactionUUID,
+    val postCheckpoint = TransactionStateMessage(
+      transactionUUID = getTransactionUUID(),
       ttl = -1,
       status = TransactionStatus.postCheckpoint,
       partition = partition,
@@ -419,11 +419,11 @@ class ProducerTransaction[T](partition: Int,
     ProducerCheckpointInfo(transactionRef = this,
       agent = transactionOwner.p2pAgent,
       preCheckpointEvent = preCheckpoint,
-      finalCheckpointEvent = finalCheckpoint,
+      postCheckpointEvent = postCheckpoint,
       streamName = transactionOwner.stream.getName,
       partition = partition,
-      transaction = getTransactionUUID,
-      totalCnt = getDataItemsCount,
+      transaction = getTransactionUUID(),
+      totalCnt = getDataItemsCount(),
       ttl = transactionOwner.stream.getTTL)
   }
 }
