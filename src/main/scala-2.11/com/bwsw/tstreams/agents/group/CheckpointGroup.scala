@@ -147,7 +147,10 @@ class CheckpointGroup(val executors: Int = 1) {
         executorPool.submit("<PreCheckpointEvent>", new Runnable {
           override def run(): Unit = {
             agent.publish(preCheckpointEvent)
-            logger.info("PRE event sent for " + transaction.getTransactionUUID.toString)
+
+            if(logger.isDebugEnabled)
+              logger.debug("PRE event sent for " + transaction.getTransactionUUID.toString)
+
             l.countDown()
           }
         })
