@@ -1,25 +1,22 @@
 package com.bwsw.tstreams.agents.consumer
 
-
-import java.util.UUID
-
 import scala.collection.mutable
 
 /**
   *
   * @param partition
-  * @param uuid
+  * @param id
   * @param count
   * @param ttl
   * @tparam T
   */
 class ConsumerTransaction[T](partition: Int,
-                             uuid: UUID,
+                             id: Long,
                              count: Int,
                              ttl: Int) {
 
   override def toString(): String = {
-    s"consumer.Transaction(uuid=$uuid,partition=$partition, count=$count, ttl=$ttl)"
+    s"consumer.Transaction(id=$id,partition=$partition, count=$count, ttl=$ttl)"
   }
 
   var consumer: Consumer[T] = null
@@ -35,9 +32,9 @@ class ConsumerTransaction[T](partition: Int,
   }
 
   /**
-    * Return transaction UUID
+    * Return transaction ID
     */
-  def getTransactionUUID(): UUID = uuid
+  def getTransactionID() = id
 
   /**
     * Return transaction partition
@@ -78,7 +75,7 @@ class ConsumerTransaction[T](partition: Int,
     //try to update buffer
     if (buffer == null || buffer.isEmpty) {
       val newCount = min2(cnt + consumer.options.dataPreload, count - 1)
-      buffer = consumer.stream.dataStorage.get(consumer.stream.getName, partition, uuid, cnt, newCount)
+      buffer = consumer.stream.dataStorage.get(consumer.stream.getName, partition, id, cnt, newCount)
       cnt = newCount + 1
     }
 
@@ -110,7 +107,7 @@ class ConsumerTransaction[T](partition: Int,
     if (consumer == null)
       throw new IllegalArgumentException("Transaction is not yet attached to consumer. Attach it first.")
 
-    val data: mutable.Queue[Array[Byte]] = consumer.stream.dataStorage.get(consumer.stream.getName, partition, uuid, cnt, count - 1)
+    val data: mutable.Queue[Array[Byte]] = consumer.stream.dataStorage.get(consumer.stream.getName, partition, id, cnt, count - 1)
     data.toList.map(x => consumer.options.converter.convert(x))
   }
 

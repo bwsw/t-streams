@@ -1,6 +1,5 @@
 package agents.integration
 
-import java.util.UUID
 import java.util.concurrent.CountDownLatch
 
 import com.bwsw.tstreams.agents.consumer.Offset.Newest
@@ -32,8 +31,8 @@ class IntersectingTransactionsTests extends FlatSpec with Matchers with BeforeAn
 
 
   it should "handle all transactions produced by two different producers, the first ends first started " in {
-    val bp = ListBuffer[UUID]()
-    val bs = ListBuffer[UUID]()
+    val bp = ListBuffer[Long]()
+    val bs = ListBuffer[Long]()
     val lp1 = new CountDownLatch(1)
     val lp2 = new CountDownLatch(1)
     val ls = new CountDownLatch(1)
@@ -60,7 +59,7 @@ class IntersectingTransactionsTests extends FlatSpec with Matchers with BeforeAn
       isUseLastOffset = true,
       callback = new Callback[String] {
         override def onTransaction(consumer: TransactionOperator[String], transaction: ConsumerTransaction[String]): Unit = this.synchronized {
-          bs.append(transaction.getTransactionUUID())
+          bs.append(transaction.getTransactionID())
           if (bs.size == 2) {
             ls.countDown()
           }
@@ -70,7 +69,7 @@ class IntersectingTransactionsTests extends FlatSpec with Matchers with BeforeAn
     val t1 = new Thread(new Runnable {
       override def run(): Unit = {
         val t = producer1.newTransaction(policy = NewTransactionProducerPolicy.CheckpointIfOpened)
-        bp.append(t.getTransactionUUID())
+        bp.append(t.getTransactionID())
         lp2.countDown()
         lp1.await()
         t.send("test")
@@ -82,7 +81,7 @@ class IntersectingTransactionsTests extends FlatSpec with Matchers with BeforeAn
       override def run(): Unit = {
         lp2.await()
         val t = producer2.newTransaction(policy = NewTransactionProducerPolicy.CheckpointIfOpened)
-        bp.append(t.getTransactionUUID())
+        bp.append(t.getTransactionID())
         t.send("test")
         t.checkpoint()
         lp1.countDown()

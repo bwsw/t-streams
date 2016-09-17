@@ -1,7 +1,6 @@
 package com.bwsw.tstreams.entities
 
 import java.util
-import java.util.UUID
 import java.util.concurrent.Executor
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -48,8 +47,8 @@ class CommitEntity(commitLog: String, session: Session) {
     * @param totalCnt    total amount of pieces of data in concrete transaction
     * @param ttl         time of transaction existence in seconds
     */
-  def commit(streamName: String, partition: Int, transaction: UUID, totalCnt: Int, ttl: Int): Unit = {
-    val values = List(streamName, new Integer(partition), transaction, new Integer(totalCnt), new Integer(ttl))
+  def commit(streamName: String, partition: Int, transaction: Long, totalCnt: Int, ttl: Int): Unit = {
+    val values = List(streamName, new Integer(partition), new java.lang.Long(transaction), new Integer(totalCnt), new Integer(ttl))
     val statementWithBindings = commitStatement.bind(values: _*)
     session.execute(statementWithBindings)
   }
@@ -59,21 +58,21 @@ class CommitEntity(commitLog: String, session: Session) {
     *
     * @param streamName  name of stream
     * @param partition
-    * @param transaction UUID
+    * @param transaction ID
     * @param totalCnt    amount of values
     * @param ttl
     * @return
     */
   def commitAsync(streamName: String,
                   partition: Int,
-                  transaction: UUID,
+                  transaction: Long,
                   totalCnt: Int,
                   ttl: Int,
                   executor: Executor,
                   function: () => Unit,
                   resourceCounter: AtomicInteger): ResultSetFuture = {
     resourceCounter.incrementAndGet()
-    val values = List(streamName, new Integer(partition), transaction, new Integer(totalCnt), new Integer(ttl))
+    val values = List(streamName, new Integer(partition), new java.lang.Long(transaction), new Integer(totalCnt), new Integer(ttl))
     val statementWithBindings = commitStatement.bind(values: _*)
     val f = session.executeAsync(statementWithBindings)
     Futures.addCallback(f, new FutureCallback[ResultSet]() {
@@ -94,17 +93,17 @@ class CommitEntity(commitLog: String, session: Session) {
     *
     * @param streamName  name of stream
     * @param partition
-    * @param transaction UUID
+    * @param transaction ID
     * @return
     */
   def deleteAsync(streamName: String,
                   partition: Int,
-                  transaction: UUID,
+                  transaction: Long,
                   executor: Executor,
                   function: () => Unit,
                   resourceCounter: AtomicInteger): ResultSetFuture = {
     resourceCounter.incrementAndGet()
-    val values = List(streamName, new Integer(partition), transaction)
+    val values = List(streamName, new Integer(partition), new java.lang.Long(transaction))
     val statementWithBindings = deleteStatement.bind(values: _*)
     val f = session.executeAsync(statementWithBindings)
     Futures.addCallback(f, new FutureCallback[ResultSet]() {
@@ -130,14 +129,14 @@ class CommitEntity(commitLog: String, session: Session) {
     * @param cnt             Amount of retrieved queue (can be less than cnt in case of insufficiency of transactions)
     * @return Queue of selected transactions
     */
-  def getTransactions[T](streamName: String, partition: Int, fromTransaction: UUID, cnt: Int = -1): scala.collection.mutable.Queue[ConsumerTransaction[T]] = {
+  def getTransactions[T](streamName: String, partition: Int, fromTransaction: Long, cnt: Int = -1): scala.collection.mutable.Queue[ConsumerTransaction[T]] = {
     val statementWithBindings =
       if (cnt == -1) {
-        val values: List[AnyRef] = List(streamName, new Integer(partition), fromTransaction)
+        val values: List[AnyRef] = List(streamName, new Integer(partition), new java.lang.Long(fromTransaction))
         selectTransactionsMoreThanStatementWithoutLimit.bind(values: _*)
       }
       else {
-        val values: List[AnyRef] = List(streamName, new Integer(partition), fromTransaction, new Integer(cnt))
+        val values: List[AnyRef] = List(streamName, new Integer(partition), new java.lang.Long(fromTransaction), new Integer(cnt))
         selectTransactionsMoreThanStatement.bind(values: _*)
       }
 
@@ -147,7 +146,7 @@ class CommitEntity(commitLog: String, session: Session) {
     val it = selected.iterator()
     while (it.hasNext) {
       val value = it.next()
-      q.enqueue(new ConsumerTransaction[T](partition, value.getUUID("transaction"), value.getInt("cnt"), value.getInt("ttl(cnt)")))
+      q.enqueue(new ConsumerTransaction[T](partition, value.getLong("transaction"), value.getInt("cnt"), value.getInt("ttl(cnt)")))
     }
     q
   }
@@ -161,8 +160,8 @@ class CommitEntity(commitLog: String, session: Session) {
     * @param cnt             Amount of retrieved queue (can be less than cnt in case of insufficiency of transactions)
     * @return Queue of selected transactions
     */
-  def getLastTransactionHelper[T](streamName: String, partition: Int, lastTransaction: UUID, cnt: Int = 128): scala.collection.mutable.Queue[ConsumerTransaction[T]] = {
-    val values: List[AnyRef] = List(streamName, new Integer(partition), lastTransaction, new Integer(cnt))
+  def getLastTransactionHelper[T](streamName: String, partition: Int, lastTransaction: Long, cnt: Int = 128): scala.collection.mutable.Queue[ConsumerTransaction[T]] = {
+    val values: List[AnyRef] = List(streamName, new Integer(partition), new java.lang.Long(lastTransaction), new Integer(cnt))
     val statementWithBindings = selectTransactionsLessThanStatement.bind(values: _*)
     val selected = session.execute(statementWithBindings)
 
@@ -170,7 +169,7 @@ class CommitEntity(commitLog: String, session: Session) {
     val it = selected.iterator()
     while (it.hasNext) {
       val value = it.next()
-      q.enqueue(new ConsumerTransaction(partition, value.getUUID("transaction"), value.getInt("cnt"), value.getInt("ttl(cnt)")))
+      q.enqueue(new ConsumerTransaction(partition, value.getLong("transaction"), value.getInt("cnt"), value.getInt("ttl(cnt)")))
     }
     q //.reverse
   }
@@ -185,8 +184,8 @@ class CommitEntity(commitLog: String, session: Session) {
     * @param rightBorder Right border of transactions to consume
     * @return Iterator of selected transactions
     */
-  def getTransactionsIterator(streamName: String, partition: Int, leftBorder: UUID, rightBorder: UUID): util.Iterator[Row] = {
-    val values: List[AnyRef] = List(streamName, new Integer(partition), leftBorder, rightBorder)
+  def getTransactionsIterator(streamName: String, partition: Int, leftBorder: Long, rightBorder: Long): util.Iterator[Row] = {
+    val values: List[AnyRef] = List(streamName, new Integer(partition), new java.lang.Long(leftBorder), new java.lang.Long(rightBorder))
     val statementWithBindings = selectTransactionsMoreThanAndLessOrEqualThanStatement.bind(values: _*)
     val selected = session.execute(statementWithBindings)
     val it = selected.iterator()
@@ -202,8 +201,8 @@ class CommitEntity(commitLog: String, session: Session) {
     * @param transaction Concrete transaction time
     * @return Amount of data in concrete transaction and ttl
     */
-  def getTransactionItemCountAndTTL(streamName: String, partition: Int, transaction: UUID): Option[(Int, Int)] = {
-    val values: List[AnyRef] = List(streamName, new Integer(partition), transaction)
+  def getTransactionItemCountAndTTL(streamName: String, partition: Int, transaction: Long): Option[(Int, Int)] = {
+    val values: List[AnyRef] = List(streamName, new Integer(partition), new java.lang.Long(transaction))
     val statementWithBindings = selectTransactionAmountStatement.bind(values: _*)
 
     val selected = session.execute(statementWithBindings)

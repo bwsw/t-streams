@@ -1,6 +1,5 @@
 package com.bwsw.tstreams.coordination.producer
 
-import java.util.UUID
 import java.util.concurrent.atomic.{AtomicBoolean, AtomicLong}
 import java.util.concurrent.locks.ReentrantLock
 import java.util.concurrent.{CountDownLatch, TimeUnit}
@@ -292,10 +291,10 @@ class PeerAgent(agentsStateManager: AgentsStateDBService,
     * Retrieve new transaction from agent
     *
     * @param partition Transaction partition
-    * @return Transaction UUID
+    * @return TransactionID
     */
-  def generateNewTransaction(partition: Int): UUID = this.synchronized {
-    LockUtil.withLockOrDieDo[UUID](externalAccessLock, (100, TimeUnit.SECONDS), Some(PeerAgent.logger), () => {
+  def generateNewTransaction(partition: Int): Long = this.synchronized {
+    LockUtil.withLockOrDieDo[Long](externalAccessLock, (100, TimeUnit.SECONDS), Some(PeerAgent.logger), () => {
       val master = agentsStateManager.getPartitionMasterInetAddressLocal(partition, null)
       if (PeerAgent.logger.isDebugEnabled) {
         PeerAgent.logger.debug(s"[GET TRANSACTION] Start retrieve transaction for agent with address: {$myInetAddress}, stream: {$streamName}, partition: {$partition} from [MASTER: {$master}].")
@@ -314,12 +313,12 @@ class PeerAgent(agentsStateManager: AgentsStateDBService,
               updateMaster(partition, init = false)
               generateNewTransaction(partition)
 
-            case TransactionResponse(snd, rcv, uuid, p) =>
+            case TransactionResponse(snd, rcv, id, p) =>
               assert(p == partition)
               if (PeerAgent.logger.isDebugEnabled) {
-                PeerAgent.logger.debug(s"[GET TRANSACTION] Finish retrieve transaction for agent with address: {$myInetAddress}, stream: {$streamName}, partition: {$partition} with timeuuid: {${uuid.timestamp()}} from [MASTER: {$master}]s")
+                PeerAgent.logger.debug(s"[GET TRANSACTION] Finish retrieve transaction for agent with address: $myInetAddress, stream: $streamName, partition: $partition with ID: $id from [MASTER: $master]s")
               }
-              uuid
+              id
           }
         } else {
           updateMaster(partition, init = false)
@@ -331,7 +330,7 @@ class PeerAgent(agentsStateManager: AgentsStateDBService,
 
   def notifyMaterialize(msg: TransactionStateMessage, to: String): Unit = {
     if (PeerAgent.logger.isDebugEnabled) {
-      PeerAgent.logger.debug(s"[MATERIALIZE] Send materialize request address\nMe: {$myInetAddress}\nTransaction owner: $to\nStream: $streamName\npartition: ${msg.partition}\nTransaction: ${msg.transactionUUID}")
+      PeerAgent.logger.debug(s"[MATERIALIZE] Send materialize request address\nMe: $myInetAddress\nTransaction owner: $to\nStream: $streamName\npartition: ${msg.partition}\nTransaction: ${msg.transactionID}")
     }
     transport.materializeRequest(to, msg)
   }

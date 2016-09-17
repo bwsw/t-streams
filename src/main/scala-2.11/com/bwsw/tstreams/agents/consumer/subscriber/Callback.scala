@@ -19,14 +19,14 @@ trait Callback[T] {
     *
     * @param consumer  consumer object which is associated with the transaction
     * @param partition partition on which the transaction is
-    * @param uuid      transaction uuid
+    * @param transactionID      transaction ID
     * @param count     amount of data items inside of the transaction
     */
   def onTransactionCall(consumer: TransactionOperator[T],
                         partition: Int,
-                        uuid: java.util.UUID,
+                        transactionID: Long,
                         count: Int) = {
-    val transactionOpt = consumer.buildTransactionObject(partition, uuid, count)
+    val transactionOpt = consumer.buildTransactionObject(partition, transactionID, count)
     transactionOpt.foreach(transaction => onTransaction(consumer, transaction = transaction))
   }
 }

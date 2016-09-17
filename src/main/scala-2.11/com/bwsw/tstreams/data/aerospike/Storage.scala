@@ -1,7 +1,5 @@
 package com.bwsw.tstreams.data.aerospike
 
-import java.util.UUID
-
 import com.aerospike.client._
 import com.bwsw.tstreams.data.IStorage
 import org.slf4j.LoggerFactory
@@ -38,7 +36,7 @@ class Storage(client: AerospikeClient, options: Options) extends IStorage[Array[
     * @param to          Data unique number from which reading will stop
     * @return Queue of object which have storage type
     */
-  override def get(streamName: String, partition: Int, transaction: UUID, from: Int, to: Int): mutable.Queue[Array[Byte]] = {
+  override def get(streamName: String, partition: Int, transaction: Long, from: Int, to: Int): mutable.Queue[Array[Byte]] = {
     val key = new Key(options.namespace, s"$streamName/$partition", transaction.toString)
     val names = (from to to).toList.map(x => x.toString)
     //    logger.debug(s"Start retrieving data from aerospike for streamName: {$streamName}, partition: {$partition}")
@@ -53,7 +51,7 @@ class Storage(client: AerospikeClient, options: Options) extends IStorage[Array[
   }
 
 
-  override def save(transaction: UUID,
+  override def save(transaction: Long,
                     stream: String,
                     partition: Int,
                     ttl: Int,

@@ -30,11 +30,11 @@ object Offset {
   case class DateTime(startTime: Date) extends IOffset
 
   /**
-    * Offset for data retrieving from custom UUID
+    * Offset for data retrieving from custom ID
     *
-    * @param startUUID Start offset in uuid
+    * @param startID Start offset in id
     */
-  case class UUID(startUUID: java.util.UUID) extends IOffset
+  case class ID(startID: Long) extends IOffset
 
 }
 

@@ -1,7 +1,5 @@
 package com.bwsw.tstreams.coordination.messages.master
 
-import java.util.UUID
-
 import com.bwsw.tstreams.common.ProtocolMessageSerializer
 import com.bwsw.tstreams.coordination.messages.state.{TransactionStateMessage, TransactionStatus}
 import com.bwsw.tstreams.coordination.producer.PeerAgent
@@ -74,21 +72,21 @@ case class NewTransactionRequest(senderID: String, receiverID: String, partition
     val master = agent.getAgentsStateManager.getPartitionMasterInetAddressLocal(partition, "")
 
     if (master == agent.getAgentAddress) {
-      val transactionUUID: UUID = agent.getProducer.getNewTransactionUUIDLocal()
-      val response = TransactionResponse(receiverID, senderID, transactionUUID, partition)
+      val transactionID = agent.getProducer.getNewTransactionIDLocal()
+      val response = TransactionResponse(receiverID, senderID, transactionID, partition)
       response.msgID = msgID
       this.respond(response)
 
       if (IMessage.logger.isDebugEnabled)
-        IMessage.logger.debug(s"Responded with early ready virtual transaction: $transactionUUID")
+        IMessage.logger.debug(s"Responded with early ready virtual transaction: $transactionID")
 
       agent.submitPipelinedTaskToCassandraExecutor(partition, () => {
-        agent.getProducer.openTransactionLocal(transactionUUID, partition,
+        agent.getProducer.openTransactionLocal(transactionID, partition,
           onComplete = () => {
-            agent.notifyMaterialize(TransactionStateMessage(transactionUUID, -1, TransactionStatus.materialize, partition, agent.getUniqueAgentID(), -1, 0), senderID)
+            agent.notifyMaterialize(TransactionStateMessage(transactionID, -1, TransactionStatus.materialize, partition, agent.getUniqueAgentID(), -1, 0), senderID)
 
             if (IMessage.logger.isDebugEnabled)
-              IMessage.logger.debug(s"Responded with complete ready transaction: $transactionUUID")
+              IMessage.logger.debug(s"Responded with complete ready transaction: $transactionID")
           })
       })
     } else {
@@ -104,10 +102,10 @@ case class NewTransactionRequest(senderID: String, receiverID: String, partition
   *
   * @param senderID
   * @param receiverID
-  * @param transactionUUID
+  * @param transactionID
   * @param partition
   */
-case class TransactionResponse(senderID: String, receiverID: String, transactionUUID: UUID, partition: Int) extends IMessage
+case class TransactionResponse(senderID: String, receiverID: String, transactionID: Long, partition: Int) extends IMessage
 
 /**
   * Message which is received when due to voting master must be revoked from current agent for certain partition

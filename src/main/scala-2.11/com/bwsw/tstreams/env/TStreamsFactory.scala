@@ -15,7 +15,7 @@ import com.bwsw.tstreams.common.{RoundRobinPolicy, _}
 import com.bwsw.tstreams.converter.IConverter
 import com.bwsw.tstreams.coordination.client.TcpTransport
 import com.bwsw.tstreams.data.IStorage
-import com.bwsw.tstreams.generator.IUUIDGenerator
+import com.bwsw.tstreams.generator.ITransactionGenerator
 import com.bwsw.tstreams.metadata.{MetadataStorage, MetadataStorageFactory}
 import com.bwsw.tstreams.streams.TStream
 import org.slf4j.LoggerFactory
@@ -909,7 +909,7 @@ class TStreamsFactory() {
   private def getBasicConsumerOptions[T](stream: TStream[Array[Byte]],
                                          partitions: Set[Int],
                                          converter: IConverter[Array[Byte], T],
-                                         transactionGenerator: IUUIDGenerator,
+                                         transactionGenerator: ITransactionGenerator,
                                          offset: IOffset,
                                          isUseLastOffset: Boolean = true): com.bwsw.tstreams.agents.consumer.ConsumerOptions[T] = this.synchronized {
     val consumer_transaction_preload = pAsInt(TSF_Dictionary.Consumer.TRANSACTION_PRELOAD, Consumer_transaction_preload_default)
@@ -949,7 +949,7 @@ class TStreamsFactory() {
     * @return
     */
   def getProducer[T](name: String,
-                     transactionGenerator: IUUIDGenerator,
+                     transactionGenerator: ITransactionGenerator,
                      converter: IConverter[T, Array[Byte]],
                      partitions: Set[Int],
                      isLowPriority: Boolean = false
@@ -1069,7 +1069,7 @@ class TStreamsFactory() {
     * @return
     */
   def getConsumer[T](name: String,
-                     transactionGenerator: IUUIDGenerator,
+                     transactionGenerator: ITransactionGenerator,
                      converter: IConverter[Array[Byte], T],
                      partitions: Set[Int],
                      offset: IOffset,
@@ -1104,7 +1104,7 @@ class TStreamsFactory() {
     * @return
     */
   def getSubscriber[T](name: String,
-                       transactionGenerator: IUUIDGenerator,
+                       transactionGenerator: ITransactionGenerator,
                        converter: IConverter[Array[Byte], T],
                        partitions: Set[Int],
                        callback: com.bwsw.tstreams.agents.consumer.subscriber.Callback[T],

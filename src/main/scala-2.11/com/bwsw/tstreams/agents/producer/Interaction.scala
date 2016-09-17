@@ -1,7 +1,5 @@
 package com.bwsw.tstreams.agents.producer
 
-import java.util.UUID
-
 import com.bwsw.tstreams.coordination.producer.PeerAgent
 
 /**
@@ -12,9 +10,9 @@ trait Interaction {
     * Method to implement for concrete producer
     * Need only if this producer is master
     *
-    * @return UUID
+    * @return ID
     */
-  def openTransactionLocal(transactionUUID: UUID, partition: Int, onComplete: () => Unit): Unit
+  def openTransactionLocal(transactionID: Long, partition: Int, onComplete: () => Unit): Unit
 
   /**
     * Agent for producer to provide producers communication

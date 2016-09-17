@@ -43,14 +43,14 @@ object CassandraHelper {
     session.execute(s"CREATE TABLE IF NOT EXISTS $keyspace.stream_commit_last (" +
       s"stream text, " +
       s"partition int, " +
-      s"transaction timeuuid, " +
+      s"transaction bigint, " +
       s"PRIMARY KEY (stream, partition))")
 
     session.execute(s"CREATE TABLE IF NOT EXISTS $keyspace.consumers (" +
       s"name text, " +
       s"stream text, " +
       s"partition int, " +
-      s"last_transaction timeuuid, " +
+      s"last_transaction bigint, " +
       s"PRIMARY KEY (name, stream, partition))")
 
 
@@ -64,14 +64,14 @@ object CassandraHelper {
     session.execute(s"CREATE TABLE IF NOT EXISTS $keyspace.commit_log (" +
       s"stream text, " +
       s"partition int, " +
-      s"transaction timeuuid, " +
+      s"transaction bigint, " +
       s"cnt int, " +
       s"PRIMARY KEY ((stream, partition), transaction))")
 
 
     session.execute(s"CREATE TABLE IF NOT EXISTS $keyspace.generators (" +
       s"name text, " +
-      s"time timeuuid, " +
+      s"time bigint, " +
       s"PRIMARY KEY (name))")
 
   }
@@ -87,7 +87,7 @@ object CassandraHelper {
     session.execute(s"CREATE TABLE IF NOT EXISTS $keyspace.data_queue ( " +
       s"stream text, " +
       s"partition int, " +
-      s"transaction timeuuid, " +
+      s"transaction bigint, " +
       s"seq int, " +
       s"data blob, " +
       s"PRIMARY KEY ((stream, partition), transaction, seq))")
