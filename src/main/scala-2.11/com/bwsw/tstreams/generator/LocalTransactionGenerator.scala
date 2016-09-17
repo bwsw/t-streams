@@ -13,7 +13,7 @@ class LocalTransactionGenerator(val scale: Int = 10000) extends ITransactionGene
   /**
     * @return Transaction ID
     */
-  override def getTransaction(): Long = {
+  override def getTransaction(): Long = this.synchronized {
     val now = System.currentTimeMillis()
     if(now - currentMillis.get > 0) {
       currentMillis.set(now)
