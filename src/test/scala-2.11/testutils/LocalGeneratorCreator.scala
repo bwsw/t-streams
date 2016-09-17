@@ -1,10 +1,12 @@
 package testutils
 
-import com.bwsw.tstreams.generator.LocalTimeUUIDGenerator
+import com.bwsw.tstreams.generator.LocalTransactionGenerator
 
 /**
   * Helper object for creating LocalTimeTransactionGenerator
   */
 object LocalGeneratorCreator {
-  def getGen() = new LocalTimeUUIDGenerator
+  val gen = new LocalTransactionGenerator
+  def getGen() = gen
+  def getTransaction() = gen.getTransaction()
 }

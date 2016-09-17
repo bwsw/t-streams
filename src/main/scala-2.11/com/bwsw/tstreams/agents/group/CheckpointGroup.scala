@@ -149,7 +149,7 @@ class CheckpointGroup(val executors: Int = 1) {
             agent.publish(preCheckpointEvent)
 
             if(logger.isDebugEnabled)
-              logger.debug("PRE event sent for " + transaction.getTransactionUUID.toString)
+              logger.debug("PRE event sent for " + transaction.getTransactionID.toString)
 
             l.countDown()
           }

@@ -1,6 +1,5 @@
 package agents.integration
 
-import java.util.UUID
 import java.util.concurrent.{CountDownLatch, TimeUnit}
 
 import com.bwsw.tstreams.agents.consumer.Offset.Newest
@@ -33,8 +32,8 @@ class TwoProducersAndSubscriberStartsBeforeWriteTests extends FlatSpec with Matc
 
   it should s"Two producers send $COUNT transactions each, subscriber receives ${2 * COUNT} when started after." in {
 
-    val bp = ListBuffer[UUID]()
-    val bs = ListBuffer[UUID]()
+    val bp = ListBuffer[Long]()
+    val bs = ListBuffer[Long]()
 
     val lp2 = new CountDownLatch(1)
     val ls = new CountDownLatch(1)
@@ -62,7 +61,7 @@ class TwoProducersAndSubscriberStartsBeforeWriteTests extends FlatSpec with Matc
       isUseLastOffset = true,
       callback = new Callback[String] {
         override def onTransaction(consumer: TransactionOperator[String], transaction: ConsumerTransaction[String]): Unit = this.synchronized {
-          bs.append(transaction.getTransactionUUID())
+          bs.append(transaction.getTransactionID())
           if (bs.size == 2 * COUNT) {
             ls.countDown()
           }
@@ -74,7 +73,7 @@ class TwoProducersAndSubscriberStartsBeforeWriteTests extends FlatSpec with Matc
         logger.info(s"Producer-1 is master of partition: ${producer1.isMeAMasterOfPartition(0)}")
         for (i <- 0 until COUNT) {
           val t = producer1.newTransaction(policy = NewTransactionProducerPolicy.CheckpointIfOpened)
-          bp.append(t.getTransactionUUID())
+          bp.append(t.getTransactionID())
           lp2.countDown()
           t.send("test")
           t.checkpoint()
@@ -87,7 +86,7 @@ class TwoProducersAndSubscriberStartsBeforeWriteTests extends FlatSpec with Matc
         for (i <- 0 until COUNT) {
           lp2.await()
           val t = producer2.newTransaction(policy = NewTransactionProducerPolicy.CheckpointIfOpened)
-          bp.append(t.getTransactionUUID())
+          bp.append(t.getTransactionID())
           t.send("test")
           t.checkpoint()
         }

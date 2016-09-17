@@ -1,7 +1,5 @@
 package com.bwsw.tstreams.data.hazelcast
 
-import java.util.UUID
-
 import com.bwsw.tstreams.data.IStorage
 import org.slf4j.LoggerFactory
 
@@ -26,7 +24,7 @@ class Storage(map: Factory.StorageMapType) extends IStorage[Array[Byte]] {
     */
   override def get(streamName: String,
                    partition: Int,
-                   transaction: UUID,
+                   transaction: Long,
                    from: Int,
                    to: Int): mutable.Queue[Array[Byte]] = synchronized {
     val key = s"$streamName-$partition-${transaction.toString}"
@@ -54,7 +52,7 @@ class Storage(map: Factory.StorageMapType) extends IStorage[Array[Byte]] {
     * @param data
     * @return
     */
-  override def save(transaction: UUID,
+  override def save(transaction: Long,
                     stream: String,
                     partition: Int,
                     ttl: Int,

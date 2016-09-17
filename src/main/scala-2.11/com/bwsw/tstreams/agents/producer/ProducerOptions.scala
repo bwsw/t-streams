@@ -5,7 +5,7 @@ import java.net.InetSocketAddress
 import com.bwsw.tstreams.common.AbstractPolicy
 import com.bwsw.tstreams.converter.IConverter
 import com.bwsw.tstreams.coordination.client.TcpTransport
-import com.bwsw.tstreams.generator.IUUIDGenerator
+import com.bwsw.tstreams.generator.ITransactionGenerator
 
 import scala.language.existentials
 
@@ -15,16 +15,16 @@ import scala.language.existentials
   * @param writePolicy                  Strategy for selecting next partition
   * @param converter                    User defined or basic converter for converting T objects to Array[Byte] objects(storage object type)
   * @param batchSize                    Insertion Type (only BatchInsert and SingleElementInsert are allowed now)
-  * @param transactionGenerator         Generator for generating UUIDs
+  * @param transactionGenerator         Generator for generating IDs
   * @tparam T User object type
   */
 class ProducerOptions[T](val transactionTTL: Int,
-                                val transactionKeepAliveInterval: Int,
-                                val writePolicy: AbstractPolicy,
-                                val batchSize: Int,
-                                val transactionGenerator: IUUIDGenerator,
-                                val coordinationOptions: CoordinationOptions,
-                                val converter: IConverter[T, Array[Byte]]) {
+                         val transactionKeepAliveInterval: Int,
+                         val writePolicy: AbstractPolicy,
+                         val batchSize: Int,
+                         val transactionGenerator: ITransactionGenerator,
+                         val coordinationOptions: CoordinationOptions,
+                         val converter: IConverter[T, Array[Byte]]) {
 
   /**
     * Transaction minimum ttl time

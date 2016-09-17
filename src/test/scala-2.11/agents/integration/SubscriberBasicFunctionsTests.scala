@@ -1,6 +1,5 @@
 package agents.integration
 
-import java.util.UUID
 import java.util.concurrent.{CountDownLatch, TimeUnit}
 
 import com.bwsw.tstreams.agents.consumer.Offset.Oldest
@@ -124,12 +123,12 @@ class SubscriberBasicFunctionsTests extends FlatSpec with Matchers with BeforeAn
     val l = new CountDownLatch(1)
     var i: Int = 0
     val TOTAL = 1000
-    var uuid: UUID = null
+    var id: Long = 0
     for (it <- 0 until TOTAL) {
       val transaction = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
       transaction.send("test")
       transaction.checkpoint()
-      uuid = transaction.getTransactionUUID()
+      id = transaction.getTransactionID()
     }
     producer.stop()
 

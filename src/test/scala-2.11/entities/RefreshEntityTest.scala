@@ -2,7 +2,6 @@ package entities
 
 import com.bwsw.tstreams.common.CassandraHelper
 import com.bwsw.tstreams.entities.CommitEntity
-import com.datastax.driver.core.utils.UUIDs
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import testutils.{RandomStringCreator, TestUtils}
 
@@ -15,7 +14,7 @@ class RefreshEntityTest extends FlatSpec with Matchers with BeforeAndAfterAll wi
   "After dropping metadata tables and creating them again commit entity" should "work" in {
     val commitEntity = new CommitEntity("commit_log", connectedSession)
     val stream = randomVal
-    val transaction = UUIDs.timeBased()
+    val transaction = System.currentTimeMillis()
     val partition = 10
     val totalCnt = 123
     val ttl = 3

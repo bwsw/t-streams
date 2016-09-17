@@ -31,8 +31,8 @@ class TransactionBufferWorkerTests extends FlatSpec with Matchers {
     itm0.size shouldBe 1
     val itm1 = q.get(100, TimeUnit.MILLISECONDS)
     itm1.size shouldBe 1
-    itm0.head.uuid shouldBe ts0(TransactionBufferTests.OPENED).uuid
-    itm1.head.uuid shouldBe ts1(TransactionBufferTests.OPENED).uuid
+    itm0.head.transactionID shouldBe ts0(TransactionBufferTests.OPENED).transactionID
+    itm1.head.transactionID shouldBe ts1(TransactionBufferTests.OPENED).transactionID
     w.stop()
   }
 
@@ -53,8 +53,8 @@ class TransactionBufferWorkerTests extends FlatSpec with Matchers {
 
     val itm0 = q.get(100, TimeUnit.MILLISECONDS)
     itm0.size shouldBe 2
-    itm0.head.uuid shouldBe ts0(TransactionBufferTests.OPENED).uuid
-    itm0.tail.head.uuid shouldBe ts1(TransactionBufferTests.OPENED).uuid
+    itm0.head.transactionID shouldBe ts0(TransactionBufferTests.OPENED).transactionID
+    itm0.tail.head.transactionID shouldBe ts1(TransactionBufferTests.OPENED).transactionID
 
     val itm1 = q.get(100, TimeUnit.MILLISECONDS)
     itm1 shouldBe null

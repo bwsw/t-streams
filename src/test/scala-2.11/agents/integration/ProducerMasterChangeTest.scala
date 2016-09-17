@@ -4,7 +4,6 @@ package agents.integration
   * Created by mendelbaum_ma on 06.09.16.
   */
 
-import java.util.UUID
 import java.util.concurrent.{CountDownLatch, TimeUnit}
 
 import com.bwsw.tstreams.agents.consumer.Offset.Newest
@@ -34,8 +33,8 @@ class ProducerMasterChangeTest extends FlatSpec with Matchers with BeforeAndAfte
 
   it should "switching the master after 100 transactions " in {
 
-    val bp = ListBuffer[UUID]()
-    val bs = ListBuffer[UUID]()
+    val bp = ListBuffer[Long]()
+    val bs = ListBuffer[Long]()
 
     val lp2 = new CountDownLatch(1)
     val ls = new CountDownLatch(1)
@@ -63,7 +62,7 @@ class ProducerMasterChangeTest extends FlatSpec with Matchers with BeforeAndAfte
       isUseLastOffset = true,
       callback = new Callback[String] {
         override def onTransaction(consumer: TransactionOperator[String], transaction: ConsumerTransaction[String]): Unit = this.synchronized {
-          bs.append(transaction.getTransactionUUID())
+          bs.append(transaction.getTransactionID())
           if (bs.size == 1100) {
             ls.countDown()
           }
@@ -74,7 +73,7 @@ class ProducerMasterChangeTest extends FlatSpec with Matchers with BeforeAndAfte
         logger.info(s"Producer-1 is master of partition: ${producer1.isMeAMasterOfPartition(0)}")
         for (i <- 0 until 100) {
           val t = producer1.newTransaction(policy = NewTransactionProducerPolicy.CheckpointIfOpened)
-          bp.append(t.getTransactionUUID())
+          bp.append(t.getTransactionID())
           lp2.countDown()
           t.send("test")
           t.checkpoint()
@@ -88,7 +87,7 @@ class ProducerMasterChangeTest extends FlatSpec with Matchers with BeforeAndAfte
         for (i <- 0 until 1000) {
           lp2.await()
           val t = producer2.newTransaction(policy = NewTransactionProducerPolicy.CheckpointIfOpened)
-          bp.append(t.getTransactionUUID())
+          bp.append(t.getTransactionID())
           t.send("test")
           t.checkpoint()
         }

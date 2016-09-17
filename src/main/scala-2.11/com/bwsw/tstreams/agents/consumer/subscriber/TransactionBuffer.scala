@@ -1,8 +1,7 @@
 package com.bwsw.tstreams.agents.consumer.subscriber
 
-import java.util.UUID
 
-import com.bwsw.tstreams.common.UUIDComparator
+import com.bwsw.tstreams.common.TransactionComparator
 import com.bwsw.tstreams.coordination.messages.state.TransactionStatus
 
 import scala.collection.mutable
@@ -20,20 +19,20 @@ class TransactionBuffer(queue: QueueBuilder.QueueType) {
 
 
   val counters = TransactionBufferCounters()
-  var lastTransaction: UUID = null
+  var lastTransaction = 0L
 
   var stateList = ListBuffer[TransactionState]()
-  val stateMap = mutable.HashMap[UUID, TransactionState]()
+  val stateMap = mutable.HashMap[Long, TransactionState]()
 
   def getQueue(): QueueBuilder.QueueType = queue
 
   /**
-    * Returns current state by transaction uuid
+    * Returns current state by transaction ID
     *
-    * @param uuid
+    * @param id
     * @return
     */
-  def getState(uuid: UUID): Option[TransactionState] = this.synchronized(stateMap.get(uuid))
+  def getState(id: Long): Option[TransactionState] = this.synchronized(stateMap.get(id))
 
   /**
     * This method updates buffer with new state
@@ -54,18 +53,18 @@ class TransactionBuffer(queue: QueueBuilder.QueueType) {
 
     // avoid transactions which are delayed
     if (update.state == TransactionStatus.opened) {
-      if (lastTransaction != null
-        && UUIDComparator.compare(update.uuid, lastTransaction) != 1) {
-        Subscriber.logger.warn(s"Unexpected transaction comparison result ${update.uuid} vs $lastTransaction detected.")
+      if (lastTransaction != 0L
+        && TransactionComparator.compare(update.transactionID, lastTransaction) != 1) {
+        Subscriber.logger.warn(s"Unexpected transaction comparison result ${update.transactionID} vs $lastTransaction detected.")
         return
       }
-      lastTransaction = update.uuid
+      lastTransaction = update.transactionID
     }
 
 
-    if (stateMap.contains(update.uuid)) {
-      val orderID = stateMap.get(update.uuid).get.queueOrderID
-      val ts = stateMap.get(update.uuid).get
+    if (stateMap.contains(update.transactionID)) {
+      val orderID = stateMap.get(update.transactionID).get.queueOrderID
+      val ts = stateMap.get(update.transactionID).get
       /*
       * state switching system (almost finite automate)
       * */
@@ -91,7 +90,7 @@ class TransactionBuffer(queue: QueueBuilder.QueueType) {
         case (TransactionStatus.opened, TransactionStatus.cancel) =>
           ts.state = TransactionStatus.invalid
           ts.ttl = 0L
-          stateMap.remove(update.uuid)
+          stateMap.remove(update.transactionID)
 
         /*
         from update -> * no implement because opened
@@ -114,7 +113,7 @@ class TransactionBuffer(queue: QueueBuilder.QueueType) {
         case (TransactionStatus.preCheckpoint, TransactionStatus.cancel) =>
           ts.state = TransactionStatus.invalid
           ts.ttl = 0L
-          stateMap.remove(update.uuid)
+          stateMap.remove(update.transactionID)
 
         case (TransactionStatus.preCheckpoint, TransactionStatus.postCheckpoint) =>
           ts.queueOrderID = orderID
@@ -133,7 +132,7 @@ class TransactionBuffer(queue: QueueBuilder.QueueType) {
     } else {
       if (update.state == TransactionStatus.opened) {
         update.ttl = System.currentTimeMillis() + update.ttl * 1000
-        stateMap.put(update.uuid, update)
+        stateMap.put(update.transactionID, update)
         stateList.append(update)
       }
     }
@@ -151,7 +150,7 @@ class TransactionBuffer(queue: QueueBuilder.QueueType) {
     if(meet.nonEmpty) {
       stateList.remove(0, meet.size)
 
-      meet.foreach(ts => stateMap.remove(ts.uuid))
+      meet.foreach(ts => stateMap.remove(ts.transactionID))
 
       queue.put(meet.filter(ts =>
         (ts.state == TransactionStatus.postCheckpoint)

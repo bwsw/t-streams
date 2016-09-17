@@ -55,7 +55,7 @@ class CheckpointGroupCheckpointTest extends FlatSpec with Matchers with BeforeAn
     group.add(consumer)
 
     val transaction1 = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
-    logger.info("Transaction 1 is " + transaction1.getTransactionUUID.toString)
+    logger.info("Transaction 1 is " + transaction1.getTransactionID.toString)
     transaction1.send("info1")
     transaction1.checkpoint()
 
@@ -64,7 +64,7 @@ class CheckpointGroupCheckpointTest extends FlatSpec with Matchers with BeforeAn
 
     //open transaction without close
     val transaction2 = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened, 1)
-    logger.info("Transaction 2 is " + transaction2.getTransactionUUID.toString)
+    logger.info("Transaction 2 is " + transaction2.getTransactionID.toString)
     transaction2.send("info2")
 
     group.checkpoint()

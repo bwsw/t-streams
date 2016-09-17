@@ -18,7 +18,7 @@ class ProducerTransactionData[T](transaction: ProducerTransaction[T], ttl: Int, 
 
   def save(): () => Unit = this.synchronized {
     val job = storage.save(
-      transaction.getTransactionUUID(),
+      transaction.getTransactionID(),
       transaction.getTransactionOwner().stream.name,
       transaction.getPartition,
       ttl,
