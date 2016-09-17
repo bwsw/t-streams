@@ -1,6 +1,5 @@
 package com.bwsw.tstreams.agents.producer
 
-import java.util.UUID
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.locks.ReentrantLock
 import java.util.concurrent.{CountDownLatch, TimeUnit}
@@ -91,7 +90,7 @@ class Producer[T](var name: String,
 
   /**
     * P2P Agent for producers interaction
-    * (getNewTransaction uuid; publish openTransaction event; publish closeTransaction event)
+    * (getNewTransaction id; publish openTransaction event; publish closeTransaction event)
     */
   override val p2pAgent: PeerAgent = new PeerAgent(
     agentsStateManager = agentsStateManager,
@@ -182,10 +181,10 @@ class Producer[T](var name: String,
     materializationGovernor.protect(p)
 
 
-    val transactionUUID = p2pAgent.generateNewTransaction(p)
+    val transactionID = p2pAgent.generateNewTransaction(p)
     if (logger.isDebugEnabled)
-      logger.debug(s"[NEW_TRANSACTION PARTITION_$p] uuid=${transactionUUID.timestamp()}")
-    val transaction = new ProducerTransaction[T](p, transactionUUID, this)
+      logger.debug(s"[NEW_TRANSACTION PARTITION_$p] ID=$transactionID")
+    val transaction = new ProducerTransaction[T](p, transactionID, this)
 
     openTransactions.put(p, transaction)
     materializationGovernor.unprotect(p)
@@ -249,22 +248,20 @@ class Producer[T](var name: String,
     *
     * @return
     */
-  def getNewTransactionUUIDLocal(): UUID = {
-    val transactionUuid = producerOptions.transactionGenerator.getTimeUUID()
-    transactionUuid
-  }
+  def getNewTransactionIDLocal() =
+    producerOptions.transactionGenerator.getTransaction()
 
   /**
     * Method to implement for concrete producer PeerAgent method
     * Need only if this producer is master
     *
-    * @return UUID
+    * @return ID
     */
-  override def openTransactionLocal(transactionUUID: UUID, partition: Int, onComplete: () => Unit): Unit = {
+  override def openTransactionLocal(transactionID: Long, partition: Int, onComplete: () => Unit): Unit = {
 
     p2pAgent.submitPipelinedTaskToPublishExecutors(partition, () => {
       val msg = TransactionStateMessage(
-        transactionUUID = transactionUUID,
+        transactionID = transactionID,
         ttl = producerOptions.transactionTTL,
         status = TransactionStatus.opened,
         partition = partition,
@@ -273,13 +270,13 @@ class Producer[T](var name: String,
         count = 0)
       subscriberNotifier.publish(msg, () => ())
       if (logger.isDebugEnabled)
-        logger.debug(s"Producer $name - [GET_LOCAL_TRANSACTION] update with message partition=$partition uuid=${transactionUUID.timestamp()} opened")
+        logger.debug(s"Producer $name - [GET_LOCAL_TRANSACTION] update with message partition=$partition ID=$transactionID opened")
     })
 
     stream.metadataStorage.commitEntity.commitAsync(
       streamName = stream.getName,
       partition = partition,
-      transaction = transactionUUID,
+      transaction = transactionID,
       totalCnt = -1,
       ttl = producerOptions.transactionTTL,
       resourceCounter = pendingCassandraTasks,
@@ -344,8 +341,8 @@ class Producer[T](var name: String,
     val opt = getOpenedTransactionForPartition(msg.partition)
     assert(opt.isDefined)
     if (logger.isDebugEnabled)
-      logger.debug(s"In Map Transaction: ${opt.get.getTransactionUUID.toString}\nIn Request Transaction: ${msg.transactionUUID}")
-    assert(opt.get.getTransactionUUID == msg.transactionUUID)
+      logger.debug(s"In Map Transaction: ${opt.get.getTransactionID.toString}\nIn Request Transaction: ${msg.transactionID}")
+    assert(opt.get.getTransactionID == msg.transactionID)
     assert(msg.status == TransactionStatus.materialize)
     opt.get.makeMaterialized()
     if (logger.isDebugEnabled)

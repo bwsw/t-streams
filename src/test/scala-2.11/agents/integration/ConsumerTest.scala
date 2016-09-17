@@ -1,12 +1,10 @@
 package agents.integration
 
-import java.util.UUID
 
 import com.bwsw.tstreams.agents.consumer.Offset.Oldest
 import com.bwsw.tstreams.agents.producer.NewTransactionProducerPolicy
 import com.bwsw.tstreams.entities.CommitEntity
 import com.bwsw.tstreams.env.TSF_Dictionary
-import com.datastax.driver.core.utils.UUIDs
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import testutils._
 
@@ -23,9 +21,11 @@ class ConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll with Te
     setProperty(TSF_Dictionary.Consumer.TRANSACTION_PRELOAD, 10).
     setProperty(TSF_Dictionary.Consumer.DATA_PRELOAD, 10)
 
+  val gen = LocalGeneratorCreator.getGen()
+
   val consumer = f.getConsumer[String](
     name = "test_consumer",
-    transactionGenerator = LocalGeneratorCreator.getGen(),
+    transactionGenerator = gen,
     converter = arrayByteToStringConverter,
     partitions = Set(0, 1, 2),
     offset = Oldest,
@@ -33,7 +33,7 @@ class ConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll with Te
 
   val producer = f.getProducer[String](
     name = "test_producer",
-    transactionGenerator = LocalGeneratorCreator.getGen(),
+    transactionGenerator = gen,
     converter = stringToArrayByteConverter,
     partitions = Set(0, 1, 2),
     isLowPriority = false)
@@ -48,14 +48,14 @@ class ConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll with Te
     val totalDataInTransaction = 10
     val data = (for (i <- 0 until totalDataInTransaction) yield randomString).toList.sorted
     val transaction = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened, 1)
-    val transactionUUID = transaction.getTransactionUUID
+    val transactionID = transaction.getTransactionID
     data.foreach(x => transaction.send(x))
     transaction.checkpoint()
     var checkVal = true
 
-    val consumedTransaction = consumer.getTransactionById(1, transactionUUID).get
+    val consumedTransaction = consumer.getTransactionById(1, transactionID).get
     checkVal = consumedTransaction.getPartition == transaction.getPartition
-    checkVal = consumedTransaction.getTransactionUUID == transactionUUID
+    checkVal = consumedTransaction.getTransactionID == transactionID
     checkVal = consumedTransaction.getAll().sorted == data
 
     checkVal shouldEqual true
@@ -68,20 +68,20 @@ class ConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll with Te
 
   "consumer.getLastTransaction" should "return last closed transaction" in {
     val commitEntity = new CommitEntity("commit_log", cluster.connect(randomKeyspace))
-    val transactions = for (i <- 0 until 100) yield UUIDs.timeBased()
-    val transaction: UUID = transactions.head
+    val transactions = for (i <- 0 until 100) yield LocalGeneratorCreator.getTransaction()
+    val transaction = transactions.head
     commitEntity.commit("test_stream", 1, transactions.head, 1, 120)
-    transactions.drop(1) foreach { x =>
-      commitEntity.commit("test_stream", 1, x, -1, 120)
+    transactions.drop(1) foreach { t =>
+      commitEntity.commit("test_stream", 1, t, -1, 120)
     }
     val retrievedTransaction = consumer.getLastTransaction(partition = 1).get
-    retrievedTransaction.getTransactionUUID shouldEqual transaction
+    retrievedTransaction.getTransactionID shouldEqual transaction
   }
 
   "consumer.getTransactionsFromTo" should "return all transactions if no incomplete" in {
     val commitEntity = new CommitEntity("commit_log", cluster.connect(randomKeyspace))
     val ALL = 100
-    val transactions = for (i <- 0 until ALL) yield UUIDs.timeBased()
+    val transactions = for (i <- 0 until ALL) yield LocalGeneratorCreator.getTransaction()
     val firstTransaction = transactions.head
     val lastTransaction = transactions.last
     transactions foreach { x =>
@@ -95,12 +95,12 @@ class ConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll with Te
     val commitEntity = new CommitEntity("commit_log", cluster.connect(randomKeyspace))
     val FIRST = 30
     val LAST = 100
-    val transactions1 = for (i <- 0 until FIRST) yield UUIDs.timeBased()
+    val transactions1 = for (i <- 0 until FIRST) yield LocalGeneratorCreator.getTransaction()
     transactions1 foreach { x =>
       commitEntity.commit("test_stream", 1, x, 1, 120)
     }
-    commitEntity.commit("test_stream", 1, UUIDs.timeBased(), -1, 120)
-    val transactions2 = for (i <- FIRST until LAST) yield UUIDs.timeBased()
+    commitEntity.commit("test_stream", 1, LocalGeneratorCreator.getTransaction(), -1, 120)
+    val transactions2 = for (i <- FIRST until LAST) yield LocalGeneratorCreator.getTransaction()
     transactions2 foreach { x =>
       commitEntity.commit("test_stream", 1, x, 1, 120)
     }
@@ -116,7 +116,7 @@ class ConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll with Te
   "consumer.getTransactionsFromTo" should "return none if empty" in {
     val commitEntity = new CommitEntity("commit_log", cluster.connect(randomKeyspace))
     val ALL = 100
-    val transactions = for (i <- 0 until ALL) yield UUIDs.timeBased()
+    val transactions = for (i <- 0 until ALL) yield LocalGeneratorCreator.getTransaction()
     val firstTransaction = transactions.head
     val lastTransaction = transactions.last
     val res = consumer.getTransactionsFromTo(1, firstTransaction, lastTransaction)
@@ -126,7 +126,7 @@ class ConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll with Te
   "consumer.getTransactionsFromTo" should "return none if to < from" in {
     val commitEntity = new CommitEntity("commit_log", cluster.connect(randomKeyspace))
     val ALL = 100
-    val transactions = for (i <- 0 until ALL) yield UUIDs.timeBased()
+    val transactions = for (i <- 0 until ALL) yield LocalGeneratorCreator.getTransaction()
     val firstTransaction = transactions.head
     val lastTransaction = transactions.tail.tail.tail.head
     transactions foreach { x =>

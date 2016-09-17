@@ -7,7 +7,7 @@ import com.bwsw.tstreams.agents.consumer.Offset.IOffset
 import com.bwsw.tstreams.agents.consumer.subscriber.QueueBuilder.InMemory
 import com.bwsw.tstreams.common.AbstractPolicy
 import com.bwsw.tstreams.converter.IConverter
-import com.bwsw.tstreams.generator.IUUIDGenerator
+import com.bwsw.tstreams.generator.ITransactionGenerator
 
 /**
   * Created by Ivan Kudryavtsev on 19.08.16.
@@ -35,7 +35,7 @@ case class SubscriberOptions[T](val transactionsPreload: Int,
                                 val converter: IConverter[Array[Byte], T],
                                 val readPolicy: AbstractPolicy,
                                 val offset: IOffset,
-                                val transactionGenerator: IUUIDGenerator,
+                                val transactionGenerator: ITransactionGenerator,
                                 val useLastOffset: Boolean,
                                 val agentAddress: String,
                                 val zkRootPath: String,

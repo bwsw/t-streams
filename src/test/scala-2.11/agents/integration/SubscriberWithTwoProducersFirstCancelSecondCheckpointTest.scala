@@ -4,7 +4,6 @@ package agents.integration
   * Created by mendelbaum_ma on 08.09.16.
   */
 
-import java.util.UUID
 import java.util.concurrent.{CountDownLatch, TimeUnit}
 
 import com.bwsw.tstreams.agents.consumer.Offset.Newest
@@ -31,9 +30,9 @@ class SubscriberWithTwoProducersFirstCancelSecondCheckpointTest extends FlatSpec
     setProperty(TSF_Dictionary.Consumer.DATA_PRELOAD, 10)
   it should "Integration MixIn checkpoint and cancel must be correctly processed on Subscriber " in {
 
-    val bp1 = ListBuffer[UUID]()
-    val bp2 = ListBuffer[UUID]()
-    val bs = ListBuffer[UUID]()
+    val bp1 = ListBuffer[Long]()
+    val bp2 = ListBuffer[Long]()
+    val bs = ListBuffer[Long]()
 
     val lp2 = new CountDownLatch(1)
     val ls = new CountDownLatch(1)
@@ -60,7 +59,7 @@ class SubscriberWithTwoProducersFirstCancelSecondCheckpointTest extends FlatSpec
       isUseLastOffset = true,
       callback = new Callback[String] {
         override def onTransaction(consumer: TransactionOperator[String], transaction: ConsumerTransaction[String]): Unit = this.synchronized {
-          bs.append(transaction.getTransactionUUID())
+          bs.append(transaction.getTransactionID())
           ls.countDown()
         }
       })
@@ -69,7 +68,7 @@ class SubscriberWithTwoProducersFirstCancelSecondCheckpointTest extends FlatSpec
       override def run(): Unit = {
         val transaction = producer1.newTransaction(policy = NewTransactionProducerPolicy.CheckpointIfOpened)
         lp2.countDown()
-        bp1.append(transaction.getTransactionUUID())
+        bp1.append(transaction.getTransactionID())
         transaction.send("test")
         transaction.cancel()
       }
@@ -79,7 +78,7 @@ class SubscriberWithTwoProducersFirstCancelSecondCheckpointTest extends FlatSpec
       override def run(): Unit = {
         lp2.await()
         val t = producer2.newTransaction(policy = NewTransactionProducerPolicy.CheckpointIfOpened)
-        bp2.append(t.getTransactionUUID())
+        bp2.append(t.getTransactionID())
         t.send("test")
         t.checkpoint()
       }

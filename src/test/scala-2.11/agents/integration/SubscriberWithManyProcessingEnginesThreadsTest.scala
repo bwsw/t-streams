@@ -8,7 +8,7 @@ import com.bwsw.tstreams.agents.consumer.{ConsumerTransaction, TransactionOperat
 import com.bwsw.tstreams.agents.producer.NewTransactionProducerPolicy
 import com.bwsw.tstreams.converter.{ArrayByteToStringConverter, StringToArrayByteConverter}
 import com.bwsw.tstreams.env.TSF_Dictionary
-import com.bwsw.tstreams.generator.LocalTimeUUIDGenerator
+import com.bwsw.tstreams.generator.LocalTransactionGenerator
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import testutils.TestUtils
 
@@ -42,7 +42,7 @@ class SubscriberWithManyProcessingEnginesThreadsTest extends FlatSpec with Match
 
     val subscriber = f.getSubscriber[String](
       name = "test_subscriber", // name of the subscribing consumer
-      transactionGenerator = new LocalTimeUUIDGenerator, // where it can get transaction uuids
+      transactionGenerator = new LocalTransactionGenerator, // where it can get transaction ids
       converter = new ArrayByteToStringConverter, // vice versa converter to string
       partitions = PARTITIONS, // active partitions
       offset = Newest, // it will start from newest available partitions
@@ -66,7 +66,7 @@ class SubscriberWithManyProcessingEnginesThreadsTest extends FlatSpec with Match
         // create producer
         val producer = f.getProducer[String](
           name = "test_producer", // name of the producer
-          transactionGenerator = new LocalTimeUUIDGenerator, // where it will get new transactions
+          transactionGenerator = new LocalTransactionGenerator, // where it will get new transactions
           converter = new StringToArrayByteConverter, // converter from String to internal data presentation
           partitions = PARTITIONS, // active partitions
           isLowPriority = false) // agent can be a master

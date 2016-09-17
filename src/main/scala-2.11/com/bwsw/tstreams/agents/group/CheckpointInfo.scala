@@ -1,7 +1,5 @@
 package com.bwsw.tstreams.agents.group
 
-import java.util.UUID
-
 import com.bwsw.tstreams.agents.producer.ProducerTransaction
 import com.bwsw.tstreams.coordination.messages.state.TransactionStateMessage
 import com.bwsw.tstreams.coordination.producer.PeerAgent
@@ -37,7 +35,7 @@ case class ProducerCheckpointInfo(transactionRef: ProducerTransaction[_],
                                   postCheckpointEvent: TransactionStateMessage,
                                   streamName: String,
                                   partition: Int,
-                                  transaction: UUID,
+                                  transaction: Long,
                                   totalCnt: Int,
                                   ttl: Int) extends CheckpointInfo
 
@@ -52,4 +50,4 @@ case class ProducerCheckpointInfo(transactionRef: ProducerTransaction[_],
 case class ConsumerCheckpointInfo(name: String,
                                   stream: String,
                                   partition: Int,
-                                  offset: UUID) extends CheckpointInfo
+                                  offset: Long) extends CheckpointInfo

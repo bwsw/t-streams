@@ -2,7 +2,6 @@ package com.bwsw.tstreams.data.cassandra
 
 import java.nio.ByteBuffer
 import java.util
-import java.util.UUID
 
 import com.bwsw.tstreams.data.IStorage
 import com.datastax.driver.core._
@@ -44,16 +43,14 @@ class Storage(cluster: Cluster, session: Session, keyspace: String) extends ISto
     */
   override def get(streamName: String,
                    partition: Int,
-                   transaction: UUID,
+                   transaction: Long,
                    from: Int,
                    to: Int): scala.collection.mutable.Queue[Array[Byte]] = {
-    val values: List[AnyRef] = List(streamName, new Integer(partition), transaction, new Integer(from), new Integer(to), new Integer(to - from + 1))
+    val values: List[AnyRef] = List(streamName, new Integer(partition), new java.lang.Long(transaction), new Integer(from), new Integer(to), new Integer(to - from + 1))
 
     val statementWithBindings = selectStatement.bind(values: _*)
 
-    //    logger.debug(s"start retrieving data for stream:{$streamName}, partition:{$partition}, from:{$from}, to:{$to}\n")
     val selected: util.List[Row] = session.execute(statementWithBindings).all()
-    //    logger.debug(s"finished retrieving data for stream:{$streamName}, partition:{$partition}, from:{$from}, to:{$to}\n")
 
     val it = selected.iterator()
     val data = scala.collection.mutable.Queue[Array[Byte]]()
@@ -73,7 +70,7 @@ class Storage(cluster: Cluster, session: Session, keyspace: String) extends ISto
     */
   override def isClosed(): Boolean = session.isClosed
 
-  override def save(transaction: UUID,
+  override def save(transaction: Long,
                     stream: String,
                     partition: Int,
                     ttl: Int,
@@ -87,7 +84,7 @@ class Storage(cluster: Cluster, session: Session, keyspace: String) extends ISto
       val statementWithBindings = insertStatement.bind(
         stream,
         new Integer(partition),
-        transaction,
+        new java.lang.Long(transaction),
         new Integer(i),
         ByteBuffer.wrap(x),
         new Integer(ttl))

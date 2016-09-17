@@ -57,15 +57,15 @@ class ConsumerCheckpointTests extends FlatSpec with Matchers with BeforeAndAfter
     producer.checkpoint()
 
     c1.start()
-    c1.getTransactionById(0, t1.getTransactionUUID()).isDefined shouldBe true
-    c1.getTransactionById(0, t2.getTransactionUUID()).isDefined shouldBe true
+    c1.getTransactionById(0, t1.getTransactionID()).isDefined shouldBe true
+    c1.getTransactionById(0, t2.getTransactionID()).isDefined shouldBe true
 
-    c1.getTransaction(0).get.getTransactionUUID() shouldBe t1.getTransactionUUID()
+    c1.getTransaction(0).get.getTransactionID() shouldBe t1.getTransactionID()
     c1.checkpoint()
     c1.stop()
 
     c2.start()
-    c2.getTransaction(0).get.getTransactionUUID() shouldBe t2.getTransactionUUID()
+    c2.getTransaction(0).get.getTransactionID() shouldBe t2.getTransactionID()
     c2.checkpoint()
     c2.getTransaction(0).isDefined shouldBe false
     c2.stop()

@@ -1,7 +1,5 @@
 package com.bwsw.tstreams.entities
 
-import java.util.UUID
-
 import com.datastax.driver.core.{BatchStatement, Session}
 
 /**
@@ -50,10 +48,10 @@ class ConsumerEntity(entityName: String, session: Session) {
     * @param stream                      Name of the specific stream
     * @param partitionAndLastTransaction Set of partition and last transaction pairs to save
     */
-  def saveBatchOffset(name: String, stream: String, partitionAndLastTransaction: scala.collection.mutable.Map[Int, UUID]): Unit = {
+  def saveBatchOffset(name: String, stream: String, partitionAndLastTransaction: scala.collection.mutable.Map[Int, Long]): Unit = {
     val batchStatement = new BatchStatement()
     partitionAndLastTransaction.map { case (partition, lastTransaction) =>
-      val values: List[AnyRef] = List(name, stream, new Integer(partition), lastTransaction)
+      val values: List[AnyRef] = List(name, stream, new Integer(partition), new java.lang.Long(lastTransaction))
       val statementWithBindings = saveSingleOffsetStatement.bind(values: _*)
       batchStatement.add(statementWithBindings)
     }
@@ -68,8 +66,8 @@ class ConsumerEntity(entityName: String, session: Session) {
     * @param partition Name of the specific partition
     * @param offset    Offset to save
     */
-  def saveSingleOffset(name: String, stream: String, partition: Int, offset: UUID): Unit = {
-    val values: List[AnyRef] = List(name, stream, new Integer(partition), offset)
+  def saveSingleOffset(name: String, stream: String, partition: Int, offset: Long): Unit = {
+    val values: List[AnyRef] = List(name, stream, new Integer(partition), new java.lang.Long(offset))
     val statementWithBindings = saveSingleOffsetStatement.bind(values: _*)
     session.execute(statementWithBindings)
   }
@@ -82,10 +80,10 @@ class ConsumerEntity(entityName: String, session: Session) {
     * @param partition Name of the specific partition
     * @return Offset
     */
-  def getLastSavedOffset(name: String, stream: String, partition: Int): UUID = {
+  def getLastSavedOffset(name: String, stream: String, partition: Int): Long = {
     val values = List(name, stream, new Integer(partition))
     val statementWithBindings = getOffsetStatement.bind(values: _*)
     val selected = session.execute(statementWithBindings).all()
-    selected.get(0).getUUID("last_transaction")
+    selected.get(0).getLong("last_transaction")
   }
 }

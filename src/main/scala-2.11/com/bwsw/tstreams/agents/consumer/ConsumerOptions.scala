@@ -5,7 +5,7 @@ import java.net.InetSocketAddress
 import com.bwsw.tstreams.agents.consumer.Offset.IOffset
 import com.bwsw.tstreams.common.AbstractPolicy
 import com.bwsw.tstreams.converter.IConverter
-import com.bwsw.tstreams.generator.IUUIDGenerator
+import com.bwsw.tstreams.generator.ITransactionGenerator
 
 /**
   * @param converter            User defined or predefined converter which convert storage type into user type
@@ -15,7 +15,7 @@ import com.bwsw.tstreams.generator.IUUIDGenerator
   * @param transactionsPreload  Buffer size of preloaded transactions
   * @param dataPreload          Buffer size of preloaded data for each consumed transaction
   * @param readPolicy           Strategy how to read from concrete stream
-  * @param transactionGenerator Generator for generating UUIDs
+  * @param transactionGenerator Generator for generating IDs
   * @tparam T User type
   */
 case class ConsumerOptions[T](val transactionsPreload: Int,
@@ -23,7 +23,7 @@ case class ConsumerOptions[T](val transactionsPreload: Int,
                               val converter: IConverter[Array[Byte], T],
                               val readPolicy: AbstractPolicy,
                               val offset: IOffset,
-                              val transactionGenerator: IUUIDGenerator,
+                              val transactionGenerator: ITransactionGenerator,
                               val useLastOffset: Boolean = true) {
   if (transactionsPreload < 1)
     throw new IllegalArgumentException("Incorrect transactionPreload value, should be greater than or equal to one.")

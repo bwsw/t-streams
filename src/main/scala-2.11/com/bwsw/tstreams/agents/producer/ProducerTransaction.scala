@@ -1,6 +1,5 @@
 package com.bwsw.tstreams.agents.producer
 
-import java.util.UUID
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantLock
 
@@ -21,11 +20,11 @@ object ProducerTransaction {
   *
   * @param partition        Concrete partition for saving this transaction
   * @param transactionOwner Producer class which was invoked newTransaction method
-  * @param transactionUUID  UUID for this transaction
+  * @param transactionID  ID for this transaction
   * @tparam T User data type
   */
 class ProducerTransaction[T](partition: Int,
-                             transactionUUID: UUID,
+                             transactionID: Long,
                              transactionOwner: Producer[T]) extends IProducerTransaction[T] {
 
   private val transactionLock = new ReentrantLock()
@@ -47,7 +46,7 @@ class ProducerTransaction[T](partition: Int,
   /**
     * BasicProducerTransaction logger for logging
     */
-  ProducerTransaction.logger.debug(s"Open transaction $getTransactionUUID for\nstream, partition: ${transactionOwner.stream.getName}, ${}")
+  ProducerTransaction.logger.debug(s"Open transaction $getTransactionID for\nstream, partition: ${transactionOwner.stream.getName}, ${}")
 
   /**
     *
@@ -66,22 +65,22 @@ class ProducerTransaction[T](partition: Int,
     state.makeMaterialized()
   }
 
-  override def toString(): String = s"producer.Transaction(uuid=$transactionUUID, partition=$partition, count=${getDataItemsCount()})"
+  override def toString(): String = s"producer.Transaction(ID=$transactionID, partition=$partition, count=${getDataItemsCount()})"
 
   def awaitMaterialized(): Unit = {
     if (ProducerTransaction.logger.isDebugEnabled) {
-      ProducerTransaction.logger.debug(s"Await for transaction $getTransactionUUID to be materialized\nfor stream,partition : ${transactionOwner.stream.getName},$partition")
+      ProducerTransaction.logger.debug(s"Await for transaction $getTransactionID to be materialized\nfor stream,partition : ${transactionOwner.stream.getName},$partition")
     }
     state.awaitMaterialization(transactionOwner.producerOptions.coordinationOptions.transport.getTimeout())
     if (ProducerTransaction.logger.isDebugEnabled) {
-      ProducerTransaction.logger.debug(s"Transaction $getTransactionUUID is materialized\nfor stream,partition : ${transactionOwner.stream.getName}, $partition")
+      ProducerTransaction.logger.debug(s"Transaction $getTransactionID is materialized\nfor stream,partition : ${transactionOwner.stream.getName}, $partition")
     }
   }
 
   /**
-    * Return transaction UUID
+    * Return transaction ID
     */
-  def getTransactionUUID(): UUID = transactionUUID
+  def getTransactionID(): Long = transactionID
 
   /**
     * Return current transaction amount of data
@@ -130,11 +129,11 @@ class ProducerTransaction[T](partition: Int,
     transactionOwner.stream.metadataStorage.commitEntity.deleteAsync(
       streamName = transactionOwner.stream.getName,
       partition = partition,
-      transaction = transactionUUID,
+      transaction = transactionID,
       executor = transactionOwner.backendActivityService,
       resourceCounter = transactionOwner.pendingCassandraTasks,
       function = () => {
-        val msg = TransactionStateMessage(transactionUUID = transactionUUID,
+        val msg = TransactionStateMessage(transactionID = transactionID,
           ttl = -1,
           status = TransactionStatus.cancel,
           partition = partition,
@@ -143,7 +142,7 @@ class ProducerTransaction[T](partition: Int,
           count = 0)
         transactionOwner.p2pAgent.publish(msg)
         if (ProducerTransaction.logger.isDebugEnabled) {
-          ProducerTransaction.logger.debug(s"[CANCEL PARTITION_${msg.partition}] ts=${msg.transactionUUID.toString} status=${msg.status.toString}")
+          ProducerTransaction.logger.debug(s"[CANCEL PARTITION_${msg.partition}] ts=${msg.transactionID.toString} status=${msg.status.toString}")
         }
       })
   }
@@ -165,7 +164,7 @@ class ProducerTransaction[T](partition: Int,
 
   private def checkpointPostEventPart(): Unit = {
     if (ProducerTransaction.logger.isDebugEnabled) {
-      ProducerTransaction.logger.debug(s"[COMMIT PARTITION_{}] ts={}", partition, transactionUUID.toString)
+      ProducerTransaction.logger.debug(s"[COMMIT PARTITION_{}] ts={}", partition, transactionID.toString)
     }
 
     //debug purposes only
@@ -183,7 +182,7 @@ class ProducerTransaction[T](partition: Int,
     }
 
     transactionOwner.p2pAgent.publish(TransactionStateMessage(
-      transactionUUID = transactionUUID,
+      transactionID = transactionID,
       ttl = -1,
       status = TransactionStatus.postCheckpoint,
       partition = partition,
@@ -193,7 +192,7 @@ class ProducerTransaction[T](partition: Int,
     ))
 
     if (ProducerTransaction.logger.isDebugEnabled) {
-      ProducerTransaction.logger.debug("[FINAL CHECKPOINT PARTITION_{}] ts={}", partition, transactionUUID.toString)
+      ProducerTransaction.logger.debug("[FINAL CHECKPOINT PARTITION_{}] ts={}", partition, transactionID.toString)
     }
   }
 
@@ -205,11 +204,11 @@ class ProducerTransaction[T](partition: Int,
       jobs.foreach(x => x())
 
       if (ProducerTransaction.logger.isDebugEnabled) {
-        ProducerTransaction.logger.debug("[START PRE CHECKPOINT PARTITION_{}] ts={}", partition, transactionUUID.toString)
+        ProducerTransaction.logger.debug("[START PRE CHECKPOINT PARTITION_{}] ts={}", partition, transactionID.toString)
       }
 
       transactionOwner.p2pAgent.publish(TransactionStateMessage(
-        transactionUUID = transactionUUID,
+        transactionID = transactionID,
         ttl = -1,
         status = TransactionStatus.preCheckpoint,
         partition = partition,
@@ -235,7 +234,7 @@ class ProducerTransaction[T](partition: Int,
       transactionOwner.stream.metadataStorage.commitEntity.commitAsync(
         streamName = transactionOwner.stream.getName,
         partition = partition,
-        transaction = transactionUUID,
+        transaction = transactionID,
         totalCnt = getDataItemsCount,
         ttl = transactionOwner.stream.getTTL,
         resourceCounter = transactionOwner.pendingCassandraTasks,
@@ -245,7 +244,7 @@ class ProducerTransaction[T](partition: Int,
     }
     else {
       transactionOwner.p2pAgent.publish(TransactionStateMessage(
-        transactionUUID = transactionUUID,
+        transactionID = transactionID,
         ttl = -1,
         status = TransactionStatus.cancel,
         partition = partition,
@@ -275,11 +274,11 @@ class ProducerTransaction[T](partition: Int,
           jobs.foreach(x => x())
 
           if (ProducerTransaction.logger.isDebugEnabled) {
-            ProducerTransaction.logger.debug("[START PRE CHECKPOINT PARTITION_{}] ts={}", partition, transactionUUID.toString)
+            ProducerTransaction.logger.debug("[START PRE CHECKPOINT PARTITION_{}] ts={}", partition, transactionID.toString)
           }
 
           transactionOwner.p2pAgent.publish(TransactionStateMessage(
-            transactionUUID = transactionUUID,
+            transactionID = transactionID,
             ttl = -1,
             status = TransactionStatus.preCheckpoint,
             partition = partition,
@@ -293,18 +292,18 @@ class ProducerTransaction[T](partition: Int,
           transactionOwner.stream.metadataStorage.commitEntity.commit(
             streamName = transactionOwner.stream.getName,
             partition = partition,
-            transaction = transactionUUID,
+            transaction = transactionID,
             totalCnt = getDataItemsCount,
             ttl = transactionOwner.stream.getTTL)
 
           if (ProducerTransaction.logger.isDebugEnabled) {
-            ProducerTransaction.logger.debug("[COMMIT PARTITION_{}] ts={}", partition, transactionUUID.toString)
+            ProducerTransaction.logger.debug("[COMMIT PARTITION_{}] ts={}", partition, transactionID.toString)
           }
           //debug purposes only
           GlobalHooks.invoke(GlobalHooks.afterCommitFailure)
 
           transactionOwner.p2pAgent.publish(TransactionStateMessage(
-            transactionUUID = transactionUUID,
+            transactionID = transactionID,
             ttl = -1,
             status = TransactionStatus.postCheckpoint,
             partition = partition,
@@ -313,12 +312,12 @@ class ProducerTransaction[T](partition: Int,
             count = getDataItemsCount()))
 
           if (ProducerTransaction.logger.isDebugEnabled) {
-            ProducerTransaction.logger.debug("[FINAL CHECKPOINT PARTITION_{}] ts={}", partition, transactionUUID.toString)
+            ProducerTransaction.logger.debug("[FINAL CHECKPOINT PARTITION_{}] ts={}", partition, transactionID.toString)
           }
         }
         else {
           transactionOwner.p2pAgent.publish(TransactionStateMessage(
-            transactionUUID = transactionUUID,
+            transactionID = transactionID,
             ttl = -1,
             status = TransactionStatus.cancel,
             partition = partition,
@@ -337,7 +336,7 @@ class ProducerTransaction[T](partition: Int,
 
     state.setUpdateFinished
     transactionOwner.p2pAgent.publish(TransactionStateMessage(
-      transactionUUID = transactionUUID,
+      transactionID = transactionID,
       ttl = transactionOwner.producerOptions.transactionTTL,
       status = TransactionStatus.update,
       partition = partition,
@@ -346,7 +345,7 @@ class ProducerTransaction[T](partition: Int,
       count = 0))
 
     if (ProducerTransaction.logger.isDebugEnabled) {
-      ProducerTransaction.logger.debug(s"[KEEP_ALIVE THREAD PARTITION_PARTITION_$partition] ts=${transactionUUID.toString} status=${TransactionStatus.update}")
+      ProducerTransaction.logger.debug(s"[KEEP_ALIVE THREAD PARTITION_PARTITION_$partition] ts=${transactionID.toString} status=${TransactionStatus.update}")
     }
   }
 
@@ -372,13 +371,13 @@ class ProducerTransaction[T](partition: Int,
 
     //-1 here indicate that transaction is started but is not finished yet
     if (ProducerTransaction.logger.isDebugEnabled) {
-      ProducerTransaction.logger.debug("Update event for Transaction {}, partition: {}", transactionUUID, partition)
+      ProducerTransaction.logger.debug("Update event for Transaction {}, partition: {}", transactionID, partition)
     }
 
     transactionOwner.stream.metadataStorage.commitEntity.commitAsync(
       streamName = transactionOwner.stream.getName,
       partition = partition,
-      transaction = transactionUUID,
+      transaction = transactionID,
       totalCnt = -1,
       resourceCounter = transactionOwner.pendingCassandraTasks,
       ttl = transactionOwner.producerOptions.transactionTTL,
@@ -399,7 +398,7 @@ class ProducerTransaction[T](partition: Int,
     state.awaitMaterialization(transactionOwner.producerOptions.coordinationOptions.transport.getTimeout())
 
     val preCheckpoint = TransactionStateMessage(
-      transactionUUID = getTransactionUUID,
+      transactionID = getTransactionID,
       ttl = -1,
       status = TransactionStatus.preCheckpoint,
       partition = partition,
@@ -408,7 +407,7 @@ class ProducerTransaction[T](partition: Int,
       count = getDataItemsCount())
 
     val postCheckpoint = TransactionStateMessage(
-      transactionUUID = getTransactionUUID(),
+      transactionID = getTransactionID(),
       ttl = -1,
       status = TransactionStatus.postCheckpoint,
       partition = partition,
@@ -422,7 +421,7 @@ class ProducerTransaction[T](partition: Int,
       postCheckpointEvent = postCheckpoint,
       streamName = transactionOwner.stream.getName,
       partition = partition,
-      transaction = getTransactionUUID(),
+      transaction = getTransactionID(),
       totalCnt = getDataItemsCount(),
       ttl = transactionOwner.stream.getTTL)
   }

@@ -25,7 +25,7 @@ class TransactionStateMessageChannelHandler(transactionsBufferWorkers: mutable.M
       val m = ProtocolMessageSerializer.deserialize[TransactionStateMessage](msg)
       if (partitionCache.contains(m.partition))
         partitionCache(m.partition)
-          .update(TransactionState(uuid = m.transactionUUID,
+          .update(TransactionState(transactionID = m.transactionID,
             partition = m.partition,
             masterSessionID = m.masterID,
             queueOrderID = m.orderID,

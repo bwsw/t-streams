@@ -1,11 +1,9 @@
 package entities
 
-import java.util.UUID
 
 import com.bwsw.tstreams.entities.ConsumerEntity
-import com.datastax.driver.core.utils.UUIDs
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
-import testutils.{RandomStringCreator, TestUtils}
+import testutils.{LocalGeneratorCreator, RandomStringCreator, TestUtils}
 
 
 class ConsumerEntityTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
@@ -19,10 +17,10 @@ class ConsumerEntityTest extends FlatSpec with Matchers with BeforeAndAfterAll w
     val consumer = randomVal
     val stream = randomVal
     val partition = 1
-    val offset = UUIDs.timeBased()
+    val offset = LocalGeneratorCreator.getTransaction()
     consumerEntity.saveSingleOffset(consumer, stream, partition, offset)
     val checkExist: Boolean = consumerEntity.exists(consumer)
-    val retValOffset: UUID = consumerEntity.getLastSavedOffset(consumer, stream, partition)
+    val retValOffset = consumerEntity.getLastSavedOffset(consumer, stream, partition)
 
     val checkVal = checkExist && retValOffset == offset
     checkVal shouldBe true
@@ -49,17 +47,17 @@ class ConsumerEntityTest extends FlatSpec with Matchers with BeforeAndAfterAll w
     val consumerEntity = new ConsumerEntity("consumers", connectedSession)
     val consumer = randomVal
     val stream = randomVal
-    val offsets = scala.collection.mutable.Map[Int, UUID]()
+    val offsets = scala.collection.mutable.Map[Int, Long]()
     for (i <- 0 to 100)
-      offsets(i) = UUIDs.timeBased()
+      offsets(i) = LocalGeneratorCreator.getTransaction()
 
     consumerEntity.saveBatchOffset(consumer, stream, offsets)
 
     var checkVal = true
 
     for (i <- 0 to 100) {
-      val uuid: UUID = consumerEntity.getLastSavedOffset(consumer, stream, i)
-      checkVal &= uuid == offsets(i)
+      val id = consumerEntity.getLastSavedOffset(consumer, stream, i)
+      checkVal &= id == offsets(i)
     }
     checkVal shouldBe true
   }

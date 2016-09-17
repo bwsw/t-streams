@@ -4,7 +4,7 @@ import java.io.File
 import java.lang.management.ManagementFactory
 import java.net.InetSocketAddress
 import java.util.concurrent.atomic.AtomicInteger
-import java.util.{Properties, UUID}
+import java.util.{Properties}
 
 import com.aerospike.client.Host
 import com.bwsw.tstreams.common.{CassandraConnectorConf, CassandraHelper, MetadataConnectionPool, ZookeeperDLMService}
@@ -98,15 +98,15 @@ trait TestUtils {
   /**
     * Sorting checker
     */
-  def isSorted(list: ListBuffer[UUID]): Boolean = {
+  def isSorted(list: ListBuffer[Long]): Boolean = {
     if (list.isEmpty)
       return true
     var checkVal = true
     var curVal = list.head
     list foreach { el =>
-      if (el.timestamp() < curVal.timestamp())
+      if (el < curVal)
         checkVal = false
-      if (el.timestamp() > curVal.timestamp())
+      if (el > curVal)
         curVal = el
     }
     checkVal

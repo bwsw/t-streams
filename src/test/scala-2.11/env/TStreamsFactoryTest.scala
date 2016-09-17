@@ -5,7 +5,7 @@ import com.bwsw.tstreams.agents.consumer.subscriber.Callback
 import com.bwsw.tstreams.agents.consumer.{ConsumerTransaction, TransactionOperator}
 import com.bwsw.tstreams.converter.{ArrayByteToStringConverter, StringToArrayByteConverter}
 import com.bwsw.tstreams.env.TSF_Dictionary
-import com.bwsw.tstreams.generator.LocalTimeUUIDGenerator
+import com.bwsw.tstreams.generator.LocalTransactionGenerator
 
 /**
   * Created by Ivan Kudryavtsev on 23.07.16.
@@ -39,7 +39,7 @@ class TStreamsFactoryTest extends FlatSpec with Matchers with BeforeAndAfterAll 
     val p = f.getProducer[String](
       name = "test-producer-1",
       isLowPriority = false,
-      transactionGenerator = new LocalTimeUUIDGenerator,
+      transactionGenerator = new LocalTransactionGenerator,
       converter = new StringToArrayByteConverter,
       partitions = Set(0))
 
@@ -52,7 +52,7 @@ class TStreamsFactoryTest extends FlatSpec with Matchers with BeforeAndAfterAll 
   "UniversalFactory.getConsumer" should "return consumer object" in {
     val c = f.getConsumer[String](
       name = "test-consumer-1",
-      transactionGenerator = new LocalTimeUUIDGenerator,
+      transactionGenerator = new LocalTransactionGenerator,
       converter = new ArrayByteToStringConverter,
       partitions = Set(0),
       offset = Oldest)
@@ -64,7 +64,7 @@ class TStreamsFactoryTest extends FlatSpec with Matchers with BeforeAndAfterAll 
   "UniversalFactory.getSubscriber" should "return subscriber object" in {
     val sub = f.getSubscriber[String](
       name = "test-subscriber",
-      transactionGenerator = new LocalTimeUUIDGenerator,
+      transactionGenerator = new LocalTransactionGenerator,
       converter = new ArrayByteToStringConverter,
       partitions = Set(0),
       offset = Oldest,

@@ -1,7 +1,5 @@
 package com.bwsw.tstreams.agents.producer
 
-import java.util.UUID
-
 import com.bwsw.tstreams.agents.group.ProducerCheckpointInfo
 
 /**
@@ -24,7 +22,7 @@ trait IProducerTransaction[T] {
 
   def isClosed(): Boolean
 
-  def getTransactionUUID(): UUID
+  def getTransactionID(): Long
 
   def makeMaterialized(): Unit
 }

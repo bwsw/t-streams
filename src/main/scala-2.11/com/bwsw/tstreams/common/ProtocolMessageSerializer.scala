@@ -1,7 +1,5 @@
 package com.bwsw.tstreams.common
 
-import java.util.UUID
-
 import com.bwsw.tstreams.coordination.messages.master._
 import com.bwsw.tstreams.coordination.messages.state.{TransactionStateMessage, TransactionStatus}
 import com.bwsw.tstreams.coordination.producer.AgentConfiguration
@@ -58,11 +56,11 @@ object ProtocolMessageSerializer {
         s"{TRq,${x.senderID},${x.receiverID},${x.partition},${x.msgID},${x.remotePeerTimestamp}}"
 
       case x: TransactionResponse =>
-        s"{TRs,${x.senderID},${x.receiverID},${x.transactionUUID.toString},${x.partition},${x.msgID},${x.remotePeerTimestamp}}"
+        s"{TRs,${x.senderID},${x.receiverID},${x.transactionID.toString},${x.partition},${x.msgID},${x.remotePeerTimestamp}}"
 
-      case TransactionStateMessage(transactionUUID, ttl, status, partition, masterID, orderID, count) =>
+      case TransactionStateMessage(transactionID, ttl, status, partition, masterID, orderID, count) =>
         val serializedStatus = serializeInternal(status)
-        s"{PTM,${transactionUUID.toString},$ttl,$serializedStatus,$partition,$masterID,$orderID,$count}"
+        s"{PTM,${transactionID.toString},$ttl,$serializedStatus,$partition,$masterID,$orderID,$count}"
 
       case TransactionStatus.preCheckpoint => s"{P}"
       case TransactionStatus.postCheckpoint => "{F}"
@@ -192,13 +190,13 @@ object ProtocolMessageSerializer {
       case "TRs" =>
         assert(tokens.size == 7)
         val res = TransactionResponse(tokens(1).toString,
-          tokens(2).toString, UUID.fromString(tokens(3).toString), tokens(4).toString.toInt)
+          tokens(2).toString, tokens(3).toString.toLong, tokens(4).toString.toInt)
         res.msgID = tokens(5).toString.toLong
         res.remotePeerTimestamp = tokens(6).toString.toLong
         res
       case "PTM" =>
         assert(tokens.size == 8)
-        TransactionStateMessage(UUID.fromString(tokens(1).toString),
+        TransactionStateMessage(tokens(1).toString.toLong,
           tokens(2).toString.toInt,
           tokens(3).asInstanceOf[TransactionStatus.ProducerTransactionStatus],
           tokens(4).toString.toInt,

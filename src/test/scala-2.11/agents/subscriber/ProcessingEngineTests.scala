@@ -1,41 +1,42 @@
 package agents.subscriber
 
-import java.util.UUID
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicLong
 
 import com.bwsw.tstreams.agents.consumer.subscriber.{Callback, ProcessingEngine, QueueBuilder}
 import com.bwsw.tstreams.agents.consumer.{ConsumerTransaction, TransactionOperator}
-import com.datastax.driver.core.utils.UUIDs
 import org.scalatest.{FlatSpec, Matchers}
+import testutils.LocalGeneratorCreator
 
 import scala.collection.mutable.ListBuffer
 
 class ProcessingEngineOperatorTestImpl extends TransactionOperator[String] {
+
   val TOTAL = 10
   val transactions = new ListBuffer[ConsumerTransaction[String]]()
   for (i <- 0 until TOTAL)
-    transactions += new ConsumerTransaction[String](0, UUIDs.timeBased(), 1, -1)
+    transactions += new ConsumerTransaction[String](0, LocalGeneratorCreator.getTransaction(), 1, -1)
 
-  var lstTransaction: Option[ConsumerTransaction[String]] = None
+  var lastTransaction: Option[ConsumerTransaction[String]] = None
 
-  override def getLastTransaction(partition: Int): Option[ConsumerTransaction[String]] = lstTransaction
+  override def getLastTransaction(partition: Int): Option[ConsumerTransaction[String]] = lastTransaction
 
-  override def getTransactionById(partition: Int, uuid: UUID): Option[ConsumerTransaction[String]] = None
+  override def getTransactionById(partition: Int, id: Long): Option[ConsumerTransaction[String]] = None
 
-  override def setStreamPartitionOffset(partition: Int, uuid: UUID): Unit = {}
+  override def setStreamPartitionOffset(partition: Int, id: Long): Unit = {}
 
-  override def loadTransactionFromDB(partition: Int, transaction: UUID): Option[ConsumerTransaction[String]] = None
+  override def loadTransactionFromDB(partition: Int, transactionID: Long): Option[ConsumerTransaction[String]] = None
 
-  override def getTransactionsFromTo(partition: Int, from: UUID, to: UUID): ListBuffer[ConsumerTransaction[String]] =
+  override def getTransactionsFromTo(partition: Int, from: Long, to: Long): ListBuffer[ConsumerTransaction[String]] =
     transactions
 
   override def checkpoint(): Unit = {}
 
   override def getPartitions(): Set[Int] = Set[Int](0)
 
-  override def getCurrentOffset(partition: Int): UUID = UUIDs.timeBased()
+  override def getCurrentOffset(partition: Int): Long = LocalGeneratorCreator.getTransaction()
 
-  override def buildTransactionObject(partition: Int, uuid: UUID, count: Int): Option[ConsumerTransaction[String]] = None
+  override def buildTransactionObject(partition: Int, id: Long, count: Int): Option[ConsumerTransaction[String]] = None
 }
 
 /**
@@ -47,6 +48,8 @@ class ProcessingEngineTests extends FlatSpec with Matchers {
     override def onTransaction(consumer: TransactionOperator[String], transaction: ConsumerTransaction[String]): Unit = {}
   }
   val qb = new QueueBuilder.InMemory()
+
+  val gen = LocalGeneratorCreator.getGen()
 
 
   "constructor" should "create Processing engine" in {
@@ -63,15 +66,15 @@ class ProcessingEngineTests extends FlatSpec with Matchers {
   "enqueueLastTransactionFromDB" should "enqueue last transaction state to Queue if it's newer than we have in our database" in {
     val c = new ProcessingEngineOperatorTestImpl()
     val pe = new ProcessingEngine[String](c, Set[Int](0), qb, cb)
-    c.lstTransaction = Option[ConsumerTransaction[String]](new ConsumerTransaction(0, UUIDs.timeBased(), 1, -1))
+    c.lastTransaction = Option[ConsumerTransaction[String]](new ConsumerTransaction(0, LocalGeneratorCreator.getTransaction(), 1, -1))
     pe.enqueueLastTransactionFromDB(0)
     val elt = pe.getQueue().get(500, TimeUnit.MILLISECONDS)
-    elt.head.uuid shouldBe c.lstTransaction.get.getTransactionUUID()
+    elt.head.transactionID shouldBe c.lastTransaction.get.getTransactionID()
   }
 
   "enqueueLastTransactionFromDB" should "not enqueue last transaction state to Queue if it's older than we have in our database" in {
     val c = new ProcessingEngineOperatorTestImpl()
-    c.lstTransaction = Option[ConsumerTransaction[String]](new ConsumerTransaction(0, UUIDs.timeBased(), 1, -1))
+    c.lastTransaction = Option[ConsumerTransaction[String]](new ConsumerTransaction(0, LocalGeneratorCreator.getTransaction(), 1, -1))
     val pe = new ProcessingEngine[String](c, Set[Int](0), qb, cb)
     pe.enqueueLastTransactionFromDB(0)
     val elt = pe.getQueue().get(500, TimeUnit.MILLISECONDS)
@@ -90,7 +93,7 @@ class ProcessingEngineTests extends FlatSpec with Matchers {
   "handleQueue" should "do fast/full load if there is seq in queue" in {
     val c = new ProcessingEngineOperatorTestImpl()
     val pe = new ProcessingEngine[String](c, Set[Int](0), qb, cb)
-    c.lstTransaction = Option[ConsumerTransaction[String]](new ConsumerTransaction(0, UUIDs.timeBased(), 1, -1))
+    c.lastTransaction = Option[ConsumerTransaction[String]](new ConsumerTransaction(0, LocalGeneratorCreator.getTransaction(), 1, -1))
     pe.enqueueLastTransactionFromDB(0)
     val act1 = pe.getLastPartitionActivity(0)
     pe.handleQueue(500)
@@ -101,14 +104,14 @@ class ProcessingEngineTests extends FlatSpec with Matchers {
   "handleQueue" should "enqueue last transaction to queue if polling interval have been expired" in {
     val c = new ProcessingEngineOperatorTestImpl()
     val pe = new ProcessingEngine[String](c, Set[Int](0), qb, cb)
-    c.lstTransaction = Option[ConsumerTransaction[String]](new ConsumerTransaction(0, UUIDs.timeBased(), 1, -1))
+    c.lastTransaction = Option[ConsumerTransaction[String]](new ConsumerTransaction(0, LocalGeneratorCreator.getTransaction(), 1, -1))
     val act1 = pe.getLastPartitionActivity(0)
     val POLLING_DELAY = 5
     Thread.sleep(1)
     pe.handleQueue(POLLING_DELAY)
     pe.enqueueLastTransactionFromDB(0)
     val elt = pe.getQueue().get(500, TimeUnit.MILLISECONDS)
-    elt.head.uuid shouldBe c.lstTransaction.get.getTransactionUUID()
+    elt.head.transactionID shouldBe c.lastTransaction.get.getTransactionID()
   }
 
 }

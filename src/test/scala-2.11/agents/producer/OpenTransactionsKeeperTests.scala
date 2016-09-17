@@ -1,11 +1,10 @@
 package agents.producer
 
-import java.util.UUID
 
 import com.bwsw.tstreams.agents.group.ProducerCheckpointInfo
 import com.bwsw.tstreams.agents.producer.{IProducerTransaction, NewTransactionProducerPolicy, OpenTransactionsKeeper}
-import com.datastax.driver.core.utils.UUIDs
 import org.scalatest.{FlatSpec, Matchers}
+import testutils.LocalGeneratorCreator
 
 /**
   * Created by Ivan Kudryavtsev on 28.08.16.
@@ -39,7 +38,7 @@ class OpenTransactionsKeeperTests extends FlatSpec with Matchers {
 
     override def getTransactionInfo(): ProducerCheckpointInfo = null
 
-    override def getTransactionUUID(): UUID = UUIDs.timeBased()
+    override def getTransactionID(): Long = LocalGeneratorCreator.getTransaction()
 
     override def makeMaterialized(): Unit = {}
   }

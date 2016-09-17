@@ -1,6 +1,5 @@
 package com.bwsw.tstreams.data
 
-import java.util.UUID
 import java.util.concurrent.atomic.AtomicBoolean
 
 import scala.collection.mutable.ListBuffer
@@ -33,7 +32,7 @@ trait IStorage[T] {
     * @param to          Data unique number from which reading will stop
     * @return Queue of object which have storage type
     */
-  def get(streamName: String, partition: Int, transaction: java.util.UUID, from: Int, to: Int): scala.collection.mutable.Queue[T]
+  def get(streamName: String, partition: Int, transaction: Long, from: Int, to: Int): scala.collection.mutable.Queue[T]
 
 
   /**
@@ -48,5 +47,5 @@ trait IStorage[T] {
   /**
     * Saves data to storage
     */
-  def save(transaction: UUID, stream: String, partition: Int, ttl: Int, lastItm: Int, data: ListBuffer[Array[Byte]]): () => Unit
+  def save(transaction: Long, stream: String, partition: Int, ttl: Int, lastItm: Int, data: ListBuffer[Array[Byte]]): () => Unit
 }

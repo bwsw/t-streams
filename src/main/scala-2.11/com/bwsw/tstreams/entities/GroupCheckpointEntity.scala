@@ -34,9 +34,9 @@ class GroupCheckpointEntity(consumerEntityName: String, producerEntityName: Stri
     val batchStatement = new BatchStatement()
     info foreach {
       case ConsumerCheckpointInfo(name, stream, partition, offset) =>
-        batchStatement.add(consumerCheckpointStatement.bind(name, stream, new Integer(partition), offset))
+        batchStatement.add(consumerCheckpointStatement.bind(name, stream, new Integer(partition), new java.lang.Long(offset)))
       case ProducerCheckpointInfo(_, _, _, _, streamName, partition, transaction, totalCnt, ttl) =>
-        batchStatement.add(producerCheckpointStatement.bind(streamName, new Integer(partition), transaction, new Integer(totalCnt), new Integer(ttl)))
+        batchStatement.add(producerCheckpointStatement.bind(streamName, new Integer(partition), new java.lang.Long(transaction), new Integer(totalCnt), new Integer(ttl)))
     }
     session.execute(batchStatement)
   }
