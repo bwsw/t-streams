@@ -20,7 +20,7 @@ class TransactionBufferWorker() {
     override def run(): Unit = {
       while(!isComplete.get) {
         signalTransactionStateSequences()
-        Thread.sleep(TransactionBuffer.MAX_POSTCHECKPOINT_WAIT * 2)
+        Thread.sleep(TransactionBuffer.MAX_POST_CHECKPOINT_WAIT * 2)
       }
     }
   })
