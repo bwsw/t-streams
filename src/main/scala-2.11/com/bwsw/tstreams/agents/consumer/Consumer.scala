@@ -55,6 +55,8 @@ class Consumer[T](val name: String,
     */
   val isStarted = new AtomicBoolean(false)
 
+  stream.dataStorage.bind()
+
   /**
     * agent name
     */
@@ -65,24 +67,22 @@ class Consumer[T](val name: String,
     */
   def getPartitions(): Set[Int] = options.readPolicy.getUsedPartitions().toSet
 
+
   /**
     * returns current read offset
     *
     * @param partition
     * @return
     */
-  def getCurrentOffset(partition: Int): Long = currentOffsets(partition)
-
-  stream.dataStorage.bind()
+  def getCurrentOffset(partition: Int): Long = this.synchronized {
+    currentOffsets(partition)
+  }
 
   /**
     * Starts the operation.
     */
   def start(): Unit = this.synchronized {
-    Consumer.logger.info(s"Start a new consumer with name: $name, streamName : ${stream.getName}, streamPartitions : ${stream.getPartitions}")
-
-
-
+    Consumer.logger.info(s"[INIT] Consumer with name: $name, streamName : ${stream.getName}, streamPartitions : ${stream.getPartitions} is about to start.")
 
     if (isStarted.get())
       throw new IllegalStateException(s"Consumer $name is started already. Double start is detected.")
@@ -208,11 +208,11 @@ class Consumer[T](val name: String,
     None
   }
 
-  def getTransactionsFromTo(partition: Int, from: Long, to: Long): ListBuffer[ConsumerTransaction[T]] = {
+  def getTransactionsFromTo(partition: Int, fromOffset: Long, toOffset: Long): ListBuffer[ConsumerTransaction[T]] = {
     val transactions = stream.metadataStorage.commitEntity.getTransactions[T](
       streamName = stream.getName,
       partition = partition,
-      fromTransaction = from,
+      fromTransaction = fromOffset,
       cnt = options.transactionsPreload)
     val okList = ListBuffer[ConsumerTransaction[T]]()
     var addFlag = true
@@ -222,7 +222,7 @@ class Consumer[T](val name: String,
         moreItems = false
       } else {
         val t = transactions.dequeue()
-        if (TransactionComparator.compare(to, t.getTransactionID()) > -1) {
+        if (TransactionComparator.compare(toOffset, t.getTransactionID()) > -1) {
           if (t.getCount() >= 0)
             okList.append(t)
           else
@@ -234,8 +234,8 @@ class Consumer[T](val name: String,
         }
       }
     }
-    if (okList.nonEmpty && addFlag && TransactionComparator.compare(to, okList.last.getTransactionID()) == 1)
-      okList.appendAll(if (okList.nonEmpty) getTransactionsFromTo(partition, okList.last.getTransactionID(), to) else ListBuffer[ConsumerTransaction[T]]())
+    if (okList.nonEmpty && addFlag && TransactionComparator.compare(toOffset, okList.last.getTransactionID()) == 1)
+      okList.appendAll(if (okList.nonEmpty) getTransactionsFromTo(partition, okList.last.getTransactionID(), toOffset) else ListBuffer[ConsumerTransaction[T]]())
 
     okList
   }
@@ -243,10 +243,10 @@ class Consumer[T](val name: String,
   /**
     *
     * @param partition Partition from which historic transaction will be retrieved
-    * @param id      ID for this transaction
+    * @param transactionID      ID for this transaction
     * @return BasicConsumerTransaction
     */
-  def getTransactionById(partition: Int, id: Long): Option[ConsumerTransaction[T]] = this.synchronized {
+  def getTransactionById(partition: Int, transactionID: Long): Option[ConsumerTransaction[T]] = this.synchronized {
 
     if (!isStarted.get())
       throw new IllegalStateException(s"Consumer $name is not started. Start it first.")
@@ -256,7 +256,7 @@ class Consumer[T](val name: String,
         s" name : $name, streamName : ${stream.getName}, streamPartitions : ${stream.getPartitions}")
     }
 
-    val transactionOpt = loadTransactionFromDB(partition, id)
+    val transactionOpt = loadTransactionFromDB(partition, transactionID)
     if (transactionOpt.isDefined) {
       val transaction = transactionOpt.get
       if (transaction.getCount() != -1) {
@@ -275,18 +275,18 @@ class Consumer[T](val name: String,
     * Sets offset on concrete partition
     *
     * @param partition partition to set offset
-    * @param id      offset value
+    * @param offset      offset value
     */
-  def setStreamPartitionOffset(partition: Int, id: Long): Unit = this.synchronized {
+  def setStreamPartitionOffset(partition: Int, offset: Long): Unit = this.synchronized {
     if (!isStarted.get())
       throw new IllegalStateException(s"Consumer $name is not started. Start it first.")
 
-    updateOffsets(partition, id)
+    updateOffsets(partition, offset)
 
     transactionBuffer(partition) = stream.metadataStorage.commitEntity.getTransactions(
       stream.getName,
       partition,
-      id,
+      offset,
       options.transactionsPreload)
   }
 
