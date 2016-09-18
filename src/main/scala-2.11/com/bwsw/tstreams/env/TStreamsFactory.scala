@@ -241,27 +241,27 @@ object TSF_Dictionary {
         /**
           * Local host connections
           */
-        val LOCAL_CONNECTIONS_PER_HOST = "data.cluster.local-connections-per-host"
+        val LOCAL_CONNECTIONS_PER_HOST = "data.cluster.cassandra.local-connections-per-host"
 
         /**
           * Remote host connections
           */
-        val REMOTE_CONNECTIONS_PER_HOST = "data.cluster.remote-connections-per-host"
+        val REMOTE_CONNECTIONS_PER_HOST = "data.cluster.cassandra.remote-connections-per-host"
 
         /**
           * Local requests per connection
           */
-        val LOCAL_REQUESTS_PER_CONNECTION = "data.cluster.local-requests-per-connection"
+        val LOCAL_REQUESTS_PER_CONNECTION = "data.cluster.cassandra.local-requests-per-connection"
 
         /**
           * Remote requests per connection
           */
-        val REMOTE_REQUESTS_PER_CONNECTION = "data.cluster.remote-requests-per-connection"
+        val REMOTE_REQUESTS_PER_CONNECTION = "data.cluster.cassandra.remote-requests-per-connection"
 
         /**
           * Heartbeat interval
           */
-        val HEARTBEAT_INTERVAL_SECONDS = "data.cluster.heartbeat-interval-seconds"
+        val HEARTBEAT_INTERVAL_SECONDS = "data.cluster.cassandra.heartbeat-interval-seconds"
 
       }
 
