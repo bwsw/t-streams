@@ -8,7 +8,7 @@ import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 
 object TransactionBuffer {
-  val MAX_POSTCHECKPOINT_WAIT = 2000
+  val MAX_POST_CHECKPOINT_WAIT = 2000
 
 }
 
@@ -83,7 +83,7 @@ class TransactionBuffer(queue: QueueBuilder.QueueType) {
           ts.queueOrderID = orderID
           ts.state = TransactionStatus.preCheckpoint
           ts.itemCount = update.itemCount
-          ts.ttl = System.currentTimeMillis() + TransactionBuffer.MAX_POSTCHECKPOINT_WAIT // TODO: fixit
+          ts.ttl = System.currentTimeMillis() + TransactionBuffer.MAX_POST_CHECKPOINT_WAIT // TODO: fixit
 
         case (TransactionStatus.opened, TransactionStatus.postCheckpoint) =>
 
