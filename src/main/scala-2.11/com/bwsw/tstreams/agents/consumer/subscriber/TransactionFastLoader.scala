@@ -33,8 +33,8 @@ class TransactionFastLoader(partitions: Set[Int],
                            l: QueueBuilder.QueueItemType,
                            predicate: (TransactionState, TransactionState) => Boolean): Boolean = (head, l, predicate) match {
     case (_, Nil, _) => true
-    case (h, e :: l, p) =>
-      predicate(h, e) && checkListSeq(e, l, p)
+    case (_, elt :: tail, _) =>
+      predicate(head, elt) && checkListSeq(elt, tail, predicate)
   }
 
   /**
