@@ -106,15 +106,15 @@ class FirstFailLockableTaskExecutor(name: String, cnt: Int = 1)
       val thresholdRun = taskRunDelayThresholdMs.get()
 
       if (now - myRunnable.submitTime > thresholdFull) {
-        logger.warn(s"Task $myRunnable has delayed Full in executor $name for ${now - myRunnable.submitTime} msecs. Threshold is: $thresholdFull msecs.")
+        logger.debug(s"Task $myRunnable has delayed Full in executor $name for ${now - myRunnable.submitTime} msecs. Threshold is: $thresholdFull msecs.")
       }
 
       if (myRunnable.runTime - myRunnable.submitTime > threshold) {
-        logger.warn(s"Task $myRunnable has delayed in Queue before run in executor $name for ${myRunnable.runTime - myRunnable.submitTime} msecs. Threshold is: $threshold msecs.")
+        logger.debug(s"Task $myRunnable has delayed in Queue before run in executor $name for ${myRunnable.runTime - myRunnable.submitTime} msecs. Threshold is: $threshold msecs.")
       }
 
       if (now - myRunnable.runTime > thresholdRun) {
-        logger.warn(s"Task $myRunnable has run in executor $name for ${now - myRunnable.runTime} msecs. Threshold is: $thresholdRun msecs.")
+        logger.debug(s"Task $myRunnable has run in executor $name for ${now - myRunnable.runTime} msecs. Threshold is: $thresholdRun msecs.")
       }
 
     } catch {
@@ -133,7 +133,7 @@ class FirstFailLockableTaskExecutor(name: String, cnt: Int = 1)
   private def checkQueueSize() = {
     val qSize = this.getQueue.size()
     if (qSize > queueLengthThreshold.get())
-      logger.warn(s"Executor $name achieved queue length $qSize, threshold is ${queueLengthThreshold.get()}")
+      logger.debug(s"Executor $name achieved queue length $qSize, threshold is ${queueLengthThreshold.get()}")
   }
 
   /**
