@@ -4,7 +4,6 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.locks.ReentrantLock
 
 import com.bwsw.tstreams.agents.group.{CheckpointInfo, ConsumerCheckpointInfo, GroupParticipant}
-import com.bwsw.tstreams.common.TransactionComparator
 import com.bwsw.tstreams.metadata.MetadataStorage
 import com.bwsw.tstreams.streams.TStream
 import org.slf4j.LoggerFactory
@@ -222,7 +221,7 @@ class Consumer[T](val name: String,
         moreItems = false
       } else {
         val t = transactions.dequeue()
-        if (TransactionComparator.compare(toOffset, t.getTransactionID()) > -1) {
+        if (toOffset >= t.getTransactionID()) {
           if (t.getCount() >= 0)
             okList.append(t)
           else
@@ -234,7 +233,7 @@ class Consumer[T](val name: String,
         }
       }
     }
-    if (okList.nonEmpty && addFlag && TransactionComparator.compare(toOffset, okList.last.getTransactionID()) == 1)
+    if (okList.nonEmpty && addFlag && toOffset > okList.last.getTransactionID())
       okList.appendAll(if (okList.nonEmpty) getTransactionsFromTo(partition, okList.last.getTransactionID(), toOffset) else ListBuffer[ConsumerTransaction[T]]())
 
     okList

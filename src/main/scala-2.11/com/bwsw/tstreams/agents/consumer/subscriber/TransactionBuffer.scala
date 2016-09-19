@@ -1,7 +1,6 @@
 package com.bwsw.tstreams.agents.consumer.subscriber
 
 
-import com.bwsw.tstreams.common.TransactionComparator
 import com.bwsw.tstreams.coordination.messages.state.TransactionStatus
 
 import scala.collection.mutable
@@ -54,7 +53,7 @@ class TransactionBuffer(queue: QueueBuilder.QueueType) {
     // avoid transactions which are delayed
     if (update.state == TransactionStatus.opened) {
       if (lastTransaction != 0L
-        && TransactionComparator.compare(update.transactionID, lastTransaction) != 1) {
+        && update.transactionID <= lastTransaction) {
         Subscriber.logger.warn(s"Unexpected transaction comparison result ${update.transactionID} vs $lastTransaction detected.")
         return
       }
@@ -63,8 +62,9 @@ class TransactionBuffer(queue: QueueBuilder.QueueType) {
 
 
     if (stateMap.contains(update.transactionID)) {
-      val orderID = stateMap.get(update.transactionID).get.queueOrderID
-      val ts = stateMap.get(update.transactionID).get
+      val ts      = stateMap(update.transactionID)
+      val orderID = ts.queueOrderID
+
       /*
       * state switching system (almost finite automate)
       * */

@@ -2,7 +2,7 @@ package com.bwsw.tstreams.agents.consumer.subscriber
 
 import com.bwsw.tstreams.agents.consumer.TransactionOperator
 import com.bwsw.tstreams.agents.consumer.subscriber.QueueBuilder.QueueItemType
-import com.bwsw.tstreams.common.{FirstFailLockableTaskExecutor, TransactionComparator}
+import com.bwsw.tstreams.common.FirstFailLockableTaskExecutor
 import com.bwsw.tstreams.coordination.messages.state.TransactionStatus
 
 /**
@@ -21,7 +21,7 @@ class TransactionFullLoader(partitions: Set[Int],
     */
   override def checkIfTransactionLoadingIsPossible(seq: QueueItemType): Boolean = {
     val last = seq.last
-    if (TransactionComparator.compare(last.transactionID, lastTransactionsMap(last.partition).transactionID) != 1) {
+    if (last.transactionID <= lastTransactionsMap(last.partition).transactionID) {
       Subscriber.logger.warn(s"Last ID: ${last.transactionID}, In DB ID: ${lastTransactionsMap(last.partition).transactionID}")
       return false
     }
