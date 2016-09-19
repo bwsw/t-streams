@@ -4,7 +4,7 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 
 import com.bwsw.tstreams.agents.consumer.TransactionOperator
-import com.bwsw.tstreams.common.{FirstFailLockableTaskExecutor, TransactionComparator}
+import com.bwsw.tstreams.common.FirstFailLockableTaskExecutor
 import com.bwsw.tstreams.coordination.messages.state.TransactionStatus
 import org.slf4j.LoggerFactory
 
@@ -122,7 +122,7 @@ class ProcessingEngine[T](consumer: TransactionOperator[T],
       return
 
     // if current last transaction is newer than from db
-    if (TransactionComparator.compare(transactionOpt.get.getTransactionID(), lastTransactionsMap(partition).transactionID) != 1)
+    if (transactionOpt.get.getTransactionID() <= lastTransactionsMap(partition).transactionID)
       return
 
     val transactionStateList = List(TransactionState(transactionID = transactionOpt.get.getTransactionID(),
