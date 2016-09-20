@@ -60,10 +60,6 @@ class PeerAgent(agentsStateManager: AgentsStateDBService,
                 isMasterProcessVote: Boolean) {
 
   val myInetAddress: String = producer.producerOptions.coordinationOptions.transport.getInetAddress()
-  /**
-    * locks
-    */
-  private val externalAccessLock = new ReentrantLock(true)
 
   /**
     * Job Executors
@@ -205,11 +201,10 @@ class PeerAgent(agentsStateManager: AgentsStateDBService,
 
     masterOpt.fold[Unit](electPartitionMaster(partition)) { master =>
       if (init) {
-        val ans = transport.deleteMasterRequest(master.agentAddress, partition)
-        ans match {
+          transport.deleteMasterRequest(master.agentAddress, partition) match {
           case null =>
             if (retries == 0)
-              throw new IllegalStateException(s"Agent didn't respond to me.")
+              throw new IllegalStateException(s"Agent ${master.agentAddress} didn't respond to me.")
             //assume that if master is not responded it will be deleted by zk
             Thread.sleep(PeerAgent.RETRY_SLEEP_TIME)
             updateMaster(partition, init, retries - 1)
@@ -222,16 +217,14 @@ class PeerAgent(agentsStateManager: AgentsStateDBService,
           case DeleteMasterResponse(_, _, p) =>
             assert(p == partition)
             val newMaster = electPartitionMaster(partition)
-            if (PeerAgent.logger.isDebugEnabled) {
-              PeerAgent.logger.debug(s"[UPDATER] Finish updating master with init: {$init} on agent: {$myInetAddress} on stream: {$streamName}, partition: {$partition} with retry=$retries; re-voted master: {$newMaster}.")
-            }
+            PeerAgent.logger.info(s"[MASTER CHANGE] Finished updating master with init=true on agent: {$myInetAddress} on stream: {$streamName}, partition: {$partition} with retry=$retries; re-voted master: {$newMaster}.")
             agentsStateManager.putPartitionMasterLocally(partition, newMaster)
         }
       } else {
         transport.pingRequest(master.agentAddress, partition) match {
           case null =>
             if (retries == 0)
-              throw new IllegalStateException(s"Agent didn't respond to me.")
+              throw new IllegalStateException(s"Agent ${master.agentAddress} didn't respond to me.")
             //assume that if master is not responded it will be deleted by zk
             Thread.sleep(PeerAgent.RETRY_SLEEP_TIME)
             updateMaster(partition, init, retries - 1)
@@ -243,9 +236,7 @@ class PeerAgent(agentsStateManager: AgentsStateDBService,
 
           case PingResponse(_, _, p) =>
             assert(p == partition)
-            if (PeerAgent.logger.isDebugEnabled) {
-              PeerAgent.logger.debug(s"[UPDATER] Finish updating master with init: {$init} on agent: {$myInetAddress} on stream: {$streamName}, partition: {$partition} with retry=$retries; old master: {$master} is alive now.")
-            }
+            PeerAgent.logger.debug(s"[MASTER CHANGE] Finished updating master with init=false on agent: {$myInetAddress} on stream: {$streamName}, partition: {$partition} with retry=$retries; old master: {$master} is alive now.")
             agentsStateManager.putPartitionMasterLocally(partition, master)
         }
       }
@@ -294,38 +285,35 @@ class PeerAgent(agentsStateManager: AgentsStateDBService,
     * @return TransactionID
     */
   def generateNewTransaction(partition: Int): Long = this.synchronized {
-    LockUtil.withLockOrDieDo[Long](externalAccessLock, (100, TimeUnit.SECONDS), Some(PeerAgent.logger), () => {
-      val master = agentsStateManager.getPartitionMasterInetAddressLocal(partition, null)
-      if (PeerAgent.logger.isDebugEnabled) {
-        PeerAgent.logger.debug(s"[GET TRANSACTION] Start retrieve transaction for agent with address: {$myInetAddress}, stream: {$streamName}, partition: {$partition} from [MASTER: {$master}].")
-      }
+    val master = agentsStateManager.getPartitionMasterInetAddressLocal(partition, null)
+    if (PeerAgent.logger.isDebugEnabled) {
+      PeerAgent.logger.debug(s"[GET TRANSACTION] Start retrieve transaction for agent with address: {$myInetAddress}, stream: {$streamName}, partition: {$partition} from [MASTER: {$master}].")
+    }
 
-      val res =
-        if (master != null) {
-          val transactionResponse = transport.transactionRequest(master, partition)
-          transactionResponse match {
-            case null =>
-              updateMaster(partition, init = false)
-              generateNewTransaction(partition)
-
-            case EmptyResponse(snd, rcv, p) =>
-              assert(p == partition)
-              updateMaster(partition, init = false)
-              generateNewTransaction(partition)
-
-            case TransactionResponse(snd, rcv, id, p) =>
-              assert(p == partition)
-              if (PeerAgent.logger.isDebugEnabled) {
-                PeerAgent.logger.debug(s"[GET TRANSACTION] Finish retrieve transaction for agent with address: $myInetAddress, stream: $streamName, partition: $partition with ID: $id from [MASTER: $master]s")
-              }
-              id
-          }
-        } else {
+    val res =
+      if (master != null) {
+        transport.transactionRequest(master, partition) match {
+        case null =>
           updateMaster(partition, init = false)
           generateNewTransaction(partition)
+
+        case EmptyResponse(snd, rcv, p) =>
+          assert(p == partition)
+          updateMaster(partition, init = false)
+          generateNewTransaction(partition)
+
+        case TransactionResponse(snd, rcv, id, p) =>
+          assert(p == partition)
+          if (PeerAgent.logger.isDebugEnabled) {
+            PeerAgent.logger.debug(s"[GET TRANSACTION] Finish retrieve transaction for agent with address: $myInetAddress, stream: $streamName, partition: $partition with ID: $id from [MASTER: $master]s")
+          }
+          id
         }
-      res
-    })
+      } else {
+        updateMaster(partition, init = false)
+        generateNewTransaction(partition)
+      }
+    res
   }
 
   def notifyMaterialize(msg: TransactionStateMessage, to: String): Unit = {
