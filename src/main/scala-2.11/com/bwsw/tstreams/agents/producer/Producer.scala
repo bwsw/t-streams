@@ -50,12 +50,23 @@ class Producer[T](var name: String,
     masterOpt.fold(false) { m => producerOptions.coordinationOptions.transport.getInetAddress() == m.agentAddress }
   }
 
-  def getPartitionMasterID(partition: Int): Int = {
+  def getLocalPartitionMasterID(partition: Int): Int = {
     val masterOpt = agentsStateManager.getCurrentMasterLocal(partition)
     masterOpt.get.uniqueAgentId
   }
 
+  def isLocalMePartitionMaster(partition: Int): Boolean = {
+    val masterOpt = agentsStateManager.getCurrentMasterLocal(partition)
+    masterOpt.fold(false) { m => producerOptions.coordinationOptions.transport.getInetAddress() == m.agentAddress }
+  }
+
   def dumpPartitionsOwnership() = agentsStateManager.dumpPartitionsOwnership()
+
+  /**
+    * Utility method which allows waiting while the producer completes partition redistribution process.
+    * Used mainly in integration tests.
+    */
+  def awaitPartitionRedistributionThreadComplete() = p2pAgent.awaitPartitionRedistributionThreadComplete.await()
 
   // short key
   val pcs = producerOptions.coordinationOptions
