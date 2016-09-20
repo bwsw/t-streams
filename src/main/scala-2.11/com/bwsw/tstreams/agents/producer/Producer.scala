@@ -55,6 +55,8 @@ class Producer[T](var name: String,
     masterOpt.get.uniqueAgentId
   }
 
+  def dumpPartitionsOwnership() = agentsStateManager.dumpPartitionsOwnership()
+
   // short key
   val pcs = producerOptions.coordinationOptions
   var isStop = false
