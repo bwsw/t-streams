@@ -58,6 +58,10 @@ class ProducerMasterDistributionValidityTest extends FlatSpec with Matchers with
 
     producer1.dumpPartitionsOwnership()
     producer2.dumpPartitionsOwnership()
+
+    producer1.stop()
+    producer2.stop()
+
   }
 
   override def afterAll(): Unit = {
