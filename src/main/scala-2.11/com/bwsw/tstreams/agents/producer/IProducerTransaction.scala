@@ -25,4 +25,6 @@ trait IProducerTransaction[T] {
   def getTransactionID(): Long
 
   def makeMaterialized(): Unit
+
+  def markAsClosed(): Unit
 }

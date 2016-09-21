@@ -90,7 +90,7 @@ class Producer[T](var name: String,
       pcs.threadPoolAmount
   }
 
-  stream.dataStorage.bind() //TODO: fix, probably deprecated
+  stream.dataStorage.bind()
 
   logger.info(s"Start new Basic producer with name : $name, streamName : ${stream.getName}, streamPartitions : ${stream.getPartitions}")
 
@@ -169,12 +169,7 @@ class Producer[T](var name: String,
     openTransactions.forallKeysDo((part: Int, transaction: IProducerTransaction[T]) => transaction.updateTransactionKeepAliveState())
   }
 
-  /**
-    * @param policy    Policy for previous transaction on concrete partition
-    * @param partition Next partition to use for transaction (default -1 which mean that write policy will be used)
-    * @return BasicProducerTransaction instance
-    */
-  def newTransaction(policy: ProducerPolicy, partition: Int = -1): ProducerTransaction[T] = {
+  private def newTransactionUnsafe(policy: ProducerPolicy, partition: Int = -1): ProducerTransaction[T] = {
     if (isStop)
       throw new IllegalStateException(s"Producer ${this.name} is already stopped. Unable to get new transaction.")
 
@@ -208,6 +203,29 @@ class Producer[T](var name: String,
       })
     transaction
   }
+
+  /**
+    * @param policy    Policy for previous transaction on concrete partition
+    * @param partition Next partition to use for transaction (default -1 which mean that write policy will be used)
+    * @return BasicProducerTransaction instance
+    */
+  def newTransaction(policy: ProducerPolicy, partition: Int = -1, retry: Int = 1): ProducerTransaction[T] = {
+    if (isStop)
+      throw new IllegalStateException(s"Producer ${this.name} is already stopped. Unable to get new transaction.")
+
+    if(retry < 0)
+      throw new IllegalStateException("Failed to get a new transaction.")
+
+    try {
+      val transaction = newTransactionUnsafe(policy, partition)
+      transaction.awaitMaterialized()
+      transaction
+    } catch {
+      case e: MaterializationException =>
+        newTransaction(policy, retry - 1)
+    }
+  }
+
 
   /**
     * Return transaction for specific partition if there is opened one.
@@ -347,16 +365,28 @@ class Producer[T](var name: String,
     *
     * @param msg
     */
-  def materialize(msg: TransactionStateMessage) = {
+  def materialize(msg: TransactionStateMessage):Unit = {
+
     if (logger.isDebugEnabled)
       logger.debug(s"Start handling MaterializeRequest at partition: ${msg.partition}")
+
     materializationGovernor.awaitUnprotected(msg.partition)
     val opt = getOpenedTransactionForPartition(msg.partition)
-    assert(opt.isDefined)
+
+    if(opt.isEmpty) {
+      logger.warn(s"There is no opened transaction for ${msg.partition}.")
+      return
+    }
+
     if (logger.isDebugEnabled)
       logger.debug(s"In Map Transaction: ${opt.get.getTransactionID.toString}\nIn Request Transaction: ${msg.transactionID}")
-    assert(opt.get.getTransactionID == msg.transactionID)
-    assert(msg.status == TransactionStatus.materialize)
+
+    if(!(opt.get.getTransactionID == msg.transactionID && msg.status == TransactionStatus.materialize)) {
+      logger.warn(s"Materialization is requested for transaction ${msg.transactionID} but expected transaction is ${opt.get.getTransactionID}.")
+      opt.get.markAsClosed()
+      return
+    }
+
     opt.get.makeMaterialized()
     if (logger.isDebugEnabled)
       logger.debug("End handling MaterializeRequest")
