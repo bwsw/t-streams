@@ -26,13 +26,14 @@ class TStreamsFactoryTest extends FlatSpec with Matchers with BeforeAndAfterAll 
   "If locked" should "raise IllegalStateException exception" in {
     val n1 = f.copy()
     n1.lock()
-    try {
+    val res = try {
       n1.setProperty(TSF_Dictionary.Stream.NAME, "cloned-stream")
-      false shouldBe true
+      false
     } catch {
       case e: IllegalStateException =>
-        true shouldBe true
+        true
     }
+    res shouldBe true
   }
 
   "UniversalFactory.getProducer" should "return producer object" in {
