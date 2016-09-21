@@ -1,6 +1,7 @@
 package com.bwsw.tstreams.agents.producer
 
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.locks.ReentrantLock
 
 import com.bwsw.tstreams.agents.group.ProducerCheckpointInfo
