@@ -52,7 +52,7 @@ class Producer[T](var name: String,
 
   def getLocalPartitionMasterID(partition: Int): Int = {
     val masterOpt = agentsStateManager.getCurrentMasterLocal(partition)
-    masterOpt.get.uniqueAgentId
+    masterOpt.fold(0) { m => m.uniqueAgentId }
   }
 
   def isLocalMePartitionMaster(partition: Int): Boolean = {
