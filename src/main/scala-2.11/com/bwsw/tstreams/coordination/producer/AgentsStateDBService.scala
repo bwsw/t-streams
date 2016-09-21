@@ -92,7 +92,7 @@ class AgentsStateDBService(dlm: ZookeeperDLMService,
       partitions foreach { p =>
         val penalty = if (isLowPriorityToBeMaster) PeerAgent.LOW_PRIORITY_PENALTY else 0
         val conf = AgentConfiguration(inetAddress, weight = 0, penalty, uniqueAgentId)
-        println(s"ConfInit: $conf")
+        //println(s"ConfInit: $conf")
         dlm.create[AgentConfiguration](getMyPath(p), conf, CreateMode.EPHEMERAL)
       }
       if (PeerAgent.logger.isDebugEnabled) {
