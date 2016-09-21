@@ -5,11 +5,11 @@ package com.bwsw.tstreams.coordination.producer
   *
   * @param agentAddress
   * @param penalty  Penalty for agent (if he want to have low priority to be master)
-  * @param priority Amount of partitions where this agent is master
+  * @param weight Amount of partitions where this agent is master
   */
-case class AgentConfiguration(agentAddress: String, var priority: Int, penalty: Int, uniqueAgentID: Int) {
+case class AgentConfiguration(agentAddress: String, var weight: Int, penalty: Int, uniqueAgentID: Int) {
   override def toString(): String =
-    s"AgentSettings(agentAddress='$agentAddress',priority='$priority', penalty='$penalty', uniqueAgentID='$uniqueAgentID')"
+    s"AgentConfiguration(agentAddress='$agentAddress', weight='$weight', penalty='$penalty', uniqueAgentID='$uniqueAgentID')"
 }
 
 
