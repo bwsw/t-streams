@@ -92,6 +92,7 @@ class AgentsStateDBService(dlm: ZookeeperDLMService,
       partitions foreach { p =>
         val penalty = if (isLowPriorityToBeMaster) PeerAgent.LOW_PRIORITY_PENALTY else 0
         val conf = AgentConfiguration(inetAddress, weight = 0, penalty, uniqueAgentId)
+        println(s"ConfInit: $conf")
         dlm.create[AgentConfiguration](getMyPath(p), conf, CreateMode.EPHEMERAL)
       }
       if (PeerAgent.logger.isDebugEnabled) {
@@ -159,6 +160,7 @@ class AgentsStateDBService(dlm: ZookeeperDLMService,
     val mySettings = dlm.get[AgentConfiguration](getMyPath(partition))
     mySettings.foreach(s => {
       f(s)
+      //println(s"ConfUpdate: $s")
       dlm.setData(getMyPath(partition), s)
     })
   }
@@ -187,7 +189,7 @@ class AgentsStateDBService(dlm: ZookeeperDLMService,
 
   def getBestMasterCandidate(partition: Int): MasterConfiguration = this.synchronized {
     val agentsData = getStreamPartitionParticipantsData(partition)
-    agentsData.foreach(d => println(s"Candidate: $d"))
+    //agentsData.foreach(d => println(s"Candidate: $d"))
     val agents = agentsData.sortBy(x => -(x.weight + x.penalty))
     val bestCandidate = MasterConfiguration(agents.last.agentAddress, agents.last.uniqueAgentID)
     bestCandidate
@@ -215,7 +217,7 @@ class AgentsStateDBService(dlm: ZookeeperDLMService,
           demoteMaster(partition)
 
           if (isUpdatePriority)
-            partitions foreach { p => updateMyPriority(partition, value = -1) }
+            partitions foreach { p => updateMyPriority(p, value = -1) }
 
           masterMap -= partition
         }
