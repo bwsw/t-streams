@@ -13,7 +13,7 @@ class ResettableCountDownLatchTests extends FlatSpec with Matchers {
   var v = 1
   "Countdown/await" should "work properly" in {
     val l = new CountDownLatch(1)
-    val t = new Thread(new Runnable {
+    new Thread(new Runnable {
       override def run(): Unit = {
         resettable.await()
         v *= 2
@@ -29,7 +29,7 @@ class ResettableCountDownLatchTests extends FlatSpec with Matchers {
   "Reinitialization" should "work properly" in {
     resettable.setValue(2)
     val l = new CountDownLatch(1)
-    val t = new Thread(new Runnable {
+    new Thread(new Runnable {
       override def run(): Unit = {
         resettable.await()
         v *= 2
