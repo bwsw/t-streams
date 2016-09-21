@@ -1,5 +1,7 @@
 package common
 
+import java.util.concurrent.CountDownLatch
+
 import com.bwsw.tstreams.common.ResettableCountDownLatch
 import org.scalatest.{FlatSpec, Matchers}
 
@@ -7,30 +9,38 @@ import org.scalatest.{FlatSpec, Matchers}
   * Created by Ivan Kudryavtsev on 07.08.16.
   */
 class ResettableCountDownLatchTests extends FlatSpec with Matchers {
-  val l = new ResettableCountDownLatch(1)
+  val resettable = new ResettableCountDownLatch(1)
   var v = 1
   "Countdown/await" should "work properly" in {
+    val l = new CountDownLatch(1)
     val t = new Thread(new Runnable {
-      override def run(): Unit = l.await()
-
-      v *= 2
-    })
-    v = 0
-    l.countDown
-    v shouldBe 0
+      override def run(): Unit = {
+        resettable.await()
+        v *= 2
+        l.countDown()
+      }
+    }).start()
+    v += 2
+    resettable.countDown
+    l.await()
+    v shouldBe 6
   }
 
   "Reinitialization" should "work properly" in {
-    l.setValue(2)
+    resettable.setValue(2)
+    val l = new CountDownLatch(1)
     val t = new Thread(new Runnable {
-      override def run(): Unit = l.await()
-
-      v *= 2
-    })
+      override def run(): Unit = {
+        resettable.await()
+        v *= 2
+        l.countDown()
+      }
+    }).start()
     v = 1
-    l.countDown
-    v = 0
-    l.countDown
-    v shouldBe 0
+    resettable.countDown
+    v = 2
+    resettable.countDown
+    l.await()
+    v shouldBe 4
   }
 }
