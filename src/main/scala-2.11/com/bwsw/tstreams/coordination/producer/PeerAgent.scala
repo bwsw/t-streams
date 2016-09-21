@@ -87,7 +87,7 @@ class PeerAgent(agentsStateManager: AgentsStateDBService,
   /**
     * this ID is used to track sequential transactions from the same master
     */
-  private val uniqueAgentId = Math.abs(Random.nextInt())
+  private val uniqueAgentId = Math.abs(Random.nextInt() + 1)
 
   def getUniqueAgentID() = uniqueAgentId
 
