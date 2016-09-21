@@ -61,6 +61,8 @@ class PeerAgent(agentsStateManager: AgentsStateDBService,
 
   val myInetAddress: String = producer.producerOptions.coordinationOptions.transport.getInetAddress()
 
+  val awaitPartitionRedistributionThreadComplete = new CountDownLatch(1)
+
   /**
     * Job Executors
     */
@@ -130,10 +132,13 @@ class PeerAgent(agentsStateManager: AgentsStateDBService,
         updateMaster(item, init = true)
         PeerAgent.logger.info(s"Master update request for partition $item is complete.")
       }
+      awaitPartitionRedistributionThreadComplete.countDown()
     }
   })
   if (isMasterProcessVote)
     partitionWeightDistributionThread.start()
+  else
+    awaitPartitionRedistributionThreadComplete.countDown()
 
 
   /**
@@ -144,12 +149,17 @@ class PeerAgent(agentsStateManager: AgentsStateDBService,
     * @return Selected master address
     */
   private def electPartitionMasterInternal(partition: Int, retries: Int = zkRetriesAmount): MasterConfiguration = {
-    if (PeerAgent.logger.isDebugEnabled) {
-      PeerAgent.logger.debug(s"[VOTING] Start voting new agent on address: {$myInetAddress} on stream: {$streamName}, partition:{$partition}")
-    }
+    PeerAgent.logger.debug(s"[MASTER VOTE INIT] Start voting new agent on address: {$myInetAddress} on stream: {$streamName}, partition:{$partition}")
+
     val master = agentsStateManager.getCurrentMaster(partition)
+
     master.fold {
+
       val bestCandidate = agentsStateManager.getBestMasterCandidate(partition)
+
+      if(bestCandidate.agentAddress == master)
+        return bestCandidate
+
       transport.setMasterRequest(bestCandidate.agentAddress, partition) match {
         case null =>
           if (retries == 0)
@@ -187,17 +197,13 @@ class PeerAgent(agentsStateManager: AgentsStateDBService,
     * @param retries   Retries to try to interact with master
     */
   def updateMaster(partition: Int, init: Boolean, retries: Int = zkRetriesAmount): Unit = this.synchronized {
-    if (PeerAgent.logger.isDebugEnabled) {
-      PeerAgent.logger.debug(s"[UPDATER] Updating master with init: {$init} on agent: {$myInetAddress} on stream: {$streamName}, partition: {$partition} with retry=$retries.")
-    }
+    PeerAgent.logger.info(s"[MASTER UPDATE INIT] Updating master with init=$init on agent: {$myInetAddress} on stream: {$streamName}, partition: {$partition} with retry=$retries.")
 
     // nothing to do if I'm the master already
     // I don't vote for NOT being master.
     val masterOpt = agentsStateManager.getCurrentMaster(partition)
-    if (masterOpt.isDefined) {
-      if (masterOpt.get.agentAddress == myInetAddress)
-        return
-    }
+    if (masterOpt.fold(false)(master => master.agentAddress == myInetAddress))
+      return
 
     masterOpt.fold[Unit](electPartitionMaster(partition)) { master =>
       if (init) {
@@ -217,7 +223,7 @@ class PeerAgent(agentsStateManager: AgentsStateDBService,
           case DeleteMasterResponse(_, _, p) =>
             assert(p == partition)
             val newMaster = electPartitionMaster(partition)
-            PeerAgent.logger.info(s"[MASTER CHANGE] Finished updating master with init=true on agent: {$myInetAddress} on stream: {$streamName}, partition: {$partition} with retry=$retries; re-voted master: {$newMaster}.")
+            PeerAgent.logger.info(s"[MASTER UPDATE RESULT] Finished updating master with init=true on agent: {$myInetAddress} on stream: {$streamName}, partition: {$partition} with retry=$retries; re-voted master: {$newMaster}.")
             agentsStateManager.putPartitionMasterLocally(partition, newMaster)
         }
       } else {
@@ -236,7 +242,7 @@ class PeerAgent(agentsStateManager: AgentsStateDBService,
 
           case PingResponse(_, _, p) =>
             assert(p == partition)
-            PeerAgent.logger.debug(s"[MASTER CHANGE] Finished updating master with init=false on agent: {$myInetAddress} on stream: {$streamName}, partition: {$partition} with retry=$retries; old master: {$master} is alive now.")
+            PeerAgent.logger.info(s"[MASTER UPDATE RESULT] Finished updating master with init=false on agent: {$myInetAddress} on stream: {$streamName}, partition: {$partition} with retry=$retries; old master: {$master} is alive now.")
             agentsStateManager.putPartitionMasterLocally(partition, master)
         }
       }
@@ -357,6 +363,7 @@ class PeerAgent(agentsStateManager: AgentsStateDBService,
 
     if (isMasterProcessVote)
       partitionWeightDistributionThread.join()
+
 
     transport.stopServer()
 

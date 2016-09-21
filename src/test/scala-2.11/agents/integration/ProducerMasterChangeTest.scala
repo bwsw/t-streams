@@ -16,9 +16,7 @@ import testutils.{LocalGeneratorCreator, TestUtils}
 
 import scala.collection.mutable.ListBuffer
 
-/**
-  * Created by mendelbaum_ma on 05.09.16.
-  */
+
 class ProducerMasterChangeTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
   f.setProperty(TSF_Dictionary.Stream.NAME, "test_stream").
     setProperty(TSF_Dictionary.Stream.PARTITIONS, 3).
