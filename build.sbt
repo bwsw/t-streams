@@ -17,6 +17,19 @@ homepage := Some(url("http://t-streams.com/"))
 
 pomIncludeRepository := { _ => false }
 
+pomExtra := (
+    <scm>
+      <url>git@github.com:bwsw/t-streams.git</url>
+      <connection>scm:git@github.com:bwsw/t-streams.git</connection>
+    </scm>
+    <developers>
+      <developer>
+        <id>bitworks</id>
+        <name>Bitworks Software, Ltd.</name>
+        <url>http://bitworks.software/</url>
+      </developer>
+    </developers>)
+
 publishTo := {
   val nexus = "https://oss.sonatype.org/"
   if (isSnapshot.value)
