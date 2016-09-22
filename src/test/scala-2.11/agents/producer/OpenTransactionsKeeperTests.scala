@@ -41,25 +41,27 @@ class OpenTransactionsKeeperTests extends FlatSpec with Matchers {
     override def getTransactionID(): Long = LocalGeneratorCreator.getTransaction()
 
     override def makeMaterialized(): Unit = {}
+
+    override def markAsClosed(): Unit = {}
   }
 
   it should "allow add and get transactions to it" in {
-    val otk = new OpenTransactionsKeeper[String]()
-    otk.put(0, new TransactionStub)
-    otk.getTransactionOption(0).isDefined shouldBe true
-    otk.getTransactionOption(1).isDefined shouldBe false
+    val keeper = new OpenTransactionsKeeper[String]()
+    keeper.put(0, new TransactionStub)
+    keeper.getTransactionOption(0).isDefined shouldBe true
+    keeper.getTransactionOption(1).isDefined shouldBe false
   }
 
   it should "handle all variants of awaitMaterialized" in {
-    val otk = new OpenTransactionsKeeper[String]()
+    val keeper = new OpenTransactionsKeeper[String]()
     val t = new TransactionStub
-    otk.put(0, t)
-    otk.awaitOpenTransactionMaterialized(0, NewTransactionProducerPolicy.CheckpointIfOpened)()
+    keeper.put(0, t)
+    keeper.awaitOpenTransactionMaterialized(0, NewTransactionProducerPolicy.CheckpointIfOpened)()
     t.lastMethod shouldBe "checkpoint"
-    otk.awaitOpenTransactionMaterialized(0, NewTransactionProducerPolicy.CancelIfOpened)()
+    keeper.awaitOpenTransactionMaterialized(0, NewTransactionProducerPolicy.CancelIfOpened)()
     t.lastMethod shouldBe "cancel"
     (try {
-      otk.awaitOpenTransactionMaterialized(0, NewTransactionProducerPolicy.ErrorIfOpened)()
+      keeper.awaitOpenTransactionMaterialized(0, NewTransactionProducerPolicy.ErrorIfOpened)()
       false
     } catch {
       case e: IllegalStateException =>
@@ -68,11 +70,11 @@ class OpenTransactionsKeeperTests extends FlatSpec with Matchers {
   }
 
   it should "handle for all keys do properly" in {
-    val otk = new OpenTransactionsKeeper[String]()
-    otk.put(0, new TransactionStub)
-    otk.put(1, new TransactionStub)
-    otk.put(2, new TransactionStub)
-    otk.forallKeysDo[Unit]((p: Int, t: IProducerTransaction[String]) => t.updateTransactionKeepAliveState())
+    val keeper = new OpenTransactionsKeeper[String]()
+    keeper.put(0, new TransactionStub)
+    keeper.put(1, new TransactionStub)
+    keeper.put(2, new TransactionStub)
+    keeper.forallKeysDo[Unit]((p: Int, t: IProducerTransaction[String]) => t.updateTransactionKeepAliveState())
     ctr shouldBe 3
   }
 

@@ -18,6 +18,7 @@ import com.bwsw.tstreams.data.IStorage
 import com.bwsw.tstreams.generator.ITransactionGenerator
 import com.bwsw.tstreams.metadata.{MetadataStorage, MetadataStorageFactory}
 import com.bwsw.tstreams.streams.TStream
+import com.datastax.driver.core.ConsistencyLevel
 import org.slf4j.LoggerFactory
 
 import scala.collection.mutable
@@ -115,6 +116,11 @@ object TSF_Dictionary {
         * Heartbeat interval
         */
       val HEARTBEAT_INTERVAL_SECONDS = "metadata.cluster.heartbeat-interval-seconds"
+
+      /**
+        * Consistency level
+        */
+      val CONSISTENCY_LEVEL = "metadata.cluster.consistency-level"
 
     }
 
@@ -262,6 +268,11 @@ object TSF_Dictionary {
           * Heartbeat interval
           */
         val HEARTBEAT_INTERVAL_SECONDS = "data.cluster.cassandra.heartbeat-interval-seconds"
+
+        /**
+          * Consistency level
+          */
+        val CONSISTENCY_LEVEL = "data.cluster.cassandra.consistency-level"
 
       }
 
@@ -519,6 +530,7 @@ class TStreamsFactory() {
   propertyMap += (TSF_Dictionary.Metadata.Cluster.LOCAL_REQUESTS_PER_CONNECTION -> 32576)
   propertyMap += (TSF_Dictionary.Metadata.Cluster.REMOTE_REQUESTS_PER_CONNECTION -> 8192)
   propertyMap += (TSF_Dictionary.Metadata.Cluster.HEARTBEAT_INTERVAL_SECONDS -> 10)
+  propertyMap += (TSF_Dictionary.Metadata.Cluster.CONSISTENCY_LEVEL -> ConsistencyLevel.ONE.toString)
 
 
   propertyMap += (TSF_Dictionary.Data.Cluster.Cassandra.LOCAL_DC -> null)
@@ -533,6 +545,8 @@ class TStreamsFactory() {
   propertyMap += (TSF_Dictionary.Data.Cluster.Cassandra.LOCAL_REQUESTS_PER_CONNECTION -> 32576)
   propertyMap += (TSF_Dictionary.Data.Cluster.Cassandra.REMOTE_REQUESTS_PER_CONNECTION -> 8192)
   propertyMap += (TSF_Dictionary.Data.Cluster.Cassandra.HEARTBEAT_INTERVAL_SECONDS -> 10)
+  propertyMap += (TSF_Dictionary.Data.Cluster.Cassandra.CONSISTENCY_LEVEL -> ConsistencyLevel.ONE.toString)
+
 
   val Cluster_hazelcast_synchronous_replicas_default = 0
   val Cluster_hazelcast_asynchronous_replicas_default = 0
@@ -632,7 +646,7 @@ class TStreamsFactory() {
   propertyMap += (TSF_Dictionary.Consumer.DATA_PRELOAD -> Consumer_data_preload_default)
   propertyMap += (TSF_Dictionary.Consumer.Subscriber.BIND_HOST -> "localhost")
   propertyMap += (TSF_Dictionary.Consumer.Subscriber.BIND_PORT ->(40000, 50000))
-  propertyMap += (TSF_Dictionary.Consumer.Subscriber.PERSISTENT_QUEUE_PATH -> "/tmp")
+  propertyMap += (TSF_Dictionary.Consumer.Subscriber.PERSISTENT_QUEUE_PATH -> null)
 
   val Subscriber_transaction_buffer_thread_pool_default = 4
   val Subscriber_transaction_buffer_thread_pool_min = 1
@@ -820,7 +834,8 @@ class TStreamsFactory() {
         remoteMaxConnectionsPerHost = remoteConnections._2,
         localMaxRequestsPerConnection = pAsInt(TSF_Dictionary.Data.Cluster.Cassandra.LOCAL_REQUESTS_PER_CONNECTION, 32768),
         remoteMaxRequestsPerConnection = pAsInt(TSF_Dictionary.Data.Cluster.Cassandra.REMOTE_REQUESTS_PER_CONNECTION, 8192),
-        heartBeatIntervalSeconds = pAsInt(TSF_Dictionary.Data.Cluster.Cassandra.HEARTBEAT_INTERVAL_SECONDS, 10)
+        heartBeatIntervalSeconds = pAsInt(TSF_Dictionary.Data.Cluster.Cassandra.HEARTBEAT_INTERVAL_SECONDS, 10),
+        consistencyLevel = ConsistencyLevel.valueOf(pAsString(TSF_Dictionary.Data.Cluster.Cassandra.CONSISTENCY_LEVEL))
       )
 
       return dsf.getInstance(opts, pAsString(TSF_Dictionary.Data.Cluster.NAMESPACE))
@@ -873,7 +888,8 @@ class TStreamsFactory() {
       remoteMaxConnectionsPerHost = remoteConnections._2,
       localMaxRequestsPerConnection = pAsInt(TSF_Dictionary.Metadata.Cluster.LOCAL_REQUESTS_PER_CONNECTION, 32768),
       remoteMaxRequestsPerConnection = pAsInt(TSF_Dictionary.Metadata.Cluster.REMOTE_REQUESTS_PER_CONNECTION, 8192),
-      heartBeatIntervalSeconds = pAsInt(TSF_Dictionary.Metadata.Cluster.HEARTBEAT_INTERVAL_SECONDS, 10)
+      heartBeatIntervalSeconds = pAsInt(TSF_Dictionary.Metadata.Cluster.HEARTBEAT_INTERVAL_SECONDS, 10),
+      consistencyLevel = ConsistencyLevel.valueOf(pAsString(TSF_Dictionary.Metadata.Cluster.CONSISTENCY_LEVEL))
     )
 
     // construct metadata storage
