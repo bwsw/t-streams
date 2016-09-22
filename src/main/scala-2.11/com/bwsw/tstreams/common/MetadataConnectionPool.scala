@@ -82,7 +82,8 @@ object MetadataConnectionPool {
               new QueryOptions()
                 .setRefreshNodeIntervalMillis(0)
                 .setRefreshNodeListIntervalMillis(0)
-                .setRefreshSchemaIntervalMillis(0))
+                .setRefreshSchemaIntervalMillis(0)
+                .setConsistencyLevel(conf.consistencyLevel))
           val cluster = builder.build()
           clusterMap(conf.hosts) = cluster
           cluster
