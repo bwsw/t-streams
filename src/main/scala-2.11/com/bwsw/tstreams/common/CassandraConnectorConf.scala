@@ -2,6 +2,8 @@ package com.bwsw.tstreams.common
 
 import java.net.InetSocketAddress
 
+import com.datastax.driver.core.ConsistencyLevel
+
 /**
   * This code is from https://github.com/datastax/spark-cassandra-connector/
   * Stores configuration of a connection to Cassandra.
@@ -23,4 +25,5 @@ case class CassandraConnectorConf(
                                    remoteMaxConnectionsPerHost: Int = 8,
                                    localMaxRequestsPerConnection: Int = 32768,
                                    remoteMaxRequestsPerConnection: Int =  8192,
-                                   heartBeatIntervalSeconds: Int = 10)
+                                   heartBeatIntervalSeconds: Int = 10,
+                                   consistencyLevel: ConsistencyLevel = ConsistencyLevel.ONE)
