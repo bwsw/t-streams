@@ -646,7 +646,7 @@ class TStreamsFactory() {
   propertyMap += (TSF_Dictionary.Consumer.DATA_PRELOAD -> Consumer_data_preload_default)
   propertyMap += (TSF_Dictionary.Consumer.Subscriber.BIND_HOST -> "localhost")
   propertyMap += (TSF_Dictionary.Consumer.Subscriber.BIND_PORT ->(40000, 50000))
-  propertyMap += (TSF_Dictionary.Consumer.Subscriber.PERSISTENT_QUEUE_PATH -> "/tmp")
+  propertyMap += (TSF_Dictionary.Consumer.Subscriber.PERSISTENT_QUEUE_PATH -> null)
 
   val Subscriber_transaction_buffer_thread_pool_default = 4
   val Subscriber_transaction_buffer_thread_pool_min = 1
