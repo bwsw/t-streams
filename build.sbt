@@ -1,6 +1,6 @@
 name := "t-streams"
 
-val tstreamsVersion = "1.0-SNAPSHOT"
+val tstreamsVersion = "1.0.3.1"
 
 version := tstreamsVersion
 organization := "com.bwsw"
@@ -16,6 +16,19 @@ licenses := Seq("Apache 2" -> url("http://www.apache.org/licenses/LICENSE-2.0"))
 homepage := Some(url("http://t-streams.com/"))
 
 pomIncludeRepository := { _ => false }
+
+pomExtra := (
+    <scm>
+      <url>git@github.com:bwsw/t-streams.git</url>
+      <connection>scm:git@github.com:bwsw/t-streams.git</connection>
+    </scm>
+    <developers>
+      <developer>
+        <id>bitworks</id>
+        <name>Bitworks Software, Ltd.</name>
+        <url>http://bitworks.software/</url>
+      </developer>
+    </developers>)
 
 publishTo := {
   val nexus = "https://oss.sonatype.org/"

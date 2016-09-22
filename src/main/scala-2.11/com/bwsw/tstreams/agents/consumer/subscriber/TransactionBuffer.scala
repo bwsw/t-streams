@@ -152,9 +152,7 @@ class TransactionBuffer(queue: QueueBuilder.QueueType) {
 
       meet.foreach(ts => stateMap.remove(ts.transactionID))
 
-      queue.put(meet.filter(ts =>
-        (ts.state == TransactionStatus.postCheckpoint)
-          || (ts.state == TransactionStatus.preCheckpoint && ts.ttl < time)).toList)
+      queue.put(meet.filter(ts => (ts.state == TransactionStatus.postCheckpoint)).toList)
     }
   }
 }
