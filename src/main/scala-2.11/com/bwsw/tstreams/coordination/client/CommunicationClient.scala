@@ -89,6 +89,8 @@ class CommunicationClient(timeoutMs: Int, retryCount: Int = 3, retryDelayMs: Int
   def sendAndWaitResponse(msg: IMessage, isExceptionIfFails: Boolean, onFailCallback: () => IMessage): IMessage = {
     if (isClosed.get)
       throw new IllegalStateException("Communication Client is closed. Unable to operate.")
+    IMessage.logger.info(msg.toString())
+
     withRetryDo[IMessage](null, () => {
       try {
         val sock = getSocket(msg.receiverID)
@@ -105,6 +107,28 @@ class CommunicationClient(timeoutMs: Int, retryCount: Int = 3, retryDelayMs: Int
     }, retryCount, isExceptionOnFail = isExceptionIfFails)
   }
 
+  /**
+    * @param msg Message to send
+    * @return Response message
+    */
+  def sendAndWaitResponseSimple(msg: IMessage): IMessage = {
+    if (isClosed.get)
+      throw new IllegalStateException("Communication Client is closed. Unable to operate.")
+
+    IMessage.logger.info(msg.toString())
+
+    try {
+      val sock = getSocket(msg.receiverID)
+      val reqString = ProtocolMessageSerializer.wrapMsg(ProtocolMessageSerializer.serialize(msg))
+      val r = writeMsgAndWaitResponse(sock, reqString)
+      if (r != null && msg.msgID != r.msgID)
+        throw new IllegalStateException(s"Sent message with ID ${msg.msgID}, received ${r.msgID}. ID must be the same.")
+      r
+    } catch {
+      case e@(_: ConnectException | _: IOException) =>
+        null
+    }
+  }
 
   /**
     * @param msg Message to send

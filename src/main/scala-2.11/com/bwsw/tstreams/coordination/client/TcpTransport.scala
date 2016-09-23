@@ -49,7 +49,7 @@ class TcpTransport(address: String, timeoutMs: Int, retryCount: Int = 3, retryDe
     * @return DeleteMasterResponse or null
     */
   def deleteMasterRequest(to: String, partition: Int): IMessage = {
-    val response = client.sendAndWaitResponse(DeleteMasterRequest(address, to, partition), isExceptionIfFails = false, () => null)
+    val response = client.sendAndWaitResponseSimple(DeleteMasterRequest(address, to, partition))
     response
   }
 
@@ -63,7 +63,7 @@ class TcpTransport(address: String, timeoutMs: Int, retryCount: Int = 3, retryDe
     * @return PingResponse or null
     */
   def pingRequest(to: String, partition: Int): IMessage = {
-    val response = client.sendAndWaitResponse(PingRequest(address, to, partition), isExceptionIfFails = false, () => null)
+    val response = client.sendAndWaitResponseSimple(PingRequest(address, to, partition))
     response
   }
 
@@ -75,7 +75,7 @@ class TcpTransport(address: String, timeoutMs: Int, retryCount: Int = 3, retryDe
     * @return SetMasterResponse or null
     */
   def setMasterRequest(to: String, partition: Int): IMessage = {
-    val response: IMessage = client.sendAndWaitResponse(SetMasterRequest(address, to, partition), isExceptionIfFails = false, () => null)
+    val response: IMessage = client.sendAndWaitResponseSimple(SetMasterRequest(address, to, partition))
     response
   }
 

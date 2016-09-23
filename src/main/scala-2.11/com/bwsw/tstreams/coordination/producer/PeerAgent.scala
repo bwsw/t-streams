@@ -126,9 +126,7 @@ class PeerAgent(agentsStateManager: AgentsStateDBService,
       while (isRunning.get() && it.hasNext) {
         Thread.sleep(partitionRedistributionDelay * 1000)
         val item = it.next
-        agentsStateManager.doLocked {
-          updateMaster(item, init = true)
-        }
+        updateMaster(item, init = true)
         PeerAgent.logger.info(s"Master update request for partition $item is complete.")
       }
       awaitPartitionRedistributionThreadComplete.countDown()
@@ -178,16 +176,21 @@ class PeerAgent(agentsStateManager: AgentsStateDBService,
     }(master => master)
   }
 
+  def updateMaster(partition: Int, init: Boolean, retries: Int = zkRetriesAmount): Unit = this.synchronized {
+    agentsStateManager doLocked {
+      updateMasterInternal(partition, init, retries)
+    }
+  }
 
   /**
     * Updating master on concrete partition
     *
     * @param partition Partition to update master
-    * @param init      If flag true master will be reselected anyway else old master can stay
+    * @param isDemoteCurrentMaster      If flag true master will be reselected anyway else old master can stay
     * @param retries   Retries to try to interact with master
     */
-  def updateMaster(partition: Int, init: Boolean, retries: Int = zkRetriesAmount): Unit = this.synchronized {
-    PeerAgent.logger.info(s"[MASTER UPDATE INIT] Updating master with init=$init on agent: {$myInetAddress} on stream: {$streamName}, partition: {$partition} with retry=$retries.")
+  def updateMasterInternal(partition: Int, isDemoteCurrentMaster: Boolean, retries: Int = zkRetriesAmount): Unit = this.synchronized {
+    PeerAgent.logger.info(s"[MASTER UPDATE INIT] Updating master with init=$isDemoteCurrentMaster on agent: {$myInetAddress} on stream: {$streamName}, partition: {$partition} with retry=$retries.")
 
     // nothing to do if I'm the master already
     // I don't vote for NOT being master.
@@ -196,19 +199,19 @@ class PeerAgent(agentsStateManager: AgentsStateDBService,
       return
 
     masterOpt.fold[Unit](electPartitionMaster(partition)) { master =>
-      if (init) {
+      if (isDemoteCurrentMaster) {
           transport.deleteMasterRequest(master.agentAddress, partition) match {
           case null =>
             if (retries == 0)
               throw new IllegalStateException(s"Agent ${master.agentAddress} didn't respond to me.")
             //assume that if master is not responded it will be deleted by zk
             Thread.sleep(PeerAgent.RETRY_SLEEP_TIME)
-            updateMaster(partition, init, retries - 1)
+            updateMasterInternal(partition, isDemoteCurrentMaster, retries - 1)
 
           case EmptyResponse(_, _, p) =>
             assert(p == partition)
             Thread.sleep(PeerAgent.RETRY_SLEEP_TIME)
-            updateMaster(partition, init, zkRetriesAmount)
+            updateMasterInternal(partition, isDemoteCurrentMaster, zkRetriesAmount)
 
           case DeleteMasterResponse(_, _, p) =>
             assert(p == partition)
@@ -223,12 +226,12 @@ class PeerAgent(agentsStateManager: AgentsStateDBService,
               throw new IllegalStateException(s"Agent ${master.agentAddress} didn't respond to me.")
             //assume that if master is not responded it will be deleted by zk
             Thread.sleep(PeerAgent.RETRY_SLEEP_TIME)
-            updateMaster(partition, init, retries - 1)
+            updateMasterInternal(partition, isDemoteCurrentMaster, retries - 1)
 
           case EmptyResponse(_, _, p) =>
             assert(p == partition)
             Thread.sleep(PeerAgent.RETRY_SLEEP_TIME)
-            updateMaster(partition, init, zkRetriesAmount)
+            updateMasterInternal(partition, isDemoteCurrentMaster, zkRetriesAmount)
 
           case PingResponse(_, _, p) =>
             assert(p == partition)
@@ -290,16 +293,12 @@ class PeerAgent(agentsStateManager: AgentsStateDBService,
       if (master != null) {
         transport.transactionRequest(master, partition) match {
         case null =>
-          agentsStateManager.doLocked {
-            updateMaster(partition, init = false)
-          }
+          updateMaster(partition, init = false)
           generateNewTransaction(partition)
 
         case EmptyResponse(snd, rcv, p) =>
           assert(p == partition)
-          agentsStateManager.doLocked {
-            updateMaster(partition, init = false)
-          }
+          updateMaster(partition, init = false)
           generateNewTransaction(partition)
 
         case TransactionResponse(snd, rcv, id, p) =>
@@ -310,9 +309,7 @@ class PeerAgent(agentsStateManager: AgentsStateDBService,
           id
         }
       } else {
-        agentsStateManager.doLocked {
-          updateMaster(partition, init = false)
-        }
+        updateMaster(partition, init = false)
         generateNewTransaction(partition)
       }
     res
@@ -335,9 +332,7 @@ class PeerAgent(agentsStateManager: AgentsStateDBService,
   def publish(msg: TransactionStateMessage, isUpdateMaster: Boolean = false): Boolean = {
     if (isUpdateMaster) {
       PeerAgent.logger.warn(s"Master update is requested for ${msg.partition}.")
-      agentsStateManager.doLocked {
-        updateMaster(msg.partition, init = false)
-      }
+      updateMaster(msg.partition, init = false)
     }
     val master = agentsStateManager.getPartitionMasterInetAddressLocal(msg.partition, null)
 
