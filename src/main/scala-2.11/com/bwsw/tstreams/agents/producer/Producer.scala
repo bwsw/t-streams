@@ -78,7 +78,7 @@ class Producer[T](var name: String,
   private val logger = LoggerFactory.getLogger(this.getClass)
   private val threadLock = new ReentrantLock(true)
 
-  private val zkRetriesAmount = pcs.zkSessionTimeout * 1000 / PeerAgent.RETRY_SLEEP_TIME + 1
+  private val peerKeepAliveTimeout = pcs.zkSessionTimeout * 1000 + 2000 // TODO: fix it!
   private val zkService = new ZookeeperDLMService(pcs.zkRootPath, pcs.zkHosts, pcs.zkSessionTimeout, pcs.zkConnectionTimeout)
 
 
@@ -108,7 +108,7 @@ class Producer[T](var name: String,
   override val p2pAgent: PeerAgent = new PeerAgent(
     agentsStateManager = agentsStateManager,
     zkService = zkService,
-    zkRetriesAmount = zkRetriesAmount,
+    peerKeepAliveTimeout = peerKeepAliveTimeout,
     producer = this,
     usedPartitions = producerOptions.writePolicy.getUsedPartitions(),
     isLowPriorityToBeMaster = pcs.isLowPriorityToBeMaster,

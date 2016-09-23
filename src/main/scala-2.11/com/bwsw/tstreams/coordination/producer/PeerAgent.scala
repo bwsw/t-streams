@@ -40,7 +40,7 @@ object PeerAgent {
   * Agent for providing peer to peer interaction between Producers
   *
   * @param zkService
-  * @param zkRetriesAmount
+  * @param peerKeepAliveTimeout
   * @param producer                Producer reference
   * @param usedPartitions          List of used producer partitions
   * @param isLowPriorityToBeMaster Flag which indicate to have low priority to be master
@@ -48,7 +48,7 @@ object PeerAgent {
   */
 class PeerAgent(agentsStateManager: AgentsStateDBService,
                 zkService: ZookeeperDLMService,
-                zkRetriesAmount: Int,
+                peerKeepAliveTimeout: Int,
                 producer: Producer[_],
                 usedPartitions: List[Int],
                 isLowPriorityToBeMaster: Boolean,
@@ -142,10 +142,11 @@ class PeerAgent(agentsStateManager: AgentsStateDBService,
     * Helper method for new master voting
     *
     * @param partition New master partition
-    * @param retries   Retries to try to set new master
+    * @param now   ???
+    * @param expiresAt ???
     * @return Selected master address
     */
-  private def electPartitionMaster(partition: Int, retries: Int = zkRetriesAmount): MasterConfiguration = {
+  private def electPartitionMaster(partition: Int, now: Long, expiresAt: Long): MasterConfiguration = {
     PeerAgent.logger.debug(s"[MASTER VOTE INIT] Start voting new agent on address: {$myInetAddress} on stream: {$streamName}, partition:{$partition}")
 
     val master = agentsStateManager.getCurrentMaster(partition)
@@ -159,11 +160,11 @@ class PeerAgent(agentsStateManager: AgentsStateDBService,
 
       transport.setMasterRequest(bestCandidate.agentAddress, partition) match {
         case null =>
-          if (retries == 0)
-            throw new IllegalStateException(s"Expected master hasn't occurred in $zkRetriesAmount trials.")
+          if (now > expiresAt)
+            throw new IllegalStateException(s"Expected master hasn't occurred up to timestamp $expiresAt.")
           //assume that if master is not responded it will be deleted by zk
           Thread.sleep(PeerAgent.RETRY_SLEEP_TIME)
-          electPartitionMaster(partition, retries - 1)
+          electPartitionMaster(partition, System.currentTimeMillis(), expiresAt)
 
         case SetMasterResponse(_, _, p) =>
           assert(p == partition)
@@ -176,9 +177,9 @@ class PeerAgent(agentsStateManager: AgentsStateDBService,
     }(master => master)
   }
 
-  def updateMaster(partition: Int, init: Boolean, retries: Int = zkRetriesAmount): Unit = this.synchronized {
+  def updateMaster(partition: Int, init: Boolean): Unit = this.synchronized {
     agentsStateManager doLocked {
-      updateMasterInternal(partition, init, retries)
+      updateMasterInternal(partition, init, System.currentTimeMillis(), System.currentTimeMillis() + peerKeepAliveTimeout)
     }
   }
 
@@ -187,10 +188,10 @@ class PeerAgent(agentsStateManager: AgentsStateDBService,
     *
     * @param partition Partition to update master
     * @param isDemoteCurrentMaster      If flag true master will be reselected anyway else old master can stay
-    * @param retries   Retries to try to interact with master
+    * @param expiresAt   Retries to try to interact with master
     */
-  def updateMasterInternal(partition: Int, isDemoteCurrentMaster: Boolean, retries: Int = zkRetriesAmount): Unit = this.synchronized {
-    PeerAgent.logger.info(s"[MASTER UPDATE INIT] Updating master with init=$isDemoteCurrentMaster on agent: {$myInetAddress} on stream: {$streamName}, partition: {$partition} with retry=$retries.")
+  def updateMasterInternal(partition: Int, isDemoteCurrentMaster: Boolean, now: Long, expiresAt: Long): Unit = this.synchronized {
+    PeerAgent.logger.info(s"[MASTER UPDATE INIT] Updating master with init=$isDemoteCurrentMaster on agent: {$myInetAddress} on stream: {$streamName}, partition: {$partition} with retry=$expiresAt.")
 
     // nothing to do if I'm the master already
     // I don't vote for NOT being master.
@@ -198,44 +199,44 @@ class PeerAgent(agentsStateManager: AgentsStateDBService,
     if (masterOpt.fold(false)(master => master.agentAddress == myInetAddress))
       return
 
-    masterOpt.fold[Unit](electPartitionMaster(partition)) { master =>
+    masterOpt.fold[Unit](electPartitionMaster(partition, System.currentTimeMillis(), expiresAt)) { master =>
       if (isDemoteCurrentMaster) {
           transport.deleteMasterRequest(master.agentAddress, partition) match {
           case null =>
-            if (retries == 0)
+            if (now > expiresAt)
               throw new IllegalStateException(s"Agent ${master.agentAddress} didn't respond to me.")
             //assume that if master is not responded it will be deleted by zk
             Thread.sleep(PeerAgent.RETRY_SLEEP_TIME)
-            updateMasterInternal(partition, isDemoteCurrentMaster, retries - 1)
+            updateMasterInternal(partition, isDemoteCurrentMaster, System.currentTimeMillis(), expiresAt)
 
           case EmptyResponse(_, _, p) =>
             assert(p == partition)
             Thread.sleep(PeerAgent.RETRY_SLEEP_TIME)
-            updateMasterInternal(partition, isDemoteCurrentMaster, zkRetriesAmount)
+            updateMasterInternal(partition, isDemoteCurrentMaster, System.currentTimeMillis(), expiresAt)
 
           case DeleteMasterResponse(_, _, p) =>
             assert(p == partition)
-            val newMaster = electPartitionMaster(partition)
-            PeerAgent.logger.info(s"[MASTER UPDATE RESULT] Finished updating master with init=true on agent: {$myInetAddress} on stream: {$streamName}, partition: {$partition} with retry=$retries; re-voted master: {$newMaster}.")
+            val newMaster = electPartitionMaster(partition, System.currentTimeMillis(), expiresAt)
+            PeerAgent.logger.info(s"[MASTER UPDATE RESULT] Finished updating master with init=true on agent: {$myInetAddress} on stream: {$streamName}, partition: {$partition} with retry=$expiresAt; re-voted master: {$newMaster}.")
             agentsStateManager.putPartitionMasterLocally(partition, newMaster)
         }
       } else {
         transport.pingRequest(master.agentAddress, partition) match {
           case null =>
-            if (retries == 0)
+            if (now > expiresAt)
               throw new IllegalStateException(s"Agent ${master.agentAddress} didn't respond to me.")
             //assume that if master is not responded it will be deleted by zk
             Thread.sleep(PeerAgent.RETRY_SLEEP_TIME)
-            updateMasterInternal(partition, isDemoteCurrentMaster, retries - 1)
+            updateMasterInternal(partition, isDemoteCurrentMaster, System.currentTimeMillis(), expiresAt)
 
           case EmptyResponse(_, _, p) =>
             assert(p == partition)
             Thread.sleep(PeerAgent.RETRY_SLEEP_TIME)
-            updateMasterInternal(partition, isDemoteCurrentMaster, zkRetriesAmount)
+            updateMasterInternal(partition, isDemoteCurrentMaster, System.currentTimeMillis(), expiresAt)
 
           case PingResponse(_, _, p) =>
             assert(p == partition)
-            PeerAgent.logger.info(s"[MASTER UPDATE RESULT] Finished updating master with init=false on agent: {$myInetAddress} on stream: {$streamName}, partition: {$partition} with retry=$retries; old master: {$master} is alive now.")
+            PeerAgent.logger.info(s"[MASTER UPDATE RESULT] Finished updating master with init=false on agent: {$myInetAddress} on stream: {$streamName}, partition: {$partition} with retry=$expiresAt; old master: {$master} is alive now.")
             agentsStateManager.putPartitionMasterLocally(partition, master)
         }
       }
