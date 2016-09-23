@@ -364,9 +364,7 @@ class PeerAgent(agentsStateManager: AgentsStateDBService,
     //to avoid infinite polling block
     executorGraphs.foreach(g => g._2.shutdown())
 
-    agentsStateManager.doLocked {
-      agentsStateManager.shutdown()
-    }
+    agentsStateManager.shutdown()
 
     transport.stopClient()
   }
