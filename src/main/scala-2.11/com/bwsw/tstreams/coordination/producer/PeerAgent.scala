@@ -28,7 +28,7 @@ object PeerAgent {
   /**
     * How long to sleep during master elections actions
     */
-  val RETRY_SLEEP_TIME = 1000
+  val RETRY_SLEEP_TIME = 100
   /**
     * Generic logger object
     */
