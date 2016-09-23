@@ -24,7 +24,7 @@ class BroadcastCommunicationClient(agentsStateManager: AgentsStateDBService,
     * Initialize coordinator
     */
   def init(): Unit = {
-    agentsStateManager.withGlobalStreamLockDo(() => initInternal())
+    agentsStateManager.doLocked { initInternal() }
   }
 
   /**

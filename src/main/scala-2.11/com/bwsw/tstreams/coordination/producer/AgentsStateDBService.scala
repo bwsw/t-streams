@@ -50,15 +50,7 @@ class AgentsStateDBService(dlm: ZookeeperDLMService,
   }
 
 
-  /**
-    * Return master for concrete partition
-    *
-    * @param partition Partition to set
-    * @return Master address
-    */
-  def getCurrentMaster(partition: Int): Option[MasterConfiguration] = this.synchronized {
-    withGlobalStreamLockDo(() => getCurrentMasterWithoutLock(partition))
-  }
+
 
   /**
     * Receives current master without locking partition
@@ -66,7 +58,7 @@ class AgentsStateDBService(dlm: ZookeeperDLMService,
     * @param partition
     * @return
     */
-  private def getCurrentMasterWithoutLock(partition: Int): Option[MasterConfiguration] = {
+  def getCurrentMaster(partition: Int): Option[MasterConfiguration] = {
     val masterOpt = try {
       dlm.get[MasterConfiguration](getPartitionMasterPath(partition))
     } catch {
@@ -88,18 +80,16 @@ class AgentsStateDBService(dlm: ZookeeperDLMService,
   def bootstrap(isLowPriorityToBeMaster: Boolean, uniqueAgentId: Int, isFull: Boolean) = this.synchronized {
     agentID = uniqueAgentId
     // save initial records to zk
-    LockUtil.withZkLockOrDieDo[Unit](dlm.getLock(ZookeeperDLMService.CREATE_PATH_LOCK), (100, TimeUnit.SECONDS), Some(ZookeeperDLMService.logger), () => {
-      partitions foreach { p =>
-        val penalty = if (isLowPriorityToBeMaster) PeerAgent.LOW_PRIORITY_PENALTY else 0
-        val conf = AgentConfiguration(inetAddress, weight = 0, penalty, uniqueAgentId)
-        //println(s"ConfInit: $conf")
-        dlm.create[AgentConfiguration](getMyPath(p), conf, CreateMode.EPHEMERAL)
-      }
-      if (PeerAgent.logger.isDebugEnabled) {
-        PeerAgent.logger.debug(s"[INIT] End initialize agent with address:{$inetAddress}, " +
-          s"stream: {$streamName}, partitions: {${partitions.mkString(",")}")
-      }
-    })
+    partitions foreach { p =>
+      val penalty = if (isLowPriorityToBeMaster) PeerAgent.LOW_PRIORITY_PENALTY else 0
+      val conf = AgentConfiguration(inetAddress, weight = 0, penalty, uniqueAgentId)
+      //println(s"ConfInit: $conf")
+      dlm.create[AgentConfiguration](getMyPath(p), conf, CreateMode.EPHEMERAL)
+    }
+    if (PeerAgent.logger.isDebugEnabled) {
+      PeerAgent.logger.debug(s"[INIT] End initialize agent with address:{$inetAddress}, " +
+        s"stream: {$streamName}, partitions: {${partitions.mkString(",")}")
+    }
 
     removeLastSessionArtifacts()
     // assign me as a master on partitions which don't have master yet
@@ -109,19 +99,17 @@ class AgentsStateDBService(dlm: ZookeeperDLMService,
 
   private def bootstrapBrokenPartitionsMasters(): Unit = {
     var ctr: Int = 0
-    LockUtil.withZkLockOrDieDo[Unit](dlm.getLock(ZookeeperDLMService.CREATE_PATH_LOCK), (100, TimeUnit.SECONDS), Some(ZookeeperDLMService.logger), () => {
-      partitions foreach {
-        p => if (getCurrentMasterWithoutLock(p).isEmpty) {
-          val mc = MasterConfiguration(inetAddress, agentID)
-          dlm.create[MasterConfiguration](
-            getPartitionMasterPath(p),
-            mc,
-            CreateMode.EPHEMERAL)
-          ctr += 1
-          masterMap += (p -> mc)
-        }
+    partitions foreach {
+      p => if (getCurrentMaster(p).isEmpty) {
+        val mc = MasterConfiguration(inetAddress, agentID)
+        dlm.create[MasterConfiguration](
+          getPartitionMasterPath(p),
+          mc,
+          CreateMode.EPHEMERAL)
+        ctr += 1
+        masterMap += (p -> mc)
       }
-    })
+    }
     partitions foreach { p => updateMyPriority(p, value = ctr) }
   }
 
@@ -195,17 +183,6 @@ class AgentsStateDBService(dlm: ZookeeperDLMService,
     bestCandidate
   }
 
-  /**
-    * Unset this agent as master on concrete partition
-    *
-    * @param partition Partition to set
-    */
-  private def demoteMaster(partition: Int) = this.synchronized {
-    withGlobalStreamLockDo(() => {
-      dlm.delete(getPartitionMasterPath(partition))
-      PeerAgent.logger.info(s"[MASTER DELETE END] Agent ($inetAddress) - I'm no longer the master for stream/partition: ($streamName,$partition).")
-    })
-  }
 
   def demoteMeAsMaster(partition: Int, isUpdatePriority: Boolean = true) = this.synchronized {
     //try to remove old master
@@ -214,7 +191,8 @@ class AgentsStateDBService(dlm: ZookeeperDLMService,
       masterSettings =>
         if (masterSettings.agentAddress == inetAddress && masterSettings.uniqueAgentId == agentID) {
           PeerAgent.logger.info(s"[MASTER DELETE BEGIN] Delete agent as MASTER on address: {$inetAddress} from stream: {$streamName}, partition:{$partition}.")
-          demoteMaster(partition)
+          dlm.delete(getPartitionMasterPath(partition))
+          PeerAgent.logger.info(s"[MASTER DELETE END] Agent ($inetAddress) - I'm no longer the master for stream/partition: ($streamName,$partition).")
 
           if (isUpdatePriority)
             partitions foreach { p => updateMyPriority(p, value = -1) }
@@ -259,45 +237,28 @@ class AgentsStateDBService(dlm: ZookeeperDLMService,
   }
 
   /**
-    * does master assignment with locking
-    *
-    * @param partition
-    */
-  def assignMeAsMaster(partition: Int) = {
-    withGlobalStreamLockDo(() => assignMeAsMasterWithoutLock(partition))
-  }
-
-  /**
     * does actual master assignment
     *
     * @param partition
     */
-  def assignMeAsMasterWithoutLock(partition: Int) = this.synchronized {
+  def assignMeAsMaster(partition: Int) = this.synchronized {
     assert(!dlm.exist(getPartitionMasterPath(partition)))
     val masterConf = MasterConfiguration(inetAddress, agentID)
-    LockUtil.withZkLockOrDieDo[Unit](dlm.getLock(ZookeeperDLMService.CREATE_PATH_LOCK), (100, TimeUnit.SECONDS), Some(ZookeeperDLMService.logger), () => {
-      dlm.create[MasterConfiguration](
-        getPartitionMasterPath(partition),
-        masterConf,
-        CreateMode.EPHEMERAL)
-    })
+    dlm.create[MasterConfiguration](
+      getPartitionMasterPath(partition),
+      masterConf,
+      CreateMode.EPHEMERAL)
     partitions foreach { p => updateMyPriority(p, value = +1) }
     masterMap += (partition -> masterConf)
     PeerAgent.logger.info(s"[SET MASTER ANNOUNCE] ($inetAddress) - I was elected as master for stream/partition: ($streamName,$partition).")
   }
 
-  def withElectionLockDo(partition: Int, f: () => MasterConfiguration): MasterConfiguration = {
-    LockUtil.withZkLockOrDieDo[MasterConfiguration](dlm.getLock(getLockVotingPath(partition)), (100, TimeUnit.SECONDS), Some(PeerAgent.logger), f)
-  }
-
-  def withGlobalStreamLockDo[T](f: () => T) = this.synchronized {
+  def doLocked[T](f: => T) = this.synchronized {
     LockUtil.withZkLockOrDieDo[T](dlm.getLock(getStreamLockPath()), (100, TimeUnit.SECONDS), Some(PeerAgent.logger), f)
   }
 
   def setSubscriberStateWatcher(partition: Int, watcher: Watcher) =
-    LockUtil.withZkLockOrDieDo[Unit](dlm.getLock(ZookeeperDLMService.WATCHER_LOCK), (100, TimeUnit.SECONDS), Some(ZookeeperDLMService.logger), () => {
       dlm.setWatcher(getSubscribersEventPath(partition), watcher)
-    })
 
   def getPartitionSubscribers(partition: Int) = {
     val subscribersPathOpt = dlm.getAllSubNodesData[String](getSubscribersDataPath(partition))

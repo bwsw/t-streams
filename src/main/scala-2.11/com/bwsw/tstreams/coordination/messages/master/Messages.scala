@@ -124,7 +124,9 @@ case class DeleteMasterRequest(senderID: String, receiverID: String, partition: 
     val master = agent.getAgentsStateManager.getPartitionMasterInetAddressLocal(partition, "")
     val response = {
       if (master == agent.getAgentAddress) {
-        agent.getAgentsStateManager().demoteMeAsMaster(partition)
+        agent.getAgentsStateManager().doLocked {
+          agent.getAgentsStateManager().demoteMeAsMaster(partition)
+        }
         DeleteMasterResponse(receiverID, senderID, partition)
       } else
         EmptyResponse(receiverID, senderID, partition)
@@ -166,7 +168,9 @@ case class SetMasterRequest(senderID: String, receiverID: String, partition: Int
       if (master == agent.getAgentAddress)
         EmptyResponse(receiverID, senderID, partition)
       else {
-        agent.getAgentsStateManager().assignMeAsMaster(partition)
+        agent.getAgentsStateManager().doLocked {
+          agent.getAgentsStateManager().assignMeAsMaster(partition)
+        }
         SetMasterResponse(receiverID, senderID, partition)
       }
     }
@@ -200,11 +204,12 @@ case class PingRequest(senderID: String, receiverID: String, partition: Int) ext
     if (IMessage.logger.isDebugEnabled)
       IMessage.logger.debug("Start handling PingRequest")
 
-    assert(receiverID == agent.getAgentAddress)
-    val master = agent.getAgentsStateManager.getPartitionMasterInetAddressLocal(partition, "")
+    val masterOpt = agent.getAgentsStateManager.doLocked {
+      agent.getAgentsStateManager.getCurrentMaster(partition)
+    }
 
     val response = {
-      if (master == agent.getAgentAddress)
+      if (masterOpt.isDefined && masterOpt.get.agentAddress == agent.getAgentAddress)
         PingResponse(receiverID, senderID, partition)
       else
         EmptyResponse(receiverID, senderID, partition)

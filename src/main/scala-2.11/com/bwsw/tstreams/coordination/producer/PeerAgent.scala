@@ -76,10 +76,6 @@ class PeerAgent(agentsStateManager: AgentsStateDBService,
 
   def getAgentAddress() = myInetAddress
 
-  def getTransport() = transport
-
-  def getUsedPartitions() = usedPartitions
-
   def getProducer() = producer
 
   def getAgentsStateManager() = agentsStateManager
@@ -119,8 +115,9 @@ class PeerAgent(agentsStateManager: AgentsStateDBService,
   // fill initial sequential counters
   usedPartitions foreach { p => sequentialIds += (p -> new AtomicLong(0)) }
 
-  agentsStateManager.bootstrap(isLowPriorityToBeMaster, uniqueAgentId, isMasterBootstrapModeFull)
-
+  agentsStateManager.doLocked {
+    agentsStateManager.bootstrap(isLowPriorityToBeMaster, uniqueAgentId, isMasterBootstrapModeFull)
+  }
 
   partitionWeightDistributionThread = new Thread(new Runnable {
     override def run(): Unit = {
@@ -129,7 +126,9 @@ class PeerAgent(agentsStateManager: AgentsStateDBService,
       while (isRunning.get() && it.hasNext) {
         Thread.sleep(partitionRedistributionDelay * 1000)
         val item = it.next
-        updateMaster(item, init = true)
+        agentsStateManager.doLocked {
+          updateMaster(item, init = true)
+        }
         PeerAgent.logger.info(s"Master update request for partition $item is complete.")
       }
       awaitPartitionRedistributionThreadComplete.countDown()
@@ -148,7 +147,7 @@ class PeerAgent(agentsStateManager: AgentsStateDBService,
     * @param retries   Retries to try to set new master
     * @return Selected master address
     */
-  private def electPartitionMasterInternal(partition: Int, retries: Int = zkRetriesAmount): MasterConfiguration = {
+  private def electPartitionMaster(partition: Int, retries: Int = zkRetriesAmount): MasterConfiguration = {
     PeerAgent.logger.debug(s"[MASTER VOTE INIT] Start voting new agent on address: {$myInetAddress} on stream: {$streamName}, partition:{$partition}")
 
     val master = agentsStateManager.getCurrentMaster(partition)
@@ -166,7 +165,7 @@ class PeerAgent(agentsStateManager: AgentsStateDBService,
             throw new IllegalStateException(s"Expected master hasn't occurred in $zkRetriesAmount trials.")
           //assume that if master is not responded it will be deleted by zk
           Thread.sleep(PeerAgent.RETRY_SLEEP_TIME)
-          electPartitionMasterInternal(partition, retries - 1)
+          electPartitionMaster(partition, retries - 1)
 
         case SetMasterResponse(_, _, p) =>
           assert(p == partition)
@@ -179,15 +178,6 @@ class PeerAgent(agentsStateManager: AgentsStateDBService,
     }(master => master)
   }
 
-  /**
-    * Voting new master for concrete partition
-    *
-    * @param partition Partition to vote new master
-    * @return New master Address
-    */
-  private def electPartitionMaster(partition: Int): MasterConfiguration = this.synchronized {
-    agentsStateManager.withElectionLockDo(partition, () => electPartitionMasterInternal(partition))
-  }
 
   /**
     * Updating master on concrete partition
@@ -300,12 +290,16 @@ class PeerAgent(agentsStateManager: AgentsStateDBService,
       if (master != null) {
         transport.transactionRequest(master, partition) match {
         case null =>
-          updateMaster(partition, init = false)
+          agentsStateManager.doLocked {
+            updateMaster(partition, init = false)
+          }
           generateNewTransaction(partition)
 
         case EmptyResponse(snd, rcv, p) =>
           assert(p == partition)
-          updateMaster(partition, init = false)
+          agentsStateManager.doLocked {
+            updateMaster(partition, init = false)
+          }
           generateNewTransaction(partition)
 
         case TransactionResponse(snd, rcv, id, p) =>
@@ -316,7 +310,9 @@ class PeerAgent(agentsStateManager: AgentsStateDBService,
           id
         }
       } else {
-        updateMaster(partition, init = false)
+        agentsStateManager.doLocked {
+          updateMaster(partition, init = false)
+        }
         generateNewTransaction(partition)
       }
     res
@@ -339,7 +335,9 @@ class PeerAgent(agentsStateManager: AgentsStateDBService,
   def publish(msg: TransactionStateMessage, isUpdateMaster: Boolean = false): Boolean = {
     if (isUpdateMaster) {
       PeerAgent.logger.warn(s"Master update is requested for ${msg.partition}.")
-      updateMaster(msg.partition, init = false)
+      agentsStateManager.doLocked {
+        updateMaster(msg.partition, init = false)
+      }
     }
     val master = agentsStateManager.getPartitionMasterInetAddressLocal(msg.partition, null)
 
@@ -364,13 +362,16 @@ class PeerAgent(agentsStateManager: AgentsStateDBService,
     if (isMasterProcessVote)
       partitionWeightDistributionThread.join()
 
-
     transport.stopServer()
 
     zkConnectionValidator.join()
     //to avoid infinite polling block
     executorGraphs.foreach(g => g._2.shutdown())
-    agentsStateManager.shutdown()
+
+    agentsStateManager.doLocked {
+      agentsStateManager.shutdown()
+    }
+
     transport.stopClient()
   }
 

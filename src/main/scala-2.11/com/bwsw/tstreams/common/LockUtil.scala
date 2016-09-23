@@ -79,7 +79,7 @@ object LockUtil {
   def withZkLockOrDieDo[T](l: DistributedLockImpl,
                                lt: (Int, TimeUnit),
                                logger: Option[Logger] = None,
-                               lambda: () => T): T = {
+                               lambda: => T): T = {
 
     val lStartTime = System.currentTimeMillis()
     val token = randomGenerator.nextInt().toString
@@ -94,7 +94,7 @@ object LockUtil {
     }
     val fStartTime = System.currentTimeMillis()
     try {
-      val rv = lambda()
+      val rv = lambda
 
       if (logger.isDefined && logger.get.isDebugEnabled) {
         val fEndTime = System.currentTimeMillis()
