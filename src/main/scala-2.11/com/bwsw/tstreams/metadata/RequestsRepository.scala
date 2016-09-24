@@ -1,6 +1,6 @@
 package com.bwsw.tstreams.metadata
 
-import com.datastax.driver.core.Session
+import com.datastax.driver.core.{PreparedStatement, Session}
 
 import scala.collection.mutable
 
@@ -29,12 +29,15 @@ object RequestsStatements {
     val commitLog = "commit_log"
     val commitLogPutStatement = session.prepare(s"INSERT INTO $commitLog (stream, partition, activity_second, transaction, count) " +
       "VALUES (?, ?, ?, ?, ?) USING TTL ?")
-    val commitLogGetStatement = session.prepare(s"SELECT stream, partition, activity_second, transaction, count, TTL(count) " +
+    val commitLogGetStatement = session.prepare(s"SELECT stream, partition, activity_second, transaction, count, TTL(count) FROM $commitLog " +
       "WHERE stream = ? AND partition = ? AND activity_second = ? AND transaction = ?")
 
+    RequestsStatements(activityPutStatement = activityPutStatement, activityGetStatement = activityGetStatement,
+      commitLogPutStatement = commitLogPutStatement, commitLogGetStatement = commitLogGetStatement)
   }
 }
 
-case class RequestsStatements() {
-
-}
+case class RequestsStatements(activityPutStatement: PreparedStatement,
+                              activityGetStatement: PreparedStatement,
+                              commitLogPutStatement: PreparedStatement,
+                              commitLogGetStatement: PreparedStatement)
