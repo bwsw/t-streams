@@ -101,9 +101,9 @@ class TransactionDatabase(session: Session, stream: String) {
     } else Nil
   }
 
-  private def scanForwardInt(partition: Integer, transactionFrom: Long, transactionTo: Long)(interval: Long, deadHigh: Long, list: List[TransactionRecord], predicate: TransactionRecord => Boolean): List[TransactionRecord] = {
+  private def scanForwardInt(partition: Integer, transactionFrom: Long, transactionTo: Long)(interval: Long, intervalDeadHigh: Long, list: List[TransactionRecord], predicate: TransactionRecord => Boolean): List[TransactionRecord] = {
 
-    if(interval > deadHigh)
+    if(interval > intervalDeadHigh)
       return list
 
     val intervalTransactions = getTransactionsForInterval(partition, interval)
@@ -113,7 +113,7 @@ class TransactionDatabase(session: Session, stream: String) {
 
     val filteredTransactions = candidateTransactions.takeWhile(predicate)
     if(candidateTransactions.size == filteredTransactions.size)
-       scanForwardInt(partition, transactionFrom, transactionTo) (interval + 1, deadHigh, list ++ candidateTransactions, predicate)
+       scanForwardInt(partition, transactionFrom, transactionTo) (interval + 1, intervalDeadHigh, list ++ candidateTransactions, predicate)
     else
       list ++ filteredTransactions
   }
