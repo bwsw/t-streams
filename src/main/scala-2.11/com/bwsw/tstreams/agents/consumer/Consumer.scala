@@ -110,7 +110,7 @@ class Consumer[T](val name: String,
       for (i <- 0 until stream.getPartitions) {
         currentOffsets(i) = options.offset match {
           case Offset.Oldest =>
-            options.transactionGenerator.getTransaction(0)
+            options.transactionGenerator.getTransaction(System.currentTimeMillis() - (stream.getTTL() + 1) * 1000)
           case Offset.Newest =>
             options.transactionGenerator.getTransaction()
           case dateTime: Offset.DateTime =>
@@ -331,6 +331,7 @@ class Consumer[T](val name: String,
 
   override def getTransactionsFromTo(partition: Int, from: Long, to: Long): ListBuffer[ConsumerTransaction[T]] = {
     val data = tsdb.scanForward(partition, from, to)(transaction => transaction.count > 0)
+    println(data)
     val result = ListBuffer[ConsumerTransaction[T]]()
     data.foreach(rec =>
       result.append(new ConsumerTransaction[T](partition = partition, transactionID = rec.transactionID, count = rec.count, ttl = rec.ttl)))

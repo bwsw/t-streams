@@ -32,13 +32,6 @@ class ConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll with Te
     offset = Oldest,
     isUseLastOffset = true)
 
-  val producer = f.getProducer[String](
-    name = "test_producer",
-    transactionGenerator = gen,
-    converter = stringToArrayByteConverter,
-    partitions = Set(0, 1, 2),
-    isLowPriority = false)
-
   val executor = new FirstFailLockableTaskExecutor("executor")
   val tsdb = new TransactionDatabase(cluster.connect(randomKeyspace), "test_stream")
 
@@ -49,20 +42,12 @@ class ConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll with Te
   }
 
   "consumer.getTransactionById" should "return sent transaction" in {
-    val totalDataInTransaction = 10
-    val data = (for (i <- 0 until totalDataInTransaction) yield randomString).toList.sorted
-    val transaction = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened, 1)
-    val transactionID = transaction.getTransactionID
-    data.foreach(x => transaction.send(x))
-    transaction.checkpoint()
-    var checkVal = true
-
+    val transactionID = LocalGeneratorCreator.getTransaction()
+    tsdb.put(TransactionRecord(1, transactionID, 2, 120), executor) {r => true}
     val consumedTransaction = consumer.getTransactionById(1, transactionID).get
-    checkVal = consumedTransaction.getPartition == transaction.getPartition
-    checkVal = consumedTransaction.getTransactionID == transactionID
-    checkVal = consumedTransaction.getAll().sorted == data
-
-    checkVal shouldEqual true
+    consumedTransaction.getPartition shouldBe 1
+    consumedTransaction.getTransactionID shouldBe transactionID
+    consumedTransaction.getCount() shouldBe 2
   }
 
   "consumer.getTransaction" should "return sent transaction" in {
@@ -111,7 +96,7 @@ class ConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll with Te
     val lastTransaction = transactions.last
 
     val res = consumer.getTransactionsFromTo(1, firstTransaction, lastTransaction)
-    res.size shouldBe transactions1.drop(1).size
+    res.size shouldBe transactions1.size
   }
 
   "consumer.getTransactionsFromTo" should "return none if empty" in {
@@ -135,9 +120,7 @@ class ConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll with Te
     res.size shouldBe 0
   }
 
-
   override def afterAll(): Unit = {
-    producer.stop()
     onAfterAll()
   }
 }
