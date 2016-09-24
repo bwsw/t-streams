@@ -40,7 +40,7 @@ class TransactionDatabaseTests extends FlatSpec with Matchers with BeforeAndAfte
   }
 
   it should "handle big range scans without problems" in {
-    val TOTAL = 1000
+    val TOTAL = 100
     val putCounter = new CountDownLatch(TOTAL)
     val putTransactions = (0 until TOTAL).map(_ => LocalGeneratorCreator.getTransaction())
     val asynchronousExecutor = new FirstFailLockableTaskExecutor("testExecutor")
@@ -61,6 +61,35 @@ class TransactionDatabaseTests extends FlatSpec with Matchers with BeforeAndAfte
 
     getTransactionsForward.tail.map(t => t.transactionID) shouldBe getTransactionsBackward.tail.reverse.map(t => t.transactionID)
     getTransactionsBackward.reverse.map(t => t.transactionID) shouldBe putTransactions.tail
+  }
+
+  it should "handle correct offsets inside interval" in {
+    val TOTAL = 100
+    val putCounter = new CountDownLatch(TOTAL)
+    val veryFirst = LocalGeneratorCreator.getTransaction()
+    val putTransactions = (0 until TOTAL).map(_ => LocalGeneratorCreator.getTransaction())
+    val asynchronousExecutor = new FirstFailLockableTaskExecutor("testExecutor")
+
+    putTransactions.foreach(i =>
+      tsdb.put(TransactionRecord(partition = 0, transactionID = i, count = 1, ttl = 600), asynchronousExecutor) (transaction => {
+        putCounter.countDown()
+      }))
+    putCounter.await()
+
+    val lastTransaction = putTransactions.tail.tail.tail.tail.head
+    val firstTransaction = putTransactions.tail.tail.head
+    val getTransactionsForward = tsdb.scanForward(0, firstTransaction, lastTransaction) (t => true)
+    getTransactionsForward.size shouldBe 3
+    getTransactionsForward.head.transactionID shouldBe firstTransaction
+    getTransactionsForward.last.transactionID shouldBe lastTransaction
+
+    val getTransactionsForwardInverse = tsdb.scanForward(0, lastTransaction, firstTransaction) (t => true)
+    getTransactionsForwardInverse.size shouldBe 0
+
+    val getTransactionsForwardVeryFirst = tsdb.scanForward(0, veryFirst, lastTransaction) (t => true)
+    getTransactionsForwardVeryFirst.head.transactionID shouldBe putTransactions.head
+    getTransactionsForwardVeryFirst.last.transactionID shouldBe lastTransaction
+
   }
 
   override def afterAll(): Unit = {

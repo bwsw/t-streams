@@ -130,7 +130,6 @@ class TransactionDatabase(session: Session, stream: String) {
   def scanForward(partition: Integer, transactionFrom: Long, deadHigh: Long)(predicate: TransactionRecord => Boolean): List[TransactionRecord] = {
     val intervalFrom = TransactionDatabase.getAggregationInterval(transactionFrom)
     val intervalDeadHi = TransactionDatabase.getAggregationInterval(deadHigh)
-    println(s"$intervalFrom, $intervalDeadHi")
     scanForwardInt(partition, transactionFrom, deadHigh)(intervalFrom, intervalDeadHi, Nil, predicate)
   }
 
