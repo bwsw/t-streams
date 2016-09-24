@@ -1,6 +1,6 @@
 package com.bwsw.tstreams.agents.producer
 
-import java.util.concurrent.TimeUnit
+import java.util.concurrent.{CountDownLatch, TimeUnit}
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.locks.ReentrantLock
 
@@ -8,6 +8,7 @@ import com.bwsw.tstreams.agents.group.ProducerCheckpointInfo
 import com.bwsw.tstreams.common.LockUtil
 import com.bwsw.tstreams.coordination.messages.state.{TransactionStateMessage, TransactionStatus}
 import com.bwsw.tstreams.debug.GlobalHooks
+import com.bwsw.tstreams.metadata.TransactionRecord
 import org.slf4j.LoggerFactory
 
 import scala.collection.mutable.ListBuffer
@@ -127,26 +128,15 @@ class ProducerTransaction[T](partition: Int,
   }
 
   private def cancelAsync() = {
-    transactionOwner
-    transactionOwner.stream.metadataStorage.commitEntity.deleteAsync(
-      streamName = transactionOwner.stream.getName,
+    transactionOwner.tsdb.del(partition, transactionID)
+    val msg = TransactionStateMessage(transactionID = transactionID,
+      ttl = -1,
+      status = TransactionStatus.cancel,
       partition = partition,
-      transaction = transactionID,
-      executor = transactionOwner.backendActivityService,
-      resourceCounter = transactionOwner.pendingCassandraTasks,
-      function = () => {
-        val msg = TransactionStateMessage(transactionID = transactionID,
-          ttl = -1,
-          status = TransactionStatus.cancel,
-          partition = partition,
-          masterID = transactionOwner.p2pAgent.getUniqueAgentID(),
-          orderID = -1,
-          count = 0)
-        transactionOwner.p2pAgent.publish(msg)
-        if (ProducerTransaction.logger.isDebugEnabled) {
-          ProducerTransaction.logger.debug(s"[CANCEL PARTITION_${msg.partition}] ts=${msg.transactionID.toString} status=${msg.status.toString}")
-        }
-      })
+      masterID = transactionOwner.p2pAgent.getUniqueAgentID(),
+      orderID = -1,
+      count = 0)
+    transactionOwner.p2pAgent.publish(msg)
   }
 
   /**
@@ -232,17 +222,8 @@ class ProducerTransaction[T](partition: Int,
           return
         }
       }
-
-      transactionOwner.stream.metadataStorage.commitEntity.commitAsync(
-        streamName = transactionOwner.stream.getName,
-        partition = partition,
-        transaction = transactionID,
-        totalCnt = getDataItemsCount,
-        ttl = transactionOwner.stream.getTTL,
-        resourceCounter = transactionOwner.pendingCassandraTasks,
-        executor = transactionOwner.backendActivityService,
-        function = checkpointPostEventPart)
-
+      val record = TransactionRecord(partition = partition, transactionID = transactionID, count = getDataItemsCount(), ttl = transactionOwner.stream.getTTL())
+      transactionOwner.tsdb.put(record, transactionOwner.backendActivityService) (record => { checkpointPostEventPart() })
     }
     else {
       transactionOwner.p2pAgent.publish(TransactionStateMessage(
@@ -291,12 +272,10 @@ class ProducerTransaction[T](partition: Int,
           //debug purposes only
           GlobalHooks.invoke(GlobalHooks.preCommitFailure)
 
-          transactionOwner.stream.metadataStorage.commitEntity.commit(
-            streamName = transactionOwner.stream.getName,
-            partition = partition,
-            transaction = transactionID,
-            totalCnt = getDataItemsCount,
-            ttl = transactionOwner.stream.getTTL)
+          val latch = new CountDownLatch(1)
+          val record = TransactionRecord(partition = partition, transactionID = transactionID, count = getDataItemsCount(), ttl = transactionOwner.stream.getTTL())
+          transactionOwner.tsdb.put(record, transactionOwner.backendActivityService) (record => { latch.countDown() })
+          latch.await()
 
           if (ProducerTransaction.logger.isDebugEnabled) {
             ProducerTransaction.logger.debug("[COMMIT PARTITION_{}] ts={}", partition, transactionID.toString)
@@ -376,15 +355,8 @@ class ProducerTransaction[T](partition: Int,
       ProducerTransaction.logger.debug("Update event for Transaction {}, partition: {}", transactionID, partition)
     }
 
-    transactionOwner.stream.metadataStorage.commitEntity.commitAsync(
-      streamName = transactionOwner.stream.getName,
-      partition = partition,
-      transaction = transactionID,
-      totalCnt = -1,
-      resourceCounter = transactionOwner.pendingCassandraTasks,
-      ttl = transactionOwner.producerOptions.transactionTTL,
-      executor = transactionOwner.backendActivityService,
-      function = doSendUpdateMessage)
+    val record = TransactionRecord(partition = partition, transactionID = transactionID, count = -1, ttl = transactionOwner.stream.getTTL())
+    transactionOwner.tsdb.put(record, transactionOwner.backendActivityService) (record => { doSendUpdateMessage() })
 
   }
 

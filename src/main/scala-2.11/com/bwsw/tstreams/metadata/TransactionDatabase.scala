@@ -36,7 +36,7 @@ class TransactionDatabase(session: Session, stream: String) {
     activityCache.put((partition, interval), true)
   }
 
-  def del[T](partition: Integer, transactionID: Long) = {
+  def del(partition: Integer, transactionID: Long) = {
     val interval = TransactionDatabase.getAggregationInterval(transactionID)
     val boundStatement = statements.commitLogDeleteStatement.bind(List(stream, new Integer(partition), new Long(interval), new Long(transactionID)): _*)
     session.execute(boundStatement)

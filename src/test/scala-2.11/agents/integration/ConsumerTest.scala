@@ -3,8 +3,9 @@ package agents.integration
 
 import com.bwsw.tstreams.agents.consumer.Offset.Oldest
 import com.bwsw.tstreams.agents.producer.NewTransactionProducerPolicy
-import com.bwsw.tstreams.entities.CommitEntity
+import com.bwsw.tstreams.common.FirstFailLockableTaskExecutor
 import com.bwsw.tstreams.env.TSF_Dictionary
+import com.bwsw.tstreams.metadata.{TransactionDatabase, TransactionRecord}
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import testutils._
 
@@ -38,6 +39,9 @@ class ConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll with Te
     partitions = Set(0, 1, 2),
     isLowPriority = false)
 
+  val executor = new FirstFailLockableTaskExecutor("executor")
+  val tsdb = new TransactionDatabase(cluster.connect(randomKeyspace), "test_stream")
+
   "consumer.getTransaction" should "return None if nothing was sent" in {
     consumer.start
     val transaction = consumer.getTransaction(0)
@@ -67,54 +71,50 @@ class ConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll with Te
   }
 
   "consumer.getLastTransaction" should "return last closed transaction" in {
-    val commitEntity = new CommitEntity("commit_log", cluster.connect(randomKeyspace))
-    val transactions = for (i <- 0 until 100) yield LocalGeneratorCreator.getTransaction()
+    val ALL = 100
+    val transactions = for (i <- 0 until ALL) yield LocalGeneratorCreator.getTransaction()
     val transaction = transactions.head
-    commitEntity.commit("test_stream", 1, transactions.head, 1, 120)
+    tsdb.put(TransactionRecord(1, transactions.head, 1, 120), executor) {r => true}
     transactions.drop(1) foreach { t =>
-      commitEntity.commit("test_stream", 1, t, -1, 120)
+      tsdb.put(TransactionRecord(1, t, -1, 120), executor) {r => true}
     }
     val retrievedTransaction = consumer.getLastTransaction(partition = 1).get
     retrievedTransaction.getTransactionID shouldEqual transaction
   }
 
   "consumer.getTransactionsFromTo" should "return all transactions if no incomplete" in {
-    val commitEntity = new CommitEntity("commit_log", cluster.connect(randomKeyspace))
     val ALL = 100
     val transactions = for (i <- 0 until ALL) yield LocalGeneratorCreator.getTransaction()
     val firstTransaction = transactions.head
     val lastTransaction = transactions.last
     transactions foreach { x =>
-      commitEntity.commit("test_stream", 1, x, 1, 120)
+      tsdb.put(TransactionRecord(1, x, 1, 120), executor) {r => true}
     }
     val res = consumer.getTransactionsFromTo(1, firstTransaction, lastTransaction)
     res.size shouldBe transactions.drop(1).size
   }
 
   "consumer.getTransactionsFromTo" should "return only transactions up to 1st incomplete" in {
-    val commitEntity = new CommitEntity("commit_log", cluster.connect(randomKeyspace))
     val FIRST = 30
     val LAST = 100
     val transactions1 = for (i <- 0 until FIRST) yield LocalGeneratorCreator.getTransaction()
     transactions1 foreach { x =>
-      commitEntity.commit("test_stream", 1, x, 1, 120)
+      tsdb.put(TransactionRecord(1, x, 1, 120), executor) {r => true}
     }
-    commitEntity.commit("test_stream", 1, LocalGeneratorCreator.getTransaction(), -1, 120)
+    tsdb.put(TransactionRecord(1, LocalGeneratorCreator.getTransaction(), -1, 120), executor) {r => true}
     val transactions2 = for (i <- FIRST until LAST) yield LocalGeneratorCreator.getTransaction()
     transactions2 foreach { x =>
-      commitEntity.commit("test_stream", 1, x, 1, 120)
+      tsdb.put(TransactionRecord(1, x, 1, 120), executor) {r => true}
     }
     val transactions = transactions1 ++ transactions2
     val firstTransaction = transactions.head
     val lastTransaction = transactions.last
-
 
     val res = consumer.getTransactionsFromTo(1, firstTransaction, lastTransaction)
     res.size shouldBe transactions1.drop(1).size
   }
 
   "consumer.getTransactionsFromTo" should "return none if empty" in {
-    val commitEntity = new CommitEntity("commit_log", cluster.connect(randomKeyspace))
     val ALL = 100
     val transactions = for (i <- 0 until ALL) yield LocalGeneratorCreator.getTransaction()
     val firstTransaction = transactions.head
@@ -124,13 +124,12 @@ class ConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll with Te
   }
 
   "consumer.getTransactionsFromTo" should "return none if to < from" in {
-    val commitEntity = new CommitEntity("commit_log", cluster.connect(randomKeyspace))
     val ALL = 100
     val transactions = for (i <- 0 until ALL) yield LocalGeneratorCreator.getTransaction()
     val firstTransaction = transactions.head
     val lastTransaction = transactions.tail.tail.tail.head
     transactions foreach { x =>
-      commitEntity.commit("test_stream", 1, x, 1, 120)
+      tsdb.put(TransactionRecord(1, x, 1, 120), executor) {r => true}
     }
     val res = consumer.getTransactionsFromTo(1, lastTransaction, firstTransaction)
     res.size shouldBe 0

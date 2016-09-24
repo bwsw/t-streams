@@ -4,7 +4,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.locks.ReentrantLock
 
 import com.bwsw.tstreams.agents.group.{CheckpointInfo, ConsumerCheckpointInfo, GroupParticipant}
-import com.bwsw.tstreams.metadata.{TransactionRecord, TransactionDatabase, MetadataStorage}
+import com.bwsw.tstreams.metadata.{MetadataStorage, TransactionDatabase, TransactionRecord}
 import com.bwsw.tstreams.streams.Stream
 import org.slf4j.LoggerFactory
 
@@ -29,7 +29,7 @@ class Consumer[T](val name: String,
   extends GroupParticipant
     with TransactionOperator[T] {
 
-  private val tsdb = new TransactionDatabase(stream.getMetadataStorage().getSession(), stream.getName())
+  val tsdb = new TransactionDatabase(stream.getMetadataStorage().getSession(), stream.getName())
 
   /**
     * Temporary checkpoints (will be cleared after every checkpoint() invokes)
@@ -327,5 +327,13 @@ class Consumer[T](val name: String,
     val transaction = new ConsumerTransaction[T](partition, transactionID, count, -1)
     transaction.attach(this)
     Some(transaction)
+  }
+
+  override def getTransactionsFromTo(partition: Int, from: Long, to: Long): ListBuffer[ConsumerTransaction[T]] = {
+    val data = tsdb.scanForward(partition, from, to)(transaction => transaction.count > 0)
+    val result = ListBuffer[ConsumerTransaction[T]]()
+    data.foreach(rec =>
+      result.append(new ConsumerTransaction[T](partition = partition, transactionID = rec.transactionID, count = rec.count, ttl = rec.ttl)))
+    result
   }
 }
