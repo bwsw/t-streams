@@ -29,8 +29,14 @@ object RequestsStatements {
     val commitLog = "commit_log"
     val commitLogPutStatement = session.prepare(s"INSERT INTO $commitLog (stream, partition, activity_second, transaction, count) " +
       "VALUES (?, ?, ?, ?, ?) USING TTL ?")
-    val commitLogGetStatement = session.prepare(s"SELECT stream, partition, activity_second, transaction, count, TTL(count) FROM $commitLog " +
-      "WHERE stream = ? AND partition = ? AND activity_second = ? AND transaction = ?")
+
+    val scanStatement = s"SELECT stream, partition, activity_second, transaction, count, TTL(count) FROM $commitLog " +
+      "WHERE stream = ? AND partition = ? AND activity_second = ?"
+
+    val commitLogScanStatement = session.prepare(scanStatement)
+
+    val commitLogGetStatement = session.prepare(s"$scanStatement AND transaction = ?")
+
 
     RequestsStatements(activityPutStatement = activityPutStatement, activityGetStatement = activityGetStatement,
       commitLogPutStatement = commitLogPutStatement, commitLogGetStatement = commitLogGetStatement)
