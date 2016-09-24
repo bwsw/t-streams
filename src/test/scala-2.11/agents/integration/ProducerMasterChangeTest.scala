@@ -106,7 +106,7 @@ class ProducerMasterChangeTest extends FlatSpec with Matchers with BeforeAndAfte
     bs.size shouldBe 1100
   }
 
-  override def afterAll(): Unit = {
+  override def afterAll() {
     onAfterAll()
   }
 }
