@@ -149,20 +149,20 @@ class TransactionDatabase(session: Session, stream: String) {
     scanBackwardInt(partition, intervalTo, intervalDeadLow, Nil, predicate)
   }
 
-  def searchBackwardInt(partition: Integer, transactionFrom: Long)(interval: Long, deadLow: Long, predicate: (TransactionRecord) => Boolean): Option[TransactionRecord] = {
-    if(interval < deadLow) return None
+  def searchBackwardInt(partition: Integer, transactionFrom: Long, deadLow: Long)(interval: Long, intervalDeadLow: Long, predicate: (TransactionRecord) => Boolean): Option[TransactionRecord] = {
+    if(interval < intervalDeadLow) return None
     val candidateTransactions = getTransactionsForInterval(partition, interval).filter(rec => rec.transactionID <= transactionFrom).reverse
     val findOpt = candidateTransactions.find(predicate)
     if(findOpt.nonEmpty)
       findOpt
     else
-      searchBackwardInt(partition, transactionFrom)(interval - 1, deadLow, predicate)
+      searchBackwardInt(partition, transactionFrom, deadLow)(interval - 1, intervalDeadLow, predicate)
   }
 
   def searchBackward(partition: Integer, transactionFrom: Long, deadLow: Long)(predicate: TransactionRecord => Boolean): Option[TransactionRecord] = {
     val intervalTo = TransactionDatabase.getAggregationInterval(transactionFrom)
     val intervalDeadLow = TransactionDatabase.getAggregationInterval(deadLow)
-    searchBackwardInt(partition, transactionFrom)(intervalTo, intervalDeadLow, predicate)
+    searchBackwardInt(partition, transactionFrom, deadLow)(intervalTo, intervalDeadLow, predicate)
   }
 
 }
