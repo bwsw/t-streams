@@ -63,7 +63,7 @@ class TransactionDatabaseTests extends FlatSpec with Matchers with BeforeAndAfte
     getTransactionsBackward.reverse.map(t => t.transactionID) shouldBe putTransactions.tail
   }
 
-  it should "handle correct offsets inside interval" in {
+  it should "handle correct offsets inside interval when forward scan" in {
     val TOTAL = 100
     val putCounter = new CountDownLatch(TOTAL)
     val veryFirst = LocalGeneratorCreator.getTransaction()
@@ -89,7 +89,6 @@ class TransactionDatabaseTests extends FlatSpec with Matchers with BeforeAndAfte
     val getTransactionsForwardVeryFirst = tsdb.scanForward(0, veryFirst, lastTransaction) (t => true)
     getTransactionsForwardVeryFirst.head.transactionID shouldBe putTransactions.head
     getTransactionsForwardVeryFirst.last.transactionID shouldBe lastTransaction
-
   }
 
   override def afterAll(): Unit = {
