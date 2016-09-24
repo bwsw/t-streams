@@ -14,6 +14,7 @@ import org.slf4j.LoggerFactory
   */
 class MetadataStorage(cluster: Cluster, session: Session, keyspace: String) {
 
+  def getSession() = session
   /**
     * Uniq id for this MetadataStorage
     */
@@ -28,11 +29,6 @@ class MetadataStorage(cluster: Cluster, session: Session, keyspace: String) {
     * Stream entity instance
     */
   val streamEntity = new StreamEntity("streams", session)
-
-  /**
-    * Commit entity instance
-    */
-  val commitEntity = new CommitEntity("commit_log", session)
 
   /**
     * Consumer entity instance

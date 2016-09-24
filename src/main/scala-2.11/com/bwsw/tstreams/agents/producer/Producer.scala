@@ -10,8 +10,8 @@ import com.bwsw.tstreams.common._
 import com.bwsw.tstreams.coordination.client.BroadcastCommunicationClient
 import com.bwsw.tstreams.coordination.messages.state.{TransactionStateMessage, TransactionStatus}
 import com.bwsw.tstreams.coordination.producer.{AgentsStateDBService, PeerAgent}
-import com.bwsw.tstreams.metadata.MetadataStorage
-import com.bwsw.tstreams.streams.TStream
+import com.bwsw.tstreams.metadata.{TransactionRecord, TransactionDatabase, MetadataStorage}
+import com.bwsw.tstreams.streams.Stream
 import org.slf4j.LoggerFactory
 
 import scala.util.control.Breaks._
@@ -26,7 +26,7 @@ import scala.util.control.Breaks._
   * @tparam T User data type
   */
 class Producer[T](var name: String,
-                  val stream: TStream[Array[Byte]],
+                  val stream: Stream[Array[Byte]],
                   val producerOptions: ProducerOptions[T])
   extends GroupParticipant with SendingAgent with Interaction {
 
@@ -38,6 +38,8 @@ class Producer[T](var name: String,
   def setAgentName(name: String) = {
     this.name = name
   }
+
+  val tsdb = new TransactionDatabase(stream.getMetadataStorage().getSession(), stream.getName())
 
   /**
     * Allows to get if the producer is master for the partition.
@@ -130,7 +132,6 @@ class Producer[T](var name: String,
   private val transactionKeepAliveThread = getTransactionKeepAliveThread
   val backendActivityService = new FirstFailLockableTaskExecutor(s"Producer $name-BackendWorker")
   val asyncActivityService = new FirstFailLockableTaskExecutor(s"Producer $name-AsyncWorker")
-  val pendingCassandraTasks = new AtomicInteger(0)
 
   /**
     *
@@ -304,20 +305,12 @@ class Producer[T](var name: String,
         logger.debug(s"Producer $name - [GET_LOCAL_TRANSACTION] update with message partition=$partition ID=$transactionID opened")
     })
 
-    stream.metadataStorage.commitEntity.commitAsync(
-      streamName = stream.getName,
-      partition = partition,
-      transaction = transactionID,
-      totalCnt = -1,
-      ttl = producerOptions.transactionTTL,
-      resourceCounter = pendingCassandraTasks,
-      function = () => {
-        // submit task for materialize notification request
-        p2pAgent.submitPipelinedTaskToMaterializeExecutor(partition, onComplete)
-        // submit task for publish notification requests
-      },
-      executor = p2pAgent.getCassandraAsyncExecutor(partition))
+    val transactionRecord = TransactionRecord(partition = partition, transactionID = transactionID, count = -1,
+      ttl = producerOptions.transactionTTL)
 
+    tsdb.put(transaction = transactionRecord, asynchronousExecutor = p2pAgent.getCassandraAsyncExecutor(partition)) (rec => {
+      p2pAgent.submitPipelinedTaskToMaterializeExecutor(partition, onComplete)
+    })
 
   }
 
@@ -339,8 +332,8 @@ class Producer[T](var name: String,
     // stop executor
 
     asyncActivityService.shutdownOrDie(100, TimeUnit.SECONDS)
-    while (pendingCassandraTasks.get() != 0) {
-      logger.info(s"Waiting for all cassandra async callbacks will be executed. Pending: ${pendingCassandraTasks.get()}.")
+    while (tsdb.getResourceCounter() != 0) {
+      logger.info(s"Waiting for all cassandra async callbacks will be executed. Pending: ${tsdb.getResourceCounter()}.")
       Thread.sleep(200)
     }
     backendActivityService.shutdownOrDie(100, TimeUnit.SECONDS)

@@ -1,15 +1,11 @@
 package com.bwsw.tstreams.agents.consumer
 
-import scala.collection.mutable.ListBuffer
-
 /**
   * Created by Ivan Kudryavtsev on 22.08.16.
   * Abstract type for Consumer
   */
 trait TransactionOperator[T] {
   def getLastTransaction(partition: Int): Option[ConsumerTransaction[T]]
-
-  def getTransactionsFromTo(partition: Int, fromTransactionID: Long, toTransactionID: Long): ListBuffer[ConsumerTransaction[T]]
 
   def getTransactionById(partition: Int, transactionID: Long): Option[ConsumerTransaction[T]]
 

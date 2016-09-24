@@ -127,6 +127,7 @@ class ProducerTransaction[T](partition: Int,
   }
 
   private def cancelAsync() = {
+    transactionOwner
     transactionOwner.stream.metadataStorage.commitEntity.deleteAsync(
       streamName = transactionOwner.stream.getName,
       partition = partition,

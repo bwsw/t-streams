@@ -4,7 +4,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 
 import com.bwsw.tstreams.common.Functions
 import com.bwsw.tstreams.coordination.server.RequestsTcpServer
-import com.bwsw.tstreams.streams.TStream
+import com.bwsw.tstreams.streams.Stream
 import org.slf4j.LoggerFactory
 
 import scala.collection.mutable
@@ -15,7 +15,7 @@ import scala.collection.mutable
   * Class implements subscriber
   */
 class Subscriber[T](val name: String,
-                    val stream: TStream[Array[Byte]],
+                    val stream: Stream[Array[Byte]],
                     val options: SubscriberOptions[T],
                     val callback: Callback[T]) {
 

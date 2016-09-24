@@ -3,7 +3,7 @@ package com.bwsw.tstreams.services
 import com.bwsw.tstreams.data.IStorage
 import com.bwsw.tstreams.entities.StreamSettings
 import com.bwsw.tstreams.metadata.MetadataStorage
-import com.bwsw.tstreams.streams.TStream
+import com.bwsw.tstreams.streams.Stream
 import org.slf4j.LoggerFactory
 
 
@@ -28,7 +28,7 @@ object BasicStreamService {
     */
   def loadStream[T](streamName: String,
                     metadataStorage: MetadataStorage,
-                    dataStorage: IStorage[T]): TStream[T] = {
+                    dataStorage: IStorage[T]): Stream[T] = {
 
 
     logger.info(s"start load stream with name : {$streamName}")
@@ -42,7 +42,7 @@ object BasicStreamService {
       val (name: String, partitions: Int, ttl: Int, description: String) =
         (settings.name, settings.partitions, settings.ttl, settings.description)
 
-      val stream: TStream[T] = new TStream(name, partitions, metadataStorage, dataStorage, ttl, description)
+      val stream: Stream[T] = new Stream(name, partitions, metadataStorage, dataStorage, ttl, description)
       stream
     }
   }
@@ -63,14 +63,14 @@ object BasicStreamService {
                       ttl: Int,
                       description: String,
                       metadataStorage: MetadataStorage,
-                      dataStorage: IStorage[T]): TStream[T] = {
+                      dataStorage: IStorage[T]): Stream[T] = {
 
 
     logger.info(s"start stream creation with name : {$streamName}, {$partitions}, {$ttl}")
     metadataStorage.streamEntity.createStream(streamName, partitions, ttl, description)
 
     logger.info(s"finished stream creation with name : {$streamName}, {$partitions}, {$ttl}")
-    val stream: TStream[T] = new TStream[T](streamName, partitions, metadataStorage, dataStorage, ttl, description)
+    val stream: Stream[T] = new Stream[T](streamName, partitions, metadataStorage, dataStorage, ttl, description)
 
     stream
   }

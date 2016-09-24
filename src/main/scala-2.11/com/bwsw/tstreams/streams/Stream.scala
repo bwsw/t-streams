@@ -30,25 +30,27 @@ class Stream[T](val name: String,
   /**
     * @return Name
     */
-  def getName =
+  def getName() =
     name
+
+  def getMetadataStorage() = metadataStorage
 
   /**
     * @return Number of partitions
     */
-  def getPartitions =
+  def getPartitions() =
     partitions
 
   /**
     * @return TTL
     */
-  def getTTL =
+  def getTTL() =
     ttl
 
   /**
     * @return Description
     */
-  def getDescriptions =
+  def getDescriptions() =
     description
 
   /**
