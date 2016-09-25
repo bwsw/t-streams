@@ -55,7 +55,7 @@ class Coordinator() {
     *
     */
   private def initializeState(): Unit = {
-    LockUtil.withZkLockOrDieDo[Unit](dlm.getLock(ZookeeperDLMService.CREATE_PATH_LOCK), (100, TimeUnit.SECONDS), Some(ZookeeperDLMService.logger), {
+    LockUtil.withZkLockOrDieDo[Unit](dlm.getLock(ZookeeperDLMService.CREATE_PATH_LOCK), (100, TimeUnit.SECONDS), Some(ZookeeperDLMService.logger), () => {
       partitions foreach (p => {
         try {
           if (!dlm.exist(getSubscriberEventPath(p)))

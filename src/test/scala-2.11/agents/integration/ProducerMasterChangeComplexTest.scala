@@ -58,7 +58,7 @@ class ProducerMasterChangeComplexTest  extends FlatSpec with Matchers with Befor
   }
   val PRODUCERS_AMOUNT          = 10
   val TRANSACTIONS_AMOUNT_EACH  = 100
-  val PROBABILITY               = 0.01 // 0.01=1%
+  val PROBABILITY               = 0.02 // 0.01=1%
   val PARTITIONS                = (0 until 5).toSet
   val MAX_WAIT_AFTER_ALL_PRODUCERS = 5
 
@@ -93,17 +93,17 @@ class ProducerMasterChangeComplexTest  extends FlatSpec with Matchers with Befor
 
   it should "handle multiple master change correctly" in {
 
-//    subscriber.start()
-//
-//    val producersThreads = (0 until PRODUCERS_AMOUNT)
-//      .map(producer => new ProducerWorker(f, onCompleteLatch, TRANSACTIONS_AMOUNT_EACH, PROBABILITY).run(PARTITIONS))
-//
-//    onCompleteLatch.await()
-//    producersThreads.foreach(thread => thread.join())
-//    waitCompleteLatch.await(MAX_WAIT_AFTER_ALL_PRODUCERS, TimeUnit.SECONDS)
-//    subscriber.stop()
-//
-//    subscriberCounter shouldBe TRANSACTIONS_AMOUNT_EACH * PRODUCERS_AMOUNT
+    subscriber.start()
+
+    val producersThreads = (0 until PRODUCERS_AMOUNT)
+      .map(producer => new ProducerWorker(f, onCompleteLatch, TRANSACTIONS_AMOUNT_EACH, PROBABILITY).run(PARTITIONS))
+
+    onCompleteLatch.await()
+    producersThreads.foreach(thread => thread.join())
+    waitCompleteLatch.await(MAX_WAIT_AFTER_ALL_PRODUCERS, TimeUnit.SECONDS)
+    subscriber.stop()
+
+    subscriberCounter shouldBe TRANSACTIONS_AMOUNT_EACH * PRODUCERS_AMOUNT
   }
 
   override def afterAll() {

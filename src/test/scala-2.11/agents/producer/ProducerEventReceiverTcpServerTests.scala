@@ -1,4 +1,4 @@
-package agents.integration
+package agents.producer
 
 import com.bwsw.tstreams.coordination.messages.state.TransactionStateMessage
 import com.bwsw.tstreams.coordination.subscriber.ProducerEventReceiverTcpServer

@@ -170,19 +170,24 @@ class PeerAgent(agentsStateManager: AgentsStateDBService,
     if (now > expiresAt)
       throw new IllegalStateException(s"Agent ${master.agentAddress} didn't respond to me.")
 
-    transport.deleteMasterRequest(master.agentAddress, partition) match {
-      case null =>
-        Thread.sleep(PeerAgent.RETRY_SLEEP_TIME)
-        removeCurrentMasterOrder(partition, master, System.currentTimeMillis(), expiresAt)
+    val masterOpt = agentsStateManager.getCurrentMaster(partition)
 
-      case EmptyResponse(_, _, p) =>
-        assert(p == partition)
-        Thread.sleep(PeerAgent.RETRY_SLEEP_TIME)
-        removeCurrentMasterOrder(partition, master, System.currentTimeMillis(), expiresAt)
+    if(masterOpt.nonEmpty) {
+      transport.deleteMasterRequest(master.agentAddress, partition) match {
+        case null =>
+          Thread.sleep(PeerAgent.RETRY_SLEEP_TIME)
+          removeCurrentMasterOrder(partition, master, System.currentTimeMillis(), expiresAt)
 
-      case DeleteMasterResponse(_, _, p) =>
-        assert(p == partition)
+        case EmptyResponse(_, _, p) =>
+          assert(p == partition)
+          Thread.sleep(PeerAgent.RETRY_SLEEP_TIME)
+          removeCurrentMasterOrder(partition, master, System.currentTimeMillis(), expiresAt)
+
+        case DeleteMasterResponse(_, _, p) =>
+          assert(p == partition)
+      }
     }
+
   }
 
   def updateMaster(partition: Int): Unit = this.synchronized {
@@ -192,15 +197,14 @@ class PeerAgent(agentsStateManager: AgentsStateDBService,
 
       val masterOpt = agentsStateManager.getCurrentMaster(partition)
 
-      if(masterOpt.nonEmpty) {
-        if(masterOpt.get.agentAddress == myInetAddress)
-          return
-        removeCurrentMasterOrder(partition, masterOpt.get, now, expiresAt)
-      }
+      if(masterOpt.forall(m => m.agentAddress != myInetAddress) || masterOpt.isEmpty) {
+        if(masterOpt.nonEmpty)
+          removeCurrentMasterOrder(partition, masterOpt.get, now, expiresAt)
 
-      val newMaster = electPartitionMasterOrder(partition, now, expiresAt)
-      PeerAgent.logger.info(s"[MASTER UPDATE RESULT] Finished updating master with init=true on agent: {$myInetAddress} on stream: {$streamName}, partition: {$partition} with retry=$expiresAt; re-voted master: {$newMaster}.")
-      agentsStateManager.putPartitionMasterLocally(partition, newMaster)
+        val newMaster = electPartitionMasterOrder(partition, now, expiresAt)
+        PeerAgent.logger.info(s"[MASTER UPDATE RESULT] Finished updating master with init=true on agent: {$myInetAddress} on stream: {$streamName}, partition: {$partition} with retry=$expiresAt; re-voted master: {$newMaster}.")
+        agentsStateManager.putPartitionMasterLocally(partition, newMaster)
+      }
     }
   }
 

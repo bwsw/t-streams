@@ -102,6 +102,9 @@ class Producer[T](var name: String,
     stream.getName,
     Set[Int]().empty ++ producerOptions.writePolicy.getUsedPartitions())
 
+  // this client is used to find new subscribers
+  val subscriberNotifier = new BroadcastCommunicationClient(agentsStateManager, usedPartitions = producerOptions.writePolicy.getUsedPartitions())
+  subscriberNotifier.init()
 
   /**
     * P2P Agent for producers interaction
@@ -121,9 +124,6 @@ class Producer[T](var name: String,
     isMasterBootstrapModeFull = pcs.isMasterBootstrapModeFull,
     isMasterProcessVote = pcs.isMasterProcessVote)
 
-  // this client is used to find new subscribers
-  val subscriberNotifier = new BroadcastCommunicationClient(agentsStateManager, usedPartitions = producerOptions.writePolicy.getUsedPartitions())
-  subscriberNotifier.init()
 
   /**
     * Queue to figure out moment when transaction is going to close
