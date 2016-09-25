@@ -103,7 +103,6 @@ class AgentsStateDBService(dlm: ZookeeperDLMService,
     partitions foreach {
       p => if (getCurrentMaster(p).isEmpty) {
         val mc = MasterConfiguration(inetAddress, agentID)
-        IMessage.logger.info(s"[$inetAddress] Created (at bootstrap) ${getPartitionMasterPath(p)}")
         dlm.create[MasterConfiguration](
           getPartitionMasterPath(p),
           mc,
@@ -196,7 +195,6 @@ class AgentsStateDBService(dlm: ZookeeperDLMService,
         if (masterSettings.agentAddress == inetAddress && masterSettings.uniqueAgentId == agentID) {
           IMessage.logger.info(s"[MASTER DELETE BEGIN] Delete agent as MASTER on address: {$inetAddress} from stream: {$streamName}, partition:{$partition}.")
           dlm.delete(getPartitionMasterPath(partition))
-          IMessage.logger.info(s"[$inetAddress] Deleted ${getPartitionMasterPath(partition)}")
           IMessage.logger.info(s"[MASTER DELETE END] Agent ($inetAddress) - I'm no longer the master for stream/partition: ($streamName,$partition).")
 
           if (isUpdatePriority)
@@ -249,7 +247,6 @@ class AgentsStateDBService(dlm: ZookeeperDLMService,
   def assignMeAsMaster(partition: Int) = {
     assert(!dlm.exist(getPartitionMasterPath(partition)))
     val masterConf = MasterConfiguration(inetAddress, agentID)
-    IMessage.logger.info(s"[$inetAddress] Created ${getPartitionMasterPath(partition)}")
     dlm.create[MasterConfiguration](
       getPartitionMasterPath(partition),
       masterConf,
