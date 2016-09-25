@@ -118,26 +118,37 @@ class TransactionDatabase(session: Session, stream: String) {
       list ++ filteredTransactions
   }
 
-  def scanForward(partition: Integer, transactionFrom: Long, deadHigh: Long)(predicate: TransactionRecord => Boolean): List[TransactionRecord] = {
+  def takeWhileForward(partition: Integer, transactionFrom: Long, deadHigh: Long)(predicate: TransactionRecord => Boolean): List[TransactionRecord] = {
     val intervalFrom = TransactionDatabase.getAggregationInterval(transactionFrom)
     val intervalDeadHi = TransactionDatabase.getAggregationInterval(deadHigh)
     scanForwardInt(partition, transactionFrom, deadHigh)(intervalFrom, intervalDeadHi, Nil, predicate)
   }
 
-  private def scanBackwardInt(partition: Integer, interval: Long, deadLow: Long, list: List[TransactionRecord], predicate: TransactionRecord => Boolean): List[TransactionRecord] = {
-    if(interval < deadLow) return list
-    val candidateTransactions = getTransactionsForInterval(partition, interval).reverse
+  private def scanBackwardInt(partition: Integer, transactionFrom: Long, transactionTo: Long)(interval: Long, intervalDeadLow: Long, list: List[TransactionRecord], predicate: TransactionRecord => Boolean): List[TransactionRecord] = {
+
+    if(interval < intervalDeadLow)
+      return list
+
+    val intervalTransactions = getTransactionsForInterval(partition, interval)
+
+    val candidateTransactions = intervalTransactions
+      .filter(rec => rec.transactionID >= transactionTo && rec.transactionID <= transactionFrom)
+      .reverse
+
     val filteredTransactions = candidateTransactions.takeWhile(predicate)
     if(candidateTransactions.size == filteredTransactions.size)
-      scanBackwardInt(partition, interval - 1, deadLow, list ++ candidateTransactions, predicate)
+      scanBackwardInt(partition, transactionFrom, transactionTo) (interval - 1, intervalDeadLow, list ++ candidateTransactions, predicate)
     else
       list ++ filteredTransactions
   }
 
-  def scanBackward(partition: Integer, transactionTo: Long, deadLow: Long)(predicate: TransactionRecord => Boolean): List[TransactionRecord] = {
-    val intervalTo = TransactionDatabase.getAggregationInterval(transactionTo)
+  def takeWhileBackward(partition: Integer, transactionFrom: Long, deadLow: Long)(predicate: TransactionRecord => Boolean): List[TransactionRecord] = {
+    if(deadLow > transactionFrom)
+      return Nil
+
+    val intervalFrom = TransactionDatabase.getAggregationInterval(transactionFrom)
     val intervalDeadLow = TransactionDatabase.getAggregationInterval(deadLow)
-    scanBackwardInt(partition, intervalTo, intervalDeadLow, Nil, predicate)
+    scanBackwardInt(partition, transactionFrom, deadLow)(intervalFrom, intervalDeadLow, Nil, predicate)
   }
 
   def searchBackwardInt(partition: Integer, transactionFrom: Long, transactionTo: Long)(interval: Long, intervalDeadLow: Long, predicate: (TransactionRecord) => Boolean): Option[TransactionRecord] = {

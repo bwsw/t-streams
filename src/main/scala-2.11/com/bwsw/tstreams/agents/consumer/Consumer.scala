@@ -81,7 +81,7 @@ class Consumer[T](val name: String,
 
   private def loadNextTransactionsForPartition(partition: Int, currentOffset: Long): mutable.Queue[ConsumerTransaction[T]] = {
     var count: Int = 0
-    val transactionsRecords = tsdb.scanForward(partition, currentOffset, options.transactionGenerator.getTransaction()) (r => {
+    val transactionsRecords = tsdb.takeWhileForward(partition, currentOffset + 1, options.transactionGenerator.getTransaction()) (r => {
       count += 1
       count <= options.transactionsPreload
     })
@@ -330,7 +330,7 @@ class Consumer[T](val name: String,
   }
 
   override def getTransactionsFromTo(partition: Int, from: Long, to: Long): ListBuffer[ConsumerTransaction[T]] = {
-    val data = tsdb.scanForward(partition, from, to)(transaction => transaction.count > 0)
+    val data = tsdb.takeWhileForward(partition, from + 1, to)(transaction => transaction.count > 0)
     val result = ListBuffer[ConsumerTransaction[T]]()
     data.foreach(rec =>
       result.append(new ConsumerTransaction[T](partition = partition, transactionID = rec.transactionID, count = rec.count, ttl = rec.ttl)))

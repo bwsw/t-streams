@@ -72,8 +72,8 @@ class ConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll with Te
     val transactions = for (i <- 0 until ALL) yield LocalGeneratorCreator.getTransaction()
     val firstTransaction = transactions.head
     val lastTransaction = transactions.last
-    transactions foreach { x =>
-      tsdb.put(TransactionRecord(1, x, 1, 120), executor) {r => true}
+    transactions foreach { t =>
+      tsdb.put(TransactionRecord(1, t, 1, 120), executor) {r => true}
     }
     val res = consumer.getTransactionsFromTo(1, firstTransaction, lastTransaction)
     res.size shouldBe transactions.drop(1).size
@@ -83,20 +83,20 @@ class ConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll with Te
     val FIRST = 30
     val LAST = 100
     val transactions1 = for (i <- 0 until FIRST) yield LocalGeneratorCreator.getTransaction()
-    transactions1 foreach { x =>
-      tsdb.put(TransactionRecord(1, x, 1, 120), executor) {r => true}
+    transactions1 foreach { t =>
+      tsdb.put(TransactionRecord(1, t, 1, 120), executor) {r => true}
     }
     tsdb.put(TransactionRecord(1, LocalGeneratorCreator.getTransaction(), -1, 120), executor) {r => true}
     val transactions2 = for (i <- FIRST until LAST) yield LocalGeneratorCreator.getTransaction()
-    transactions2 foreach { x =>
-      tsdb.put(TransactionRecord(1, x, 1, 120), executor) {r => true}
+    transactions2 foreach { t =>
+      tsdb.put(TransactionRecord(1, t, 1, 120), executor) {r => true}
     }
     val transactions = transactions1 ++ transactions2
     val firstTransaction = transactions.head
     val lastTransaction = transactions.last
 
     val res = consumer.getTransactionsFromTo(1, firstTransaction, lastTransaction)
-    res.size shouldBe transactions1.size
+    res.size shouldBe transactions1.drop(1).size
   }
 
   "consumer.getTransactionsFromTo" should "return none if empty" in {
@@ -113,8 +113,8 @@ class ConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll with Te
     val transactions = for (i <- 0 until ALL) yield LocalGeneratorCreator.getTransaction()
     val firstTransaction = transactions.head
     val lastTransaction = transactions.tail.tail.tail.head
-    transactions foreach { x =>
-      tsdb.put(TransactionRecord(1, x, 1, 120), executor) {r => true}
+    transactions foreach { t =>
+      tsdb.put(TransactionRecord(1, t, 1, 120), executor) {r => true}
     }
     val res = consumer.getTransactionsFromTo(1, lastTransaction, firstTransaction)
     res.size shouldBe 0
