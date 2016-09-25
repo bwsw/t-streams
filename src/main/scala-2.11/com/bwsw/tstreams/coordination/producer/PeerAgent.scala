@@ -147,7 +147,7 @@ class PeerAgent(agentsStateManager: AgentsStateDBService,
     * @return Selected master address
     */
   private def electPartitionMaster(partition: Int, now: Long, expiresAt: Long): MasterConfiguration = {
-    PeerAgent.logger.debug(s"[MASTER VOTE INIT] Start voting new agent on address: {$myInetAddress} on stream: {$streamName}, partition:{$partition}")
+    PeerAgent.logger.info(s"[MASTER VOTE INIT] Start voting new agent on address: {$myInetAddress} on stream: {$streamName}, partition:{$partition}")
 
     val master = agentsStateManager.getCurrentMaster(partition)
 

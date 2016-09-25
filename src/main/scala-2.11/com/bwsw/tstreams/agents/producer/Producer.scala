@@ -80,7 +80,7 @@ class Producer[T](var name: String,
   private val logger = LoggerFactory.getLogger(this.getClass)
   private val threadLock = new ReentrantLock(true)
 
-  private val peerKeepAliveTimeout = pcs.zkSessionTimeout * 1000 + 2000 // TODO: fix it!
+  private val peerKeepAliveTimeout = pcs.zkSessionTimeout * 1000 * 2
   private val zkService = new ZookeeperDLMService(pcs.zkRootPath, pcs.zkHosts, pcs.zkSessionTimeout, pcs.zkConnectionTimeout)
 
 
