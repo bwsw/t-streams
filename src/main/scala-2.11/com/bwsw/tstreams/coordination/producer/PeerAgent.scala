@@ -190,7 +190,7 @@ class PeerAgent(agentsStateManager: AgentsStateDBService,
     * @param isDemoteCurrentMaster      If flag true master will be reselected anyway else old master can stay
     * @param expiresAt   Retries to try to interact with master
     */
-  def updateMasterInternal(partition: Int, isDemoteCurrentMaster: Boolean, now: Long, expiresAt: Long): Unit = this.synchronized {
+  def updateMasterInternal(partition: Int, isDemoteCurrentMaster: Boolean, now: Long, expiresAt: Long): Unit = {
     PeerAgent.logger.info(s"[MASTER UPDATE INIT] Updating master with init=$isDemoteCurrentMaster on agent: {$myInetAddress} on stream: {$streamName}, partition: {$partition} with retry=$expiresAt.")
 
     // nothing to do if I'm the master already

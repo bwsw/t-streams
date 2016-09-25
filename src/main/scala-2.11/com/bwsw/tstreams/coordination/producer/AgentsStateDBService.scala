@@ -3,6 +3,7 @@ package com.bwsw.tstreams.coordination.producer
 import java.util.concurrent.TimeUnit
 
 import com.bwsw.tstreams.common.{LockUtil, ZookeeperDLMService}
+import com.bwsw.tstreams.coordination.messages.master.IMessage
 import org.apache.zookeeper.{CreateMode, KeeperException, Watcher}
 
 import scala.collection.mutable
@@ -133,9 +134,9 @@ class AgentsStateDBService(dlm: ZookeeperDLMService,
     * @param value     Value which will be added to current priority
     */
   private def updateMyPriority(partition: Int, value: Int) = {
-    PeerAgent.logger.debug(s"[PRIORITY CHANGE BEGIN] Start amend agent priority with value:{$value} with address: {$inetAddress} on stream: {$streamName}, partition: {$partition}")
+    IMessage.logger.debug(s"[PRIORITY CHANGE BEGIN] Start amend agent priority with value:{$value} with address: {$inetAddress} on stream: {$streamName}, partition: {$partition}")
     updateMySettings(partition, (s: AgentConfiguration) => s.weight += value)
-    PeerAgent.logger.debug(s"[PRIORITY CHANGE END] Finish amend agent priority with value:{$value} with address: {$inetAddress} on stream: {$streamName}, partition: {$partition}")
+    IMessage.logger.debug(s"[PRIORITY CHANGE END] Finish amend agent priority with value:{$value} with address: {$inetAddress} on stream: {$streamName}, partition: {$partition}")
   }
 
   /**
@@ -190,9 +191,9 @@ class AgentsStateDBService(dlm: ZookeeperDLMService,
     master foreach {
       masterSettings =>
         if (masterSettings.agentAddress == inetAddress && masterSettings.uniqueAgentId == agentID) {
-          PeerAgent.logger.info(s"[MASTER DELETE BEGIN] Delete agent as MASTER on address: {$inetAddress} from stream: {$streamName}, partition:{$partition}.")
+          IMessage.logger.info(s"[MASTER DELETE BEGIN] Delete agent as MASTER on address: {$inetAddress} from stream: {$streamName}, partition:{$partition}.")
           dlm.delete(getPartitionMasterPath(partition))
-          PeerAgent.logger.info(s"[MASTER DELETE END] Agent ($inetAddress) - I'm no longer the master for stream/partition: ($streamName,$partition).")
+          IMessage.logger.info(s"[MASTER DELETE END] Agent ($inetAddress) - I'm no longer the master for stream/partition: ($streamName,$partition).")
 
           if (isUpdatePriority)
             partitions foreach { p => updateMyPriority(p, value = -1) }
@@ -250,7 +251,7 @@ class AgentsStateDBService(dlm: ZookeeperDLMService,
       CreateMode.EPHEMERAL)
     partitions foreach { p => updateMyPriority(p, value = +1) }
     masterMap += (partition -> masterConf)
-    PeerAgent.logger.info(s"[SET MASTER ANNOUNCE] ($inetAddress) - I was elected as master for stream/partition: ($streamName,$partition).")
+    IMessage.logger.info(s"[SET MASTER ANNOUNCE] ($inetAddress) - I was elected as master for stream/partition: ($streamName,$partition).")
   }
 
   def doLocked[T](f: => T) = this.synchronized {

@@ -114,6 +114,8 @@ class CommunicationClient(timeoutMs: Int, retryCount: Int = 3, retryDelayMs: Int
     if (isClosed.get)
       throw new IllegalStateException("Communication Client is closed. Unable to operate.")
 
+    println(msg)
+
     try {
       val sock = getSocket(msg.receiverID)
       val reqString = ProtocolMessageSerializer.wrapMsg(ProtocolMessageSerializer.serialize(msg))
@@ -191,9 +193,9 @@ class CommunicationClient(timeoutMs: Int, retryCount: Int = 3, retryDelayMs: Int
   private def closeSocketAndCleanPeerMap(socket: Socket) = this.synchronized {
     val address = socket.getInetAddress.toString
     try {
-      CommunicationClient.logger.info(s"Socket to peer ${socket.getInetAddress.toString} is to be closed.")
+      CommunicationClient.logger.info(s"Socket to peer ${socket.getInetAddress.toString}:${socket.getPort} is to be closed.")
       socket.close()
-      CommunicationClient.logger.info(s"Socket to peer ${socket.getInetAddress.toString} is closed.")
+      CommunicationClient.logger.info(s"Socket to peer ${socket.getInetAddress.toString}:${socket.getPort} is closed.")
     } catch {
       case e@(_: ConnectException | _: IOException) =>
         CommunicationClient.logger.warn(s"An exception occurred: ${e.getMessage}")
@@ -212,12 +214,12 @@ class CommunicationClient(timeoutMs: Int, retryCount: Int = 3, retryDelayMs: Int
   private def writeMsgAndWaitResponse(sock: Socket, reqString: String): IMessage = {
     try {
       if (CommunicationClient.logger.isDebugEnabled)
-        CommunicationClient.logger.debug(s"To send message $reqString to peer ${sock.getInetAddress.toString}.")
+        CommunicationClient.logger.debug(s"To send message $reqString to peer ${sock.getInetAddress.toString}:${sock.getPort}.")
       val outputStream = sock.getOutputStream
       outputStream.write(reqString.getBytes)
       outputStream.flush()
       if (CommunicationClient.logger.isDebugEnabled)
-        CommunicationClient.logger.debug(s"Sent message $reqString to peer ${sock.getInetAddress.toString}.")
+        CommunicationClient.logger.debug(s"Sent message $reqString to peer ${sock.getInetAddress.toString}:${sock.getPort}.")
     }
     catch {
       case e@(_: ConnectException | _: IOException) =>
@@ -228,7 +230,7 @@ class CommunicationClient(timeoutMs: Int, retryCount: Int = 3, retryDelayMs: Int
     var answer = {
       try {
         if (CommunicationClient.logger.isDebugEnabled)
-          CommunicationClient.logger.debug(s"To receive response message on $reqString sent to peer ${sock.getInetAddress.toString}.")
+          CommunicationClient.logger.debug(s"To receive response message on $reqString sent to peer ${sock.getInetAddress.toString}:${sock.getPort}.")
         val reader = new BufferedReader(new InputStreamReader(sock.getInputStream))
         val string = reader.readLine()
         if (string == null)
@@ -236,13 +238,13 @@ class CommunicationClient(timeoutMs: Int, retryCount: Int = 3, retryDelayMs: Int
         else {
           val response = ProtocolMessageSerializer.deserialize[IMessage](string)
           if (CommunicationClient.logger.isDebugEnabled)
-            CommunicationClient.logger.debug(s"Received response message $response on $reqString sent to peer ${sock.getInetAddress.toString}.")
+            CommunicationClient.logger.debug(s"Received response message $response on $reqString sent to peer ${sock.getInetAddress.toString}:${sock.getPort}.")
           response
         }
       }
       catch {
         case e@(_: SocketTimeoutException | _: ProtocolMessageSerializerException | _: IOException | _: ConnectException) =>
-          CommunicationClient.logger.warn(s"An exception occurred when receiving response from peer ${sock.getInetAddress.toString}: ${e.getMessage}")
+          CommunicationClient.logger.warn(s"An exception occurred when receiving response from peer ${sock.getInetAddress.toString}:${sock.getPort} -  ${e.getMessage}")
           null.asInstanceOf[IMessage]
       }
     }
@@ -264,16 +266,16 @@ class CommunicationClient(timeoutMs: Int, retryCount: Int = 3, retryDelayMs: Int
     //do request
     try {
       if (CommunicationClient.logger.isDebugEnabled)
-        CommunicationClient.logger.debug(s"To send message $reqString to peer ${sock.getInetAddress.toString}.")
+        CommunicationClient.logger.debug(s"To send message $reqString to peer ${sock.getInetAddress.toString}:${sock.getPort}.")
       val outputStream = sock.getOutputStream
       outputStream.write(reqString.getBytes)
       outputStream.flush()
       if (CommunicationClient.logger.isDebugEnabled)
-        CommunicationClient.logger.debug(s"Sent message $reqString to peer ${sock.getInetAddress.toString}.")
+        CommunicationClient.logger.debug(s"Sent message $reqString to peer ${sock.getInetAddress.toString}:${sock.getPort}.")
     }
     catch {
       case e@(_: ConnectException | _: IOException) =>
-        CommunicationClient.logger.warn(s"An exception occurred when sending response to peer ${sock.getInetAddress.toString}: ${e.getMessage}")
+        CommunicationClient.logger.warn(s"An exception occurred when sending response to peer ${sock.getInetAddress.toString}:${sock.getPort} - ${e.getMessage}")
         closeSocketAndCleanPeerMap(sock)
         return false
     }
