@@ -22,9 +22,6 @@ object RequestsRepository {
 
 object RequestsStatements {
   def prepare(session: Session): RequestsStatements = {
-    val activityTable = "commit_log_activity"
-    val activityPutStatement = session.prepare(s"INSERT INTO $activityTable (stream, partition, interval) VALUES (?, ?, ?)")
-    val activityGetStatement = session.prepare(s"SELECT stream, partition, interval FROM $activityTable WHERE stream = ? AND partition = ? AND interval = ?")
 
     val commitLog = "commit_log"
     val commitLogPutStatement = session.prepare(s"INSERT INTO $commitLog (stream, partition, interval, transaction, count) " +
@@ -40,8 +37,6 @@ object RequestsStatements {
     val commitLogDeleteStatement = session.prepare(s"DELETE FROM $commitLog WHERE stream = ? AND partition = ? AND interval = ? AND transaction = ?")
 
     RequestsStatements(
-      activityPutStatement = activityPutStatement,
-      activityGetStatement = activityGetStatement,
       commitLogPutStatement = commitLogPutStatement,
       commitLogGetStatement = commitLogGetStatement,
       commitLogScanStatement = commitLogScanStatement,
@@ -49,9 +44,7 @@ object RequestsStatements {
   }
 }
 
-case class RequestsStatements(activityPutStatement: PreparedStatement,
-                              activityGetStatement: PreparedStatement,
-                              commitLogPutStatement: PreparedStatement,
+case class RequestsStatements(commitLogPutStatement: PreparedStatement,
                               commitLogGetStatement: PreparedStatement,
                               commitLogDeleteStatement: PreparedStatement,
                               commitLogScanStatement: PreparedStatement)

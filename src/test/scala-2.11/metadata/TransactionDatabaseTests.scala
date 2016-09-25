@@ -39,7 +39,7 @@ class TransactionDatabaseTests extends FlatSpec with Matchers with BeforeAndAfte
   }
 
   it should "handle big range scans without problems" in {
-    val TOTAL = 100
+    val TOTAL = 1000
     val putCounter = new CountDownLatch(TOTAL)
     val putTransactions = (0 until TOTAL).map(_ => LocalGeneratorCreator.getTransaction())
 

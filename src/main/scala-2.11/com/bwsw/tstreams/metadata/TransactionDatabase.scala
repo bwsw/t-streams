@@ -1,11 +1,10 @@
 package com.bwsw.tstreams.metadata
 
 import java.util.concurrent.atomic.AtomicInteger
-import java.util.concurrent.{ConcurrentHashMap, ExecutorService}
+import java.util.concurrent.{ExecutorService}
 
 import com.datastax.driver.core.{ResultSet, Session}
 import java.lang.Long
-import java.util
 
 import scala.collection.JavaConverters._
 import com.google.common.util.concurrent.{FutureCallback, Futures}
@@ -17,20 +16,10 @@ case class TransactionRecord(partition: Int, transactionID: Long, count: Int, tt
 object TransactionDatabase {
   def AGGREGATION_INTERVAL            = SCALE * AGGREGATION_FACTOR
   var SCALE                           = 10000
-  var AGGREGATION_FACTOR              = 1000
-  var AGGREGATION_ADDITIONAL_FACTORS  = List(10000, 1000, 100, 10)
+  var AGGREGATION_FACTOR              = 1000    /* second */
   var ACTIVITY_CACHE_SIZE             = 10000
   def getAggregationInterval(transactionID: Long, interval: Int = TransactionDatabase.AGGREGATION_INTERVAL): Long = Math.floorDiv(transactionID, interval)
 
-  def makeCache[K,V](capacity: Int) = {
-    new util.LinkedHashMap[K, V](capacity, 0.7F, true) {
-      private val cacheCapacity = capacity
-
-      override def removeEldestEntry(entry: java.util.Map.Entry[K, V]): Boolean = {
-        this.size() > this.cacheCapacity
-      }
-    }
-  }
 }
 
 /**
@@ -38,27 +27,11 @@ object TransactionDatabase {
   */
 class TransactionDatabase(session: Session, stream: String) {
 
-  val activityCache = TransactionDatabase.makeCache[(Int, Long), Boolean](TransactionDatabase.ACTIVITY_CACHE_SIZE)
   val statements = RequestsRepository.getStatements(session)
   val resourceCounter = new AtomicInteger(0)
 
   def getResourceCounter() = resourceCounter.get()
   def getSession() = session
-
-  private def updateActivityCache(partition: Int, interval: Long, isPrimaryInterval: Boolean = true): Unit = {
-    val boundStatement = statements.activityPutStatement.bind(List(stream, new Integer(partition), new Long(interval)): _*)
-    session.execute(boundStatement)
-
-    println(s"$partition -> $interval")
-    this.synchronized {
-      activityCache.put((partition, interval), true)
-    }
-
-    if(isPrimaryInterval)
-      TransactionDatabase.AGGREGATION_ADDITIONAL_FACTORS.foreach(f =>
-        updateActivityCache(partition, TransactionDatabase.getAggregationInterval(interval, f), false))
-
-  }
 
   def del(partition: Integer, transactionID: Long) = {
     val interval = TransactionDatabase.getAggregationInterval(transactionID)
@@ -68,13 +41,6 @@ class TransactionDatabase(session: Session, stream: String) {
 
   def put[T](transaction: TransactionRecord, asynchronousExecutor: ExecutorService)(onComplete: TransactionRecord => T) = {
     val interval = TransactionDatabase.getAggregationInterval(transaction.transactionID)
-
-    val activity = this.synchronized {
-      Option(activityCache.get((transaction.partition, interval)))
-    }
-
-    if((activity.isEmpty || !activity.get) && transaction.count > 0)
-      updateActivityCache(transaction.partition, interval)
 
     val boundStatement = statements.commitLogPutStatement.bind(List(stream, new Integer(transaction.partition), new Long(interval), new Long(transaction.transactionID), new Integer(transaction.count), new Integer(transaction.ttl)): _*)
 
@@ -89,57 +55,19 @@ class TransactionDatabase(session: Session, stream: String) {
     }, asynchronousExecutor)
   }
 
-  def isActivityWas(partition: Integer, interval: Long): Boolean = {
-    syncActivityCache(partition, interval)
-
-    this.synchronized {
-      activityCache.get((partition, interval))
-    }
-  }
-
-  def syncActivityCache(partition: Integer, interval: Long) = {
-    val key = (partition, interval)
-
-    val activity = this.synchronized {
-      Option(activityCache.get(key))
-    }
-
-    if(activity.isEmpty || !activity.get) {
-      val boundStatement = statements.activityGetStatement.bind(List(stream, partition, interval): _*)
-      val activityRow = session.execute(boundStatement)
-      val row = activityRow.one()
-      val activityStatus = if (row == null) false else true
-
-      this.synchronized {
-        activityCache.put((partition, interval), activityStatus)
-      }
-
-    }
-  }
-
   def get(partition: Integer, transactionID: Long): Option[TransactionRecord] = {
     val interval = TransactionDatabase.getAggregationInterval(transactionID)
-    if(isActivityWas(partition, interval)) {
-      val boundStatement = statements.commitLogGetStatement.bind(List(stream, partition, interval, transactionID): _*)
-      val activityRow = session.execute(boundStatement)
-      val row = activityRow.one()
-      if(row != null)
-        Some(TransactionRecord(partition = partition, transactionID = transactionID,
-          count = row.getInt("count"), ttl = row.getInt("ttl(count)")))
-      else
-        None
-    } else
-      None
+    val boundStatement = statements.commitLogGetStatement.bind(List(stream, partition, interval, transactionID): _*)
+    val activityRow = session.execute(boundStatement)
+    Option(activityRow.one()).map(row => TransactionRecord(partition,transactionID,row.getInt("count"),row.getInt("ttl(count)")))
   }
 
-  def getTransactionsForInterval(partition: Integer, interval: Long): List[TransactionRecord] = {
-    if(isActivityWas(partition, interval)) {
-      val boundStatement = statements.commitLogScanStatement.bind(List(stream, partition, interval): _*)
-      val activityRows = session.execute(boundStatement)
-      activityRows.iterator().asScala
-        .map(row => TransactionRecord(partition = partition, transactionID = row.getLong("transaction"),
-          count = row.getInt("count"), ttl = row.getInt("ttl(count)"))).toList
-    } else Nil
+  private def getTransactionsForInterval(partition: Integer, interval: Long): List[TransactionRecord] = {
+    val boundStatement = statements.commitLogScanStatement.bind(List(stream, partition, interval): _*)
+    val activityRows = session.execute(boundStatement)
+    activityRows.iterator().asScala
+      .map(row => TransactionRecord(partition = partition, transactionID = row.getLong("transaction"),
+        count = row.getInt("count"), ttl = row.getInt("ttl(count)"))).toList
   }
 
   @tailrec
