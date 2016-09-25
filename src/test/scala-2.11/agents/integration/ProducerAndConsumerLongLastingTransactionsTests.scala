@@ -8,6 +8,7 @@ import testutils._
 
 import scala.util.control.Breaks._
 
+// TODO: FAILED
 
 class ProducerAndConsumerLongLastingTransactionsTests extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
 
