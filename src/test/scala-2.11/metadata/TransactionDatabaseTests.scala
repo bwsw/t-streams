@@ -118,7 +118,6 @@ class TransactionDatabaseTests extends FlatSpec with Matchers with BeforeAndAfte
   it should "handle scan backward correctly" in {
     val TOTAL = 100
     val putCounter = new CountDownLatch(TOTAL)
-    val veryFirst = LocalGeneratorCreator.getTransaction()
     val putTransactions = (0 until TOTAL).map(_ => LocalGeneratorCreator.getTransaction())
 
     putTransactions.foreach(i =>

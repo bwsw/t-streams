@@ -18,8 +18,9 @@ object TransactionDatabase {
   def AGGREGATION_INTERVAL = SCALE * AGGREGATION_FACTOR
   var SCALE                = 10000
   var AGGREGATION_FACTOR   = 1000
+  var AGGREGATION_ADDITIONAL_FACTORS  = List(10000, 1000, 100, 10)
   var ACTIVITY_CACHE_SIZE  = 10000
-  def getAggregationInterval(transactionID: Long): Long = Math.floorDiv(transactionID, TransactionDatabase.AGGREGATION_INTERVAL)
+  def getAggregationInterval(transactionID: Long, interval: Int = TransactionDatabase.AGGREGATION_INTERVAL): Long = Math.floorDiv(transactionID, interval)
 
   def makeCache[K,V](capacity: Int) = {
     new util.LinkedHashMap[K, V](capacity, 0.7F, true) {
@@ -44,13 +45,17 @@ class TransactionDatabase(session: Session, stream: String) {
   def getResourceCounter() = resourceCounter.get()
   def getSession() = session
 
-  def updateActivityCache(partition: Int, interval: Long) = {
+  private def updateActivityCache(partition: Int, interval: Long, isPrimaryInterval: Boolean = true): Unit = {
     val boundStatement = statements.activityPutStatement.bind(List(stream, new Integer(partition), new Long(interval)): _*)
     session.execute(boundStatement)
 
     this.synchronized {
       activityCache.put((partition, interval), true)
     }
+
+    if(isPrimaryInterval)
+      TransactionDatabase.AGGREGATION_ADDITIONAL_FACTORS.foreach(f =>
+        updateActivityCache(partition, TransactionDatabase.getAggregationInterval(interval, f), false))
 
   }
 
