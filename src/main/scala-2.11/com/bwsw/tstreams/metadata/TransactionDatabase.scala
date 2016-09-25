@@ -15,11 +15,11 @@ import scala.annotation.tailrec
 case class TransactionRecord(partition: Int, transactionID: Long, count: Int, ttl: Int)
 
 object TransactionDatabase {
-  def AGGREGATION_INTERVAL = SCALE * AGGREGATION_FACTOR
-  var SCALE                = 10000
-  var AGGREGATION_FACTOR   = 1000
+  def AGGREGATION_INTERVAL            = SCALE * AGGREGATION_FACTOR
+  var SCALE                           = 10000
+  var AGGREGATION_FACTOR              = 1000
   var AGGREGATION_ADDITIONAL_FACTORS  = List(10000, 1000, 100, 10)
-  var ACTIVITY_CACHE_SIZE  = 10000
+  var ACTIVITY_CACHE_SIZE             = 10000
   def getAggregationInterval(transactionID: Long, interval: Int = TransactionDatabase.AGGREGATION_INTERVAL): Long = Math.floorDiv(transactionID, interval)
 
   def makeCache[K,V](capacity: Int) = {
@@ -49,6 +49,7 @@ class TransactionDatabase(session: Session, stream: String) {
     val boundStatement = statements.activityPutStatement.bind(List(stream, new Integer(partition), new Long(interval)): _*)
     session.execute(boundStatement)
 
+    println(s"$partition -> $interval")
     this.synchronized {
       activityCache.put((partition, interval), true)
     }
