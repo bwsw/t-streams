@@ -114,7 +114,7 @@ class CommunicationClient(timeoutMs: Int, retryCount: Int = 3, retryDelayMs: Int
     if (isClosed.get)
       throw new IllegalStateException("Communication Client is closed. Unable to operate.")
 
-    println(msg)
+    CommunicationClient.logger.info(msg.toString())
 
     try {
       val sock = getSocket(msg.receiverID)

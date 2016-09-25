@@ -54,7 +54,7 @@ trait IMessage {
   }
 
   override def toString(): String = {
-    s"Type: ${this.getClass}\nID: $msgID\nSender: $senderID\nReceiver: $receiverID\nPartition: $partition"
+    s"Type: ${this.getClass} ID: $msgID Sender: $senderID Receiver: $receiverID Partition: $partition"
   }
 }
 
