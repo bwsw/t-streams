@@ -29,25 +29,25 @@ class AgentsStateDBService(dlm: ZookeeperDLMService,
     * @param default
     * @return
     */
-  def getPartitionMasterInetAddressLocal(partition: Int, default: String): String = this.synchronized {
-    val opt = masterMap get partition
+  def getPartitionMasterInetAddressLocal(partition: Int, default: String): String = {
+    val opt = masterMap.synchronized { masterMap get partition }
     if (opt.isDefined)
       opt.get.agentAddress
     else
       default
   }
 
-  def getCurrentMasterLocal(partition: Int): Option[MasterConfiguration] = this.synchronized {
-    masterMap get partition
+  def getCurrentMasterLocal(partition: Int): Option[MasterConfiguration] = {
+    masterMap.synchronized { masterMap get partition }
   }
 
 
-  def putPartitionMasterLocally(partition: Int, agent: MasterConfiguration) = this.synchronized {
-    masterMap += (partition -> agent)
+  def putPartitionMasterLocally(partition: Int, agent: MasterConfiguration) = {
+    masterMap.synchronized { masterMap += (partition -> agent) }
   }
 
-  def removePartitionMasterLocally(partition: Int) = this.synchronized {
-    masterMap -= partition
+  def removePartitionMasterLocally(partition: Int) = {
+    masterMap.synchronized { masterMap -= partition }
   }
 
 
@@ -78,7 +78,7 @@ class AgentsStateDBService(dlm: ZookeeperDLMService,
     * @param isLowPriorityToBeMaster
     * @param uniqueAgentId
     */
-  def bootstrap(isLowPriorityToBeMaster: Boolean, uniqueAgentId: Int, isFull: Boolean) = this.synchronized {
+  def bootstrap(isLowPriorityToBeMaster: Boolean, uniqueAgentId: Int, isFull: Boolean) = {
     agentID = uniqueAgentId
     // save initial records to zk
     partitions foreach { p =>
@@ -103,12 +103,15 @@ class AgentsStateDBService(dlm: ZookeeperDLMService,
     partitions foreach {
       p => if (getCurrentMaster(p).isEmpty) {
         val mc = MasterConfiguration(inetAddress, agentID)
+        IMessage.logger.info(s"[$inetAddress] Created (at bootstrap) ${getPartitionMasterPath(p)}")
         dlm.create[MasterConfiguration](
           getPartitionMasterPath(p),
           mc,
           CreateMode.EPHEMERAL)
         ctr += 1
-        masterMap += (p -> mc)
+        masterMap.synchronized {
+          masterMap += (p -> mc)
+        }
       }
     }
     partitions foreach { p => updateMyPriority(p, value = ctr) }
@@ -117,9 +120,9 @@ class AgentsStateDBService(dlm: ZookeeperDLMService,
   /**
     * removes artifacts
     */
-  def shutdown() = this.synchronized {
+  def shutdown() = {
 
-    val parts = masterMap.keys
+    val parts = masterMap.synchronized { masterMap.keys }
     parts foreach { p => demoteMeAsMaster(partition = p, isUpdatePriority = false) }
 
     partitions foreach { p =>
@@ -145,7 +148,7 @@ class AgentsStateDBService(dlm: ZookeeperDLMService,
     * @param partition
     * @param f
     */
-  private def updateMySettings(partition: Int, f: (AgentConfiguration) => Unit) = this.synchronized {
+  private def updateMySettings(partition: Int, f: (AgentConfiguration) => Unit) = {
     val mySettings = dlm.get[AgentConfiguration](getMyPath(partition))
     mySettings.foreach(s => {
       f(s)
@@ -160,7 +163,7 @@ class AgentsStateDBService(dlm: ZookeeperDLMService,
     * @param partition
     * @return
     */
-  def getStreamPartitionParticipants(partition: Int): List[String] = this.synchronized {
+  def getStreamPartitionParticipants(partition: Int): List[String] = {
     val agentsOpt = dlm.getAllSubPath(getPartitionPath(partition))
     if (agentsOpt.isDefined)
       agentsOpt.get
@@ -168,7 +171,7 @@ class AgentsStateDBService(dlm: ZookeeperDLMService,
       Nil
   }
 
-  def getStreamPartitionParticipantsData(partition: Int): List[AgentConfiguration] = this.synchronized {
+  def getStreamPartitionParticipantsData(partition: Int): List[AgentConfiguration] = {
     val agentsDataOpt = dlm.getAllSubNodesData[AgentConfiguration](getPartitionPath(partition))
     if (agentsDataOpt.isDefined)
       agentsDataOpt.get
@@ -176,7 +179,7 @@ class AgentsStateDBService(dlm: ZookeeperDLMService,
       Nil
   }
 
-  def getBestMasterCandidate(partition: Int): MasterConfiguration = this.synchronized {
+  def getBestMasterCandidate(partition: Int): MasterConfiguration = {
     val agentsData = getStreamPartitionParticipantsData(partition)
     //agentsData.foreach(d => println(s"Candidate: $d"))
     val agents = agentsData.sortBy(x => -(x.weight + x.penalty))
@@ -185,7 +188,7 @@ class AgentsStateDBService(dlm: ZookeeperDLMService,
   }
 
 
-  def demoteMeAsMaster(partition: Int, isUpdatePriority: Boolean = true) = this.synchronized {
+  def demoteMeAsMaster(partition: Int, isUpdatePriority: Boolean = true) = {
     //try to remove old master
     val master = getCurrentMaster(partition)
     master foreach {
@@ -193,12 +196,13 @@ class AgentsStateDBService(dlm: ZookeeperDLMService,
         if (masterSettings.agentAddress == inetAddress && masterSettings.uniqueAgentId == agentID) {
           IMessage.logger.info(s"[MASTER DELETE BEGIN] Delete agent as MASTER on address: {$inetAddress} from stream: {$streamName}, partition:{$partition}.")
           dlm.delete(getPartitionMasterPath(partition))
+          IMessage.logger.info(s"[$inetAddress] Deleted ${getPartitionMasterPath(partition)}")
           IMessage.logger.info(s"[MASTER DELETE END] Agent ($inetAddress) - I'm no longer the master for stream/partition: ($streamName,$partition).")
 
           if (isUpdatePriority)
             partitions foreach { p => updateMyPriority(p, value = -1) }
 
-          masterMap -= partition
+          masterMap.synchronized { masterMap -= partition }
         }
     }
   }
@@ -215,7 +219,7 @@ class AgentsStateDBService(dlm: ZookeeperDLMService,
     *
     * @param partition
     */
-  private def removeLastSessionArtifact(partition: Int) = this.synchronized {
+  private def removeLastSessionArtifact(partition: Int) = {
     val agents = getStreamPartitionParticipants(partition)
     agents foreach { agent =>
       if (agent.contains("agent_" + inetAddress + "_") && !agent.contains(agentID.toString)) {
@@ -242,19 +246,24 @@ class AgentsStateDBService(dlm: ZookeeperDLMService,
     *
     * @param partition
     */
-  def assignMeAsMaster(partition: Int) = this.synchronized {
+  def assignMeAsMaster(partition: Int) = {
     assert(!dlm.exist(getPartitionMasterPath(partition)))
     val masterConf = MasterConfiguration(inetAddress, agentID)
+    IMessage.logger.info(s"[$inetAddress] Created ${getPartitionMasterPath(partition)}")
     dlm.create[MasterConfiguration](
       getPartitionMasterPath(partition),
       masterConf,
       CreateMode.EPHEMERAL)
     partitions foreach { p => updateMyPriority(p, value = +1) }
-    masterMap += (partition -> masterConf)
+
+    masterMap.synchronized {
+      masterMap += (partition -> masterConf)
+    }
+
     IMessage.logger.info(s"[SET MASTER ANNOUNCE] ($inetAddress) - I was elected as master for stream/partition: ($streamName,$partition).")
   }
 
-  def doLocked[T](f: => T) = this.synchronized {
+  def doLocked[T](f: => T) = {
     LockUtil.withZkLockOrDieDo[T](dlm.getLock(getStreamLockPath()), (100, TimeUnit.SECONDS), Some(PeerAgent.logger), f)
   }
 
@@ -287,7 +296,7 @@ class AgentsStateDBService(dlm: ZookeeperDLMService,
 
   def getStreamLockPath() = s"/global/stream/$streamName"
 
-  def dumpPartitionsOwnership() = this.synchronized {
+  def dumpPartitionsOwnership() = masterMap.synchronized {
     val partitionsWhereMeIsMaster = masterMap.filter(kv => kv._2.agentAddress == inetAddress).keys
     PeerAgent.logger.info(s"I am $inetAddress with ID $agentID and is master for $partitionsWhereMeIsMaster")
   }

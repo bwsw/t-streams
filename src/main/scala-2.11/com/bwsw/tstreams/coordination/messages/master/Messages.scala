@@ -149,11 +149,11 @@ case class DeleteMasterResponse(senderID: String, receiverID: String, partition:
   */
 case class SetMasterRequest(senderID: String, receiverID: String, partition: Int) extends IMessage {
   override def handleP2PRequest(agent: PeerAgent) = {
-
+    IMessage.logger.info("Begin handle SetMasterRequest")
     assert(receiverID == agent.getAgentAddress)
 
     val master = agent.getAgentsStateManager.getPartitionMasterInetAddressLocal(partition, "")
-
+    IMessage.logger.info("Got local master")
     val response = {
       if (master == agent.getAgentAddress)
         EmptyResponse(receiverID, senderID, partition)
@@ -165,7 +165,7 @@ case class SetMasterRequest(senderID: String, receiverID: String, partition: Int
 
     response.msgID = msgID
     this.respond(response)
-
+    IMessage.logger.info("End handle SetMasterRequest")
   }
 }
 
