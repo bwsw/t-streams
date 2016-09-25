@@ -1,6 +1,8 @@
 package agents.integration
 
 
+import java.util.concurrent.CountDownLatch
+
 import com.bwsw.tstreams.agents.consumer.Offset.Oldest
 import com.bwsw.tstreams.agents.producer.NewTransactionProducerPolicy
 import com.bwsw.tstreams.common.FirstFailLockableTaskExecutor
@@ -57,24 +59,33 @@ class ConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll with Te
 
   "consumer.getLastTransaction" should "return last closed transaction" in {
     val ALL = 100
+    val putCounter = new CountDownLatch(ALL - 1)
     val transactions = for (i <- 0 until ALL) yield LocalGeneratorCreator.getTransaction()
     val transaction = transactions.head
     tsdb.put(TransactionRecord(1, transactions.head, 1, 120), executor) {r => true}
     transactions.drop(1) foreach { t =>
-      tsdb.put(TransactionRecord(1, t, -1, 120), executor) {r => true}
+      tsdb.put(TransactionRecord(1, t, -1, 120), executor) {r => {
+        putCounter.countDown()
+      }}
     }
+    putCounter.await()
     val retrievedTransaction = consumer.getLastTransaction(partition = 1).get
     retrievedTransaction.getTransactionID shouldEqual transaction
   }
 
   "consumer.getTransactionsFromTo" should "return all transactions if no incomplete" in {
     val ALL = 100
+    val putCounter = new CountDownLatch(ALL)
     val transactions = for (i <- 0 until ALL) yield LocalGeneratorCreator.getTransaction()
     val firstTransaction = transactions.head
     val lastTransaction = transactions.last
     transactions foreach { t =>
-      tsdb.put(TransactionRecord(1, t, 1, 120), executor) {r => true}
+      tsdb.put(TransactionRecord(1, t, 1, 120), executor) {r => {
+        putCounter.countDown()
+      }}
     }
+    putCounter.await()
+
     val res = consumer.getTransactionsFromTo(1, firstTransaction, lastTransaction)
     res.size shouldBe transactions.drop(1).size
   }
@@ -82,15 +93,25 @@ class ConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll with Te
   "consumer.getTransactionsFromTo" should "return only transactions up to 1st incomplete" in {
     val FIRST = 30
     val LAST = 100
+    val putCounter1 = new CountDownLatch(FIRST)
+    val putCounter2 = new CountDownLatch(LAST - FIRST)
+
     val transactions1 = for (i <- 0 until FIRST) yield LocalGeneratorCreator.getTransaction()
     transactions1 foreach { t =>
-      tsdb.put(TransactionRecord(1, t, 1, 120), executor) {r => true}
+      tsdb.put(TransactionRecord(1, t, 1, 120), executor) {r => {
+        putCounter1.countDown()
+      }}
     }
     tsdb.put(TransactionRecord(1, LocalGeneratorCreator.getTransaction(), -1, 120), executor) {r => true}
     val transactions2 = for (i <- FIRST until LAST) yield LocalGeneratorCreator.getTransaction()
     transactions2 foreach { t =>
-      tsdb.put(TransactionRecord(1, t, 1, 120), executor) {r => true}
+      tsdb.put(TransactionRecord(1, t, 1, 120), executor) {r => {
+        putCounter2.countDown()
+      }}
     }
+    putCounter1.await()
+    putCounter2.await()
+
     val transactions = transactions1 ++ transactions2
     val firstTransaction = transactions.head
     val lastTransaction = transactions.last
@@ -110,12 +131,16 @@ class ConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll with Te
 
   "consumer.getTransactionsFromTo" should "return none if to < from" in {
     val ALL = 100
+    val putCounter = new CountDownLatch(ALL)
     val transactions = for (i <- 0 until ALL) yield LocalGeneratorCreator.getTransaction()
     val firstTransaction = transactions.head
     val lastTransaction = transactions.tail.tail.tail.head
     transactions foreach { t =>
-      tsdb.put(TransactionRecord(1, t, 1, 120), executor) {r => true}
+      tsdb.put(TransactionRecord(1, t, 1, 120), executor) {r => {
+        putCounter.countDown()
+      }}
     }
+    putCounter.await()
     val res = consumer.getTransactionsFromTo(1, lastTransaction, firstTransaction)
     res.size shouldBe 0
   }
