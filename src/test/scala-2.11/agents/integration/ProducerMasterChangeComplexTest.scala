@@ -58,7 +58,7 @@ class ProducerMasterChangeComplexTest  extends FlatSpec with Matchers with Befor
   }
   val PRODUCERS_AMOUNT          = 10
   val TRANSACTIONS_AMOUNT_EACH  = 100
-  val PROBABILITY               = 0.02 // 0.01=1%
+  val PROBABILITY               = 0.005 // 0.01=1%
   val PARTITIONS                = (0 until 5).toSet
   val MAX_WAIT_AFTER_ALL_PRODUCERS = 5
 
