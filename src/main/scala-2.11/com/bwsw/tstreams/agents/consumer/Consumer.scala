@@ -132,7 +132,7 @@ class Consumer[T](val name: String,
     }
 
     for (partition <- options.readPolicy.getUsedPartitions())
-      transactionBuffer(partition) = loadNextTransactionsForPartition(partition, currentOffsets(partition))
+      transactionBuffer(partition) = mutable.Queue[ConsumerTransaction[T]]()
 
     isStarted.set(true)
   }
@@ -196,7 +196,8 @@ class Consumer[T](val name: String,
       throw new IllegalStateException(s"Consumer $name is not started. Start it first.")
 
     val transactionFrom = new java.lang.Long(options.transactionGenerator.getTransaction())
-    val transactionsRecord = tsdb.searchBackward(new Integer(partition), transactionFrom, new java.lang.Long(0)) (rec => rec.count > 0)
+    val transactionsRecord = tsdb.searchBackward(new Integer(partition),
+      transactionFrom, options.transactionGenerator.getTransaction(System.currentTimeMillis() - stream.getTTL() * 1000)) (rec => rec.count > 0)
 
     transactionsRecord
       .map(rec => new ConsumerTransaction[T](partition = partition, transactionID = rec.transactionID, count = rec.count, ttl = rec.ttl))

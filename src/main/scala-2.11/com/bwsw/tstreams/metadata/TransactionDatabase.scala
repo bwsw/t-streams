@@ -10,6 +10,8 @@ import java.util
 import scala.collection.JavaConverters._
 import com.google.common.util.concurrent.{FutureCallback, Futures}
 
+import scala.annotation.tailrec
+
 case class TransactionRecord(partition: Int, transactionID: Long, count: Int, ttl: Int)
 
 object TransactionDatabase {
@@ -134,6 +136,7 @@ class TransactionDatabase(session: Session, stream: String) {
     } else Nil
   }
 
+  @tailrec
   private def scanForwardInt(partition: Integer, transactionFrom: Long, transactionTo: Long)(interval: Long, intervalDeadHigh: Long, list: List[TransactionRecord], predicate: TransactionRecord => Boolean): List[TransactionRecord] = {
 
     if(interval > intervalDeadHigh)
@@ -157,6 +160,7 @@ class TransactionDatabase(session: Session, stream: String) {
     scanForwardInt(partition, transactionFrom, deadHigh)(intervalFrom, intervalDeadHi, Nil, predicate)
   }
 
+  @tailrec
   private def scanBackwardInt(partition: Integer, transactionFrom: Long, transactionTo: Long)(interval: Long, intervalDeadLow: Long, list: List[TransactionRecord], predicate: TransactionRecord => Boolean): List[TransactionRecord] = {
 
     if(interval < intervalDeadLow)
@@ -184,7 +188,8 @@ class TransactionDatabase(session: Session, stream: String) {
     scanBackwardInt(partition, transactionFrom, deadLow)(intervalFrom, intervalDeadLow, Nil, predicate)
   }
 
-  def searchBackwardInt(partition: Integer, transactionFrom: Long, transactionTo: Long)(interval: Long, intervalDeadLow: Long, predicate: (TransactionRecord) => Boolean): Option[TransactionRecord] = {
+  @tailrec
+  private def searchBackwardInt(partition: Integer, transactionFrom: Long, transactionTo: Long)(interval: Long, intervalDeadLow: Long, predicate: (TransactionRecord) => Boolean): Option[TransactionRecord] = {
     if(interval < intervalDeadLow)
       return None
 
