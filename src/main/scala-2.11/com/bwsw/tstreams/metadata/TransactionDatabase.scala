@@ -1,12 +1,13 @@
 package com.bwsw.tstreams.metadata
 
 import java.util.concurrent.atomic.AtomicInteger
-import java.util.concurrent.{ExecutorService, ConcurrentHashMap}
+import java.util.concurrent.{ConcurrentHashMap, ExecutorService}
 
 import com.datastax.driver.core.{ResultSet, Session}
 import java.lang.Long
-import scala.collection.JavaConverters._
+import java.util
 
+import scala.collection.JavaConverters._
 import com.google.common.util.concurrent.{FutureCallback, Futures}
 
 case class TransactionRecord(partition: Int, transactionID: Long, count: Int, ttl: Int)
@@ -15,7 +16,18 @@ object TransactionDatabase {
   def AGGREGATION_INTERVAL = SCALE * AGGREGATION_FACTOR
   var SCALE                = 10000
   var AGGREGATION_FACTOR   = 1000
+  var ACTIVITY_CACHE_SIZE  = 10000
   def getAggregationInterval(transactionID: Long): Long = Math.floorDiv(transactionID, TransactionDatabase.AGGREGATION_INTERVAL)
+
+  def makeCache[K,V](capacity: Int) = {
+    new util.LinkedHashMap[K, V](capacity, 0.7F, true) {
+      private val cacheCapacity = capacity
+
+      override def removeEldestEntry(entry: java.util.Map.Entry[K, V]): Boolean = {
+        this.size() > this.cacheCapacity
+      }
+    }
+  }
 }
 
 /**
@@ -23,7 +35,7 @@ object TransactionDatabase {
   */
 class TransactionDatabase(session: Session, stream: String) {
 
-  val activityCache = new ConcurrentHashMap[(Int, Long), Boolean]()
+  val activityCache = TransactionDatabase.makeCache[(Int, Long), Boolean](TransactionDatabase.ACTIVITY_CACHE_SIZE)
   val statements = RequestsRepository.getStatements(session)
   val resourceCounter = new AtomicInteger(0)
 
@@ -33,7 +45,11 @@ class TransactionDatabase(session: Session, stream: String) {
   def updateActivityCache(partition: Int, interval: Long) = {
     val boundStatement = statements.activityPutStatement.bind(List(stream, new Integer(partition), new Long(interval)): _*)
     session.execute(boundStatement)
-    activityCache.put((partition, interval), true)
+
+    this.synchronized {
+      activityCache.put((partition, interval), true)
+    }
+
   }
 
   def del(partition: Integer, transactionID: Long) = {
@@ -44,9 +60,14 @@ class TransactionDatabase(session: Session, stream: String) {
 
   def put[T](transaction: TransactionRecord, asynchronousExecutor: ExecutorService)(onComplete: TransactionRecord => T) = {
     val interval = TransactionDatabase.getAggregationInterval(transaction.transactionID)
-    if((!activityCache.contains((transaction.partition, interval)) || !activityCache.get((transaction.partition, interval)))
-      && transaction.count > 0)
+
+    val activity = this.synchronized {
+      Option(activityCache.get((transaction.partition, interval)))
+    }
+
+    if((activity.isEmpty || !activity.get) && transaction.count > 0)
       updateActivityCache(transaction.partition, interval)
+
     val boundStatement = statements.commitLogPutStatement.bind(List(stream, new Integer(transaction.partition), new Long(interval), new Long(transaction.transactionID), new Integer(transaction.count), new Integer(transaction.ttl)): _*)
 
     resourceCounter.incrementAndGet()
@@ -62,17 +83,29 @@ class TransactionDatabase(session: Session, stream: String) {
 
   def isActivityWas(partition: Integer, interval: Long): Boolean = {
     syncActivityCache(partition, interval)
-    activityCache.get((partition, interval))
+
+    this.synchronized {
+      activityCache.get((partition, interval))
+    }
   }
 
   def syncActivityCache(partition: Integer, interval: Long) = {
     val key = (partition, interval)
-    if(!activityCache.contains(key) || !activityCache.get(key)) {
+
+    val activity = this.synchronized {
+      Option(activityCache.get(key))
+    }
+
+    if(activity.isEmpty || !activity.get) {
       val boundStatement = statements.activityGetStatement.bind(List(stream, partition, interval): _*)
       val activityRow = session.execute(boundStatement)
       val row = activityRow.one()
       val activityStatus = if (row == null) false else true
-      activityCache.put((partition, interval), activityStatus)
+
+      this.synchronized {
+        activityCache.put((partition, interval), activityStatus)
+      }
+
     }
   }
 
