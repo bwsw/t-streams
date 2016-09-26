@@ -17,7 +17,7 @@ import com.bwsw.tstreams.coordination.client.TcpTransport
 import com.bwsw.tstreams.data.IStorage
 import com.bwsw.tstreams.generator.ITransactionGenerator
 import com.bwsw.tstreams.metadata.{MetadataStorage, MetadataStorageFactory}
-import com.bwsw.tstreams.streams.TStream
+import com.bwsw.tstreams.streams.Stream
 import com.datastax.driver.core.ConsistencyLevel
 import org.slf4j.LoggerFactory
 
@@ -903,13 +903,13 @@ class TStreamsFactory() {
     * @param datastorage
     * @return
     */
-  private def getStreamObject(metadatastorage: MetadataStorage, datastorage: IStorage[Array[Byte]]): TStream[Array[Byte]] = this.synchronized {
+  private def getStreamObject(metadatastorage: MetadataStorage, datastorage: IStorage[Array[Byte]]): Stream[Array[Byte]] = this.synchronized {
     assert(pAsString(TSF_Dictionary.Stream.NAME) != null)
     pAssertIntRange(pAsInt(TSF_Dictionary.Stream.PARTITIONS, Stream_partitions_default), Stream_partitions_min, Stream_partitions_max)
     pAssertIntRange(pAsInt(TSF_Dictionary.Stream.TTL, Stream_ttl_default), Stream_ttl_min, Stream_ttl_max)
 
     // construct stream
-    val stream = new TStream[Array[Byte]](
+    val stream = new Stream[Array[Byte]](
       name = pAsString(TSF_Dictionary.Stream.NAME),
       partitions = pAsInt(TSF_Dictionary.Stream.PARTITIONS, Stream_partitions_default),
       metadataStorage = metadatastorage,
@@ -922,7 +922,7 @@ class TStreamsFactory() {
   /**
     * reusable method which returns consumer options object
     */
-  private def getBasicConsumerOptions[T](stream: TStream[Array[Byte]],
+  private def getBasicConsumerOptions[T](stream: Stream[Array[Byte]],
                                          partitions: Set[Int],
                                          converter: IConverter[Array[Byte], T],
                                          transactionGenerator: ITransactionGenerator,
@@ -942,13 +942,13 @@ class TStreamsFactory() {
   /**
     * return returns basic scream object
     */
-  def getStream(): TStream[Array[Byte]] = this.synchronized {
+  def getStream(): Stream[Array[Byte]] = this.synchronized {
     if (isClosed.get)
       throw new IllegalStateException("TStreamsFactory is closed. This is the illegal usage of the object.")
 
     val ds: IStorage[Array[Byte]] = getDataStorage()
     val ms: MetadataStorage = getMetadataStorage()
-    val stream: TStream[Array[Byte]] = getStreamObject(metadatastorage = ms, datastorage = ds)
+    val stream: Stream[Array[Byte]] = getStreamObject(metadatastorage = ms, datastorage = ds)
     stream
 
   }
@@ -977,7 +977,7 @@ class TStreamsFactory() {
 
     val ds: IStorage[Array[Byte]] = getDataStorage()
     val ms: MetadataStorage = getMetadataStorage()
-    val stream: TStream[Array[Byte]] = getStreamObject(metadatastorage = ms, datastorage = ds)
+    val stream: Stream[Array[Byte]] = getStreamObject(metadatastorage = ms, datastorage = ds)
 
     assert(pAsString(TSF_Dictionary.Producer.BIND_PORT) != null)
     assert(pAsString(TSF_Dictionary.Producer.BIND_HOST) != null)
@@ -1097,7 +1097,7 @@ class TStreamsFactory() {
 
     val ds: IStorage[Array[Byte]] = getDataStorage()
     val ms: MetadataStorage = getMetadataStorage()
-    val stream: TStream[Array[Byte]] = getStreamObject(metadatastorage = ms, datastorage = ds)
+    val stream: Stream[Array[Byte]] = getStreamObject(metadatastorage = ms, datastorage = ds)
     val consumerOptions = getBasicConsumerOptions(transactionGenerator = transactionGenerator,
       stream = stream,
       partitions = partitions,
@@ -1132,7 +1132,7 @@ class TStreamsFactory() {
 
     val ds: IStorage[Array[Byte]] = getDataStorage()
     val ms: MetadataStorage = getMetadataStorage()
-    val stream: TStream[Array[Byte]] = getStreamObject(metadatastorage = ms, datastorage = ds)
+    val stream: Stream[Array[Byte]] = getStreamObject(metadatastorage = ms, datastorage = ds)
 
     val consumerOptions = getBasicConsumerOptions(transactionGenerator = transactionGenerator,
       stream = stream,

@@ -1,6 +1,6 @@
 package com.bwsw.tstreams.common
 
-import com.bwsw.tstreams.streams.TStream
+import com.bwsw.tstreams.streams.Stream
 
 /**
   * Round robin policy impl of [[AbstractPolicy]]]
@@ -8,7 +8,7 @@ import com.bwsw.tstreams.streams.TStream
   * @param usedPartitions Partitions from which agent will interact
   */
 
-class RoundRobinPolicy(stream: TStream[_], usedPartitions: Set[Int])
+class RoundRobinPolicy(stream: Stream[_], usedPartitions: Set[Int])
   extends AbstractPolicy(stream = stream, usedPartitions = usedPartitions) {
 
   /**

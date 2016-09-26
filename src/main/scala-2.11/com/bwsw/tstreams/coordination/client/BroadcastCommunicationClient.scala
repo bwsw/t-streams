@@ -4,7 +4,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 
 import com.bwsw.tstreams.common.ZookeeperDLMService
 import com.bwsw.tstreams.coordination.messages.state.TransactionStateMessage
-import com.bwsw.tstreams.coordination.producer.AgentsStateDBService
+import com.bwsw.tstreams.coordination.producer.{AgentsStateDBService, PeerAgent}
 import org.apache.zookeeper.{WatchedEvent, Watcher}
 
 
@@ -24,7 +24,7 @@ class BroadcastCommunicationClient(agentsStateManager: AgentsStateDBService,
     * Initialize coordinator
     */
   def init(): Unit = {
-    agentsStateManager.withGlobalStreamLockDo(() => initInternal())
+    agentsStateManager.doLocked { initInternal() }
   }
 
   /**

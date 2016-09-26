@@ -40,13 +40,19 @@ class Coordinator() {
     initializeState()
   }
 
+  private def getLock() = dlm.getLock(ZookeeperDLMService.SUBSCRIBER_LOCK)
+  private def getLockTimeout() = (100, TimeUnit.SECONDS)
+
   /**
     * shuts down coordinator
     */
   def shutdown() = {
     if (!isInitialized.getAndSet(false))
       throw new IllegalStateException("Failed to stop object as it's already stopped.")
-    partitions foreach (p => dlm.delete(getSubscriberMembershipPath(p)))
+
+    LockUtil.withZkLockOrDieDo(getLock(), getLockTimeout(), Some(ZookeeperDLMService.logger)) {
+      partitions foreach (p => dlm.delete(getSubscriberMembershipPath(p)))
+    }
     dlm.close()
   }
 
@@ -55,8 +61,7 @@ class Coordinator() {
     *
     */
   private def initializeState(): Unit = {
-    LockUtil.withZkLockOrDieDo[Unit](dlm.getLock(ZookeeperDLMService.CREATE_PATH_LOCK), (100, TimeUnit.SECONDS), Some(ZookeeperDLMService.logger), () => {
-
+    LockUtil.withZkLockOrDieDo(getLock(), getLockTimeout(), Some(ZookeeperDLMService.logger)) {
       partitions foreach (p => {
         try {
           if (!dlm.exist(getSubscriberEventPath(p)))
@@ -73,10 +78,8 @@ class Coordinator() {
         }
         dlm.create(getSubscriberMembershipPath(p), agentAddress, CreateMode.EPHEMERAL)
       })
-    })
-
+    }
     partitions foreach (p => dlm.notify(getSubscriberEventPath(p)))
-
   }
 
   private def getSubscriberEventPath(p: Int) = s"/subscribers/event/$stream/$p"
