@@ -44,7 +44,9 @@ class ConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll with Te
 
   "consumer.getTransactionById" should "return sent transaction" in {
     val transactionID = LocalGeneratorCreator.getTransaction()
-    tsdb.put(TransactionRecord(1, transactionID, 2, 120), executor) {r => true}
+    val putCounter = new CountDownLatch(1)
+    tsdb.put(TransactionRecord(1, transactionID, 2, 120), executor) {r => putCounter.countDown()}
+    putCounter.await()
     val consumedTransaction = consumer.getTransactionById(1, transactionID).get
     consumedTransaction.getPartition shouldBe 1
     consumedTransaction.getTransactionID shouldBe transactionID
