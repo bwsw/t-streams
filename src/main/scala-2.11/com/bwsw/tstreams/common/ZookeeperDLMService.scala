@@ -19,8 +19,8 @@ object ZookeeperDLMService {
   val logger = LoggerFactory.getLogger(this.getClass)
   val serializer = new JsonSerializer
 
-  val CREATE_PATH_LOCK = "/locks/create_path_lock"
-  val WATCHER_LOCK = "/locks/watcher_path_lock"
+  val SUBSCRIBER_LOCK = "/locks/subscriber_lock"
+
   val executor = new FirstFailLockableTaskExecutor("ZookeeperDLMService-executor")
   val ctr = new AtomicInteger(0)
 }

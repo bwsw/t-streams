@@ -260,9 +260,11 @@ class AgentsStateDBService(dlm: ZookeeperDLMService,
     IMessage.logger.info(s"[SET MASTER ANNOUNCE] ($inetAddress) - I was elected as master for stream/partition: ($streamName,$partition).")
   }
 
-  def doLocked[T](f: => T) = {
-    LockUtil.withZkLockOrDieDo[T](dlm.getLock(getStreamLockPath()), (100, TimeUnit.SECONDS), Some(PeerAgent.logger), f)
-  }
+  def doLocked[T](f: => T) =
+    LockUtil.withZkLockOrDieDo[T](dlm.getLock(getStreamLockPath()), (100, TimeUnit.SECONDS), Some(PeerAgent.logger)) {
+      f
+    }
+
 
   def setSubscriberStateWatcher(partition: Int, watcher: Watcher) =
       dlm.setWatcher(getSubscribersEventPath(partition), watcher)

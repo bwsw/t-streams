@@ -18,13 +18,13 @@ class GroupCheckpointEntity(consumerEntityName: String, producerEntityName: Stri
     * Statement for saving consumer single offset
     */
   private val consumerCheckpointStatement = session
-    .prepare(s"INSERT INTO $consumerEntityName (name,stream,partition,last_transaction) VALUES(?,?,?,?)")
+    .prepare(s"INSERT INTO $consumerEntityName (name, stream, partition, last_transaction) VALUES(?, ?, ?,  ?)")
 
   /**
     * Statement using for saving producer offsets
     */
   private val producerCheckpointStatement = session
-    .prepare(s"INSERT INTO $producerEntityName (stream,partition,interval, transaction,cnt) VALUES(?,?,?,?) USING TTL ?")
+    .prepare(s"INSERT INTO $producerEntityName (stream, partition, interval, transaction, count) VALUES(?, ?, ?, ?, ?) USING TTL ?")
 
   /**
     * Group agents commit
