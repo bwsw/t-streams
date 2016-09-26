@@ -4,7 +4,7 @@ import java.net.InetSocketAddress
 
 import com.bwsw.tstreams.common.CassandraConnectorConf
 import com.bwsw.tstreams.services.BasicStreamService
-import com.bwsw.tstreams.streams.TStream
+import com.bwsw.tstreams.streams.Stream
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import testutils.{RandomStringCreator, TestUtils}
 
@@ -22,7 +22,7 @@ class TStreamServiceTest extends FlatSpec with Matchers with BeforeAndAfterAll w
   "BasicStreamService.createStream()" should "create stream" in {
     val name = randomVal
 
-    val stream: TStream[_] = BasicStreamService.createStream(
+    val stream: Stream[_] = BasicStreamService.createStream(
       streamName = name,
       partitions = 3,
       ttl = 100,
@@ -30,7 +30,7 @@ class TStreamServiceTest extends FlatSpec with Matchers with BeforeAndAfterAll w
       metadataStorage = metadataStorageInst,
       dataStorage = storageInst)
 
-    val checkVal = stream.isInstanceOf[TStream[_]]
+    val checkVal = stream.isInstanceOf[Stream[_]]
 
     checkVal shouldBe true
   }
@@ -68,8 +68,8 @@ class TStreamServiceTest extends FlatSpec with Matchers with BeforeAndAfterAll w
       metadataStorage = metadataStorageInst,
       dataStorage = storageInst)
 
-    val stream: TStream[_] = BasicStreamService.loadStream(name, metadataStorageInst, storageInst)
-    val checkVal = stream.isInstanceOf[TStream[_]]
+    val stream: Stream[_] = BasicStreamService.loadStream(name, metadataStorageInst, storageInst)
+    val checkVal = stream.isInstanceOf[Stream[_]]
     checkVal shouldBe true
   }
 

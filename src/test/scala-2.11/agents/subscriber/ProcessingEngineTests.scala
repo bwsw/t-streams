@@ -27,9 +27,6 @@ class ProcessingEngineOperatorTestImpl extends TransactionOperator[String] {
 
   override def loadTransactionFromDB(partition: Int, transactionID: Long): Option[ConsumerTransaction[String]] = None
 
-  override def getTransactionsFromTo(partition: Int, from: Long, to: Long): ListBuffer[ConsumerTransaction[String]] =
-    transactions
-
   override def checkpoint(): Unit = {}
 
   override def getPartitions(): Set[Int] = Set[Int](0)
@@ -37,6 +34,8 @@ class ProcessingEngineOperatorTestImpl extends TransactionOperator[String] {
   override def getCurrentOffset(partition: Int): Long = LocalGeneratorCreator.getTransaction()
 
   override def buildTransactionObject(partition: Int, id: Long, count: Int): Option[ConsumerTransaction[String]] = None
+
+  override def getTransactionsFromTo(partition: Int, from: Long, to: Long): ListBuffer[ConsumerTransaction[String]] = transactions
 }
 
 /**

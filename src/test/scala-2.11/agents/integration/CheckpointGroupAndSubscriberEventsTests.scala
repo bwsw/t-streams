@@ -1,6 +1,6 @@
 package agents.integration
 
-import java.util.concurrent.CountDownLatch
+import java.util.concurrent.{TimeUnit, CountDownLatch}
 
 import com.bwsw.tstreams.agents.consumer.Offset.Newest
 import com.bwsw.tstreams.agents.consumer.subscriber.Callback
@@ -40,12 +40,13 @@ class CheckpointGroupAndSubscriberEventsTests extends FlatSpec with Matchers wit
 
   "Group commit" should "checkpoint all AgentsGroup state" in {
     val l = new CountDownLatch(1)
-    var ctr: Int = 0
+    var transactionsCounter: Int = 0
+
     val group = new CheckpointGroup()
 
     group.add(producer)
 
-    val s = f.getSubscriber[String](name = "ss+2",
+    val subscriber = f.getSubscriber[String](name = "ss+2",
       transactionGenerator = LocalGeneratorCreator.getGen(),
       converter = arrayByteToStringConverter,
       partitions = Set(0),
@@ -53,31 +54,22 @@ class CheckpointGroupAndSubscriberEventsTests extends FlatSpec with Matchers wit
       isUseLastOffset = true,
       callback = new Callback[String] {
         override def onTransaction(consumer: TransactionOperator[String], transaction: ConsumerTransaction[String]): Unit = this.synchronized {
-          ctr += 1
-          if (ctr == 2) {
+          transactionsCounter += 1
+          if (transactionsCounter == 2) {
             l.countDown()
           }
         }
       })
-    s.start()
-
-    val start = System.currentTimeMillis()
-
-    producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened, 0)
+    subscriber.start()
+    val txn1 = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened, 0)
+    txn1.send("test")
     group.checkpoint()
-
-    producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened, 0)
+    val txn2 = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened, 0)
+    txn2.send("test")
     group.checkpoint()
-
-    l.await()
-
-    val end = System.currentTimeMillis()
-
-    logger.info(s"End - start = ${end - start}")
-    end - start < 2000 shouldBe true
-
-    s.stop()
-
+    l.await(5, TimeUnit.SECONDS) shouldBe true
+    transactionsCounter shouldBe 2
+    subscriber.stop()
   }
 
   override def afterAll(): Unit = {

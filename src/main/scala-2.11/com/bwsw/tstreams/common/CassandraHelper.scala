@@ -62,12 +62,18 @@ object CassandraHelper {
 
 
     session.execute(s"CREATE TABLE IF NOT EXISTS $keyspace.commit_log (" +
-      s"stream text, " +
-      s"partition int, " +
-      s"transaction bigint, " +
-      s"cnt int, " +
-      s"PRIMARY KEY ((stream, partition), transaction))")
+      s"stream TEXT, " +
+      s"partition INT, " +
+      s"interval BIGINT, " +
+      s"transaction BIGINT, " +
+      s"count INT, " +
+      s"PRIMARY KEY ((stream, partition, interval), transaction)) WITH CLUSTERING ORDER BY (transaction ASC)")
 
+    session.execute(s"CREATE TABLE IF NOT EXISTS $keyspace.commit_log_activity (" +
+      s"stream TEXT, " +
+      s"partition INT, " +
+      s"interval BIGINT, " +
+      s"PRIMARY KEY ((stream, partition), interval)) WITH CLUSTERING ORDER BY (interval ASC)")
 
     session.execute(s"CREATE TABLE IF NOT EXISTS $keyspace.generators (" +
       s"name text, " +
@@ -114,6 +120,7 @@ object CassandraHelper {
     session.execute(s"DROP TABLE IF EXISTS $keyspace.consumers")
     session.execute(s"DROP TABLE IF EXISTS $keyspace.streams")
     session.execute(s"DROP TABLE IF EXISTS $keyspace.commit_log")
+    session.execute(s"DROP TABLE IF EXISTS $keyspace.commit_log_activity")
     session.execute(s"DROP TABLE IF EXISTS $keyspace.generators")
   }
 
@@ -128,6 +135,7 @@ object CassandraHelper {
     session.execute(s"TRUNCATE $keyspace.consumers")
     session.execute(s"TRUNCATE $keyspace.streams")
     session.execute(s"TRUNCATE $keyspace.commit_log")
+    session.execute(s"TRUNCATE $keyspace.commit_log_activity")
     session.execute(s"TRUNCATE $keyspace.generators")
   }
 

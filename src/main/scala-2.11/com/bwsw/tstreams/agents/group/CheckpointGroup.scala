@@ -5,6 +5,7 @@ import java.util.concurrent.locks.ReentrantLock
 import java.util.concurrent.{CountDownLatch, TimeUnit}
 
 import com.bwsw.tstreams.common.{FirstFailLockableTaskExecutor, LockUtil}
+import com.bwsw.tstreams.generator.ITransactionGenerator
 import org.slf4j.LoggerFactory
 
 /**

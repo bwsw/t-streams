@@ -139,20 +139,30 @@ class TransactionBuffer(queue: QueueBuilder.QueueType) {
 
   }
 
-  def signalCompleteTransactions() = this.synchronized {
+  def signalCompleteTransactions(): Unit = this.synchronized {
     val time = System.currentTimeMillis()
 
-    val meet = stateList.takeWhile(ts =>
-      (ts.state == TransactionStatus.postCheckpoint
-        || ts.state == TransactionStatus.invalid
-        || ts.ttl < time))
+    val meetPostCheckpoint = stateList.takeWhile(ts => ts.state == TransactionStatus.postCheckpoint)
 
-    if(meet.nonEmpty) {
-      stateList.remove(0, meet.size)
+    meetPostCheckpoint.foreach(ts => stateMap.remove(ts.transactionID))
 
-      meet.foreach(ts => stateMap.remove(ts.transactionID))
+    if(meetPostCheckpoint.nonEmpty) {
+      stateList.remove(0, meetPostCheckpoint.size)
+      queue.put(meetPostCheckpoint.toList)
+    }
 
-      queue.put(meet.filter(ts => (ts.state == TransactionStatus.postCheckpoint)).toList)
+    val meetPreCheckpointTimeoutAndInvalid = stateList.takeWhile(ts =>
+        ts.state == TransactionStatus.invalid
+        || (ts.ttl < time && ts.state == TransactionStatus.preCheckpoint))
+
+    meetPreCheckpointTimeoutAndInvalid.foreach(ts => stateMap.remove(ts.transactionID))
+
+    if(meetPreCheckpointTimeoutAndInvalid.nonEmpty) {
+      stateList.remove(0, meetPreCheckpointTimeoutAndInvalid.size)
+      val resList = meetPreCheckpointTimeoutAndInvalid.filter(ts => ts.state == TransactionStatus.preCheckpoint).toList
+      resList.foreach(ts => ts.queueOrderID = 0) // to do full loading
+      if(resList.nonEmpty)
+        queue.put(resList)
     }
   }
 }

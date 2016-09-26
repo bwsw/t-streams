@@ -1,5 +1,7 @@
 package agents.integration
 
+import java.util.concurrent.CountDownLatch
+
 import com.bwsw.tstreams.agents.consumer.Offset.Oldest
 import com.bwsw.tstreams.agents.producer.NewTransactionProducerPolicy
 import com.bwsw.tstreams.env.TSF_Dictionary
@@ -8,6 +10,7 @@ import testutils._
 
 import scala.util.control.Breaks._
 
+// TODO: FAILED
 
 class ProducerAndConsumerLongLastingTransactionsTests extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
 
@@ -53,72 +56,50 @@ class ProducerAndConsumerLongLastingTransactionsTests extends FlatSpec with Matc
     val dataToSend1: List[String] = (for (part <- 0 until totalElementsInTransaction) yield "data_to_send_pr1_" + randomString).toList.sorted
     val dataToSend2: List[String] = (for (part <- 0 until totalElementsInTransaction) yield "data_to_send_pr2_" + randomString).toList.sorted
 
+    val waitFirstAtSubscriber = new CountDownLatch(1)
+    val waitSecondAtSubscriber = new CountDownLatch(1)
+    val waitFirstAtProducer = new CountDownLatch(1)
+
     val producer1Thread = new Thread(new Runnable {
       def run() {
         val transaction = producer1.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
+        waitFirstAtProducer.countDown()
         dataToSend1.foreach { x =>
           transaction.send(x)
           Thread.sleep(2000)
         }
         transaction.checkpoint()
+        waitFirstAtSubscriber.countDown()
       }
     })
 
     val producer2Thread = new Thread(new Runnable {
       def run() {
-        Thread.sleep(2000)
+        waitFirstAtProducer.await()
         val transaction = producer2.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
         dataToSend2.foreach { x =>
           transaction.send(x)
         }
         transaction.checkpoint()
-      }
-    })
-
-    var checkVal = true
-
-    val consumerThread = new Thread(new Runnable {
-      Thread.sleep(3000)
-
-      def run() = {
-        var isFirstProducerFinished = true
-        breakable {
-          while (true) {
-            val transactionOpt = consumer.getTransaction(0)
-            if (transactionOpt.isDefined) {
-              val data = transactionOpt.get.getAll().sorted
-              if (isFirstProducerFinished) {
-                checkVal &= data == dataToSend1
-                isFirstProducerFinished = false
-              }
-              else {
-                checkVal &= data == dataToSend2
-                break()
-              }
-            }
-            Thread.sleep(200)
-          }
-        }
+        waitSecondAtSubscriber.countDown()
       }
     })
 
     producer1Thread.start()
     producer2Thread.start()
-    consumerThread.start()
-    producer1Thread.join(timeoutForWaiting * 1000)
-    producer2Thread.join(timeoutForWaiting * 1000)
-    consumerThread.join(timeoutForWaiting * 1000)
 
-    checkVal &= !producer1Thread.isAlive
-    checkVal &= !producer2Thread.isAlive
-    checkVal &= !consumerThread.isAlive
+    waitFirstAtSubscriber.await()
+    val transaction1Opt = consumer.getTransaction(0)
+    val data1 = transaction1Opt.get.getAll().sorted
+    data1 shouldBe dataToSend1
 
-    //assert that is nothing to read
-    (0 until consumer.stream.getPartitions) foreach { _ =>
-      checkVal &= consumer.getTransaction(0).isEmpty
-    }
+    waitSecondAtSubscriber.await()
+    val transaction2Opt = consumer.getTransaction(0)
+    val data2 = transaction2Opt.get.getAll().sorted
+    data2 shouldBe dataToSend2
 
-    checkVal shouldEqual true
+    producer1Thread.join()
+    producer2Thread.join()
   }
 
   override def afterAll(): Unit = {

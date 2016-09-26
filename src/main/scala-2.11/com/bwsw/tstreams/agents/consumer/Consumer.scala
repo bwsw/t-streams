@@ -4,10 +4,11 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.locks.ReentrantLock
 
 import com.bwsw.tstreams.agents.group.{CheckpointInfo, ConsumerCheckpointInfo, GroupParticipant}
-import com.bwsw.tstreams.metadata.MetadataStorage
-import com.bwsw.tstreams.streams.TStream
+import com.bwsw.tstreams.metadata.{MetadataStorage, TransactionDatabase, TransactionRecord}
+import com.bwsw.tstreams.streams.Stream
 import org.slf4j.LoggerFactory
 
+import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 
 object Consumer {
@@ -23,11 +24,12 @@ object Consumer {
   * @tparam T User data type
   */
 class Consumer[T](val name: String,
-                  val stream: TStream[Array[Byte]],
+                  val stream: Stream[Array[Byte]],
                   val options: ConsumerOptions[T])
   extends GroupParticipant
     with TransactionOperator[T] {
 
+  val tsdb = new TransactionDatabase(stream.getMetadataStorage().getSession(), stream.getName())
 
   /**
     * Temporary checkpoints (will be cleared after every checkpoint() invokes)
@@ -77,6 +79,21 @@ class Consumer[T](val name: String,
     currentOffsets(partition)
   }
 
+  private def loadNextTransactionsForPartition(partition: Int, currentOffset: Long): mutable.Queue[ConsumerTransaction[T]] = {
+    var count: Int = 0
+    val transactionsRecords = tsdb.takeWhileForward(partition, currentOffset + 1, options.transactionGenerator.getTransaction()) (r => {
+      count += 1
+      count <= options.transactionsPreload
+    })
+
+    val transactionsQueue = mutable.Queue[ConsumerTransaction[T]]()
+    transactionsRecords.foreach(record => {
+      val consumerTransaction = new ConsumerTransaction[T](partition, record.transactionID, record.count, record.ttl)
+      transactionsQueue.enqueue(consumerTransaction)
+    })
+    transactionsQueue
+  }
+
   /**
     * Starts the operation.
     */
@@ -93,7 +110,7 @@ class Consumer[T](val name: String,
       for (i <- 0 until stream.getPartitions) {
         currentOffsets(i) = options.offset match {
           case Offset.Oldest =>
-            options.transactionGenerator.getTransaction(0)
+            options.transactionGenerator.getTransaction(System.currentTimeMillis() - (stream.getTTL() + 1) * 1000)
           case Offset.Newest =>
             options.transactionGenerator.getTransaction()
           case dateTime: Offset.DateTime =>
@@ -114,15 +131,12 @@ class Consumer[T](val name: String,
       }
     }
 
-    for (i <- options.readPolicy.getUsedPartitions())
-      transactionBuffer(i) = stream.metadataStorage.commitEntity.getTransactions[T](
-        streamName = stream.getName,
-        partition = i,
-        fromTransaction = currentOffsets(i),
-        cnt = options.transactionsPreload)
+    for (partition <- options.readPolicy.getUsedPartitions())
+      transactionBuffer(partition) = mutable.Queue[ConsumerTransaction[T]]()
 
     isStarted.set(true)
   }
+
 
   /**
     * Receives new transaction from the partition
@@ -139,11 +153,7 @@ class Consumer[T](val name: String,
       throw new IllegalStateException(s"Consumer doesn't work on partition=$partition.")
 
     if (transactionBuffer(partition).isEmpty) {
-      transactionBuffer(partition) = stream.metadataStorage.commitEntity.getTransactions(
-        streamName = stream.getName,
-        partition = partition,
-        fromTransaction = currentOffsets(partition),
-        cnt = options.transactionsPreload)
+      transactionBuffer(partition) = loadNextTransactionsForPartition(partition, currentOffsets(partition))
 
       if (transactionBuffer(partition).isEmpty) {
         return None
@@ -185,59 +195,15 @@ class Consumer[T](val name: String,
     if (!isStarted.get())
       throw new IllegalStateException(s"Consumer $name is not started. Start it first.")
 
-    var id = options.transactionGenerator.getTransaction()
-    var isFinished = false
-    while (!isFinished) {
+    val transactionFrom = new java.lang.Long(options.transactionGenerator.getTransaction())
+    val transactionsRecord = tsdb.searchBackward(new Integer(partition),
+      transactionFrom, options.transactionGenerator.getTransaction(System.currentTimeMillis() - stream.getTTL() * 1000)) (rec => rec.count > 0)
 
-      val queue = stream.metadataStorage.commitEntity.getLastTransactionHelper[T](stream.getName, partition, id)
-
-      if (queue.isEmpty)
-        isFinished = true
-      else {
-        while (queue.nonEmpty) {
-          val transaction: ConsumerTransaction[T] = queue.dequeue()
-          if (transaction.getCount() != -1) {
-            transaction.attach(this)
-            return Option[ConsumerTransaction[T]](transaction)
-          }
-          id = transaction.getTransactionID()
-        }
-      }
-    }
-    None
+    transactionsRecord
+      .map(rec => new ConsumerTransaction[T](partition = partition, transactionID = rec.transactionID, count = rec.count, ttl = rec.ttl))
   }
 
-  def getTransactionsFromTo(partition: Int, fromOffset: Long, toOffset: Long): ListBuffer[ConsumerTransaction[T]] = {
-    val transactions = stream.metadataStorage.commitEntity.getTransactions[T](
-      streamName = stream.getName,
-      partition = partition,
-      fromTransaction = fromOffset,
-      cnt = options.transactionsPreload)
-    val okList = ListBuffer[ConsumerTransaction[T]]()
-    var addFlag = true
-    var moreItems = true
-    while (addFlag && moreItems) {
-      if (transactions.isEmpty) {
-        moreItems = false
-      } else {
-        val t = transactions.dequeue()
-        if (toOffset >= t.getTransactionID()) {
-          if (t.getCount() >= 0)
-            okList.append(t)
-          else
-            addFlag = false // we have reached uncompleted transaction, stop
-        } else {
-          // we have reached right end of interval [from, -> to]
-          moreItems = false
-          addFlag = false
-        }
-      }
-    }
-    if (okList.nonEmpty && addFlag && toOffset > okList.last.getTransactionID())
-      okList.appendAll(if (okList.nonEmpty) getTransactionsFromTo(partition, okList.last.getTransactionID(), toOffset) else ListBuffer[ConsumerTransaction[T]]())
 
-    okList
-  }
 
   /**
     *
@@ -282,11 +248,7 @@ class Consumer[T](val name: String,
 
     updateOffsets(partition, offset)
 
-    transactionBuffer(partition) = stream.metadataStorage.commitEntity.getTransactions(
-      stream.getName,
-      partition,
-      offset,
-      options.transactionsPreload)
+    transactionBuffer(partition) = loadNextTransactionsForPartition(partition, offset)
   }
 
   /**
@@ -299,15 +261,8 @@ class Consumer[T](val name: String,
     if (!isStarted.get())
       throw new IllegalStateException("Consumer is not started. Start consumer first.")
 
-    val data: Option[(Int, Int)] =
-      stream.metadataStorage.commitEntity.getTransactionItemCountAndTTL(stream.getName, partition, transactionID)
-
-    if (data.isDefined) {
-      val (cnt, ttl) = data.get
-      Some(new ConsumerTransaction(partition, transactionID, cnt, ttl))
-    }
-    else
-      None
+    tsdb.get(partition, transactionID)
+      .map(rec => new ConsumerTransaction(partition, transactionID, rec.count, rec.ttl))
   }
 
   /**
@@ -373,5 +328,13 @@ class Consumer[T](val name: String,
     val transaction = new ConsumerTransaction[T](partition, transactionID, count, -1)
     transaction.attach(this)
     Some(transaction)
+  }
+
+  override def getTransactionsFromTo(partition: Int, from: Long, to: Long): ListBuffer[ConsumerTransaction[T]] = {
+    val data = tsdb.takeWhileForward(partition, from + 1, to)(transaction => transaction.count > 0)
+    val result = ListBuffer[ConsumerTransaction[T]]()
+    data.foreach(rec =>
+      result.append(new ConsumerTransaction[T](partition = partition, transactionID = rec.transactionID, count = rec.count, ttl = rec.ttl)))
+    result
   }
 }

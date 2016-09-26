@@ -9,8 +9,6 @@ import scala.collection.mutable.ListBuffer
 trait TransactionOperator[T] {
   def getLastTransaction(partition: Int): Option[ConsumerTransaction[T]]
 
-  def getTransactionsFromTo(partition: Int, fromTransactionID: Long, toTransactionID: Long): ListBuffer[ConsumerTransaction[T]]
-
   def getTransactionById(partition: Int, transactionID: Long): Option[ConsumerTransaction[T]]
 
   def buildTransactionObject(partition: Int, transactionID: Long, count: Int): Option[ConsumerTransaction[T]]
@@ -18,6 +16,8 @@ trait TransactionOperator[T] {
   def setStreamPartitionOffset(partition: Int, transactionID: Long): Unit
 
   def loadTransactionFromDB(partition: Int, transactionID: Long): Option[ConsumerTransaction[T]]
+
+  def getTransactionsFromTo(partition: Int, from: Long, to: Long): ListBuffer[ConsumerTransaction[T]]
 
   def checkpoint(): Unit
 
