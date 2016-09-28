@@ -107,8 +107,6 @@ class CheckpointGroup(val executors: Int = 1) {
 
     agents.foreach { case (name, agent) => if (agent.isInstanceOf[SendingAgent]) agent.asInstanceOf[SendingAgent].finalizeDataSend() }
 
-    var exc: Exception = null
-
     try {
 
       // receive from all agents their checkpoint information
@@ -126,19 +124,16 @@ class CheckpointGroup(val executors: Int = 1) {
       publishPostCheckpointEventForAllProducers(checkpointStateInfo)
 
     }
-    catch {
-      case e: Exception =>
-        exc = e
+    finally {
+      // unlock all agents
+      agents.foreach { case (name, agent) =>
+        if (agent.getThreadLock() != null)
+          agent.getThreadLock().unlock()
+      }
+
+      lock.unlock()
     }
 
-    // unlock all agents
-    agents.foreach { case (name, agent) =>
-      if (agent.getThreadLock() != null)
-        agent.getThreadLock().unlock()
-    }
-
-    lock.unlock()
-    if (null != exc) throw exc
   }
 
   private def publishPreCheckpointEventForAllProducers(producers: List[CheckpointInfo]) = {

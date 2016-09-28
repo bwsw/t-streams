@@ -178,7 +178,7 @@ class ProducerTransaction[T](partition: Int,
       ttl = -1,
       status = TransactionStatus.postCheckpoint,
       partition = partition,
-      masterID = transactionOwner.getLocalPartitionMasterID(partition),
+      masterID = transactionOwner.getPartitionMasterIDLocalInfo(partition),
       orderID = -1,
       count = getDataItemsCount()
     ))
@@ -204,7 +204,7 @@ class ProducerTransaction[T](partition: Int,
         ttl = -1,
         status = TransactionStatus.preCheckpoint,
         partition = partition,
-        masterID = transactionOwner.getLocalPartitionMasterID(partition),
+        masterID = transactionOwner.getPartitionMasterIDLocalInfo(partition),
         orderID = -1,
         count = getDataItemsCount()))
 
@@ -265,7 +265,7 @@ class ProducerTransaction[T](partition: Int,
             ttl = -1,
             status = TransactionStatus.preCheckpoint,
             partition = partition,
-            masterID = transactionOwner.getLocalPartitionMasterID(partition),
+            masterID = transactionOwner.getPartitionMasterIDLocalInfo(partition),
             orderID = -1,
             count = getDataItemsCount()))
 
@@ -288,7 +288,7 @@ class ProducerTransaction[T](partition: Int,
             ttl = -1,
             status = TransactionStatus.postCheckpoint,
             partition = partition,
-            masterID = transactionOwner.getLocalPartitionMasterID(partition),
+            masterID = transactionOwner.getPartitionMasterIDLocalInfo(partition),
             orderID = -1,
             count = getDataItemsCount()))
 
@@ -376,7 +376,7 @@ class ProducerTransaction[T](partition: Int,
       ttl = -1,
       status = TransactionStatus.preCheckpoint,
       partition = partition,
-      masterID = transactionOwner.getLocalPartitionMasterID(partition),
+      masterID = transactionOwner.getPartitionMasterIDLocalInfo(partition),
       orderID = -1,
       count = getDataItemsCount())
 
@@ -385,7 +385,7 @@ class ProducerTransaction[T](partition: Int,
       ttl = -1,
       status = TransactionStatus.postCheckpoint,
       partition = partition,
-      masterID = transactionOwner.getLocalPartitionMasterID(partition),
+      masterID = transactionOwner.getPartitionMasterIDLocalInfo(partition),
       orderID = -1,
       count = getDataItemsCount())
 

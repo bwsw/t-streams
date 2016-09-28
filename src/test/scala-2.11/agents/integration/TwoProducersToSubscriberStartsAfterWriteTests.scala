@@ -69,7 +69,7 @@ class TwoProducersToSubscriberStartsAfterWriteTests extends FlatSpec with Matche
 
     val t1 = new Thread(new Runnable {
       override def run(): Unit = {
-        logger.info(s"Producer-1 is master of partition: ${producer1.isMeAMasterOfPartition(0)}")
+        logger.info(s"Producer-1 is master of partition: ${producer1.isMasterOfPartition(0)}")
         for (i <- 0 until COUNT) {
           val t = producer1.newTransaction(policy = NewTransactionProducerPolicy.CheckpointIfOpened)
           bp.append(t.getTransactionID())
@@ -81,7 +81,7 @@ class TwoProducersToSubscriberStartsAfterWriteTests extends FlatSpec with Matche
     })
     val t2 = new Thread(new Runnable {
       override def run(): Unit = {
-        logger.info(s"Producer-2 is master of partition: ${producer2.isMeAMasterOfPartition(0)}")
+        logger.info(s"Producer-2 is master of partition: ${producer2.isMasterOfPartition(0)}")
         for (i <- 0 until COUNT) {
           lp2.await()
           val t = producer2.newTransaction(policy = NewTransactionProducerPolicy.CheckpointIfOpened)
