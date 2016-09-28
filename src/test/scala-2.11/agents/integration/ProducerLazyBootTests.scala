@@ -46,17 +46,17 @@ class ProducerLazyBootTests extends FlatSpec with Matchers with BeforeAndAfterAl
       partitions = (0 until ALL_PARTITIONS).toSet,
       isLowPriority = false)
 
-    producer1.isMeAMasterOfPartition(0) shouldBe false
-    producer1.isMeAMasterOfPartition(1) shouldBe false
-    producer2.isMeAMasterOfPartition(0) shouldBe true
-    producer2.isMeAMasterOfPartition(1) shouldBe true
+    producer1.isMasterOfPartition(0) shouldBe false
+    producer1.isMasterOfPartition(1) shouldBe false
+    producer2.isMasterOfPartition(0) shouldBe true
+    producer2.isMasterOfPartition(1) shouldBe true
 
     producer2.stop()
 
     producer1.newTransaction(NewTransactionProducerPolicy.CheckpointIfOpened, 0)
-    producer1.isMeAMasterOfPartition(0) shouldBe true
+    producer1.isMasterOfPartition(0) shouldBe true
     producer1.newTransaction(NewTransactionProducerPolicy.CheckpointIfOpened, 1)
-    producer1.isMeAMasterOfPartition(1) shouldBe true
+    producer1.isMasterOfPartition(1) shouldBe true
 
     producer1.stop()
 
@@ -75,8 +75,8 @@ class ProducerLazyBootTests extends FlatSpec with Matchers with BeforeAndAfterAl
 
     Thread.sleep(3000)
 
-    producer.isMeAMasterOfPartition(0) shouldBe true
-    producer.isMeAMasterOfPartition(1) shouldBe true
+    producer.isMasterOfPartition(0) shouldBe true
+    producer.isMasterOfPartition(1) shouldBe true
 
     producer.stop()
 
@@ -95,8 +95,8 @@ class ProducerLazyBootTests extends FlatSpec with Matchers with BeforeAndAfterAl
 
     Thread.sleep(3000)
 
-    producer.isMeAMasterOfPartition(0) shouldBe false
-    producer.isMeAMasterOfPartition(1) shouldBe false
+    producer.isMasterOfPartition(0) shouldBe false
+    producer.isMasterOfPartition(1) shouldBe false
 
     producer.stop()
 
@@ -115,9 +115,9 @@ class ProducerLazyBootTests extends FlatSpec with Matchers with BeforeAndAfterAl
       isLowPriority = false)
 
     producer.newTransaction(NewTransactionProducerPolicy.CheckpointIfOpened, 0)
-    producer.isMeAMasterOfPartition(0) shouldBe true
+    producer.isMasterOfPartition(0) shouldBe true
     producer.newTransaction(NewTransactionProducerPolicy.CheckpointIfOpened, 1)
-    producer.isMeAMasterOfPartition(1) shouldBe true
+    producer.isMasterOfPartition(1) shouldBe true
 
     producer.stop()
 

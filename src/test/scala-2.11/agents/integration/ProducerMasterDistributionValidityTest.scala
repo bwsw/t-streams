@@ -53,8 +53,8 @@ class ProducerMasterDistributionValidityTest extends FlatSpec with Matchers with
 
     producer2.awaitPartitionRedistributionThreadComplete()
 
-    PARTS.count(p => producer1.isLocalMePartitionMaster(p)) shouldBe COUNT
-    PARTS.count(p => producer2.isLocalMePartitionMaster(p)) shouldBe COUNT
+    PARTS.count(p => producer1.isPartitionMasterLocalInfo(p)) shouldBe COUNT
+    PARTS.count(p => producer2.isPartitionMasterLocalInfo(p)) shouldBe COUNT
 
     producer1.dumpPartitionsOwnership()
     producer2.dumpPartitionsOwnership()
