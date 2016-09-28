@@ -1,16 +1,14 @@
-package com.bwsw.tstreams.services
+package com.bwsw.tstreams.streams
 
 import com.bwsw.tstreams.data.IStorage
-import com.bwsw.tstreams.entities.StreamSettings
 import com.bwsw.tstreams.metadata.MetadataStorage
-import com.bwsw.tstreams.streams.Stream
 import org.slf4j.LoggerFactory
 
 
 /**
   * Service for streams
   */
-object BasicStreamService {
+object StreamService {
 
   /**
     * Basic Stream logger for logging
@@ -29,12 +27,7 @@ object BasicStreamService {
   def loadStream[T](streamName: String,
                     metadataStorage: MetadataStorage,
                     dataStorage: IStorage[T]): Stream[T] = {
-
-
-    logger.info(s"start load stream with name : {$streamName}")
-    val settingsOpt: Option[StreamSettings] = metadataStorage.streamEntity.getStream(streamName)
-
-    logger.info(s"finished load stream with name : {$streamName}")
+    val settingsOpt: Option[StreamSettings] = Stream.getStream(metadataStorage.getSession(), streamName)
     if (settingsOpt.isEmpty)
       throw new IllegalArgumentException("stream with this name can not be loaded")
     else {
@@ -65,14 +58,8 @@ object BasicStreamService {
                       metadataStorage: MetadataStorage,
                       dataStorage: IStorage[T]): Stream[T] = {
 
-
-    logger.info(s"start stream creation with name : {$streamName}, {$partitions}, {$ttl}")
-    metadataStorage.streamEntity.createStream(streamName, partitions, ttl, description)
-
-    logger.info(s"finished stream creation with name : {$streamName}, {$partitions}, {$ttl}")
-    val stream: Stream[T] = new Stream[T](streamName, partitions, metadataStorage, dataStorage, ttl, description)
-
-    stream
+    Stream.createStream(metadataStorage.getSession(), streamName, partitions, ttl, description)
+    new Stream[T](streamName, partitions, metadataStorage, dataStorage, ttl, description)
   }
 
 
@@ -83,9 +70,7 @@ object BasicStreamService {
     * @param metadataStorage Name of metadata storage where concrete stream exist
     */
   def deleteStream(streamName: String, metadataStorage: MetadataStorage): Unit = {
-    logger.info(s"start deleting stream with name : $streamName")
-    metadataStorage.streamEntity.deleteStream(streamName)
-    logger.info(s"finished deleting stream with name : $streamName")
+    Stream.deleteStream(metadataStorage.getSession(), streamName)
   }
 
 
@@ -95,11 +80,7 @@ object BasicStreamService {
     * @param streamName      Name of the stream to check
     * @param metadataStorage Name of metadata storage where concrete stream exist
     */
-  def isExist(streamName: String, metadataStorage: MetadataStorage): Boolean = {
-    logger.info(s"start checking existence stream with name : $streamName")
-    val checkVal = metadataStorage.streamEntity.isExist(streamName)
-    logger.info(s"finished checking existence stream with name : $streamName")
-    checkVal
-  }
+  def isExist(streamName: String, metadataStorage: MetadataStorage): Boolean =
+    Stream.isExist(metadataStorage.getSession(), streamName)
 
 }

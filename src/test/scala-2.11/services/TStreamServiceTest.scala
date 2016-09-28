@@ -3,8 +3,7 @@ package services
 import java.net.InetSocketAddress
 
 import com.bwsw.tstreams.common.CassandraConnectorConf
-import com.bwsw.tstreams.services.BasicStreamService
-import com.bwsw.tstreams.streams.Stream
+import com.bwsw.tstreams.streams.{StreamService, Stream}
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import testutils.{RandomStringCreator, TestUtils}
 
@@ -22,7 +21,7 @@ class TStreamServiceTest extends FlatSpec with Matchers with BeforeAndAfterAll w
   "BasicStreamService.createStream()" should "create stream" in {
     val name = randomVal
 
-    val stream: Stream[_] = BasicStreamService.createStream(
+    val stream: Stream[_] = StreamService.createStream(
       streamName = name,
       partitions = 3,
       ttl = 100,
@@ -39,7 +38,7 @@ class TStreamServiceTest extends FlatSpec with Matchers with BeforeAndAfterAll w
     intercept[IllegalArgumentException] {
       val name = randomVal
 
-      BasicStreamService.createStream(
+      StreamService.createStream(
         streamName = name,
         partitions = 3,
         ttl = 100,
@@ -47,7 +46,7 @@ class TStreamServiceTest extends FlatSpec with Matchers with BeforeAndAfterAll w
         metadataStorage = metadataStorageInst,
         dataStorage = storageInst)
 
-      BasicStreamService.createStream(
+      StreamService.createStream(
         streamName = name,
         partitions = 3,
         ttl = 100,
@@ -60,7 +59,7 @@ class TStreamServiceTest extends FlatSpec with Matchers with BeforeAndAfterAll w
   "BasicStreamService.loadStream()" should "load created stream" in {
     val name = randomVal
 
-    BasicStreamService.createStream(
+    StreamService.createStream(
       streamName = name,
       partitions = 3,
       ttl = 100,
@@ -68,7 +67,7 @@ class TStreamServiceTest extends FlatSpec with Matchers with BeforeAndAfterAll w
       metadataStorage = metadataStorageInst,
       dataStorage = storageInst)
 
-    val stream: Stream[_] = BasicStreamService.loadStream(name, metadataStorageInst, storageInst)
+    val stream: Stream[_] = StreamService.loadStream(name, metadataStorageInst, storageInst)
     val checkVal = stream.isInstanceOf[Stream[_]]
     checkVal shouldBe true
   }
@@ -77,7 +76,7 @@ class TStreamServiceTest extends FlatSpec with Matchers with BeforeAndAfterAll w
     val name = randomVal
     val notExistName = randomVal
 
-    BasicStreamService.createStream(
+    StreamService.createStream(
       streamName = name,
       partitions = 3,
       ttl = 100,
@@ -85,8 +84,8 @@ class TStreamServiceTest extends FlatSpec with Matchers with BeforeAndAfterAll w
       metadataStorage = metadataStorageInst,
       dataStorage = storageInst)
 
-    val isExist = BasicStreamService.isExist(name, metadataStorageInst)
-    val isNotExist = BasicStreamService.isExist(notExistName, metadataStorageInst)
+    val isExist = StreamService.isExist(name, metadataStorageInst)
+    val isNotExist = StreamService.isExist(notExistName, metadataStorageInst)
     val checkVal = isExist && !isNotExist
 
     checkVal shouldBe true
@@ -96,14 +95,14 @@ class TStreamServiceTest extends FlatSpec with Matchers with BeforeAndAfterAll w
     val name = randomVal
 
     intercept[IllegalArgumentException] {
-      BasicStreamService.loadStream(name, metadataStorageInst, storageInst)
+      StreamService.loadStream(name, metadataStorageInst, storageInst)
     }
   }
 
   "BasicStreamService.deleteStream()" should "delete created stream" in {
     val name = randomVal
 
-    BasicStreamService.createStream(
+    StreamService.createStream(
       streamName = name,
       partitions = 3,
       ttl = 100,
@@ -111,10 +110,10 @@ class TStreamServiceTest extends FlatSpec with Matchers with BeforeAndAfterAll w
       metadataStorage = metadataStorageInst,
       dataStorage = storageInst)
 
-    BasicStreamService.deleteStream(name, metadataStorageInst)
+    StreamService.deleteStream(name, metadataStorageInst)
 
     intercept[IllegalArgumentException] {
-      BasicStreamService.loadStream(name, metadataStorageInst, storageInst)
+      StreamService.loadStream(name, metadataStorageInst, storageInst)
     }
   }
 
@@ -122,7 +121,7 @@ class TStreamServiceTest extends FlatSpec with Matchers with BeforeAndAfterAll w
     val name = randomVal
 
     intercept[IllegalArgumentException] {
-      BasicStreamService.deleteStream(name, metadataStorageInst)
+      StreamService.deleteStream(name, metadataStorageInst)
     }
   }
 
