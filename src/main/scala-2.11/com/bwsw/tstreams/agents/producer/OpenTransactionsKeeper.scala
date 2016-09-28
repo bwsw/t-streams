@@ -44,13 +44,8 @@ class OpenTransactionsKeeper[T] {
     * @param partition
     * @return
     */
-  private def getTransactionOptionNaive(partition: Int) = {
-    val itm = openTransactionsMap.getOrDefault(partition, null)
-    if (itm != null)
-      Option(itm)
-    else
-      None
-  }
+  private def getTransactionOptionNaive(partition: Int) =
+    Option(openTransactionsMap.getOrDefault(partition, null))
 
   /**
     * Returns if transaction is in map and checks it's state
@@ -59,21 +54,8 @@ class OpenTransactionsKeeper[T] {
     * @return
     */
   def getTransactionOption(partition: Int) = {
-    val partOpt = getTransactionOptionNaive(partition)
-    val transactionOpt = {
-      if (partOpt.isDefined) {
-        if (partOpt.get.isClosed) {
-          None
-        }
-        else {
-          partOpt
-        }
-      }
-      else {
-        None
-      }
-    }
-    transactionOpt
+    val transactionOpt = getTransactionOptionNaive(partition)
+    transactionOpt.flatMap(transaction => if(!transaction.isClosed()) Some(transaction) else None)
   }
 
   /**
