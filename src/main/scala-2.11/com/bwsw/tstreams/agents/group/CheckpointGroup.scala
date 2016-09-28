@@ -5,7 +5,8 @@ import java.util.concurrent.locks.ReentrantLock
 import java.util.concurrent.{CountDownLatch, TimeUnit}
 
 import com.bwsw.tstreams.common.{FirstFailLockableTaskExecutor, LockUtil}
-import com.bwsw.tstreams.generator.ITransactionGenerator
+import com.bwsw.tstreams.metadata.{RequestsRepository, MetadataStorage, TransactionDatabase}
+import com.datastax.driver.core.BatchStatement
 import org.slf4j.LoggerFactory
 
 /**
@@ -92,6 +93,30 @@ class CheckpointGroup(val executors: Int = 1) {
   }
 
   /**
+    * Group agents commit
+    *
+    * @param info Info to commit
+    *             (used only for consumers now; producers is not atomic)
+    */
+  private def doGroupCheckpoint(metadata: MetadataStorage, info: List[CheckpointInfo]): Unit = {
+    val batchStatement = new BatchStatement()
+    val session = metadata.getSession()
+    val requests = RequestsRepository.getStatements(session)
+    info foreach {
+      case ConsumerCheckpointInfo(name, stream, partition, offset) =>
+        batchStatement.add(requests.consumerCheckpointStatement.bind(name, stream, new Integer(partition), new java.lang.Long(offset)))
+
+      case ProducerCheckpointInfo(_, _, _, _, streamName, partition, transaction, totalCnt, ttl) =>
+
+        val interval = new java.lang.Long(TransactionDatabase.getAggregationInterval(transaction))
+
+        batchStatement.add(requests.commitLogPutStatement.bind(streamName, new Integer(partition),
+          interval , new java.lang.Long(transaction), new Integer(totalCnt), new Integer(ttl)))
+    }
+    metadata.getSession().execute(batchStatement)
+  }
+
+  /**
     * Commit all agents state
     */
   def checkpoint(): Unit = {
@@ -118,7 +143,7 @@ class CheckpointGroup(val executors: Int = 1) {
       publishPreCheckpointEventForAllProducers(checkpointStateInfo)
 
       //assume all agents use the same metadata entity
-      agents.head._2.getMetadataRef().groupCheckpointEntity.groupCheckpoint(checkpointStateInfo)
+      doGroupCheckpoint(agents.head._2.getMetadataRef(), checkpointStateInfo)
 
       // do publish post events for all producers
       publishPostCheckpointEventForAllProducers(checkpointStateInfo)

@@ -23,8 +23,9 @@ object RequestsRepository {
 object RequestsStatements {
   def prepare(session: Session): RequestsStatements = {
 
-    val commitLogTable = "commit_log"
-    val streamTable = "streams"
+    val commitLogTable  = "commit_log"
+    val streamTable     = "streams"
+    val consumerTable   = "consumers"
 
     val commitLogPutStatement = session.prepare(s"INSERT INTO $commitLogTable (stream, partition, interval, transaction, count) " +
       "VALUES (?, ?, ?, ?, ?) USING TTL ?")
@@ -32,22 +33,25 @@ object RequestsStatements {
     val scanStatement = s"SELECT stream, partition, interval, transaction, count, TTL(count) FROM $commitLogTable " +
       "WHERE stream = ? AND partition = ? AND interval = ?"
 
-    val commitLogScanStatement = session.prepare(scanStatement)
-    val commitLogGetStatement = session.prepare(s"$scanStatement AND transaction = ?")
-    val commitLogDeleteStatement = session.prepare(s"DELETE FROM $commitLogTable WHERE stream = ? AND partition = ? AND interval = ? AND transaction = ?")
+    val commitLogScanStatement    = session.prepare(scanStatement)
+    val commitLogGetStatement     = session.prepare(s"$scanStatement AND transaction = ?")
+    val commitLogDeleteStatement  = session.prepare(s"DELETE FROM $commitLogTable WHERE stream = ? AND partition = ? AND interval = ? AND transaction = ?")
 
     val streamInsertStatement = session.prepare(s"INSERT INTO $streamTable (stream_name, partitions, ttl, description) VALUES (?,?,?,?)")
     val streamDeleteStatement = session.prepare(s"DELETE FROM $streamTable WHERE stream_name=?")
     val streamSelectStatement = session.prepare(s"SELECT * FROM $streamTable WHERE stream_name=? LIMIT 1")
 
+    val consumerCheckpointStatement = session.prepare(s"INSERT INTO $consumerTable (name, stream, partition, last_transaction) VALUES(?, ?, ?,  ?)")
+
     RequestsStatements(
-      commitLogPutStatement = commitLogPutStatement,
-      commitLogGetStatement = commitLogGetStatement,
-      commitLogScanStatement = commitLogScanStatement,
-      commitLogDeleteStatement = commitLogDeleteStatement,
-      streamInsertStatement = streamInsertStatement,
-      streamDeleteStatement = streamDeleteStatement,
-      streamSelectStatement = streamSelectStatement)
+      commitLogPutStatement       = commitLogPutStatement,
+      commitLogGetStatement       = commitLogGetStatement,
+      commitLogScanStatement      = commitLogScanStatement,
+      commitLogDeleteStatement    = commitLogDeleteStatement,
+      streamInsertStatement       = streamInsertStatement,
+      streamDeleteStatement       = streamDeleteStatement,
+      streamSelectStatement       = streamSelectStatement,
+      consumerCheckpointStatement = consumerCheckpointStatement)
   }
 }
 
@@ -57,4 +61,5 @@ case class RequestsStatements(commitLogPutStatement: PreparedStatement,
                               commitLogScanStatement: PreparedStatement,
                               streamInsertStatement: PreparedStatement,
                               streamDeleteStatement: PreparedStatement,
-                              streamSelectStatement: PreparedStatement)
+                              streamSelectStatement: PreparedStatement,
+                              consumerCheckpointStatement: PreparedStatement)
