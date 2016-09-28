@@ -38,11 +38,11 @@ class ProducerTest extends FlatSpec with Matchers with BeforeAndAfterAll with Te
     isLowPriority = false)
 
   "Producer.isMeAMasterOfPartition" should "return true" in {
-    (0 until ALL_PARTITIONS).foreach(p => producer.isMeAMasterOfPartition(p) shouldBe true)
+    (0 until ALL_PARTITIONS).foreach(p => producer.isMasterOfPartition(p) shouldBe true)
   }
 
   "Producer.isMeAMasterOfPartition" should "return false" in {
-    (ALL_PARTITIONS until ALL_PARTITIONS + 1).foreach(p => producer.isMeAMasterOfPartition(p) shouldBe false)
+    (ALL_PARTITIONS until ALL_PARTITIONS + 1).foreach(p => producer.isMasterOfPartition(p) shouldBe false)
   }
 
   "BasicProducer.newTransaction()" should "return BasicProducerTransaction instance" in {

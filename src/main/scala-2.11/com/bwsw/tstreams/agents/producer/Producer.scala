@@ -1,6 +1,5 @@
 package com.bwsw.tstreams.agents.producer
 
-import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.locks.ReentrantLock
 import java.util.concurrent.{CountDownLatch, TimeUnit}
 
@@ -10,7 +9,7 @@ import com.bwsw.tstreams.common._
 import com.bwsw.tstreams.coordination.client.BroadcastCommunicationClient
 import com.bwsw.tstreams.coordination.messages.state.{TransactionStateMessage, TransactionStatus}
 import com.bwsw.tstreams.coordination.producer.{AgentsStateDBService, PeerAgent}
-import com.bwsw.tstreams.metadata.{TransactionRecord, TransactionDatabase, MetadataStorage}
+import com.bwsw.tstreams.metadata.{MetadataStorage, TransactionDatabase, TransactionRecord}
 import com.bwsw.tstreams.streams.Stream
 import org.slf4j.LoggerFactory
 
@@ -41,40 +40,13 @@ class Producer[T](var name: String,
 
   val tsdb = new TransactionDatabase(stream.getMetadataStorage().getSession(), stream.getName())
 
-  /**
-    * Allows to get if the producer is master for the partition.
-    *
-    * @param partition
-    * @return
-    */
-  def isMeAMasterOfPartition(partition: Int): Boolean = {
-    val masterOpt = agentsStateManager.getCurrentMaster(partition)
-    masterOpt.fold(false) { m => producerOptions.coordinationOptions.transport.getInetAddress() == m.agentAddress }
-  }
-
-  def getLocalPartitionMasterID(partition: Int): Int = {
-    val masterOpt = agentsStateManager.getCurrentMasterLocal(partition)
-    masterOpt.fold(0) { m => m.uniqueAgentId }
-  }
-
-  def isLocalMePartitionMaster(partition: Int): Boolean = {
-    val masterOpt = agentsStateManager.getCurrentMasterLocal(partition)
-    masterOpt.fold(false) { m => producerOptions.coordinationOptions.transport.getInetAddress() == m.agentAddress }
-  }
-
-  def dumpPartitionsOwnership() = agentsStateManager.dumpPartitionsOwnership()
-
-  /**
-    * Utility method which allows waiting while the producer completes partition redistribution process.
-    * Used mainly in integration tests.
-    */
-  def awaitPartitionRedistributionThreadComplete() = p2pAgent.awaitPartitionRedistributionThreadComplete.await()
 
   // short key
   val pcs = producerOptions.coordinationOptions
   var isStop = false
 
   private val openTransactions = new OpenTransactionsKeeper[T]()
+
   // stores latches for materialization await (protects from materialization before main transaction response)
   private val materializationGovernor = new MaterializationGovernor(producerOptions.writePolicy.getUsedPartitions().toSet)
   private val logger = LoggerFactory.getLogger(this.getClass)
@@ -82,7 +54,6 @@ class Producer[T](var name: String,
 
   private val peerKeepAliveTimeout = pcs.zkSessionTimeout * 1000 * 2
   private val zkService = new ZookeeperDLMService(pcs.zkRootPath, pcs.zkHosts, pcs.zkSessionTimeout, pcs.zkConnectionTimeout)
-
 
   // amount of threads which will handle partitions in masters, etc
   val threadPoolSize: Int = {
@@ -132,6 +103,36 @@ class Producer[T](var name: String,
   private val transactionKeepAliveThread = getTransactionKeepAliveThread
   val backendActivityService = new FirstFailLockableTaskExecutor(s"Producer $name-BackendWorker")
   val asyncActivityService = new FirstFailLockableTaskExecutor(s"Producer $name-AsyncWorker")
+
+
+  /**
+    * Allows to get if the producer is master for the partition.
+    *
+    * @param partition
+    * @return
+    */
+  def isMasterOfPartition(partition: Int): Boolean = {
+    val masterOpt = agentsStateManager.getCurrentMaster(partition)
+    masterOpt.fold(false) { m => producerOptions.coordinationOptions.transport.getInetAddress() == m.agentAddress }
+  }
+
+  def getPartitionMasterIDLocalInfo(partition: Int): Int = {
+    val masterOpt = agentsStateManager.getCurrentMasterLocal(partition)
+    masterOpt.fold(0) { m => m.uniqueAgentId }
+  }
+
+  def isPartitionMasterLocalInfo(partition: Int): Boolean = {
+    val masterOpt = agentsStateManager.getCurrentMasterLocal(partition)
+    masterOpt.fold(false) { m => producerOptions.coordinationOptions.transport.getInetAddress() == m.agentAddress }
+  }
+
+  def dumpPartitionsOwnership() = agentsStateManager.dumpPartitionsOwnership()
+
+  /**
+    * Utility method which allows waiting while the producer completes partition redistribution process.
+    * Used mainly in integration tests.
+    */
+  def awaitPartitionRedistributionThreadComplete() = p2pAgent.awaitPartitionRedistributionThreadComplete.await()
 
   /**
     *
