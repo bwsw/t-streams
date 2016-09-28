@@ -23,28 +23,38 @@ object RequestsRepository {
 object RequestsStatements {
   def prepare(session: Session): RequestsStatements = {
 
-    val commitLog = "commit_log"
-    val commitLogPutStatement = session.prepare(s"INSERT INTO $commitLog (stream, partition, interval, transaction, count) " +
+    val commitLogTable = "commit_log"
+    val streamTable = "streams"
+
+    val commitLogPutStatement = session.prepare(s"INSERT INTO $commitLogTable (stream, partition, interval, transaction, count) " +
       "VALUES (?, ?, ?, ?, ?) USING TTL ?")
 
-    val scanStatement = s"SELECT stream, partition, interval, transaction, count, TTL(count) FROM $commitLog " +
+    val scanStatement = s"SELECT stream, partition, interval, transaction, count, TTL(count) FROM $commitLogTable " +
       "WHERE stream = ? AND partition = ? AND interval = ?"
 
     val commitLogScanStatement = session.prepare(scanStatement)
-
     val commitLogGetStatement = session.prepare(s"$scanStatement AND transaction = ?")
+    val commitLogDeleteStatement = session.prepare(s"DELETE FROM $commitLogTable WHERE stream = ? AND partition = ? AND interval = ? AND transaction = ?")
 
-    val commitLogDeleteStatement = session.prepare(s"DELETE FROM $commitLog WHERE stream = ? AND partition = ? AND interval = ? AND transaction = ?")
+    val streamInsertStatement = session.prepare(s"INSERT INTO $streamTable (stream_name, partitions, ttl, description) VALUES (?,?,?,?)")
+    val streamDeleteStatement = session.prepare(s"DELETE FROM $streamTable WHERE stream_name=?")
+    val streamSelectStatement = session.prepare(s"SELECT * FROM $streamTable WHERE stream_name=? LIMIT 1")
 
     RequestsStatements(
       commitLogPutStatement = commitLogPutStatement,
       commitLogGetStatement = commitLogGetStatement,
       commitLogScanStatement = commitLogScanStatement,
-      commitLogDeleteStatement = commitLogDeleteStatement)
+      commitLogDeleteStatement = commitLogDeleteStatement,
+      streamInsertStatement = streamInsertStatement,
+      streamDeleteStatement = streamDeleteStatement,
+      streamSelectStatement = streamSelectStatement)
   }
 }
 
 case class RequestsStatements(commitLogPutStatement: PreparedStatement,
                               commitLogGetStatement: PreparedStatement,
                               commitLogDeleteStatement: PreparedStatement,
-                              commitLogScanStatement: PreparedStatement)
+                              commitLogScanStatement: PreparedStatement,
+                              streamInsertStatement: PreparedStatement,
+                              streamDeleteStatement: PreparedStatement,
+                              streamSelectStatement: PreparedStatement)

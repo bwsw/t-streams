@@ -26,11 +26,6 @@ class MetadataStorage(cluster: Cluster, session: Session, keyspace: String) {
   private val logger = LoggerFactory.getLogger(this.getClass)
 
   /**
-    * Stream entity instance
-    */
-  val streamEntity = new StreamEntity("streams", session)
-
-  /**
     * Consumer entity instance
     */
   val consumerEntity = new ConsumerEntity("consumers", session)
