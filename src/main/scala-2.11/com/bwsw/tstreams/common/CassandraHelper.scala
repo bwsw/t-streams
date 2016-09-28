@@ -8,9 +8,12 @@ import com.datastax.driver.core.Session
   */
 object CassandraHelper {
 
-  var replicationStrategy = "SimpleStrategy"
-  var replicationFactor = "1"
-  var durableWrites = "true"
+  var REPLICATION_STRATEGY = "SimpleStrategy"
+  var REPLICATION_FACTOR = "1"
+  var DURABLE_WRITES = "true"
+
+  val tables = List("stream_commit_last", "consumers", "streams", "commit_log")
+
 
   /**
     * Keyspace creator helper
@@ -20,8 +23,8 @@ object CassandraHelper {
     */
   def createKeyspace(session: Session, keyspace: String) =
     session.execute(s"CREATE KEYSPACE IF NOT EXISTS $keyspace WITH replication = " +
-      s" {'class': '$replicationStrategy', 'replication_factor': '$replicationFactor'} " +
-      s" AND durable_writes = $durableWrites")
+      s" {'class': '$REPLICATION_STRATEGY', 'replication_factor': '$REPLICATION_FACTOR'} " +
+      s" AND durable_writes = $DURABLE_WRITES")
 
   /**
     * Keyspace destroyer helper
@@ -69,17 +72,6 @@ object CassandraHelper {
       s"count INT, " +
       s"PRIMARY KEY ((stream, partition, interval), transaction)) WITH CLUSTERING ORDER BY (transaction ASC)")
 
-    session.execute(s"CREATE TABLE IF NOT EXISTS $keyspace.commit_log_activity (" +
-      s"stream TEXT, " +
-      s"partition INT, " +
-      s"interval BIGINT, " +
-      s"PRIMARY KEY ((stream, partition), interval)) WITH CLUSTERING ORDER BY (interval ASC)")
-
-    session.execute(s"CREATE TABLE IF NOT EXISTS $keyspace.generators (" +
-      s"name text, " +
-      s"time bigint, " +
-      s"PRIMARY KEY (name))")
-
   }
 
   /**
@@ -115,14 +107,9 @@ object CassandraHelper {
     * @param session  Session
     * @param keyspace Keyspace name
     */
-  def dropMetadataTables(session: Session, keyspace: String) = {
-    session.execute(s"DROP TABLE IF EXISTS $keyspace.stream_commit_last")
-    session.execute(s"DROP TABLE IF EXISTS $keyspace.consumers")
-    session.execute(s"DROP TABLE IF EXISTS $keyspace.streams")
-    session.execute(s"DROP TABLE IF EXISTS $keyspace.commit_log")
-    session.execute(s"DROP TABLE IF EXISTS $keyspace.commit_log_activity")
-    session.execute(s"DROP TABLE IF EXISTS $keyspace.generators")
-  }
+  def dropMetadataTables(session: Session, keyspace: String) =
+      tables.foreach(table => session.execute(s"DROP TABLE IF EXISTS $keyspace.$table"))
+
 
   /**
     * Metadata table flushing helper
@@ -130,14 +117,9 @@ object CassandraHelper {
     * @param session  Session
     * @param keyspace Keyspace name
     */
-  def clearMetadataTables(session: Session, keyspace: String) = {
-    session.execute(s"TRUNCATE $keyspace.stream_commit_last")
-    session.execute(s"TRUNCATE $keyspace.consumers")
-    session.execute(s"TRUNCATE $keyspace.streams")
-    session.execute(s"TRUNCATE $keyspace.commit_log")
-    session.execute(s"TRUNCATE $keyspace.commit_log_activity")
-    session.execute(s"TRUNCATE $keyspace.generators")
-  }
+  def clearMetadataTables(session: Session, keyspace: String) =
+    tables.foreach(table => session.execute(s"TRUNCATE $keyspace.$table"))
+
 
 
   /**
