@@ -18,13 +18,13 @@ import com.bwsw.tstreams.generator.ITransactionGenerator
   * @param transactionGenerator Generator for generating IDs
   * @tparam T User type
   */
-case class ConsumerOptions[T](val transactionsPreload: Int,
-                              val dataPreload: Int,
-                              val converter: IConverter[Array[Byte], T],
-                              val readPolicy: AbstractPolicy,
-                              val offset: IOffset,
-                              val transactionGenerator: ITransactionGenerator,
-                              val useLastOffset: Boolean = true) {
+case class ConsumerOptions[T](transactionsPreload: Int,
+                              dataPreload: Int,
+                              converter: IConverter[Array[Byte], T],
+                              readPolicy: AbstractPolicy,
+                              offset: IOffset,
+                              transactionGenerator: ITransactionGenerator,
+                              useLastOffset: Boolean = true) {
   if (transactionsPreload < 1)
     throw new IllegalArgumentException("Incorrect transactionPreload value, should be greater than or equal to one.")
 
@@ -40,7 +40,7 @@ case class ConsumerOptions[T](val transactionsPreload: Int,
   * @param zkHosts          Zk hosts to connect
   * @param zkSessionTimeout Zk session timeout
   * @param threadPoolAmount Thread pool amount which is used by
-  *                         [[com.bwsw.tstreams.agents.consumer.subscriber.SubscribingConsumer]]]
+  *                         [[com.bwsw.tstreams.agents.consumer.subscriber.Subscriber]]]
   *                         by default (threads_amount == used_consumer_partitions)
   */
 class SubscriberCoordinationOptions(val agentAddress: String,
