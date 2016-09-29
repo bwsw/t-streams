@@ -3,8 +3,8 @@ package testutils
 import java.io.File
 import java.lang.management.ManagementFactory
 import java.net.InetSocketAddress
+import java.util.Properties
 import java.util.concurrent.atomic.AtomicInteger
-import java.util.{Properties}
 
 import com.aerospike.client.Host
 import com.bwsw.tstreams.common.{CassandraConnectorConf, CassandraHelper, MetadataConnectionPool, ZookeeperDLMService}

@@ -1,6 +1,6 @@
 package com.bwsw.tstreams.agents.consumer.subscriber
 
-import com.bwsw.tstreams.agents.consumer.{Consumer, TransactionOperator}
+import com.bwsw.tstreams.agents.consumer.TransactionOperator
 import com.bwsw.tstreams.agents.consumer.subscriber.QueueBuilder.QueueItemType
 import com.bwsw.tstreams.common.FirstFailLockableTaskExecutor
 import com.bwsw.tstreams.coordination.messages.state.TransactionStatus

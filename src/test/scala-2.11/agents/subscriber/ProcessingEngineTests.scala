@@ -1,7 +1,6 @@
 package agents.subscriber
 
 import java.util.concurrent.TimeUnit
-import java.util.concurrent.atomic.AtomicLong
 
 import com.bwsw.tstreams.agents.consumer.subscriber.{Callback, ProcessingEngine, QueueBuilder}
 import com.bwsw.tstreams.agents.consumer.{ConsumerTransaction, TransactionOperator}

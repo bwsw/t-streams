@@ -5,7 +5,7 @@ import java.util.concurrent.locks.ReentrantLock
 import java.util.concurrent.{CountDownLatch, TimeUnit}
 
 import com.bwsw.tstreams.common.{FirstFailLockableTaskExecutor, LockUtil}
-import com.bwsw.tstreams.metadata.{RequestsRepository, MetadataStorage, TransactionDatabase}
+import com.bwsw.tstreams.metadata.{MetadataStorage, RequestsRepository, TransactionDatabase}
 import com.datastax.driver.core.BatchStatement
 import org.slf4j.LoggerFactory
 

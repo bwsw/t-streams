@@ -1,7 +1,6 @@
 package com.bwsw.tstreams.common
 
-import java.util.concurrent.TimeUnit
-import java.util.concurrent.LinkedBlockingQueue
+import java.util.concurrent.{LinkedBlockingQueue, TimeUnit}
 
 /**
   * Created by Ivan Kudryavtsev on 19.08.16.

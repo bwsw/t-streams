@@ -4,7 +4,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.locks.ReentrantLock
 
 import com.bwsw.tstreams.agents.group.{CheckpointInfo, ConsumerCheckpointInfo, GroupParticipant}
-import com.bwsw.tstreams.metadata.{MetadataStorage, TransactionDatabase, TransactionRecord}
+import com.bwsw.tstreams.metadata.{MetadataStorage, TransactionDatabase}
 import com.bwsw.tstreams.streams.Stream
 import org.slf4j.LoggerFactory
 
@@ -30,6 +30,7 @@ class Consumer[T](val name: String,
     with TransactionOperator[T] {
 
   val tsdb = new TransactionDatabase(stream.getMetadataStorage().getSession(), stream.getName())
+  val consumerService = new ConsumerService(stream.getMetadataStorage().getSession())
 
   /**
     * Temporary checkpoints (will be cleared after every checkpoint() invokes)
@@ -104,7 +105,7 @@ class Consumer[T](val name: String,
       throw new IllegalStateException(s"Consumer $name is started already. Double start is detected.")
 
     //set consumer offsets
-    if (!stream.metadataStorage.consumerEntity.exists(name) || !options.useLastOffset) {
+    if (!consumerService.exists(name) || !options.useLastOffset) {
       isReadOffsetsAreSet = true
 
       for (i <- 0 until stream.getPartitions) {
@@ -126,7 +127,7 @@ class Consumer[T](val name: String,
 
     if (!isReadOffsetsAreSet) {
       for (i <- options.readPolicy.getUsedPartitions()) {
-        val offset = stream.metadataStorage.consumerEntity.getLastSavedOffset(name, stream.getName, i)
+        val offset = consumerService.getLastSavedOffset(name, stream.getName, i)
         updateOffsets(i, offset)
       }
     }
@@ -277,7 +278,7 @@ class Consumer[T](val name: String,
       Consumer.logger.debug(s"Start saving checkpoints for " +
         s"consumer with name : $name, streamName : ${stream.getName}, streamPartitions : ${stream.getPartitions}")
     }
-    stream.metadataStorage.consumerEntity.saveBatchOffset(name, stream.getName, checkpointOffsets)
+    consumerService.saveBatchOffset(name, stream.getName, checkpointOffsets)
     checkpointOffsets.clear()
   }
 

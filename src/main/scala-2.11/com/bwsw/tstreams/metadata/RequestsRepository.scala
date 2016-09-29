@@ -41,7 +41,9 @@ object RequestsStatements {
     val streamDeleteStatement = session.prepare(s"DELETE FROM $streamTable WHERE stream_name=?")
     val streamSelectStatement = session.prepare(s"SELECT * FROM $streamTable WHERE stream_name=? LIMIT 1")
 
-    val consumerCheckpointStatement = session.prepare(s"INSERT INTO $consumerTable (name, stream, partition, last_transaction) VALUES(?, ?, ?,  ?)")
+    val consumerCheckpointStatement           = session.prepare(s"INSERT INTO $consumerTable (name, stream, partition, last_transaction) VALUES(?, ?, ?,  ?)")
+    val consumerCheckpointExistsStatement     = session.prepare(s"SELECT name FROM $consumerTable WHERE name = ? LIMIT 1")
+    val consumerGetCheckpointStatement        = session.prepare(s"SELECT last_transaction FROM $consumerTable WHERE name = ? AND stream = ? AND partition = ? LIMIT 1")
 
     RequestsStatements(
       commitLogPutStatement       = commitLogPutStatement,
@@ -51,15 +53,19 @@ object RequestsStatements {
       streamInsertStatement       = streamInsertStatement,
       streamDeleteStatement       = streamDeleteStatement,
       streamSelectStatement       = streamSelectStatement,
-      consumerCheckpointStatement = consumerCheckpointStatement)
+      consumerCheckpointStatement = consumerCheckpointStatement,
+      consumerAnyCheckpointsExistsStatement = consumerCheckpointExistsStatement,
+      consumerGetCheckpointStatement    = consumerGetCheckpointStatement)
   }
 }
 
-case class RequestsStatements(commitLogPutStatement: PreparedStatement,
-                              commitLogGetStatement: PreparedStatement,
+case class RequestsStatements(commitLogPutStatement:    PreparedStatement,
+                              commitLogGetStatement:    PreparedStatement,
                               commitLogDeleteStatement: PreparedStatement,
-                              commitLogScanStatement: PreparedStatement,
-                              streamInsertStatement: PreparedStatement,
-                              streamDeleteStatement: PreparedStatement,
-                              streamSelectStatement: PreparedStatement,
-                              consumerCheckpointStatement: PreparedStatement)
+                              commitLogScanStatement:   PreparedStatement,
+                              streamInsertStatement:    PreparedStatement,
+                              streamDeleteStatement:    PreparedStatement,
+                              streamSelectStatement:    PreparedStatement,
+                              consumerCheckpointStatement:        PreparedStatement,
+                              consumerAnyCheckpointsExistsStatement:  PreparedStatement,
+                              consumerGetCheckpointStatement:         PreparedStatement)
