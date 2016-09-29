@@ -64,6 +64,6 @@ class ConsumerService(session: Session) {
   def getLastSavedOffset(name: String, stream: String, partition: Int): Long = {
     val values = List(name, stream, new Integer(partition))
     Option(session.execute(requests.consumerGetCheckpointStatement.bind(values: _*)).one())
-      .fold(0L)(row => row.getLong("last_transaction"))
+      .fold(-1L)(row => row.getLong("last_transaction"))
   }
 }
