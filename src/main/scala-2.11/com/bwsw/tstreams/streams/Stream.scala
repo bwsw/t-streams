@@ -1,7 +1,7 @@
 package com.bwsw.tstreams.streams
 
 import com.bwsw.tstreams.data.IStorage
-import com.bwsw.tstreams.metadata.{RequestsRepository, MetadataStorage}
+import com.bwsw.tstreams.metadata.{MetadataStorage, RequestsRepository}
 import com.datastax.driver.core.Session
 
 /**

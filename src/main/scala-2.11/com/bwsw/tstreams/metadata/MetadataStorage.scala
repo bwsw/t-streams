@@ -3,7 +3,6 @@ package com.bwsw.tstreams.metadata
 import java.util.concurrent.locks.ReentrantLock
 
 import com.bwsw.tstreams.common.{CassandraConnectorConf, CassandraHelper, MetadataConnectionPool}
-import com.bwsw.tstreams.entities._
 import com.datastax.driver.core._
 import org.slf4j.LoggerFactory
 
@@ -16,19 +15,9 @@ class MetadataStorage(cluster: Cluster, session: Session, keyspace: String) {
 
   def getSession() = session
   /**
-    * Uniq id for this MetadataStorage
+    * Unique id for this MetadataStorage
     */
   val id = java.util.UUID.randomUUID().toString
-
-  /**
-    * MetadataStorage logger for logging
-    */
-  private val logger = LoggerFactory.getLogger(this.getClass)
-
-  /**
-    * Consumer entity instance
-    */
-  val consumerEntity = new ConsumerEntity("consumers", session)
 
   /**
     * @return Closed this storage or not

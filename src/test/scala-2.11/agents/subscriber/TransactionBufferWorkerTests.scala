@@ -2,7 +2,7 @@ package agents.subscriber
 
 import java.util.concurrent.TimeUnit
 
-import com.bwsw.tstreams.agents.consumer.subscriber.{TransactionBuffer, QueueBuilder, TransactionBufferWorker}
+import com.bwsw.tstreams.agents.consumer.subscriber.{QueueBuilder, TransactionBuffer, TransactionBufferWorker}
 import org.scalatest.{FlatSpec, Matchers}
 
 /**

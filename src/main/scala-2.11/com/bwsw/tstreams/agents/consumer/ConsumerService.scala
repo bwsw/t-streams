@@ -1,33 +1,16 @@
-package com.bwsw.tstreams.entities
+package com.bwsw.tstreams.agents.consumer
 
+import com.bwsw.tstreams.metadata.RequestsRepository
 import com.datastax.driver.core.{BatchStatement, Session}
 
 /**
   * Consumer entity for interact with consumers metadata
   *
-  * @param entityName Metadata table name
   * @param session    Session with metadata
   */
-class ConsumerEntity(entityName: String, session: Session) {
+class ConsumerService(session: Session) {
 
-  /**
-    * Statement for check exist or not some specific consumer
-    */
-  private val existStatement = session
-    .prepare(s"SELECT name FROM $entityName WHERE name=? LIMIT 1")
-
-  /**
-    * Statement for saving single offset
-    */
-  private val saveSingleOffsetStatement = session
-    .prepare(s"INSERT INTO $entityName (name,stream,partition,last_transaction) VALUES(?,?,?,?)")
-
-  /**
-    * Statement for retrieving offsets from consumers metadata
-    */
-  private val getOffsetStatement = session
-    .prepare(s"SELECT last_transaction FROM $entityName WHERE name=? AND stream=? AND partition=? LIMIT 1")
-
+  private val requests = RequestsRepository.getStatements(session)
 
   /**
     * Checking exist or not concrete consumer
@@ -36,9 +19,8 @@ class ConsumerEntity(entityName: String, session: Session) {
     * @return Exist or not concrete consumer
     */
   def exists(consumerName: String): Boolean = {
-    val statementWithBindings = existStatement.bind(consumerName)
-    val res = session.execute(statementWithBindings).all()
-    !res.isEmpty
+    val boundStatement = requests.consumerAnyCheckpointsExistsStatement.bind(consumerName)
+    Option(session.execute(boundStatement).one()).isDefined
   }
 
   /**
@@ -52,8 +34,8 @@ class ConsumerEntity(entityName: String, session: Session) {
     val batchStatement = new BatchStatement()
     partitionAndLastTransaction.map { case (partition, lastTransaction) =>
       val values: List[AnyRef] = List(name, stream, new Integer(partition), new java.lang.Long(lastTransaction))
-      val statementWithBindings = saveSingleOffsetStatement.bind(values: _*)
-      batchStatement.add(statementWithBindings)
+      val boundStatement = requests.consumerCheckpointStatement.bind(values: _*)
+      batchStatement.add(boundStatement)
     }
     session.execute(batchStatement)
   }
@@ -68,8 +50,7 @@ class ConsumerEntity(entityName: String, session: Session) {
     */
   def saveSingleOffset(name: String, stream: String, partition: Int, offset: Long): Unit = {
     val values: List[AnyRef] = List(name, stream, new Integer(partition), new java.lang.Long(offset))
-    val statementWithBindings = saveSingleOffsetStatement.bind(values: _*)
-    session.execute(statementWithBindings)
+    session.execute(requests.consumerCheckpointStatement.bind(values: _*))
   }
 
   /**
@@ -82,8 +63,7 @@ class ConsumerEntity(entityName: String, session: Session) {
     */
   def getLastSavedOffset(name: String, stream: String, partition: Int): Long = {
     val values = List(name, stream, new Integer(partition))
-    val statementWithBindings = getOffsetStatement.bind(values: _*)
-    val selected = session.execute(statementWithBindings).all()
-    selected.get(0).getLong("last_transaction")
+    Option(session.execute(requests.consumerGetCheckpointStatement.bind(values: _*)).one())
+      .fold(-1L)(row => row.getLong("last_transaction"))
   }
 }

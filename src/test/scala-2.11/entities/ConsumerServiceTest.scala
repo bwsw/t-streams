@@ -1,19 +1,18 @@
 package entities
 
-
-import com.bwsw.tstreams.entities.ConsumerEntity
+import com.bwsw.tstreams.agents.consumer.ConsumerService
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import testutils.{LocalGeneratorCreator, RandomStringCreator, TestUtils}
 
 
-class ConsumerEntityTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
+class ConsumerServiceTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
   def randomVal: String = RandomStringCreator.randomAlphaString(10)
 
   val connectedSession = cluster.connect(randomKeyspace)
 
   "ConsumerEntity.saveSingleOffset() ConsumerEntity.exist() ConsumerEntity.getOffset()" should "create new consumer with particular offset," +
     " then check consumer existence, then get this consumer offset" in {
-    val consumerEntity = new ConsumerEntity("consumers", connectedSession)
+    val consumerEntity = new ConsumerService(connectedSession)
     val consumer = randomVal
     val stream = randomVal
     val partition = 1
@@ -27,24 +26,22 @@ class ConsumerEntityTest extends FlatSpec with Matchers with BeforeAndAfterAll w
   }
 
   "ConsumerEntity.exist()" should "return false if consumer not exist" in {
-    val consumerEntity = new ConsumerEntity("consumers", connectedSession)
+    val consumerEntity = new ConsumerService(connectedSession)
     val consumer = randomVal
     consumerEntity.exists(consumer) shouldEqual false
   }
 
   "ConsumerEntity.getOffset()" should "throw java.lang.IndexOutOfBoundsException if consumer not exist" in {
-    val consumerEntity = new ConsumerEntity("consumers", connectedSession)
+    val consumerEntity = new ConsumerService(connectedSession)
     val consumer = randomVal
     val stream = randomVal
     val partition = 1
-    intercept[java.lang.IndexOutOfBoundsException] {
-      consumerEntity.getLastSavedOffset(consumer, stream, partition)
-    }
+    consumerEntity.getLastSavedOffset(consumer, stream, partition) shouldBe -1
   }
 
   "ConsumerEntity.saveBatchOffset(); ConsumerEntity.getOffset()" should "create new consumer with particular offsets and " +
     "then validate this consumer offsets" in {
-    val consumerEntity = new ConsumerEntity("consumers", connectedSession)
+    val consumerEntity = new ConsumerService(connectedSession)
     val consumer = randomVal
     val stream = randomVal
     val offsets = scala.collection.mutable.Map[Int, Long]()
