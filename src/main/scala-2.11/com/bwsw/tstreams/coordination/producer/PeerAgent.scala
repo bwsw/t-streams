@@ -12,6 +12,7 @@ import com.bwsw.tstreams.coordination.messages.state.TransactionStateMessage
 import io.netty.channel.Channel
 import org.slf4j.LoggerFactory
 
+import scala.annotation.tailrec
 import scala.collection.mutable
 import scala.util.Random
 
@@ -73,16 +74,16 @@ class PeerAgent(agentsStateManager: AgentsStateDBService,
   private var zkConnectionValidator: Thread = null
   private var partitionWeightDistributionThread: Thread = null
 
+  /**
+    * this ID is used to track sequential transactions from the same master
+    */
+  private val uniqueAgentId = Math.abs(Random.nextInt() + 1)
+
   def getAgentAddress() = myInetAddress
 
   def getProducer() = producer
 
   def getAgentsStateManager() = agentsStateManager
-
-  /**
-    * this ID is used to track sequential transactions from the same master
-    */
-  private val uniqueAgentId = Math.abs(Random.nextInt() + 1)
 
   def getUniqueAgentID() = uniqueAgentId
 
@@ -165,9 +166,10 @@ class PeerAgent(agentsStateManager: AgentsStateDBService,
     }
   }
 
-  def removeCurrentMasterOrder(partition: Int, master: MasterConfiguration, now: Long, expiresAt: Long): Unit = {
+  @tailrec
+  private def removeCurrentMasterOrder(partition: Int, master: MasterConfiguration, now: Long, expiresAt: Long): Unit = {
     if (now > expiresAt)
-      throw new IllegalStateException(s"Agent ${master.agentAddress} didn't respond to me.")
+      throw new IllegalStateException(s"Agent ${master.agentAddress} didn't respond to me up to $expiresAt.")
 
     val masterOpt = agentsStateManager.getCurrentMaster(partition)
 
@@ -190,11 +192,13 @@ class PeerAgent(agentsStateManager: AgentsStateDBService,
   }
 
   def updateMaster(partition: Int): Unit = this.synchronized {
+    if(!isRunning.get())
+      return
     agentsStateManager.doLocked {
+      val masterOpt = agentsStateManager.getCurrentMaster(partition)
+
       val now       = System.currentTimeMillis()
       val expiresAt = now + peerKeepAliveTimeout
-
-      val masterOpt = agentsStateManager.getCurrentMaster(partition)
 
       if(masterOpt.forall(m => m.agentAddress != myInetAddress) || masterOpt.isEmpty) {
         if(masterOpt.nonEmpty)
@@ -337,10 +341,12 @@ class PeerAgent(agentsStateManager: AgentsStateDBService,
     if (isMasterProcessVote)
       partitionWeightDistributionThread.join()
 
-    transport.stopServer()
-    agentsStateManager.shutdown()
+    agentsStateManager.doLocked {
+      transport.stopServer()
+      agentsStateManager.shutdown()
+      zkConnectionValidator.join()
+    }
 
-    zkConnectionValidator.join()
     //to avoid infinite polling block
     executorGraphs.foreach(g => g._2.shutdown())
 

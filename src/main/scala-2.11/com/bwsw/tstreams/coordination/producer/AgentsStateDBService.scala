@@ -4,6 +4,7 @@ import java.util.concurrent.TimeUnit
 
 import com.bwsw.tstreams.common.{LockUtil, ZookeeperDLMService}
 import com.bwsw.tstreams.coordination.messages.master.IMessage
+import org.apache.zookeeper.KeeperException.NoNodeException
 import org.apache.zookeeper.{CreateMode, KeeperException, Watcher}
 
 import scala.collection.mutable
@@ -120,13 +121,21 @@ class AgentsStateDBService(dlm: ZookeeperDLMService,
     * removes artifacts
     */
   def shutdown() = {
-
-    val parts = masterMap.synchronized { masterMap.keys }
-    parts foreach { p => demoteMeAsMaster(partition = p, isUpdatePriority = false) }
-
-    partitions foreach { p =>
-      dlm.delete(getMyPath(p))
-    }
+    val masterPartitions = masterMap.synchronized { masterMap.keys }
+    masterPartitions.foreach(p =>
+      try {
+        PeerAgent.logger.info(s"[CLEAR ZK] Agent=$inetAddress node=" + getPartitionMasterPath(p))
+        dlm.delete(getPartitionMasterPath(p))
+      } catch {
+        case exc: NoNodeException =>
+      })
+    partitions.foreach(p =>
+      try {
+        PeerAgent.logger.info(s"[CLEAR ZK] Agent=$inetAddress node=" + getMyPath(p))
+        dlm.delete(getMyPath(p))
+      } catch {
+        case exc: NoNodeException =>
+      })
   }
 
   /**
