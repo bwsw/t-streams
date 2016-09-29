@@ -338,12 +338,12 @@ class PeerAgent(agentsStateManager: AgentsStateDBService,
       partitionWeightDistributionThread.join()
 
     transport.stopServer()
+    agentsStateManager.shutdown()
 
     zkConnectionValidator.join()
     //to avoid infinite polling block
     executorGraphs.foreach(g => g._2.shutdown())
 
-    agentsStateManager.shutdown()
 
     transport.stopClient()
   }
