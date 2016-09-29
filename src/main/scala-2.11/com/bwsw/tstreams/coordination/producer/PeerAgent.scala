@@ -1,12 +1,11 @@
 package com.bwsw.tstreams.coordination.producer
 
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.atomic.{AtomicBoolean, AtomicLong}
-import java.util.concurrent.locks.ReentrantLock
-import java.util.concurrent.{CountDownLatch, TimeUnit}
 
 import com.bwsw.tstreams.agents.producer.Producer
 import com.bwsw.tstreams.common.ProtocolMessageSerializer.ProtocolMessageSerializerException
-import com.bwsw.tstreams.common.{LockUtil, ProtocolMessageSerializer, ZookeeperDLMService}
+import com.bwsw.tstreams.common.{ProtocolMessageSerializer, ZookeeperDLMService}
 import com.bwsw.tstreams.coordination.client.TcpTransport
 import com.bwsw.tstreams.coordination.messages.master._
 import com.bwsw.tstreams.coordination.messages.state.TransactionStateMessage

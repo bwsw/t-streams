@@ -1,15 +1,14 @@
 package com.bwsw.tstreams.metadata
 
+import java.lang.Long
+import java.util.concurrent.ExecutorService
 import java.util.concurrent.atomic.AtomicInteger
-import java.util.concurrent.{ExecutorService}
 
 import com.datastax.driver.core.{ResultSet, Session}
-import java.lang.Long
-
-import scala.collection.JavaConverters._
 import com.google.common.util.concurrent.{FutureCallback, Futures}
 
 import scala.annotation.tailrec
+import scala.collection.JavaConverters._
 
 case class TransactionRecord(partition: Int, transactionID: Long, count: Int, ttl: Int)
 

@@ -5,8 +5,8 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantLock
 
 import com.datastax.driver.core.Cluster.Builder
-import com.datastax.driver.core.policies.ExponentialReconnectionPolicy
 import com.datastax.driver.core._
+import com.datastax.driver.core.policies.ExponentialReconnectionPolicy
 import org.slf4j.LoggerFactory
 
 /**

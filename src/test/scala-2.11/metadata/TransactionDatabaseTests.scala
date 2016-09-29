@@ -3,8 +3,8 @@ package metadata
 import java.util.concurrent.CountDownLatch
 
 import com.bwsw.tstreams.common.FirstFailLockableTaskExecutor
-import com.bwsw.tstreams.metadata.{TransactionRecord, TransactionDatabase}
-import org.scalatest.{BeforeAndAfterAll, Matchers, FlatSpec}
+import com.bwsw.tstreams.metadata.{TransactionDatabase, TransactionRecord}
+import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import testutils.{LocalGeneratorCreator, TestUtils}
 
 /**

@@ -3,7 +3,7 @@ package services
 import java.net.InetSocketAddress
 
 import com.bwsw.tstreams.common.CassandraConnectorConf
-import com.bwsw.tstreams.streams.{StreamService, Stream}
+import com.bwsw.tstreams.streams.{Stream, StreamService}
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import testutils.{RandomStringCreator, TestUtils}
 
