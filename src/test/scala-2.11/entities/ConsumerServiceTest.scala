@@ -36,9 +36,7 @@ class ConsumerServiceTest extends FlatSpec with Matchers with BeforeAndAfterAll 
     val consumer = randomVal
     val stream = randomVal
     val partition = 1
-    intercept[java.lang.IndexOutOfBoundsException] {
-      consumerEntity.getLastSavedOffset(consumer, stream, partition)
-    }
+    consumerEntity.getLastSavedOffset(consumer, stream, partition) shouldBe -1
   }
 
   "ConsumerEntity.saveBatchOffset(); ConsumerEntity.getOffset()" should "create new consumer with particular offsets and " +
