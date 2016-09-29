@@ -15,14 +15,9 @@ class MetadataStorage(cluster: Cluster, session: Session, keyspace: String) {
 
   def getSession() = session
   /**
-    * Uniq id for this MetadataStorage
+    * Unique id for this MetadataStorage
     */
   val id = java.util.UUID.randomUUID().toString
-
-  /**
-    * MetadataStorage logger for logging
-    */
-  private val logger = LoggerFactory.getLogger(this.getClass)
 
   /**
     * @return Closed this storage or not
