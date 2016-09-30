@@ -27,7 +27,7 @@ class TwoProducersToSubscriberStartsAfterWriteTests extends FlatSpec with Matche
     setProperty(TSF_Dictionary.Consumer.TRANSACTION_PRELOAD, 10).
     setProperty(TSF_Dictionary.Consumer.DATA_PRELOAD, 10)
 
-  val COUNT = 10000
+  val COUNT = 1000
 
   it should s"Two producers send $COUNT transactions each, subscriber receives ${2 * COUNT} when started after." in {
 

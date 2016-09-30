@@ -82,18 +82,18 @@ class Producer[T](var name: String,
     * (getNewTransaction id; publish openTransaction event; publish closeTransaction event)
     */
   override val p2pAgent: PeerAgent = new PeerAgent(
-    agentsStateManager = agentsStateManager,
-    zkService = zkService,
-    peerKeepAliveTimeout = peerKeepAliveTimeout,
-    producer = this,
-    usedPartitions = producerOptions.writePolicy.getUsedPartitions(),
+    agentsStateManager      = agentsStateManager,
+    zkService               = zkService,
+    peerKeepAliveTimeout    = peerKeepAliveTimeout,
+    producer                = this,
+    usedPartitions          = producerOptions.writePolicy.getUsedPartitions(),
     isLowPriorityToBeMaster = pcs.isLowPriorityToBeMaster,
-    transport = pcs.transport,
-    threadPoolAmount = threadPoolSize,
-    threadPoolPublisherThreadsAmount = pcs.threadPoolPublisherThreadsAmount,
-    partitionRedistributionDelay = pcs.partitionRedistributionDelay,
-    isMasterBootstrapModeFull = pcs.isMasterBootstrapModeFull,
-    isMasterProcessVote = pcs.isMasterProcessVote)
+    transport               = pcs.transport,
+    threadPoolAmount        = threadPoolSize,
+    threadPoolPublisherThreadsAmount  = pcs.threadPoolPublisherThreadsAmount,
+    partitionRedistributionDelay      = pcs.partitionRedistributionDelay,
+    isMasterBootstrapModeFull         = pcs.isMasterBootstrapModeFull,
+    isMasterProcessVote               = pcs.isMasterProcessVote)
 
 
   /**
