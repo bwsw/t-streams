@@ -4,6 +4,7 @@ import java.util.concurrent.TimeUnit
 
 import com.bwsw.tstreams.common.{LockUtil, ZookeeperDLMService}
 import com.bwsw.tstreams.coordination.messages.master.IMessage
+import org.apache.zookeeper.KeeperException.NoNodeException
 import org.apache.zookeeper.{CreateMode, KeeperException, Watcher}
 
 import scala.collection.mutable
@@ -119,15 +120,11 @@ class AgentsStateDBService(dlm: ZookeeperDLMService,
   /**
     * removes artifacts
     */
-  def shutdown() = {
-
-    val parts = masterMap.synchronized { masterMap.keys }
-    parts foreach { p => demoteMeAsMaster(partition = p, isUpdatePriority = false) }
-
-    partitions foreach { p =>
+  def shutdown() =
+    partitions.foreach(p => {
+      demoteMeAsMaster(p, false)
       dlm.delete(getMyPath(p))
-    }
-  }
+    })
 
   /**
     * Amend agent priority
@@ -185,7 +182,6 @@ class AgentsStateDBService(dlm: ZookeeperDLMService,
     val bestCandidate = MasterConfiguration(agents.last.agentAddress, agents.last.uniqueAgentID)
     bestCandidate
   }
-
 
   def demoteMeAsMaster(partition: Int, isUpdatePriority: Boolean = true) = {
     //try to remove old master
@@ -264,7 +260,6 @@ class AgentsStateDBService(dlm: ZookeeperDLMService,
     LockUtil.withZkLockOrDieDo[T](dlm.getLock(getStreamLockPath()), (100, TimeUnit.SECONDS), Some(PeerAgent.logger)) {
       f
     }
-
 
   def setSubscriberStateWatcher(partition: Int, watcher: Watcher) =
       dlm.setWatcher(getSubscribersEventPath(partition), watcher)

@@ -4,7 +4,7 @@ package agents.integration
   * Created by Ivan Kudryavtsev on 21.09.16.
   */
 
-import java.util.concurrent.CountDownLatch
+import java.util.concurrent.{TimeUnit, CountDownLatch}
 
 import com.bwsw.tstreams.agents.consumer.Offset.Newest
 import com.bwsw.tstreams.agents.consumer.subscriber.Callback
@@ -91,20 +91,20 @@ class ProducerMasterChangeComplexTest  extends FlatSpec with Matchers with Befor
       }
     })
 
-//  it should "handle multiple master change correctly" in {
-//
-//    subscriber.start()
-//
-//    val producersThreads = (0 until PRODUCERS_AMOUNT)
-//      .map(producer => new ProducerWorker(f, onCompleteLatch, TRANSACTIONS_AMOUNT_EACH, PROBABILITY).run(PARTITIONS))
-//
-//    onCompleteLatch.await()
-//    producersThreads.foreach(thread => thread.join())
-//    waitCompleteLatch.await(MAX_WAIT_AFTER_ALL_PRODUCERS, TimeUnit.SECONDS)
-//    subscriber.stop()
-//
-//    subscriberCounter shouldBe TRANSACTIONS_AMOUNT_EACH * PRODUCERS_AMOUNT
-//  }
+  it should "handle multiple master change correctly" in {
+
+    subscriber.start()
+
+    val producersThreads = (0 until PRODUCERS_AMOUNT)
+      .map(producer => new ProducerWorker(f, onCompleteLatch, TRANSACTIONS_AMOUNT_EACH, PROBABILITY).run(PARTITIONS))
+
+    onCompleteLatch.await()
+    producersThreads.foreach(thread => thread.join())
+    waitCompleteLatch.await(MAX_WAIT_AFTER_ALL_PRODUCERS, TimeUnit.SECONDS)
+    subscriber.stop()
+
+    subscriberCounter shouldBe TRANSACTIONS_AMOUNT_EACH * PRODUCERS_AMOUNT
+  }
 
   override def afterAll() {
     onAfterAll()
