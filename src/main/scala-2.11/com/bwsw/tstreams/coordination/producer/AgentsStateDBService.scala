@@ -120,23 +120,11 @@ class AgentsStateDBService(dlm: ZookeeperDLMService,
   /**
     * removes artifacts
     */
-  def shutdown() = {
-    val masterPartitions = masterMap.synchronized { masterMap.keys }
-    masterPartitions.foreach(p =>
-      try {
-        PeerAgent.logger.info(s"[CLEAR ZK] Agent=$inetAddress node=" + getPartitionMasterPath(p))
-        dlm.delete(getPartitionMasterPath(p))
-      } catch {
-        case exc: NoNodeException =>
-      })
-    partitions.foreach(p =>
-      try {
-        PeerAgent.logger.info(s"[CLEAR ZK] Agent=$inetAddress node=" + getMyPath(p))
-        dlm.delete(getMyPath(p))
-      } catch {
-        case exc: NoNodeException =>
-      })
-  }
+  def shutdown() =
+    partitions.foreach(p => {
+      demoteMeAsMaster(p, false)
+      dlm.delete(getMyPath(p))
+    })
 
   /**
     * Amend agent priority
@@ -194,7 +182,6 @@ class AgentsStateDBService(dlm: ZookeeperDLMService,
     val bestCandidate = MasterConfiguration(agents.last.agentAddress, agents.last.uniqueAgentID)
     bestCandidate
   }
-
 
   def demoteMeAsMaster(partition: Int, isUpdatePriority: Boolean = true) = {
     //try to remove old master
@@ -273,7 +260,6 @@ class AgentsStateDBService(dlm: ZookeeperDLMService,
     LockUtil.withZkLockOrDieDo[T](dlm.getLock(getStreamLockPath()), (100, TimeUnit.SECONDS), Some(PeerAgent.logger)) {
       f
     }
-
 
   def setSubscriberStateWatcher(partition: Int, watcher: Watcher) =
       dlm.setWatcher(getSubscribersEventPath(partition), watcher)
