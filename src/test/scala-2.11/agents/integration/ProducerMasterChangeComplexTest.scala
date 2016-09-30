@@ -57,16 +57,17 @@ class ProducerMasterChangeComplexTest  extends FlatSpec with Matchers with Befor
     }
   }
   val PRODUCERS_AMOUNT          = 10
-  val TRANSACTIONS_AMOUNT_EACH  = 100
-  val PROBABILITY               = 0.005 // 0.01=1%
-  val PARTITIONS                = (0 until 5).toSet
+  val TRANSACTIONS_AMOUNT_EACH  = 1000
+  val PROBABILITY               = 0.01 // 0.01=1%
+  val PARTITIONS_COUNT          = 10
+  val PARTITIONS                = (0 until PARTITIONS_COUNT).toSet
   val MAX_WAIT_AFTER_ALL_PRODUCERS = 5
 
   val onCompleteLatch   = new CountDownLatch(PRODUCERS_AMOUNT)
   val waitCompleteLatch = new CountDownLatch(1)
 
   f.setProperty(TSF_Dictionary.Stream.NAME, "test_stream").
-    setProperty(TSF_Dictionary.Stream.PARTITIONS, 5).
+    setProperty(TSF_Dictionary.Stream.PARTITIONS, PARTITIONS_COUNT).
     setProperty(TSF_Dictionary.Stream.TTL, 60 * 10).
     setProperty(TSF_Dictionary.Coordination.CONNECTION_TIMEOUT, 7).
     setProperty(TSF_Dictionary.Coordination.TTL, 7).
