@@ -1,5 +1,7 @@
 package agents.integration
 
+import java.util.concurrent.{TimeUnit, CountDownLatch}
+
 import com.bwsw.tstreams.agents.consumer.Offset.{Newest, Oldest}
 import com.bwsw.tstreams.agents.consumer.subscriber.Callback
 import com.bwsw.tstreams.agents.consumer.{ConsumerTransaction, TransactionOperator}
@@ -12,6 +14,8 @@ import testutils.{LocalGeneratorCreator, TestUtils}
   * Created by Ivan Kudryavtsev on 26.08.16.
   */
 class SubscriberBasicPubSubTests extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
+
+
   f.setProperty(TSF_Dictionary.Stream.NAME, "test_stream").
     setProperty(TSF_Dictionary.Stream.PARTITIONS, 3).
     setProperty(TSF_Dictionary.Stream.TTL, 60 * 10).
@@ -24,6 +28,10 @@ class SubscriberBasicPubSubTests extends FlatSpec with Matchers with BeforeAndAf
     setProperty(TSF_Dictionary.Consumer.DATA_PRELOAD, 10)
 
   it should "handle all transactions produced by producer" in {
+
+    val TOTAL = 100
+    val latch = new CountDownLatch(1)
+
     var subsciberTransactionsAmount = 0
     val producer = f.getProducer[String](
       name = "test_producer",
@@ -41,23 +49,28 @@ class SubscriberBasicPubSubTests extends FlatSpec with Matchers with BeforeAndAf
         override def onTransaction(consumer: TransactionOperator[String], transaction: ConsumerTransaction[String]): Unit = this.synchronized {
           subsciberTransactionsAmount += 1
           transaction.getAll()
+          if(subsciberTransactionsAmount == TOTAL)
+            latch.countDown()
         }
       })
     s.start()
-    val TOTAL = 100
     for (it <- 0 until TOTAL) {
       val transaction = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
       transaction.send("test")
       transaction.checkpoint()
     }
     producer.stop()
-    Thread.sleep(1000)
+    latch.await(10, TimeUnit.SECONDS) shouldBe true
     s.stop()
     subsciberTransactionsAmount shouldBe TOTAL
   }
 
   it should "handle all transactions produced by two different producers" in {
+
+    val TOTAL = 100
     var subscriberTransactionsAmount = 0
+    val latch = new CountDownLatch(1)
+
     val producer1 = f.getProducer[String](
       name = "test_producer",
       transactionGenerator = LocalGeneratorCreator.getGen(),
@@ -73,10 +86,11 @@ class SubscriberBasicPubSubTests extends FlatSpec with Matchers with BeforeAndAf
       callback = new Callback[String] {
         override def onTransaction(consumer: TransactionOperator[String], transaction: ConsumerTransaction[String]): Unit = this.synchronized {
           subscriberTransactionsAmount += 1
+          if(subscriberTransactionsAmount == TOTAL * 2)
+            latch.countDown()
         }
       })
     s.start()
-    val TOTAL = 100
     for (it <- 0 until TOTAL) {
       val transaction = producer1.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
       transaction.send("test")
@@ -89,13 +103,14 @@ class SubscriberBasicPubSubTests extends FlatSpec with Matchers with BeforeAndAf
       converter = stringToArrayByteConverter,
       partitions = Set(0, 1, 2),
       isLowPriority = false)
+
     for (it <- 0 until TOTAL) {
       val transaction = producer2.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
       transaction.send("test")
       transaction.checkpoint()
     }
     producer2.stop()
-    Thread.sleep(1000)
+    latch.await(10, TimeUnit.SECONDS) shouldBe true
     s.stop()
     subscriberTransactionsAmount shouldBe TOTAL * 2
   }
