@@ -1,9 +1,9 @@
 package common
 
+import com.bwsw.tstreams.agents.producer.AgentConfiguration
 import com.bwsw.tstreams.common.ProtocolMessageSerializer
 import com.bwsw.tstreams.coordination.messages.master._
 import com.bwsw.tstreams.coordination.messages.state.{TransactionStateMessage, TransactionStatus}
-import com.bwsw.tstreams.coordination.producer.AgentConfiguration
 import org.scalatest.{FlatSpec, Matchers}
 import testutils.LocalGeneratorCreator
 

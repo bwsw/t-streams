@@ -1,10 +1,9 @@
-package com.bwsw.tstreams.coordination.producer
+package com.bwsw.tstreams.agents.producer
 
 import java.util.concurrent.TimeUnit
 
 import com.bwsw.tstreams.common.{LockUtil, ZookeeperDLMService}
 import com.bwsw.tstreams.coordination.messages.master.IMessage
-import org.apache.zookeeper.KeeperException.NoNodeException
 import org.apache.zookeeper.{CreateMode, KeeperException, Watcher}
 
 import scala.collection.mutable

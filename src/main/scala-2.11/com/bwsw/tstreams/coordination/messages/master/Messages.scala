@@ -1,8 +1,9 @@
 package com.bwsw.tstreams.coordination.messages.master
 
+import com.bwsw.tstreams.agents.producer
+import com.bwsw.tstreams.agents.producer.PeerAgent
 import com.bwsw.tstreams.common.ProtocolMessageSerializer
 import com.bwsw.tstreams.coordination.messages.state.{TransactionStateMessage, TransactionStatus}
-import com.bwsw.tstreams.coordination.producer.PeerAgent
 import io.netty.channel.Channel
 import org.slf4j.LoggerFactory
 
@@ -16,7 +17,7 @@ object IMessage {
 
 /**
   * Messages which used for providing
-  * interaction between [[com.bwsw.tstreams.coordination.producer.PeerAgent]]]
+  * interaction between [[producer.PeerAgent]]]
   */
 trait IMessage {
   var msgID: Long = Random.nextLong()

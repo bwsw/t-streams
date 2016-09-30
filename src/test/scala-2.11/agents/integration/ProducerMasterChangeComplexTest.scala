@@ -4,7 +4,7 @@ package agents.integration
   * Created by Ivan Kudryavtsev on 21.09.16.
   */
 
-import java.util.concurrent.{TimeUnit, CountDownLatch}
+import java.util.concurrent.{CountDownLatch, TimeUnit}
 
 import com.bwsw.tstreams.agents.consumer.Offset.Newest
 import com.bwsw.tstreams.agents.consumer.subscriber.Callback

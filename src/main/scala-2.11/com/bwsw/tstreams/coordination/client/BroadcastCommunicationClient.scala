@@ -2,9 +2,9 @@ package com.bwsw.tstreams.coordination.client
 
 import java.util.concurrent.atomic.AtomicBoolean
 
+import com.bwsw.tstreams.agents.producer.AgentsStateDBService
 import com.bwsw.tstreams.common.ZookeeperDLMService
 import com.bwsw.tstreams.coordination.messages.state.TransactionStateMessage
-import com.bwsw.tstreams.coordination.producer.AgentsStateDBService
 import org.apache.zookeeper.{WatchedEvent, Watcher}
 
 

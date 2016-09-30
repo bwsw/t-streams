@@ -1,7 +1,5 @@
 package com.bwsw.tstreams.agents.producer
 
-import com.bwsw.tstreams.coordination.producer.PeerAgent
-
 /**
   * Trait for producers
   */

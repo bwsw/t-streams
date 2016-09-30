@@ -1,8 +1,7 @@
 package com.bwsw.tstreams.agents.group
 
-import com.bwsw.tstreams.agents.producer.ProducerTransaction
+import com.bwsw.tstreams.agents.producer.{PeerAgent, ProducerTransaction}
 import com.bwsw.tstreams.coordination.messages.state.TransactionStateMessage
-import com.bwsw.tstreams.coordination.producer.PeerAgent
 
 import scala.language.existentials
 

@@ -1,9 +1,8 @@
-package com.bwsw.tstreams.coordination.producer
+package com.bwsw.tstreams.agents.producer
 
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.atomic.{AtomicBoolean, AtomicLong}
 
-import com.bwsw.tstreams.agents.producer.Producer
 import com.bwsw.tstreams.common.ProtocolMessageSerializer.ProtocolMessageSerializerException
 import com.bwsw.tstreams.common.{ProtocolMessageSerializer, ZookeeperDLMService}
 import com.bwsw.tstreams.coordination.client.TcpTransport

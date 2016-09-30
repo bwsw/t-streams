@@ -1,6 +1,6 @@
 package agents.integration
 
-import java.util.concurrent.{TimeUnit, CountDownLatch}
+import java.util.concurrent.{CountDownLatch, TimeUnit}
 
 import com.bwsw.tstreams.agents.consumer.Offset.{Newest, Oldest}
 import com.bwsw.tstreams.agents.consumer.subscriber.Callback
