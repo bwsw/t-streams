@@ -7,13 +7,15 @@ import java.util.Properties
 import java.util.concurrent.atomic.AtomicInteger
 
 import com.aerospike.client.Host
-import com.bwsw.tstreams.common.{CassandraConnectorConf, CassandraHelper, MetadataConnectionPool, ZookeeperDLMService}
+import com.bwsw.tstreams.common.{CassandraConnectorConf, CassandraHelper, MetadataConnectionPool}
 import com.bwsw.tstreams.converter.{ArrayByteToStringConverter, StringToArrayByteConverter}
 import com.bwsw.tstreams.data.hazelcast
 import com.bwsw.tstreams.debug.GlobalHooks
 import com.bwsw.tstreams.env.{TSF_Dictionary, TStreamsFactory}
 import com.bwsw.tstreams.metadata.MetadataStorageFactory
 import com.google.common.io.Files
+import org.apache.curator.framework.CuratorFrameworkFactory
+import org.apache.curator.retry.ExponentialBackoffRetry
 import org.apache.zookeeper.server.quorum.QuorumPeerConfig
 import org.apache.zookeeper.server.{ServerConfig, ZooKeeperServerMain}
 import org.cassandraunit.utils.EmbeddedCassandraServerHelper
@@ -90,7 +92,13 @@ trait TestUtils {
 
   val aerospikeOptions = new com.bwsw.tstreams.data.aerospike.Options("test", hosts)
   val hazelcastOptions = new hazelcast.Options("test", 0, 0)
-  val zkService = new ZookeeperDLMService("", List(new InetSocketAddress("127.0.0.1", zookeeperPort)), 7, 7)
+
+  val curatorClient = CuratorFrameworkFactory.builder()
+    .namespace("")
+    .connectionTimeoutMs(7000)
+    .sessionTimeoutMs(7000)
+    .retryPolicy(new ExponentialBackoffRetry(1000, 3))
+    .connectString("127.0.0.1").build()
 
   removeZkMetadata(f.getProperty(TSF_Dictionary.Coordination.ROOT).toString)
 
@@ -118,8 +126,8 @@ trait TestUtils {
     * @param path Zk root to delete
     */
   def removeZkMetadata(path: String) = {
-    if (zkService.exist(path))
-      zkService.deleteRecursive(path)
+    if (curatorClient.checkExists.forPath(path) != null)
+      curatorClient.delete.deletingChildrenIfNeeded().forPath(path)
   }
 
   /**

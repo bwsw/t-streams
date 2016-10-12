@@ -41,15 +41,13 @@ class SubscriberWithTwoProducersFirstCancelSecondCheckpointTest extends FlatSpec
       name = "test_producer1",
       transactionGenerator = LocalGeneratorCreator.getGen(),
       converter = stringToArrayByteConverter,
-      partitions = Set(0),
-      isLowPriority = false)
+      partitions = Set(0))
 
     val producer2 = f.getProducer[String](
       name = "test_producer2",
       transactionGenerator = LocalGeneratorCreator.getGen(),
       converter = stringToArrayByteConverter,
-      partitions = Set(0),
-      isLowPriority = false)
+      partitions = Set(0))
 
     val subscriber = f.getSubscriber[String](name = "ss+2",
       transactionGenerator = LocalGeneratorCreator.getGen(),

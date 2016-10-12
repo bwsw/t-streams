@@ -10,6 +10,8 @@ import com.bwsw.tstreams.coordination.client.BroadcastCommunicationClient
 import com.bwsw.tstreams.coordination.messages.state.{TransactionStateMessage, TransactionStatus}
 import com.bwsw.tstreams.metadata.{MetadataStorage, TransactionDatabase, TransactionRecord}
 import com.bwsw.tstreams.streams.Stream
+import org.apache.curator.framework.CuratorFrameworkFactory
+import org.apache.curator.retry.ExponentialBackoffRetry
 import org.slf4j.LoggerFactory
 
 import scala.util.control.Breaks._
@@ -52,7 +54,17 @@ class Producer[T](var name: String,
   private val threadLock = new ReentrantLock(true)
 
   private val peerKeepAliveTimeout = pcs.zkSessionTimeout * 1000 * 2
-  private val zkService = new ZookeeperDLMService(pcs.zkRootPath, pcs.zkHosts, pcs.zkSessionTimeout, pcs.zkConnectionTimeout)
+
+  private val curatorClient = CuratorFrameworkFactory.builder()
+    .namespace(java.nio.file.Paths.get(pcs.zkRootPath, stream.getName()).toString)
+    .connectionTimeoutMs(pcs.zkConnectionTimeout * 1000)
+    .sessionTimeoutMs( pcs.zkSessionTimeout * 1000)
+    .retryPolicy(new ExponentialBackoffRetry(1000, 3))
+    .connectString(pcs.zkHosts).build()
+
+  curatorClient.start()
+  curatorClient.create().creatingParentContainersIfNeeded().forPath("subscribers")
+
 
   // amount of threads which will handle partitions in masters, etc
   val threadPoolSize: Int = {
@@ -66,14 +78,8 @@ class Producer[T](var name: String,
 
   logger.info(s"Start new Basic producer with name : $name, streamName : ${stream.getName}, streamPartitions : ${stream.getPartitions}")
 
-  private val agentsStateManager = new AgentsStateDBService(
-    zkService,
-    producerOptions.coordinationOptions.transport.getInetAddress(),
-    stream.getName,
-    Set[Int]().empty ++ producerOptions.writePolicy.getUsedPartitions())
-
   // this client is used to find new subscribers
-  val subscriberNotifier = new BroadcastCommunicationClient(agentsStateManager, usedPartitions = producerOptions.writePolicy.getUsedPartitions())
+  val subscriberNotifier = new BroadcastCommunicationClient(curatorClient, partitions = producerOptions.writePolicy.getUsedPartitions())
   subscriberNotifier.init()
 
   /**
@@ -81,18 +87,14 @@ class Producer[T](var name: String,
     * (getNewTransaction id; publish openTransaction event; publish closeTransaction event)
     */
   override val p2pAgent: PeerAgent = new PeerAgent(
-    agentsStateManager      = agentsStateManager,
-    zkService               = zkService,
+    curatorClient           = curatorClient,
     peerKeepAliveTimeout    = peerKeepAliveTimeout,
     producer                = this,
     usedPartitions          = producerOptions.writePolicy.getUsedPartitions(),
-    isLowPriorityToBeMaster = pcs.isLowPriorityToBeMaster,
     transport               = pcs.transport,
     threadPoolAmount        = threadPoolSize,
     threadPoolPublisherThreadsAmount  = pcs.threadPoolPublisherThreadsAmount,
-    partitionRedistributionDelay      = pcs.partitionRedistributionDelay,
-    isMasterBootstrapModeFull         = pcs.isMasterBootstrapModeFull,
-    isMasterProcessVote               = pcs.isMasterProcessVote)
+    partitionRedistributionDelay      = pcs.partitionRedistributionDelay)
 
 
   /**
@@ -110,28 +112,16 @@ class Producer[T](var name: String,
     * @param partition
     * @return
     */
-  def isMasterOfPartition(partition: Int): Boolean = {
-    val masterOpt = agentsStateManager.getCurrentMaster(partition)
-    masterOpt.fold(false) { m => producerOptions.coordinationOptions.transport.getInetAddress() == m.agentAddress }
-  }
+  def isMasterOfPartition(partition: Int): Boolean =
+    p2pAgent.isMasterOfPartition(partition)
 
-  def getPartitionMasterIDLocalInfo(partition: Int): Int = {
-    val masterOpt = agentsStateManager.getCurrentMasterLocal(partition)
-    masterOpt.fold(0) { m => m.uniqueAgentId }
-  }
-
-  def isPartitionMasterLocalInfo(partition: Int): Boolean = {
-    val masterOpt = agentsStateManager.getCurrentMasterLocal(partition)
-    masterOpt.fold(false) { m => producerOptions.coordinationOptions.transport.getInetAddress() == m.agentAddress }
-  }
-
-  def dumpPartitionsOwnership() = agentsStateManager.dumpPartitionsOwnership()
+  def getPartitionMasterIDLocalInfo(partition: Int): Int =
+    p2pAgent.getPartitionMasterInetAddressLocal(partition)._2
 
   /**
     * Utility method which allows waiting while the producer completes partition redistribution process.
     * Used mainly in integration tests.
     */
-  def awaitPartitionRedistributionThreadComplete() = p2pAgent.awaitPartitionRedistributionThreadComplete.await()
 
   /**
     *
@@ -342,7 +332,7 @@ class Producer[T](var name: String,
     p2pAgent.stop()
     // stop function which works with subscribers
     subscriberNotifier.stop()
-    zkService.close()
+    curatorClient.close()
   }
 
   /**

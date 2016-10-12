@@ -68,8 +68,7 @@ class SubscriberWithManyProcessingEnginesThreadsTest extends FlatSpec with Match
           name = "test_producer", // name of the producer
           transactionGenerator = new LocalTransactionGenerator, // where it will get new transactions
           converter = new StringToArrayByteConverter, // converter from String to internal data presentation
-          partitions = PARTITIONS, // active partitions
-          isLowPriority = false) // agent can be a master
+          partitions = PARTITIONS) // agent can be a master
 
         (0 until TOTAL_TRANSACTIONS).foreach(
           i => {

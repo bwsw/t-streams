@@ -37,8 +37,7 @@ class SubscriberBasicPubSubTests extends FlatSpec with Matchers with BeforeAndAf
       name = "test_producer",
       transactionGenerator = LocalGeneratorCreator.getGen(),
       converter = stringToArrayByteConverter,
-      partitions = Set(0, 1, 2),
-      isLowPriority = false)
+      partitions = Set(0, 1, 2))
 
     val s = f.getSubscriber[String](name = "sv2",
       transactionGenerator = LocalGeneratorCreator.getGen(),
@@ -75,8 +74,7 @@ class SubscriberBasicPubSubTests extends FlatSpec with Matchers with BeforeAndAf
       name = "test_producer",
       transactionGenerator = LocalGeneratorCreator.getGen(),
       converter = stringToArrayByteConverter,
-      partitions = Set(0, 1, 2),
-      isLowPriority = false)
+      partitions = Set(0, 1, 2))
 
     val s = f.getSubscriber[String](name = "sv2",
       transactionGenerator = LocalGeneratorCreator.getGen(),
@@ -101,8 +99,7 @@ class SubscriberBasicPubSubTests extends FlatSpec with Matchers with BeforeAndAf
       name = "test_producer2",
       transactionGenerator = LocalGeneratorCreator.getGen(),
       converter = stringToArrayByteConverter,
-      partitions = Set(0, 1, 2),
-      isLowPriority = false)
+      partitions = Set(0, 1, 2))
 
     for (it <- 0 until TOTAL) {
       val transaction = producer2.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)

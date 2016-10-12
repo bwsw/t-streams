@@ -27,15 +27,13 @@ class ProducerAndConsumerLongLastingTransactionsTests extends FlatSpec with Matc
     name = "test_producer",
     transactionGenerator = LocalGeneratorCreator.getGen(),
     converter = stringToArrayByteConverter,
-    partitions = Set(0),
-    isLowPriority = false)
+    partitions = Set(0))
 
   val producer2 = f.getProducer[String](
     name = "test_producer",
     transactionGenerator = LocalGeneratorCreator.getGen(),
     converter = stringToArrayByteConverter,
-    partitions = Set(0),
-    isLowPriority = false)
+    partitions = Set(0))
 
   val consumer = f.getConsumer[String](
     name = "test_consumer",

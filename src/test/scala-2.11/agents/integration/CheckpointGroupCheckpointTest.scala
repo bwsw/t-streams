@@ -28,8 +28,7 @@ class CheckpointGroupCheckpointTest extends FlatSpec with Matchers with BeforeAn
     name = "test_producer",
     transactionGenerator = LocalGeneratorCreator.getGen(),
     converter = stringToArrayByteConverter,
-    partitions = Set(0, 1, 2),
-    isLowPriority = false)
+    partitions = Set(0, 1, 2))
 
   val consumer = f.getConsumer[String](
     name = "test_consumer",

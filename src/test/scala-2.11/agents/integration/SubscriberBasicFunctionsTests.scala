@@ -29,8 +29,7 @@ class SubscriberBasicFunctionsTests extends FlatSpec with Matchers with BeforeAn
     name = "test_producer",
     transactionGenerator = LocalGeneratorCreator.getGen(),
     converter = stringToArrayByteConverter,
-    partitions = Set(0, 1, 2),
-    isLowPriority = false)
+    partitions = Set(0, 1, 2))
 
   it should "start and stop with default options" in {
     val s = f.getSubscriber[String](name = "sv2",

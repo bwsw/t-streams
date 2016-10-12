@@ -35,8 +35,7 @@ class CheckpointGroupAndSubscriberEventsTests extends FlatSpec with Matchers wit
     name = "test_producer",
     transactionGenerator = LocalGeneratorCreator.getGen(),
     converter = stringToArrayByteConverter,
-    partitions = Set(0),
-    isLowPriority = false)
+    partitions = Set(0))
 
   "Group commit" should "checkpoint all AgentsGroup state" in {
     val l = new CountDownLatch(1)

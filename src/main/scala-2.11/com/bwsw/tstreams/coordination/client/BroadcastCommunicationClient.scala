@@ -2,51 +2,38 @@ package com.bwsw.tstreams.coordination.client
 
 import java.util.concurrent.atomic.AtomicBoolean
 
-import com.bwsw.tstreams.agents.producer.AgentsStateDBService
-import com.bwsw.tstreams.common.ZookeeperDLMService
 import com.bwsw.tstreams.coordination.messages.state.TransactionStateMessage
-import org.apache.zookeeper.{WatchedEvent, Watcher}
+import org.apache.curator.framework.CuratorFramework
+
+import scala.collection.JavaConversions._
 
 
 /**
   *
-  * @param agentsStateManager
-  * @param usedPartitions
+  * @param curatorClient
+  * @param partitions
   */
-class BroadcastCommunicationClient(agentsStateManager: AgentsStateDBService,
-                                   usedPartitions: List[Int]) {
+class BroadcastCommunicationClient(curatorClient: CuratorFramework, partitions: Set[Int]) {
 
-  val isStopped = new AtomicBoolean(false)
+  val isStopped = new AtomicBoolean(true)
 
   private val partitionSubscribers = new java.util.concurrent.ConcurrentHashMap[Int, (Set[String], CommunicationClient)]()
+
+  private val updateThread = new Thread(new Runnable {
+    override def run(): Unit = {
+      while(!isStopped.get()) {
+        partitions.foreach(p => updateSubscribers(p))
+        Thread.sleep(1000)
+      }
+    }
+  })
 
   /**
     * Initialize coordinator
     */
   def init(): Unit = {
-    agentsStateManager.doLocked { initInternal() }
-  }
-
-  /**
-    * init itself
-    */
-  def initInternal(): Unit = {
-    usedPartitions foreach { p =>
-      partitionSubscribers
-        .put(p, (Set[String]().empty, new CommunicationClient(10, 1, 0)))
-      val watcher = new Watcher {
-        override def process(event: WatchedEvent): Unit = {
-          val wo = this
-          ZookeeperDLMService.executor.submit("<UpdateSubscribersTask>", new Runnable {
-            override def run(): Unit = {
-              updateSubscribers(p)
-              agentsStateManager.setSubscriberStateWatcher(p, wo)
-            }
-          })
-        }
-      }
-      watcher.process(null)
-    }
+    updateThread.start()
+    isStopped.set(false)
   }
 
   /**
@@ -68,9 +55,9 @@ class BroadcastCommunicationClient(agentsStateManager: AgentsStateDBService,
   private def updateSubscribers(partition: Int) = {
     if (!isStopped.get) {
       val (_, broadcaster) = partitionSubscribers.get(partition)
-      val endpoints = agentsStateManager.getPartitionSubscribers(partition)
-      broadcaster.initConnections(endpoints)
-      partitionSubscribers.put(partition, (agentsStateManager.getPartitionSubscribers(partition), broadcaster))
+      val children = curatorClient.getChildren.forPath(s"subscribers/${partition}").toSet
+      broadcaster.initConnections(children)
+      partitionSubscribers.put(partition, (children, broadcaster))
     }
 
   }
@@ -82,7 +69,7 @@ class BroadcastCommunicationClient(agentsStateManager: AgentsStateDBService,
     if (isStopped.getAndSet(true))
       throw new IllegalStateException("Producer->Subscriber notifier was stopped second time.")
 
-    usedPartitions foreach { p => partitionSubscribers.get(p)._2.close() }
+    partitions foreach { p => partitionSubscribers.get(p)._2.close() }
     partitionSubscribers.clear()
   }
 }

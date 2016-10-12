@@ -46,7 +46,7 @@ libraryDependencies ++= Seq(
   "org.slf4j" % "slf4j-simple" % "1.7.21",
   "org.scalatest" % "scalatest_2.11" % "3.0.0-M15",
   "org.scalamock" %% "scalamock-scalatest-support" % "3.2.2" % "test",
-  "io.netty" % "netty-all" % "4.1.0.CR7",
+  "io.netty" % "netty-all" % "4.0.23.Final",
   "com.aerospike" % "aerospike-client" % "3.2.1",
   "org.apache.commons" % "commons-collections4" % "4.1",
   "com.fasterxml.jackson.module" % "jackson-module-scala_2.11" % "2.6.3",
@@ -56,10 +56,8 @@ libraryDependencies ++= Seq(
   "org.cassandraunit" % "cassandra-unit" % "2.2.2.1",
   "log4j" % "log4j" % "1.2.17",
   "com.hazelcast" % "hazelcast" % "3.6.4",
-  ("org.apache.zookeeper" % "zookeeper" % "3.4.6")
-    .exclude("org.slf4j", "slf4j-log4j12"),
+  "org.apache.curator" % "curator-recipes" % "3.2.0",
   "com.google.guava" % "guava" % "18.0")
-
 
 libraryDependencies += ("com.datastax.cassandra" % "cassandra-driver-core" % "3.0.0")
   .exclude("com.google.guava", "guava")
@@ -77,15 +75,6 @@ libraryDependencies += ("org.cassandraunit" % "cassandra-unit" % "2.2.2.1")
   .exclude("io.netty", "netty-buffer")
   .exclude("io.netty", "netty-handler")
 
-//COORDINATION
-resolvers += "twitter resolver" at "http://maven.twttr.com"
-libraryDependencies += ("com.twitter.common.zookeeper" % "lock" % "0.0.38")
-  .exclude("com.google.guava", "guava")
-  .exclude("org.slf4f", "slf4j-api")
-  .exclude("log4j", "log4j")
-  .exclude("io.netty", "netty")
-  .exclude("org.slf4j", "slf4j-log4j12")
-  .exclude("org.apache.zookeeper", "zookeeper")
 
 //ASSEMBLY STRATEGY
 assemblyJarName in assembly := "t-streams-" + tstreamsVersion + ".jar"
@@ -94,7 +83,6 @@ assemblyMergeStrategy in assembly := {
   case PathList("org", "slf4j", "impl", xs@_*) => MergeStrategy.discard
   case PathList("org", "cassandraunit", xs@_*) => MergeStrategy.discard
   case PathList("org", "hamcrest", xs@_*) => MergeStrategy.discard
-  case PathList("com", "twitter", "common", "zookeeper", xs@_*) => MergeStrategy.first
   case PathList("io", "netty", xs@_*) => MergeStrategy.first
   case PathList("com", "datastax", "cassandra", xs@_*) => MergeStrategy.first
   case PathList("org", "slf4j", xs@_*) => MergeStrategy.first

@@ -52,8 +52,7 @@ class ProducerMasterChangeComplexTest  extends FlatSpec with Matchers with Befor
         name = "test_producer1",
         transactionGenerator = LocalGeneratorCreator.getGen(),
         converter = new StringToArrayByteConverter,
-        partitions = partitions,
-        isLowPriority = false)
+        partitions = partitions)
     }
   }
   val PRODUCERS_AMOUNT          = 10

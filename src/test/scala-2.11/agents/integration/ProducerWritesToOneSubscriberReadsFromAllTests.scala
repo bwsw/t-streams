@@ -34,8 +34,7 @@ class ProducerWritesToOneSubscriberReadsFromAllTests extends FlatSpec with Match
       name = "test_producer",
       transactionGenerator = LocalGeneratorCreator.getGen(),
       converter = stringToArrayByteConverter,
-      partitions = Set(0),
-      isLowPriority = false)
+      partitions = Set(0))
 
     val s = f.getSubscriber[String](name = "sv2",
       transactionGenerator = LocalGeneratorCreator.getGen(),

@@ -41,7 +41,6 @@ class TStreamsFactoryTest extends FlatSpec with Matchers with BeforeAndAfterAll 
   "UniversalFactory.getProducer" should "return producer object" in {
     val p = f.getProducer[String](
       name = "test-producer-1",
-      isLowPriority = false,
       transactionGenerator = new LocalTransactionGenerator,
       converter = new StringToArrayByteConverter,
       partitions = Set(0))
