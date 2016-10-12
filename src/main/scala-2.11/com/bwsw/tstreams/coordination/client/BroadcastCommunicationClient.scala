@@ -22,8 +22,8 @@ class BroadcastCommunicationClient(curatorClient: CuratorFramework, partitions: 
   private val updateThread = new Thread(new Runnable {
     override def run(): Unit = {
       while(!isStopped.get()) {
-        partitions.foreach(p => updateSubscribers(p))
         Thread.sleep(1000)
+        partitions.foreach(p => updateSubscribers(p))
       }
     }
   })
@@ -32,6 +32,7 @@ class BroadcastCommunicationClient(curatorClient: CuratorFramework, partitions: 
     * Initialize coordinator
     */
   def init(): Unit = {
+    partitions.foreach(p => updateSubscribers(p))
     updateThread.start()
     isStopped.set(false)
   }
