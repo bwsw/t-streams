@@ -55,15 +55,16 @@ class Producer[T](var name: String,
 
   private val peerKeepAliveTimeout = pcs.zkSessionTimeout * 1000 * 2
 
+  val fullPrefix = java.nio.file.Paths.get(pcs.zkRootPath, stream.getName()).toString.substring(1)
   private val curatorClient = CuratorFrameworkFactory.builder()
-    .namespace(java.nio.file.Paths.get(pcs.zkRootPath, stream.getName()).toString)
+    .namespace(fullPrefix)
     .connectionTimeoutMs(pcs.zkConnectionTimeout * 1000)
     .sessionTimeoutMs( pcs.zkSessionTimeout * 1000)
     .retryPolicy(new ExponentialBackoffRetry(1000, 3))
     .connectString(pcs.zkHosts).build()
 
   curatorClient.start()
-  curatorClient.create().creatingParentContainersIfNeeded().forPath("subscribers")
+  curatorClient.create().creatingParentContainersIfNeeded().forPath("/subscribers")
 
 
   // amount of threads which will handle partitions in masters, etc

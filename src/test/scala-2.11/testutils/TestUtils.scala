@@ -99,6 +99,7 @@ trait TestUtils {
     .sessionTimeoutMs(7000)
     .retryPolicy(new ExponentialBackoffRetry(1000, 3))
     .connectString("127.0.0.1").build()
+  curatorClient.start()
 
   removeZkMetadata(f.getProperty(TSF_Dictionary.Coordination.ROOT).toString)
 
@@ -151,6 +152,7 @@ trait TestUtils {
     removeZkMetadata("/unit")
     metadataStorageFactory.closeFactory()
     storageFactory.closeFactory()
+    curatorClient.close()
   }
 }
 

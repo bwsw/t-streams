@@ -107,14 +107,23 @@ class PeerAgent(curatorClient: CuratorFramework,
   usedPartitions foreach { p => sequentialIds += (p -> new AtomicLong(0)) }
 
 
-  def updatePartitionMasterInetAddress(partition: Int) = leaderMap.synchronized {
+  def updatePartitionMasterInetAddress(partition: Int): Unit = leaderMap.synchronized {
+    if(!usedPartitions.contains(partition))
+      return
+
     if(!leaderMap.contains(partition)) {
-      val leader = new LeaderLatch(curatorClient, s"master-${partition}#$uniqueAgentId", transport.getInetAddress())
+      if(curatorClient.checkExists().forPath(s"/master-${partition}") == null)
+        curatorClient.create.forPath(s"/master-${partition}")
+      val leader = new LeaderLatch(curatorClient, s"/master-${partition}", s"${transport.getInetAddress()}#$uniqueAgentId")
       leaderMap(partition) = leader
       leader.start()
     }
 
-    val leaderInfo = leaderMap(partition).getLeader().getId
+    var leaderInfo = leaderMap(partition).getLeader().getId
+    while(leaderInfo == "") {
+      leaderInfo = leaderMap(partition).getLeader().getId
+      Thread.sleep(50)
+    }
     val parts = leaderInfo.split('#')
     val leaderAddress = parts.head
     val leaderId = Integer.parseInt(parts.tail.head)
@@ -133,6 +142,9 @@ class PeerAgent(curatorClient: CuratorFramework,
   }
 
   def isMasterOfPartition(partition: Int): Boolean = leaderMap.synchronized {
+    if(!usedPartitions.contains(partition))
+      return false
+
     if (!leaderMap.contains(partition)) {
       updatePartitionMasterInetAddress(partition)
     }
