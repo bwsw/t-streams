@@ -49,7 +49,7 @@ class BroadcastCommunicationClient(curatorClient: CuratorFramework, partitions: 
   def publish(msg: TransactionStateMessage, onComplete: () => Unit): Unit = {
     if (!isStopped.get) {
       val (set, broadcaster) = partitionSubscribers.get(msg.partition)
-      partitionSubscribers.put(msg.partition, (broadcaster.broadcast(set, msg), broadcaster))
+      broadcaster.broadcast(set, msg)
     }
     onComplete()
   }
@@ -59,10 +59,9 @@ class BroadcastCommunicationClient(curatorClient: CuratorFramework, partitions: 
     */
   private def updateSubscribers(partition: Int) = {
     if (!isStopped.get) {
-      val (_, broadcaster) = partitionSubscribers.get(partition)
+      val (oldset, broadcaster) = partitionSubscribers.get(partition)
       if(curatorClient.checkExists.forPath(s"/subscribers/${partition}") != null) {
-        val children = curatorClient.getChildren.forPath(s"/subscribers/${partition}").toSet
-        broadcaster.initConnections(children)
+        val children = curatorClient.getChildren.forPath(s"/subscribers/${partition}").toSet ++ oldset
         partitionSubscribers.put(partition, (children, broadcaster))
       }
     }
