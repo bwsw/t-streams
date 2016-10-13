@@ -65,6 +65,7 @@ class Producer[T](var name: String,
     .connectString(pcs.zkHosts).build()
 
   curatorClient.start()
+
   try {
     curatorClient.create().creatingParentContainersIfNeeded().forPath("/subscribers")
   } catch {

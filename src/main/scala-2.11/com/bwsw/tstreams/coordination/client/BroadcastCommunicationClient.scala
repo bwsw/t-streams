@@ -32,13 +32,13 @@ class BroadcastCommunicationClient(curatorClient: CuratorFramework, partitions: 
     * Initialize coordinator
     */
   def init(): Unit = {
+    isStopped.set(false)
     partitions.foreach { p => {
         partitionSubscribers.put(p, (Set[String]().empty, new CommunicationClient(10, 1, 0)))
         updateSubscribers(p)
       }
     }
     updateThread.start()
-    isStopped.set(false)
   }
 
   /**
@@ -58,12 +58,10 @@ class BroadcastCommunicationClient(curatorClient: CuratorFramework, partitions: 
     * Update subscribers on specific partition
     */
   private def updateSubscribers(partition: Int) = {
-    if (!isStopped.get) {
-      val (oldset, broadcaster) = partitionSubscribers.get(partition)
-      if(curatorClient.checkExists.forPath(s"/subscribers/${partition}") != null) {
-        val children = curatorClient.getChildren.forPath(s"/subscribers/${partition}").toSet ++ oldset
-        partitionSubscribers.put(partition, (children, broadcaster))
-      }
+    val (oldPeers, broadcaster) = partitionSubscribers.get(partition)
+    if(curatorClient.checkExists.forPath(s"/subscribers/${partition}") != null) {
+      val newPeers = curatorClient.getChildren.forPath(s"/subscribers/${partition}").toSet ++ oldPeers
+      partitionSubscribers.put(partition, (newPeers, broadcaster))
     }
   }
 
@@ -73,6 +71,8 @@ class BroadcastCommunicationClient(curatorClient: CuratorFramework, partitions: 
   def stop() = {
     if (isStopped.getAndSet(true))
       throw new IllegalStateException("Producer->Subscriber notifier was stopped second time.")
+
+    updateThread.join()
 
     partitions foreach { p => partitionSubscribers.get(p)._2.close() }
     partitionSubscribers.clear()
