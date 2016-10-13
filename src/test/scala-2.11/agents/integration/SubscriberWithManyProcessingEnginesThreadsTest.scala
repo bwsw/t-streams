@@ -49,7 +49,7 @@ class SubscriberWithManyProcessingEnginesThreadsTest extends FlatSpec with Match
       callback = new Callback[String] {
         override def onTransaction(op: TransactionOperator[String], transaction: ConsumerTransaction[String]): Unit = this.synchronized {
           transactionsCounter += 1
-          if (transactionsCounter % 100 == 0) {
+          if (transactionsCounter % 1000 == 0) {
             logger.info(s"I have read $transactionsCounter transactions up to now.")
             op.checkpoint()
           }
@@ -76,8 +76,8 @@ class SubscriberWithManyProcessingEnginesThreadsTest extends FlatSpec with Match
               val v = Random.nextInt()
               t.send(s"$v")
             })
-            if (i % 100 == 0)
-              logger.info(s"I have written $i transactions up to now.")
+            //if (i % 100 == 0)
+            //  logger.info(s"I have written $i transactions up to now.")
             t.checkpoint(false) // checkpoint the transaction
           })
         producer.stop() // stop operation
