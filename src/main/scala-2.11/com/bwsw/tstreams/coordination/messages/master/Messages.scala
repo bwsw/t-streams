@@ -1,8 +1,9 @@
 package com.bwsw.tstreams.coordination.messages.master
 
+import com.bwsw.tstreams.agents.producer
+import com.bwsw.tstreams.agents.producer.PeerAgent
 import com.bwsw.tstreams.common.ProtocolMessageSerializer
 import com.bwsw.tstreams.coordination.messages.state.{TransactionStateMessage, TransactionStatus}
-import com.bwsw.tstreams.coordination.producer.PeerAgent
 import io.netty.channel.Channel
 import org.slf4j.LoggerFactory
 
@@ -16,7 +17,7 @@ object IMessage {
 
 /**
   * Messages which used for providing
-  * interaction between [[com.bwsw.tstreams.coordination.producer.PeerAgent]]]
+  * interaction between [[producer.PeerAgent]]]
   */
 trait IMessage {
   var msgID: Long = Random.nextLong()
@@ -69,9 +70,9 @@ case class NewTransactionRequest(senderID: String, receiverID: String, partition
   override def handleP2PRequest(agent: PeerAgent) = {
     assert(receiverID == agent.getAgentAddress)
 
-    val master = agent.getAgentsStateManager.getPartitionMasterInetAddressLocal(partition, "")
+    val master = agent.isMasterOfPartition(partition)
 
-    if (master == agent.getAgentAddress) {
+    if (master) {
       val transactionID = agent.getProducer.getNewTransactionIDLocal()
       val response = TransactionResponse(receiverID, senderID, transactionID, partition)
       response.msgID = msgID
@@ -108,107 +109,6 @@ case class NewTransactionRequest(senderID: String, receiverID: String, partition
 case class TransactionResponse(senderID: String, receiverID: String, transactionID: Long, partition: Int) extends IMessage
 
 /**
-  * Message which is received when due to voting master must be revoked from current agent for certain partition
-  *
-  * @param senderID
-  * @param receiverID
-  * @param partition
-  */
-case class DeleteMasterRequest(senderID: String, receiverID: String, partition: Int) extends IMessage {
-  override def handleP2PRequest(agent: PeerAgent) = {
-    assert(receiverID == agent.getAgentAddress)
-
-    val master = agent.getAgentsStateManager.getPartitionMasterInetAddressLocal(partition, "")
-    val response = {
-      if (master == agent.getAgentAddress) {
-        agent.getAgentsStateManager().demoteMeAsMaster(partition)
-        DeleteMasterResponse(receiverID, senderID, partition)
-      } else
-        EmptyResponse(receiverID, senderID, partition)
-    }
-    response.msgID = msgID
-    this.respond(response)
-  }
-}
-
-/**
-  * Response message on master revocation from this agent for certain partition
-  *
-  * @param senderID
-  * @param receiverID
-  * @param partition
-  */
-case class DeleteMasterResponse(senderID: String, receiverID: String, partition: Int) extends IMessage
-
-/**
-  * Request message to assign master for certain partition at this agent
-  *
-  * @param senderID
-  * @param receiverID
-  * @param partition
-  */
-case class SetMasterRequest(senderID: String, receiverID: String, partition: Int) extends IMessage {
-  override def handleP2PRequest(agent: PeerAgent) = {
-    assert(receiverID == agent.getAgentAddress)
-
-    val master = agent.getAgentsStateManager.getPartitionMasterInetAddressLocal(partition, "")
-    val response = {
-      if (master == agent.getAgentAddress)
-        EmptyResponse(receiverID, senderID, partition)
-      else {
-        agent.getAgentsStateManager().assignMeAsMaster(partition)
-        SetMasterResponse(receiverID, senderID, partition)
-      }
-    }
-
-    response.msgID = msgID
-    this.respond(response)
-  }
-}
-
-/**
-  * response on master assignment
-  *
-  * @param senderID
-  * @param receiverID
-  * @param partition
-  */
-case class SetMasterResponse(senderID: String, receiverID: String, partition: Int) extends IMessage
-
-/**
-  * Ping/Pong request (keep alive)
-  *
-  * @param senderID
-  * @param receiverID
-  * @param partition
-  */
-case class PingRequest(senderID: String, receiverID: String, partition: Int) extends IMessage {
-  override def handleP2PRequest(agent: PeerAgent) = {
-
-    val masterOpt = agent.getAgentsStateManager.getCurrentMaster(partition)
-
-    val response = {
-      if (masterOpt.isDefined && masterOpt.get.agentAddress == agent.getAgentAddress)
-        PingResponse(receiverID, senderID, partition)
-      else
-        EmptyResponse(receiverID, senderID, partition)
-    }
-
-    response.msgID = msgID
-    this.respond(response)
-  }
-}
-
-/**
-  * Ping/Pong response (keep alive)
-  *
-  * @param senderID
-  * @param receiverID
-  * @param partition
-  */
-case class PingResponse(senderID: String, receiverID: String, partition: Int) extends IMessage
-
-/**
   * Request which is received when producer does publish operation through master and master proxies it to subscribers
   *
   * @param senderID
@@ -219,13 +119,10 @@ case class PublishRequest(senderID: String, receiverID: String, msg: Transaction
   override val partition: Int = msg.partition
 
   override def handleP2PRequest(agent: PeerAgent) = {
-    val master = agent.getAgentsStateManager.getPartitionMasterInetAddressLocal(partition, "")
-
-    if (master == agent.getAgentAddress) {
+    if (agent.isMasterOfPartition(partition)) {
       agent.submitPipelinedTaskToPublishExecutors(partition,
         () => agent.getProducer.subscriberNotifier.publish(msg, onComplete = () => {}))
     }
-
   }
 }
 

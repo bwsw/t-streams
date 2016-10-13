@@ -43,8 +43,7 @@ class ProducerUpdateTaskTest extends FlatSpec with Matchers with BeforeAndAfterA
     name = "test_producer",
     transactionGenerator = LocalGeneratorCreator.getGen(),
     converter = stringToArrayByteConverter,
-    partitions = Set(0, 1, 2),
-    isLowPriority = false)
+    partitions = Set(0, 1, 2))
 
 
   "BasicProducer.checkpoint with delay in update (test latch in update)" should "complete in ordered way" in {

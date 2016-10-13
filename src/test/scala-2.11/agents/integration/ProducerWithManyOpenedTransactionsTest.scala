@@ -24,8 +24,7 @@ class ProducerWithManyOpenedTransactionsTest extends FlatSpec with Matchers with
     name = "test_producer",
     transactionGenerator = LocalGeneratorCreator.getGen(),
     converter = stringToArrayByteConverter,
-    partitions = Set(0, 1, 2),
-    isLowPriority = false)
+    partitions = Set(0, 1, 2))
 
   val consumer = f.getConsumer[String](
     name = "test_consumer",

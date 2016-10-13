@@ -192,14 +192,12 @@ class Consumer[T](val name: String,
     * @return Last transaction
     */
   def getLastTransaction(partition: Int): Option[ConsumerTransaction[T]] = this.synchronized {
-
     if (!isStarted.get())
       throw new IllegalStateException(s"Consumer $name is not started. Start it first.")
 
     val transactionFrom = new java.lang.Long(options.transactionGenerator.getTransaction())
     val transactionsRecord = tsdb.searchBackward(new Integer(partition),
-      transactionFrom, options.transactionGenerator.getTransaction(System.currentTimeMillis() - stream.getTTL() * 1000)) (rec => rec.count > 0)
-
+      transactionFrom, currentOffsets(partition)) (rec => rec.count > 0)
     transactionsRecord
       .map(rec => new ConsumerTransaction[T](partition = partition, transactionID = rec.transactionID, count = rec.count, ttl = rec.ttl))
   }

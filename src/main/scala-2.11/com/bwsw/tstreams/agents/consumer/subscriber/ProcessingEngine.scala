@@ -68,7 +68,6 @@ class ProcessingEngine[T](consumer: TransactionOperator[T],
     * @param pollTimeMs
     */
   def handleQueue(pollTimeMs: Int) = {
-
     if (!isThresholdsSet.get()) {
       isThresholdsSet.set(true)
       executor.setThresholds(queueLengthThreshold = 10, taskFullDelayThresholdMs = pollTimeMs + 50,
@@ -115,23 +114,18 @@ class ProcessingEngine[T](consumer: TransactionOperator[T],
     */
   def enqueueLastTransactionFromDB(partition: Int): Unit = {
     assert(partitions.contains(partition))
-
     val transactionOpt = consumer.getLastTransaction(partition)
-
     if (transactionOpt.isEmpty)
       return
-
     // if current last transaction is newer than from db
     if (transactionOpt.get.getTransactionID() <= lastTransactionsMap(partition).transactionID)
       return
-
     val transactionStateList = List(TransactionState(transactionID = transactionOpt.get.getTransactionID(),
       partition = partition,
       masterSessionID = 0,
       queueOrderID = 0,
       itemCount = transactionOpt.get.getCount(), state = TransactionStatus.postCheckpoint,
       ttl = -1))
-
     if (Subscriber.logger.isDebugEnabled())
       Subscriber.logger.debug(s"Enqueued $transactionStateList")
 

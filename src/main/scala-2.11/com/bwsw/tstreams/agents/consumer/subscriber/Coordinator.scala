@@ -1,11 +1,10 @@
 package com.bwsw.tstreams.agents.consumer.subscriber
 
-import java.net.InetSocketAddress
-import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 
-import com.bwsw.tstreams.common.{LockUtil, ZookeeperDLMService}
-import org.apache.zookeeper.{CreateMode, KeeperException}
+import org.apache.curator.framework.{CuratorFramework, CuratorFrameworkFactory}
+import org.apache.curator.retry.ExponentialBackoffRetry
+import org.apache.zookeeper.CreateMode
 
 /**
   * Created by Ivan Kudryavtsev on 23.08.16.
@@ -14,7 +13,7 @@ class Coordinator() {
 
   var agentAddress: String = null
   var stream: String = null
-  var dlm: ZookeeperDLMService = null
+  var curatorClient: CuratorFramework = null
   var partitions: Set[Int] = null
 
 
@@ -24,7 +23,7 @@ class Coordinator() {
                 stream: String,
                 partitions: Set[Int],
                 zkRootPath: String,
-                zkHosts: Set[InetSocketAddress],
+                zkHosts: String,
                 zkSessionTimeout: Int,
                 zkConnectionTimeout: Int) = this.synchronized {
 
@@ -35,13 +34,18 @@ class Coordinator() {
     this.stream = stream
     this.partitions = partitions
 
-    dlm = new ZookeeperDLMService(zkRootPath, zkHosts.toList, zkSessionTimeout, zkConnectionTimeout)
+    val namespace = java.nio.file.Paths.get(zkRootPath, stream).toString.substring(1)
+    curatorClient = CuratorFrameworkFactory.builder()
+      .namespace(namespace)
+      .connectionTimeoutMs(zkConnectionTimeout * 1000)
+      .sessionTimeoutMs(zkSessionTimeout * 1000)
+      .retryPolicy(new ExponentialBackoffRetry(1000, 3))
+      .connectString(zkHosts).build()
+
+    curatorClient.start()
 
     initializeState()
   }
-
-  private def getLock() = dlm.getLock(ZookeeperDLMService.SUBSCRIBER_LOCK)
-  private def getLockTimeout() = (100, TimeUnit.SECONDS)
 
   /**
     * shuts down coordinator
@@ -50,10 +54,7 @@ class Coordinator() {
     if (!isInitialized.getAndSet(false))
       throw new IllegalStateException("Failed to stop object as it's already stopped.")
 
-    LockUtil.withZkLockOrDieDo(getLock(), getLockTimeout(), Some(ZookeeperDLMService.logger)) {
-      partitions foreach (p => dlm.delete(getSubscriberMembershipPath(p)))
-    }
-    dlm.close()
+    curatorClient.close()
   }
 
   /**
@@ -61,28 +62,8 @@ class Coordinator() {
     *
     */
   private def initializeState(): Unit = {
-    LockUtil.withZkLockOrDieDo(getLock(), getLockTimeout(), Some(ZookeeperDLMService.logger)) {
-      partitions foreach (p => {
-        try {
-          if (!dlm.exist(getSubscriberEventPath(p)))
-            dlm.create[String](getSubscriberEventPath(p), s"$stream/$p", CreateMode.PERSISTENT)
-        } catch {
-          case e: KeeperException =>
-          case e: IllegalStateException =>
-        }
-
-        try {
-          dlm.delete(getSubscriberMembershipPath(p))
-        } catch {
-          case e: KeeperException =>
-        }
-        dlm.create(getSubscriberMembershipPath(p), agentAddress, CreateMode.EPHEMERAL)
-      })
-    }
-    partitions foreach (p => dlm.notify(getSubscriberEventPath(p)))
+    partitions.foreach(p =>
+      curatorClient.create().creatingParentsIfNeeded().withMode(CreateMode.EPHEMERAL).forPath(s"/subscribers/$p/$agentAddress"))
   }
 
-  private def getSubscriberEventPath(p: Int) = s"/subscribers/event/$stream/$p"
-
-  private def getSubscriberMembershipPath(p: Int) = s"/subscribers/agents/$stream/$p/$agentAddress"
 }

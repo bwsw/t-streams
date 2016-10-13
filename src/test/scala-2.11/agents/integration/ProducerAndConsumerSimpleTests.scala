@@ -29,8 +29,7 @@ class ProducerAndConsumerSimpleTests extends FlatSpec with Matchers with BeforeA
     name = "test_producer",
     transactionGenerator = LocalGeneratorCreator.getGen(),
     converter = stringToArrayByteConverter,
-    partitions = Set(0),
-    isLowPriority = false)
+    partitions = Set(0))
 
   val consumer = f.getConsumer[String](
     name = "test_consumer",

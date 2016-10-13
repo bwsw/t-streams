@@ -37,20 +37,6 @@ class SubscriberWithTwoProducersFirstCancelSecondCheckpointTest extends FlatSpec
     val lp2 = new CountDownLatch(1)
     val ls = new CountDownLatch(1)
 
-    val producer1 = f.getProducer[String](
-      name = "test_producer1",
-      transactionGenerator = LocalGeneratorCreator.getGen(),
-      converter = stringToArrayByteConverter,
-      partitions = Set(0),
-      isLowPriority = false)
-
-    val producer2 = f.getProducer[String](
-      name = "test_producer2",
-      transactionGenerator = LocalGeneratorCreator.getGen(),
-      converter = stringToArrayByteConverter,
-      partitions = Set(0),
-      isLowPriority = false)
-
     val subscriber = f.getSubscriber[String](name = "ss+2",
       transactionGenerator = LocalGeneratorCreator.getGen(),
       converter = arrayByteToStringConverter,
@@ -63,6 +49,22 @@ class SubscriberWithTwoProducersFirstCancelSecondCheckpointTest extends FlatSpec
           ls.countDown()
         }
       })
+
+    subscriber.start()
+
+    val producer1 = f.getProducer[String](
+      name = "test_producer1",
+      transactionGenerator = LocalGeneratorCreator.getGen(),
+      converter = stringToArrayByteConverter,
+      partitions = Set(0))
+
+    val producer2 = f.getProducer[String](
+      name = "test_producer2",
+      transactionGenerator = LocalGeneratorCreator.getGen(),
+      converter = stringToArrayByteConverter,
+      partitions = Set(0))
+
+
 
     val t1 = new Thread(new Runnable {
       override def run(): Unit = {
@@ -84,7 +86,7 @@ class SubscriberWithTwoProducersFirstCancelSecondCheckpointTest extends FlatSpec
       }
     })
 
-    subscriber.start()
+    //subscriber.start()
 
     t1.start()
     t2.start()

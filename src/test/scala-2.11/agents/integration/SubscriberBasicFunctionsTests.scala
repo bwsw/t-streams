@@ -29,8 +29,7 @@ class SubscriberBasicFunctionsTests extends FlatSpec with Matchers with BeforeAn
     name = "test_producer",
     transactionGenerator = LocalGeneratorCreator.getGen(),
     converter = stringToArrayByteConverter,
-    partitions = Set(0, 1, 2),
-    isLowPriority = false)
+    partitions = Set(0, 1, 2))
 
   it should "start and stop with default options" in {
     val s = f.getSubscriber[String](name = "sv2",
@@ -106,7 +105,6 @@ class SubscriberBasicFunctionsTests extends FlatSpec with Matchers with BeforeAn
 
   it should "allow to be created with in memory queues" in {
     val f1 = f.copy()
-    f1.setProperty(TSF_Dictionary.Consumer.Subscriber.PERSISTENT_QUEUE_PATH, null)
     val s = f1.getSubscriber[String](name = "sv2_inram",
       transactionGenerator = LocalGeneratorCreator.getGen(),
       converter = arrayByteToStringConverter, partitions = Set(0, 1, 2),
