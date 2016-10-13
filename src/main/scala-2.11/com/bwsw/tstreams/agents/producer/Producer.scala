@@ -12,6 +12,7 @@ import com.bwsw.tstreams.metadata.{MetadataStorage, TransactionDatabase, Transac
 import com.bwsw.tstreams.streams.Stream
 import org.apache.curator.framework.CuratorFrameworkFactory
 import org.apache.curator.retry.ExponentialBackoffRetry
+import org.apache.zookeeper.KeeperException
 import org.slf4j.LoggerFactory
 
 import scala.util.control.Breaks._
@@ -64,8 +65,13 @@ class Producer[T](var name: String,
     .connectString(pcs.zkHosts).build()
 
   curatorClient.start()
-  curatorClient.create().creatingParentContainersIfNeeded().forPath("/subscribers")
-
+  try {
+    curatorClient.create().creatingParentContainersIfNeeded().forPath("/subscribers")
+  } catch {
+    case e: KeeperException =>
+      if(e.code() != KeeperException.Code.NODEEXISTS)
+        throw e
+  }
 
   // amount of threads which will handle partitions in masters, etc
   val threadPoolSize: Int = {

@@ -34,15 +34,15 @@ class Coordinator() {
     this.stream = stream
     this.partitions = partitions
 
+    val namespace = java.nio.file.Paths.get(zkRootPath, stream).toString.substring(1)
     curatorClient = CuratorFrameworkFactory.builder()
-      .namespace(java.nio.file.Paths.get(zkRootPath, stream).toString)
+      .namespace(namespace)
       .connectionTimeoutMs(zkConnectionTimeout * 1000)
       .sessionTimeoutMs(zkSessionTimeout * 1000)
       .retryPolicy(new ExponentialBackoffRetry(1000, 3))
       .connectString(zkHosts).build()
 
     curatorClient.start()
-    curatorClient.create().creatingParentContainersIfNeeded().forPath("subscribers")
 
     initializeState()
   }
@@ -62,10 +62,8 @@ class Coordinator() {
     *
     */
   private def initializeState(): Unit = {
-    curatorClient.create().creatingParentsIfNeeded().withMode(CreateMode.EPHEMERAL).forPath(agentAddress)
+    partitions.foreach(p =>
+      curatorClient.create().creatingParentsIfNeeded().withMode(CreateMode.EPHEMERAL).forPath(s"/subscribers/$p/$agentAddress"))
   }
 
-  private def getSubscriberEventPath(p: Int) = s"/subscribers/event/$stream/$p"
-
-  private def getSubscriberMembershipPath(p: Int) = s"/subscribers/agents/$stream/$p/$agentAddress"
 }
