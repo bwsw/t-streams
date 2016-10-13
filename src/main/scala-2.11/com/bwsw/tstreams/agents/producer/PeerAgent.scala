@@ -158,7 +158,7 @@ class PeerAgent(curatorClient: CuratorFramework,
     * @param partition Transaction partition
     * @return TransactionID
     */
-  def generateNewTransaction(partition: Int): Long = {
+  def generateNewTransaction(partition: Int): Long = this.synchronized {
     val master = getPartitionMasterInetAddressLocal(partition)._1
     if (PeerAgent.logger.isDebugEnabled) {
       PeerAgent.logger.debug(s"[GET TRANSACTION] Start retrieve transaction for agent with address: {$myInetAddress}, stream: {$streamName}, partition: {$partition} from [MASTER: {$master}].")

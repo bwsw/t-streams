@@ -60,11 +60,12 @@ class BroadcastCommunicationClient(curatorClient: CuratorFramework, partitions: 
   private def updateSubscribers(partition: Int) = {
     if (!isStopped.get) {
       val (_, broadcaster) = partitionSubscribers.get(partition)
-      val children = curatorClient.getChildren.forPath(s"subscribers/${partition}").toSet
-      broadcaster.initConnections(children)
-      partitionSubscribers.put(partition, (children, broadcaster))
+      if(curatorClient.checkExists.forPath(s"/subscribers/${partition}") != null) {
+        val children = curatorClient.getChildren.forPath(s"/subscribers/${partition}").toSet
+        broadcaster.initConnections(children)
+        partitionSubscribers.put(partition, (children, broadcaster))
+      }
     }
-
   }
 
   /**
