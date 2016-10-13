@@ -10,6 +10,7 @@ import com.bwsw.tstreams.coordination.messages.state.TransactionStateMessage
 import io.netty.channel.Channel
 import org.apache.curator.framework.CuratorFramework
 import org.apache.curator.framework.recipes.leader.LeaderLatch
+import org.apache.zookeeper.KeeperException
 import org.slf4j.LoggerFactory
 
 import scala.collection.mutable
@@ -112,8 +113,14 @@ class PeerAgent(curatorClient: CuratorFramework,
       return
 
     if(!leaderMap.contains(partition)) {
-      if(curatorClient.checkExists().forPath(s"/master-${partition}") == null)
+      try {
         curatorClient.create.forPath(s"/master-${partition}")
+      } catch {
+        case e: KeeperException =>
+          if(e.code() != KeeperException.Code.NODEEXISTS)
+            throw e
+      }
+
       val leader = new LeaderLatch(curatorClient, s"/master-${partition}", s"${transport.getInetAddress()}#$uniqueAgentId")
       leaderMap(partition) = leader
       leader.start()
