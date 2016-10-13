@@ -1,27 +1,15 @@
 package common
 
+import com.bwsw.tstreams.agents.producer.AgentConfiguration
 import com.bwsw.tstreams.common.ProtocolMessageSerializer
 import com.bwsw.tstreams.coordination.messages.master._
 import com.bwsw.tstreams.coordination.messages.state.{TransactionStateMessage, TransactionStatus}
-import com.bwsw.tstreams.coordination.producer.AgentConfiguration
 import org.scalatest.{FlatSpec, Matchers}
 import testutils.LocalGeneratorCreator
 
 
 class ProtocolMessageSerializerTest extends FlatSpec with Matchers {
 
-  "TStreams serializer" should "serialize and deserialize DeleteMasterRequest" in {
-    val clazz = DeleteMasterRequest("snd", "rcv", 0)
-    val string = ProtocolMessageSerializer.serialize(clazz)
-    val req = ProtocolMessageSerializer.deserialize[DeleteMasterRequest](string)
-    clazz shouldEqual req
-  }
-  "TStreams serializer" should "serialize and deserialize DeleteMasterResponse" in {
-    val clazz = DeleteMasterResponse("snd", "rcv", 0)
-    val string = ProtocolMessageSerializer.serialize(clazz)
-    val req = ProtocolMessageSerializer.deserialize[DeleteMasterResponse](string)
-    clazz shouldEqual req
-  }
   "TStreams serializer" should "serialize and deserialize EmptyRequest" in {
     val clazz = EmptyRequest("snd", "rcv", 0)
     val string = ProtocolMessageSerializer.serialize(clazz)
@@ -34,18 +22,7 @@ class ProtocolMessageSerializerTest extends FlatSpec with Matchers {
     val req = ProtocolMessageSerializer.deserialize[EmptyResponse](string)
     clazz shouldEqual req
   }
-  "TStreams serializer" should "serialize and deserialize PingRequest" in {
-    val clazz = PingRequest("snd", "rcv", 0)
-    val string = ProtocolMessageSerializer.serialize(clazz)
-    val req = ProtocolMessageSerializer.deserialize[PingRequest](string)
-    clazz shouldEqual req
-  }
-  "TStreams serializer" should "serialize and deserialize PingResponse" in {
-    val clazz = PingResponse("snd", "rcv", 0)
-    val string = ProtocolMessageSerializer.serialize(clazz)
-    val req = ProtocolMessageSerializer.deserialize[PingResponse](string)
-    clazz shouldEqual req
-  }
+
   "TStreams serializer" should "serialize and deserialize PublishRequest" in {
     val clazz = PublishRequest("snd", "rcv", TransactionStateMessage(LocalGeneratorCreator.getTransaction(), 228, TransactionStatus.cancel, 1488, 1, 0, 2))
     val string = ProtocolMessageSerializer.serialize(clazz)
@@ -58,18 +35,7 @@ class ProtocolMessageSerializerTest extends FlatSpec with Matchers {
     val req = ProtocolMessageSerializer.deserialize[PublishResponse](string)
     clazz shouldEqual req
   }
-  "TStreams serializer" should "serialize and deserialize SetMasterRequest" in {
-    val clazz = SetMasterRequest("snd", "rcv", -1)
-    val string = ProtocolMessageSerializer.serialize(clazz)
-    val req = ProtocolMessageSerializer.deserialize[SetMasterRequest](string)
-    clazz shouldEqual req
-  }
-  "TStreams serializer" should "serialize and deserialize SetMasterResponse" in {
-    val clazz = SetMasterResponse("snd", "rcv", -1)
-    val string = ProtocolMessageSerializer.serialize(clazz)
-    val req = ProtocolMessageSerializer.deserialize[SetMasterResponse](string)
-    clazz shouldEqual req
-  }
+
   "TStreams serializer" should "serialize and deserialize TransactionRequest" in {
     val clazz = NewTransactionRequest("snd", "rcv", -1)
     val string = ProtocolMessageSerializer.serialize(clazz)

@@ -30,8 +30,7 @@ class ProducerUsedByTwoThreadsSimultaneouslyTests extends FlatSpec with Matchers
     name = "test_producer",
     transactionGenerator = LocalGeneratorCreator.getGen(),
     converter = stringToArrayByteConverter,
-    partitions = (0 until ALL_PARTITIONS).toSet,
-    isLowPriority = false)
+    partitions = (0 until ALL_PARTITIONS).toSet)
 
   it should "work correctly if two different threads uses different partitions" in {
     val l = new CountDownLatch(2)

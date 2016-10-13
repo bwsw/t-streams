@@ -1,7 +1,5 @@
 package com.bwsw.tstreams.agents.producer
 
-import java.net.InetSocketAddress
-
 import com.bwsw.tstreams.common.AbstractPolicy
 import com.bwsw.tstreams.converter.IConverter
 import com.bwsw.tstreams.coordination.client.TcpTransport
@@ -53,21 +51,16 @@ class ProducerOptions[T](val transactionTTL: Int,
   * @param zkHosts                 Zk hosts to connect
   * @param zkRootPath              Zk root path for all metadata
   * @param zkSessionTimeout        Zk session timeout
-  * @param isLowPriorityToBeMaster Flag which indicate priority to became master on stream/partition
-  *                                of this agent
   * @param transport               Transport providing interaction between agents
   * @param threadPoolAmount        Thread pool amount which is used by
   *                                PeerAgent
   *                                by default (threads_amount == used_producer_partitions)
   */
-class CoordinationOptions(val zkHosts: List[InetSocketAddress],
+class CoordinationOptions(val zkHosts: String,
                           val zkRootPath: String,
                           val zkSessionTimeout: Int,
                           val zkConnectionTimeout: Int,
-                          val isLowPriorityToBeMaster: Boolean,
                           val transport: TcpTransport,
                           val threadPoolAmount: Int,
                           val threadPoolPublisherThreadsAmount: Int,
-                          val partitionRedistributionDelay: Int,
-                          val isMasterBootstrapModeFull: Boolean,
-                          val isMasterProcessVote: Boolean)
+                          val partitionRedistributionDelay: Int)

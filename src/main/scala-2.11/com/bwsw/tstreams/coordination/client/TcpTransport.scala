@@ -41,43 +41,8 @@ class TcpTransport(address: String, timeoutMs: Int, retryCount: Int = 3, retryDe
   private val server: RequestsTcpServer = new RequestsTcpServer(splits(0), splits(1).toInt, new ChannelHandler())
   private val client: CommunicationClient = new CommunicationClient(timeoutMs, retryCount, retryDelayMs)
 
-  /**
-    * Request to disable concrete master
-    *
-    * @param to
-    * @param partition
-    * @return DeleteMasterResponse or null
-    */
-  def deleteMasterRequest(to: String, partition: Int): IMessage = {
-    val response = client.sendAndWaitResponseSimple(DeleteMasterRequest(address, to, partition))
-    response
-  }
 
   def getTimeout() = timeoutMs
-
-  /**
-    * Request to figure out state of receiver
-    *
-    * @param to
-    * @param partition
-    * @return PingResponse or null
-    */
-  def pingRequest(to: String, partition: Int): IMessage = {
-    val response = client.sendAndWaitResponseSimple(PingRequest(address, to, partition))
-    response
-  }
-
-  /**
-    * Request to set concrete master
-    *
-    * @param to
-    * @param partition
-    * @return SetMasterResponse or null
-    */
-  def setMasterRequest(to: String, partition: Int): IMessage = {
-    val response: IMessage = client.sendAndWaitResponseSimple(SetMasterRequest(address, to, partition))
-    response
-  }
 
   /**
     * Request to get Transaction

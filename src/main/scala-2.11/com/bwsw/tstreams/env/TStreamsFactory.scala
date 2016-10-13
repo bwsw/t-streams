@@ -369,19 +369,6 @@ object TSF_Dictionary {
       */
     val TRANSPORT_RETRY_DELAY = "producer.transport-retry-delay"
 
-    /**
-      * Lazy bootstrap or not
-      */
-    val MASTER_BOOTSTRAP_MODE = "producer.master-bootstrap-mode"
-
-    object Consts {
-      val MASTER_BOOTSTRAP_MODE_FULL = "full"
-      val MASTER_BOOTSTRAP_MODE_LAZY = "lazy"
-      val MASTER_BOOTSTRAP_MODE_LAZY_VOTE = "lazy+vote"
-    }
-
-    //TODO: fix internals transport->master
-
 
     object Transaction {
       /**
@@ -632,8 +619,6 @@ class TStreamsFactory() {
   val Producer_thread_pool_publisher_threads_amount_max = 32
 
   propertyMap += (TSF_Dictionary.Producer.THREAD_POOL_PUBLISHER_TREADS_AMOUNT -> Producer_thread_pool_publisher_threads_amount_default)
-
-  propertyMap += (TSF_Dictionary.Producer.MASTER_BOOTSTRAP_MODE -> TSF_Dictionary.Producer.Consts.MASTER_BOOTSTRAP_MODE_FULL)
 
   // consumer scope
   val Consumer_transaction_preload_default = 10
@@ -967,8 +952,7 @@ class TStreamsFactory() {
   def getProducer[T](name: String,
                      transactionGenerator: ITransactionGenerator,
                      converter: IConverter[T, Array[Byte]],
-                     partitions: Set[Int],
-                     isLowPriority: Boolean = false
+                     partitions: Set[Int]
                     ): Producer[T] = this.synchronized {
 
     if (isClosed.get)
@@ -1010,36 +994,17 @@ class TStreamsFactory() {
       pAsInt(TSF_Dictionary.Producer.TRANSPORT_RETRY_COUNT, Producer_transport_retry_count_default),
       pAsInt(TSF_Dictionary.Producer.TRANSPORT_RETRY_DELAY, Producer_transport_retry_delay_default) * 1000)
 
-    val isMasterBootstrapModeFull =
-      if (pAsString(TSF_Dictionary.Producer.MASTER_BOOTSTRAP_MODE) == TSF_Dictionary.Producer.Consts.MASTER_BOOTSTRAP_MODE_FULL)
-        true
-      else
-        false
-
-    val isMasterProcessVote =
-      if (isMasterBootstrapModeFull)
-        true
-      else {
-        if (pAsString(TSF_Dictionary.Producer.MASTER_BOOTSTRAP_MODE) == TSF_Dictionary.Producer.Consts.MASTER_BOOTSTRAP_MODE_LAZY_VOTE)
-          true
-        else
-          false
-      }
-
-
 
     val cao = new CoordinationOptions(
-      zkHosts = NetworkUtil.getInetSocketAddressCompatibleHostList(pAsString(TSF_Dictionary.Coordination.ENDPOINTS)),
+      zkHosts = pAsString(TSF_Dictionary.Coordination.ENDPOINTS),
       zkRootPath = pAsString(TSF_Dictionary.Coordination.ROOT),
       zkSessionTimeout = pAsInt(TSF_Dictionary.Coordination.TTL, Coordination_ttl_default),
       zkConnectionTimeout = pAsInt(TSF_Dictionary.Coordination.CONNECTION_TIMEOUT, Coordination_connection_timeout_default),
-      isLowPriorityToBeMaster = isLowPriority,
       transport = transport,
       threadPoolAmount = pAsInt(TSF_Dictionary.Producer.THREAD_POOL, Producer_thread_pool_default),
       threadPoolPublisherThreadsAmount = pAsInt(TSF_Dictionary.Producer.THREAD_POOL_PUBLISHER_TREADS_AMOUNT, Producer_thread_pool_publisher_threads_amount_default),
-      partitionRedistributionDelay = pAsInt(TSF_Dictionary.Coordination.PARTITION_REDISTRIBUTION_DELAY, Coordination_partition_redistribution_delay_default),
-      isMasterBootstrapModeFull = isMasterBootstrapModeFull,
-      isMasterProcessVote = isMasterProcessVote)
+      partitionRedistributionDelay = pAsInt(TSF_Dictionary.Coordination.PARTITION_REDISTRIBUTION_DELAY, Coordination_partition_redistribution_delay_default)
+    )
 
 
     var writePolicy: AbstractPolicy = null
@@ -1179,7 +1144,7 @@ class TStreamsFactory() {
     val opts = com.bwsw.tstreams.agents.consumer.subscriber.SubscriberOptionsBuilder.fromConsumerOptions(consumerOptions,
       agentAddress = bind_host + ":" + bind_port,
       zkRootPath = root,
-      zkHosts = Set[InetSocketAddress]().empty ++ NetworkUtil.getInetSocketAddressCompatibleHostList(endpoints),
+      zkHosts = endpoints,
       zkSessionTimeout = ttl,
       zkConnectionTimeout = conn_timeout,
       transactionsBufferWorkersThreadPoolAmount = transaction_thread_pool,

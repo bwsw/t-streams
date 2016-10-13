@@ -35,8 +35,7 @@ class AsynchronousTransactionTests extends FlatSpec with Matchers
     name = "test_producer",
     transactionGenerator = LocalGeneratorCreator.getGen(),
     converter = stringToArrayByteConverter,
-    partitions = Set(0),
-    isLowPriority = false)
+    partitions = Set(0))
 
   "Fire async checkpoint by producer and wait when complete" should "consumer get transaction from DB" in {
     val l = new CountDownLatch(1)

@@ -23,13 +23,12 @@ class SubscriberWithManyProcessingEnginesThreadsTest extends FlatSpec with Match
   val TOTAL_ITEMS = 1
   val TOTAL_PARTITIONS = 10
   val PARTITIONS = (0 until TOTAL_PARTITIONS).toSet
-  val PROCESSING_ENGINES_THREAD_POOL = 10
-  val TRANSACTION_BUFFER_THREAD_POOL = 10
+  val PROCESSING_ENGINES_THREAD_POOL = 1
+  val TRANSACTION_BUFFER_THREAD_POOL = 1
 
   val POLLING_FREQUENCY_DELAY = 1000
 
   f.setProperty(TSF_Dictionary.Stream.NAME, "test_stream")
-    .setProperty(TSF_Dictionary.Consumer.Subscriber.PERSISTENT_QUEUE_PATH, null)
     .setProperty(TSF_Dictionary.Stream.NAME, "test-stream")
     .setProperty(TSF_Dictionary.Consumer.Subscriber.POLLING_FREQUENCY_DELAY, POLLING_FREQUENCY_DELAY)
     .setProperty(TSF_Dictionary.Consumer.Subscriber.PROCESSING_ENGINES_THREAD_POOL, PROCESSING_ENGINES_THREAD_POOL)
@@ -50,7 +49,7 @@ class SubscriberWithManyProcessingEnginesThreadsTest extends FlatSpec with Match
       callback = new Callback[String] {
         override def onTransaction(op: TransactionOperator[String], transaction: ConsumerTransaction[String]): Unit = this.synchronized {
           transactionsCounter += 1
-          if (transactionsCounter % 100 == 0) {
+          if (transactionsCounter % 1000 == 0) {
             logger.info(s"I have read $transactionsCounter transactions up to now.")
             op.checkpoint()
           }
@@ -68,8 +67,7 @@ class SubscriberWithManyProcessingEnginesThreadsTest extends FlatSpec with Match
           name = "test_producer", // name of the producer
           transactionGenerator = new LocalTransactionGenerator, // where it will get new transactions
           converter = new StringToArrayByteConverter, // converter from String to internal data presentation
-          partitions = PARTITIONS, // active partitions
-          isLowPriority = false) // agent can be a master
+          partitions = PARTITIONS) // agent can be a master
 
         (0 until TOTAL_TRANSACTIONS).foreach(
           i => {
@@ -78,8 +76,8 @@ class SubscriberWithManyProcessingEnginesThreadsTest extends FlatSpec with Match
               val v = Random.nextInt()
               t.send(s"$v")
             })
-            if (i % 100 == 0)
-              logger.info(s"I have written $i transactions up to now.")
+            //if (i % 100 == 0)
+            //  logger.info(s"I have written $i transactions up to now.")
             t.checkpoint(false) // checkpoint the transaction
           })
         producer.stop() // stop operation

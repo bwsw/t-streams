@@ -4,7 +4,7 @@ package agents.integration
   * Created by Ivan Kudryavtsev on 21.09.16.
   */
 
-import java.util.concurrent.{TimeUnit, CountDownLatch}
+import java.util.concurrent.{CountDownLatch, TimeUnit}
 
 import com.bwsw.tstreams.agents.consumer.Offset.Newest
 import com.bwsw.tstreams.agents.consumer.subscriber.Callback
@@ -52,13 +52,12 @@ class ProducerMasterChangeComplexTest  extends FlatSpec with Matchers with Befor
         name = "test_producer1",
         transactionGenerator = LocalGeneratorCreator.getGen(),
         converter = new StringToArrayByteConverter,
-        partitions = partitions,
-        isLowPriority = false)
+        partitions = partitions)
     }
   }
   val PRODUCERS_AMOUNT          = 10
-  val TRANSACTIONS_AMOUNT_EACH  = 100
-  val PROBABILITY               = 0.005 // 0.01=1%
+  val TRANSACTIONS_AMOUNT_EACH  = 1000
+  val PROBABILITY               = 0.01 // 0.01=1%
   val PARTITIONS_COUNT          = 10
   val PARTITIONS                = (0 until PARTITIONS_COUNT).toSet
   val MAX_WAIT_AFTER_ALL_PRODUCERS = 5

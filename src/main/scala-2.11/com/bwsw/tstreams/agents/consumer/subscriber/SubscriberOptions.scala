@@ -1,7 +1,5 @@
 package com.bwsw.tstreams.agents.consumer.subscriber
 
-import java.net.InetSocketAddress
-
 import com.bwsw.tstreams.agents.consumer
 import com.bwsw.tstreams.agents.consumer.Offset.IOffset
 import com.bwsw.tstreams.agents.consumer.subscriber.QueueBuilder.InMemory
@@ -39,7 +37,7 @@ case class SubscriberOptions[T](val transactionsPreload: Int,
                                 val useLastOffset: Boolean,
                                 val agentAddress: String,
                                 val zkRootPath: String,
-                                val zkHosts: Set[InetSocketAddress],
+                                val zkHosts: String,
                                 val zkSessionTimeout: Int,
                                 val zkConnectionTimeout: Int,
                                 val transactionBufferWorkersThreadPoolAmount: Int = 1,

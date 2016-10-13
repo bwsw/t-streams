@@ -34,8 +34,7 @@ class ProducerTest extends FlatSpec with Matchers with BeforeAndAfterAll with Te
     name = "test_producer",
     transactionGenerator = LocalGeneratorCreator.getGen(),
     converter = stringToArrayByteConverter,
-    partitions = (0 until ALL_PARTITIONS).toSet,
-    isLowPriority = false)
+    partitions = (0 until ALL_PARTITIONS).toSet)
 
   "Producer.isMeAMasterOfPartition" should "return true" in {
     (0 until ALL_PARTITIONS).foreach(p => producer.isMasterOfPartition(p) shouldBe true)

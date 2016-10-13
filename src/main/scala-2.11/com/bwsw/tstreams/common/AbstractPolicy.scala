@@ -64,7 +64,7 @@ abstract class AbstractPolicy(stream: Stream[_], usedPartitions: Set[Int]) {
     *
     * @return Used partitions
     */
-  def getUsedPartitions(): List[Int] = this.synchronized {
-    usedPartitionsList
+  def getUsedPartitions(): Set[Int] = this.synchronized {
+    usedPartitionsList.toSet
   }
 }

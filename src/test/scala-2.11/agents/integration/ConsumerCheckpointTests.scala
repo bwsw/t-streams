@@ -29,8 +29,7 @@ class ConsumerCheckpointTests extends FlatSpec with Matchers with BeforeAndAfter
       name = "test_producer",
       transactionGenerator = LocalGeneratorCreator.getGen(),
       converter = stringToArrayByteConverter,
-      partitions = Set(0),
-      isLowPriority = false)
+      partitions = Set(0))
 
     val c1 = f.getConsumer[String](
       name = CONSUMER_NAME,

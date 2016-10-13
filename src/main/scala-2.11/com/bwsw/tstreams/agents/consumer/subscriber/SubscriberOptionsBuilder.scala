@@ -1,7 +1,5 @@
 package com.bwsw.tstreams.agents.consumer.subscriber
 
-import java.net.InetSocketAddress
-
 import com.bwsw.tstreams.agents.consumer
 import com.bwsw.tstreams.agents.consumer.subscriber.QueueBuilder.InMemory
 
@@ -9,7 +7,7 @@ object SubscriberOptionsBuilder {
   def fromConsumerOptions[T](consumerOpts: consumer.ConsumerOptions[T],
                              agentAddress: String,
                              zkRootPath: String,
-                             zkHosts: Set[InetSocketAddress],
+                             zkHosts: String,
                              zkSessionTimeout: Int,
                              zkConnectionTimeout: Int,
                              transactionsBufferWorkersThreadPoolAmount: Int = 1,

@@ -95,8 +95,12 @@ class CommunicationClient(timeoutMs: Int, retryCount: Int = 3, retryDelayMs: Int
         val sock = getSocket(msg.receiverID)
         val reqString = ProtocolMessageSerializer.wrapMsg(ProtocolMessageSerializer.serialize(msg))
         val r = writeMsgAndWaitResponse(sock, reqString)
-        if (r != null && msg.msgID != r.msgID)
+        if (r != null && msg.msgID != r.msgID) {
+          CommunicationClient.logger.error("Request: " + msg.toString())
+          CommunicationClient.logger.error("Response: " + r.toString())
           throw new IllegalStateException(s"Sent message with ID ${msg.msgID}, received ${r.msgID}. ID must be the same.")
+
+        }
         r
       } catch {
         case e@(_: ConnectException | _: IOException) =>
@@ -149,40 +153,23 @@ class CommunicationClient(timeoutMs: Int, retryCount: Int = 3, retryDelayMs: Int
   }
 
   /**
-    *
-    * @param peers
-    */
-  def initConnections(peers: Set[String]) = {
-    peers.foreach(peer =>
-      try {
-        peerMap get peer foreach (s => closeSocketAndCleanPeerMap(s))
-        val s = getSocket(peer)
-      } catch {
-        case e@(_: ConnectException | _: IOException) =>
-          CommunicationClient.logger.warn(s"An exception occurred when opening connection to peer $peer: ${e.getMessage}")
-      })
-  }
-
-  /**
     * Send broadcast message to several recipients
     *
     * @param peers
     * @param msg
     * @return Set of not  peers (to exclude failed from further send-outs until next update)
     */
-  def broadcast(peers: Set[String], msg: TransactionStateMessage): Set[String] = {
+  def broadcast(peers: Set[String], msg: TransactionStateMessage): Unit = {
     val req = ProtocolMessageSerializer
       .wrapMsg(ProtocolMessageSerializer
         .serialize(msg))
 
-    peers.filter(peer =>
+    peers.foreach(peer =>
       try {
-        val r = writeMsgAndNoWaitResponse(getSocket(peer), req)
-        r
+        writeMsgAndNoWaitResponse(getSocket(peer), req)
       } catch {
         case e@(_: ConnectException | _: IOException) =>
           CommunicationClient.logger.warn(s"An exception occurred when opening connection to peer $peer: ${e.getMessage}")
-          false // failed
       })
   }
 
@@ -224,10 +211,11 @@ class CommunicationClient(timeoutMs: Int, retryCount: Int = 3, retryDelayMs: Int
     catch {
       case e@(_: ConnectException | _: IOException) =>
         CommunicationClient.logger.warn(s"An exception occurred when sending request to peer ${sock.getInetAddress.toString}: ${e.getMessage}")
+        closeSocketAndCleanPeerMap(sock)
         return null.asInstanceOf[IMessage]
     }
     //wait response with timeout
-    var answer = {
+    val answer = {
       try {
         if (CommunicationClient.logger.isDebugEnabled)
           CommunicationClient.logger.debug(s"To receive response message on $reqString sent to peer ${sock.getInetAddress.toString}:${sock.getPort}.")
@@ -248,10 +236,10 @@ class CommunicationClient(timeoutMs: Int, retryCount: Int = 3, retryDelayMs: Int
           null.asInstanceOf[IMessage]
       }
     }
-    if (answer == null) {
-      answer = null
+
+    if (answer == null)
       closeSocketAndCleanPeerMap(sock)
-    }
+
     answer
   }
 
