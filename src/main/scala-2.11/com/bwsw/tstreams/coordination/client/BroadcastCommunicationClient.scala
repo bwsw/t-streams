@@ -32,7 +32,11 @@ class BroadcastCommunicationClient(curatorClient: CuratorFramework, partitions: 
     * Initialize coordinator
     */
   def init(): Unit = {
-    partitions.foreach(p => updateSubscribers(p))
+    partitions.foreach { p => {
+        partitionSubscribers.put(p, (Set[String]().empty, new CommunicationClient(10, 1, 0)))
+        updateSubscribers(p)
+      }
+    }
     updateThread.start()
     isStopped.set(false)
   }
