@@ -13,6 +13,7 @@ import org.apache.curator.framework.recipes.leader.LeaderLatch
 import org.apache.zookeeper.KeeperException
 import org.slf4j.LoggerFactory
 
+import scala.annotation.tailrec
 import scala.collection.mutable
 import scala.util.Random
 
@@ -107,8 +108,18 @@ class PeerAgent(curatorClient: CuratorFramework,
   // fill initial sequential counters
   usedPartitions foreach { p => sequentialIds += (p -> new AtomicLong(0)) }
 
+  @tailrec
+  private def getLeaderId(partition: Int): String = {
+    try {
+      leaderMap(partition).getLeader().getId
+    } catch {
+      case e: KeeperException =>
+        Thread.sleep(50)
+        getLeaderId(partition)
+    }
+  }
 
-  def updatePartitionMasterInetAddress(partition: Int): Unit = leaderMap.synchronized {
+  private def updatePartitionMasterInetAddress(partition: Int): Unit = leaderMap.synchronized {
     if(!usedPartitions.contains(partition))
       return
 
@@ -126,9 +137,9 @@ class PeerAgent(curatorClient: CuratorFramework,
       leader.start()
     }
 
-    var leaderInfo = leaderMap(partition).getLeader().getId
+    var leaderInfo = getLeaderId(partition)
     while(leaderInfo == "") {
-      leaderInfo = leaderMap(partition).getLeader().getId
+      leaderInfo = getLeaderId(partition)
       Thread.sleep(50)
     }
     val parts = leaderInfo.split('#')
