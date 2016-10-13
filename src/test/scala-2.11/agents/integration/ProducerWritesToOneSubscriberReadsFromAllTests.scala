@@ -2,7 +2,7 @@ package agents.integration
 
 import java.util.concurrent.{CountDownLatch, TimeUnit}
 
-import com.bwsw.tstreams.agents.consumer.Offset.Oldest
+import com.bwsw.tstreams.agents.consumer.Offset.Newest
 import com.bwsw.tstreams.agents.consumer.subscriber.Callback
 import com.bwsw.tstreams.agents.consumer.{ConsumerTransaction, TransactionOperator}
 import com.bwsw.tstreams.agents.producer.NewTransactionProducerPolicy
@@ -40,7 +40,7 @@ class ProducerWritesToOneSubscriberReadsFromAllTests extends FlatSpec with Match
       transactionGenerator = LocalGeneratorCreator.getGen(),
       converter = arrayByteToStringConverter,
       partitions = Set(0, 1, 2),
-      offset = Oldest,
+      offset = Newest,
       isUseLastOffset = true,
       callback = new Callback[String] {
         override def onTransaction(consumer: TransactionOperator[String], transaction: ConsumerTransaction[String]): Unit = this.synchronized {
@@ -53,7 +53,7 @@ class ProducerWritesToOneSubscriberReadsFromAllTests extends FlatSpec with Match
     for (it <- 0 until TOTAL) {
       val transaction = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
       transaction.send("test")
-      transaction.checkpoint(false)
+      transaction.checkpoint()
     }
     producer.stop()
     l.await(1000, TimeUnit.MILLISECONDS)
