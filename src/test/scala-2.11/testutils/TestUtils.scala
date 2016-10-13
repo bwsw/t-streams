@@ -72,7 +72,6 @@ trait TestUtils {
     .setProperty(TSF_Dictionary.Data.Cluster.NAMESPACE, "test")
     .setProperty(TSF_Dictionary.Coordination.ROOT, coordinationRoot)
     .setProperty(TSF_Dictionary.Coordination.ENDPOINTS, s"localhost:$zookeeperPort")
-    .setProperty(TSF_Dictionary.Consumer.Subscriber.PERSISTENT_QUEUE_PATH, null)
     .setProperty(TSF_Dictionary.Stream.NAME, "test-stream")
     .setProperty(TSF_Dictionary.Data.Cluster.DRIVER, TSF_Dictionary.Data.Cluster.Consts.DATA_DRIVER_HAZELCAST)
 
@@ -98,7 +97,7 @@ trait TestUtils {
     .connectionTimeoutMs(7000)
     .sessionTimeoutMs(7000)
     .retryPolicy(new ExponentialBackoffRetry(1000, 3))
-    .connectString("127.0.0.1").build()
+    .connectString(s"127.0.0.1:$zookeeperPort").build()
   curatorClient.start()
 
   removeZkMetadata(f.getProperty(TSF_Dictionary.Coordination.ROOT).toString)

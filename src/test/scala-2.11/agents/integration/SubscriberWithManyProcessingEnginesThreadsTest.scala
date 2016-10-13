@@ -29,7 +29,6 @@ class SubscriberWithManyProcessingEnginesThreadsTest extends FlatSpec with Match
   val POLLING_FREQUENCY_DELAY = 1000
 
   f.setProperty(TSF_Dictionary.Stream.NAME, "test_stream")
-    .setProperty(TSF_Dictionary.Consumer.Subscriber.PERSISTENT_QUEUE_PATH, null)
     .setProperty(TSF_Dictionary.Stream.NAME, "test-stream")
     .setProperty(TSF_Dictionary.Consumer.Subscriber.POLLING_FREQUENCY_DELAY, POLLING_FREQUENCY_DELAY)
     .setProperty(TSF_Dictionary.Consumer.Subscriber.PROCESSING_ENGINES_THREAD_POOL, PROCESSING_ENGINES_THREAD_POOL)
