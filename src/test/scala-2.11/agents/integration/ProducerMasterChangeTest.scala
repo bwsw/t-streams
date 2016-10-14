@@ -100,6 +100,8 @@ class ProducerMasterChangeTest extends FlatSpec with Matchers with BeforeAndAfte
     producer2.stop()
     s.stop()
     bs.size shouldBe 1100
+
+    bp.toSet.intersect(bs.toSet).size shouldBe 1100
   }
 
   override def afterAll() {
