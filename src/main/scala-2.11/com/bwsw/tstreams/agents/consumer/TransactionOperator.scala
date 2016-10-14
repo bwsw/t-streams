@@ -24,4 +24,6 @@ trait TransactionOperator[T] {
   def getPartitions(): Set[Int]
 
   def getCurrentOffset(partition: Int): Long
+
+  def getProposedTransactionId(): Long
 }

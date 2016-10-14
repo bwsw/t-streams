@@ -336,4 +336,6 @@ class Consumer[T](val name: String,
       result.append(new ConsumerTransaction[T](partition = partition, transactionID = rec.transactionID, count = rec.count, ttl = rec.ttl)))
     result
   }
+
+  override def getProposedTransactionId(): Long = options.transactionGenerator.getTransaction()
 }
