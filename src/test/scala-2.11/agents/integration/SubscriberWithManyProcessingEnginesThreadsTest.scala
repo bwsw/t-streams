@@ -19,14 +19,14 @@ import scala.util.Random
   */
 class SubscriberWithManyProcessingEnginesThreadsTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
 
-  val TOTAL_TRANSACTIONS = 1000
+  val TOTAL_TRANSACTIONS = 100000
   val TOTAL_ITEMS = 1
-  val TOTAL_PARTITIONS = 10
+  val TOTAL_PARTITIONS = 100
   val PARTITIONS = (0 until TOTAL_PARTITIONS).toSet
-  val PROCESSING_ENGINES_THREAD_POOL = 1
-  val TRANSACTION_BUFFER_THREAD_POOL = 1
+  val PROCESSING_ENGINES_THREAD_POOL = 10
+  val TRANSACTION_BUFFER_THREAD_POOL = 10
 
-  val POLLING_FREQUENCY_DELAY = 1000
+  val POLLING_FREQUENCY_DELAY = 10000
 
   f.setProperty(TSF_Dictionary.Stream.NAME, "test_stream")
     .setProperty(TSF_Dictionary.Stream.NAME, "test-stream")
