@@ -54,4 +54,19 @@ class ResourceCountingMapTests extends FlatSpec with Matchers {
     rcm.forceRelease(0)
     removeCtr.get shouldBe 1
   }
+
+  it should "Correctly handle double placement (by name)" in {
+    val removeCtr = new AtomicInteger(0)
+    val addCtr = new AtomicInteger(0)
+    val rcm = new ResourceCountingMap[Int, String, Unit]((a: String) => removeCtr.incrementAndGet())
+    rcm.place(0, {
+      addCtr.incrementAndGet()
+      "test"})
+
+    rcm.place(0, {
+      addCtr.incrementAndGet()
+      "test"})
+
+    addCtr.get shouldBe 1
+  }
 }
