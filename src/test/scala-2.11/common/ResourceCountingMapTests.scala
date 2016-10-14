@@ -70,4 +70,9 @@ class ResourceCountingMapTests extends FlatSpec with Matchers {
 
     addCtr.get shouldBe 1
   }
+
+  it should "Correctly handle absent keys" in {
+    val rcm = new ResourceCountingMap[Int, String, Unit]((a: String) => Unit)
+    rcm.acquire(0).isEmpty shouldBe true
+  }
 }

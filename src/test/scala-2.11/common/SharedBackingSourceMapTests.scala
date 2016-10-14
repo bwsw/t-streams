@@ -14,9 +14,9 @@ class SharedBackingSourceMapTests extends FlatSpec with Matchers  {
     val rcm = new ResourceCountingMap[Int, AtomicInteger, Unit]((a: AtomicInteger) => removeCtr.incrementAndGet())
     val sbrm = new ResourceSharedBackingSourceMap[Int, AtomicInteger, Unit](rcm)
 
-    sbrm.put(0, new AtomicInteger(1))
+    sbrm.putIfNotExists(0, new AtomicInteger(1))
 
-    sbrm.put(0, new AtomicInteger(2))
+    sbrm.putIfNotExists(0, new AtomicInteger(2))
 
     val v = sbrm.get(0)
 
@@ -33,4 +33,16 @@ class SharedBackingSourceMapTests extends FlatSpec with Matchers  {
     removeCtr.get shouldBe 2
 
   }
+
+  it should "handle forceRemove properly" in {
+    val removeCtr = new AtomicInteger(0)
+    val rcm = new ResourceCountingMap[Int, AtomicInteger, Unit]((a: AtomicInteger) => removeCtr.incrementAndGet())
+    val sbrm1 = new ResourceSharedBackingSourceMap[Int, AtomicInteger, Unit](rcm)
+    val sbrm2 = new ResourceSharedBackingSourceMap[Int, AtomicInteger, Unit](rcm)
+
+    sbrm1.putIfNotExists(0, new AtomicInteger(1)) shouldBe true
+    sbrm2.putIfNotExists(0, new AtomicInteger(1)) shouldBe false
+
+  }
+
 }

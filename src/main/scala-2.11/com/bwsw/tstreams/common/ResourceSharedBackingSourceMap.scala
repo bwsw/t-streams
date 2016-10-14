@@ -9,14 +9,24 @@ class ResourceSharedBackingSourceMap[K, V, T](resourceMap: ResourceCountingMap[K
   private val map = mutable.Map[K, V]()
 
   def get(key: K): Option[V] = map.synchronized {
+    val valueOpt = map.get(key)
+    if(valueOpt.isEmpty) {
+      val valueOpt = resourceMap.acquire(key)
+      valueOpt.foreach(v => map.put(key, valueOpt.get))
+    }
     map.get(key)
   }
 
-  def put(key: K, value: V): Unit = map.synchronized {
+  def putIfNotExists(key: K, value: => V): Boolean = map.synchronized {
     remove(key)
-    val res = value
-    resourceMap.place(key, res)
-    map.put(key, resourceMap.acquire(key).get)
+    val resourceMapValueOpt = resourceMap.acquire(key)
+    resourceMap.release(key)
+    if(resourceMapValueOpt.isEmpty) {
+      resourceMap.place(key, value)
+      map.put(key, resourceMap.acquire(key).get)
+      true
+    } else
+      false
   }
 
   def remove(key: K) = map.synchronized {
