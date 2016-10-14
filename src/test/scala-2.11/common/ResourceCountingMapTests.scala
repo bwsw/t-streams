@@ -60,11 +60,12 @@ class ResourceCountingMapTests extends FlatSpec with Matchers {
     val addCtr = new AtomicInteger(0)
     val rcm = new ResourceCountingMap[Int, String, Unit]((a: String) => removeCtr.incrementAndGet())
     rcm.place(0, {
-      addCtr.incrementAndGet()
+      addCtr.addAndGet(1)
       "test"})
 
+    // lazy evaluation must be here... Check it.
     rcm.place(0, {
-      addCtr.incrementAndGet()
+      addCtr.addAndGet(2)
       "test"})
 
     addCtr.get shouldBe 1

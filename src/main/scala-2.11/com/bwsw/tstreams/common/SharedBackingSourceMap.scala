@@ -12,15 +12,11 @@ class ResourceSharedBackingSourceMap[K, V, T](resourceMap: ResourceCountingMap[K
     map.get(key)
   }
 
-  def put(key: K, value: => V): Unit = map.synchronized {
-    val valueOpt = resourceMap.acquire(key)
-    if(valueOpt.isDefined) {
-      map.put(key, valueOpt.get)
-    } else {
-      val res = value
-      resourceMap.place(key, res)
-      put(key, res)
-    }
+  def put(key: K, value: V): Unit = map.synchronized {
+    remove(key)
+    val res = value
+    resourceMap.place(key, res)
+    map.put(key, resourceMap.acquire(key).get)
   }
 
   def remove(key: K) = map.synchronized {
