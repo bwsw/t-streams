@@ -15,9 +15,10 @@ import scala.collection.JavaConversions._
   */
 class BroadcastCommunicationClient(curatorClient: CuratorFramework, partitions: Set[Int]) {
 
-  val isStopped = new AtomicBoolean(true)
+  private val isStopped = new AtomicBoolean(true)
+  private val communicationClient = new CommunicationClient(10, 1, 0)
 
-  private val partitionSubscribers = new java.util.concurrent.ConcurrentHashMap[Int, (Set[String], CommunicationClient)]()
+  private val partitionSubscribers = new java.util.concurrent.ConcurrentHashMap[Int, Set[String]]()
 
   private val updateThread = new Thread(new Runnable {
     override def run(): Unit = {
@@ -34,7 +35,7 @@ class BroadcastCommunicationClient(curatorClient: CuratorFramework, partitions: 
   def init(): Unit = {
     isStopped.set(false)
     partitions.foreach { p => {
-        partitionSubscribers.put(p, (Set[String]().empty, new CommunicationClient(10, 1, 0)))
+        partitionSubscribers.put(p, Set[String]().empty)
         updateSubscribers(p)
       }
     }
@@ -48,8 +49,8 @@ class BroadcastCommunicationClient(curatorClient: CuratorFramework, partitions: 
     */
   def publish(msg: TransactionStateMessage, onComplete: () => Unit): Unit = {
     if (!isStopped.get) {
-      val (set, broadcaster) = partitionSubscribers.get(msg.partition)
-      broadcaster.broadcast(set, msg)
+      val set = partitionSubscribers.get(msg.partition)
+      communicationClient.broadcast(set, msg)
     }
     onComplete()
   }
@@ -58,10 +59,10 @@ class BroadcastCommunicationClient(curatorClient: CuratorFramework, partitions: 
     * Update subscribers on specific partition
     */
   private def updateSubscribers(partition: Int) = {
-    val (oldPeers, broadcaster) = partitionSubscribers.get(partition)
+    val oldPeers = partitionSubscribers.get(partition)
     if(curatorClient.checkExists.forPath(s"/subscribers/${partition}") != null) {
       val newPeers = curatorClient.getChildren.forPath(s"/subscribers/${partition}").toSet ++ oldPeers
-      partitionSubscribers.put(partition, (newPeers, broadcaster))
+      partitionSubscribers.put(partition, newPeers)
     }
   }
 
@@ -71,10 +72,8 @@ class BroadcastCommunicationClient(curatorClient: CuratorFramework, partitions: 
   def stop() = {
     if (isStopped.getAndSet(true))
       throw new IllegalStateException("Producer->Subscriber notifier was stopped second time.")
-
     updateThread.join()
-
-    partitions foreach { p => partitionSubscribers.get(p)._2.close() }
+    communicationClient.close()
     partitionSubscribers.clear()
   }
 }

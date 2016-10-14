@@ -1,6 +1,6 @@
 name := "t-streams"
 
-val tstreamsVersion = "1.0.4-SNAPSHOT"
+val tstreamsVersion = "1.1.0-SNAPSHOT"
 
 version := tstreamsVersion
 organization := "com.bwsw"

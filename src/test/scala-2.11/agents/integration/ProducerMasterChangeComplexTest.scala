@@ -15,9 +15,13 @@ import com.bwsw.tstreams.env.{TSF_Dictionary, TStreamsFactory}
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import testutils.{LocalGeneratorCreator, TestUtils}
 
+import scala.collection.mutable.ListBuffer
 import scala.util.Random
 
 class ProducerMasterChangeComplexTest  extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
+
+  val producerBuffer = ListBuffer[Long]()
+  val subscriberBuffer = ListBuffer[Long]()
 
   class ProducerWorker(val factory: TStreamsFactory, val onCompleteLatch: CountDownLatch, val amount: Int, val probability: Double) {
     var producer: Producer[String] = null
@@ -31,6 +35,9 @@ class ProducerMasterChangeComplexTest  extends FlatSpec with Matchers with Befor
           val t = producer.newTransaction(policy = NewTransactionProducerPolicy.CheckpointIfOpened)
           t.send("test")
           t.checkpoint(checkpointModeSync)
+          producerBuffer.synchronized {
+            producerBuffer.append(t.getTransactionID())
+          }
           counter += 1
         }
         producer.stop()
@@ -56,7 +63,7 @@ class ProducerMasterChangeComplexTest  extends FlatSpec with Matchers with Befor
     }
   }
   val PRODUCERS_AMOUNT          = 10
-  val TRANSACTIONS_AMOUNT_EACH  = 1000
+  val TRANSACTIONS_AMOUNT_EACH  = 100
   val PROBABILITY               = 0.01 // 0.01=1%
   val PARTITIONS_COUNT          = 10
   val PARTITIONS                = (0 until PARTITIONS_COUNT).toSet
@@ -86,6 +93,9 @@ class ProducerMasterChangeComplexTest  extends FlatSpec with Matchers with Befor
     callback = new Callback[String] {
       override def onTransaction(consumer: TransactionOperator[String], transaction: ConsumerTransaction[String]): Unit = this.synchronized {
         subscriberCounter += 1
+        subscriberBuffer.synchronized {
+          subscriberBuffer.append(transaction.getTransactionID())
+        }
         if(subscriberCounter == PRODUCERS_AMOUNT * TRANSACTIONS_AMOUNT_EACH)
           waitCompleteLatch.countDown()
       }
@@ -104,6 +114,12 @@ class ProducerMasterChangeComplexTest  extends FlatSpec with Matchers with Befor
     subscriber.stop()
 
     subscriberCounter shouldBe TRANSACTIONS_AMOUNT_EACH * PRODUCERS_AMOUNT
+
+    val intersectionSize = producerBuffer.toSet.intersect(subscriberBuffer.toSet).size
+
+    intersectionSize shouldBe producerBuffer.size
+    intersectionSize shouldBe subscriberBuffer.size
+
   }
 
   override def afterAll() {
