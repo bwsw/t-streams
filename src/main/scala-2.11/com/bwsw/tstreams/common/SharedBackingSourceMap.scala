@@ -30,6 +30,13 @@ class ResourceSharedBackingSourceMap[K, V, T](resourceMap: ResourceCountingMap[K
     })
   }
 
+  def forceRemove(key: K) = map.synchronized {
+    map.get(key).foreach(_ => {
+      map.remove(key)
+      resourceMap.forceRelease(key)
+    })
+  }
+
   def clear() = map.synchronized {
     map.keys.foreach(key => remove(key))
   }

@@ -18,15 +18,25 @@ class ResourceCountingMap[K, V, T](deleteCallback: (V) => T) {
 
   def release(key: K) = map.synchronized {
     val valueOpt = map.get(key)
-    valueOpt.foreach(valueEntry => {
-      if(valueEntry._1.decrementAndGet() == 0)
+    valueOpt.foreach(valueEntry =>
+      if(valueEntry._1.decrementAndGet() == 0) {
         deleteCallback(valueEntry._2)
+        map.remove(key)
+      })
+  }
+
+  def forceRelease(key: K) = map.synchronized {
+    val valueOpt = map.get(key)
+    valueOpt.foreach(valueEntry => {
+      deleteCallback(valueEntry._2)
       map.remove(key)
     })
   }
 
-  def place(key: K, value: V) = map.synchronized {
-    map(key) = (new AtomicInteger(0), value)
+  def place(key: K, value: => V) = map.synchronized {
+    val valueOpt = map.get(key)
+    if(valueOpt.isEmpty)
+      map(key) = (new AtomicInteger(0), value)
   }
 
 }

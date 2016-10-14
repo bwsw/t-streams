@@ -10,7 +10,7 @@ import org.scalatest.{FlatSpec, Matchers}
   */
 class ResourceCountingMapTests extends FlatSpec with Matchers {
 
-  it should "Do placement" in {
+  it should "Do placement and removal if once" in {
     val removeCtr = new AtomicInteger(0)
     val rcm = new ResourceCountingMap[Int, String, Unit]((a: String) => removeCtr.incrementAndGet())
     rcm.place(0, "test")
@@ -18,6 +18,40 @@ class ResourceCountingMapTests extends FlatSpec with Matchers {
     v.nonEmpty shouldBe true
     v.get shouldBe "test"
     rcm.release(0)
+    removeCtr.get shouldBe 1
+  }
+
+  it should "Do placement and proper removal if twice" in {
+    val removeCtr = new AtomicInteger(0)
+    val rcm = new ResourceCountingMap[Int, String, Unit]((a: String) => removeCtr.incrementAndGet())
+    rcm.place(0, "test")
+    val v = rcm.acquire(0)
+    v.nonEmpty shouldBe true
+    v.get shouldBe "test"
+
+    val v1 = rcm.acquire(0)
+    v1.nonEmpty shouldBe true
+    v1.get shouldBe "test"
+
+    rcm.release(0)
+    rcm.release(0)
+
+    removeCtr.get shouldBe 1
+  }
+
+  it should "Do placement and proper forced removal if twice" in {
+    val removeCtr = new AtomicInteger(0)
+    val rcm = new ResourceCountingMap[Int, String, Unit]((a: String) => removeCtr.incrementAndGet())
+    rcm.place(0, "test")
+    val v = rcm.acquire(0)
+    v.nonEmpty shouldBe true
+    v.get shouldBe "test"
+
+    val v1 = rcm.acquire(0)
+    v1.nonEmpty shouldBe true
+    v1.get shouldBe "test"
+
+    rcm.forceRelease(0)
     removeCtr.get shouldBe 1
   }
 }
