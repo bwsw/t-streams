@@ -37,6 +37,8 @@ class FullLoaderOperatorTestImpl extends TransactionOperator[String] {
   override def getCurrentOffset(partition: Int) = LocalGeneratorCreator.getTransaction()
 
   override def buildTransactionObject(partition: Int, id: Long, count: Int): Option[ConsumerTransaction[String]] = Some(new ConsumerTransaction[String](0, LocalGeneratorCreator.getTransaction(), 1, -1))
+
+  override def getProposedTransactionId(): Long = LocalGeneratorCreator.getTransaction()
 }
 
 trait FullLoaderTestContainer {

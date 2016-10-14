@@ -114,18 +114,18 @@ class ProcessingEngine[T](consumer: TransactionOperator[T],
     */
   def enqueueLastTransactionFromDB(partition: Int): Unit = {
     assert(partitions.contains(partition))
-    val transactionOpt = consumer.getLastTransaction(partition)
-    if (transactionOpt.isEmpty)
-      return
-    // if current last transaction is newer than from db
-    if (transactionOpt.get.getTransactionID() <= lastTransactionsMap(partition).transactionID)
-      return
-    val transactionStateList = List(TransactionState(transactionID = transactionOpt.get.getTransactionID(),
-      partition = partition,
+
+    val proposedTransactionId = consumer.getProposedTransactionId()
+
+    val transactionStateList = List(TransactionState(
+      transactionID   = proposedTransactionId,
+      partition       = partition,
       masterSessionID = 0,
-      queueOrderID = 0,
-      itemCount = transactionOpt.get.getCount(), state = TransactionStatus.postCheckpoint,
-      ttl = -1))
+      queueOrderID    = 0,
+      itemCount       = -1,
+      state           = TransactionStatus.postCheckpoint,
+      ttl             = -1))
+
     if (Subscriber.logger.isDebugEnabled())
       Subscriber.logger.debug(s"Enqueued $transactionStateList")
 
