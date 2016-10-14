@@ -10,19 +10,19 @@ import scala.collection.mutable
 class ResourceCountingMap[K, V, T](deleteCallback: (V) => T) {
   private val map = mutable.Map[K, (AtomicInteger, V)]()
 
-  def acquire(key: K) = map.synchronized {
+  def acquire(key: K): Option[V] = map.synchronized {
     val valueOpt = map.get(key)
     valueOpt.foreach(valueEntry => valueEntry._1.incrementAndGet())
-    valueOpt
+    valueOpt.map(kv => kv._2)
   }
 
   def release(key: K) = map.synchronized {
     val valueOpt = map.get(key)
     valueOpt.foreach(valueEntry => {
-      if(valueEntry._1.decrementAndGet() == 0) deleteCallback(valueEntry._2)
+      if(valueEntry._1.decrementAndGet() == 0)
+        deleteCallback(valueEntry._2)
       map.remove(key)
     })
-    valueOpt
   }
 
   def place(key: K, value: V) = map.synchronized {
