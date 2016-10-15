@@ -36,10 +36,13 @@ class ExecutorGraph(name: String = "", publisherThreadsAmount: Int = 1) {
   private def submitTo(name: String, ex: FirstFailLockableTaskExecutor, f: () => Unit) = this.synchronized {
     List(general, newTransaction, cassandra, materialize, publish)
       .foreach(e => if (e.isFailed.get()) throw new IllegalStateException(s"Executor ${e.toString} is failed. No new tasks are allowed."))
-    List(general, newTransaction, cassandra, materialize, publish)
-      .foreach(e => if (ex == e) e.submit(s"<ExecutorGraphTask> :: $name", new Runnable {
-        override def run(): Unit = f()
-      }))
+
+    ex.submit(s"<ExecutorGraphTask> :: $name", new Runnable { override def run(): Unit = f() })
+
+    //    List(general, newTransaction, cassandra, materialize, publish)
+    //      .foreach(e => if (ex == e) e.submit(s"<ExecutorGraphTask> :: $name", new Runnable {
+    //        override def run(): Unit = f()
+    //      }))
   }
 
   def submitToGeneral(name: String, f: () => Unit) = submitTo(name, general, f)
