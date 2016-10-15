@@ -48,7 +48,6 @@ libraryDependencies ++= Seq(
   "org.scalamock" %% "scalamock-scalatest-support" % "3.2.2" % "test",
   "io.netty" % "netty-all" % "4.0.23.Final",
   "com.aerospike" % "aerospike-client" % "3.2.1",
-  "org.apache.commons" % "commons-collections4" % "4.1",
   "com.fasterxml.jackson.module" % "jackson-module-scala_2.11" % "2.6.3",
   "net.openhft" % "chronicle-queue" % "4.2.6",
   "org.scala-lang" % "scala-reflect" % "2.11.8",
@@ -56,7 +55,7 @@ libraryDependencies ++= Seq(
   "org.cassandraunit" % "cassandra-unit" % "2.2.2.1",
   "log4j" % "log4j" % "1.2.17",
   "com.hazelcast" % "hazelcast" % "3.6.4",
-  "org.apache.curator" % "curator-recipes" % "3.2.0",
+  "org.apache.curator" % "curator-recipes" % "2.11.0",
   "com.google.guava" % "guava" % "18.0")
 
 libraryDependencies += ("com.datastax.cassandra" % "cassandra-driver-core" % "3.0.0")
@@ -88,7 +87,6 @@ assemblyMergeStrategy in assembly := {
   case PathList("org", "slf4j", xs@_*) => MergeStrategy.first
   case PathList("org", "scalatest", xs@_*) => MergeStrategy.first
   case PathList("com", "aerospike", xs@_*) => MergeStrategy.first
-  case PathList("org", "apache", "commons", xs@_*) => MergeStrategy.first
   case PathList("com", "fasterxml", "jackson", "module", xs@_*) => MergeStrategy.first
   case PathList("net", "openhft", xs@_*) => MergeStrategy.first
   case x =>
