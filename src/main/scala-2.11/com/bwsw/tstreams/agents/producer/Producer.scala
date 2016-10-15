@@ -278,7 +278,7 @@ class Producer[T](var name: String,
     *
     * @return
     */
-  def getNewTransactionIDLocal() =
+  def generateNewTransactionIDLocal() =
     producerOptions.transactionGenerator.getTransaction()
 
   /**
@@ -298,7 +298,7 @@ class Producer[T](var name: String,
         masterID = p2pAgent.getUniqueAgentID(),
         orderID = p2pAgent.getAndIncSequentialID(partition),
         count = 0)
-      subscriberNotifier.publish(msg, () => ())
+      subscriberNotifier.publish(msg)
       if (logger.isDebugEnabled)
         logger.debug(s"Producer $name - [GET_LOCAL_TRANSACTION] update with message partition=$partition ID=$transactionID opened")
     })

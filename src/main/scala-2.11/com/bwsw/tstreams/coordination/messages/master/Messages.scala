@@ -73,7 +73,7 @@ case class NewTransactionRequest(senderID: String, receiverID: String, partition
     val master = agent.isMasterOfPartition(partition)
 
     if (master) {
-      val transactionID = agent.getProducer.getNewTransactionIDLocal()
+      val transactionID = agent.getProducer.generateNewTransactionIDLocal()
       val response = TransactionResponse(receiverID, senderID, transactionID, partition)
       response.msgID = msgID
       this.respond(response)
@@ -121,7 +121,7 @@ case class PublishRequest(senderID: String, receiverID: String, msg: Transaction
   override def handleP2PRequest(agent: PeerAgent) = {
     if (agent.isMasterOfPartition(partition)) {
       agent.submitPipelinedTaskToPublishExecutors(partition,
-        () => agent.getProducer.subscriberNotifier.publish(msg, onComplete = () => {}))
+        () => agent.getProducer.subscriberNotifier.publish(msg))
     }
   }
 }

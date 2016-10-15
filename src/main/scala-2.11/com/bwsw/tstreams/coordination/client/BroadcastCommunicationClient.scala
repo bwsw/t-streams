@@ -15,6 +15,8 @@ import scala.collection.JavaConversions._
   */
 class BroadcastCommunicationClient(curatorClient: CuratorFramework, partitions: Set[Int]) {
 
+  private val UPDATE_PERIOD_MS = 1000
+
   private val isStopped = new AtomicBoolean(true)
   private val communicationClient = new CommunicationClient(10, 1, 0)
 
@@ -23,7 +25,7 @@ class BroadcastCommunicationClient(curatorClient: CuratorFramework, partitions: 
   private val updateThread = new Thread(new Runnable {
     override def run(): Unit = {
       while(!isStopped.get()) {
-        Thread.sleep(1000)
+        Thread.sleep(UPDATE_PERIOD_MS)
         partitions.foreach(p => updateSubscribers(p))
       }
     }
@@ -47,12 +49,11 @@ class BroadcastCommunicationClient(curatorClient: CuratorFramework, partitions: 
     *
     * @param msg Message
     */
-  def publish(msg: TransactionStateMessage, onComplete: () => Unit): Unit = {
+  def publish(msg: TransactionStateMessage): Unit = {
     if (!isStopped.get) {
       val set = partitionSubscribers.get(msg.partition)
       communicationClient.broadcast(set, msg)
     }
-    onComplete()
   }
 
   /**
