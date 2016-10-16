@@ -20,8 +20,7 @@ sealed trait CheckpointInfo
   *                       first - do pre checkpoint event for all subscribers
   *                       second - commit transaction metadata in cassandra
   *                       third - do final checkpoint event for all subscribers
-  * @param preCheckpointEvent
-  * @param postCheckpointEvent
+  * @param checkpointEvent
   * @param streamName     Stream name
   * @param partition      Partition number
   * @param transaction    Transaction to commit
@@ -30,8 +29,7 @@ sealed trait CheckpointInfo
   */
 case class ProducerCheckpointInfo(transactionRef: ProducerTransaction[_],
                                   agent: PeerAgent,
-                                  preCheckpointEvent: TransactionStateMessage,
-                                  postCheckpointEvent: TransactionStateMessage,
+                                  checkpointEvent: TransactionStateMessage,
                                   streamName: String,
                                   partition: Int,
                                   transaction: Long,

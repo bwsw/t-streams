@@ -49,21 +49,20 @@ class ProtocolMessageSerializerTest extends FlatSpec with Matchers {
     clazz shouldEqual req
   }
   "TStreams serializer" should "serialize and deserialize PTM" in {
-    val clazz = TransactionStateMessage(LocalGeneratorCreator.getTransaction(), 123, TransactionStatus.postCheckpoint, 5, 1, 2, 3)
+    val clazz = TransactionStateMessage(LocalGeneratorCreator.getTransaction(), 123, TransactionStatus.checkpointed, 5, 1, 2, 3)
     val string = ProtocolMessageSerializer.serialize(clazz)
     val req = ProtocolMessageSerializer.deserialize[TransactionStateMessage](string)
     clazz shouldEqual req
   }
   "TStreams serializer" should "serialize and deserialize PTS" in {
-    val pre = TransactionStatus.preCheckpoint
-    val fin = TransactionStatus.postCheckpoint
+    val fin = TransactionStatus.checkpointed
     val canceled = TransactionStatus.cancel
     val updated = TransactionStatus.update
     val opened = TransactionStatus.opened
     val materialize = TransactionStatus.materialize
     val invalid = TransactionStatus.invalid
 
-    List(pre, fin, canceled, updated, opened, materialize, invalid).foreach(i =>
+    List(fin, canceled, updated, opened, materialize, invalid).foreach(i =>
       assert(ProtocolMessageSerializer
         .deserialize[TransactionStatus.ProducerTransactionStatus](ProtocolMessageSerializer.serialize(i)) == i))
   }

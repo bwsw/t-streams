@@ -12,14 +12,9 @@ object TransactionStatus extends Enumeration {
   val opened = Value
 
   /**
-    * If transaction in pre checkpointed
-    */
-  val preCheckpoint = Value
-
-  /**
     * If transaction is finally checkpointed
     */
-  val postCheckpoint = Value
+  val checkpointed = Value
 
   /**
     * If transaction is cancelled
