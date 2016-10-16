@@ -21,9 +21,6 @@ class TransactionBufferWorkerTests extends FlatSpec with Matchers {
     w.update(ts0(TransactionBufferTests.OPENED))
     w.update(ts1(TransactionBufferTests.OPENED))
 
-    w.update(ts0(TransactionBufferTests.PRE))
-    w.update(ts1(TransactionBufferTests.PRE))
-
     w.update(ts0(TransactionBufferTests.POST))
     w.update(ts1(TransactionBufferTests.POST))
 
@@ -44,9 +41,6 @@ class TransactionBufferWorkerTests extends FlatSpec with Matchers {
 
     w.update(ts0(TransactionBufferTests.OPENED))
     w.update(ts1(TransactionBufferTests.OPENED))
-
-    w.update(ts0(TransactionBufferTests.PRE))
-    w.update(ts1(TransactionBufferTests.PRE))
 
     w.update(ts1(TransactionBufferTests.POST))
     w.update(ts0(TransactionBufferTests.POST))

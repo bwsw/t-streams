@@ -44,8 +44,7 @@ object ProtocolMessageSerializer {
         val serializedStatus = serializeInternal(status)
         s"{PTM,${transactionID.toString},$ttl,$serializedStatus,$partition,$masterID,$orderID,$count}"
 
-      case TransactionStatus.preCheckpoint => s"{P}"
-      case TransactionStatus.postCheckpoint => "{F}"
+      case TransactionStatus.`checkpointed` => "{F}"
       case TransactionStatus.update => "{U}"
       case TransactionStatus.cancel => "{C}"
       case TransactionStatus.opened => "{O}"
@@ -152,12 +151,9 @@ object ProtocolMessageSerializer {
       case "AS" =>
         assert(tokens.size == 5)
         AgentConfiguration(tokens(1).toString, tokens(2).toString.toInt, tokens(3).toString.toInt, tokens(4).toString.toInt)
-      case "P" =>
-        assert(tokens.size == 1)
-        TransactionStatus.preCheckpoint
       case "F" =>
         assert(tokens.size == 1)
-        TransactionStatus.postCheckpoint
+        TransactionStatus.checkpointed
       case "U" =>
         assert(tokens.size == 1)
         TransactionStatus.update

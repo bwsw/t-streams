@@ -175,7 +175,7 @@ class ProducerTransaction[T](partition: Int,
     transactionOwner.p2pAgent.publish(TransactionStateMessage(
       transactionID = transactionID,
       ttl = -1,
-      status = TransactionStatus.postCheckpoint,
+      status = TransactionStatus.checkpointed,
       partition = partition,
       masterID = transactionOwner.getPartitionMasterIDLocalInfo(partition),
       orderID = -1,
@@ -197,15 +197,6 @@ class ProducerTransaction[T](partition: Int,
       if (ProducerTransaction.logger.isDebugEnabled) {
         ProducerTransaction.logger.debug("[START PRE CHECKPOINT PARTITION_{}] ts={}", partition, transactionID.toString)
       }
-
-      transactionOwner.p2pAgent.publish(TransactionStateMessage(
-        transactionID = transactionID,
-        ttl = -1,
-        status = TransactionStatus.preCheckpoint,
-        partition = partition,
-        masterID = transactionOwner.getPartitionMasterIDLocalInfo(partition),
-        orderID = -1,
-        count = getDataItemsCount()))
 
       //debug purposes only
       {
@@ -259,15 +250,6 @@ class ProducerTransaction[T](partition: Int,
             ProducerTransaction.logger.debug("[START PRE CHECKPOINT PARTITION_{}] ts={}", partition, transactionID.toString)
           }
 
-          transactionOwner.p2pAgent.publish(TransactionStateMessage(
-            transactionID = transactionID,
-            ttl = -1,
-            status = TransactionStatus.preCheckpoint,
-            partition = partition,
-            masterID = transactionOwner.getPartitionMasterIDLocalInfo(partition),
-            orderID = -1,
-            count = getDataItemsCount()))
-
           //debug purposes only
           GlobalHooks.invoke(GlobalHooks.preCommitFailure)
 
@@ -285,7 +267,7 @@ class ProducerTransaction[T](partition: Int,
           transactionOwner.p2pAgent.publish(TransactionStateMessage(
             transactionID = transactionID,
             ttl = -1,
-            status = TransactionStatus.postCheckpoint,
+            status = TransactionStatus.checkpointed,
             partition = partition,
             masterID = transactionOwner.getPartitionMasterIDLocalInfo(partition),
             orderID = -1,
@@ -370,19 +352,10 @@ class ProducerTransaction[T](partition: Int,
   def getTransactionInfo(): ProducerCheckpointInfo = {
     state.awaitMaterialization(transactionOwner.producerOptions.coordinationOptions.transport.getTimeout())
 
-    val preCheckpoint = TransactionStateMessage(
-      transactionID = getTransactionID,
-      ttl = -1,
-      status = TransactionStatus.preCheckpoint,
-      partition = partition,
-      masterID = transactionOwner.getPartitionMasterIDLocalInfo(partition),
-      orderID = -1,
-      count = getDataItemsCount())
-
-    val postCheckpoint = TransactionStateMessage(
+    val checkpoint = TransactionStateMessage(
       transactionID = getTransactionID(),
       ttl = -1,
-      status = TransactionStatus.postCheckpoint,
+      status = TransactionStatus.checkpointed,
       partition = partition,
       masterID = transactionOwner.getPartitionMasterIDLocalInfo(partition),
       orderID = -1,
@@ -390,8 +363,7 @@ class ProducerTransaction[T](partition: Int,
 
     ProducerCheckpointInfo(transactionRef = this,
       agent = transactionOwner.p2pAgent,
-      preCheckpointEvent = preCheckpoint,
-      postCheckpointEvent = postCheckpoint,
+      checkpointEvent = checkpoint,
       streamName = transactionOwner.stream.getName,
       partition = partition,
       transaction = getTransactionID(),

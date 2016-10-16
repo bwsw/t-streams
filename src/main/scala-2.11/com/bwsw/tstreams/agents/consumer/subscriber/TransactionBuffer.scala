@@ -46,8 +46,7 @@ class TransactionBuffer(queue: QueueBuilder.QueueType) {
       case TransactionStatus.opened => counters.openEvents.incrementAndGet()
       case TransactionStatus.cancel => counters.cancelEvents.incrementAndGet()
       case TransactionStatus.update => counters.updateEvents.incrementAndGet()
-      case TransactionStatus.preCheckpoint => counters.preCheckpointEvents.incrementAndGet()
-      case TransactionStatus.postCheckpoint => counters.postCheckpointEvents.incrementAndGet()
+      case TransactionStatus.`checkpointed` => counters.checkpointEvents.incrementAndGet()
     }
 
     // avoid transactions which are delayed
@@ -79,18 +78,16 @@ class TransactionBuffer(queue: QueueBuilder.QueueType) {
           ts.state = TransactionStatus.opened
           ts.ttl = System.currentTimeMillis() + update.ttl * 1000
 
-        case (TransactionStatus.opened, TransactionStatus.preCheckpoint) =>
-          ts.queueOrderID = orderID
-          ts.state = TransactionStatus.preCheckpoint
-          ts.itemCount = update.itemCount
-          ts.ttl = System.currentTimeMillis() + TransactionBuffer.MAX_POST_CHECKPOINT_WAIT // TODO: fixit
-
-        case (TransactionStatus.opened, TransactionStatus.postCheckpoint) =>
-
         case (TransactionStatus.opened, TransactionStatus.cancel) =>
           ts.state = TransactionStatus.invalid
           ts.ttl = 0L
           stateMap.remove(update.transactionID)
+
+        case (TransactionStatus.opened, TransactionStatus.`checkpointed`) =>
+          ts.queueOrderID = orderID
+          ts.state = TransactionStatus.checkpointed
+          ts.itemCount = update.itemCount
+          ts.ttl = Long.MaxValue
 
         /*
         from update -> * no implement because opened
@@ -98,7 +95,6 @@ class TransactionBuffer(queue: QueueBuilder.QueueType) {
         case (TransactionStatus.update, _) =>
 
         /*
-
            */
         case (TransactionStatus.invalid, _) =>
 
@@ -108,25 +104,9 @@ class TransactionBuffer(queue: QueueBuilder.QueueType) {
         case (TransactionStatus.cancel, _) =>
 
         /*
-        from pre -> *
-         */
-        case (TransactionStatus.preCheckpoint, TransactionStatus.cancel) =>
-          ts.state = TransactionStatus.invalid
-          ts.ttl = 0L
-          stateMap.remove(update.transactionID)
-
-        case (TransactionStatus.preCheckpoint, TransactionStatus.postCheckpoint) =>
-          ts.queueOrderID = orderID
-          ts.state = TransactionStatus.postCheckpoint
-          ts.itemCount = update.itemCount
-          ts.ttl = Long.MaxValue
-
-        case (TransactionStatus.preCheckpoint, _) =>
-
-        /*
         from post -> *
          */
-        case (TransactionStatus.postCheckpoint, _) =>
+        case (TransactionStatus.`checkpointed`, _) =>
       }
 
     } else {
@@ -142,27 +122,21 @@ class TransactionBuffer(queue: QueueBuilder.QueueType) {
   def signalCompleteTransactions(): Unit = this.synchronized {
     val time = System.currentTimeMillis()
 
-    val meetPostCheckpoint = stateList.takeWhile(ts => ts.state == TransactionStatus.postCheckpoint)
+    val meetCheckpoint = stateList.takeWhile(ts => ts.state == TransactionStatus.checkpointed)
 
-    meetPostCheckpoint.foreach(ts => stateMap.remove(ts.transactionID))
+    meetCheckpoint.foreach(ts => stateMap.remove(ts.transactionID))
 
-    if(meetPostCheckpoint.nonEmpty) {
-      stateList.remove(0, meetPostCheckpoint.size)
-      queue.put(meetPostCheckpoint.toList)
+    if(meetCheckpoint.nonEmpty) {
+      stateList.remove(0, meetCheckpoint.size)
+      queue.put(meetCheckpoint.toList)
     }
 
-    val meetPreCheckpointTimeoutAndInvalid = stateList.takeWhile(ts =>
-        ts.state == TransactionStatus.invalid
-        || (ts.ttl < time && ts.state == TransactionStatus.preCheckpoint))
+    val meetTimeoutAndInvalid = stateList.takeWhile(ts => ts.ttl < time)
 
-    meetPreCheckpointTimeoutAndInvalid.foreach(ts => stateMap.remove(ts.transactionID))
-
-    if(meetPreCheckpointTimeoutAndInvalid.nonEmpty) {
-      stateList.remove(0, meetPreCheckpointTimeoutAndInvalid.size)
-      val resList = meetPreCheckpointTimeoutAndInvalid.filter(ts => ts.state == TransactionStatus.preCheckpoint).toList
-      resList.foreach(ts => ts.queueOrderID = 0) // to do full loading
-      if(resList.nonEmpty)
-        queue.put(resList)
+    if(meetTimeoutAndInvalid.nonEmpty) {
+      meetTimeoutAndInvalid.foreach(ts => stateMap.remove(ts.transactionID))
+      stateList.remove(0, meetTimeoutAndInvalid.size)
     }
+
   }
 }
