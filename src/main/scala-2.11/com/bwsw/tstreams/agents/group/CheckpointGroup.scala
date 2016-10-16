@@ -1,8 +1,8 @@
 package com.bwsw.tstreams.agents.group
 
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.locks.ReentrantLock
-import java.util.concurrent.{CountDownLatch, TimeUnit}
 
 import com.bwsw.tstreams.common.{FirstFailLockableTaskExecutor, LockUtil}
 import com.bwsw.tstreams.metadata.{MetadataStorage, RequestsRepository, TransactionDatabase}
@@ -106,7 +106,7 @@ class CheckpointGroup(val executors: Int = 1) {
       case ConsumerCheckpointInfo(name, stream, partition, offset) =>
         batchStatement.add(requests.consumerCheckpointStatement.bind(name, stream, new Integer(partition), new java.lang.Long(offset)))
 
-      case ProducerCheckpointInfo(_, _, _, _, streamName, partition, transaction, totalCnt, ttl) =>
+      case ProducerCheckpointInfo(_, _, _, streamName, partition, transaction, totalCnt, ttl) =>
 
         val interval = new java.lang.Long(TransactionDatabase.getAggregationInterval(transaction))
 
@@ -139,14 +139,11 @@ class CheckpointGroup(val executors: Int = 1) {
         agent.getCheckpointInfoAndClear()
       }.reduceRight((l1, l2) => l1 ++ l2)
 
-      // do publish pre events for all producers
-      publishPreCheckpointEventForAllProducers(checkpointStateInfo)
-
       //assume all agents use the same metadata entity
       doGroupCheckpoint(agents.head._2.getMetadataRef(), checkpointStateInfo)
 
       // do publish post events for all producers
-      publishPostCheckpointEventForAllProducers(checkpointStateInfo)
+      publishCheckpointEventForAllProducers(checkpointStateInfo)
 
     }
     finally {
@@ -161,30 +158,12 @@ class CheckpointGroup(val executors: Int = 1) {
 
   }
 
-  private def publishPreCheckpointEventForAllProducers(producers: List[CheckpointInfo]) = {
-    val l = new CountDownLatch(producers.size)
+
+  private def publishCheckpointEventForAllProducers(producers: List[CheckpointInfo]) = {
     producers foreach {
-      case ProducerCheckpointInfo(transaction, agent, preCheckpointEvent, _, _, _, _, _, _) =>
-        executorPool.submit("<PreCheckpointEvent>", new Runnable {
-          override def run(): Unit = {
-            agent.publish(preCheckpointEvent)
-
-            if(logger.isDebugEnabled)
-              logger.debug("PRE event sent for " + transaction.getTransactionID.toString)
-
-            l.countDown()
-          }
-        })
-      case _ => l.countDown()
-    }
-    l.await()
-  }
-
-  private def publishPostCheckpointEventForAllProducers(producers: List[CheckpointInfo]) = {
-    producers foreach {
-      case ProducerCheckpointInfo(_, agent, _, postCheckpointEvent, _, _, _, _, _) =>
-        executorPool.submit("<PostCheckpointEvent>", new Runnable {
-          override def run(): Unit = agent.publish(postCheckpointEvent)
+      case ProducerCheckpointInfo(_, agent, checkpointEvent, _, _, _, _, _) =>
+        executorPool.submit("<CheckpointEvent>", new Runnable {
+          override def run(): Unit = agent.publish(checkpointEvent)
         })
       case _ =>
     }

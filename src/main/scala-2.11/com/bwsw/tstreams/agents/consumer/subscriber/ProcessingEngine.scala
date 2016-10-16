@@ -59,7 +59,7 @@ class ProcessingEngine[T](consumer: TransactionOperator[T],
   partitions
     .foreach (p => {
       setLastPartitionActivity(p)
-      lastTransactionsMap(p) = TransactionState(consumer.getCurrentOffset(p), p, -1, -1, -1, TransactionStatus.postCheckpoint, -1)
+      lastTransactionsMap(p) = TransactionState(consumer.getCurrentOffset(p), p, -1, -1, -1, TransactionStatus.checkpointed, -1)
     })
 
   /**
@@ -123,7 +123,7 @@ class ProcessingEngine[T](consumer: TransactionOperator[T],
       masterSessionID = 0,
       queueOrderID    = 0,
       itemCount       = -1,
-      state           = TransactionStatus.postCheckpoint,
+      state           = TransactionStatus.checkpointed,
       ttl             = -1))
 
     if (Subscriber.logger.isDebugEnabled())

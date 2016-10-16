@@ -49,7 +49,7 @@ class TransactionBufferWorker() {
     updateExecutor.submit(s"<UpdateAndNotifyTask($transactionState)>", new Runnable {
       override def run(): Unit = {
         transactionBufferMap(transactionState.partition).update(transactionState)
-        if(transactionState.state == TransactionStatus.postCheckpoint)
+        if(transactionState.state == TransactionStatus.checkpointed)
           transactionBufferMap(transactionState.partition).signalCompleteTransactions()
       }
     })

@@ -63,8 +63,8 @@ class TransactionFullLoaderTests extends FlatSpec with Matchers {
       val partition = 0
       val masterID = 0
       val orderID = 0
-      lastTransactionsMap(0) = TransactionState(LocalGeneratorCreator.getTransaction(), partition, masterID, orderID, 1, TransactionStatus.postCheckpoint, -1)
-      val nextTransactionState = List(TransactionState(LocalGeneratorCreator.getTransaction(), partition, masterID, orderID + 1, 1, TransactionStatus.postCheckpoint, -1))
+      lastTransactionsMap(0) = TransactionState(LocalGeneratorCreator.getTransaction(), partition, masterID, orderID, 1, TransactionStatus.checkpointed, -1)
+      val nextTransactionState = List(TransactionState(LocalGeneratorCreator.getTransaction(), partition, masterID, orderID + 1, 1, TransactionStatus.checkpointed, -1))
 
       override def test(): Unit = {
         fullLoader.checkIfTransactionLoadingIsPossible(nextTransactionState) shouldBe true
@@ -79,8 +79,8 @@ class TransactionFullLoaderTests extends FlatSpec with Matchers {
       val partition = 0
       val masterID = 0
       val orderID = 0
-      val nextTransactionState = List(TransactionState(LocalGeneratorCreator.getTransaction(), partition, masterID, orderID + 1, 1, TransactionStatus.postCheckpoint, -1))
-      lastTransactionsMap(0) = TransactionState(LocalGeneratorCreator.getTransaction(), partition, masterID, orderID, 1, TransactionStatus.postCheckpoint, -1)
+      val nextTransactionState = List(TransactionState(LocalGeneratorCreator.getTransaction(), partition, masterID, orderID + 1, 1, TransactionStatus.checkpointed, -1))
+      lastTransactionsMap(0) = TransactionState(LocalGeneratorCreator.getTransaction(), partition, masterID, orderID, 1, TransactionStatus.checkpointed, -1)
 
       override def test(): Unit = {
         fullLoader.checkIfTransactionLoadingIsPossible(nextTransactionState) shouldBe false
@@ -95,10 +95,10 @@ class TransactionFullLoaderTests extends FlatSpec with Matchers {
       val partition = 0
       val masterID = 0
       val orderID = 0
-      lastTransactionsMap(0) = TransactionState(LocalGeneratorCreator.getTransaction(), partition, masterID, orderID, 1, TransactionStatus.postCheckpoint, -1)
+      lastTransactionsMap(0) = TransactionState(LocalGeneratorCreator.getTransaction(), partition, masterID, orderID, 1, TransactionStatus.checkpointed, -1)
       val fullLoader2 = new TransactionFullLoader(partitions(), lastTransactionsMap)
       val consumerOuter = new FullLoaderOperatorTestImpl()
-      val nextTransactionState = List(TransactionState(consumerOuter.transactions.last.getTransactionID(), partition, masterID, orderID + 1, 1, TransactionStatus.postCheckpoint, -1))
+      val nextTransactionState = List(TransactionState(consumerOuter.transactions.last.getTransactionID(), partition, masterID, orderID + 1, 1, TransactionStatus.checkpointed, -1))
 
       override def test(): Unit = {
         var ctr: Int = 0
@@ -126,10 +126,10 @@ class TransactionFullLoaderTests extends FlatSpec with Matchers {
       val partition = 0
       val masterID = 0
       val orderID = 0
-      lastTransactionsMap(0) = TransactionState(LocalGeneratorCreator.getTransaction(), partition, masterID, orderID, 1, TransactionStatus.postCheckpoint, -1)
+      lastTransactionsMap(0) = TransactionState(LocalGeneratorCreator.getTransaction(), partition, masterID, orderID, 1, TransactionStatus.checkpointed, -1)
       val fullLoader2 = new TransactionFullLoader(partitions(), lastTransactionsMap)
       val consumerOuter = new FullLoaderOperatorTestImpl()
-      val nextTransactionState = List(TransactionState(consumerOuter.transactions.last.getTransactionID(), partition, masterID, orderID + 1, 1, TransactionStatus.postCheckpoint, -1))
+      val nextTransactionState = List(TransactionState(consumerOuter.transactions.last.getTransactionID(), partition, masterID, orderID + 1, 1, TransactionStatus.checkpointed, -1))
 
       override def test(): Unit = {
         var ctr: Int = 0
