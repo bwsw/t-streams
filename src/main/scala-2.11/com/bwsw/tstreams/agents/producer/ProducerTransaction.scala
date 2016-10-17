@@ -132,7 +132,7 @@ class ProducerTransaction[T](partition: Int,
       ttl = -1,
       status = TransactionStatus.cancel,
       partition = partition,
-      masterID = transactionOwner.p2pAgent.getUniqueAgentID(),
+      masterID = transactionOwner.getPartitionMasterIDLocalInfo(partition),
       orderID = -1,
       count = 0)
     transactionOwner.p2pAgent.publish(msg)
@@ -221,7 +221,7 @@ class ProducerTransaction[T](partition: Int,
         ttl = -1,
         status = TransactionStatus.cancel,
         partition = partition,
-        masterID = transactionOwner.p2pAgent.getUniqueAgentID(),
+        masterID = transactionOwner.getPartitionMasterIDLocalInfo(partition),
         orderID = -1, count = 0))
     }
   }
@@ -283,7 +283,7 @@ class ProducerTransaction[T](partition: Int,
             ttl = -1,
             status = TransactionStatus.cancel,
             partition = partition,
-            masterID = transactionOwner.p2pAgent.getUniqueAgentID(),
+            masterID = transactionOwner.getPartitionMasterIDLocalInfo(partition),
             orderID = -1,
             count = 0))
         }
