@@ -57,7 +57,7 @@ class ProducerAndConsumerSimpleTests extends FlatSpec with Matchers with BeforeA
     var checkVal = transaction.getAll().sorted == sendData
 
     //assert that is nothing to read
-    (0 until consumer.stream.getPartitions) foreach { _ =>
+    (0 until consumer.stream.partitionsCount) foreach { _ =>
       checkVal &= consumer.getTransaction(0).isEmpty
     }
 
@@ -84,7 +84,7 @@ class ProducerAndConsumerSimpleTests extends FlatSpec with Matchers with BeforeA
     var checkVal = true
 
     //assert that is nothing to read
-    (0 until consumer.stream.getPartitions) foreach { _ =>
+    (0 until consumer.stream.partitionsCount) foreach { _ =>
       checkVal &= consumer.getTransaction(0).isEmpty
     }
 
@@ -116,7 +116,7 @@ class ProducerAndConsumerSimpleTests extends FlatSpec with Matchers with BeforeA
     }
 
     //assert that is nothing to read
-    (0 until consumer.stream.getPartitions) foreach { _ =>
+    (0 until consumer.stream.partitionsCount) foreach { _ =>
       checkVal &= consumer.getTransaction(0).isEmpty
     }
 
@@ -166,7 +166,7 @@ class ProducerAndConsumerSimpleTests extends FlatSpec with Matchers with BeforeA
     checkVal &= !consumerThread.isAlive
 
     //assert that is nothing to read
-    (0 until consumer.stream.getPartitions) foreach { _ =>
+    (0 until consumer.stream.partitionsCount) foreach { _ =>
       checkVal &= consumer.getTransaction(0).isEmpty
     }
 
