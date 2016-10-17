@@ -896,7 +896,7 @@ class TStreamsFactory() {
     // construct stream
     val stream = new Stream[Array[Byte]](
       name = pAsString(TSF_Dictionary.Stream.NAME),
-      partitions = pAsInt(TSF_Dictionary.Stream.PARTITIONS, Stream_partitions_default),
+      partitionsCount = pAsInt(TSF_Dictionary.Stream.PARTITIONS, Stream_partitions_default),
       metadataStorage = metadatastorage,
       dataStorage = datastorage,
       ttl = pAsInt(TSF_Dictionary.Stream.TTL, Stream_ttl_default),

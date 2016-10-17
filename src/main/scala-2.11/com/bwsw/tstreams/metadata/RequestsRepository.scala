@@ -42,7 +42,6 @@ object RequestsStatements {
     val streamSelectStatement = session.prepare(s"SELECT * FROM $streamTable WHERE stream_name=? LIMIT 1")
 
     val consumerCheckpointStatement           = session.prepare(s"INSERT INTO $consumerTable (name, stream, partition, last_transaction) VALUES(?, ?, ?,  ?)")
-    val consumerCheckpointExistsStatement     = session.prepare(s"SELECT name FROM $consumerTable WHERE name = ? LIMIT 1")
     val consumerGetCheckpointStatement        = session.prepare(s"SELECT last_transaction FROM $consumerTable WHERE name = ? AND stream = ? AND partition = ? LIMIT 1")
 
     RequestsStatements(
@@ -54,7 +53,6 @@ object RequestsStatements {
       streamDeleteStatement       = streamDeleteStatement,
       streamSelectStatement       = streamSelectStatement,
       consumerCheckpointStatement = consumerCheckpointStatement,
-      consumerAnyCheckpointsExistsStatement = consumerCheckpointExistsStatement,
       consumerGetCheckpointStatement    = consumerGetCheckpointStatement)
   }
 }
@@ -67,5 +65,4 @@ case class RequestsStatements(commitLogPutStatement:    PreparedStatement,
                               streamDeleteStatement:    PreparedStatement,
                               streamSelectStatement:    PreparedStatement,
                               consumerCheckpointStatement:        PreparedStatement,
-                              consumerAnyCheckpointsExistsStatement:  PreparedStatement,
                               consumerGetCheckpointStatement:         PreparedStatement)

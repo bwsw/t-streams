@@ -29,8 +29,8 @@ class Consumer[T](val name: String,
   extends GroupParticipant
     with TransactionOperator[T] {
 
-  val tsdb = new TransactionDatabase(stream.getMetadataStorage().getSession(), stream.getName())
-  val consumerService = new ConsumerService(stream.getMetadataStorage().getSession())
+  val tsdb = new TransactionDatabase(stream.metadataStorage.getSession(), stream.name)
+  val consumerService = new ConsumerService(stream.metadataStorage.getSession())
 
   /**
     * Temporary checkpoints (will be cleared after every checkpoint() invokes)
@@ -99,41 +99,35 @@ class Consumer[T](val name: String,
     * Starts the operation.
     */
   def start(): Unit = this.synchronized {
-    Consumer.logger.info(s"[INIT] Consumer with name: $name, streamName : ${stream.getName}, streamPartitions : ${stream.getPartitions} is about to start.")
+    Consumer.logger.info(s"[INIT] Consumer with name: $name, streamName : ${stream.name}, streamPartitions : ${stream.partitionsCount} is about to start.")
 
     if (isStarted.get())
       throw new IllegalStateException(s"Consumer $name is started already. Double start is detected.")
 
-    //set consumer offsets
-    if (!consumerService.exists(name) || !options.useLastOffset) {
-      isReadOffsetsAreSet = true
 
-      for (i <- 0 until stream.getPartitions) {
-        currentOffsets(i) = options.offset match {
-          case Offset.Oldest =>
-            options.transactionGenerator.getTransaction(System.currentTimeMillis() - (stream.getTTL() + 1) * 1000)
-          case Offset.Newest =>
-            options.transactionGenerator.getTransaction()
-          case dateTime: Offset.DateTime =>
-            options.transactionGenerator.getTransaction(dateTime.startTime.getTime)
-          case offset: Offset.ID =>
-            offset.startID
-          case _ =>
-            throw new IllegalStateException(s"Offset option for consumer $name cannot be resolved to known Offset.* object.")
+    for (partition <- options.readPolicy.getUsedPartitions()) {
+      val bootstrapOffset =
+        if (consumerService.offsetExists(name, stream.name, partition) && options.useLastOffset) {
+          consumerService.getLastSavedOffset(name, stream.name, partition)
+        } else {
+          options.offset match {
+            case Offset.Oldest =>
+              options.transactionGenerator.getTransaction(System.currentTimeMillis() - (stream.ttl + 1) * 1000)
+            case Offset.Newest =>
+              options.transactionGenerator.getTransaction()
+            case dateTime: Offset.DateTime =>
+              options.transactionGenerator.getTransaction(dateTime.startTime.getTime)
+            case offset: Offset.ID =>
+              offset.startID
+            case _ =>
+              throw new IllegalStateException(s"Offset option for consumer $name cannot be resolved to known Offset.* object.")
+          }
         }
-        checkpointOffsets(i) = currentOffsets(i)
-      }
-    }
 
-    if (!isReadOffsetsAreSet) {
-      for (i <- options.readPolicy.getUsedPartitions()) {
-        val offset = consumerService.getLastSavedOffset(name, stream.getName, i)
-        updateOffsets(i, offset)
-      }
-    }
-
-    for (partition <- options.readPolicy.getUsedPartitions())
+      updateOffsets(partition, bootstrapOffset)
       transactionBuffer(partition) = mutable.Queue[ConsumerTransaction[T]]()
+    }
+
 
     isStarted.set(true)
   }
@@ -217,7 +211,7 @@ class Consumer[T](val name: String,
 
     if (Consumer.logger.isDebugEnabled) {
       Consumer.logger.debug(s"Start retrieving new historic transaction for consumer with" +
-        s" name : $name, streamName : ${stream.getName}, streamPartitions : ${stream.getPartitions}")
+        s" name : $name, streamName : ${stream.name}, streamPartitions : ${stream.partitionsCount}")
     }
 
     val transactionOpt = loadTransactionFromDB(partition, transactionID)
@@ -274,9 +268,9 @@ class Consumer[T](val name: String,
 
     if (Consumer.logger.isDebugEnabled) {
       Consumer.logger.debug(s"Start saving checkpoints for " +
-        s"consumer with name : $name, streamName : ${stream.getName}, streamPartitions : ${stream.getPartitions}")
+        s"consumer with name : $name, streamName : ${stream.name}, streamPartitions : ${stream.partitionsCount}")
     }
-    consumerService.saveBatchOffset(name, stream.getName, checkpointOffsets)
+    consumerService.saveBatchOffset(name, stream.name, checkpointOffsets)
     checkpointOffsets.clear()
   }
 
@@ -289,7 +283,7 @@ class Consumer[T](val name: String,
       throw new IllegalStateException("Consumer is not started. Start consumer first.")
 
     val checkpointData = checkpointOffsets.map { case (partition, lastTransaction) =>
-      ConsumerCheckpointInfo(name, stream.getName, partition, lastTransaction)
+      ConsumerCheckpointInfo(name, stream.name, partition, lastTransaction)
     }.toList
     checkpointOffsets.clear()
     checkpointData

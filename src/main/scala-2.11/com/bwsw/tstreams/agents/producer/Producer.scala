@@ -40,7 +40,7 @@ class Producer[T](var name: String,
     this.name = name
   }
 
-  val tsdb = new TransactionDatabase(stream.getMetadataStorage().getSession(), stream.getName())
+  val tsdb = new TransactionDatabase(stream.metadataStorage.getSession(), stream.name)
 
 
   // short key
@@ -56,7 +56,7 @@ class Producer[T](var name: String,
 
   private val peerKeepAliveTimeout = pcs.zkSessionTimeout * 1000 * 2
 
-  val fullPrefix = java.nio.file.Paths.get(pcs.zkRootPath, stream.getName()).toString.substring(1)
+  val fullPrefix = java.nio.file.Paths.get(pcs.zkRootPath, stream.name).toString.substring(1)
   private val curatorClient = CuratorFrameworkFactory.builder()
     .namespace(fullPrefix)
     .connectionTimeoutMs(pcs.zkConnectionTimeout * 1000)
@@ -84,7 +84,7 @@ class Producer[T](var name: String,
 
   stream.dataStorage.bind()
 
-  logger.info(s"Start new Basic producer with name : $name, streamName : ${stream.getName}, streamPartitions : ${stream.getPartitions}")
+  logger.info(s"Start new Basic producer with name : $name, streamName : ${stream.name}, streamPartitions : ${stream.partitionsCount}")
 
   // this client is used to find new subscribers
   val subscriberNotifier = new BroadcastCommunicationClient(curatorClient, partitions = producerOptions.writePolicy.getUsedPartitions())
@@ -179,7 +179,7 @@ class Producer[T](var name: String,
         partition
     }
 
-    if (!(p >= 0 && p < stream.getPartitions))
+    if (!(p >= 0 && p < stream.partitionsCount))
       throw new IllegalArgumentException(s"Producer $name - invalid partition")
 
     val previousTransactionAction: () => Unit =
@@ -233,7 +233,7 @@ class Producer[T](var name: String,
     * @return Transaction reference if it exist and is opened
     */
   def getOpenedTransactionForPartition(partition: Int): Option[IProducerTransaction[T]] = {
-    if (!(partition >= 0 && partition < stream.getPartitions))
+    if (!(partition >= 0 && partition < stream.partitionsCount))
       throw new IllegalArgumentException(s"Producer $name - invalid partition")
     openTransactions.getTransactionOption(partition)
   }

@@ -27,7 +27,7 @@ abstract class AbstractPolicy(stream: Stream[_], usedPartitions: Set[Int]) {
     throw new IllegalArgumentException("UsedPartitions can't be empty")
 
   usedPartitionsList.foreach { x =>
-    if (x < 0 || x >= stream.getPartitions)
+    if (x < 0 || x >= stream.partitionsCount)
       throw new IllegalArgumentException(s"Invalid partition:{$x} in usedPartitions")
   }
 
