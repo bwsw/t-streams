@@ -129,7 +129,7 @@ class Subscriber[T](val name: String,
 
     coordinator.bootstrap(
       agentAddress = options.agentAddress,
-      stream = stream.getName,
+      stream = stream.name,
       partitions = Set[Int]().empty ++ options.readPolicy.getUsedPartitions(),
       zkRootPath = options.zkRootPath,
       zkHosts = options.zkHosts,

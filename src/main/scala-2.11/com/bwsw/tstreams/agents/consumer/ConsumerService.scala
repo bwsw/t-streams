@@ -18,8 +18,8 @@ class ConsumerService(session: Session) {
     * @param consumerName Name of the consumer
     * @return Exist or not concrete consumer
     */
-  def exists(consumerName: String): Boolean = {
-    val boundStatement = requests.consumerAnyCheckpointsExistsStatement.bind(consumerName)
+  def offsetExists(consumerName: String, stream: String, partition: Int): Boolean = {
+    val boundStatement = requests.consumerGetCheckpointStatement.bind(consumerName, stream, new Integer(partition))
     Option(session.execute(boundStatement).one()).isDefined
   }
 

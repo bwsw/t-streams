@@ -65,7 +65,7 @@ class PeerAgent(curatorClient: CuratorFramework,
     */
   private val executorGraphs = mutable.Map[Int, ExecutorGraph]()
 
-  private val streamName = producer.stream.getName
+  private val streamName = producer.stream.name
   private val isRunning = new AtomicBoolean(true)
 
   /**
