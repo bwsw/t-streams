@@ -18,7 +18,7 @@ class ConsumerServiceTest extends FlatSpec with Matchers with BeforeAndAfterAll 
     val partition = 1
     val offset = LocalGeneratorCreator.getTransaction()
     consumerEntity.saveSingleOffset(consumer, stream, partition, offset)
-    val checkExist: Boolean = consumerEntity.exists(consumer)
+    val checkExist: Boolean = consumerEntity.offsetExists(consumer, stream, partition)
     val retValOffset = consumerEntity.getLastSavedOffset(consumer, stream, partition)
 
     val checkVal = checkExist && retValOffset == offset
@@ -28,7 +28,9 @@ class ConsumerServiceTest extends FlatSpec with Matchers with BeforeAndAfterAll 
   "ConsumerEntity.exist()" should "return false if consumer not exist" in {
     val consumerEntity = new ConsumerService(connectedSession)
     val consumer = randomVal
-    consumerEntity.exists(consumer) shouldEqual false
+    val stream = randomVal
+    val partition = 1
+    consumerEntity.offsetExists(consumer, stream, partition) shouldEqual false
   }
 
   "ConsumerEntity.getOffset()" should "throw java.lang.IndexOutOfBoundsException if consumer not exist" in {

@@ -30,7 +30,7 @@ class ProducerTransaction[T](partition: Int,
 
   private val transactionLock = new ReentrantLock()
 
-  private val data = new ProducerTransactionData[T](this, transactionOwner.stream.getTTL, transactionOwner.stream.dataStorage)
+  private val data = new ProducerTransactionData[T](this, transactionOwner.stream.ttl, transactionOwner.stream.dataStorage)
 
   /**
     * state of transaction
@@ -47,7 +47,7 @@ class ProducerTransaction[T](partition: Int,
   /**
     * BasicProducerTransaction logger for logging
     */
-  ProducerTransaction.logger.debug(s"Open transaction $getTransactionID for\nstream, partition: ${transactionOwner.stream.getName}, ${}")
+  ProducerTransaction.logger.debug(s"Open transaction $getTransactionID for\nstream, partition: ${transactionOwner.stream.name}, ${}")
 
   /**
     *
@@ -70,11 +70,11 @@ class ProducerTransaction[T](partition: Int,
 
   def awaitMaterialized(): Unit = {
     if (ProducerTransaction.logger.isDebugEnabled) {
-      ProducerTransaction.logger.debug(s"Await for transaction $getTransactionID to be materialized\nfor stream,partition : ${transactionOwner.stream.getName},$partition")
+      ProducerTransaction.logger.debug(s"Await for transaction $getTransactionID to be materialized\nfor stream,partition : ${transactionOwner.stream.name},$partition")
     }
     state.awaitMaterialization(transactionOwner.producerOptions.coordinationOptions.transport.getTimeout())
     if (ProducerTransaction.logger.isDebugEnabled) {
-      ProducerTransaction.logger.debug(s"Transaction $getTransactionID is materialized\nfor stream,partition : ${transactionOwner.stream.getName}, $partition")
+      ProducerTransaction.logger.debug(s"Transaction $getTransactionID is materialized\nfor stream,partition : ${transactionOwner.stream.name}, $partition")
     }
   }
 
@@ -212,7 +212,7 @@ class ProducerTransaction[T](partition: Int,
           return
         }
       }
-      val record = TransactionRecord(partition = partition, transactionID = transactionID, count = getDataItemsCount(), ttl = transactionOwner.stream.getTTL())
+      val record = TransactionRecord(partition = partition, transactionID = transactionID, count = getDataItemsCount(), ttl = transactionOwner.stream.ttl)
       transactionOwner.tsdb.put(record, transactionOwner.backendActivityService) (record => { checkpointPostEventPart() })
     }
     else {
@@ -254,7 +254,7 @@ class ProducerTransaction[T](partition: Int,
           GlobalHooks.invoke(GlobalHooks.preCommitFailure)
 
           val latch = new CountDownLatch(1)
-          val record = TransactionRecord(partition = partition, transactionID = transactionID, count = getDataItemsCount(), ttl = transactionOwner.stream.getTTL())
+          val record = TransactionRecord(partition = partition, transactionID = transactionID, count = getDataItemsCount(), ttl = transactionOwner.stream.ttl)
           transactionOwner.tsdb.put(record, transactionOwner.backendActivityService) (record => { latch.countDown() })
           latch.await()
 
@@ -336,7 +336,7 @@ class ProducerTransaction[T](partition: Int,
       ProducerTransaction.logger.debug("Update event for Transaction {}, partition: {}", transactionID, partition)
     }
 
-    val record = TransactionRecord(partition = partition, transactionID = transactionID, count = -1, ttl = transactionOwner.stream.getTTL())
+    val record = TransactionRecord(partition = partition, transactionID = transactionID, count = -1, ttl = transactionOwner.stream.ttl)
     transactionOwner.tsdb.put(record, transactionOwner.backendActivityService) (record => { doSendUpdateMessage() })
 
   }
@@ -364,10 +364,10 @@ class ProducerTransaction[T](partition: Int,
     ProducerCheckpointInfo(transactionRef = this,
       agent = transactionOwner.p2pAgent,
       checkpointEvent = checkpoint,
-      streamName = transactionOwner.stream.getName,
+      streamName = transactionOwner.stream.name,
       partition = partition,
       transaction = getTransactionID(),
       totalCnt = getDataItemsCount(),
-      ttl = transactionOwner.stream.getTTL)
+      ttl = transactionOwner.stream.ttl)
   }
 }
