@@ -35,6 +35,7 @@ case class SubscriberOptions[T](val transactionsPreload: Int,
                                 val offset: IOffset,
                                 val transactionGenerator: ITransactionGenerator,
                                 val useLastOffset: Boolean,
+                                val rememberFirstStartOffset: Boolean = true,
                                 val agentAddress: String,
                                 val zkRootPath: String,
                                 val zkHosts: String,
@@ -53,6 +54,7 @@ case class SubscriberOptions[T](val transactionsPreload: Int,
     readPolicy = readPolicy,
     offset = offset,
     transactionGenerator = transactionGenerator,
+    rememberFirstStartOffset = rememberFirstStartOffset,
     useLastOffset = useLastOffset)
 
 }

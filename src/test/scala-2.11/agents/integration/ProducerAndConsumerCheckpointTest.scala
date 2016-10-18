@@ -35,7 +35,7 @@ class ProducerAndConsumerCheckpointTest extends FlatSpec with Matchers with Befo
     converter = arrayByteToStringConverter,
     partitions = Set(0),
     offset = Oldest,
-    isUseLastOffset = true)
+    useLastOffset = true)
 
   val consumer2 = f.getConsumer[String](
     name = "test_consumer",
@@ -43,7 +43,7 @@ class ProducerAndConsumerCheckpointTest extends FlatSpec with Matchers with Befo
     converter = arrayByteToStringConverter,
     partitions = Set(0),
     offset = Oldest,
-    isUseLastOffset = true)
+    useLastOffset = true)
 
 
   "producer, consumer" should "producer - generate many transactions, consumer - retrieve all of them with reinitialization after some time" in {
