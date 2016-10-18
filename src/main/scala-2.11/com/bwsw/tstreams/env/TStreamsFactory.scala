@@ -9,7 +9,7 @@ import com.aerospike.client.policy.{ClientPolicy, Policy, WritePolicy}
 import com.bwsw.tstreams.agents.consumer.Consumer
 import com.bwsw.tstreams.agents.consumer.Offset.IOffset
 import com.bwsw.tstreams.agents.consumer.subscriber.QueueBuilder.Persistent
-import com.bwsw.tstreams.agents.consumer.subscriber.{QueueBuilder, Subscriber}
+import com.bwsw.tstreams.agents.consumer.subscriber.{QueueBuilder, Subscriber, SubscriberOptionsBuilder}
 import com.bwsw.tstreams.agents.producer.{CoordinationOptions, Producer}
 import com.bwsw.tstreams.common.{RoundRobinPolicy, _}
 import com.bwsw.tstreams.converter.IConverter
@@ -912,14 +912,19 @@ class TStreamsFactory() {
                                          converter: IConverter[Array[Byte], T],
                                          transactionGenerator: ITransactionGenerator,
                                          offset: IOffset,
-                                         isUseLastOffset: Boolean = true): com.bwsw.tstreams.agents.consumer.ConsumerOptions[T] = this.synchronized {
+                                         checkpointAtStart: Boolean = false,
+                                         useLastOffset: Boolean = true): com.bwsw.tstreams.agents.consumer.ConsumerOptions[T] = this.synchronized {
     val consumer_transaction_preload = pAsInt(TSF_Dictionary.Consumer.TRANSACTION_PRELOAD, Consumer_transaction_preload_default)
     pAssertIntRange(consumer_transaction_preload, Consumer_transaction_preload_min, Consumer_transaction_preload_max)
 
     val consumer_data_preload = pAsInt(TSF_Dictionary.Consumer.DATA_PRELOAD, Consumer_data_preload_default)
     pAssertIntRange(consumer_data_preload, Consumer_data_preload_min, Consumer_data_preload_max)
 
-    val consumerOptions = new com.bwsw.tstreams.agents.consumer.ConsumerOptions[T](transactionsPreload = consumer_transaction_preload, dataPreload = consumer_data_preload, converter = converter, readPolicy = new RoundRobinPolicy(stream, partitions), offset = offset, transactionGenerator = transactionGenerator, useLastOffset = isUseLastOffset)
+    val consumerOptions = new com.bwsw.tstreams.agents.consumer.ConsumerOptions[T](transactionsPreload = consumer_transaction_preload,
+      dataPreload = consumer_data_preload, converter = converter,
+      readPolicy = new RoundRobinPolicy(stream, partitions), offset = offset,
+      transactionGenerator = transactionGenerator, useLastOffset = useLastOffset,
+      checkpointAtStart = checkpointAtStart)
 
     consumerOptions
   }
@@ -942,7 +947,6 @@ class TStreamsFactory() {
     * returns ready to use producer object
     *
     * @param name Producer name
-    * @param isLowPriority
     * @param transactionGenerator
     * @param converter
     * @param partitions
@@ -1055,7 +1059,7 @@ class TStreamsFactory() {
                      partitions: Set[Int],
                      offset: IOffset,
                      useLastOffset: Boolean = true,
-                     rememberFirstStartOffset: Boolean = true): Consumer[T] = this.synchronized {
+                     checkpointAtStart: Boolean = false): Consumer[T] = this.synchronized {
 
     if (isClosed.get)
       throw new IllegalStateException("TStreamsFactory is closed. This is the illegal usage of the object.")
@@ -1065,11 +1069,9 @@ class TStreamsFactory() {
     val ms: MetadataStorage = getMetadataStorage()
     val stream: Stream[Array[Byte]] = getStreamObject(metadatastorage = ms, datastorage = ds)
     val consumerOptions = getBasicConsumerOptions(transactionGenerator = transactionGenerator,
-      stream = stream,
-      partitions = partitions,
-      converter = converter,
-      offset = offset,
-      isUseLastOffset = useLastOffset)
+      stream = stream, partitions = partitions, converter = converter,
+      offset = offset, checkpointAtStart = checkpointAtStart,
+      useLastOffset = useLastOffset)
 
     new Consumer(name, stream, consumerOptions)
   }
@@ -1091,8 +1093,8 @@ class TStreamsFactory() {
                        partitions: Set[Int],
                        callback: com.bwsw.tstreams.agents.consumer.subscriber.Callback[T],
                        offset: IOffset,
-                       isUseLastOffset: Boolean = true
-                      ): Subscriber[T] = this.synchronized {
+                       useLastOffset: Boolean = true,
+                       checkpointAtStart: Boolean = false): Subscriber[T] = this.synchronized {
     if (isClosed.get)
       throw new IllegalStateException("TStreamsFactory is closed. This is the illegal usage of the object.")
 
@@ -1104,8 +1106,9 @@ class TStreamsFactory() {
       stream = stream,
       partitions = partitions,
       converter = converter,
+      checkpointAtStart = checkpointAtStart,
       offset = offset,
-      isUseLastOffset = isUseLastOffset)
+      useLastOffset = useLastOffset)
 
     val bind_host = pAsString(TSF_Dictionary.Consumer.Subscriber.BIND_HOST)
     assert(bind_host != null)
@@ -1142,7 +1145,7 @@ class TStreamsFactory() {
 
     val queue_path = pAsString(TSF_Dictionary.Consumer.Subscriber.PERSISTENT_QUEUE_PATH)
 
-    val opts = com.bwsw.tstreams.agents.consumer.subscriber.SubscriberOptionsBuilder.fromConsumerOptions(consumerOptions,
+    val opts = SubscriberOptionsBuilder.fromConsumerOptions(consumerOptions,
       agentAddress = bind_host + ":" + bind_port,
       zkRootPath = root,
       zkHosts = endpoints,
@@ -1151,8 +1154,7 @@ class TStreamsFactory() {
       transactionsBufferWorkersThreadPoolAmount = transaction_thread_pool,
       processingEngineWorkersThreadAmount = pe_thread_pool,
       pollingFrequencyDelay = polling_frequency,
-      transactionsQueueBuilder = if (queue_path == null) new QueueBuilder.InMemory() else new Persistent(queue_path)
-    )
+      transactionsQueueBuilder = if (queue_path == null) new QueueBuilder.InMemory() else new Persistent(queue_path))
 
     new Subscriber[T](name, stream, opts, callback)
   }

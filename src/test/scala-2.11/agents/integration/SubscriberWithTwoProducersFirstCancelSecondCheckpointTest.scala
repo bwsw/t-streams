@@ -42,7 +42,7 @@ class SubscriberWithTwoProducersFirstCancelSecondCheckpointTest extends FlatSpec
       converter = arrayByteToStringConverter,
       partitions = Set(0),
       offset = Newest,
-      isUseLastOffset = true,
+      useLastOffset = true,
       callback = new Callback[String] {
         override def onTransaction(consumer: TransactionOperator[String], transaction: ConsumerTransaction[String]): Unit = this.synchronized {
           bs.append(transaction.getTransactionID())

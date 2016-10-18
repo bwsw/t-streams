@@ -36,7 +36,7 @@ class SubscriberBasicFunctionsTests extends FlatSpec with Matchers with BeforeAn
       transactionGenerator = LocalGeneratorCreator.getGen(),
       converter = arrayByteToStringConverter, partitions = Set(0, 1, 2),
       offset = Oldest,
-      isUseLastOffset = true,
+      useLastOffset = true,
       callback = new Callback[String] {
         override def onTransaction(consumer: TransactionOperator[String], transaction: ConsumerTransaction[String]): Unit = {}
       })
@@ -49,7 +49,7 @@ class SubscriberBasicFunctionsTests extends FlatSpec with Matchers with BeforeAn
       transactionGenerator = LocalGeneratorCreator.getGen(),
       converter = arrayByteToStringConverter, partitions = Set(0, 1, 2),
       offset = Oldest,
-      isUseLastOffset = true,
+      useLastOffset = true,
       callback = new Callback[String] {
         override def onTransaction(consumer: TransactionOperator[String], transaction: ConsumerTransaction[String]): Unit = {}
       })
@@ -64,7 +64,7 @@ class SubscriberBasicFunctionsTests extends FlatSpec with Matchers with BeforeAn
       transactionGenerator = LocalGeneratorCreator.getGen(),
       converter = arrayByteToStringConverter, partitions = Set(0, 1, 2),
       offset = Oldest,
-      isUseLastOffset = true,
+      useLastOffset = true,
       callback = new Callback[String] {
         override def onTransaction(consumer: TransactionOperator[String], transaction: ConsumerTransaction[String]): Unit = {}
       })
@@ -86,7 +86,7 @@ class SubscriberBasicFunctionsTests extends FlatSpec with Matchers with BeforeAn
       transactionGenerator = LocalGeneratorCreator.getGen(),
       converter = arrayByteToStringConverter, partitions = Set(0, 1, 2),
       offset = Oldest,
-      isUseLastOffset = true,
+      useLastOffset = true,
       callback = new Callback[String] {
         override def onTransaction(consumer: TransactionOperator[String], transaction: ConsumerTransaction[String]): Unit = {}
       })
@@ -109,7 +109,7 @@ class SubscriberBasicFunctionsTests extends FlatSpec with Matchers with BeforeAn
       transactionGenerator = LocalGeneratorCreator.getGen(),
       converter = arrayByteToStringConverter, partitions = Set(0, 1, 2),
       offset = Oldest,
-      isUseLastOffset = true,
+      useLastOffset = true,
       callback = new Callback[String] {
         override def onTransaction(consumer: TransactionOperator[String], transaction: ConsumerTransaction[String]): Unit = {}
       })
@@ -134,7 +134,7 @@ class SubscriberBasicFunctionsTests extends FlatSpec with Matchers with BeforeAn
       transactionGenerator = LocalGeneratorCreator.getGen(),
       converter = arrayByteToStringConverter, partitions = Set(0, 1, 2),
       offset = Oldest,
-      isUseLastOffset = true,
+      useLastOffset = true,
       callback = new Callback[String] {
         override def onTransaction(consumer: TransactionOperator[String], transaction: ConsumerTransaction[String]): Unit = this.synchronized {
           i += 1

@@ -2,7 +2,7 @@ package agents.integration
 
 import java.util.concurrent.{CountDownLatch, TimeUnit}
 
-import com.bwsw.tstreams.agents.consumer.Offset.{Newest, Oldest}
+import com.bwsw.tstreams.agents.consumer.Offset.Newest
 import com.bwsw.tstreams.agents.consumer.subscriber.Callback
 import com.bwsw.tstreams.agents.consumer.{ConsumerTransaction, TransactionOperator}
 import com.bwsw.tstreams.agents.producer.NewTransactionProducerPolicy
@@ -42,8 +42,8 @@ class SubscriberBasicPubSubTests extends FlatSpec with Matchers with BeforeAndAf
     val s = f.getSubscriber[String](name = "sv2",
       transactionGenerator = LocalGeneratorCreator.getGen(),
       converter = arrayByteToStringConverter, partitions = Set(0, 1, 2),
-      offset = Oldest,
-      isUseLastOffset = true,
+      offset = Newest,
+      useLastOffset = false,
       callback = new Callback[String] {
         override def onTransaction(consumer: TransactionOperator[String], transaction: ConsumerTransaction[String]): Unit = this.synchronized {
           subsciberTransactionsAmount += 1
@@ -80,7 +80,7 @@ class SubscriberBasicPubSubTests extends FlatSpec with Matchers with BeforeAndAf
       transactionGenerator = LocalGeneratorCreator.getGen(),
       converter = arrayByteToStringConverter, partitions = Set(0, 1, 2),
       offset = Newest,
-      isUseLastOffset = true,
+      useLastOffset = false,
       callback = new Callback[String] {
         override def onTransaction(consumer: TransactionOperator[String], transaction: ConsumerTransaction[String]): Unit = this.synchronized {
           subscriberTransactionsAmount += 1
