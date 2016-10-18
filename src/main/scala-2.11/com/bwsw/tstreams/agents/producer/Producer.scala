@@ -17,6 +17,10 @@ import org.slf4j.LoggerFactory
 
 import scala.util.control.Breaks._
 
+object Producer {
+  val logger = LoggerFactory.getLogger(this.getClass)
+  var SHUTDOWN_WAIT_MAX_SECONDS = GeneralOptions.SHUTDOWN_WAIT_MAX_SECONDS
+}
 
 /**
   * Basic producer class
@@ -51,7 +55,6 @@ class Producer[T](var name: String,
 
   // stores latches for materialization await (protects from materialization before main transaction response)
   private val materializationGovernor = new MaterializationGovernor(producerOptions.writePolicy.getUsedPartitions().toSet)
-  private val logger = LoggerFactory.getLogger(this.getClass)
   private val threadLock = new ReentrantLock(true)
 
   private val peerKeepAliveTimeout = pcs.zkSessionTimeout * 1000 * 2
@@ -84,7 +87,7 @@ class Producer[T](var name: String,
 
   stream.dataStorage.bind()
 
-  logger.info(s"Start new Basic producer with name : $name, streamName : ${stream.name}, streamPartitions : ${stream.partitionsCount}")
+  Producer.logger.info(s"Start new Basic producer with name : $name, streamName : ${stream.name}, streamPartitions : ${stream.partitionsCount}")
 
   // this client is used to find new subscribers
   val subscriberNotifier = new BroadcastCommunicationClient(curatorClient, partitions = producerOptions.writePolicy.getUsedPartitions())
@@ -140,12 +143,12 @@ class Producer[T](var name: String,
       override def run(): Unit = {
         Thread.currentThread().setName(s"Producer-$name-KeepAlive")
         latch.countDown()
-        logger.info(s"Producer $name - object is started, launched open transaction update thread")
+        Producer.logger.info(s"Producer $name - object is started, launched open transaction update thread")
         breakable {
           while (true) {
             val value: Boolean = shutdownKeepAliveThread.wait(producerOptions.transactionKeepAliveInterval * 1000)
             if (value) {
-              logger.info(s"Producer $name - object either checkpointed or cancelled. Exit KeepAliveThread.")
+              Producer.logger.info(s"Producer $name - object either checkpointed or cancelled. Exit KeepAliveThread.")
               break()
             }
             asyncActivityService.submit("<UpdateOpenedTransactionsTask>", new Runnable {
@@ -164,7 +167,7 @@ class Producer[T](var name: String,
     * Used to send update event to all opened transactions
     */
   private def updateOpenedTransactions() = this.synchronized {
-    logger.debug(s"Producer $name - scheduled for long lasting transactions")
+    Producer.logger.debug(s"Producer $name - scheduled for long lasting transactions")
     openTransactions.forallKeysDo((part: Int, transaction: IProducerTransaction[T]) => transaction.updateTransactionKeepAliveState())
   }
 
@@ -189,8 +192,8 @@ class Producer[T](var name: String,
 
 
     val transactionID = p2pAgent.generateNewTransaction(p)
-    if (logger.isDebugEnabled)
-      logger.debug(s"[NEW_TRANSACTION PARTITION_$p] ID=$transactionID")
+    if (Producer.logger.isDebugEnabled)
+      Producer.logger.debug(s"[NEW_TRANSACTION PARTITION_$p] ID=$transactionID")
     val transaction = new ProducerTransaction[T](p, transactionID, this)
 
     openTransactions.put(p, transaction)
@@ -299,8 +302,8 @@ class Producer[T](var name: String,
         orderID = p2pAgent.getAndIncSequentialID(partition),
         count = 0)
       subscriberNotifier.publish(msg)
-      if (logger.isDebugEnabled)
-        logger.debug(s"Producer $name - [GET_LOCAL_TRANSACTION] update with message partition=$partition ID=$transactionID opened")
+      if (Producer.logger.isDebugEnabled)
+        Producer.logger.debug(s"Producer $name - [GET_LOCAL_TRANSACTION] update with message partition=$partition ID=$transactionID opened")
     })
 
     val transactionRecord = TransactionRecord(partition = partition, transactionID = transactionID, count = -1,
@@ -317,8 +320,8 @@ class Producer[T](var name: String,
     * Stop this agent
     */
   def stop() = {
-    logger.info(s"Producer $name is shutting down.")
-    LockUtil.withLockOrDieDo[Unit](threadLock, (100, TimeUnit.SECONDS), Some(logger), () => {
+    Producer.logger.info(s"Producer $name is shutting down.")
+    LockUtil.withLockOrDieDo[Unit](threadLock, (100, TimeUnit.SECONDS), Some(Producer.logger), () => {
       if (isStop)
         throw new IllegalStateException(s"Producer ${this.name} is already stopped. Duplicate action.")
       isStop = true
@@ -329,12 +332,12 @@ class Producer[T](var name: String,
     transactionKeepAliveThread.join()
     // stop executor
 
-    asyncActivityService.shutdownOrDie(100, TimeUnit.SECONDS)
+    asyncActivityService.shutdownOrDie(Producer.SHUTDOWN_WAIT_MAX_SECONDS, TimeUnit.SECONDS)
     while (tsdb.getResourceCounter() != 0) {
-      logger.info(s"Waiting for all cassandra async callbacks will be executed. Pending: ${tsdb.getResourceCounter()}.")
+      Producer.logger.info(s"Waiting for all cassandra async callbacks will be executed. Pending: ${tsdb.getResourceCounter()}.")
       Thread.sleep(200)
     }
-    backendActivityService.shutdownOrDie(100, TimeUnit.SECONDS)
+    backendActivityService.shutdownOrDie(Producer.SHUTDOWN_WAIT_MAX_SECONDS, TimeUnit.SECONDS)
 
     // stop provide master features to public
     p2pAgent.stop()
@@ -358,29 +361,29 @@ class Producer[T](var name: String,
     */
   def materialize(msg: TransactionStateMessage):Unit = {
 
-    if (logger.isDebugEnabled)
-      logger.debug(s"Start handling MaterializeRequest at partition: ${msg.partition}")
+    if (Producer.logger.isDebugEnabled)
+      Producer.logger.debug(s"Start handling MaterializeRequest at partition: ${msg.partition}")
 
     materializationGovernor.awaitUnprotected(msg.partition)
     val opt = getOpenedTransactionForPartition(msg.partition)
 
     if(opt.isEmpty) {
-      logger.warn(s"There is no opened transaction for ${msg.partition}.")
+      Producer.logger.warn(s"There is no opened transaction for ${msg.partition}.")
       return
     }
 
-    if (logger.isDebugEnabled)
-      logger.debug(s"In Map Transaction: ${opt.get.getTransactionID.toString}\nIn Request Transaction: ${msg.transactionID}")
+    if (Producer.logger.isDebugEnabled)
+      Producer.logger.debug(s"In Map Transaction: ${opt.get.getTransactionID.toString}\nIn Request Transaction: ${msg.transactionID}")
 
     if(!(opt.get.getTransactionID == msg.transactionID && msg.status == TransactionStatus.materialize)) {
-      logger.warn(s"Materialization is requested for transaction ${msg.transactionID} but expected transaction is ${opt.get.getTransactionID}.")
+      Producer.logger.warn(s"Materialization is requested for transaction ${msg.transactionID} but expected transaction is ${opt.get.getTransactionID}.")
       opt.get.markAsClosed()
       return
     }
 
     opt.get.makeMaterialized()
-    if (logger.isDebugEnabled)
-      logger.debug("End handling MaterializeRequest")
+    if (Producer.logger.isDebugEnabled)
+      Producer.logger.debug("End handling MaterializeRequest")
 
   }
 }

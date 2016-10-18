@@ -2,13 +2,17 @@ package com.bwsw.tstreams.agents.consumer.subscriber
 
 import java.util.concurrent.atomic.AtomicBoolean
 
-import com.bwsw.tstreams.common.Functions
+import com.bwsw.tstreams.common.{Functions, GeneralOptions}
 import com.bwsw.tstreams.coordination.server.RequestsTcpServer
 import com.bwsw.tstreams.streams.Stream
 import org.slf4j.LoggerFactory
 
 import scala.collection.mutable
 
+object Subscriber {
+  val logger = LoggerFactory.getLogger(this.getClass)
+  var SHUTDOWN_WAIT_MAX_SECONDS = GeneralOptions.SHUTDOWN_WAIT_MAX_SECONDS
+}
 
 /**
   * Created by Ivan Kudryavtsev on 19.08.16.
@@ -203,6 +207,3 @@ class Subscriber[T](val name: String,
 
 }
 
-object Subscriber {
-  val logger = LoggerFactory.getLogger(this.getClass)
-}

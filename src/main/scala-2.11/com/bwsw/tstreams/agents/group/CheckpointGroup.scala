@@ -4,10 +4,15 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.locks.ReentrantLock
 
-import com.bwsw.tstreams.common.{FirstFailLockableTaskExecutor, LockUtil}
+import com.bwsw.tstreams.common.{FirstFailLockableTaskExecutor, GeneralOptions, LockUtil}
 import com.bwsw.tstreams.metadata.{MetadataStorage, RequestsRepository, TransactionDatabase}
 import com.datastax.driver.core.BatchStatement
 import org.slf4j.LoggerFactory
+
+object CheckpointGroup {
+  var SHUTDOWN_WAIT_MAX_SECONDS = GeneralOptions.SHUTDOWN_WAIT_MAX_SECONDS
+  val logger = LoggerFactory.getLogger(this.getClass)
+}
 
 /**
   * Base class to creating agent group
@@ -21,11 +26,6 @@ class CheckpointGroup(val executors: Int = 1) {
   private val lockTimeout = (20, TimeUnit.SECONDS)
   private val executorPool = new FirstFailLockableTaskExecutor("CheckpointGroup-Workers", executors)
   private val isStopped = new AtomicBoolean(false)
-
-  /**
-    * MetadataStorage logger for logging
-    */
-  private val logger = LoggerFactory.getLogger(this.getClass)
 
   /**
     * Validate that all agents has the same metadata storage
@@ -43,7 +43,7 @@ class CheckpointGroup(val executors: Int = 1) {
     * @param agent Agent ref
     */
   def add(agent: GroupParticipant): Unit = {
-    LockUtil.withLockOrDieDo[Unit](lock, lockTimeout, Some(logger), () => {
+    LockUtil.withLockOrDieDo[Unit](lock, lockTimeout, Some(CheckpointGroup.logger), () => {
       if (isStopped.get)
         throw new IllegalStateException("Group is stopped. No longer operations are possible.")
       if (agents.contains(agent.getAgentName)) {
@@ -58,7 +58,7 @@ class CheckpointGroup(val executors: Int = 1) {
     * clears group
     */
   def clear(): Unit = {
-    LockUtil.withLockOrDieDo[Unit](lock, lockTimeout, Some(logger), () => {
+    LockUtil.withLockOrDieDo[Unit](lock, lockTimeout, Some(CheckpointGroup.logger), () => {
       if (isStopped.get)
         throw new IllegalStateException("Group is stopped. No longer operations are possible.")
       agents.clear()
@@ -71,7 +71,7 @@ class CheckpointGroup(val executors: Int = 1) {
     * @param name Agent name
     */
   def remove(name: String): Unit = {
-    LockUtil.withLockOrDieDo[Unit](lock, lockTimeout, Some(logger), () => {
+    LockUtil.withLockOrDieDo[Unit](lock, lockTimeout, Some(CheckpointGroup.logger), () => {
       if (isStopped.get)
         throw new IllegalStateException("Group is stopped. No longer operations are possible.")
       if (!agents.contains(name)) {
@@ -85,7 +85,7 @@ class CheckpointGroup(val executors: Int = 1) {
     * Checks if an agent with the name is already inside
     */
   def exists(name: String): Boolean = {
-    LockUtil.withLockOrDieDo[Boolean](lock, lockTimeout, Some(logger), () => {
+    LockUtil.withLockOrDieDo[Boolean](lock, lockTimeout, Some(CheckpointGroup.logger), () => {
       if (isStopped.get)
         throw new IllegalStateException("Group is stopped. No longer operations are possible.")
       agents.contains(name)
@@ -123,11 +123,11 @@ class CheckpointGroup(val executors: Int = 1) {
     if (isStopped.get)
       throw new IllegalStateException("Group is stopped. No longer operations are possible.")
 
-    LockUtil.lockOrDie(lock, lockTimeout, Some(logger))
+    LockUtil.lockOrDie(lock, lockTimeout, Some(CheckpointGroup.logger))
 
     agents.foreach { case (name, agent) =>
       if (agent.getThreadLock() != null)
-        LockUtil.lockOrDie(agent.getThreadLock(), lockTimeout, Some(logger))
+        LockUtil.lockOrDie(agent.getThreadLock(), lockTimeout, Some(CheckpointGroup.logger))
     }
 
     agents.foreach { case (name, agent) => if (agent.isInstanceOf[SendingAgent]) agent.asInstanceOf[SendingAgent].finalizeDataSend() }
@@ -175,8 +175,9 @@ class CheckpointGroup(val executors: Int = 1) {
   def stop(): Unit = {
     if (isStopped.getAndSet(true))
       throw new IllegalStateException("Group is stopped. No longer operations are possible.")
-    executorPool.shutdownOrDie(100, TimeUnit.SECONDS)
+    executorPool.shutdownOrDie(CheckpointGroup.SHUTDOWN_WAIT_MAX_SECONDS, TimeUnit.SECONDS)
     clear()
   }
 
 }
+
