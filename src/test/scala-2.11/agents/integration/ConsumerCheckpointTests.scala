@@ -37,7 +37,7 @@ class ConsumerCheckpointTests extends FlatSpec with Matchers with BeforeAndAfter
       converter = arrayByteToStringConverter,
       partitions = Set(0),
       offset = Oldest,
-      isUseLastOffset = false)
+      useLastOffset = false)
 
     val c2 = f.getConsumer[String](
       name = CONSUMER_NAME,
@@ -45,7 +45,7 @@ class ConsumerCheckpointTests extends FlatSpec with Matchers with BeforeAndAfter
       converter = arrayByteToStringConverter,
       partitions = Set(0),
       offset = Oldest,
-      isUseLastOffset = true)
+      useLastOffset = true)
 
     val t1 = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened, 0)
     t1.send("data")

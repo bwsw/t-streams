@@ -64,6 +64,11 @@ class TransactionBuffer(queue: QueueBuilder.QueueType) {
       val ts      = stateMap(update.transactionID)
       val orderID = ts.queueOrderID
 
+      // If master is changed and we the event has been received via another master then it's bad case.
+      // Set new master to avoid fast loading (additional protection is done thru orderID.
+      //
+      ts.masterSessionID = update.masterSessionID
+
       /*
       * state switching system (almost finite automate)
       * */

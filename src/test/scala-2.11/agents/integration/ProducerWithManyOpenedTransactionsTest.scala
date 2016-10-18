@@ -32,7 +32,7 @@ class ProducerWithManyOpenedTransactionsTest extends FlatSpec with Matchers with
     converter = arrayByteToStringConverter,
     partitions = Set(0, 1, 2),
     offset = Oldest,
-    isUseLastOffset = true)
+    useLastOffset = true)
   consumer.start
 
   "BasicProducer.newTransaction()" should "return BasicProducerTransaction instance" in {

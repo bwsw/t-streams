@@ -49,7 +49,7 @@ class AsynchronousTransactionTests extends FlatSpec with Matchers
       converter = arrayByteToStringConverter,
       partitions = Set(0),
       offset = Oldest,
-      isUseLastOffset = true)
+      useLastOffset = true)
 
     val pTransaction = producer.newTransaction(policy = NewTransactionProducerPolicy.ErrorIfOpened)
     pTransaction.send("test")
@@ -77,7 +77,7 @@ class AsynchronousTransactionTests extends FlatSpec with Matchers
       converter = arrayByteToStringConverter,
       partitions = Set(0),
       offset = Oldest,
-      isUseLastOffset = true)
+      useLastOffset = true)
 
     val pTransaction = producer.newTransaction(policy = NewTransactionProducerPolicy.ErrorIfOpened)
     pTransaction.send("test")
@@ -103,7 +103,7 @@ class AsynchronousTransactionTests extends FlatSpec with Matchers
       converter = arrayByteToStringConverter,
       partitions = Set(0),
       offset = Oldest,
-      isUseLastOffset = true)
+      useLastOffset = true)
 
     val pTransaction = producer.newTransaction(policy = NewTransactionProducerPolicy.ErrorIfOpened)
     pTransaction.send("test")

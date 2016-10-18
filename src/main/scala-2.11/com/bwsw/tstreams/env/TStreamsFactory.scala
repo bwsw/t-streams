@@ -1054,7 +1054,8 @@ class TStreamsFactory() {
                      converter: IConverter[Array[Byte], T],
                      partitions: Set[Int],
                      offset: IOffset,
-                     isUseLastOffset: Boolean = true): Consumer[T] = this.synchronized {
+                     useLastOffset: Boolean = true,
+                     rememberFirstStartOffset: Boolean = true): Consumer[T] = this.synchronized {
 
     if (isClosed.get)
       throw new IllegalStateException("TStreamsFactory is closed. This is the illegal usage of the object.")
@@ -1068,7 +1069,7 @@ class TStreamsFactory() {
       partitions = partitions,
       converter = converter,
       offset = offset,
-      isUseLastOffset = isUseLastOffset)
+      isUseLastOffset = useLastOffset)
 
     new Consumer(name, stream, consumerOptions)
   }

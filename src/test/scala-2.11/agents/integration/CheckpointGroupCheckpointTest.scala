@@ -36,7 +36,7 @@ class CheckpointGroupCheckpointTest extends FlatSpec with Matchers with BeforeAn
     converter = arrayByteToStringConverter,
     partitions = Set(0, 1, 2),
     offset = Oldest,
-    isUseLastOffset = true)
+    useLastOffset = true)
 
   val consumer2 = f.getConsumer[String](
     name = "test_consumer",
@@ -44,7 +44,7 @@ class CheckpointGroupCheckpointTest extends FlatSpec with Matchers with BeforeAn
     converter = arrayByteToStringConverter,
     partitions = Set(0, 1, 2),
     offset = Oldest,
-    isUseLastOffset = true)
+    useLastOffset = true)
 
   consumer.start
 

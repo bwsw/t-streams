@@ -26,7 +26,8 @@ trait Callback[T] {
                         partition: Int,
                         transactionID: Long,
                         count: Int) = {
-    val transactionOpt = consumer.buildTransactionObject(partition, transactionID, count)
-    transactionOpt.foreach(transaction => onTransaction(consumer, transaction = transaction))
+    consumer.setStreamPartitionOffset(partition, transactionID)
+    consumer.buildTransactionObject(partition, transactionID, count)
+      .foreach(transaction => onTransaction(consumer, transaction = transaction))
   }
 }

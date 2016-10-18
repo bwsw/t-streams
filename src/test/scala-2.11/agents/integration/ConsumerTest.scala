@@ -31,7 +31,7 @@ class ConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll with Te
     converter = arrayByteToStringConverter,
     partitions = Set(0, 1, 2),
     offset = Oldest,
-    isUseLastOffset = true)
+    useLastOffset = true)
 
   val executor = new FirstFailLockableTaskExecutor("executor")
   val tsdb = new TransactionDatabase(cluster.connect(randomKeyspace), "test_stream")
