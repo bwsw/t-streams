@@ -54,7 +54,7 @@ case class SubscriberOptions[T](val transactionsPreload: Int,
     readPolicy = readPolicy,
     offset = offset,
     transactionGenerator = transactionGenerator,
-    rememberFirstStartOffset = rememberFirstStartOffset,
+    checkpointAtStart = rememberFirstStartOffset,
     useLastOffset = useLastOffset)
 
 }

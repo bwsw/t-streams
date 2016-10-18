@@ -128,8 +128,10 @@ class Consumer[T](val name: String,
       transactionBuffer(partition) = mutable.Queue[ConsumerTransaction[T]]()
     }
 
-
     isStarted.set(true)
+
+    if(options.checkpointAtStart) checkpoint()
+
   }
 
 

@@ -89,7 +89,7 @@ class ProducerMasterChangeComplexTest  extends FlatSpec with Matchers with Befor
     converter = arrayByteToStringConverter,
     partitions = PARTITIONS,     // Set(0),
     offset = Newest,
-    isUseLastOffset = false, // true
+    useLastOffset = false, // true
     callback = new Callback[String] {
       override def onTransaction(consumer: TransactionOperator[String], transaction: ConsumerTransaction[String]): Unit = this.synchronized {
         subscriberCounter += 1

@@ -45,7 +45,7 @@ class SubscriberWithManyProcessingEnginesThreadsTest extends FlatSpec with Match
       converter = new ArrayByteToStringConverter, // vice versa converter to string
       partitions = PARTITIONS, // active partitions
       offset = Newest, // it will start from newest available partitions
-      isUseLastOffset = false, // will ignore history
+      useLastOffset = false, // will ignore history
       callback = new Callback[String] {
         override def onTransaction(op: TransactionOperator[String], transaction: ConsumerTransaction[String]): Unit = this.synchronized {
           transactionsCounter += 1

@@ -24,8 +24,8 @@ case class ConsumerOptions[T](transactionsPreload: Int,
                               readPolicy: AbstractPolicy,
                               offset: IOffset,
                               transactionGenerator: ITransactionGenerator,
-                              useLastOffset: Boolean = true,
-                              rememberFirstStartOffset: Boolean = true) {
+                              useLastOffset: Boolean,
+                              checkpointAtStart: Boolean) {
   if (transactionsPreload < 1)
     throw new IllegalArgumentException("Incorrect transactionPreload value, should be greater than or equal to one.")
 
