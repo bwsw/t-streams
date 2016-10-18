@@ -133,7 +133,7 @@ class ProcessingEngine[T](consumer: TransactionOperator[T],
   }
 
   def stop() = {
-    executor.shutdownOrDie(100, TimeUnit.SECONDS)
+    executor.shutdownOrDie(Subscriber.SHUTDOWN_WAIT_MAX_SECONDS, TimeUnit.SECONDS)
   }
 }
 
