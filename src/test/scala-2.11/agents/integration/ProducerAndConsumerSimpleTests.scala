@@ -37,7 +37,7 @@ class ProducerAndConsumerSimpleTests extends FlatSpec with Matchers with BeforeA
     converter = arrayByteToStringConverter,
     partitions = Set(0),
     offset = Oldest,
-    isUseLastOffset = true)
+    useLastOffset = true)
 
   consumer.start()
 

@@ -41,7 +41,7 @@ class ProducerAndConsumerLongLastingTransactionsTests extends FlatSpec with Matc
     converter = arrayByteToStringConverter,
     partitions = Set(0),
     offset = Oldest,
-    isUseLastOffset = true)
+    useLastOffset = true)
 
   consumer.start()
 
