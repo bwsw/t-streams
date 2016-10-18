@@ -3,6 +3,7 @@ package com.bwsw.tstreams.coordination.client
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 
+import com.bwsw.tstreams.agents.producer.Producer
 import com.bwsw.tstreams.common.FirstFailLockableTaskExecutor
 import com.bwsw.tstreams.coordination.messages.master._
 import com.bwsw.tstreams.coordination.messages.state.TransactionStateMessage
@@ -99,7 +100,7 @@ class TcpTransport(address: String, timeoutMs: Int, retryCount: Int = 3, retryDe
   def stopServer(): Unit = {
     IMessage.logger.info(s"Transport (for server) is shutting down.")
     server.stop()
-    executor.shutdownOrDie(100, TimeUnit.SECONDS)
+    executor.shutdownOrDie(Producer.SHUTDOWN_WAIT_MAX_SECONDS, TimeUnit.SECONDS)
   }
 
 }

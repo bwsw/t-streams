@@ -10,7 +10,6 @@ import com.bwsw.tstreams.common.FirstFailLockableTaskExecutor
   */
 class ExecutorGraph(name: String = "", publisherThreadsAmount: Int = 1) {
 
-  val SHUTDOWN_TIMEOUT = 100
   val SHUTDOWN_UNITS = TimeUnit.SECONDS
 
   val general = new FirstFailLockableTaskExecutor(s"ExecutorGraph-general-$name")
@@ -24,7 +23,7 @@ class ExecutorGraph(name: String = "", publisherThreadsAmount: Int = 1) {
     */
   def shutdown() = this.synchronized {
     List(general, newTransaction, cassandra, materialize, publish)
-      .foreach(e => e.shutdownOrDie(SHUTDOWN_TIMEOUT, SHUTDOWN_UNITS))
+      .foreach(e => e.shutdownOrDie(Producer.SHUTDOWN_WAIT_MAX_SECONDS, SHUTDOWN_UNITS))
   }
 
   /**
