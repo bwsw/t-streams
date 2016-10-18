@@ -41,7 +41,7 @@ class ProducerWritesToOneSubscriberReadsFromAllTests extends FlatSpec with Match
       converter = arrayByteToStringConverter,
       partitions = Set(0, 1, 2),
       offset = Newest,
-      isUseLastOffset = true,
+      useLastOffset = true,
       callback = new Callback[String] {
         override def onTransaction(consumer: TransactionOperator[String], transaction: ConsumerTransaction[String]): Unit = this.synchronized {
           subscriberTransactionsAmount += 1

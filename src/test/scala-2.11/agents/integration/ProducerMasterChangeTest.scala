@@ -55,7 +55,7 @@ class ProducerMasterChangeTest extends FlatSpec with Matchers with BeforeAndAfte
       converter = arrayByteToStringConverter,
       partitions = Set(0),
       offset = Newest,
-      isUseLastOffset = false,
+      useLastOffset = false,
       callback = new Callback[String] {
         override def onTransaction(consumer: TransactionOperator[String], transaction: ConsumerTransaction[String]): Unit = this.synchronized {
           bs.append(transaction.getTransactionID())
