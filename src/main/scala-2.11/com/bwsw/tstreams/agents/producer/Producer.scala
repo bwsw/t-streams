@@ -1,5 +1,6 @@
 package com.bwsw.tstreams.agents.producer
 
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.locks.ReentrantLock
 import java.util.concurrent.{CountDownLatch, TimeUnit}
 
@@ -49,7 +50,7 @@ class Producer[T](var name: String,
 
   // short key
   val pcs = producerOptions.coordinationOptions
-  var isStop = false
+  val isStop = new AtomicBoolean(false)
 
   private val openTransactions = new OpenTransactionsKeeper[T]()
 
@@ -172,7 +173,7 @@ class Producer[T](var name: String,
   }
 
   private def newTransactionUnsafe(policy: ProducerPolicy, partition: Int = -1): ProducerTransaction[T] = {
-    if (isStop)
+    if (isStop.get())
       throw new IllegalStateException(s"Producer ${this.name} is already stopped. Unable to get new transaction.")
 
     val p = {
@@ -212,7 +213,7 @@ class Producer[T](var name: String,
     * @return BasicProducerTransaction instance
     */
   def newTransaction(policy: ProducerPolicy, partition: Int = -1, retry: Int = 1): ProducerTransaction[T] = {
-    if (isStop)
+    if (isStop.get())
       throw new IllegalStateException(s"Producer ${this.name} is already stopped. Unable to get new transaction.")
 
     if(retry < 0)
@@ -321,11 +322,9 @@ class Producer[T](var name: String,
     */
   def stop() = {
     Producer.logger.info(s"Producer $name is shutting down.")
-    LockUtil.withLockOrDieDo[Unit](threadLock, (100, TimeUnit.SECONDS), Some(Producer.logger), () => {
-      if (isStop)
-        throw new IllegalStateException(s"Producer ${this.name} is already stopped. Duplicate action.")
-      isStop = true
-    })
+
+    if (isStop.getAndSet(true))
+      throw new IllegalStateException(s"Producer ${this.name} is already stopped. Duplicate action.")
 
     // stop update state of all open transactions
     shutdownKeepAliveThread.signal(true)
