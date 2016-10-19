@@ -11,6 +11,7 @@ import org.slf4j.LoggerFactory
 
 object CheckpointGroup {
   var SHUTDOWN_WAIT_MAX_SECONDS = GeneralOptions.SHUTDOWN_WAIT_MAX_SECONDS
+  var LOCK_TIMEOUT_SECONDS = 20
   val logger = LoggerFactory.getLogger(this.getClass)
 }
 
@@ -21,11 +22,11 @@ class CheckpointGroup(val executors: Int = 1) {
   /**
     * Group of agents (producers/consumer)
     */
-  private var agents = scala.collection.mutable.Map[String, GroupParticipant]()
-  private val lock = new ReentrantLock()
-  private val lockTimeout = (20, TimeUnit.SECONDS)
-  private val executorPool = new FirstFailLockableTaskExecutor("CheckpointGroup-Workers", executors)
-  private val isStopped = new AtomicBoolean(false)
+  private var agents        = scala.collection.mutable.Map[String, GroupParticipant]()
+  private val lockTimeout   = (CheckpointGroup.LOCK_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+  private val lock          = new ReentrantLock()
+  private val executorPool  = new FirstFailLockableTaskExecutor("CheckpointGroup-Workers", executors)
+  private val isStopped     = new AtomicBoolean(false)
 
   /**
     * Validate that all agents has the same metadata storage
