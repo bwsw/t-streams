@@ -40,10 +40,15 @@ publishTo := {
 
 publishArtifact in Test := false
 
+resolvers += "twitter-repo" at "http://maven.twttr.com"
+
+
 //COMMON
 libraryDependencies ++= Seq(
   "org.slf4j" % "slf4j-api" % "1.7.21",
   "org.slf4j" % "slf4j-simple" % "1.7.21",
+  "org.apache.thrift" % "libthrift" % "0.9.3",
+  "com.twitter" %% "scrooge-core" % "4.7.0",
   "org.scalatest" % "scalatest_2.11" % "3.0.0-M15",
   "org.scalamock" %% "scalamock-scalatest-support" % "3.2.2" % "test",
   "io.netty" % "netty-all" % "4.0.23.Final",
@@ -96,3 +101,4 @@ assemblyMergeStrategy in assembly := {
 
 //TESTS
 parallelExecution in ThisBuild := false
+com.twitter.scrooge.ScroogeSBT.newSettings
