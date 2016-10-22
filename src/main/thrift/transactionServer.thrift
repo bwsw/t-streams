@@ -7,10 +7,13 @@ enum TransactionStates {
 }
 
 struct Transaction {
-    1: required i64 transactionID
-    2: required TransactionStates state
-    3: required i32 quantity
-    4: required i32 timestamp
+    1: required string              stream
+    2: required i32                 partition
+    3: required i64                 interval
+    4: required i64                 transactionID
+    5: required TransactionStates   state
+    6: required i32                 quantity
+    7: required i32                 timestamp
 }
 
 struct Stream {
@@ -19,12 +22,8 @@ struct Stream {
 }
 
 service TransactionServerService {
-    // auth api
-    string authenticate(1: string login, 2: string password),
-
     // transaction api
-    bool putTransaction(1: string token, 2: string stream, 3: i32 partition, 4: i64 interval,
-                        5: i64 transaction, 6: TransactionStates state, 7: i32 quantity, 8: i32 timestamp),
+    bool putTransaction(1: string token, 2: list<Transaction> transactions),
 
     list<Transaction> scanTransactions(1: string token, 2: string stream, 3: i32 partition, 4: i64 interval),
 

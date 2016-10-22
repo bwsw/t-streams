@@ -49,7 +49,6 @@ libraryDependencies ++= Seq(
   "org.slf4j" % "slf4j-simple" % "1.7.21",
   "org.scalatest" % "scalatest_2.11" % "3.0.0-M15",
   "org.scalamock" %% "scalamock-scalatest-support" % "3.2.2" % "test",
-  "io.netty" % "netty-all" % "4.0.23.Final",
   "com.aerospike" % "aerospike-client" % "3.2.1",
   "com.fasterxml.jackson.module" % "jackson-module-scala_2.11" % "2.6.3",
   "net.openhft" % "chronicle-queue" % "4.2.6",
@@ -63,10 +62,10 @@ libraryDependencies ++= Seq(
 
 
 libraryDependencies ++= Seq(
-  "org.apache.thrift" % "libthrift" % "0.9.0",
-  "com.twitter" %% "scrooge-core" % "4.6.0",
+  "org.apache.thrift" % "libthrift" % "0.9.3",
+  "com.twitter" %% "scrooge-core" % "4.11.0",
+  "com.twitter" %% "twitter-server" % "1.23.0",
   "com.twitter" %% "finagle-thrift" % "6.34.0")
-
 
 libraryDependencies += ("com.datastax.cassandra" % "cassandra-driver-core" % "3.0.0")
   .exclude("com.google.guava", "guava")
