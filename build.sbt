@@ -101,4 +101,3 @@ assemblyMergeStrategy in assembly := {
 
 //TESTS
 parallelExecution in ThisBuild := false
-com.twitter.scrooge.ScroogeSBT.newSettings
