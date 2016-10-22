@@ -26,9 +26,9 @@ service TransactionServerService {
     bool putTransaction(1: string token, 2: string stream, 3: i32 partition, 4: i64 interval,
                         5: i64 transaction, 6: TransactionStates state, 7: i32 quantity, 8: i32 timestamp),
 
-    list<Transaction> scanTransctions(1: string token, 2: string stream, 3: i32 partition, 4: i64 interval),
+    list<Transaction> scanTransactions(1: string token, 2: string stream, 3: i32 partition, 4: i64 interval),
 
-    i32 scanTransctionsCRC32(1: string token, 2: string stream, 3: i32 partition, 4: i64 interval),
+    i32 scanTransactionsCRC32(1: string token, 2: string stream, 3: i32 partition, 4: i64 interval),
 
     bool delTransaction(1: string token, 2: string stream, 3: i32 partition, 4: i64 interval, 5: i64 transaction),
 
