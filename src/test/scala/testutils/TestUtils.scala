@@ -2,7 +2,6 @@ package testutils
 
 import java.io.File
 import java.lang.management.ManagementFactory
-import java.net.InetSocketAddress
 import java.util.Properties
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -45,47 +44,14 @@ trait TestUtils {
   logger.info("-------------------------------------------------------")
 
 
-  val cluster = MetadataConnectionPool.getCluster(CassandraConnectorConf(Set(new InetSocketAddress("localhost", TestUtils.cassandraPort))))
-  val session = MetadataConnectionPool.getSession(CassandraConnectorConf(Set(new InetSocketAddress("localhost", TestUtils.cassandraPort))), null)
-
-  def createRandomKeyspace(): String = {
-    val randomKeyspace = randomString
-    CassandraHelper.createKeyspace(session, randomKeyspace)
-    CassandraHelper.createMetadataTables(session, randomKeyspace)
-    CassandraHelper.createDataTable(session, randomKeyspace)
-    CassandraHelper.clearMetadataTables(session, randomKeyspace)
-    CassandraHelper.clearDataTable(session, randomKeyspace)
-
-    randomKeyspace
-  }
-
-  val randomKeyspace = createRandomKeyspace()
-
   val f = new TStreamsFactory()
-  f.setProperty(TSF_Dictionary.Metadata.Cluster.NAMESPACE, randomKeyspace)
-    .setProperty(TSF_Dictionary.Metadata.Cluster.ENDPOINTS, s"localhost:${TestUtils.cassandraPort}")
-    .setProperty(TSF_Dictionary.Data.Cluster.NAMESPACE, "test")
-    .setProperty(TSF_Dictionary.Coordination.ROOT, coordinationRoot)
+  f.setProperty(TSF_Dictionary.Coordination.ROOT, coordinationRoot)
     .setProperty(TSF_Dictionary.Coordination.ENDPOINTS, s"localhost:$zookeeperPort")
     .setProperty(TSF_Dictionary.Stream.NAME, "test-stream")
-    .setProperty(TSF_Dictionary.Data.Cluster.DRIVER, TSF_Dictionary.Data.Cluster.Consts.DATA_DRIVER_HAZELCAST)
-
-  //metadata/data factories
-  val metadataStorageFactory = new MetadataStorageFactory
-  val storageFactory = new com.bwsw.tstreams.data.aerospike.Factory
-  val hazelcastStorageFactory = new hazelcast.Factory
-  val cassandraStorageFactory = new com.bwsw.tstreams.data.cassandra.Factory
-
 
   //converters to convert usertype->storagetype; storagetype->usertype
   val arrayByteToStringConverter = new ArrayByteToStringConverter
   val stringToArrayByteConverter = new StringToArrayByteConverter
-
-  //aerospike storage options
-  val hosts = Set(new Host("localhost", 3000))
-
-  val aerospikeOptions = new com.bwsw.tstreams.data.aerospike.Options("test", hosts)
-  val hazelcastOptions = new hazelcast.Options("test", 0, 0)
 
   val curatorClient = CuratorFrameworkFactory.builder()
     .namespace("")
@@ -144,8 +110,6 @@ trait TestUtils {
     GlobalHooks.addHook(GlobalHooks.afterCommitFailure, () => ())
     removeZkMetadata(f.getProperty(TSF_Dictionary.Coordination.ROOT).toString)
     removeZkMetadata("/unit")
-    metadataStorageFactory.closeFactory()
-    storageFactory.closeFactory()
     curatorClient.close()
   }
 }
@@ -157,7 +121,6 @@ object TestUtils {
 
   private val id: AtomicInteger = new AtomicInteger(0)
 
-  EmbeddedCassandraServerHelper.startEmbeddedCassandra(60000L)
   System.getProperty("java.io.tmpdir", "./target/")
   private val zk = new ZooKeeperLocal(zookeperPort, Files.createTempDir().toString)
 
