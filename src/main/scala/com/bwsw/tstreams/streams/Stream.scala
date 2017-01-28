@@ -1,5 +1,7 @@
 package com.bwsw.tstreams.streams
 
+import com.bwsw.tstreams.common.StorageClient
+
 /**
   * Settings of stream in metadata storage
   *
@@ -18,22 +20,7 @@ object Stream {
     * @param name Stream name to fetch from database
     * @return StreamSettings
     */
-  def getStream(session: Session, name: String): Option[StreamSettings] = {
-    val requests = RequestsRepository.getStatements(session)
-    val statementWithBindings = requests.streamSelectStatement.bind(name)
-    val stream = session.execute(statementWithBindings).one()
-
-    if (stream == null)
-      None
-    else {
-      val name        = stream.getString("stream_name")
-      val partitions  = stream.getInt("partitions")
-      val description = stream.getString("description")
-      val ttl         = stream.getInt("ttl")
-      Some(StreamSettings(name, partitions, ttl, description))
-    }
-  }
-
+  def getStream(storageClient: StorageClient, name: String): Option[StreamSettings] = ???
   /**
     * Create stream with parameters
     *
@@ -43,20 +30,11 @@ object Stream {
     * @param description Stream arbitrary description and com.bwsw.tstreams.metadata, etc.
     * @return StreamSettings
     */
-  def createStream(session: Session,
+  def createStream(storageClient: StorageClient,
                    name: String,
                    partitions: Int,
                    ttl: Int,
-                   description: String): Unit = {
-    if (isExist(session, name))
-      throw new IllegalArgumentException(s"Stream $name already exist")
-
-    val requests  = RequestsRepository.getStatements(session)
-    val values    = List(name, new Integer(partitions), new Integer(ttl), description)
-    val statementWithBindings = requests.streamInsertStatement.bind(values: _*)
-
-    session.execute(statementWithBindings)
-  }
+                   description: String): Unit = ???
 
   /**
     * Alternate stream with parameters
@@ -67,29 +45,14 @@ object Stream {
     * @param description Stream arbitrary description and com.bwsw.tstreams.metadata, etc.
     * @return StreamSettings
     */
-  def changeStream(session: Session, name: String, partitions: Int, ttl: Int, description: String): Unit = {
-    if (!isExist(session, name))
-      throw new IllegalArgumentException(s"Stream $name does not exist.")
-
-    val values                = List(name, new Integer(partitions), new Integer(ttl), description)
-    val requests              = RequestsRepository.getStatements(session)
-    val statementWithBindings = requests.streamInsertStatement.bind(values: _*)
-    session.execute(statementWithBindings)
-  }
+  def changeStream(storageClient: StorageClient, name: String, partitions: Int, ttl: Int, description: String): Unit = ???
 
   /**
     * Deleting concrete stream
     *
     * @param name Stream name to delete
     */
-  def deleteStream(session: Session, name: String): Unit = {
-    if (!isExist(session, name))
-      throw new IllegalArgumentException("stream not exist")
-
-    val requests              = RequestsRepository.getStatements(session)
-    val statementWithBindings = requests.streamDeleteStatement.bind(name)
-    session.execute(statementWithBindings)
-  }
+  def deleteStream(storageClient: StorageClient, name: String): Unit = ???
 
   /**
     * Checking that concrete stream exist
@@ -97,25 +60,20 @@ object Stream {
     * @param name Stream name to check if exists
     * @return Exist stream or not
     */
-  def isExist(session: Session, name: String): Boolean = {
-    val checkVal = getStream(session, name).isDefined
-    checkVal
-  }
+  def isExist(storageClient: StorageClient, name: String): Boolean = ???
 }
 
 /**
   * @param name            Name of the stream
   * @param partitionsCount Number of stream partitions
-  * @param metadataStorage Stream metadata storage which it used
-  * @param dataStorage     Data storage which will be using stream
+  * @param storageClient   Client to storage
   * @param ttl             Time of transaction time expiration in seconds
   * @param description     Some additional info about stream
   * @tparam T Storage data type
   */
 class Stream[T](val name: String,
                 var partitionsCount: Int,
-                val metadataStorage: MetadataStorage,
-                val dataStorage: IStorage[T],
+                val storageClient: StorageClient,
                 var ttl: Int,
                 var description: String) {
   /**
@@ -130,8 +88,7 @@ class Stream[T](val name: String,
     * Save stream info in metadata
     */
   def save(): Unit = {
-    val session = metadataStorage.getSession()
-    Stream.changeStream(session, name, partitionsCount, ttl, description)
+    Stream.changeStream(storageClient, name, partitionsCount, ttl, description)
   }
 
 }

@@ -437,10 +437,9 @@ class TStreamsFactory() {
   /**
     * common routine which allows to get ready to use stream object by env
     *
-    * @param storage
     * @return
     */
-  private def getStreamObject(storage: Storage, datastorage: IStorage[Array[Byte]]): Stream[Array[Byte]] = this.synchronized {
+  private def getStreamObject(): Stream[Array[Byte]] = this.synchronized {
     assert(pAsString(TSF_Dictionary.Stream.NAME) != null)
     pAssertIntRange(pAsInt(TSF_Dictionary.Stream.PARTITIONS, Stream_partitions_default), Stream_partitions_min, Stream_partitions_max)
     pAssertIntRange(pAsInt(TSF_Dictionary.Stream.TTL, Stream_ttl_default), Stream_ttl_min, Stream_ttl_max)
@@ -449,8 +448,7 @@ class TStreamsFactory() {
     val stream = new Stream[Array[Byte]](
       name = pAsString(TSF_Dictionary.Stream.NAME),
       partitionsCount = pAsInt(TSF_Dictionary.Stream.PARTITIONS, Stream_partitions_default),
-      metadataStorage = metadatastorage,
-      dataStorage = datastorage,
+      storageClient = new StorageClient(),
       ttl = pAsInt(TSF_Dictionary.Stream.TTL, Stream_ttl_default),
       description = pAsString(TSF_Dictionary.Stream.DESCRIPTION, ""))
     return stream
@@ -488,7 +486,7 @@ class TStreamsFactory() {
     if (isClosed.get)
       throw new IllegalStateException("TStreamsFactory is closed. This is the illegal usage of the object.")
 
-    val stream: Stream[Array[Byte]] = getStreamObject(metadatastorage = ms, datastorage = ds)
+    val stream: Stream[Array[Byte]] = getStreamObject()
     stream
 
   }
@@ -513,7 +511,7 @@ class TStreamsFactory() {
       throw new IllegalStateException("TStreamsFactory is closed. This is the illegal usage of the object.")
 
 
-    val stream: Stream[Array[Byte]] = getStreamObject(metadatastorage = ms, datastorage = ds)
+    val stream: Stream[Array[Byte]] = getStreamObject()
 
     assert(pAsString(TSF_Dictionary.Producer.BIND_PORT) != null)
     assert(pAsString(TSF_Dictionary.Producer.BIND_HOST) != null)
@@ -613,7 +611,7 @@ class TStreamsFactory() {
       throw new IllegalStateException("TStreamsFactory is closed. This is the illegal usage of the object.")
 
 
-    val stream: Stream[Array[Byte]] = getStreamObject(metadatastorage = ms, datastorage = ds)
+    val stream: Stream[Array[Byte]] = getStreamObject()
     val consumerOptions = getBasicConsumerOptions(transactionGenerator = transactionGenerator,
       stream = stream, partitions = partitions, converter = converter,
       offset = offset, checkpointAtStart = checkpointAtStart,
@@ -644,7 +642,7 @@ class TStreamsFactory() {
     if (isClosed.get)
       throw new IllegalStateException("TStreamsFactory is closed. This is the illegal usage of the object.")
 
-    val stream: Stream[Array[Byte]] = getStreamObject(metadatastorage = ms, datastorage = ds)
+    val stream: Stream[Array[Byte]] = getStreamObject()
 
     val consumerOptions = getBasicConsumerOptions(transactionGenerator = transactionGenerator,
       stream = stream,
