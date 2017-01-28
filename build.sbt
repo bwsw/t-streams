@@ -1,11 +1,11 @@
 name := "t-streams"
 
-val tstreamsVersion = "1.1.0-SNAPSHOT"
+val tstreamsVersion = "2.0.1-SNAPSHOT"
 
 version := tstreamsVersion
 organization := "com.bwsw"
 
-scalaVersion := "2.11.8"
+scalaVersion := "2.12.1"
 
 scalacOptions += "-feature"
 scalacOptions += "-deprecation"
@@ -14,6 +14,10 @@ publishMavenStyle := true
 
 licenses := Seq("Apache 2" -> url("http://www.apache.org/licenses/LICENSE-2.0"))
 homepage := Some(url("http://t-streams.com/"))
+
+resolvers += "Sonatype OSS" at "https://oss.sonatype.org/service/local/staging/deploy/maven2"
+resolvers += "Sonatype OSS snapshots" at "https://oss.sonatype.org/content/repositories/snapshots"
+
 
 pomIncludeRepository := { _ => false }
 
@@ -40,48 +44,20 @@ publishTo := {
 
 publishArtifact in Test := false
 
-resolvers += "twitter-repo" at "http://maven.twttr.com"
-
-
 //COMMON
 libraryDependencies ++= Seq(
   "org.slf4j" % "slf4j-api" % "1.7.21",
   "org.slf4j" % "slf4j-simple" % "1.7.21",
-  "org.scalatest" % "scalatest_2.11" % "3.0.0-M15",
-  "org.scalamock" %% "scalamock-scalatest-support" % "3.2.2" % "test",
-  "com.aerospike" % "aerospike-client" % "3.2.1",
-  "com.fasterxml.jackson.module" % "jackson-module-scala_2.11" % "2.6.3",
+  "org.scalatest" % "scalatest_2.12" % "3.0.1",
+  "org.scalamock" % "scalamock-scalatest-support_2.12" % "3.5.0",
+  "io.netty" % "netty-all" % "4.1.7.Final",
+  "com.fasterxml.jackson.module" % "jackson-module-scala_2.12" % "2.8.6",
   "net.openhft" % "chronicle-queue" % "4.2.6",
-  "org.scala-lang" % "scala-reflect" % "2.11.8",
-  "org.scala-lang.modules" % "scala-xml_2.11" % "1.0.4",
-  "org.cassandraunit" % "cassandra-unit" % "2.2.2.1",
+  "org.scala-lang" % "scala-reflect" % "2.12.1",
+  "org.scala-lang.modules" % "scala-xml_2.12" % "1.0.6",
   "log4j" % "log4j" % "1.2.17",
-  "com.hazelcast" % "hazelcast" % "3.6.4",
   "org.apache.curator" % "curator-recipes" % "2.11.0",
   "com.google.guava" % "guava" % "18.0")
-
-
-libraryDependencies ++= Seq(
-  "org.apache.thrift" % "libthrift" % "0.9.3",
-  "com.twitter" %% "scrooge-core" % "4.11.0",
-  "com.twitter" %% "twitter-server" % "1.23.0",
-  "com.twitter" %% "finagle-thrift" % "6.34.0")
-
-libraryDependencies += ("com.datastax.cassandra" % "cassandra-driver-core" % "3.0.0")
-  .exclude("com.google.guava", "guava")
-  .exclude("io.netty", "netty-common")
-  .exclude("io.netty", "netty-codec")
-  .exclude("io.netty", "netty-transport")
-  .exclude("io.netty", "netty-buffer")
-  .exclude("io.netty", "netty-handler")
-
-libraryDependencies += ("org.cassandraunit" % "cassandra-unit" % "2.2.2.1")
-  .exclude("com.google.guava", "guava")
-  .exclude("io.netty", "netty-common")
-  .exclude("io.netty", "netty-codec")
-  .exclude("io.netty", "netty-transport")
-  .exclude("io.netty", "netty-buffer")
-  .exclude("io.netty", "netty-handler")
 
 
 //ASSEMBLY STRATEGY
@@ -89,13 +65,10 @@ assemblyJarName in assembly := "t-streams-" + tstreamsVersion + ".jar"
 
 assemblyMergeStrategy in assembly := {
   case PathList("org", "slf4j", "impl", xs@_*) => MergeStrategy.discard
-  case PathList("org", "cassandraunit", xs@_*) => MergeStrategy.discard
   case PathList("org", "hamcrest", xs@_*) => MergeStrategy.discard
   case PathList("io", "netty", xs@_*) => MergeStrategy.first
-  case PathList("com", "datastax", "cassandra", xs@_*) => MergeStrategy.first
   case PathList("org", "slf4j", xs@_*) => MergeStrategy.first
   case PathList("org", "scalatest", xs@_*) => MergeStrategy.first
-  case PathList("com", "aerospike", xs@_*) => MergeStrategy.first
   case PathList("com", "fasterxml", "jackson", "module", xs@_*) => MergeStrategy.first
   case PathList("net", "openhft", xs@_*) => MergeStrategy.first
   case x =>
