@@ -85,11 +85,7 @@ object Stream {
   * @param description     Some additional info about stream
   * @tparam T Storage data type
   */
-class Stream[T](val name: String,
-                var partitionsCount: Int,
-                val storageClient: StorageClient,
-                var ttl: Int,
-                var description: String) {
+class Stream[T](name: String, partitionsCount: Int, storageClient: StorageClient, ttl: Int, description: String) {
   /**
     * Transaction minimum ttl time
     */
