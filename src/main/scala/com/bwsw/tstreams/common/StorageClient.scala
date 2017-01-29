@@ -22,11 +22,13 @@ class StorageClient(clientOptions: StorageClientOptions, authOptions: StorageCli
   map += (("client.pool",                       clientOptions.threadPool.toString))
 
   map += (("auth.login",                        authOptions.login))
-  map += (("auth.timeout.connection",           authOptions.connectionTimeoutMs.toString))
   map += (("auth.password",                     authOptions.password))
+
+  map += (("auth.timeout.connection",           authOptions.connectionTimeoutMs.toString))
   map += (("auth.timeout.betweenRetries",       authOptions.timeoutBetweenRetriesMs.toString))
-  map += (("auth.token.timeout.betweenRetries", authOptions.timeoutBetweenRetriesMs.toString))
-  map += (("auth.token.timeout.connection",     authOptions.connectionTimeoutMs.toString))
+
+  map += (("auth.token.timeout.betweenRetries", authOptions.tokenTimeoutBetweenRetriesMs.toString))
+  map += (("auth.token.timeout.connection",     authOptions.tokenTimeoutConnectionMs.toString))
 
   map += (("zk.endpoints",                      zookeeperOptions.endpoints))
   map += (("zk.prefix",                         zookeeperOptions.prefix))
