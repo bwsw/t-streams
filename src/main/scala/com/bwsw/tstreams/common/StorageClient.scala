@@ -63,7 +63,7 @@ class StorageClientBuilder private(authOpts: StorageClientAuthOptions, zookeeper
 
   def getClientOptions()    = clientOptions.copy()
   def getZookeeperOptions() = zookeeperOptions.copy()
-  def getAuthOptions()        = authOptions.copy()
+  def getAuthOptions()      = authOptions.copy()
 }
 
 /**

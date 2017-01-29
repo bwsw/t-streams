@@ -72,6 +72,7 @@ object Stream {
     * @return Exist stream or not
     */
   def isExist(storageClient: StorageClient, name: String): Boolean = {
+    //TODO: fix doesStreamExists
     Await.result(storageClient.client.doesStreamExist(name), OP_TIMEOUT)
   }
 

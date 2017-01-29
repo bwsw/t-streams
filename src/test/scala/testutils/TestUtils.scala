@@ -117,7 +117,6 @@ trait TestUtils {
 object TestUtils {
 
   val zookeperPort = 21810
-  val cassandraPort = 9142
 
   private val id: AtomicInteger = new AtomicInteger(0)
 
