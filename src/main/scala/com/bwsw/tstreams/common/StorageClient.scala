@@ -13,32 +13,32 @@ import com.bwsw.tstreamstransactionserver.netty.client.Client
   * @param login
   * @param password
   * @param connectionTimeoutMs
-  * @param timeoutBetweenRetriesMs
-  * @param tokenTimeoutBetweenRetriesMs
-  * @param tokenTimeoutConnectionMs
+  * @param retryDelayMs
+  * @param tokenRetryDelayMs
+  * @param tokenConnectionTimeoutMs
   */
-case class StorageClientAuthOptions(login: String = "", password: String = "", connectionTimeoutMs: Int = 5000, timeoutBetweenRetriesMs: Int = 500,
-                                    tokenTimeoutBetweenRetriesMs: Int = 200, tokenTimeoutConnectionMs: Int = 5000)
+case class StorageClientAuthOptions(login: String = "", password: String = "", connectionTimeoutMs: Int = 5000, retryDelayMs: Int = 500,
+                                    tokenRetryDelayMs: Int = 200, tokenConnectionTimeoutMs: Int = 5000)
 
 /**
   *
   * @param endpoints
   * @param prefix
   * @param sessionTimeoutMs
-  * @param retriesMax
-  * @param timeoutBetweenRetriesMs
+  * @param retryCount
+  * @param retryDelayMs
   * @param connectionTimeoutMs
   */
-case class StorageClientZookeeperOptions(endpoints: String = "127.0.0.1:2181", prefix: String = "/tts", sessionTimeoutMs: Int = 10000, retriesMax: Int = 5,
-                                         timeoutBetweenRetriesMs: Int = 500, connectionTimeoutMs: Int = 10000)
+case class StorageClientZookeeperOptions(endpoints: String = "127.0.0.1:2181", prefix: String = "/tts", sessionTimeoutMs: Int = 10000, retryCount: Int = 5,
+                                         retryDelayMs: Int = 500, connectionTimeoutMs: Int = 10000)
 
 /**
   *
   * @param connectionTimeoutMs
-  * @param timeoutBetweenRetriesMs
+  * @param retryDelayMs
   * @param threadPool
   */
-case class StorageClientOptions(connectionTimeoutMs: Int = 5000, timeoutBetweenRetriesMs: Int = 200, threadPool: Int = 4)
+case class StorageClientOptions(connectionTimeoutMs: Int = 5000, retryDelayMs: Int = 200, threadPool: Int = 4)
 
 /**
   *
@@ -76,23 +76,22 @@ class StorageClient private(clientOptions: StorageClientOptions, authOptions: St
   private val map = scala.collection.mutable.Map[String,String]()
 
   map += (("server.timeout.connection",         clientOptions.connectionTimeoutMs.toString))
-  map += (("server.timeout.betweenRetries",     clientOptions.timeoutBetweenRetriesMs.toString))
+  map += (("server.timeout.betweenRetries",     clientOptions.retryDelayMs.toString))
   map += (("client.pool",                       clientOptions.threadPool.toString))
 
   map += (("auth.login",                        authOptions.login))
   map += (("auth.password",                     authOptions.password))
-
   map += (("auth.timeout.connection",           authOptions.connectionTimeoutMs.toString))
-  map += (("auth.timeout.betweenRetries",       authOptions.timeoutBetweenRetriesMs.toString))
+  map += (("auth.timeout.betweenRetries",       authOptions.retryDelayMs.toString))
 
-  map += (("auth.token.timeout.betweenRetries", authOptions.tokenTimeoutBetweenRetriesMs.toString))
-  map += (("auth.token.timeout.connection",     authOptions.tokenTimeoutConnectionMs.toString))
+  map += (("auth.token.timeout.betweenRetries", authOptions.tokenRetryDelayMs.toString))
+  map += (("auth.token.timeout.connection",     authOptions.tokenConnectionTimeoutMs.toString))
 
   map += (("zk.endpoints",                      zookeeperOptions.endpoints))
   map += (("zk.prefix",                         zookeeperOptions.prefix))
-  map += (("zk.retries.max",                    zookeeperOptions.retriesMax.toString))
+  map += (("zk.retries.max",                    zookeeperOptions.retryCount.toString))
   map += (("zk.timeout.session",                zookeeperOptions.sessionTimeoutMs.toString))
-  map += (("zk.timeout.betweenRetries",         zookeeperOptions.timeoutBetweenRetriesMs.toString))
+  map += (("zk.timeout.betweenRetries",         zookeeperOptions.retryDelayMs.toString))
   map += (("zk.timeout.connection",             zookeeperOptions.connectionTimeoutMs.toString))
 
   val client = new Client(new ClientConfig(new ConfigMap(map.toMap)))

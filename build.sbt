@@ -15,9 +15,10 @@ publishMavenStyle := true
 licenses := Seq("Apache 2" -> url("http://www.apache.org/licenses/LICENSE-2.0"))
 homepage := Some(url("http://t-streams.com/"))
 
-resolvers += "Sonatype OSS" at "https://oss.sonatype.org/service/local/staging/deploy/maven2"
-resolvers += "Sonatype OSS snapshots" at "https://oss.sonatype.org/content/repositories/snapshots"
-
+resolvers ++= Seq("Sonatype OSS" at "https://oss.sonatype.org/service/local/staging/deploy/maven2",
+  "Sonatype OSS snapshots" at "https://oss.sonatype.org/content/repositories/snapshots",
+  "Twitter Repo" at "https://maven.twttr.com",
+  "Oracle Maven2 Repo" at "http://download.oracle.com/maven")
 
 pomIncludeRepository := { _ => false }
 
