@@ -298,7 +298,7 @@ class ProducerTransaction[T](partition: Int,
     state.setUpdateFinished
     transactionOwner.p2pAgent.publish(TransactionStateMessage(
       transactionID = transactionID,
-      ttl = transactionOwner.producerOptions.transactionTTL,
+      ttl = transactionOwner.producerOptions.transactionTtlMs,
       status = TransactionStatus.update,
       partition = partition,
       masterID = transactionOwner.p2pAgent.getUniqueAgentID(),

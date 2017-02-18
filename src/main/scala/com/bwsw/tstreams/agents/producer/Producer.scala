@@ -59,13 +59,13 @@ class Producer[T](var name: String,
 
   private val peerKeepAliveTimeout = pcs.zkSessionTimeoutMs * 1000 * 2
 
-  val fullPrefix = java.nio.file.Paths.get(pcs.zkRootPath, stream.name).toString.substring(1)
+  val fullPrefix = java.nio.file.Paths.get(pcs.zkPrefix, stream.name).toString.substring(1)
   private val curatorClient = CuratorFrameworkFactory.builder()
     .namespace(fullPrefix)
     .connectionTimeoutMs(pcs.zkConnectionTimeoutMs * 1000)
     .sessionTimeoutMs( pcs.zkSessionTimeoutMs * 1000)
     .retryPolicy(new ExponentialBackoffRetry(1000, 3))
-    .connectString(pcs.zkHosts).build()
+    .connectString(pcs.zkEndpoints).build()
 
   curatorClient.start()
 
@@ -146,7 +146,7 @@ class Producer[T](var name: String,
         Producer.logger.info(s"Producer $name - object is started, launched open transaction update thread")
         breakable {
           while (true) {
-            val value: Boolean = shutdownKeepAliveThread.wait(producerOptions.transactionKeepAliveInterval * 1000)
+            val value: Boolean = shutdownKeepAliveThread.wait(producerOptions.transactionKeepAliveMs * 1000)
             if (value) {
               Producer.logger.info(s"Producer $name - object either checkpointed or cancelled. Exit KeepAliveThread.")
               break()
@@ -295,7 +295,7 @@ class Producer[T](var name: String,
     p2pAgent.submitPipelinedTaskToPublishExecutors(partition, () => {
       val msg = TransactionStateMessage(
         transactionID = transactionID,
-        ttl = producerOptions.transactionTTL,
+        ttl = producerOptions.transactionTtlMs,
         status = TransactionStatus.opened,
         partition = partition,
         masterID = p2pAgent.getUniqueAgentID(),
@@ -307,7 +307,7 @@ class Producer[T](var name: String,
     })
 
     val transactionRecord = TransactionRecord(partition = partition, transactionID = transactionID, count = -1,
-      ttl = producerOptions.transactionTTL)
+      ttl = producerOptions.transactionTtlMs)
 
     tsdb.put(transaction = transactionRecord, asynchronousExecutor = p2pAgent.getCassandraAsyncExecutor(partition)) (rec => {
       p2pAgent.submitPipelinedTaskToMaterializeExecutor(partition, onComplete)

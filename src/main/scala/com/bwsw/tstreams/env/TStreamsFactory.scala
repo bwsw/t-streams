@@ -225,6 +225,15 @@ class TStreamsFactory() {
     val notifyThreadPoolSize = pAsInt(co.Producer.notifyThreadPoolSize, producerDefaults.notifyThreadPoolSize.default)
     producerDefaults.notifyThreadPoolSize.check(notifyThreadPoolSize)
 
+    val transactionTtlMs = pAsInt(co.Producer.Transaction.ttlMs, producerDefaults.Transaction.ttlMs.default)
+    producerDefaults.Transaction.ttlMs.check(transactionTtlMs)
+
+    val transactionKeepAliveMs = pAsInt(co.Producer.Transaction.keepAliveMs, producerDefaults.Transaction.keepAliveMs.default)
+    producerDefaults.Transaction.keepAliveMs.check(transactionKeepAliveMs)
+
+    val batchSize = pAsInt(co.Producer.Transaction.batchSize, producerDefaults.Transaction.batchSize.default)
+    producerDefaults.Transaction.batchSize.check(batchSize)
+
     val transport = new TcpTransport(
       pAsString(co.Producer.bindHost) + ":" + port.toString,
       transportTimeoutMs,
@@ -233,10 +242,10 @@ class TStreamsFactory() {
 
 
     val cao = new CoordinationOptions(
-      zkHosts = pAsString(co.Coordination.endpoints),
-      zkRootPath = pAsString(co.Coordination.prefix),
-      zkSessionTimeoutMs = pAsInt(co.Coordination.sessionTimeoutMs, coordinationDefaults.sessionTimeoutMs.default),
-      zkConnectionTimeoutMs = pAsInt(co.Coordination.connectionTimeoutMs, coordinationDefaults.connectionTimeoutMs.default),
+      zkEndpoints = pAsString(co.Coordination.endpoints),
+      zkPrefix = pAsString(co.Coordination.prefix),
+      zkSessionTimeoutMs = sessionTimeoutMs,
+      zkConnectionTimeoutMs = connectionTimeoutMs,
       transport = transport,
       threadPoolSize = threadPoolSize,
       notifyThreadPoolSize = notifyThreadPoolSize,
@@ -254,20 +263,15 @@ class TStreamsFactory() {
         "is supported currently in UniversalFactory.")
     }
 
-    pAssertIntRange(pAsInt(co.Producer.Transaction.ttlMs, Producer_transaction_ttl_default), Producer_transaction_ttl_min, Producer_transaction_ttl_max)
-    pAssertIntRange(pAsInt(co.Producer.Transaction.keepAliveMs, Producer_transaction_keep_alive_default), Producer_transaction_keep_alive_min, Producer_transaction_keep_alive_max)
-    assert(pAsInt(co.Producer.Transaction.ttlMs, Producer_transaction_ttl_default) >=
-      pAsInt(co.Producer.Transaction.keepAliveMs, Producer_transaction_keep_alive_default) * 3)
+    assert(transactionTtlMs >= transactionKeepAliveMs * 3)
 
-    val insertCnt = pAsInt(co.Producer.Transaction.batchSize, Producer_transaction_data_write_batch_size_default)
-    pAssertIntRange(insertCnt,
-      Producer_transaction_data_write_batch_size_min, Producer_transaction_data_write_batch_size_max)
+
 
     val po = new com.bwsw.tstreams.agents.producer.ProducerOptions[T](
-      transactionTTL = pAsInt(co.Producer.Transaction.ttlMs, Producer_transaction_ttl_default),
-      transactionKeepAliveInterval = pAsInt(co.Producer.Transaction.keepAliveMs, Producer_transaction_keep_alive_default),
+      transactionTtlMs = transactionTtlMs,
+      transactionKeepAliveMs = transactionKeepAliveMs,
       writePolicy = writePolicy,
-      batchSize = insertCnt,
+      batchSize = batchSize,
       transactionGenerator = transactionGenerator,
       coordinationOptions = cao,
       converter = converter)
