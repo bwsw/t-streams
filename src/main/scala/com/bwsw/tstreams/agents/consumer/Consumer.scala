@@ -4,7 +4,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.locks.ReentrantLock
 
 import com.bwsw.tstreams.agents.group.{CheckpointInfo, ConsumerCheckpointInfo, GroupParticipant}
-import com.bwsw.tstreams.streams.Stream
+import com.bwsw.tstreams.streams.{Stream, TransactionDatabase}
 import org.slf4j.LoggerFactory
 
 import scala.collection.mutable
@@ -27,7 +27,7 @@ class Consumer(val name: String,
   extends GroupParticipant
     with TransactionOperator {
 
-  val tsdb = new TransactionDatabase(stream.metadataStorage.getSession(), stream.name)
+  val tsdb = new TransactionDatabase(stream.storageClient, stream.name)
   val consumerService = new ConsumerService(stream.metadataStorage.getSession())
 
   /**

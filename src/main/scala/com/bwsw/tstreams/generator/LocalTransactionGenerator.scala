@@ -2,6 +2,8 @@ package com.bwsw.tstreams.generator
 
 import java.util.concurrent.atomic.{AtomicInteger, AtomicLong}
 
+import com.bwsw.tstreams.streams.TransactionDatabase
+
 /**
   * Entity for generating new transaction time
   */

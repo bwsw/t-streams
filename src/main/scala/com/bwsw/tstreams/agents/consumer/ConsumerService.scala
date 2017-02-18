@@ -1,13 +1,13 @@
 package com.bwsw.tstreams.agents.consumer
 
+import com.bwsw.tstreams.common.StorageClient
+
 /**
   * Consumer entity for interact with consumers metadata
   *
-  * @param session    Session with metadata
+  * @param storageClient    Session with metadata
   */
-class ConsumerService(session: Session) {
-
-  private val requests = RequestsRepository.getStatements(session)
+class ConsumerService(storageClient: StorageClient) {
 
   /**
     * Checking exist or not concrete consumer
