@@ -8,9 +8,8 @@ import scala.collection.mutable
   * @param transactionID
   * @param count
   * @param ttl
-  * @tparam T
   */
-class ConsumerTransaction[T](partition: Int,
+class ConsumerTransaction(partition: Int,
                              transactionID: Long,
                              count: Int,
                              ttl: Int) {
@@ -19,9 +18,9 @@ class ConsumerTransaction[T](partition: Int,
     s"consumer.Transaction(id=$transactionID,partition=$partition, count=$count, ttl=$ttl)"
   }
 
-  var consumer: Consumer[T] = null
+  var consumer: Consumer = null
 
-  def attach(c: Consumer[T]) = {
+  def attach(c: Consumer) = {
     if (c == null)
       throw new IllegalArgumentException("Argument must be not null.")
 
@@ -64,7 +63,7 @@ class ConsumerTransaction[T](partition: Int,
   /**
     * @return Next piece of data from current transaction
     */
-  def next(): T = this.synchronized {
+  def next() = this.synchronized {
 
     if (consumer == null)
       throw new IllegalArgumentException("Transaction is not yet attached to consumer. Attach it first.")
@@ -79,7 +78,7 @@ class ConsumerTransaction[T](partition: Int,
       cnt = newCount + 1
     }
 
-    consumer.options.converter.convert(buffer.dequeue())
+    buffer.dequeue()
   }
 
   /**
@@ -102,13 +101,13 @@ class ConsumerTransaction[T](partition: Int,
   /**
     * @return All consumed transaction
     */
-  def getAll(): List[T] = this.synchronized {
+  def getAll() = this.synchronized {
 
     if (consumer == null)
       throw new IllegalArgumentException("Transaction is not yet attached to consumer. Attach it first.")
 
     val data: mutable.Queue[Array[Byte]] = consumer.stream.dataStorage.get(consumer.stream.name, partition, transactionID, cnt, count - 1)
-    data.toList.map(x => consumer.options.converter.convert(x))
+    data
   }
 
   /**

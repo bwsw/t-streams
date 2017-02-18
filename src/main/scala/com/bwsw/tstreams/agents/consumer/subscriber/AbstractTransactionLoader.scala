@@ -9,8 +9,8 @@ import com.bwsw.tstreams.common.FirstFailLockableTaskExecutor
 trait AbstractTransactionLoader {
   def checkIfTransactionLoadingIsPossible(seq: QueueBuilder.QueueItemType): Boolean
 
-  def load[T](seq: QueueBuilder.QueueItemType,
-              consumer: TransactionOperator[T],
+  def load(seq: QueueBuilder.QueueItemType,
+              consumer: TransactionOperator,
               executor: FirstFailLockableTaskExecutor,
-              callback: Callback[T])
+              callback: Callback)
 }

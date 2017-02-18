@@ -5,15 +5,15 @@ import com.bwsw.tstreams.agents.consumer.{ConsumerTransaction, TransactionOperat
 /**
   * Trait to implement to handle incoming messages
   */
-trait Callback[T] {
+trait Callback {
   /**
     * Callback which is called on every closed transaction
     *
     * @param consumer    associated Consumer
     * @param transaction the transaction which currently has delivered
     */
-  def onTransaction(consumer: TransactionOperator[T],
-                    transaction: ConsumerTransaction[T]): Unit
+  def onTransaction(consumer: TransactionOperator,
+                    transaction: ConsumerTransaction): Unit
 
   /**
     *
@@ -22,7 +22,7 @@ trait Callback[T] {
     * @param transactionID      transaction ID
     * @param count     amount of data items inside of the transaction
     */
-  def onTransactionCall(consumer: TransactionOperator[T],
+  def onTransactionCall(consumer: TransactionOperator,
                         partition: Int,
                         transactionID: Long,
                         count: Int) = {

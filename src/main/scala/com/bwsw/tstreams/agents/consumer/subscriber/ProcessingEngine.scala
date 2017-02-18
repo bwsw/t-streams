@@ -15,10 +15,10 @@ import scala.util.Random
   * Created by Ivan Kudryavtsev on 20.08.16.
   * Does top-level management tasks for new events.
   */
-class ProcessingEngine[T](consumer: TransactionOperator[T],
+class ProcessingEngine(consumer: TransactionOperator,
                           partitions: Set[Int],
                           queueBuilder: QueueBuilder.Abstract,
-                          callback: Callback[T]) {
+                          callback: Callback) {
 
   private val id = Math.abs(Random.nextInt())
   // keeps last transaction states processed
@@ -82,12 +82,12 @@ class ProcessingEngine[T](consumer: TransactionOperator[T],
       isFirstTime = false
       if (seq.nonEmpty) {
         if (fastLoader.checkIfTransactionLoadingIsPossible(seq)) {
-          fastLoader.load[T](seq, consumer, loadExecutor, callback)
+          fastLoader.load(seq, consumer, loadExecutor, callback)
         }
         else {
           if (fullLoader.checkIfTransactionLoadingIsPossible(seq)) {
             ProcessingEngine.logger.info(s"PE $id - Load full occurred for seq $seq")
-            fullLoader.load[T](seq, consumer, loadExecutor, callback)
+            fullLoader.load(seq, consumer, loadExecutor, callback)
           } else {
             Subscriber.logger.warn(s"Fast and Full loading failed for $seq.")
           }
@@ -143,7 +143,7 @@ object ProcessingEngine {
 
   type LastTransactionStateMapType = mutable.Map[Int, TransactionState]
 
-  class CallbackTask[T](consumer: TransactionOperator[T], transactionState: TransactionState, callback: Callback[T]) extends Runnable {
+  class CallbackTask(consumer: TransactionOperator, transactionState: TransactionState, callback: Callback) extends Runnable {
 
     override def toString() = s"CallbackTask($transactionState)"
 
