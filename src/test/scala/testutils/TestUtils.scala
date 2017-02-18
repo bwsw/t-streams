@@ -4,7 +4,6 @@ import java.io.File
 import java.lang.management.ManagementFactory
 import java.util.concurrent.atomic.AtomicInteger
 
-import com.bwsw.tstreams.converter.{ArrayByteToStringConverter, StringToArrayByteConverter}
 import com.bwsw.tstreams.debug.GlobalHooks
 import com.bwsw.tstreams.env.{ConfigurationOptions, TStreamsFactory}
 import com.google.common.io.Files
@@ -45,10 +44,6 @@ trait TestUtils {
   f.setProperty(ConfigurationOptions.Coordination.prefix, coordinationRoot)
     .setProperty(ConfigurationOptions.Coordination.endpoints, s"localhost:$zookeeperPort")
     .setProperty(ConfigurationOptions.Stream.name, "test-stream")
-
-  //converters to convert usertype->storagetype; storagetype->usertype
-  val arrayByteToStringConverter = new ArrayByteToStringConverter
-  val stringToArrayByteConverter = new StringToArrayByteConverter
 
   val curatorClient = CuratorFrameworkFactory.builder()
     .namespace("")

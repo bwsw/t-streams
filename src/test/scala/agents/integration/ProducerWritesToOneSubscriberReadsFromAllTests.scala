@@ -30,20 +30,18 @@ class ProducerWritesToOneSubscriberReadsFromAllTests extends FlatSpec with Match
 
   it should "handle all transactions produced by producer" in {
     var subscriberTransactionsAmount = 0
-    val producer = f.getProducer[String](
+    val producer = f.getProducer(
       name = "test_producer",
       transactionGenerator = LocalGeneratorCreator.getGen(),
-      converter = stringToArrayByteConverter,
       partitions = Set(0))
 
-    val s = f.getSubscriber[String](name = "sv2",
+    val s = f.getSubscriber(name = "sv2",
       transactionGenerator = LocalGeneratorCreator.getGen(),
-      converter = arrayByteToStringConverter,
       partitions = Set(0, 1, 2),
       offset = Newest,
       useLastOffset = true,
-      callback = new Callback[String] {
-        override def onTransaction(consumer: TransactionOperator[String], transaction: ConsumerTransaction[String]): Unit = this.synchronized {
+      callback = new Callback {
+        override def onTransaction(consumer: TransactionOperator, transaction: ConsumerTransaction): Unit = this.synchronized {
           subscriberTransactionsAmount += 1
           if(subscriberTransactionsAmount == TOTAL)
             l.countDown()

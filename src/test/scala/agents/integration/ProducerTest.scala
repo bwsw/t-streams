@@ -30,10 +30,9 @@ class ProducerTest extends FlatSpec with Matchers with BeforeAndAfterAll with Te
     setProperty(ConfigurationOptions.Consumer.transactionPreload, 10).
     setProperty(ConfigurationOptions.Consumer.dataPreload, 10)
 
-  val producer = f.getProducer[String](
+  val producer = f.getProducer(
     name = "test_producer",
     transactionGenerator = LocalGeneratorCreator.getGen(),
-    converter = stringToArrayByteConverter,
     partitions = (0 until ALL_PARTITIONS).toSet)
 
   "Producer.isMeAMasterOfPartition" should "return true" in {
@@ -47,7 +46,7 @@ class ProducerTest extends FlatSpec with Matchers with BeforeAndAfterAll with Te
   "BasicProducer.newTransaction()" should "return BasicProducerTransaction instance" in {
     val transaction = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
     transaction.checkpoint()
-    transaction.isInstanceOf[ProducerTransaction[_]] shouldEqual true
+    transaction.isInstanceOf[ProducerTransaction] shouldEqual true
   }
 
   "BasicProducer.newTransaction(ProducerPolicies.errorIfOpen)" should "throw exception if previous transaction was not closed" in {

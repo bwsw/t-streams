@@ -24,16 +24,14 @@ class ProducerAndConsumerSimpleTests extends FlatSpec with Matchers with BeforeA
     setProperty(ConfigurationOptions.Consumer.transactionPreload, 10).
     setProperty(ConfigurationOptions.Consumer.dataPreload, 10)
 
-  val producer = f.getProducer[String](
+  val producer = f.getProducer(
     name = "test_producer",
     transactionGenerator = LocalGeneratorCreator.getGen(),
-    converter = stringToArrayByteConverter,
     partitions = Set(0))
 
-  val consumer = f.getConsumer[String](
+  val consumer = f.getConsumer(
     name = "test_consumer",
     transactionGenerator = LocalGeneratorCreator.getGen(),
-    converter = arrayByteToStringConverter,
     partitions = Set(0),
     offset = Oldest,
     useLastOffset = true)
@@ -42,7 +40,6 @@ class ProducerAndConsumerSimpleTests extends FlatSpec with Matchers with BeforeA
 
 
   "producer, consumer" should "producer - generate one transaction, consumer - retrieve it with getAll method" in {
-    CassandraHelper.clearMetadataTables(session, randomKeyspace)
     val totalDataInTransaction = 10
     val producerTransaction = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
     val sendData = (for (part <- 0 until totalDataInTransaction) yield "data_part_" + randomString).sorted
@@ -64,7 +61,6 @@ class ProducerAndConsumerSimpleTests extends FlatSpec with Matchers with BeforeA
   }
 
   "producer, consumer" should "producer - generate one transaction, consumer - retrieve it using iterator" in {
-    CassandraHelper.clearMetadataTables(session, randomKeyspace)
     val totalDataInTransaction = 10
     val producerTransaction = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
     val sendData = (for (part <- 0 until totalDataInTransaction) yield "data_part_" + randomString).sorted
@@ -75,7 +71,7 @@ class ProducerAndConsumerSimpleTests extends FlatSpec with Matchers with BeforeA
     val transactionOpt = consumer.getTransaction(0)
     assert(transactionOpt.isDefined)
     val transaction = transactionOpt.get
-    var dataToAssert = ListBuffer[String]()
+    var dataToAssert = ListBuffer[Array[Byte]]()
     while (transaction.hasNext()) {
       dataToAssert += transaction.next()
     }
@@ -93,7 +89,6 @@ class ProducerAndConsumerSimpleTests extends FlatSpec with Matchers with BeforeA
   }
 
   "producer, consumer" should "producer - generate some set of transactions, consumer - retrieve them all" in {
-    CassandraHelper.clearMetadataTables(session, randomKeyspace)
     val transactionsAmount = 100
     val totalDataInTransaction = 10
     val sendData = (for (part <- 0 until totalDataInTransaction) yield "data_part_" + randomString).sorted
@@ -123,7 +118,6 @@ class ProducerAndConsumerSimpleTests extends FlatSpec with Matchers with BeforeA
   }
 
   "producer, consumer" should "producer - generate transaction, consumer retrieve it (both start async)" in {
-    CassandraHelper.clearMetadataTables(session, randomKeyspace)
     val timeoutForWaiting = 120
     val totalDataInTransaction = 10
     val sendData = (for (part <- 0 until totalDataInTransaction) yield "data_part_" + part).sorted
@@ -145,7 +139,7 @@ class ProducerAndConsumerSimpleTests extends FlatSpec with Matchers with BeforeA
       def run() {
         breakable {
           while (true) {
-            val consumedTransaction: Option[ConsumerTransaction[String]] = consumer.getTransaction(0)
+            val consumedTransaction: Option[ConsumerTransaction] = consumer.getTransaction(0)
             if (consumedTransaction.isDefined) {
               checkVal &= consumedTransaction.get.getAll().sorted == sendData
               break()

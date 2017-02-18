@@ -23,22 +23,19 @@ class ProducerAndConsumerLongLastingTransactionsTests extends FlatSpec with Matc
     setProperty(ConfigurationOptions.Consumer.transactionPreload, 10).
     setProperty(ConfigurationOptions.Consumer.dataPreload, 10)
 
-  val producer1 = f.getProducer[String](
+  val producer1 = f.getProducer(
     name = "test_producer",
     transactionGenerator = LocalGeneratorCreator.getGen(),
-    converter = stringToArrayByteConverter,
     partitions = Set(0))
 
-  val producer2 = f.getProducer[String](
+  val producer2 = f.getProducer(
     name = "test_producer",
     transactionGenerator = LocalGeneratorCreator.getGen(),
-    converter = stringToArrayByteConverter,
     partitions = Set(0))
 
-  val consumer = f.getConsumer[String](
+  val consumer = f.getConsumer(
     name = "test_consumer",
     transactionGenerator = LocalGeneratorCreator.getGen(),
-    converter = arrayByteToStringConverter,
     partitions = Set(0),
     offset = Oldest,
     useLastOffset = true)

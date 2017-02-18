@@ -33,24 +33,21 @@ class SubscriberBasicPubSubTests extends FlatSpec with Matchers with BeforeAndAf
     val latch = new CountDownLatch(1)
 
     var subsciberTransactionsAmount = 0
-    val producer = f.getProducer[String](
+    val producer = f.getProducer(
       name = "test_producer",
       transactionGenerator = LocalGeneratorCreator.getGen(),
-      converter = stringToArrayByteConverter,
       partitions = Set(0, 1, 2))
 
-    val s = f.getSubscriber[String](name = "sv2",
+    val s = f.getSubscriber(name = "sv2",
       transactionGenerator = LocalGeneratorCreator.getGen(),
-      converter = arrayByteToStringConverter, partitions = Set(0, 1, 2),
+      partitions = Set(0, 1, 2),
       offset = Newest,
       useLastOffset = false,
-      callback = new Callback[String] {
-        override def onTransaction(consumer: TransactionOperator[String], transaction: ConsumerTransaction[String]): Unit = this.synchronized {
-          subsciberTransactionsAmount += 1
-          transaction.getAll()
-          if(subsciberTransactionsAmount == TOTAL)
-            latch.countDown()
-        }
+      callback = (consumer: TransactionOperator, transaction: ConsumerTransaction) => this.synchronized {
+        subsciberTransactionsAmount += 1
+        transaction.getAll()
+        if (subsciberTransactionsAmount == TOTAL)
+          latch.countDown()
       })
     s.start()
     for (it <- 0 until TOTAL) {
@@ -70,19 +67,18 @@ class SubscriberBasicPubSubTests extends FlatSpec with Matchers with BeforeAndAf
     var subscriberTransactionsAmount = 0
     val latch = new CountDownLatch(1)
 
-    val producer1 = f.getProducer[String](
+    val producer1 = f.getProducer(
       name = "test_producer",
       transactionGenerator = LocalGeneratorCreator.getGen(),
-      converter = stringToArrayByteConverter,
       partitions = Set(0, 1, 2))
 
-    val s = f.getSubscriber[String](name = "sv2",
+    val s = f.getSubscriber(name = "sv2",
       transactionGenerator = LocalGeneratorCreator.getGen(),
-      converter = arrayByteToStringConverter, partitions = Set(0, 1, 2),
+      partitions = Set(0, 1, 2),
       offset = Newest,
       useLastOffset = false,
-      callback = new Callback[String] {
-        override def onTransaction(consumer: TransactionOperator[String], transaction: ConsumerTransaction[String]): Unit = this.synchronized {
+      callback = new Callback {
+        override def onTransaction(consumer: TransactionOperator, transaction: ConsumerTransaction): Unit = this.synchronized {
           subscriberTransactionsAmount += 1
           if(subscriberTransactionsAmount == TOTAL * 2)
             latch.countDown()
@@ -95,10 +91,9 @@ class SubscriberBasicPubSubTests extends FlatSpec with Matchers with BeforeAndAf
       transaction.checkpoint()
     }
     producer1.stop()
-    val producer2 = f.getProducer[String](
+    val producer2 = f.getProducer(
       name = "test_producer2",
       transactionGenerator = LocalGeneratorCreator.getGen(),
-      converter = stringToArrayByteConverter,
       partitions = Set(0, 1, 2))
 
     for (it <- 0 until TOTAL) {

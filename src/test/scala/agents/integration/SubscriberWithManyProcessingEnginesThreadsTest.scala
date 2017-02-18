@@ -6,7 +6,6 @@ import com.bwsw.tstreams.agents.consumer.Offset.Newest
 import com.bwsw.tstreams.agents.consumer.subscriber.Callback
 import com.bwsw.tstreams.agents.consumer.{ConsumerTransaction, TransactionOperator}
 import com.bwsw.tstreams.agents.producer.NewTransactionProducerPolicy
-import com.bwsw.tstreams.converter.{ArrayByteToStringConverter, StringToArrayByteConverter}
 import com.bwsw.tstreams.env.ConfigurationOptions
 import com.bwsw.tstreams.generator.LocalTransactionGenerator
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
@@ -39,15 +38,14 @@ class SubscriberWithManyProcessingEnginesThreadsTest extends FlatSpec with Match
     val awaitTransactionsLatch = new CountDownLatch(1)
     var transactionsCounter = 0
 
-    val subscriber = f.getSubscriber[String](
+    val subscriber = f.getSubscriber(
       name = "test_subscriber", // name of the subscribing consumer
       transactionGenerator = new LocalTransactionGenerator, // where it can get transaction ids
-      converter = new ArrayByteToStringConverter, // vice versa converter to string
       partitions = PARTITIONS, // active partitions
       offset = Newest, // it will start from newest available partitions
       useLastOffset = false, // will ignore history
-      callback = new Callback[String] {
-        override def onTransaction(op: TransactionOperator[String], transaction: ConsumerTransaction[String]): Unit = this.synchronized {
+      callback = new Callback {
+        override def onTransaction(op: TransactionOperator, transaction: ConsumerTransaction): Unit = this.synchronized {
           transactionsCounter += 1
           if (transactionsCounter % 1000 == 0) {
             logger.info(s"I have read $transactionsCounter transactions up to now.")
@@ -63,10 +61,9 @@ class SubscriberWithManyProcessingEnginesThreadsTest extends FlatSpec with Match
     val producerThread = new Thread(new Runnable {
       override def run(): Unit = {
         // create producer
-        val producer = f.getProducer[String](
+        val producer = f.getProducer(
           name = "test_producer", // name of the producer
           transactionGenerator = new LocalTransactionGenerator, // where it will get new transactions
-          converter = new StringToArrayByteConverter, // converter from String to internal data presentation
           partitions = PARTITIONS) // agent can be a master
 
         (0 until TOTAL_TRANSACTIONS).foreach(

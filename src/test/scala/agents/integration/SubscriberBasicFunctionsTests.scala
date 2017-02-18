@@ -25,33 +25,31 @@ class SubscriberBasicFunctionsTests extends FlatSpec with Matchers with BeforeAn
     setProperty(ConfigurationOptions.Consumer.transactionPreload, 10).
     setProperty(ConfigurationOptions.Consumer.dataPreload, 10)
 
-  val producer = f.getProducer[String](
+  val producer = f.getProducer(
     name = "test_producer",
     transactionGenerator = LocalGeneratorCreator.getGen(),
-    converter = stringToArrayByteConverter,
     partitions = Set(0, 1, 2))
 
   it should "start and stop with default options" in {
-    val s = f.getSubscriber[String](name = "sv2",
+    val s = f.getSubscriber(name = "sv2",
       transactionGenerator = LocalGeneratorCreator.getGen(),
-      converter = arrayByteToStringConverter, partitions = Set(0, 1, 2),
+      partitions = Set(0, 1, 2),
       offset = Oldest,
       useLastOffset = true,
-      callback = new Callback[String] {
-        override def onTransaction(consumer: TransactionOperator[String], transaction: ConsumerTransaction[String]): Unit = {}
+      callback = new Callback {
+        override def onTransaction(consumer: TransactionOperator, transaction: ConsumerTransaction): Unit = {}
       })
     s.start()
     s.stop()
   }
 
   it should "allow start and stop several times" in {
-    val s = f.getSubscriber[String](name = "sv2",
+    val s = f.getSubscriber(name = "sv2",
       transactionGenerator = LocalGeneratorCreator.getGen(),
-      converter = arrayByteToStringConverter, partitions = Set(0, 1, 2),
-      offset = Oldest,
+      offset = Oldest, partitions = Set(0, 1, 2),
       useLastOffset = true,
-      callback = new Callback[String] {
-        override def onTransaction(consumer: TransactionOperator[String], transaction: ConsumerTransaction[String]): Unit = {}
+      callback = new Callback {
+        override def onTransaction(consumer: TransactionOperator, transaction: ConsumerTransaction): Unit = {}
       })
     s.start()
     s.stop()
@@ -60,13 +58,13 @@ class SubscriberBasicFunctionsTests extends FlatSpec with Matchers with BeforeAn
   }
 
   it should "not allow double start" in {
-    val s = f.getSubscriber[String](name = "sv2",
+    val s = f.getSubscriber(name = "sv2",
       transactionGenerator = LocalGeneratorCreator.getGen(),
-      converter = arrayByteToStringConverter, partitions = Set(0, 1, 2),
+      partitions = Set(0, 1, 2),
       offset = Oldest,
       useLastOffset = true,
-      callback = new Callback[String] {
-        override def onTransaction(consumer: TransactionOperator[String], transaction: ConsumerTransaction[String]): Unit = {}
+      callback = new Callback {
+        override def onTransaction(consumer: TransactionOperator, transaction: ConsumerTransaction): Unit = {}
       })
     s.start()
     var flag = false
@@ -82,13 +80,13 @@ class SubscriberBasicFunctionsTests extends FlatSpec with Matchers with BeforeAn
   }
 
   it should "not allow double stop" in {
-    val s = f.getSubscriber[String](name = "sv2",
+    val s = f.getSubscriber(name = "sv2",
       transactionGenerator = LocalGeneratorCreator.getGen(),
-      converter = arrayByteToStringConverter, partitions = Set(0, 1, 2),
+      partitions = Set(0, 1, 2),
       offset = Oldest,
       useLastOffset = true,
-      callback = new Callback[String] {
-        override def onTransaction(consumer: TransactionOperator[String], transaction: ConsumerTransaction[String]): Unit = {}
+      callback = new Callback {
+        override def onTransaction(consumer: TransactionOperator, transaction: ConsumerTransaction): Unit = {}
       })
     s.start()
     s.stop()
@@ -105,13 +103,13 @@ class SubscriberBasicFunctionsTests extends FlatSpec with Matchers with BeforeAn
 
   it should "allow to be created with in memory queues" in {
     val f1 = f.copy()
-    val s = f1.getSubscriber[String](name = "sv2_inram",
+    val s = f1.getSubscriber(name = "sv2_inram",
       transactionGenerator = LocalGeneratorCreator.getGen(),
-      converter = arrayByteToStringConverter, partitions = Set(0, 1, 2),
+      partitions = Set(0, 1, 2),
       offset = Oldest,
       useLastOffset = true,
-      callback = new Callback[String] {
-        override def onTransaction(consumer: TransactionOperator[String], transaction: ConsumerTransaction[String]): Unit = {}
+      callback = new Callback {
+        override def onTransaction(consumer: TransactionOperator, transaction: ConsumerTransaction): Unit = {}
       })
     s.start()
     s.stop()
@@ -130,13 +128,13 @@ class SubscriberBasicFunctionsTests extends FlatSpec with Matchers with BeforeAn
     }
     producer.stop()
 
-    val s = f.getSubscriber[String](name = "sv2",
+    val s = f.getSubscriber(name = "sv2",
       transactionGenerator = LocalGeneratorCreator.getGen(),
-      converter = arrayByteToStringConverter, partitions = Set(0, 1, 2),
+      partitions = Set(0, 1, 2),
       offset = Oldest,
       useLastOffset = true,
-      callback = new Callback[String] {
-        override def onTransaction(consumer: TransactionOperator[String], transaction: ConsumerTransaction[String]): Unit = this.synchronized {
+      callback = new Callback {
+        override def onTransaction(consumer: TransactionOperator, transaction: ConsumerTransaction): Unit = this.synchronized {
           i += 1
           if (i == TOTAL)
             l.countDown()

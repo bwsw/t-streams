@@ -3,7 +3,6 @@ package env
 import com.bwsw.tstreams.agents.consumer.Offset.Oldest
 import com.bwsw.tstreams.agents.consumer.subscriber.Callback
 import com.bwsw.tstreams.agents.consumer.{ConsumerTransaction, TransactionOperator}
-import com.bwsw.tstreams.converter.{ArrayByteToStringConverter, StringToArrayByteConverter}
 import com.bwsw.tstreams.env.ConfigurationOptions
 import com.bwsw.tstreams.generator.LocalTransactionGenerator
 
@@ -39,10 +38,9 @@ class TStreamsFactoryTest extends FlatSpec with Matchers with BeforeAndAfterAll 
   }
 
   "UniversalFactory.getProducer" should "return producer object" in {
-    val p = f.getProducer[String](
+    val p = f.getProducer(
       name = "test-producer-1",
       transactionGenerator = new LocalTransactionGenerator,
-      converter = new StringToArrayByteConverter,
       partitions = Set(0))
 
     p != null shouldEqual true
@@ -52,10 +50,9 @@ class TStreamsFactoryTest extends FlatSpec with Matchers with BeforeAndAfterAll 
   }
 
   "UniversalFactory.getConsumer" should "return consumer object" in {
-    val c = f.getConsumer[String](
+    val c = f.getConsumer(
       name = "test-consumer-1",
       transactionGenerator = new LocalTransactionGenerator,
-      converter = new ArrayByteToStringConverter,
       partitions = Set(0),
       offset = Oldest)
 
@@ -64,14 +61,13 @@ class TStreamsFactoryTest extends FlatSpec with Matchers with BeforeAndAfterAll 
   }
 
   "UniversalFactory.getSubscriber" should "return subscriber object" in {
-    val sub = f.getSubscriber[String](
+    val sub = f.getSubscriber(
       name = "test-subscriber",
       transactionGenerator = new LocalTransactionGenerator,
-      converter = new ArrayByteToStringConverter,
       partitions = Set(0),
       offset = Oldest,
-      callback = new Callback[String] {
-        override def onTransaction(consumer: TransactionOperator[String], transaction: ConsumerTransaction[String]): Unit = {}
+      callback = new Callback {
+        override def onTransaction(consumer: TransactionOperator, transaction: ConsumerTransaction): Unit = {}
       })
 
     sub != null shouldEqual true

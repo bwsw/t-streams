@@ -7,7 +7,6 @@ package agents.integration
 import java.util.concurrent.{CountDownLatch, TimeUnit}
 
 import com.bwsw.tstreams.agents.consumer.Offset.Newest
-import com.bwsw.tstreams.agents.consumer.subscriber.Callback
 import com.bwsw.tstreams.agents.consumer.{ConsumerTransaction, TransactionOperator}
 import com.bwsw.tstreams.agents.producer.NewTransactionProducerPolicy
 import com.bwsw.tstreams.env.ConfigurationOptions
@@ -37,56 +36,45 @@ class SubscriberWithTwoProducersFirstCancelSecondCheckpointTest extends FlatSpec
     val lp2 = new CountDownLatch(1)
     val ls = new CountDownLatch(1)
 
-    val subscriber = f.getSubscriber[String](name = "ss+2",
+    val subscriber = f.getSubscriber(name = "ss+2",
       transactionGenerator = LocalGeneratorCreator.getGen(),
-      converter = arrayByteToStringConverter,
       partitions = Set(0),
       offset = Newest,
       useLastOffset = true,
-      callback = new Callback[String] {
-        override def onTransaction(consumer: TransactionOperator[String], transaction: ConsumerTransaction[String]): Unit = this.synchronized {
-          bs.append(transaction.getTransactionID())
-          ls.countDown()
-        }
+      callback = (consumer: TransactionOperator, transaction: ConsumerTransaction) => this.synchronized {
+        bs.append(transaction.getTransactionID())
+        ls.countDown()
       })
 
     subscriber.start()
 
-    val producer1 = f.getProducer[String](
+    val producer1 = f.getProducer(
       name = "test_producer1",
       transactionGenerator = LocalGeneratorCreator.getGen(),
-      converter = stringToArrayByteConverter,
       partitions = Set(0))
 
-    val producer2 = f.getProducer[String](
+    val producer2 = f.getProducer(
       name = "test_producer2",
       transactionGenerator = LocalGeneratorCreator.getGen(),
-      converter = stringToArrayByteConverter,
       partitions = Set(0))
 
 
 
-    val t1 = new Thread(new Runnable {
-      override def run(): Unit = {
-        val transaction = producer1.newTransaction(policy = NewTransactionProducerPolicy.CheckpointIfOpened)
-        lp2.countDown()
-        bp1.append(transaction.getTransactionID())
-        transaction.send("test")
-        transaction.cancel()
-      }
+    val t1 = new Thread(() => {
+      val transaction = producer1.newTransaction(policy = NewTransactionProducerPolicy.CheckpointIfOpened)
+      lp2.countDown()
+      bp1.append(transaction.getTransactionID())
+      transaction.send("test")
+      transaction.cancel()
     })
 
-    val t2 = new Thread(new Runnable {
-      override def run(): Unit = {
-        lp2.await()
-        val t = producer2.newTransaction(policy = NewTransactionProducerPolicy.CheckpointIfOpened)
-        bp2.append(t.getTransactionID())
-        t.send("test")
-        t.checkpoint()
-      }
+    val t2 = new Thread(() => {
+      lp2.await()
+      val t = producer2.newTransaction(policy = NewTransactionProducerPolicy.CheckpointIfOpened)
+      bp2.append(t.getTransactionID())
+      t.send("test")
+      t.checkpoint()
     })
-
-    //subscriber.start()
 
     t1.start()
     t2.start()

@@ -39,10 +39,9 @@ class ProducerUpdateTaskTest extends FlatSpec with Matchers with BeforeAndAfterA
     setProperty(ConfigurationOptions.Consumer.transactionPreload, 10).
     setProperty(ConfigurationOptions.Consumer.dataPreload, 10)
 
-  val producer = f.getProducer[String](
+  val producer = f.getProducer(
     name = "test_producer",
     transactionGenerator = LocalGeneratorCreator.getGen(),
-    converter = stringToArrayByteConverter,
     partitions = Set(0, 1, 2))
 
 

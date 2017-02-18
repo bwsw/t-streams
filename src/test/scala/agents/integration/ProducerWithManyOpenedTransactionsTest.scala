@@ -20,16 +20,14 @@ class ProducerWithManyOpenedTransactionsTest extends FlatSpec with Matchers with
     setProperty(ConfigurationOptions.Consumer.transactionPreload, 10).
     setProperty(ConfigurationOptions.Consumer.dataPreload, 10)
 
-  val producer = f.getProducer[String](
+  val producer = f.getProducer(
     name = "test_producer",
     transactionGenerator = LocalGeneratorCreator.getGen(),
-    converter = stringToArrayByteConverter,
     partitions = Set(0, 1, 2))
 
-  val consumer = f.getConsumer[String](
+  val consumer = f.getConsumer(
     name = "test_consumer",
     transactionGenerator = LocalGeneratorCreator.getGen(),
-    converter = arrayByteToStringConverter,
     partitions = Set(0, 1, 2),
     offset = Oldest,
     useLastOffset = true)
@@ -39,9 +37,9 @@ class ProducerWithManyOpenedTransactionsTest extends FlatSpec with Matchers with
     val data1 = (for (i <- 0 until 10) yield randomString).sorted
     val data2 = (for (i <- 0 until 10) yield randomString).sorted
     val data3 = (for (i <- 0 until 10) yield randomString).sorted
-    val transaction1: ProducerTransaction[String] = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
-    val transaction2: ProducerTransaction[String] = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
-    val transaction3: ProducerTransaction[String] = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
+    val transaction1: ProducerTransaction = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
+    val transaction2: ProducerTransaction = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
+    val transaction3: ProducerTransaction = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
     data1.foreach(x => transaction1.send(x))
     data2.foreach(x => transaction2.send(x))
     data3.foreach(x => transaction3.send(x))

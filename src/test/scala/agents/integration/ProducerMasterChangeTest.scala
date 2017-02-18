@@ -37,27 +37,24 @@ class ProducerMasterChangeTest extends FlatSpec with Matchers with BeforeAndAfte
     val lp2 = new CountDownLatch(1)
     val ls = new CountDownLatch(1)
 
-    val producer1 = f.getProducer[String](
+    val producer1 = f.getProducer(
       name = "test_producer1",
       transactionGenerator = LocalGeneratorCreator.getGen(),
-      converter = stringToArrayByteConverter,
       partitions = Set(0))
 
 
-    val producer2 = f.getProducer[String](
+    val producer2 = f.getProducer(
       name = "test_producer2",
       transactionGenerator = LocalGeneratorCreator.getGen(),
-      converter = stringToArrayByteConverter,
       partitions = Set(0))
 
-    val s = f.getSubscriber[String](name = "ss+2",
+    val s = f.getSubscriber(name = "ss+2",
       transactionGenerator = LocalGeneratorCreator.getGen(),
-      converter = arrayByteToStringConverter,
       partitions = Set(0),
       offset = Newest,
       useLastOffset = false,
-      callback = new Callback[String] {
-        override def onTransaction(consumer: TransactionOperator[String], transaction: ConsumerTransaction[String]): Unit = this.synchronized {
+      callback = new Callback {
+        override def onTransaction(consumer: TransactionOperator, transaction: ConsumerTransaction): Unit = this.synchronized {
           bs.append(transaction.getTransactionID())
           if (bs.size == 1100) {
             ls.countDown()

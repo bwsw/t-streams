@@ -11,7 +11,7 @@ import com.bwsw.tstreams.agents.producer.{CoordinationOptions, Producer}
 import com.bwsw.tstreams.common.{RoundRobinPolicy, _}
 import com.bwsw.tstreams.coordination.client.TcpTransport
 import com.bwsw.tstreams.env.defaults.TStreamsFactoryProducerDefaults.PortRange
-import com.bwsw.tstreams.generator.ITransactionGenerator
+import com.bwsw.tstreams.generator.{ITransactionGenerator, LocalTransactionGenerator}
 import com.bwsw.tstreams.streams.Stream
 import com.bwsw.tstreamstransactionserver.options.{AuthOptions, ClientOptions, ZookeeperOptions}
 import org.slf4j.LoggerFactory
@@ -169,12 +169,10 @@ class TStreamsFactory() {
     * returns ready to use producer object
     *
     * @param name Producer name
-    * @param transactionGenerator
     * @param partitions
     * @return
     */
   def getProducer(name: String,
-                  transactionGenerator: ITransactionGenerator,
                   partitions: Set[Int]
                  ): Producer = this.synchronized {
 
@@ -268,7 +266,7 @@ class TStreamsFactory() {
       transactionKeepAliveMs = transactionKeepAliveMs,
       writePolicy = writePolicy,
       batchSize = batchSize,
-      transactionGenerator = transactionGenerator,
+      transactionGenerator = new LocalTransactionGenerator,
       coordinationOptions = cao)
 
     new Producer(name = name, stream = stream, producerOptions = po)
@@ -278,12 +276,10 @@ class TStreamsFactory() {
     * returns ready to use consumer object
     *
     * @param name Consumer name
-    * @param transactionGenerator
     * @param partitions
     * @return
     */
   def getConsumer(name: String,
-                  transactionGenerator: ITransactionGenerator,
                   partitions: Set[Int],
                   offset: IOffset,
                   useLastOffset: Boolean = true,
@@ -294,7 +290,7 @@ class TStreamsFactory() {
 
 
     val stream = getStream()
-    val consumerOptions = getBasicConsumerOptions(transactionGenerator = transactionGenerator,
+    val consumerOptions = getBasicConsumerOptions(transactionGenerator = new LocalTransactionGenerator,
       stream = stream, partitions = partitions,
       offset = offset, checkpointAtStart = checkpointAtStart,
       useLastOffset = useLastOffset)
@@ -306,13 +302,11 @@ class TStreamsFactory() {
   /**
     * returns ready to use subscribing consumer object
     *
-    * @param transactionGenerator
     * @param partitions
     * @param callback
     * @return
     */
   def getSubscriber(name: String,
-                    transactionGenerator: ITransactionGenerator,
                     partitions: Set[Int],
                     callback: com.bwsw.tstreams.agents.consumer.subscriber.Callback,
                     offset: IOffset,
@@ -326,7 +320,7 @@ class TStreamsFactory() {
 
     val stream = getStream()
 
-    val consumerOptions = getBasicConsumerOptions(transactionGenerator = transactionGenerator,
+    val consumerOptions = getBasicConsumerOptions(transactionGenerator = new LocalTransactionGenerator,
       stream = stream,
       partitions = partitions,
       checkpointAtStart = checkpointAtStart,

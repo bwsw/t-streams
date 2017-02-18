@@ -38,26 +38,23 @@ class TwoProducersAndSubscriberStartsBeforeWriteTests extends FlatSpec with Matc
     val lp2 = new CountDownLatch(1)
     val ls = new CountDownLatch(1)
 
-    val producer1 = f.getProducer[String](
+    val producer1 = f.getProducer(
       name = "test_producer1",
       transactionGenerator = LocalGeneratorCreator.getGen(),
-      converter = stringToArrayByteConverter,
       partitions = Set(0))
 
 
-    val producer2 = f.getProducer[String](
+    val producer2 = f.getProducer(
       name = "test_producer2",
       transactionGenerator = LocalGeneratorCreator.getGen(),
-      converter = stringToArrayByteConverter,
       partitions = Set(0))
 
-    val s = f.getSubscriber[String](name = "ss+2",
+    val s = f.getSubscriber(name = "ss+2",
       transactionGenerator = LocalGeneratorCreator.getGen(),
-      converter = arrayByteToStringConverter,
       partitions = Set(0),
       offset = Newest,
       useLastOffset = true,
-      callback = new Callback[String] {
+      callback = new Callback {
         override def onTransaction(consumer: TransactionOperator[String], transaction: ConsumerTransaction[String]): Unit = this.synchronized {
           bs.append(transaction.getTransactionID())
           if (bs.size == 2 * COUNT) {
@@ -66,28 +63,24 @@ class TwoProducersAndSubscriberStartsBeforeWriteTests extends FlatSpec with Matc
         }
       })
 
-    val t1 = new Thread(new Runnable {
-      override def run(): Unit = {
-        logger.info(s"Producer-1 is master of partition: ${producer1.isMasterOfPartition(0)}")
-        for (i <- 0 until COUNT) {
-          val t = producer1.newTransaction(policy = NewTransactionProducerPolicy.CheckpointIfOpened)
-          bp.append(t.getTransactionID())
-          lp2.countDown()
-          t.send("test")
-          t.checkpoint()
-        }
+    val t1 = new Thread(() => {
+      logger.info(s"Producer-1 is master of partition: ${producer1.isMasterOfPartition(0)}")
+      for (i <- 0 until COUNT) {
+        val t = producer1.newTransaction(policy = NewTransactionProducerPolicy.CheckpointIfOpened)
+        bp.append(t.getTransactionID())
+        lp2.countDown()
+        t.send("test")
+        t.checkpoint()
       }
     })
-    val t2 = new Thread(new Runnable {
-      override def run(): Unit = {
-        logger.info(s"Producer-2 is master of partition: ${producer2.isMasterOfPartition(0)}")
-        for (i <- 0 until COUNT) {
-          lp2.await()
-          val t = producer2.newTransaction(policy = NewTransactionProducerPolicy.CheckpointIfOpened)
-          bp.append(t.getTransactionID())
-          t.send("test")
-          t.checkpoint()
-        }
+    val t2 = new Thread(() => {
+      logger.info(s"Producer-2 is master of partition: ${producer2.isMasterOfPartition(0)}")
+      for (i <- 0 until COUNT) {
+        lp2.await()
+        val t = producer2.newTransaction(policy = NewTransactionProducerPolicy.CheckpointIfOpened)
+        bp.append(t.getTransactionID())
+        t.send("test")
+        t.checkpoint()
       }
     })
     s.start()

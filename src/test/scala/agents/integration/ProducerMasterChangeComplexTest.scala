@@ -10,7 +10,6 @@ import com.bwsw.tstreams.agents.consumer.Offset.Newest
 import com.bwsw.tstreams.agents.consumer.subscriber.Callback
 import com.bwsw.tstreams.agents.consumer.{ConsumerTransaction, TransactionOperator}
 import com.bwsw.tstreams.agents.producer.{NewTransactionProducerPolicy, Producer}
-import com.bwsw.tstreams.converter.StringToArrayByteConverter
 import com.bwsw.tstreams.env.{ConfigurationOptions, TStreamsFactory}
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import testutils.{LocalGeneratorCreator, TestUtils}
@@ -24,7 +23,7 @@ class ProducerMasterChangeComplexTest  extends FlatSpec with Matchers with Befor
   val subscriberBuffer = ListBuffer[Long]()
 
   class ProducerWorker(val factory: TStreamsFactory, val onCompleteLatch: CountDownLatch, val amount: Int, val probability: Double) {
-    var producer: Producer[String] = null
+    var producer: Producer = null
     var counter: Int = 0
     // public because will be called
     def loop(partitions: Set[Int], checkpointModeSync: Boolean = true) = {
@@ -55,10 +54,9 @@ class ProducerMasterChangeComplexTest  extends FlatSpec with Matchers with Befor
 
     // private - will not be called outside
     private def makeNewProducer(partitions: Set[Int]) = {
-      factory.getProducer[String](
+      factory.getProducer(
         name = "test_producer1",
         transactionGenerator = LocalGeneratorCreator.getGen(),
-        converter = new StringToArrayByteConverter,
         partitions = partitions)
     }
   }
@@ -84,14 +82,13 @@ class ProducerMasterChangeComplexTest  extends FlatSpec with Matchers with Befor
     setProperty(ConfigurationOptions.Consumer.dataPreload, 10)
 
   var subscriberCounter = 0
-  val subscriber = f.getSubscriber[String](name = "s",
+  val subscriber = f.getSubscriber(name = "s",
     transactionGenerator = LocalGeneratorCreator.getGen(),
-    converter = arrayByteToStringConverter,
     partitions = PARTITIONS,     // Set(0),
     offset = Newest,
     useLastOffset = false, // true
-    callback = new Callback[String] {
-      override def onTransaction(consumer: TransactionOperator[String], transaction: ConsumerTransaction[String]): Unit = this.synchronized {
+    callback = new Callback {
+      override def onTransaction(consumer: TransactionOperator, transaction: ConsumerTransaction): Unit = this.synchronized {
         subscriberCounter += 1
         subscriberBuffer.synchronized {
           subscriberBuffer.append(transaction.getTransactionID())

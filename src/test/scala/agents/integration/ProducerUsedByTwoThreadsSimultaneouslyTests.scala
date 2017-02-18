@@ -26,10 +26,9 @@ class ProducerUsedByTwoThreadsSimultaneouslyTests extends FlatSpec with Matchers
     setProperty(ConfigurationOptions.Consumer.transactionPreload, 10).
     setProperty(ConfigurationOptions.Consumer.dataPreload, 10)
 
-  val producer = f.getProducer[String](
+  val producer = f.getProducer(
     name = "test_producer",
     transactionGenerator = LocalGeneratorCreator.getGen(),
-    converter = stringToArrayByteConverter,
     partitions = (0 until ALL_PARTITIONS).toSet)
 
   it should "work correctly if two different threads uses different partitions" in {
@@ -47,16 +46,14 @@ class ProducerUsedByTwoThreadsSimultaneouslyTests extends FlatSpec with Matchers
       }
     })
 
-    val t2 = new Thread(new Runnable {
-      override def run(): Unit = {
-        (0 until COUNT)
-          .foreach(i => {
-            val t = producer.newTransaction(NewTransactionProducerPolicy.CheckpointAsyncIfOpened, 1)
-            t.send("data")
-            t.checkpoint(false)
-          })
-        l.countDown()
-      }
+    val t2 = new Thread(() => {
+      (0 until COUNT)
+        .foreach(i => {
+          val t = producer.newTransaction(NewTransactionProducerPolicy.CheckpointAsyncIfOpened, 1)
+          t.send("data")
+          t.checkpoint(false)
+        })
+      l.countDown()
     })
 
     t1.start()

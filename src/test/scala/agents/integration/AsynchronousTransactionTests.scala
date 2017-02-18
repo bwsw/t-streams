@@ -31,10 +31,9 @@ class AsynchronousTransactionTests extends FlatSpec with Matchers
     setProperty(ConfigurationOptions.Consumer.dataPreload, 10)
 
 
-  val producer = f.getProducer[String](
+  val producer = f.getProducer(
     name = "test_producer",
     transactionGenerator = LocalGeneratorCreator.getGen(),
-    converter = stringToArrayByteConverter,
     partitions = Set(0))
 
   "Fire async checkpoint by producer and wait when complete" should "consumer get transaction from DB" in {
@@ -43,10 +42,9 @@ class AsynchronousTransactionTests extends FlatSpec with Matchers
       l.countDown()
     })
 
-    val c = f.getConsumer[String](
+    val c = f.getConsumer(
       name = "test_subscriber",
       transactionGenerator = LocalGeneratorCreator.getGen(),
-      converter = arrayByteToStringConverter,
       partitions = Set(0),
       offset = Oldest,
       useLastOffset = true)
@@ -71,10 +69,9 @@ class AsynchronousTransactionTests extends FlatSpec with Matchers
       throw new Exception("expected")
     })
 
-    val c = f.getConsumer[String](
+    val c = f.getConsumer(
       name = "test_subscriber",
       transactionGenerator = LocalGeneratorCreator.getGen(),
-      converter = arrayByteToStringConverter,
       partitions = Set(0),
       offset = Oldest,
       useLastOffset = true)
@@ -97,10 +94,9 @@ class AsynchronousTransactionTests extends FlatSpec with Matchers
       throw new Exception("expected")
     })
 
-    val c = f.getConsumer[String](
+    val c = f.getConsumer(
       name = "test_subscriber",
       transactionGenerator = LocalGeneratorCreator.getGen(),
-      converter = arrayByteToStringConverter,
       partitions = Set(0),
       offset = Oldest,
       useLastOffset = true)

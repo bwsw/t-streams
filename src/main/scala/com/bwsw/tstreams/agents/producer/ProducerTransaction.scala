@@ -103,9 +103,9 @@ class ProducerTransaction(partition: Int,
     *
     * @param obj some user object
     */
-  def send(obj: T): Unit = {
+  def send(obj: Array[Byte]): Unit = {
     state.isOpenedOrDie()
-    val number = data.put(obj, transactionOwner.producerOptions.converter)
+    val number = data.put(obj)
     val job = {
       if (number % transactionOwner.producerOptions.batchSize == 0) {
         data.save()
