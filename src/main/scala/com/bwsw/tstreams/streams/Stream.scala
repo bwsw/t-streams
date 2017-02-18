@@ -9,10 +9,10 @@ import scala.concurrent.duration._
 /**
   * Settings of stream in metadata storage
   *
-  * @param name        Stream name
-  * @param partitionsCount  Number of stream partitions
-  * @param ttl         Time in seconds of transaction expiration
-  * @param description Some stream additional info
+  * @param name            Stream name
+  * @param partitionsCount Number of stream partitions
+  * @param ttl             Time in seconds of transaction expiration
+  * @param description     Some stream additional info
   */
 case class StreamSettings(name: String, partitionsCount: Int, ttl: Int, description: String)
 

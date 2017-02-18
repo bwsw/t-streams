@@ -22,8 +22,8 @@ class ProducerWritesToOneSubscriberReadsFromAllTests extends FlatSpec with Match
     setProperty(ConfigurationOptions.Producer.transportTimeoutMs, 5).
     setProperty(ConfigurationOptions.Producer.Transaction.ttlMs, 3).
     setProperty(ConfigurationOptions.Producer.Transaction.keepAliveMs, 1).
-    setProperty(ConfigurationOptions.Consumer.TRANSACTION_PRELOAD, 10).
-    setProperty(ConfigurationOptions.Consumer.DATA_PRELOAD, 10)
+    setProperty(ConfigurationOptions.Consumer.transactionPreload, 10).
+    setProperty(ConfigurationOptions.Consumer.dataPreload, 10)
 
   val TOTAL = 1000
   val l = new CountDownLatch(1)

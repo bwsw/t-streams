@@ -30,9 +30,9 @@ class SubscriberWithManyProcessingEnginesThreadsTest extends FlatSpec with Match
 
   f.setProperty(ConfigurationOptions.Stream.name, "test_stream")
     .setProperty(ConfigurationOptions.Stream.name, "test-stream")
-    .setProperty(ConfigurationOptions.Consumer.Subscriber.POLLING_FREQUENCY_DELAY, POLLING_FREQUENCY_DELAY)
-    .setProperty(ConfigurationOptions.Consumer.Subscriber.PROCESSING_ENGINES_THREAD_POOL, PROCESSING_ENGINES_THREAD_POOL)
-    .setProperty(ConfigurationOptions.Consumer.Subscriber.TRANSACTION_BUFFER_THREAD_POOL, TRANSACTION_BUFFER_THREAD_POOL)
+    .setProperty(ConfigurationOptions.Consumer.Subscriber.pollingFrequencyDelayMs, POLLING_FREQUENCY_DELAY)
+    .setProperty(ConfigurationOptions.Consumer.Subscriber.processingEnginesThreadPoolSize, PROCESSING_ENGINES_THREAD_POOL)
+    .setProperty(ConfigurationOptions.Consumer.Subscriber.transactionBufferThreadPoolSize, TRANSACTION_BUFFER_THREAD_POOL)
     .setProperty(ConfigurationOptions.Stream.partitionsCount, TOTAL_PARTITIONS)
 
   it should s"Start and work correctly with PROCESSING_ENGINES_THREAD_POOL=$PROCESSING_ENGINES_THREAD_POOL" in {

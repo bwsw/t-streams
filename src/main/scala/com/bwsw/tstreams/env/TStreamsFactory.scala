@@ -24,44 +24,15 @@ import scala.collection.mutable
 class TStreamsFactory() {
   private val logger = LoggerFactory.getLogger(this.getClass)
   val propertyMap = mutable.HashMap[String, Any]()
-  val isClosed    = new AtomicBoolean(false)
-  val isLocked    = new AtomicBoolean(false)
-  val co          = ConfigurationOptions
+  val isClosed = new AtomicBoolean(false)
+  val isLocked = new AtomicBoolean(false)
+  val co = ConfigurationOptions
 
   propertyMap ++= defaults.TStreamsFactoryStorageClientDefaults.get
   propertyMap ++= defaults.TStreamsFactoryStreamDefaults.get
   propertyMap ++= defaults.TStreamsFactoryCoordinationDefaults.get
   propertyMap ++= defaults.TStreamsFactoryProducerDefaults.get
-
-
-  // consumer scope
-  val Consumer_transaction_preload_default = 10
-  val Consumer_transaction_preload_min = 1
-  val Consumer_transaction_preload_max = 100
-  propertyMap += (co.Consumer.TRANSACTION_PRELOAD -> Consumer_transaction_preload_default)
-  val Consumer_data_preload_default = 100
-  val Consumer_data_preload_min = 10
-  val Consumer_data_preload_max = 200
-  propertyMap += (co.Consumer.DATA_PRELOAD -> Consumer_data_preload_default)
-  propertyMap += (co.Consumer.Subscriber.BIND_HOST -> "localhost")
-  propertyMap += (co.Consumer.Subscriber.BIND_PORT ->(40000, 50000))
-  propertyMap += (co.Consumer.Subscriber.PERSISTENT_QUEUE_PATH -> null)
-
-  val Subscriber_transaction_buffer_thread_pool_default = 4
-  val Subscriber_transaction_buffer_thread_pool_min = 1
-  val Subscriber_transaction_buffer_thread_pool_max = 64
-  propertyMap += (co.Consumer.Subscriber.TRANSACTION_BUFFER_THREAD_POOL -> Subscriber_transaction_buffer_thread_pool_default)
-
-  val Subscriber_processing_engines_thread_pool_default = 1
-  val Subscriber_processing_engines_thread_pool_min = 1
-  val Subscriber_processing_engines_thread_pool_max = 64
-  propertyMap += (co.Consumer.Subscriber.PROCESSING_ENGINES_THREAD_POOL -> Subscriber_processing_engines_thread_pool_default)
-
-
-  val Subscriber_polling_frequency_delay_default = 1000
-  val Subscriber_polling_frequency_delay_min = 100
-  val Subscriber_polling_frequency_delay_max = 100000
-  propertyMap += (co.Consumer.Subscriber.POLLING_FREQUENCY_DELAY -> Subscriber_polling_frequency_delay_default)
+  propertyMap ++= defaults.TStreamsFactoryConsumerDefaults.get
 
   /**
     * locks factory, after lock setProperty leads to exception.
@@ -152,17 +123,17 @@ class TStreamsFactory() {
     streamDefaults.Stream.partitionsCount.check(pAsInt(co.Stream.partitionsCount, streamDefaults.Stream.partitionsCount.default))
     streamDefaults.Stream.ttlSec.check(pAsInt(co.Stream.ttlSec, streamDefaults.Stream.ttlSec.default))
 
-    val clientOptions     = new ClientOptions()
-    val authOptions       = new AuthOptions()
-    val zookeeperOptions  = new ZookeeperOptions()
+    val clientOptions = new ClientOptions()
+    val authOptions = new AuthOptions()
+    val zookeeperOptions = new ZookeeperOptions()
 
     // construct stream
     val stream = new Stream(
-      storageClient   = new StorageClient(clientOptions = clientOptions, authOptions = authOptions, zookeeperOptions = zookeeperOptions),
-      name            = pAsString(co.Stream.name),
+      storageClient = new StorageClient(clientOptions = clientOptions, authOptions = authOptions, zookeeperOptions = zookeeperOptions),
+      name = pAsString(co.Stream.name),
       partitionsCount = pAsInt(co.Stream.partitionsCount, streamDefaults.Stream.partitionsCount.default),
-      ttl             = pAsInt(co.Stream.ttlSec, streamDefaults.Stream.ttlSec.default),
-      description     = pAsString(co.Stream.description, ""))
+      ttl = pAsInt(co.Stream.ttlSec, streamDefaults.Stream.ttlSec.default),
+      description = pAsString(co.Stream.description, ""))
 
     stream
   }
@@ -177,17 +148,17 @@ class TStreamsFactory() {
                                          offset: IOffset,
                                          checkpointAtStart: Boolean = false,
                                          useLastOffset: Boolean = true): com.bwsw.tstreams.agents.consumer.ConsumerOptions[T] = this.synchronized {
-    val consumer_transaction_preload = pAsInt(co.Consumer.TRANSACTION_PRELOAD, Consumer_transaction_preload_default)
+    val consumer_transaction_preload = pAsInt(co.Consumer.transactionPreload, Consumer_transaction_preload_default)
     pAssertIntRange(consumer_transaction_preload, Consumer_transaction_preload_min, Consumer_transaction_preload_max)
 
-    val consumer_data_preload = pAsInt(co.Consumer.DATA_PRELOAD, Consumer_data_preload_default)
+    val consumer_data_preload = pAsInt(co.Consumer.dataPreload, Consumer_data_preload_default)
     pAssertIntRange(consumer_data_preload, Consumer_data_preload_min, Consumer_data_preload_max)
 
     val consumerOptions = new com.bwsw.tstreams.agents.consumer.ConsumerOptions[T](transactionsPreload = consumer_transaction_preload,
-      dataPreload           = consumer_data_preload, converter = converter,
-      readPolicy            = new RoundRobinPolicy(stream, partitions), offset = offset,
-      transactionGenerator  = transactionGenerator, useLastOffset = useLastOffset,
-      checkpointAtStart     = checkpointAtStart)
+      dataPreload = consumer_data_preload, converter = converter,
+      readPolicy = new RoundRobinPolicy(stream, partitions), offset = offset,
+      transactionGenerator = transactionGenerator, useLastOffset = useLastOffset,
+      checkpointAtStart = checkpointAtStart)
 
     consumerOptions
   }
@@ -353,11 +324,11 @@ class TStreamsFactory() {
       offset = offset,
       useLastOffset = useLastOffset)
 
-    val bind_host = pAsString(co.Consumer.Subscriber.BIND_HOST)
+    val bind_host = pAsString(co.Consumer.Subscriber.bindHost)
     assert(bind_host != null)
-    assert(co.Consumer.Subscriber.BIND_PORT != null)
+    assert(co.Consumer.Subscriber.bindPort != null)
 
-    val bind_port = getProperty(co.Consumer.Subscriber.BIND_PORT) match {
+    val bind_port = getProperty(co.Consumer.Subscriber.bindPort) match {
       case (p: Int) => p
       case (pFrom: Int, pTo: Int) => SpareServerSocketLookupUtility.findSparePort(pAsString(co.Producer.bindHost), pFrom, pTo).get
     }
@@ -374,19 +345,19 @@ class TStreamsFactory() {
     pAssertIntRange(conn_timeout,
       Coordination_connection_timeout_min, Coordination_connection_timeout_max)
 
-    val transaction_thread_pool = pAsInt(co.Consumer.Subscriber.TRANSACTION_BUFFER_THREAD_POOL, Subscriber_transaction_buffer_thread_pool_default)
+    val transaction_thread_pool = pAsInt(co.Consumer.Subscriber.transactionBufferThreadPoolSize, Subscriber_transaction_buffer_thread_pool_default)
     pAssertIntRange(transaction_thread_pool,
       Subscriber_transaction_buffer_thread_pool_min, Subscriber_transaction_buffer_thread_pool_max)
 
-    val pe_thread_pool = pAsInt(co.Consumer.Subscriber.PROCESSING_ENGINES_THREAD_POOL, Subscriber_processing_engines_thread_pool_default)
+    val pe_thread_pool = pAsInt(co.Consumer.Subscriber.processingEnginesThreadPoolSize, Subscriber_processing_engines_thread_pool_default)
     pAssertIntRange(pe_thread_pool,
       Subscriber_processing_engines_thread_pool_min, Subscriber_processing_engines_thread_pool_max)
 
-    val polling_frequency = pAsInt(co.Consumer.Subscriber.POLLING_FREQUENCY_DELAY, Subscriber_polling_frequency_delay_default)
+    val polling_frequency = pAsInt(co.Consumer.Subscriber.pollingFrequencyDelayMs, Subscriber_polling_frequency_delay_default)
     pAssertIntRange(polling_frequency,
       Subscriber_polling_frequency_delay_min, Subscriber_polling_frequency_delay_max)
 
-    val queue_path = pAsString(co.Consumer.Subscriber.PERSISTENT_QUEUE_PATH)
+    val queue_path = pAsString(co.Consumer.Subscriber.persistentQueuePath)
 
     val opts = SubscriberOptionsBuilder.fromConsumerOptions(consumerOptions,
       agentAddress = bind_host + ":" + bind_port,

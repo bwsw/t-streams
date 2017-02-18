@@ -27,9 +27,9 @@ class CheckpointGroupAndSubscriberEventsTests extends FlatSpec with Matchers wit
     .setProperty(ConfigurationOptions.Producer.transportTimeoutMs, 5)
     .setProperty(ConfigurationOptions.Producer.Transaction.ttlMs, 6)
     .setProperty(ConfigurationOptions.Producer.Transaction.keepAliveMs, 2)
-    .setProperty(ConfigurationOptions.Consumer.TRANSACTION_PRELOAD, 10)
-    .setProperty(ConfigurationOptions.Consumer.DATA_PRELOAD, 10)
-    .setProperty(ConfigurationOptions.Consumer.Subscriber.POLLING_FREQUENCY_DELAY, 2000)
+    .setProperty(ConfigurationOptions.Consumer.transactionPreload, 10)
+    .setProperty(ConfigurationOptions.Consumer.dataPreload, 10)
+    .setProperty(ConfigurationOptions.Consumer.Subscriber.pollingFrequencyDelayMs, 2000)
 
   val producer = f.getProducer[String](
     name = "test_producer",

@@ -19,8 +19,8 @@ class ConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll with Te
       .setProperty(ConfigurationOptions.Producer.transportTimeoutMs, 5)
       .setProperty(ConfigurationOptions.Producer.Transaction.ttlMs, 6)
       .setProperty(ConfigurationOptions.Producer.Transaction.keepAliveMs, 2)
-      .setProperty(ConfigurationOptions.Consumer.TRANSACTION_PRELOAD, 10)
-      .setProperty(ConfigurationOptions.Consumer.DATA_PRELOAD, 10)
+      .setProperty(ConfigurationOptions.Consumer.transactionPreload, 10)
+      .setProperty(ConfigurationOptions.Consumer.dataPreload, 10)
 
   val gen = LocalGeneratorCreator.getGen()
 

@@ -26,8 +26,8 @@ class SubscriberWithTwoProducersFirstCancelSecondCheckpointTest extends FlatSpec
     setProperty(ConfigurationOptions.Producer.transportTimeoutMs, 5).
     setProperty(ConfigurationOptions.Producer.Transaction.ttlMs, 3).
     setProperty(ConfigurationOptions.Producer.Transaction.keepAliveMs, 1).
-    setProperty(ConfigurationOptions.Consumer.TRANSACTION_PRELOAD, 10).
-    setProperty(ConfigurationOptions.Consumer.DATA_PRELOAD, 10)
+    setProperty(ConfigurationOptions.Consumer.transactionPreload, 10).
+    setProperty(ConfigurationOptions.Consumer.dataPreload, 10)
   it should "Integration MixIn checkpoint and cancel must be correctly processed on Subscriber " in {
 
     val bp1 = ListBuffer[Long]()

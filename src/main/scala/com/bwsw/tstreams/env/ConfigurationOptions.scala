@@ -11,26 +11,26 @@ object ConfigurationOptions {
   object StorageClient {
 
     object Zookeeper {
-      val endpoints             = "storage-client.zk.endpoints"
-      val prefix                = "storage-client.zk.prefix"
-      val sessionTimeoutMs      = "storage-client.zk.session-timeout-ms"
-      val connectionTimeoutMs   = "storage-client.zk.connection-timeout-ms"
-      val retryCount            = "storage-client.zk.retry-count"
-      val retryDelayMs          = "storage-client.zk.retry-delay-ms"
+      val endpoints = "storage-client.zk.endpoints"
+      val prefix = "storage-client.zk.prefix"
+      val sessionTimeoutMs = "storage-client.zk.session-timeout-ms"
+      val connectionTimeoutMs = "storage-client.zk.connection-timeout-ms"
+      val retryCount = "storage-client.zk.retry-count"
+      val retryDelayMs = "storage-client.zk.retry-delay-ms"
     }
 
     // TODO: fixit bad scope
     object Auth {
-      val key                       = "storage-client.auth.key"
-      val connectionTimeoutMs       = "storage-client.auth.connection-timeout-ms"
-      val retryDelayMs              = "storage-client.auth.retry-delay-ms"
-      val tokenConnectionTimeoutMs  = "storage-client.auth.token-connection-timeout-ms"
-      val tokenRetryDelayMs         = "storage-client.auth.token-retry-delay-ms"
+      val key = "storage-client.auth.key"
+      val connectionTimeoutMs = "storage-client.auth.connection-timeout-ms"
+      val retryDelayMs = "storage-client.auth.retry-delay-ms"
+      val tokenConnectionTimeoutMs = "storage-client.auth.token-connection-timeout-ms"
+      val tokenRetryDelayMs = "storage-client.auth.token-retry-delay-ms"
     }
 
-    val connectionTimeoutMs         = "storage-client.connection-timeout-ms"
-    val retryDelayMs                = "storage-client.retry-delay-ms"
-    val threadPool                  = "storage-client.thread-pool"
+    val connectionTimeoutMs = "storage-client.connection-timeout-ms"
+    val retryDelayMs = "storage-client.retry-delay-ms"
+    val threadPool = "storage-client.thread-pool"
   }
 
   object Stream {
@@ -70,7 +70,6 @@ object ConfigurationOptions {
       */
     val partitionsRedistributionDelaySec = "coordination.partition-redistribution-delay"
   }
-
 
 
   /**
@@ -158,11 +157,11 @@ object ConfigurationOptions {
     /**
       * amount of transactions to preload from C* to avoid additional select ops
       */
-    val TRANSACTION_PRELOAD = "consumer.transaction-preload"
+    val transactionPreload = "consumer.transaction-preload"
     /**
       * amount of data items to load at once from data storage
       */
-    val DATA_PRELOAD = "consumer.data-preload"
+    val dataPreload = "consumer.data-preload"
 
     /**
       * TSF_Dictionary.Consumer subscriber scope
@@ -171,31 +170,31 @@ object ConfigurationOptions {
       /**
         * host/ip to bind
         */
-      val BIND_HOST = "consumer.subscriber.bind-host"
+      val bindHost = "consumer.subscriber.bind-host"
       /**
         * port to bind
         */
-      val BIND_PORT = "consumer.subscriber.bind-port"
+      val bindPort = "consumer.subscriber.bind-port"
 
       /**
         * persistent queue path (fast disk where to store bursted data
         */
-      val PERSISTENT_QUEUE_PATH = "consumer.subscriber.persistent-queue.path"
+      val persistentQueuePath = "consumer.subscriber.persistent-queue.path"
 
       /**
         * thread pool size
         */
-      val TRANSACTION_BUFFER_THREAD_POOL = "consumer.subscriber.transaction-buffer-thread-pool"
+      val transactionBufferThreadPoolSize = "consumer.subscriber.transaction-buffer-thread-pool"
 
       /**
         * processing engines pool
         */
-      val PROCESSING_ENGINES_THREAD_POOL = "consumer.subscriber.processing-engines-thread-pool"
+      val processingEnginesThreadPoolSize = "consumer.subscriber.processing-engines-thread-pool"
 
       /**
         * thread pool size
         */
-      val POLLING_FREQUENCY_DELAY = "consumer.subscriber.polling-frequency-delay"
+      val pollingFrequencyDelayMs = "consumer.subscriber.polling-frequency-delay"
 
     }
 
