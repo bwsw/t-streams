@@ -57,13 +57,13 @@ class Producer[T](var name: String,
   private val materializationGovernor = new MaterializationGovernor(producerOptions.writePolicy.getUsedPartitions().toSet)
   private val threadLock = new ReentrantLock(true)
 
-  private val peerKeepAliveTimeout = pcs.zkSessionTimeout * 1000 * 2
+  private val peerKeepAliveTimeout = pcs.zkSessionTimeoutMs * 1000 * 2
 
   val fullPrefix = java.nio.file.Paths.get(pcs.zkRootPath, stream.name).toString.substring(1)
   private val curatorClient = CuratorFrameworkFactory.builder()
     .namespace(fullPrefix)
-    .connectionTimeoutMs(pcs.zkConnectionTimeout * 1000)
-    .sessionTimeoutMs( pcs.zkSessionTimeout * 1000)
+    .connectionTimeoutMs(pcs.zkConnectionTimeoutMs * 1000)
+    .sessionTimeoutMs( pcs.zkSessionTimeoutMs * 1000)
     .retryPolicy(new ExponentialBackoffRetry(1000, 3))
     .connectString(pcs.zkHosts).build()
 
@@ -79,10 +79,10 @@ class Producer[T](var name: String,
 
   // amount of threads which will handle partitions in masters, etc
   val threadPoolSize: Int = {
-    if (pcs.threadPoolAmount == -1)
+    if (pcs.threadPoolSize == -1)
       producerOptions.writePolicy.getUsedPartitions().size
     else
-      pcs.threadPoolAmount
+      pcs.threadPoolSize
   }
 
   stream.dataStorage.bind()
@@ -104,8 +104,8 @@ class Producer[T](var name: String,
     usedPartitions          = producerOptions.writePolicy.getUsedPartitions(),
     transport               = pcs.transport,
     threadPoolAmount        = threadPoolSize,
-    threadPoolPublisherThreadsAmount  = pcs.threadPoolPublisherThreadsAmount,
-    partitionRedistributionDelay      = pcs.partitionRedistributionDelay)
+    threadPoolPublisherThreadsAmount  = pcs.notifyThreadPoolSize,
+    partitionRedistributionDelay      = pcs.partitionRedistributionDelaySec)
 
 
   /**

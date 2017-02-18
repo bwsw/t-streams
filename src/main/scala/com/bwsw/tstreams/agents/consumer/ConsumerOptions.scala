@@ -4,11 +4,9 @@ import java.net.InetSocketAddress
 
 import com.bwsw.tstreams.agents.consumer.Offset.IOffset
 import com.bwsw.tstreams.common.AbstractPolicy
-import com.bwsw.tstreams.converter.IConverter
 import com.bwsw.tstreams.generator.ITransactionGenerator
 
 /**
-  * @param converter            User defined or predefined converter which convert storage type into user type
   * @param offset               Offset from which start to read
   * @param useLastOffset        Use or not last offset for specific consumer
   *                             if last offset not exist, offset will be used
@@ -16,11 +14,9 @@ import com.bwsw.tstreams.generator.ITransactionGenerator
   * @param dataPreload          Buffer size of preloaded data for each consumed transaction
   * @param readPolicy           Strategy how to read from concrete stream
   * @param transactionGenerator Generator for generating IDs
-  * @tparam T User type
   */
-case class ConsumerOptions[T](transactionsPreload: Int,
+case class ConsumerOptions(transactionsPreload: Int,
                               dataPreload: Int,
-                              converter: IConverter[Array[Byte], T],
                               readPolicy: AbstractPolicy,
                               offset: IOffset,
                               transactionGenerator: ITransactionGenerator,

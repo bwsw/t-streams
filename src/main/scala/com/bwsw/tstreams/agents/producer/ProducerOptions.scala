@@ -50,17 +50,17 @@ class ProducerOptions[T](val transactionTTL: Int,
 /**
   * @param zkHosts                 Zk hosts to connect
   * @param zkRootPath              Zk root path for all metadata
-  * @param zkSessionTimeout        Zk session timeout
+  * @param zkSessionTimeoutMs        Zk session timeout
   * @param transport               Transport providing interaction between agents
-  * @param threadPoolAmount        Thread pool amount which is used by
+  * @param threadPoolSize        Thread pool amount which is used by
   *                                PeerAgent
   *                                by default (threads_amount == used_producer_partitions)
   */
 class CoordinationOptions(val zkHosts: String,
                           val zkRootPath: String,
-                          val zkSessionTimeout: Int,
-                          val zkConnectionTimeout: Int,
+                          val zkSessionTimeoutMs: Int,
+                          val zkConnectionTimeoutMs: Int,
                           val transport: TcpTransport,
-                          val threadPoolAmount: Int,
-                          val threadPoolPublisherThreadsAmount: Int,
-                          val partitionRedistributionDelay: Int)
+                          val threadPoolSize: Int,
+                          val notifyThreadPoolSize: Int,
+                          val partitionRedistributionDelaySec: Int)
