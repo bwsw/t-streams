@@ -1,6 +1,7 @@
 package com.bwsw.tstreams.streams
 
 import com.bwsw.tstreams.common.StorageClient
+import com.bwsw.tstreams.env.defaults.TStreamsFactoryStreamDefaults
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
@@ -86,13 +87,10 @@ object Stream {
   * @param description     Some additional info about stream
   */
 class Stream(val storageClient: StorageClient, val name: String, val partitionsCount: Int, val ttl: Int, val description: String) {
-  /**
-    * Transaction minimum ttl time
-    */
-  private val minTransactionTTL = 3
 
-  if (ttl < minTransactionTTL)
-    throw new IllegalArgumentException(s"The TTL must be greater or equal than $minTransactionTTL seconds.")
+
+  if (ttl < TStreamsFactoryStreamDefaults.Stream.ttlSec.min)
+    throw new IllegalArgumentException(s"The TTL must be greater or equal than ${TStreamsFactoryStreamDefaults.Stream.ttlSec.min} seconds.")
 
   /**
     * Save stream info in metadata

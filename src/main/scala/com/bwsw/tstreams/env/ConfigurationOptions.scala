@@ -40,7 +40,7 @@ object ConfigurationOptions {
     /**
       * stream time to leave (data expunged from datastore after that time)
       */
-    val ttl = "stream.ttl"
+    val ttlSec = "stream.ttl"
   }
 
   /**
@@ -81,58 +81,58 @@ object ConfigurationOptions {
     /**
       * amount of threads which handles works with transactions on master
       */
-    val THREAD_POOL = "producer.thread-pool"
+    val threadPoolSize = "producer.thread-pool"
 
     /**
       * amount of publisher threads in a thread pool (default 1)
       */
-    val THREAD_POOL_PUBLISHER_TREADS_AMOUNT = "producer.thread-pool.publisher-threads-amount"
+    val notifyThreadPoolSize = "producer.thread-pool.publisher-threads-amount"
 
     /**
       * hostname or ip of producer master listener
       */
-    val BIND_HOST = "producer.bind-host"
+    val bindHost = "producer.bind-host"
     /**
       * port of producer master listener
       */
-    val BIND_PORT = "producer.bind-port"
+    val bindPort = "producer.bind-port"
     /**
       * Transport timeout is maximum time to wait for master to respond
       */
-    val TRANSPORT_TIMEOUT = "producer.transport-timeout"
+    val transportTimeoutMs = "producer.transport-timeout"
 
     /**
       * Retry count for transport failures
       */
-    val TRANSPORT_RETRY_COUNT = "producer.transport-retry-count"
+    val transportRetryCount = "producer.transport-retry-count"
 
     /**
       * Retry delay for transport failures
       */
-    val TRANSPORT_RETRY_DELAY = "producer.transport-retry-delay"
+    val transportRetryDelayMs = "producer.transport-retry-delay"
 
 
     object Transaction {
       /**
         * TTL of transaction to wait until determine it's broken
         */
-      val TTL = "producer.transaction.ttl"
+      val ttlMs = "producer.transaction.ttl"
       /**
         * Time to wait for successful end of opening operation on master for transaction
         */
-      val OPEN_MAXWAIT = "producer.transaction.open-maxwait"
+      val openMaxWaitMs = "producer.transaction.open-maxwait"
       /**
         * Time to update transaction state (keep it alive for long transactions)
         */
-      val KEEP_ALIVE = "producer.transaction.keep-alive"
+      val keepAliveMs = "producer.transaction.keep-alive"
       /**
         * amount of data items to batch when write data into transaction
         */
-      val DATA_WRITE_BATCH_SIZE = "producer.transaction.data-write-batch-size"
+      val batchSize = "producer.transaction.data-write-batch-size"
       /**
         * policy to distribute transactions over stream partitions
         */
-      val DISTRIBUTION_POLICY = "producer.transaction.distribution-policy"
+      val distributionPolicy = "producer.transaction.distribution-policy"
 
       // TODO: fix internals write->distribution
 

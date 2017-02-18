@@ -15,7 +15,7 @@ import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import testutils.TestUtils
 
 class TStreamsFactoryTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
-  f.setProperty(ConfigurationOptions.Stream.ttl, 60 * 10)
+  f.setProperty(ConfigurationOptions.Stream.ttlSec, 60 * 10)
 
 
   "If copied" should "contain same data" in {

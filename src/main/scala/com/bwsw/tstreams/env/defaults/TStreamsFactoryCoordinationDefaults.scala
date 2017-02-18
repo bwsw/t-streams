@@ -20,15 +20,15 @@ object TStreamsFactoryCoordinationDefaults {
 
   def get = {
     val m = mutable.HashMap[String, Any]()
-    val co = ConfigurationOptions
+    val co = ConfigurationOptions.Coordination
 
-    m(co.Coordination.endpoints) = Coordination.endpoints
-    m(co.Coordination.prefix)    = Coordination.prefix
-    m(co.Coordination.sessionTimeoutMs)                 = Coordination.sessionTimeoutMs.default
-    m(co.Coordination.connectionTimeoutMs)              = Coordination.connectionTimeoutMs.default
+    m(co.endpoints) = Coordination.endpoints
+    m(co.prefix)    = Coordination.prefix
+    m(co.sessionTimeoutMs)                 = Coordination.sessionTimeoutMs.default
+    m(co.connectionTimeoutMs)              = Coordination.connectionTimeoutMs.default
 
     // TODO: check deprecated
-    m(co.Coordination.partitionsRedistributionDelaySec) = Coordination.partitionsRedistributionDelaySec.default
+    m(co.partitionsRedistributionDelaySec) = Coordination.partitionsRedistributionDelaySec.default
 
     m
   }

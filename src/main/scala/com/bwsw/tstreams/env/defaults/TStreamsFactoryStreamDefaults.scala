@@ -14,16 +14,16 @@ object TStreamsFactoryStreamDefaults {
     val name            = "test"
     val description     = ""
     val partitionsCount = IntMinMaxDefault(1, 2147483647, 1)
-    val ttl             = IntMinMaxDefault(60, 3600 * 24 * 365 * 50 /* 50 years */, 60 * 60 * 24 /* one day */)
+    val ttlSec             = IntMinMaxDefault(60, 3600 * 24 * 365 * 50 /* 50 years */, 60 * 60 * 24 /* one day */)
   }
 
   def get = {
     val m = mutable.HashMap[String, Any]()
-    val co = ConfigurationOptions
-    m(co.Stream.name) = Stream.name
-    m(co.Stream.description) = ""
-    m(co.Stream.partitionsCount) = Stream.partitionsCount.default
-    m(co.Stream.ttl)             = Stream.ttl.default
+    val co = ConfigurationOptions.Stream
+    m(co.name) = Stream.name
+    m(co.description) = ""
+    m(co.partitionsCount) = Stream.partitionsCount.default
+    m(co.ttlSec)             = Stream.ttlSec.default
     m
   }
 }

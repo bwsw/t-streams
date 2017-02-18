@@ -15,12 +15,12 @@ class CheckpointGroupCheckpointTest extends FlatSpec with Matchers with BeforeAn
 
   f.setProperty(ConfigurationOptions.Stream.name, "test_stream").
     setProperty(ConfigurationOptions.Stream.partitionsCount, 3).
-    setProperty(ConfigurationOptions.Stream.ttl, 60 * 10).
+    setProperty(ConfigurationOptions.Stream.ttlSec, 60 * 10).
     setProperty(ConfigurationOptions.Coordination.connectionTimeoutMs, 7).
     setProperty(ConfigurationOptions.Coordination.sessionTimeoutMs, 7).
-    setProperty(ConfigurationOptions.Producer.TRANSPORT_TIMEOUT, 5).
-    setProperty(ConfigurationOptions.Producer.Transaction.TTL, 6).
-    setProperty(ConfigurationOptions.Producer.Transaction.KEEP_ALIVE, 2).
+    setProperty(ConfigurationOptions.Producer.transportTimeoutMs, 5).
+    setProperty(ConfigurationOptions.Producer.Transaction.ttlMs, 6).
+    setProperty(ConfigurationOptions.Producer.Transaction.keepAliveMs, 2).
     setProperty(ConfigurationOptions.Consumer.TRANSACTION_PRELOAD, 10).
     setProperty(ConfigurationOptions.Consumer.DATA_PRELOAD, 10)
 

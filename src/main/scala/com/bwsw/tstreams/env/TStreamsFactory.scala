@@ -28,55 +28,11 @@ class TStreamsFactory() {
   val isLocked    = new AtomicBoolean(false)
   val co          = ConfigurationOptions
 
-  propertyMap ++= defaults.TStreamsFactoryStorageDefaults.get
+  propertyMap ++= defaults.TStreamsFactoryStorageClientDefaults.get
   propertyMap ++= defaults.TStreamsFactoryStreamDefaults.get
   propertyMap ++= defaults.TStreamsFactoryCoordinationDefaults.get
+  propertyMap ++= defaults.TStreamsFactoryProducerDefaults.get
 
-  // producer scope
-  propertyMap += (co.Producer.BIND_HOST -> "localhost")
-  propertyMap += (co.Producer.BIND_PORT ->(40000, 50000))
-  val Producer_transport_timeout_default = 5
-  val Producer_transport_timeout_min = 1
-  val Producer_transport_timeout_max = 10
-  propertyMap += (co.Producer.TRANSPORT_TIMEOUT -> Producer_transport_timeout_default)
-
-  val Producer_transport_retry_count_default = 3
-  val Producer_transport_retry_delay_default = 1
-
-  propertyMap += (co.Producer.TRANSPORT_RETRY_COUNT -> Producer_transport_retry_count_default)
-  propertyMap += (co.Producer.TRANSPORT_RETRY_DELAY -> Producer_transport_retry_delay_default)
-
-  val Producer_transaction_ttl_default = 30
-  val Producer_transaction_ttl_min = 3
-  val Producer_transaction_ttl_max = 120
-  propertyMap += (co.Producer.Transaction.TTL -> Producer_transaction_ttl_default)
-
-  val Producer_transaction_open_maxwait_default = 5
-  val Producer_transaction_open_maxwait_min = 1
-  val Producer_transaction_open_maxwait_max = 10
-  propertyMap += (co.Producer.Transaction.OPEN_MAXWAIT -> Producer_transaction_open_maxwait_default)
-
-  val Producer_transaction_keep_alive_default = 1
-  val Producer_transaction_keep_alive_min = 1
-  val Producer_transaction_keep_alive_max = 2
-  propertyMap += (co.Producer.Transaction.KEEP_ALIVE -> Producer_transaction_keep_alive_default)
-
-  val Producer_transaction_data_write_batch_size_default = 100
-  val Producer_transaction_data_write_batch_size_min = 1
-  val Producer_transaction_data_write_batch_size_max = 1000
-  propertyMap += (co.Producer.Transaction.DATA_WRITE_BATCH_SIZE -> Producer_transaction_data_write_batch_size_default)
-  propertyMap += (co.Producer.Transaction.DISTRIBUTION_POLICY -> co.Producer.Transaction.Consts.DISTRIBUTION_POLICY_RR)
-
-  val Producer_thread_pool_default = 4
-  val Producer_thread_pool_min = 1
-  val Producer_thread_pool_max = 64
-  propertyMap += (co.Producer.THREAD_POOL -> Producer_thread_pool_default)
-
-  val Producer_thread_pool_publisher_threads_amount_default = 1
-  val Producer_thread_pool_publisher_threads_amount_min = 1
-  val Producer_thread_pool_publisher_threads_amount_max = 32
-
-  propertyMap += (co.Producer.THREAD_POOL_PUBLISHER_TREADS_AMOUNT -> Producer_thread_pool_publisher_threads_amount_default)
 
   // consumer scope
   val Consumer_transaction_preload_default = 10
@@ -194,7 +150,7 @@ class TStreamsFactory() {
 
     assert(pAsString(co.Stream.name) != null)
     streamDefaults.Stream.partitionsCount.check(pAsInt(co.Stream.partitionsCount, streamDefaults.Stream.partitionsCount.default))
-    streamDefaults.Stream.ttl.check(pAsInt(co.Stream.ttl, streamDefaults.Stream.ttl.default))
+    streamDefaults.Stream.ttlSec.check(pAsInt(co.Stream.ttlSec, streamDefaults.Stream.ttlSec.default))
 
     val clientOptions     = new ClientOptions()
     val authOptions       = new AuthOptions()
@@ -205,7 +161,7 @@ class TStreamsFactory() {
       storageClient   = new StorageClient(clientOptions = clientOptions, authOptions = authOptions, zookeeperOptions = zookeeperOptions),
       name            = pAsString(co.Stream.name),
       partitionsCount = pAsInt(co.Stream.partitionsCount, streamDefaults.Stream.partitionsCount.default),
-      ttl             = pAsInt(co.Stream.ttl, streamDefaults.Stream.ttl.default),
+      ttl             = pAsInt(co.Stream.ttlSec, streamDefaults.Stream.ttlSec.default),
       description     = pAsString(co.Stream.description, ""))
 
     stream
@@ -258,19 +214,19 @@ class TStreamsFactory() {
 
     val stream: Stream[Array[Byte]] = getStream()
 
-    assert(pAsString(co.Producer.BIND_PORT) != null)
-    assert(pAsString(co.Producer.BIND_HOST) != null)
+    assert(pAsString(co.Producer.bindPort) != null)
+    assert(pAsString(co.Producer.bindHost) != null)
     assert(pAsString(co.Coordination.endpoints) != null)
     assert(pAsString(co.Coordination.prefix) != null)
 
-    val port = getProperty(co.Producer.BIND_PORT) match {
+    val port = getProperty(co.Producer.bindPort) match {
       case (p: Int) => p
-      case (pFrom: Int, pTo: Int) => SpareServerSocketLookupUtility.findSparePort(pAsString(co.Producer.BIND_HOST), pFrom, pTo).get
+      case (pFrom: Int, pTo: Int) => SpareServerSocketLookupUtility.findSparePort(pAsString(co.Producer.bindHost), pFrom, pTo).get
     }
 
     pAssertIntRange(pAsInt(co.Coordination.sessionTimeoutMs, Coordination_ttl_default), Coordination_ttl_min, Coordination_ttl_max)
 
-    pAssertIntRange(pAsInt(co.Producer.TRANSPORT_TIMEOUT, Producer_transport_timeout_default), Producer_transport_timeout_min, Producer_transport_timeout_max)
+    pAssertIntRange(pAsInt(co.Producer.transportTimeoutMs, Producer_transport_timeout_default), Producer_transport_timeout_min, Producer_transport_timeout_max)
 
     pAssertIntRange(pAsInt(co.Coordination.connectionTimeoutMs, Coordination_connection_timeout_default),
       Coordination_connection_timeout_min, Coordination_connection_timeout_max)
@@ -278,16 +234,16 @@ class TStreamsFactory() {
     pAssertIntRange(pAsInt(co.Coordination.partitionsRedistributionDelaySec, Coordination_partition_redistribution_delay_default),
       Coordination_partition_redistribution_delay_min, Coordination_partition_redistribution_delay_max)
 
-    pAssertIntRange(pAsInt(co.Producer.THREAD_POOL, Producer_thread_pool_default), Producer_thread_pool_min, Producer_thread_pool_max)
+    pAssertIntRange(pAsInt(co.Producer.threadPoolSize, Producer_thread_pool_default), Producer_thread_pool_min, Producer_thread_pool_max)
 
-    pAssertIntRange(pAsInt(co.Producer.THREAD_POOL_PUBLISHER_TREADS_AMOUNT, Producer_thread_pool_publisher_threads_amount_default),
+    pAssertIntRange(pAsInt(co.Producer.notifyThreadPoolSize, Producer_thread_pool_publisher_threads_amount_default),
       Producer_thread_pool_publisher_threads_amount_min, Producer_thread_pool_publisher_threads_amount_max)
 
     val transport = new TcpTransport(
-      pAsString(co.Producer.BIND_HOST) + ":" + port.toString,
-      pAsInt(co.Producer.TRANSPORT_TIMEOUT, Producer_transport_timeout_default) * 1000,
-      pAsInt(co.Producer.TRANSPORT_RETRY_COUNT, Producer_transport_retry_count_default),
-      pAsInt(co.Producer.TRANSPORT_RETRY_DELAY, Producer_transport_retry_delay_default) * 1000)
+      pAsString(co.Producer.bindHost) + ":" + port.toString,
+      pAsInt(co.Producer.transportTimeoutMs, Producer_transport_timeout_default) * 1000,
+      pAsInt(co.Producer.transportRetryCount, Producer_transport_retry_count_default),
+      pAsInt(co.Producer.transportRetryDelayMs, Producer_transport_retry_delay_default) * 1000)
 
 
     val cao = new CoordinationOptions(
@@ -296,15 +252,15 @@ class TStreamsFactory() {
       zkSessionTimeout = pAsInt(co.Coordination.sessionTimeoutMs, Coordination_ttl_default),
       zkConnectionTimeout = pAsInt(co.Coordination.connectionTimeoutMs, Coordination_connection_timeout_default),
       transport = transport,
-      threadPoolAmount = pAsInt(co.Producer.THREAD_POOL, Producer_thread_pool_default),
-      threadPoolPublisherThreadsAmount = pAsInt(co.Producer.THREAD_POOL_PUBLISHER_TREADS_AMOUNT, Producer_thread_pool_publisher_threads_amount_default),
+      threadPoolAmount = pAsInt(co.Producer.threadPoolSize, Producer_thread_pool_default),
+      threadPoolPublisherThreadsAmount = pAsInt(co.Producer.notifyThreadPoolSize, Producer_thread_pool_publisher_threads_amount_default),
       partitionRedistributionDelay = pAsInt(co.Coordination.partitionsRedistributionDelaySec, Coordination_partition_redistribution_delay_default)
     )
 
 
     var writePolicy: AbstractPolicy = null
 
-    if (pAsString(co.Producer.Transaction.DISTRIBUTION_POLICY) ==
+    if (pAsString(co.Producer.Transaction.distributionPolicy) ==
       co.Producer.Transaction.Consts.DISTRIBUTION_POLICY_RR) {
       writePolicy = new RoundRobinPolicy(stream, partitions)
     }
@@ -313,18 +269,18 @@ class TStreamsFactory() {
         "is supported currently in UniversalFactory.")
     }
 
-    pAssertIntRange(pAsInt(co.Producer.Transaction.TTL, Producer_transaction_ttl_default), Producer_transaction_ttl_min, Producer_transaction_ttl_max)
-    pAssertIntRange(pAsInt(co.Producer.Transaction.KEEP_ALIVE, Producer_transaction_keep_alive_default), Producer_transaction_keep_alive_min, Producer_transaction_keep_alive_max)
-    assert(pAsInt(co.Producer.Transaction.TTL, Producer_transaction_ttl_default) >=
-      pAsInt(co.Producer.Transaction.KEEP_ALIVE, Producer_transaction_keep_alive_default) * 3)
+    pAssertIntRange(pAsInt(co.Producer.Transaction.ttlMs, Producer_transaction_ttl_default), Producer_transaction_ttl_min, Producer_transaction_ttl_max)
+    pAssertIntRange(pAsInt(co.Producer.Transaction.keepAliveMs, Producer_transaction_keep_alive_default), Producer_transaction_keep_alive_min, Producer_transaction_keep_alive_max)
+    assert(pAsInt(co.Producer.Transaction.ttlMs, Producer_transaction_ttl_default) >=
+      pAsInt(co.Producer.Transaction.keepAliveMs, Producer_transaction_keep_alive_default) * 3)
 
-    val insertCnt = pAsInt(co.Producer.Transaction.DATA_WRITE_BATCH_SIZE, Producer_transaction_data_write_batch_size_default)
+    val insertCnt = pAsInt(co.Producer.Transaction.batchSize, Producer_transaction_data_write_batch_size_default)
     pAssertIntRange(insertCnt,
       Producer_transaction_data_write_batch_size_min, Producer_transaction_data_write_batch_size_max)
 
     val po = new com.bwsw.tstreams.agents.producer.ProducerOptions[T](
-      transactionTTL = pAsInt(co.Producer.Transaction.TTL, Producer_transaction_ttl_default),
-      transactionKeepAliveInterval = pAsInt(co.Producer.Transaction.KEEP_ALIVE, Producer_transaction_keep_alive_default),
+      transactionTTL = pAsInt(co.Producer.Transaction.ttlMs, Producer_transaction_ttl_default),
+      transactionKeepAliveInterval = pAsInt(co.Producer.Transaction.keepAliveMs, Producer_transaction_keep_alive_default),
       writePolicy = writePolicy,
       batchSize = insertCnt,
       transactionGenerator = transactionGenerator,
@@ -403,7 +359,7 @@ class TStreamsFactory() {
 
     val bind_port = getProperty(co.Consumer.Subscriber.BIND_PORT) match {
       case (p: Int) => p
-      case (pFrom: Int, pTo: Int) => SpareServerSocketLookupUtility.findSparePort(pAsString(co.Producer.BIND_HOST), pFrom, pTo).get
+      case (pFrom: Int, pTo: Int) => SpareServerSocketLookupUtility.findSparePort(pAsString(co.Producer.bindHost), pFrom, pTo).get
     }
 
     val endpoints = pAsString(co.Coordination.endpoints)
