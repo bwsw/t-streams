@@ -7,7 +7,7 @@ import com.bwsw.tstreams.agents.consumer.subscriber.Callback
 import com.bwsw.tstreams.agents.consumer.{ConsumerTransaction, TransactionOperator}
 import com.bwsw.tstreams.agents.producer.NewTransactionProducerPolicy
 import com.bwsw.tstreams.converter.{ArrayByteToStringConverter, StringToArrayByteConverter}
-import com.bwsw.tstreams.env.TSF_Dictionary
+import com.bwsw.tstreams.env.ConfigurationOptions
 import com.bwsw.tstreams.generator.LocalTransactionGenerator
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import testutils.TestUtils
@@ -28,12 +28,12 @@ class SubscriberWithManyProcessingEnginesThreadsTest extends FlatSpec with Match
 
   val POLLING_FREQUENCY_DELAY = 10000
 
-  f.setProperty(TSF_Dictionary.Stream.NAME, "test_stream")
-    .setProperty(TSF_Dictionary.Stream.NAME, "test-stream")
-    .setProperty(TSF_Dictionary.Consumer.Subscriber.POLLING_FREQUENCY_DELAY, POLLING_FREQUENCY_DELAY)
-    .setProperty(TSF_Dictionary.Consumer.Subscriber.PROCESSING_ENGINES_THREAD_POOL, PROCESSING_ENGINES_THREAD_POOL)
-    .setProperty(TSF_Dictionary.Consumer.Subscriber.TRANSACTION_BUFFER_THREAD_POOL, TRANSACTION_BUFFER_THREAD_POOL)
-    .setProperty(TSF_Dictionary.Stream.PARTITIONS, TOTAL_PARTITIONS)
+  f.setProperty(ConfigurationOptions.Stream.NAME, "test_stream")
+    .setProperty(ConfigurationOptions.Stream.NAME, "test-stream")
+    .setProperty(ConfigurationOptions.Consumer.Subscriber.POLLING_FREQUENCY_DELAY, POLLING_FREQUENCY_DELAY)
+    .setProperty(ConfigurationOptions.Consumer.Subscriber.PROCESSING_ENGINES_THREAD_POOL, PROCESSING_ENGINES_THREAD_POOL)
+    .setProperty(ConfigurationOptions.Consumer.Subscriber.TRANSACTION_BUFFER_THREAD_POOL, TRANSACTION_BUFFER_THREAD_POOL)
+    .setProperty(ConfigurationOptions.Stream.PARTITIONS, TOTAL_PARTITIONS)
 
   it should s"Start and work correctly with PROCESSING_ENGINES_THREAD_POOL=$PROCESSING_ENGINES_THREAD_POOL" in {
     val awaitTransactionsLatch = new CountDownLatch(1)

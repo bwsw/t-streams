@@ -11,7 +11,7 @@ import com.bwsw.tstreams.agents.consumer.subscriber.Callback
 import com.bwsw.tstreams.agents.consumer.{ConsumerTransaction, TransactionOperator}
 import com.bwsw.tstreams.agents.producer.{NewTransactionProducerPolicy, Producer}
 import com.bwsw.tstreams.converter.StringToArrayByteConverter
-import com.bwsw.tstreams.env.{TSF_Dictionary, TStreamsFactory}
+import com.bwsw.tstreams.env.{ConfigurationOptions, TStreamsFactory}
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import testutils.{LocalGeneratorCreator, TestUtils}
 
@@ -72,16 +72,16 @@ class ProducerMasterChangeComplexTest  extends FlatSpec with Matchers with Befor
   val onCompleteLatch   = new CountDownLatch(PRODUCERS_AMOUNT)
   val waitCompleteLatch = new CountDownLatch(1)
 
-  f.setProperty(TSF_Dictionary.Stream.NAME, "test_stream").
-    setProperty(TSF_Dictionary.Stream.PARTITIONS, PARTITIONS_COUNT).
-    setProperty(TSF_Dictionary.Stream.TTL, 60 * 10).
-    setProperty(TSF_Dictionary.Coordination.CONNECTION_TIMEOUT, 7).
-    setProperty(TSF_Dictionary.Coordination.TTL, 7).
-    setProperty(TSF_Dictionary.Producer.TRANSPORT_TIMEOUT, 5).
-    setProperty(TSF_Dictionary.Producer.Transaction.TTL, 3).
-    setProperty(TSF_Dictionary.Producer.Transaction.KEEP_ALIVE, 1).
-    setProperty(TSF_Dictionary.Consumer.TRANSACTION_PRELOAD, 10).
-    setProperty(TSF_Dictionary.Consumer.DATA_PRELOAD, 10)
+  f.setProperty(ConfigurationOptions.Stream.NAME, "test_stream").
+    setProperty(ConfigurationOptions.Stream.PARTITIONS, PARTITIONS_COUNT).
+    setProperty(ConfigurationOptions.Stream.TTL, 60 * 10).
+    setProperty(ConfigurationOptions.Coordination.CONNECTION_TIMEOUT, 7).
+    setProperty(ConfigurationOptions.Coordination.TTL, 7).
+    setProperty(ConfigurationOptions.Producer.TRANSPORT_TIMEOUT, 5).
+    setProperty(ConfigurationOptions.Producer.Transaction.TTL, 3).
+    setProperty(ConfigurationOptions.Producer.Transaction.KEEP_ALIVE, 1).
+    setProperty(ConfigurationOptions.Consumer.TRANSACTION_PRELOAD, 10).
+    setProperty(ConfigurationOptions.Consumer.DATA_PRELOAD, 10)
 
   var subscriberCounter = 0
   val subscriber = f.getSubscriber[String](name = "s",

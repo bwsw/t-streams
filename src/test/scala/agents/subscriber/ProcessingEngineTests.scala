@@ -54,31 +54,6 @@ class ProcessingEngineTests extends FlatSpec with Matchers {
     val pe = new ProcessingEngine[String](new ProcessingEngineOperatorTestImpl(), Set[Int](0), qb, cb)
   }
 
-//  "enqueueLastTransactionFromDB" should "not Enqueue last transaction state to Queue if it's not defined" in {
-//    val pe = new ProcessingEngine[String](new ProcessingEngineOperatorTestImpl(), Set[Int](0), qb, cb)
-//    pe.enqueueLastTransactionFromDB(0)
-//    val elt = pe.getQueue().get(500, TimeUnit.MILLISECONDS)
-//    elt shouldBe null
-//  }
-//
-//  "enqueueLastTransactionFromDB" should "enqueue last transaction state to Queue if it's newer than we have in our database" in {
-//    val c = new ProcessingEngineOperatorTestImpl()
-//    val pe = new ProcessingEngine[String](c, Set[Int](0), qb, cb)
-//    c.lastTransaction = Option[ConsumerTransaction[String]](new ConsumerTransaction(0, LocalGeneratorCreator.getTransaction(), 1, -1))
-//    pe.enqueueLastTransactionFromDB(0)
-//    val elt = pe.getQueue().get(500, TimeUnit.MILLISECONDS)
-//    elt.head.transactionID shouldBe c.lastTransaction.get.getTransactionID()
-//  }
-
-//  "enqueueLastTransactionFromDB" should "not enqueue last transaction state to Queue if it's older than we have in our database" in {
-//    val c = new ProcessingEngineOperatorTestImpl()
-//    c.lastTransaction = Option[ConsumerTransaction[String]](new ConsumerTransaction(0, LocalGeneratorCreator.getTransaction(), 1, -1))
-//    val pe = new ProcessingEngine[String](c, Set[Int](0), qb, cb)
-//    pe.enqueueLastTransactionFromDB(0)
-//    val elt = pe.getQueue().get(500, TimeUnit.MILLISECONDS)
-//    elt shouldBe null
-//  }
-
   "handleQueue" should "do nothing if there is nothing in queue" in {
     val c = new ProcessingEngineOperatorTestImpl()
     val pe = new ProcessingEngine[String](c, Set[Int](0), qb, cb)
@@ -99,17 +74,5 @@ class ProcessingEngineTests extends FlatSpec with Matchers {
     act2 - act1 > 0 shouldBe true
   }
 
-//  "handleQueue" should "enqueue last transaction to queue if polling interval have been expired" in {
-//    val c = new ProcessingEngineOperatorTestImpl()
-//    val pe = new ProcessingEngine[String](c, Set[Int](0), qb, cb)
-//    c.lastTransaction = Option[ConsumerTransaction[String]](new ConsumerTransaction(0, LocalGeneratorCreator.getTransaction(), 1, -1))
-//    val act1 = pe.getLastPartitionActivity(0)
-//    val POLLING_DELAY = 5
-//    Thread.sleep(1)
-//    pe.handleQueue(POLLING_DELAY)
-//    pe.enqueueLastTransactionFromDB(0)
-//    val elt = pe.getQueue().get(500, TimeUnit.MILLISECONDS)
-//    elt.head.transactionID shouldBe c.lastTransaction.get.getTransactionID()
-//  }
 
 }

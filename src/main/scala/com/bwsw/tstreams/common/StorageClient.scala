@@ -9,7 +9,7 @@ import com.bwsw.tstreamstransactionserver.options.{AuthOptions, ClientBuilder, C
   * @param authOptions
   * @param zookeeperOptions
   */
-class StorageClient private(clientOptions: ClientOptions, authOptions: AuthOptions, zookeeperOptions: ZookeeperOptions) {
+class StorageClient(clientOptions: ClientOptions, authOptions: AuthOptions, zookeeperOptions: ZookeeperOptions) {
   private val map = scala.collection.mutable.Map[String,String]()
   private val clientBuilder = new ClientBuilder()
 

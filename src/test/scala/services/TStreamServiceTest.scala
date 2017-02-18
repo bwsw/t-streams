@@ -1,32 +1,27 @@
 package services
 
-import java.net.InetSocketAddress
-
+import com.bwsw.tstreams.common.StorageClient
 import com.bwsw.tstreams.streams.{Stream, StreamService}
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
-import testutils.{RandomStringCreator, TestUtils}
+import testutils.{RandomStringCreator, TestStorageServer, TestUtils}
 
 
 class TStreamServiceTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
 
-  val storageInst = hazelcastStorageFactory.getInstance(hazelcastOptions)
-  val metadataStorageInst = metadataStorageFactory.getInstance(
-    CassandraConnectorConf(Set(new InetSocketAddress("localhost", 9142))),
-    keyspace = randomKeyspace)
-
   def randomVal: String = RandomStringCreator.randomAlphaString(10)
 
+  val storageClient: StorageClient = null
+  val storageServer = TestStorageServer.get()
 
   "BasicStreamService.createStream()" should "create stream" in {
     val name = randomVal
 
     val stream: Stream[_] = StreamService.createStream(
+      storageClient = storageClient,
       streamName = name,
       partitions = 3,
       ttl = 100,
-      description = "some_description",
-      metadataStorage = metadataStorageInst,
-      dataStorage = storageInst)
+      description = "some_description")
 
     val checkVal = stream.isInstanceOf[Stream[_]]
 
@@ -38,20 +33,18 @@ class TStreamServiceTest extends FlatSpec with Matchers with BeforeAndAfterAll w
       val name = randomVal
 
       StreamService.createStream(
+        storageClient = storageClient,
         streamName = name,
         partitions = 3,
         ttl = 100,
-        description = "some_description",
-        metadataStorage = metadataStorageInst,
-        dataStorage = storageInst)
+        description = "some_description")
 
       StreamService.createStream(
+        storageClient = storageClient,
         streamName = name,
         partitions = 3,
         ttl = 100,
-        description = "some_description",
-        metadataStorage = metadataStorageInst,
-        dataStorage = storageInst)
+        description = "some_description")
     }
   }
 
@@ -59,42 +52,39 @@ class TStreamServiceTest extends FlatSpec with Matchers with BeforeAndAfterAll w
     val name = randomVal
 
     StreamService.createStream(
+      storageClient = storageClient,
       streamName = name,
       partitions = 3,
       ttl = 100,
-      description = "some_description",
-      metadataStorage = metadataStorageInst,
-      dataStorage = storageInst)
+      description = "some_description")
 
-    val stream: Stream[_] = StreamService.loadStream(name, metadataStorageInst, storageInst)
+    val stream: Stream[_] = StreamService.loadStream(storageClient = storageClient, name)
     val checkVal = stream.isInstanceOf[Stream[_]]
     checkVal shouldBe true
   }
 
   "BasicStreamService.isExist()" should "say exist concrete stream or not" in {
     val name = randomVal
-    val notExistName = randomVal
+    val dummyName = randomVal
 
     StreamService.createStream(
+      storageClient = storageClient,
       streamName = name,
       partitions = 3,
       ttl = 100,
-      description = "some_description",
-      metadataStorage = metadataStorageInst,
-      dataStorage = storageInst)
+      description = "some_description")
 
-    val isExist = StreamService.doesExist(name, metadataStorageInst)
-    val isNotExist = StreamService.doesExist(notExistName, metadataStorageInst)
-    val checkVal = isExist && !isNotExist
-
-    checkVal shouldBe true
+    val isPresent = StreamService.doesExist(storageClient = storageClient,name)
+    isPresent shouldBe true
+    val isAbsent = !StreamService.doesExist(storageClient = storageClient, dummyName)
+    isAbsent shouldBe true
   }
 
   "BasicStreamService.loadStream()" should "throw exception if stream not exist" in {
     val name = randomVal
 
     intercept[IllegalArgumentException] {
-      StreamService.loadStream(name, metadataStorageInst, storageInst)
+      StreamService.loadStream(storageClient = storageClient,name)
     }
   }
 
@@ -102,17 +92,16 @@ class TStreamServiceTest extends FlatSpec with Matchers with BeforeAndAfterAll w
     val name = randomVal
 
     StreamService.createStream(
+      storageClient = storageClient,
       streamName = name,
       partitions = 3,
       ttl = 100,
-      description = "some_description",
-      metadataStorage = metadataStorageInst,
-      dataStorage = storageInst)
+      description = "some_description")
 
-    StreamService.deleteStream(name, metadataStorageInst)
+    StreamService.deleteStream(storageClient = storageClient,name)
 
     intercept[IllegalArgumentException] {
-      StreamService.loadStream(name, metadataStorageInst, storageInst)
+      StreamService.loadStream(storageClient = storageClient, name)
     }
   }
 
@@ -120,11 +109,12 @@ class TStreamServiceTest extends FlatSpec with Matchers with BeforeAndAfterAll w
     val name = randomVal
 
     intercept[IllegalArgumentException] {
-      StreamService.deleteStream(name, metadataStorageInst)
+      StreamService.deleteStream(storageClient = storageClient, name)
     }
   }
 
   override def afterAll(): Unit = {
+    TestStorageServer.dispose(storageServer)
     onAfterAll()
   }
 }

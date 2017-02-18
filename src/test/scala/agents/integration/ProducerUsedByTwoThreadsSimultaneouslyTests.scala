@@ -3,7 +3,7 @@ package agents.integration
 import java.util.concurrent.CountDownLatch
 
 import com.bwsw.tstreams.agents.producer._
-import com.bwsw.tstreams.env.TSF_Dictionary
+import com.bwsw.tstreams.env.ConfigurationOptions
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import testutils._
 
@@ -15,16 +15,16 @@ class ProducerUsedByTwoThreadsSimultaneouslyTests extends FlatSpec with Matchers
   val ALL_PARTITIONS = 2
   val COUNT = 10000
 
-  f.setProperty(TSF_Dictionary.Stream.NAME, "test_stream").
-    setProperty(TSF_Dictionary.Stream.PARTITIONS, ALL_PARTITIONS).
-    setProperty(TSF_Dictionary.Stream.TTL, 60 * 10).
-    setProperty(TSF_Dictionary.Coordination.CONNECTION_TIMEOUT, 7).
-    setProperty(TSF_Dictionary.Coordination.TTL, 7).
-    setProperty(TSF_Dictionary.Producer.TRANSPORT_TIMEOUT, 5).
-    setProperty(TSF_Dictionary.Producer.Transaction.TTL, 6).
-    setProperty(TSF_Dictionary.Producer.Transaction.KEEP_ALIVE, 2).
-    setProperty(TSF_Dictionary.Consumer.TRANSACTION_PRELOAD, 10).
-    setProperty(TSF_Dictionary.Consumer.DATA_PRELOAD, 10)
+  f.setProperty(ConfigurationOptions.Stream.NAME, "test_stream").
+    setProperty(ConfigurationOptions.Stream.PARTITIONS, ALL_PARTITIONS).
+    setProperty(ConfigurationOptions.Stream.TTL, 60 * 10).
+    setProperty(ConfigurationOptions.Coordination.CONNECTION_TIMEOUT, 7).
+    setProperty(ConfigurationOptions.Coordination.TTL, 7).
+    setProperty(ConfigurationOptions.Producer.TRANSPORT_TIMEOUT, 5).
+    setProperty(ConfigurationOptions.Producer.Transaction.TTL, 6).
+    setProperty(ConfigurationOptions.Producer.Transaction.KEEP_ALIVE, 2).
+    setProperty(ConfigurationOptions.Consumer.TRANSACTION_PRELOAD, 10).
+    setProperty(ConfigurationOptions.Consumer.DATA_PRELOAD, 10)
 
   val producer = f.getProducer[String](
     name = "test_producer",
