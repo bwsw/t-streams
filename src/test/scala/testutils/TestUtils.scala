@@ -42,9 +42,9 @@ trait TestUtils {
 
 
   val f = new TStreamsFactory()
-  f.setProperty(ConfigurationOptions.Coordination.ROOT, coordinationRoot)
-    .setProperty(ConfigurationOptions.Coordination.ENDPOINTS, s"localhost:$zookeeperPort")
-    .setProperty(ConfigurationOptions.Stream.NAME, "test-stream")
+  f.setProperty(ConfigurationOptions.Coordination.prefix, coordinationRoot)
+    .setProperty(ConfigurationOptions.Coordination.endpoints, s"localhost:$zookeeperPort")
+    .setProperty(ConfigurationOptions.Stream.name, "test-stream")
 
   //converters to convert usertype->storagetype; storagetype->usertype
   val arrayByteToStringConverter = new ArrayByteToStringConverter
@@ -58,7 +58,7 @@ trait TestUtils {
     .connectString(s"127.0.0.1:$zookeeperPort").build()
   curatorClient.start()
 
-  removeZkMetadata(f.getProperty(ConfigurationOptions.Coordination.ROOT).toString)
+  removeZkMetadata(f.getProperty(ConfigurationOptions.Coordination.prefix).toString)
 
 
   /**
@@ -105,7 +105,7 @@ trait TestUtils {
     System.setProperty("DEBUG", "false")
     GlobalHooks.addHook(GlobalHooks.preCommitFailure, () => ())
     GlobalHooks.addHook(GlobalHooks.afterCommitFailure, () => ())
-    removeZkMetadata(f.getProperty(ConfigurationOptions.Coordination.ROOT).toString)
+    removeZkMetadata(f.getProperty(ConfigurationOptions.Coordination.prefix).toString)
     removeZkMetadata("/unit")
     curatorClient.close()
   }

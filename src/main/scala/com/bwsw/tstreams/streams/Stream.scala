@@ -84,9 +84,8 @@ object Stream {
   * @param partitionsCount Number of stream partitions
   * @param ttl             Time of transaction time expiration in seconds
   * @param description     Some additional info about stream
-  * @tparam T Storage data type
   */
-class Stream[T](storageClient: StorageClient,name: String, partitionsCount: Int,  ttl: Int, description: String) {
+class Stream(val storageClient: StorageClient, val name: String, val partitionsCount: Int, val ttl: Int, val description: String) {
   /**
     * Transaction minimum ttl time
     */

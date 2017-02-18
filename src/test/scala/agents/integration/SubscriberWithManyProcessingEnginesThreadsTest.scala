@@ -28,12 +28,12 @@ class SubscriberWithManyProcessingEnginesThreadsTest extends FlatSpec with Match
 
   val POLLING_FREQUENCY_DELAY = 10000
 
-  f.setProperty(ConfigurationOptions.Stream.NAME, "test_stream")
-    .setProperty(ConfigurationOptions.Stream.NAME, "test-stream")
+  f.setProperty(ConfigurationOptions.Stream.name, "test_stream")
+    .setProperty(ConfigurationOptions.Stream.name, "test-stream")
     .setProperty(ConfigurationOptions.Consumer.Subscriber.POLLING_FREQUENCY_DELAY, POLLING_FREQUENCY_DELAY)
     .setProperty(ConfigurationOptions.Consumer.Subscriber.PROCESSING_ENGINES_THREAD_POOL, PROCESSING_ENGINES_THREAD_POOL)
     .setProperty(ConfigurationOptions.Consumer.Subscriber.TRANSACTION_BUFFER_THREAD_POOL, TRANSACTION_BUFFER_THREAD_POOL)
-    .setProperty(ConfigurationOptions.Stream.PARTITIONS, TOTAL_PARTITIONS)
+    .setProperty(ConfigurationOptions.Stream.partitionsCount, TOTAL_PARTITIONS)
 
   it should s"Start and work correctly with PROCESSING_ENGINES_THREAD_POOL=$PROCESSING_ENGINES_THREAD_POOL" in {
     val awaitTransactionsLatch = new CountDownLatch(1)

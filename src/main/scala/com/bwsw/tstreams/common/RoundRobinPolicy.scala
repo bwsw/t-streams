@@ -8,7 +8,7 @@ import com.bwsw.tstreams.streams.Stream
   * @param usedPartitions Partitions from which agent will interact
   */
 
-class RoundRobinPolicy(stream: Stream[_], usedPartitions: Set[Int])
+class RoundRobinPolicy(stream: Stream, usedPartitions: Set[Int])
   extends AbstractPolicy(stream = stream, usedPartitions = usedPartitions) {
 
   /**

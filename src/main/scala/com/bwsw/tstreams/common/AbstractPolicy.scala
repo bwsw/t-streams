@@ -6,7 +6,7 @@ import com.bwsw.tstreams.streams.Stream
   * Basic interface for policies
   * Class is not thread safe. User must create separate instance for every producer/consumer
   */
-abstract class AbstractPolicy(stream: Stream[_], usedPartitions: Set[Int]) {
+abstract class AbstractPolicy(stream: Stream, usedPartitions: Set[Int]) {
 
   protected val usedPartitionsList = usedPartitions.toList
 

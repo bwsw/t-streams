@@ -15,11 +15,11 @@ class ProducerUsedByTwoThreadsSimultaneouslyTests extends FlatSpec with Matchers
   val ALL_PARTITIONS = 2
   val COUNT = 10000
 
-  f.setProperty(ConfigurationOptions.Stream.NAME, "test_stream").
-    setProperty(ConfigurationOptions.Stream.PARTITIONS, ALL_PARTITIONS).
-    setProperty(ConfigurationOptions.Stream.TTL, 60 * 10).
-    setProperty(ConfigurationOptions.Coordination.CONNECTION_TIMEOUT, 7).
-    setProperty(ConfigurationOptions.Coordination.TTL, 7).
+  f.setProperty(ConfigurationOptions.Stream.name, "test_stream").
+    setProperty(ConfigurationOptions.Stream.partitionsCount, ALL_PARTITIONS).
+    setProperty(ConfigurationOptions.Stream.ttl, 60 * 10).
+    setProperty(ConfigurationOptions.Coordination.connectionTimeoutMs, 7).
+    setProperty(ConfigurationOptions.Coordination.sessionTimeoutMs, 7).
     setProperty(ConfigurationOptions.Producer.TRANSPORT_TIMEOUT, 5).
     setProperty(ConfigurationOptions.Producer.Transaction.TTL, 6).
     setProperty(ConfigurationOptions.Producer.Transaction.KEEP_ALIVE, 2).

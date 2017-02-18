@@ -15,21 +15,21 @@ import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import testutils.TestUtils
 
 class TStreamsFactoryTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
-  f.setProperty(ConfigurationOptions.Stream.TTL, 60 * 10)
+  f.setProperty(ConfigurationOptions.Stream.ttl, 60 * 10)
 
 
   "If copied" should "contain same data" in {
     val n1 = f.copy()
-    n1.setProperty(ConfigurationOptions.Stream.NAME, "cloned-stream")
+    n1.setProperty(ConfigurationOptions.Stream.name, "cloned-stream")
     val n2 = n1.copy()
-    n2.getProperty(ConfigurationOptions.Stream.NAME) shouldBe "cloned-stream"
+    n2.getProperty(ConfigurationOptions.Stream.name) shouldBe "cloned-stream"
   }
 
   "If locked" should "raise IllegalStateException exception" in {
     val n1 = f.copy()
     n1.lock()
     val res = try {
-      n1.setProperty(ConfigurationOptions.Stream.NAME, "cloned-stream")
+      n1.setProperty(ConfigurationOptions.Stream.name, "cloned-stream")
       false
     } catch {
       case e: IllegalStateException =>

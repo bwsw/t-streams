@@ -31,7 +31,7 @@ object StreamService {
       val (name: String, partitionsCount: Int, ttl: Int, description: String) =
         (settings.name, settings.partitionsCount, settings.ttl, settings.description)
 
-      val stream: Stream[T] = new Stream(storageClient = storageClient, name = name, partitionsCount = partitionsCount,
+      val stream: Stream = new Stream(storageClient = storageClient, name = name, partitionsCount = partitionsCount,
         ttl = ttl, description = description)
       stream
     }
@@ -51,10 +51,10 @@ object StreamService {
                       streamName: String,
                       partitions: Int,
                       ttl: Int,
-                      description: String): Stream[T] = {
+                      description: String): Stream = {
 
     Stream.createStream(storageClient, streamName, partitions, ttl, description)
-    new Stream[T](storageClient, streamName, partitions, ttl, description)
+    new Stream(storageClient, streamName, partitions, ttl, description)
   }
 
 

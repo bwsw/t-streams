@@ -72,11 +72,11 @@ class ProducerMasterChangeComplexTest  extends FlatSpec with Matchers with Befor
   val onCompleteLatch   = new CountDownLatch(PRODUCERS_AMOUNT)
   val waitCompleteLatch = new CountDownLatch(1)
 
-  f.setProperty(ConfigurationOptions.Stream.NAME, "test_stream").
-    setProperty(ConfigurationOptions.Stream.PARTITIONS, PARTITIONS_COUNT).
-    setProperty(ConfigurationOptions.Stream.TTL, 60 * 10).
-    setProperty(ConfigurationOptions.Coordination.CONNECTION_TIMEOUT, 7).
-    setProperty(ConfigurationOptions.Coordination.TTL, 7).
+  f.setProperty(ConfigurationOptions.Stream.name, "test_stream").
+    setProperty(ConfigurationOptions.Stream.partitionsCount, PARTITIONS_COUNT).
+    setProperty(ConfigurationOptions.Stream.ttl, 60 * 10).
+    setProperty(ConfigurationOptions.Coordination.connectionTimeoutMs, 7).
+    setProperty(ConfigurationOptions.Coordination.sessionTimeoutMs, 7).
     setProperty(ConfigurationOptions.Producer.TRANSPORT_TIMEOUT, 5).
     setProperty(ConfigurationOptions.Producer.Transaction.TTL, 3).
     setProperty(ConfigurationOptions.Producer.Transaction.KEEP_ALIVE, 1).

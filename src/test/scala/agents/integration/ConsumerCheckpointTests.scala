@@ -10,11 +10,11 @@ import testutils.{LocalGeneratorCreator, TestUtils}
   * Created by Ivan Kudryavtsev on 09.09.16.
   */
 class ConsumerCheckpointTests extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
-  f.setProperty(ConfigurationOptions.Stream.NAME, "test_stream").
-    setProperty(ConfigurationOptions.Stream.PARTITIONS, 1).
-    setProperty(ConfigurationOptions.Stream.TTL, 60 * 10).
-    setProperty(ConfigurationOptions.Coordination.CONNECTION_TIMEOUT, 7).
-    setProperty(ConfigurationOptions.Coordination.TTL, 7).
+  f.setProperty(ConfigurationOptions.Stream.name, "test_stream").
+    setProperty(ConfigurationOptions.Stream.partitionsCount, 1).
+    setProperty(ConfigurationOptions.Stream.ttl, 60 * 10).
+    setProperty(ConfigurationOptions.Coordination.connectionTimeoutMs, 7).
+    setProperty(ConfigurationOptions.Coordination.sessionTimeoutMs, 7).
     setProperty(ConfigurationOptions.Producer.TRANSPORT_TIMEOUT, 5).
     setProperty(ConfigurationOptions.Producer.Transaction.TTL, 6).
     setProperty(ConfigurationOptions.Producer.Transaction.KEEP_ALIVE, 2).

@@ -1,4 +1,7 @@
-package com.bwsw.tstreams.env
+package com.bwsw.tstreams.env.defaults
+
+import com.bwsw.tstreams.common.IntMinMaxDefault
+import com.bwsw.tstreams.env.ConfigurationOptions
 
 import scala.collection.mutable
 
