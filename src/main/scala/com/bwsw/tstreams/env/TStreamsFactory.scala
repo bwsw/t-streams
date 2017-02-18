@@ -142,11 +142,11 @@ class TStreamsFactory() {
     * reusable method which returns consumer options object
     */
   private def getBasicConsumerOptions(stream: Stream,
-                                         partitions: Set[Int],
-                                         transactionGenerator: ITransactionGenerator,
-                                         offset: IOffset,
-                                         checkpointAtStart: Boolean = false,
-                                         useLastOffset: Boolean = true) = this.synchronized {
+                                      partitions: Set[Int],
+                                      transactionGenerator: ITransactionGenerator,
+                                      offset: IOffset,
+                                      checkpointAtStart: Boolean = false,
+                                      useLastOffset: Boolean = true) = this.synchronized {
 
     val consumerDefaults = defaults.TStreamsFactoryConsumerDefaults
 
@@ -174,9 +174,9 @@ class TStreamsFactory() {
     * @return
     */
   def getProducer(name: String,
-                     transactionGenerator: ITransactionGenerator,
-                     partitions: Set[Int]
-                    ): Producer = this.synchronized {
+                  transactionGenerator: ITransactionGenerator,
+                  partitions: Set[Int]
+                 ): Producer = this.synchronized {
 
     if (isClosed.get)
       throw new IllegalStateException("TStreamsFactory is closed. This is the illegal usage of the object.")
@@ -200,6 +200,9 @@ class TStreamsFactory() {
     val sessionTimeoutMs = pAsInt(co.Coordination.sessionTimeoutMs, coordinationDefaults.sessionTimeoutMs.default)
     coordinationDefaults.sessionTimeoutMs.check(sessionTimeoutMs)
 
+    val connectionTimeoutMs = pAsInt(co.Coordination.connectionTimeoutMs, coordinationDefaults.connectionTimeoutMs.default)
+    coordinationDefaults.connectionTimeoutMs.check(connectionTimeoutMs)
+
     val transportTimeoutMs = pAsInt(co.Producer.transportTimeoutMs, producerDefaults.transportTimeoutMs.default)
     producerDefaults.transportTimeoutMs.check(transportTimeoutMs)
 
@@ -208,9 +211,6 @@ class TStreamsFactory() {
 
     val transportRetryCount = pAsInt(co.Producer.transportRetryCount, producerDefaults.transportRetryCount.default)
     producerDefaults.transportRetryCount.check(transportRetryCount)
-
-    val connectionTimeoutMs = pAsInt(co.Coordination.connectionTimeoutMs, coordinationDefaults.connectionTimeoutMs.default)
-    coordinationDefaults.connectionTimeoutMs.check(connectionTimeoutMs)
 
     val partitionsRedistributionDelaySec = pAsInt(co.Coordination.partitionsRedistributionDelaySec, coordinationDefaults.partitionsRedistributionDelaySec.default)
     coordinationDefaults.partitionsRedistributionDelaySec.check(partitionsRedistributionDelaySec)
@@ -283,11 +283,11 @@ class TStreamsFactory() {
     * @return
     */
   def getConsumer(name: String,
-                     transactionGenerator: ITransactionGenerator,
-                     partitions: Set[Int],
-                     offset: IOffset,
-                     useLastOffset: Boolean = true,
-                     checkpointAtStart: Boolean = false): Consumer = this.synchronized {
+                  transactionGenerator: ITransactionGenerator,
+                  partitions: Set[Int],
+                  offset: IOffset,
+                  useLastOffset: Boolean = true,
+                  checkpointAtStart: Boolean = false): Consumer = this.synchronized {
 
     if (isClosed.get)
       throw new IllegalStateException("TStreamsFactory is closed. This is the illegal usage of the object.")
@@ -312,14 +312,17 @@ class TStreamsFactory() {
     * @return
     */
   def getSubscriber(name: String,
-                       transactionGenerator: ITransactionGenerator,
-                       partitions: Set[Int],
-                       callback: com.bwsw.tstreams.agents.consumer.subscriber.Callback,
-                       offset: IOffset,
-                       useLastOffset: Boolean = true,
-                       checkpointAtStart: Boolean = false): Subscriber = this.synchronized {
+                    transactionGenerator: ITransactionGenerator,
+                    partitions: Set[Int],
+                    callback: com.bwsw.tstreams.agents.consumer.subscriber.Callback,
+                    offset: IOffset,
+                    useLastOffset: Boolean = true,
+                    checkpointAtStart: Boolean = false): Subscriber = this.synchronized {
     if (isClosed.get)
       throw new IllegalStateException("TStreamsFactory is closed. This is the illegal usage of the object.")
+
+    val coordinationDefaults = defaults.TStreamsFactoryCoordinationDefaults.Coordination
+    val consumerDefaults = defaults.TStreamsFactoryConsumerDefaults
 
     val stream = getStream()
 
@@ -336,7 +339,7 @@ class TStreamsFactory() {
 
     val bind_port = getProperty(co.Consumer.Subscriber.bindPort) match {
       case (p: Int) => p
-      case (pFrom: Int, pTo: Int) => SpareServerSocketLookupUtility.findSparePort(pAsString(co.Producer.bindHost), pFrom, pTo).get
+      case PortRange(pFrom: Int, pTo: Int) => SpareServerSocketLookupUtility.findSparePort(pAsString(co.Producer.bindHost), pFrom, pTo).get
     }
 
     val endpoints = pAsString(co.Coordination.endpoints)
@@ -345,35 +348,32 @@ class TStreamsFactory() {
     val root = pAsString(co.Coordination.prefix)
     assert(root != null)
 
-    val ttl = pAsInt(co.Coordination.sessionTimeoutMs, Coordination_ttl_default)
-    pAssertIntRange(ttl, Coordination_ttl_min, Coordination_ttl_max)
-    val conn_timeout = pAsInt(co.Coordination.connectionTimeoutMs, Coordination_connection_timeout_default)
-    pAssertIntRange(conn_timeout,
-      Coordination_connection_timeout_min, Coordination_connection_timeout_max)
+    val sessionTimeoutMs = pAsInt(co.Coordination.sessionTimeoutMs, coordinationDefaults.sessionTimeoutMs.default)
+    coordinationDefaults.sessionTimeoutMs.check(sessionTimeoutMs)
 
-    val transaction_thread_pool = pAsInt(co.Consumer.Subscriber.transactionBufferThreadPoolSize, Subscriber_transaction_buffer_thread_pool_default)
-    pAssertIntRange(transaction_thread_pool,
-      Subscriber_transaction_buffer_thread_pool_min, Subscriber_transaction_buffer_thread_pool_max)
+    val connectionTimeoutMs = pAsInt(co.Coordination.connectionTimeoutMs, coordinationDefaults.connectionTimeoutMs.default)
+    coordinationDefaults.connectionTimeoutMs.check(connectionTimeoutMs)
 
-    val pe_thread_pool = pAsInt(co.Consumer.Subscriber.processingEnginesThreadPoolSize, Subscriber_processing_engines_thread_pool_default)
-    pAssertIntRange(pe_thread_pool,
-      Subscriber_processing_engines_thread_pool_min, Subscriber_processing_engines_thread_pool_max)
+    val transactionBufferThreadPoolSize = pAsInt(co.Consumer.Subscriber.transactionBufferThreadPoolSize, consumerDefaults.Consumer.Subscriber.transactionBufferThreadPoolSize.default)
+    consumerDefaults.Consumer.Subscriber.transactionBufferThreadPoolSize.check(transactionBufferThreadPoolSize)
 
-    val polling_frequency = pAsInt(co.Consumer.Subscriber.pollingFrequencyDelayMs, Subscriber_polling_frequency_delay_default)
-    pAssertIntRange(polling_frequency,
-      Subscriber_polling_frequency_delay_min, Subscriber_polling_frequency_delay_max)
+    val processingEnginesThreadPoolSize = pAsInt(co.Consumer.Subscriber.processingEnginesThreadPoolSize, consumerDefaults.Consumer.Subscriber.processingEnginesThreadPoolSize.default)
+    consumerDefaults.Consumer.Subscriber.processingEnginesThreadPoolSize.check(processingEnginesThreadPoolSize)
+
+    val pollingFrequencyDelayMs = pAsInt(co.Consumer.Subscriber.pollingFrequencyDelayMs, consumerDefaults.Consumer.Subscriber.pollingFrequencyDelayMs.default)
+    consumerDefaults.Consumer.Subscriber.pollingFrequencyDelayMs.check(pollingFrequencyDelayMs)
 
     val queue_path = pAsString(co.Consumer.Subscriber.persistentQueuePath)
 
     val opts = SubscriberOptionsBuilder.fromConsumerOptions(consumerOptions,
       agentAddress = bind_host + ":" + bind_port,
-      zkRootPath = root,
-      zkHosts = endpoints,
-      zkSessionTimeout = ttl,
-      zkConnectionTimeout = conn_timeout,
-      transactionsBufferWorkersThreadPoolAmount = transaction_thread_pool,
-      processingEngineWorkersThreadAmount = pe_thread_pool,
-      pollingFrequencyDelay = polling_frequency,
+      zkPrefixPath = root,
+      zkEndpoints = endpoints,
+      zkSessionTimeoutMs = sessionTimeoutMs,
+      zkConnectionTimeoutMs = connectionTimeoutMs,
+      transactionsBufferWorkersThreadPoolSize = transactionBufferThreadPoolSize,
+      processingEngineWorkersThreadSize = processingEnginesThreadPoolSize,
+      pollingFrequencyDelayMs = pollingFrequencyDelayMs,
       transactionsQueueBuilder = if (queue_path == null) new QueueBuilder.InMemory() else new Persistent(queue_path))
 
     new Subscriber(name, stream, opts, callback)
@@ -385,7 +385,6 @@ class TStreamsFactory() {
   def close(): Unit = {
     if (isClosed.getAndSet(true))
       throw new IllegalStateException("TStreamsFactory is closed. This is repeatable close operation.")
-
   }
 
 }
