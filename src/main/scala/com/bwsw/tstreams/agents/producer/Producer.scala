@@ -28,11 +28,10 @@ object Producer {
   * @param name            Producer name
   * @param stream          Stream for transaction sending
   * @param producerOptions This producer options
-  * @tparam T User data type
   */
-class Producer[T](var name: String,
-                  val stream: Stream[Array[Byte]],
-                  val producerOptions: ProducerOptions[T])
+class Producer(var name: String,
+                  val stream: Stream,
+                  val producerOptions: ProducerOptions)
   extends GroupParticipant with SendingAgent with Interaction {
 
   /**
@@ -51,7 +50,7 @@ class Producer[T](var name: String,
   val pcs = producerOptions.coordinationOptions
   val isStop = new AtomicBoolean(false)
 
-  private val openTransactions = new OpenTransactionsKeeper[T]()
+  private val openTransactions = new OpenTransactionsKeeper()
 
   // stores latches for materialization await (protects from materialization before main transaction response)
   private val materializationGovernor = new MaterializationGovernor(producerOptions.writePolicy.getUsedPartitions().toSet)
@@ -84,8 +83,6 @@ class Producer[T](var name: String,
     else
       pcs.threadPoolSize
   }
-
-  stream.dataStorage.bind()
 
   Producer.logger.info(s"Start new Basic producer with name : $name, streamName : ${stream.name}, streamPartitions : ${stream.partitionsCount}")
 
@@ -168,10 +165,10 @@ class Producer[T](var name: String,
     */
   private def updateOpenedTransactions() = this.synchronized {
     Producer.logger.debug(s"Producer $name - scheduled for long lasting transactions")
-    openTransactions.forallKeysDo((part: Int, transaction: IProducerTransaction[T]) => transaction.updateTransactionKeepAliveState())
+    openTransactions.forallKeysDo((part: Int, transaction: IProducerTransaction) => transaction.updateTransactionKeepAliveState())
   }
 
-  private def newTransactionUnsafe(policy: ProducerPolicy, partition: Int = -1): ProducerTransaction[T] = {
+  private def newTransactionUnsafe(policy: ProducerPolicy, partition: Int = -1): ProducerTransaction = {
     if (isStop.get())
       throw new IllegalStateException(s"Producer ${this.name} is already stopped. Unable to get new transaction.")
 
@@ -194,7 +191,7 @@ class Producer[T](var name: String,
     val transactionID = p2pAgent.generateNewTransaction(p)
     if (Producer.logger.isDebugEnabled)
       Producer.logger.debug(s"[NEW_TRANSACTION PARTITION_$p] ID=$transactionID")
-    val transaction = new ProducerTransaction[T](p, transactionID, this)
+    val transaction = new ProducerTransaction(p, transactionID, this)
 
     openTransactions.put(p, transaction)
     materializationGovernor.unprotect(p)
@@ -211,7 +208,7 @@ class Producer[T](var name: String,
     * @param partition Next partition to use for transaction (default -1 which mean that write policy will be used)
     * @return BasicProducerTransaction instance
     */
-  def newTransaction(policy: ProducerPolicy, partition: Int = -1, retry: Int = 1): ProducerTransaction[T] = {
+  def newTransaction(policy: ProducerPolicy, partition: Int = -1, retry: Int = 1): ProducerTransaction = {
     if (isStop.get())
       throw new IllegalStateException(s"Producer ${this.name} is already stopped. Unable to get new transaction.")
 
@@ -235,7 +232,7 @@ class Producer[T](var name: String,
     * @param partition Partition from which transaction will be retrieved
     * @return Transaction reference if it exist and is opened
     */
-  def getOpenedTransactionForPartition(partition: Int): Option[IProducerTransaction[T]] = {
+  def getOpenedTransactionForPartition(partition: Int): Option[IProducerTransaction] = {
     if (!(partition >= 0 && partition < stream.partitionsCount))
       throw new IllegalArgumentException(s"Producer $name - invalid partition")
     openTransactions.getTransactionOption(partition)
@@ -245,37 +242,31 @@ class Producer[T](var name: String,
     * Checkpoint all opened transactions (not atomic). For atomic use CheckpointGroup.
     */
   def checkpoint(isSynchronous: Boolean = true): Unit =
-    openTransactions.forallKeysDo((k: Int, v: IProducerTransaction[T]) => v.checkpoint(isSynchronous))
+    openTransactions.forallKeysDo((k: Int, v: IProducerTransaction) => v.checkpoint(isSynchronous))
 
 
   /**
     * Cancel all opened transactions (not atomic). For atomic use CheckpointGroup.
     */
   def cancel(): Unit =
-    openTransactions.forallKeysDo((k: Int, v: IProducerTransaction[T]) => v.cancel())
+    openTransactions.forallKeysDo((k: Int, v: IProducerTransaction) => v.cancel())
 
 
   /**
     * Finalize all opened transactions (not atomic). For atomic use CheckpointGroup.
     */
   def finalizeDataSend(): Unit = {
-    openTransactions.forallKeysDo((k: Int, v: IProducerTransaction[T]) => v.finalizeDataSend())
+    openTransactions.forallKeysDo((k: Int, v: IProducerTransaction) => v.finalizeDataSend())
   }
 
   /**
     * Info to commit
     */
   override def getCheckpointInfoAndClear(): List[CheckpointInfo] = {
-    val checkpointInfo = openTransactions.forallKeysDo((k: Int, v: IProducerTransaction[T]) => v.getTransactionInfo()).toList
+    val checkpointInfo = openTransactions.forallKeysDo((k: Int, v: IProducerTransaction) => v.getTransactionInfo()).toList
     openTransactions.clear()
     checkpointInfo
   }
-
-  /**
-    * @return Metadata storage link for concrete agent
-    */
-  override def getMetadataRef(): MetadataStorage =
-    stream.metadataStorage
 
   /**
     *

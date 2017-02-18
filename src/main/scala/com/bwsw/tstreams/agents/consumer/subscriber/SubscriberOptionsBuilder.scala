@@ -4,7 +4,7 @@ import com.bwsw.tstreams.agents.consumer
 import com.bwsw.tstreams.agents.consumer.subscriber.QueueBuilder.InMemory
 
 object SubscriberOptionsBuilder {
-  def fromConsumerOptions[T](consumerOpts: consumer.ConsumerOptions[T],
+  def fromConsumerOptions(consumerOpts: consumer.ConsumerOptions,
                              agentAddress: String,
                              zkRootPath: String,
                              zkHosts: String,
@@ -13,11 +13,10 @@ object SubscriberOptionsBuilder {
                              transactionsBufferWorkersThreadPoolAmount: Int = 1,
                              processingEngineWorkersThreadAmount: Int = 1,
                              pollingFrequencyDelay: Int = 1000,
-                             transactionsQueueBuilder: QueueBuilder.Abstract = new InMemory): SubscriberOptions[T] =
-    new SubscriberOptions[T](
+                             transactionsQueueBuilder: QueueBuilder.Abstract = new InMemory): SubscriberOptions =
+    new SubscriberOptions(
       transactionsPreload = consumerOpts.transactionsPreload,
       dataPreload = consumerOpts.dataPreload,
-      converter = consumerOpts.converter,
       readPolicy = consumerOpts.readPolicy,
       offset = consumerOpts.offset,
       transactionGenerator = consumerOpts.transactionGenerator,

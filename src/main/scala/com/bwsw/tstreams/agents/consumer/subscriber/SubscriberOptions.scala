@@ -4,7 +4,6 @@ import com.bwsw.tstreams.agents.consumer
 import com.bwsw.tstreams.agents.consumer.Offset.IOffset
 import com.bwsw.tstreams.agents.consumer.subscriber.QueueBuilder.InMemory
 import com.bwsw.tstreams.common.AbstractPolicy
-import com.bwsw.tstreams.converter.IConverter
 import com.bwsw.tstreams.generator.ITransactionGenerator
 
 /**
@@ -15,7 +14,6 @@ import com.bwsw.tstreams.generator.ITransactionGenerator
   *
   * @param transactionsPreload
   * @param dataPreload
-  * @param converter
   * @param readPolicy
   * @param offset
   * @param transactionGenerator
@@ -26,11 +24,9 @@ import com.bwsw.tstreams.generator.ITransactionGenerator
   * @param zkConnectionTimeout
   * @param transactionBufferWorkersThreadPoolAmount
   * @param useLastOffset
-  * @tparam T
   */
-case class SubscriberOptions[T](val transactionsPreload: Int,
+case class SubscriberOptions(val transactionsPreload: Int,
                                 val dataPreload: Int,
-                                val converter: IConverter[Array[Byte], T],
                                 val readPolicy: AbstractPolicy,
                                 val offset: IOffset,
                                 val transactionGenerator: ITransactionGenerator,
@@ -47,10 +43,9 @@ case class SubscriberOptions[T](val transactionsPreload: Int,
                                 val transactionsQueueBuilder: QueueBuilder.Abstract = new InMemory
                                ) {
 
-  def getConsumerOptions() = consumer.ConsumerOptions[T](
+  def getConsumerOptions() = consumer.ConsumerOptions(
     transactionsPreload = transactionsPreload,
     dataPreload = dataPreload,
-    converter = converter,
     readPolicy = readPolicy,
     offset = offset,
     transactionGenerator = transactionGenerator,

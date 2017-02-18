@@ -20,9 +20,8 @@ object StreamService {
     * @param storageClient   Storage of concrete stream
     * @param streamName      Name of the stream
     * @return Stream instance
-    * @tparam T Type of stream data
     */
-  def loadStream[T](storageClient: StorageClient, streamName: String): Stream[T] = {
+  def loadStream(storageClient: StorageClient, streamName: String): Stream = {
     val settingsOpt: Option[StreamSettings] = Stream.getStream(storageClient, streamName)
     if (settingsOpt.isEmpty)
       throw new IllegalArgumentException("stream with this name can not be loaded")
@@ -45,9 +44,8 @@ object StreamService {
     * @param partitions      Number of stream partitions
     * @param description     Some additional info about stream
     * @param ttl             Expiration time of single transaction in seconds
-    * @tparam T Type of stream data
     */
-  def createStream[T](storageClient: StorageClient,
+  def createStream(storageClient: StorageClient,
                       streamName: String,
                       partitions: Int,
                       ttl: Int,

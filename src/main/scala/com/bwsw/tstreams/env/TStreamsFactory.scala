@@ -9,7 +9,6 @@ import com.bwsw.tstreams.agents.consumer.subscriber.{QueueBuilder, Subscriber, S
 import com.bwsw.tstreams.agents.consumer.{Consumer, ConsumerOptions}
 import com.bwsw.tstreams.agents.producer.{CoordinationOptions, Producer}
 import com.bwsw.tstreams.common.{RoundRobinPolicy, _}
-import com.bwsw.tstreams.converter.IConverter
 import com.bwsw.tstreams.coordination.client.TcpTransport
 import com.bwsw.tstreams.env.defaults.TStreamsFactoryProducerDefaults.PortRange
 import com.bwsw.tstreams.generator.ITransactionGenerator
@@ -171,16 +170,13 @@ class TStreamsFactory() {
     *
     * @param name Producer name
     * @param transactionGenerator
-    * @param converter
     * @param partitions
-    * @tparam T - type convert data from
     * @return
     */
-  def getProducer[T](name: String,
+  def getProducer(name: String,
                      transactionGenerator: ITransactionGenerator,
-                     converter: IConverter[T, Array[Byte]],
                      partitions: Set[Int]
-                    ): Producer[T] = this.synchronized {
+                    ): Producer = this.synchronized {
 
     if (isClosed.get)
       throw new IllegalStateException("TStreamsFactory is closed. This is the illegal usage of the object.")
@@ -267,16 +263,15 @@ class TStreamsFactory() {
 
 
 
-    val po = new com.bwsw.tstreams.agents.producer.ProducerOptions[T](
+    val po = new com.bwsw.tstreams.agents.producer.ProducerOptions(
       transactionTtlMs = transactionTtlMs,
       transactionKeepAliveMs = transactionKeepAliveMs,
       writePolicy = writePolicy,
       batchSize = batchSize,
       transactionGenerator = transactionGenerator,
-      coordinationOptions = cao,
-      converter = converter)
+      coordinationOptions = cao)
 
-    new Producer[T](name = name, stream = stream, producerOptions = po)
+    new Producer(name = name, stream = stream, producerOptions = po)
   }
 
   /**
@@ -285,15 +280,14 @@ class TStreamsFactory() {
     * @param name Consumer name
     * @param transactionGenerator
     * @param partitions
-    * @tparam T type to convert data to
     * @return
     */
-  def getConsumer[T](name: String,
+  def getConsumer(name: String,
                      transactionGenerator: ITransactionGenerator,
                      partitions: Set[Int],
                      offset: IOffset,
                      useLastOffset: Boolean = true,
-                     checkpointAtStart: Boolean = false): Consumer[T] = this.synchronized {
+                     checkpointAtStart: Boolean = false): Consumer = this.synchronized {
 
     if (isClosed.get)
       throw new IllegalStateException("TStreamsFactory is closed. This is the illegal usage of the object.")
@@ -315,16 +309,15 @@ class TStreamsFactory() {
     * @param transactionGenerator
     * @param partitions
     * @param callback
-    * @tparam T - type to convert data to
     * @return
     */
-  def getSubscriber[T](name: String,
+  def getSubscriber(name: String,
                        transactionGenerator: ITransactionGenerator,
                        partitions: Set[Int],
-                       callback: com.bwsw.tstreams.agents.consumer.subscriber.Callback[T],
+                       callback: com.bwsw.tstreams.agents.consumer.subscriber.Callback,
                        offset: IOffset,
                        useLastOffset: Boolean = true,
-                       checkpointAtStart: Boolean = false): Subscriber[T] = this.synchronized {
+                       checkpointAtStart: Boolean = false): Subscriber = this.synchronized {
     if (isClosed.get)
       throw new IllegalStateException("TStreamsFactory is closed. This is the illegal usage of the object.")
 
@@ -383,7 +376,7 @@ class TStreamsFactory() {
       pollingFrequencyDelay = polling_frequency,
       transactionsQueueBuilder = if (queue_path == null) new QueueBuilder.InMemory() else new Persistent(queue_path))
 
-    new Subscriber[T](name, stream, opts, callback)
+    new Subscriber(name, stream, opts, callback)
   }
 
   /**

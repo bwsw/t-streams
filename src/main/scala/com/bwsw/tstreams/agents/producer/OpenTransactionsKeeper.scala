@@ -11,8 +11,8 @@ import scala.collection.mutable.ListBuffer
 /**
   * Created by Ivan Kudryavtsev on 28.08.16.
   */
-class OpenTransactionsKeeper[T] {
-  private val openTransactionsMap = new ConcurrentHashMap[Int, IProducerTransaction[T]]()
+class OpenTransactionsKeeper {
+  private val openTransactionsMap = new ConcurrentHashMap[Int, IProducerTransaction]()
 
   /**
     * Allows to do something with all not closed transactions.
@@ -21,7 +21,7 @@ class OpenTransactionsKeeper[T] {
     * @tparam RV
     * @return
     */
-  def forallKeysDo[RV](f: (Int, IProducerTransaction[T]) => RV): Iterable[RV] = {
+  def forallKeysDo[RV](f: (Int, IProducerTransaction) => RV): Iterable[RV] = {
     val keys = openTransactionsMap.keys()
     val res = ListBuffer[RV]()
     for (k <- keys) {
@@ -98,7 +98,7 @@ class OpenTransactionsKeeper[T] {
     * @param transaction
     * @return
     */
-  def put(partition: Int, transaction: IProducerTransaction[T]) = {
+  def put(partition: Int, transaction: IProducerTransaction) = {
     openTransactionsMap.put(partition, transaction)
   }
 

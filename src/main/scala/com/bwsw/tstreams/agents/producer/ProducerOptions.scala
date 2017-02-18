@@ -1,7 +1,6 @@
 package com.bwsw.tstreams.agents.producer
 
 import com.bwsw.tstreams.common.AbstractPolicy
-import com.bwsw.tstreams.converter.IConverter
 import com.bwsw.tstreams.coordination.client.TcpTransport
 import com.bwsw.tstreams.generator.ITransactionGenerator
 
@@ -11,18 +10,15 @@ import scala.language.existentials
   * @param transactionTtlMs               Single transaction live time
   * @param transactionKeepAliveMs Update transaction interval which is used to keep alive transaction in time when it is opened
   * @param writePolicy                  Strategy for selecting next partition
-  * @param converter                    User defined or basic converter for converting T objects to Array[Byte] objects(storage object type)
   * @param batchSize                    Insertion Type (only BatchInsert and SingleElementInsert are allowed now)
   * @param transactionGenerator         Generator for generating IDs
-  * @tparam T User object type
   */
-class ProducerOptions[T](val transactionTtlMs: Int,
+class ProducerOptions(val transactionTtlMs: Int,
                          val transactionKeepAliveMs: Int,
                          val writePolicy: AbstractPolicy,
                          val batchSize: Int,
                          val transactionGenerator: ITransactionGenerator,
-                         val coordinationOptions: CoordinationOptions,
-                         val converter: IConverter[T, Array[Byte]]) {
+                         val coordinationOptions: CoordinationOptions) {
 
   /**
     * Transaction minimum ttl time

@@ -48,7 +48,7 @@ object PeerAgent {
   */
 class PeerAgent(curatorClient: CuratorFramework,
                 peerKeepAliveTimeout: Int,
-                producer: Producer[_],
+                producer: Producer,
                 usedPartitions: Set[Int],
                 transport: TcpTransport,
                 threadPoolAmount: Int,

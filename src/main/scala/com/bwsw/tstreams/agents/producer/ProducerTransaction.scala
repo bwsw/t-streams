@@ -23,13 +23,13 @@ object ProducerTransaction {
   * @param transactionID  ID for this transaction
   * @tparam T User data type
   */
-class ProducerTransaction[T](partition: Int,
+class ProducerTransaction(partition: Int,
                              transactionID: Long,
-                             transactionOwner: Producer[T]) extends IProducerTransaction[T] {
+                             transactionOwner: Producer) extends IProducerTransaction {
 
   private val transactionLock = new ReentrantLock()
 
-  private val data = new ProducerTransactionData[T](this, transactionOwner.stream.ttl, transactionOwner.stream.dataStorage)
+  private val data = new ProducerTransactionData(this, transactionOwner.stream.ttl, transactionOwner.stream.dataStorage)
 
   /**
     * state of transaction

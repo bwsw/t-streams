@@ -5,7 +5,7 @@ import com.bwsw.tstreams.agents.group.ProducerCheckpointInfo
 /**
   * Created by Ivan Kudryavtsev on 29.08.16.
   */
-trait IProducerTransaction[T] {
+trait IProducerTransaction {
   def awaitMaterialized(): Unit
 
   def send(obj: T): Unit
