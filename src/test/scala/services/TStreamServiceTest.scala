@@ -83,8 +83,8 @@ class TStreamServiceTest extends FlatSpec with Matchers with BeforeAndAfterAll w
       metadataStorage = metadataStorageInst,
       dataStorage = storageInst)
 
-    val isExist = StreamService.isExist(name, metadataStorageInst)
-    val isNotExist = StreamService.isExist(notExistName, metadataStorageInst)
+    val isExist = StreamService.doesExist(name, metadataStorageInst)
+    val isNotExist = StreamService.doesExist(notExistName, metadataStorageInst)
     val checkVal = isExist && !isNotExist
 
     checkVal shouldBe true

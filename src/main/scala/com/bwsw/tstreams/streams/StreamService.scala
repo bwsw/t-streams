@@ -1,5 +1,6 @@
 package com.bwsw.tstreams.streams
 
+import com.bwsw.tstreams.common.StorageClient
 import org.slf4j.LoggerFactory
 
 
@@ -16,24 +17,22 @@ object StreamService {
   /**
     * Getting existing stream
     *
+    * @param storageClient   Storage of concrete stream
     * @param streamName      Name of the stream
-    * @param metadataStorage Metadata storage of concrete stream
-    * @param dataStorage     Data storage of concrete stream
     * @return Stream instance
     * @tparam T Type of stream data
     */
-  def loadStream[T](streamName: String,
-                    metadataStorage: MetadataStorage,
-                    dataStorage: IStorage[T]): Stream[T] = {
-    val settingsOpt: Option[StreamSettings] = Stream.getStream(metadataStorage.getSession(), streamName)
+  def loadStream[T](storageClient: StorageClient, streamName: String): Stream[T] = {
+    val settingsOpt: Option[StreamSettings] = Stream.getStream(storageClient, streamName)
     if (settingsOpt.isEmpty)
       throw new IllegalArgumentException("stream with this name can not be loaded")
     else {
       val settings = settingsOpt.get
-      val (name: String, partitions: Int, ttl: Int, description: String) =
-        (settings.name, settings.partitions, settings.ttl, settings.description)
+      val (name: String, partitionsCount: Int, ttl: Int, description: String) =
+        (settings.name, settings.partitionsCount, settings.ttl, settings.description)
 
-      val stream: Stream[T] = new Stream(name, partitions, metadataStorage, dataStorage, ttl, description)
+      val stream: Stream[T] = new Stream(storageClient = storageClient, name = name, partitionsCount = partitionsCount,
+        ttl = ttl, description = description)
       stream
     }
   }
@@ -41,44 +40,42 @@ object StreamService {
   /**
     * Creating stream
     *
+    * @param storageClient   Storage of concrete stream
     * @param streamName      Name of the stream
     * @param partitions      Number of stream partitions
-    * @param metadataStorage Metadata storage using by this stream
-    * @param dataStorage     Data storage using by this stream
     * @param description     Some additional info about stream
     * @param ttl             Expiration time of single transaction in seconds
     * @tparam T Type of stream data
     */
-  def createStream[T](streamName: String,
+  def createStream[T](storageClient: StorageClient,
+                      streamName: String,
                       partitions: Int,
                       ttl: Int,
-                      description: String,
-                      metadataStorage: MetadataStorage,
-                      dataStorage: IStorage[T]): Stream[T] = {
+                      description: String): Stream[T] = {
 
-    Stream.createStream(metadataStorage.getSession(), streamName, partitions, ttl, description)
-    new Stream[T](streamName, partitions, metadataStorage, dataStorage, ttl, description)
+    Stream.createStream(storageClient, streamName, partitions, ttl, description)
+    new Stream[T](storageClient, streamName, partitions, ttl, description)
   }
 
 
   /**
     * Deleting concrete stream
     *
+    * @param storageClient   Storage of concrete stream
     * @param streamName      Name of the stream to delete
-    * @param metadataStorage Name of metadata storage where concrete stream exist
     */
-  def deleteStream(streamName: String, metadataStorage: MetadataStorage): Unit = {
-    Stream.deleteStream(metadataStorage.getSession(), streamName)
+  def deleteStream(storageClient: StorageClient, streamName: String): Unit = {
+    Stream.deleteStream(storageClient, streamName)
   }
 
 
   /**
     * Checking exist concrete stream or not
     *
+    * @param storageClient   Storage of concrete stream
     * @param streamName      Name of the stream to check
-    * @param metadataStorage Name of metadata storage where concrete stream exist
     */
-  def isExist(streamName: String, metadataStorage: MetadataStorage): Boolean =
-    Stream.isExist(metadataStorage.getSession(), streamName)
+  def doesExist(storageClient: StorageClient, streamName: String): Boolean =
+    Stream.isExist(storageClient, streamName)
 
 }

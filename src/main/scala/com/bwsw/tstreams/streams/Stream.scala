@@ -9,11 +9,11 @@ import scala.concurrent.duration._
   * Settings of stream in metadata storage
   *
   * @param name        Stream name
-  * @param partitions  Number of stream partitions
+  * @param partitionsCount  Number of stream partitions
   * @param ttl         Time in seconds of transaction expiration
   * @param description Some stream additional info
   */
-case class StreamSettings(name: String, partitions: Int, ttl: Int, description: String)
+case class StreamSettings(name: String, partitionsCount: Int, ttl: Int, description: String)
 
 object Stream {
 
@@ -27,7 +27,7 @@ object Stream {
     */
   def getStream(storageClient: StorageClient, name: String): Option[StreamSettings] = {
     val stream = Await.result(storageClient.client.getStream(name), OP_TIMEOUT)
-    Some(StreamSettings(name = stream.name, partitions = stream.partitions, ttl = stream.ttl, description = stream.description.fold("")(x => x)))
+    Some(StreamSettings(name = stream.name, partitionsCount = stream.partitions, ttl = stream.ttl, description = stream.description.fold("")(x => x)))
   }
 
   /**
@@ -79,14 +79,14 @@ object Stream {
 }
 
 /**
+  * @param storageClient   Client to storage
   * @param name            Name of the stream
   * @param partitionsCount Number of stream partitions
-  * @param storageClient   Client to storage
   * @param ttl             Time of transaction time expiration in seconds
   * @param description     Some additional info about stream
   * @tparam T Storage data type
   */
-class Stream[T](name: String, partitionsCount: Int, storageClient: StorageClient, ttl: Int, description: String) {
+class Stream[T](storageClient: StorageClient,name: String, partitionsCount: Int,  ttl: Int, description: String) {
   /**
     * Transaction minimum ttl time
     */
