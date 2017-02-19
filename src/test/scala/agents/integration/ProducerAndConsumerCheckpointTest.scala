@@ -41,7 +41,7 @@ class ProducerAndConsumerCheckpointTest extends FlatSpec with Matchers with Befo
 
 
   "producer, consumer" should "producer - generate many transactions, consumer - retrieve all of them with reinitialization after some time" in {
-    val dataToSend = (for (i <- 0 until 100) yield randomString).sorted
+    val dataToSend = (for (i <- 0 until 100) yield randomKeyspace).sorted
     val transactionsAmount = 1000
 
     (0 until transactionsAmount) foreach { _ =>

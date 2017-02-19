@@ -16,7 +16,6 @@ import testutils.TestUtils
 class CheckpointGroupAndSubscriberEventsTests extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
 
   System.setProperty("DEBUG", "true")
-  System.setProperty(org.slf4j.impl.SimpleLogger.DEFAULT_LOG_LEVEL_KEY, "DEBUG")
 
   f.setProperty(ConfigurationOptions.Stream.name, "test_stream")
     .setProperty(ConfigurationOptions.Stream.partitionsCount, 3)

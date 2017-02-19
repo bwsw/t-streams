@@ -1,50 +1,59 @@
 package entities
 
 import com.bwsw.tstreams.agents.consumer.ConsumerService
+import com.bwsw.tstreams.streams.StreamService
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
-import testutils.{LocalGeneratorCreator, RandomStringCreator, TestUtils}
+import testutils.{LocalGeneratorCreator, TestStorageServer, TestUtils}
 
 
 class ConsumerServiceTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
-  def randomVal: String = RandomStringCreator.randomAlphaString(10)
 
+  logger.info(s"to get storage server: ${TestUtils.getTmpDir()}")
+  val srv = TestStorageServer.get()
+  logger.info("to get storage client")
+  val storageClient = f.getStorageClient()
 
   "ConsumerEntity.saveSingleOffset() ConsumerEntity.exist() ConsumerEntity.getOffset()" should "create new consumer with particular offset," +
     " then check consumer existence, then get this consumer offset" in {
-    val consumerEntity = new ConsumerService(null)
-    val consumer = randomVal
-    val stream = randomVal
+    val consumerEntity = new ConsumerService(storageClient)
+    val consumer = getRandomString
+    val stream = getRandomString
+    StreamService.createStream(storageClient, stream, 1, 24 * 3600, "")
     val partition = 1
     val offset = LocalGeneratorCreator.getTransaction()
     consumerEntity.saveSingleOffset(consumer, stream, partition, offset)
     val checkExist: Boolean = consumerEntity.offsetExists(consumer, stream, partition)
     val retValOffset = consumerEntity.getLastSavedOffset(consumer, stream, partition)
-
+    println(retValOffset)
     val checkVal = checkExist && retValOffset == offset
     checkVal shouldBe true
   }
 
   "ConsumerEntity.exist()" should "return false if consumer not exist" in {
-    val consumerEntity = new ConsumerService(null)
-    val consumer = randomVal
-    val stream = randomVal
+    val consumerEntity = new ConsumerService(storageClient)
+    val consumer = getRandomString
+    val stream = getRandomString
+    StreamService.createStream(storageClient, stream, 1, 24 * 3600, "")
     val partition = 1
     consumerEntity.offsetExists(consumer, stream, partition) shouldEqual false
   }
 
   "ConsumerEntity.getOffset()" should "throw java.lang.IndexOutOfBoundsException if consumer not exist" in {
-    val consumerEntity = new ConsumerService(null)
-    val consumer = randomVal
-    val stream = randomVal
+    val consumerEntity = new ConsumerService(storageClient)
+    val consumer = getRandomString
+    val stream = getRandomString
+    StreamService.createStream(storageClient, stream, 1, 24 * 3600, "")
     val partition = 1
     consumerEntity.getLastSavedOffset(consumer, stream, partition) shouldBe -1
   }
 
   "ConsumerEntity.saveBatchOffset(); ConsumerEntity.getOffset()" should "create new consumer with particular offsets and " +
     "then validate this consumer offsets" in {
-    val consumerEntity = new ConsumerService(null)
-    val consumer = randomVal
-    val stream = randomVal
+    val consumerEntity = new ConsumerService(storageClient)
+    val consumer = getRandomString
+    val stream = getRandomString
+    StreamService.createStream(storageClient, stream, 1, 24 * 3600, "")
+
     val offsets = scala.collection.mutable.Map[Int, Long]()
     for (i <- 0 to 100)
       offsets(i) = LocalGeneratorCreator.getTransaction()
@@ -61,6 +70,7 @@ class ConsumerServiceTest extends FlatSpec with Matchers with BeforeAndAfterAll 
   }
 
   override def afterAll(): Unit = {
+    TestStorageServer.dispose(srv)
     onAfterAll()
   }
 }

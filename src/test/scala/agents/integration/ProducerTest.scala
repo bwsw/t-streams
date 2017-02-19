@@ -8,8 +8,6 @@ import testutils._
 
 class ProducerTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
 
-  System.setProperty("org.slf4j.simpleLogger.defaultLogLevel", "debug")
-  System.setProperty(org.slf4j.impl.SimpleLogger.DEFAULT_LOG_LEVEL_KEY, "DEBUG")
   System.setProperty("DEBUG", "true")
   System.setProperty("log4j.rootLogger", "DEBUG, STDOUT")
   System.setProperty("log4j.appender.STDOUT", "org.apache.log4j.ConsoleAppender")

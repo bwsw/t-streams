@@ -32,9 +32,9 @@ class ProducerWithManyOpenedTransactionsTest extends FlatSpec with Matchers with
   consumer.start
 
   "BasicProducer.newTransaction()" should "return BasicProducerTransaction instance" in {
-    val data1 = (for (i <- 0 until 10) yield randomString).sorted
-    val data2 = (for (i <- 0 until 10) yield randomString).sorted
-    val data3 = (for (i <- 0 until 10) yield randomString).sorted
+    val data1 = (for (i <- 0 until 10) yield randomKeyspace).sorted
+    val data2 = (for (i <- 0 until 10) yield randomKeyspace).sorted
+    val data3 = (for (i <- 0 until 10) yield randomKeyspace).sorted
     val transaction1: ProducerTransaction = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
     val transaction2: ProducerTransaction = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
     val transaction3: ProducerTransaction = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)

@@ -92,7 +92,10 @@ class TStreamsFactory() {
     * @param default assign it if the value received from options is null
     * @return
     */
-  private def pAsInt(key: String, default: Int = 0): Int = if (null == getProperty(key)) default else Integer.parseInt(getProperty(key).toString)
+  private def pAsInt(key: String, default: Int = 0): Int = if (null == getProperty(key)) default else getProperty(key).toString.toInt
+
+  private def pAsLong(key: String, default: Long = 0L): Long = if (null == getProperty(key)) default else getProperty(key).toString.toLong
+
 
   /**
     * variant method to get option as string with default value if null
@@ -106,6 +109,27 @@ class TStreamsFactory() {
     if (null == s)
       return default
     s.toString
+  }
+
+  def getStorageClient() = this.synchronized {
+    val clientOptions = new ClientOptions(connectionTimeoutMs = pAsInt(co.StorageClient.connectionTimeoutMs),
+      retryDelayMs = pAsInt(co.StorageClient.retryDelayMs),
+      threadPool = pAsInt(co.StorageClient.threadPool))
+
+    val authOptions = new AuthOptions(key = pAsString(co.StorageClient.Auth.key),
+      connectionTimeoutMs = pAsInt(co.StorageClient.Auth.connectionTimeoutMs),
+      retryDelayMs = pAsInt(co.StorageClient.Auth.retryDelayMs),
+      tokenConnectionTimeoutMs = pAsInt(co.StorageClient.Auth.tokenConnectionTimeoutMs),
+      tokenRetryDelayMs = pAsInt(co.StorageClient.Auth.tokenRetryDelayMs))
+
+    val zookeeperOptions = new ZookeeperOptions(endpoints = pAsString(co.StorageClient.Zookeeper.endpoints),
+      prefix = pAsString(co.StorageClient.Zookeeper.prefix),
+      sessionTimeoutMs = pAsInt(co.StorageClient.Zookeeper.sessionTimeoutMs),
+      connectionTimeoutMs = pAsInt(co.StorageClient.Zookeeper.connectionTimeoutMs),
+      retryDelayMs = pAsInt(co.StorageClient.Zookeeper.retryDelayMs),
+      retryCount = pAsInt(co.StorageClient.Zookeeper.retryCount))
+
+    new StorageClient(clientOptions = clientOptions, authOptions = authOptions, zookeeperOptions = zookeeperOptions)
   }
 
   /**
@@ -123,16 +147,14 @@ class TStreamsFactory() {
     streamDefaults.Stream.partitionsCount.check(pAsInt(co.Stream.partitionsCount, streamDefaults.Stream.partitionsCount.default))
     streamDefaults.Stream.ttlSec.check(pAsInt(co.Stream.ttlSec, streamDefaults.Stream.ttlSec.default))
 
-    val clientOptions = new ClientOptions()
-    val authOptions = new AuthOptions()
-    val zookeeperOptions = new ZookeeperOptions()
+
 
     // construct stream
     val stream = new Stream(
-      storageClient = new StorageClient(clientOptions = clientOptions, authOptions = authOptions, zookeeperOptions = zookeeperOptions),
+      storageClient = getStorageClient(),
       name = pAsString(co.Stream.name),
       partitionsCount = pAsInt(co.Stream.partitionsCount, streamDefaults.Stream.partitionsCount.default),
-      ttl = pAsInt(co.Stream.ttlSec, streamDefaults.Stream.ttlSec.default),
+      ttl = pAsLong(co.Stream.ttlSec, streamDefaults.Stream.ttlSec.default),
       description = pAsString(co.Stream.description, ""))
 
     stream
@@ -258,7 +280,6 @@ class TStreamsFactory() {
     }
 
     assert(transactionTtlMs >= transactionKeepAliveMs * 3)
-
 
 
     val po = new com.bwsw.tstreams.agents.producer.ProducerOptions(

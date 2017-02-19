@@ -25,8 +25,8 @@ trait TestUtils {
     * @return Alpha string
     */
   val id = TestUtils.moveId()
-  val randomString = TestUtils.getKeyspace(id)
-  val coordinationRoot = s"/${randomString}"
+  val randomKeyspace = TestUtils.getKeyspace(id)
+  val coordinationRoot = s"/${randomKeyspace}"
 
   val zookeeperPort = TestUtils.ZOOKEEPER_PORT
 
@@ -43,6 +43,7 @@ trait TestUtils {
   val f = new TStreamsFactory()
   f.setProperty(ConfigurationOptions.Coordination.prefix, coordinationRoot)
     .setProperty(ConfigurationOptions.Coordination.endpoints, s"localhost:$zookeeperPort")
+    .setProperty(ConfigurationOptions.StorageClient.Zookeeper.endpoints, s"localhost:$zookeeperPort")
     .setProperty(ConfigurationOptions.Stream.name, "test-stream")
 
   val curatorClient = CuratorFrameworkFactory.builder()
@@ -53,8 +54,12 @@ trait TestUtils {
     .connectString(s"127.0.0.1:$zookeeperPort").build()
   curatorClient.start()
 
+  if (curatorClient.checkExists().forPath("/tts") == null)
+    curatorClient.create().forPath("/tts")
+
   removeZkMetadata(f.getProperty(ConfigurationOptions.Coordination.prefix).toString)
 
+  def getRandomString: String = RandomStringCreator.randomAlphaString(10)
 
   /**
     * Sorting checker
@@ -116,7 +121,9 @@ object TestUtils {
     val rid = id.incrementAndGet()
     rid
   }
+
   def getKeyspace(id: Int): String = "tk_" + id.toString
+
   def getTmpDir(): String = Files.createTempDir().toString
 
   private val zk = new ZookeeperTestServer(ZOOKEEPER_PORT, Files.createTempDir().toString)

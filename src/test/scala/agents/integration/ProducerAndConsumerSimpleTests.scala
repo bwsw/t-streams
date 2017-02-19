@@ -40,7 +40,7 @@ class ProducerAndConsumerSimpleTests extends FlatSpec with Matchers with BeforeA
   "producer, consumer" should "producer - generate one transaction, consumer - retrieve it with getAll method" in {
     val totalDataInTransaction = 10
     val producerTransaction = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
-    val sendData = (for (part <- 0 until totalDataInTransaction) yield "data_part_" + randomString).sorted
+    val sendData = (for (part <- 0 until totalDataInTransaction) yield "data_part_" + randomKeyspace).sorted
     sendData.foreach { x =>
       producerTransaction.send(x.getBytes())
     }
@@ -61,7 +61,7 @@ class ProducerAndConsumerSimpleTests extends FlatSpec with Matchers with BeforeA
   "producer, consumer" should "producer - generate one transaction, consumer - retrieve it using iterator" in {
     val totalDataInTransaction = 10
     val producerTransaction = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
-    val sendData = (for (part <- 0 until totalDataInTransaction) yield "data_part_" + randomString).sorted
+    val sendData = (for (part <- 0 until totalDataInTransaction) yield "data_part_" + randomKeyspace).sorted
     sendData.foreach { x =>
       producerTransaction.send(x.getBytes())
     }
@@ -89,7 +89,7 @@ class ProducerAndConsumerSimpleTests extends FlatSpec with Matchers with BeforeA
   "producer, consumer" should "producer - generate some set of transactions, consumer - retrieve them all" in {
     val transactionsAmount = 100
     val totalDataInTransaction = 10
-    val sendData = (for (part <- 0 until totalDataInTransaction) yield "data_part_" + randomString).sorted
+    val sendData = (for (part <- 0 until totalDataInTransaction) yield "data_part_" + randomKeyspace).sorted
 
     (0 until transactionsAmount).foreach { _ =>
       val producerTransaction = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)

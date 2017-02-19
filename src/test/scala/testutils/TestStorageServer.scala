@@ -1,5 +1,7 @@
 package testutils
 
+import java.util.concurrent.CountDownLatch
+
 import com.bwsw.tstreamstransactionserver.netty.server.Server
 import com.bwsw.tstreamstransactionserver.options.{ServerBuilder, StorageOptions, ZookeeperOptions}
 
@@ -13,7 +15,12 @@ object TestStorageServer {
 
   def get(): Server = {
     val transactionServer = serverBuilder.withServerStorageOptions(new StorageOptions(path = TestUtils.getTmpDir())).build()
-    transactionServer.start()
+    val l = new CountDownLatch(1)
+    new Thread(() => {
+      l.countDown()
+      transactionServer.start()
+    }).start()
+    l.await()
     transactionServer
   }
 

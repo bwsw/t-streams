@@ -43,8 +43,8 @@ class ProducerAndConsumerLongLastingTransactionsTests extends FlatSpec with Matc
     " than the first one but with pause at the very beginning, consumer - retrieve all transactions which was sent" in {
     val timeoutForWaiting = 120
     val totalElementsInTransaction = 10
-    val dataToSend1: List[String] = (for (part <- 0 until totalElementsInTransaction) yield "data_to_send_pr1_" + randomString).toList.sorted
-    val dataToSend2: List[String] = (for (part <- 0 until totalElementsInTransaction) yield "data_to_send_pr2_" + randomString).toList.sorted
+    val dataToSend1: List[String] = (for (part <- 0 until totalElementsInTransaction) yield "data_to_send_pr1_" + randomKeyspace).toList.sorted
+    val dataToSend2: List[String] = (for (part <- 0 until totalElementsInTransaction) yield "data_to_send_pr2_" + randomKeyspace).toList.sorted
 
     val waitFirstAtSubscriber = new CountDownLatch(1)
     val waitSecondAtSubscriber = new CountDownLatch(1)
