@@ -16,14 +16,6 @@ T-streams implements messaging for Producers and Consumers which is critical for
 
 Web-site: http://t-streams.com/
 
-T-streams library uses next data management systems for operation:
-
- * Apache Cassandra – metadata backend, data backend;
- * Aerospike – data backend (preferred);
- * Redis/Apache Zookeeper – distributed lock management and pub-sub features. Redis is preferred.
-
-Data backends are pluggable and can be developed for other key-value storages, e.g. Redis or even Ceph, AWS S3, etc.
-
 ## T-streams library fits good if…
 
 T-streams library is designed to solve the problems, mentioned before and provides following features:
