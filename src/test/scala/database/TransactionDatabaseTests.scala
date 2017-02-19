@@ -33,14 +33,6 @@ class TransactionDatabaseTests extends FlatSpec with Matchers with BeforeAndAfte
     })
   }
 
-  it should "delete transactions from the db" in {
-    val transactionID = LocalGeneratorCreator.getTransaction()
-    val rec = TransactionRecord(partition = 0, transactionID = transactionID, count = 1, ttl = 1, state = TransactionStates.Opened)
-    tsdb.put(rec, true)(t => {
-      tsdb.get(0, transactionID).get.transactionID shouldBe transactionID
-    })
-  }
-
   it should "handle big range scans without problems" in {
     val TOTAL = 1000
     val putCounter = new CountDownLatch(TOTAL)
