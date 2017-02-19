@@ -9,11 +9,12 @@ import com.bwsw.tstreams.agents.producer.NewTransactionProducerPolicy.ProducerPo
 import com.bwsw.tstreams.common._
 import com.bwsw.tstreams.coordination.client.BroadcastCommunicationClient
 import com.bwsw.tstreams.coordination.messages.state.{TransactionStateMessage, TransactionStatus}
-import com.bwsw.tstreams.streams.Stream
+import com.bwsw.tstreams.streams.{Stream, TransactionDatabase, TransactionRecord}
 import org.apache.curator.framework.CuratorFrameworkFactory
 import org.apache.curator.retry.ExponentialBackoffRetry
 import org.apache.zookeeper.KeeperException
 import org.slf4j.LoggerFactory
+import transactionService.rpc.TransactionStates
 
 import scala.util.control.Breaks._
 
@@ -43,7 +44,7 @@ class Producer(var name: String,
     this.name = name
   }
 
-  val tsdb = new TransactionDatabase(stream.metadataStorage.getSession(), stream.name)
+  val tsdb = new TransactionDatabase(stream.storageClient, stream.name)
 
 
   // short key
@@ -298,9 +299,9 @@ class Producer(var name: String,
     })
 
     val transactionRecord = TransactionRecord(partition = partition, transactionID = transactionID, count = -1,
-      ttl = producerOptions.transactionTtlMs)
+      ttl = producerOptions.transactionTtlMs, state = TransactionStates.Opened)
 
-    tsdb.put(transaction = transactionRecord, asynchronousExecutor = p2pAgent.getCassandraAsyncExecutor(partition)) (rec => {
+    tsdb.put(transaction = transactionRecord) (rec => {
       p2pAgent.submitPipelinedTaskToMaterializeExecutor(partition, onComplete)
     })
 
@@ -375,4 +376,6 @@ class Producer(var name: String,
       Producer.logger.debug("End handling MaterializeRequest")
 
   }
+
+  override def getStorageClient(): StorageClient = stream.storageClient
 }

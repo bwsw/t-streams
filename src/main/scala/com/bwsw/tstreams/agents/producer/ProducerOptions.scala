@@ -7,18 +7,18 @@ import com.bwsw.tstreams.generator.ITransactionGenerator
 import scala.language.existentials
 
 /**
-  * @param transactionTtlMs               Single transaction live time
+  * @param transactionTtlMs       Single transaction live time
   * @param transactionKeepAliveMs Update transaction interval which is used to keep alive transaction in time when it is opened
-  * @param writePolicy                  Strategy for selecting next partition
-  * @param batchSize                    Insertion Type (only BatchInsert and SingleElementInsert are allowed now)
-  * @param transactionGenerator         Generator for generating IDs
+  * @param writePolicy            Strategy for selecting next partition
+  * @param batchSize              Insertion Type (only BatchInsert and SingleElementInsert are allowed now)
+  * @param transactionGenerator   Generator for generating IDs
   */
-class ProducerOptions(val transactionTtlMs: Int,
-                         val transactionKeepAliveMs: Int,
-                         val writePolicy: AbstractPolicy,
-                         val batchSize: Int,
-                         val transactionGenerator: ITransactionGenerator,
-                         val coordinationOptions: CoordinationOptions) {
+class ProducerOptions(val transactionTtlMs: Long,
+                      val transactionKeepAliveMs: Int,
+                      val writePolicy: AbstractPolicy,
+                      val batchSize: Int,
+                      val transactionGenerator: ITransactionGenerator,
+                      val coordinationOptions: CoordinationOptions) {
 
   /**
     * Transaction minimum ttl time
@@ -44,13 +44,13 @@ class ProducerOptions(val transactionTtlMs: Int,
 
 
 /**
-  * @param zkEndpoints                 Zk hosts to connect
-  * @param zkPrefix              Zk root path for all metadata
-  * @param zkSessionTimeoutMs        Zk session timeout
-  * @param transport               Transport providing interaction between agents
-  * @param threadPoolSize        Thread pool amount which is used by
-  *                                PeerAgent
-  *                                by default (threads_amount == used_producer_partitions)
+  * @param zkEndpoints        Zk hosts to connect
+  * @param zkPrefix           Zk root path for all metadata
+  * @param zkSessionTimeoutMs Zk session timeout
+  * @param transport          Transport providing interaction between agents
+  * @param threadPoolSize     Thread pool amount which is used by
+  *                           PeerAgent
+  *                           by default (threads_amount == used_producer_partitions)
   */
 class CoordinationOptions(val zkEndpoints: String,
                           val zkPrefix: String,

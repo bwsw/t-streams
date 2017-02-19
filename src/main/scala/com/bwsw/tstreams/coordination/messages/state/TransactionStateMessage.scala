@@ -13,7 +13,7 @@ import com.bwsw.tstreams.coordination.messages.state.TransactionStatus.ProducerT
   * @param orderID
   */
 case class TransactionStateMessage(transactionID: Long,
-                                   ttl: Int,
+                                   ttl: Long,
                                    status: ProducerTransactionStatus,
                                    partition: Int,
                                    masterID: Int,

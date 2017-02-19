@@ -311,6 +311,4 @@ class PeerAgent(curatorClient: CuratorFramework,
     executorGraphs(execNum).submitToNewTransaction("<NewTransactionTask>", task)
   }
 
-  def getCassandraAsyncExecutor(partition: Int) =
-    executorGraphs(partitionsToExecutors(partition)).getCassandra()
 }

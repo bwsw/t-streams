@@ -6,12 +6,7 @@ import scala.collection.mutable.ListBuffer
 import scala.concurrent.Await
 import scala.concurrent.duration._
 
-class RPCConsumerTransaction(s: String, n: String, p: Int, id: Long) extends transactionService.rpc.ConsumerTransaction {
-  override def stream: String = s
-  override def name: String = n
-  override def partition: Int = p
-  override def transactionID: Long = id
-}
+
 /**
   * Consumer entity for interact with consumers metadata
   *

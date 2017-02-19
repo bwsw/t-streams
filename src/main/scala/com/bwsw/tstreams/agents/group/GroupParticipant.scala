@@ -2,6 +2,8 @@ package com.bwsw.tstreams.agents.group
 
 import java.util.concurrent.locks.ReentrantLock
 
+import com.bwsw.tstreams.common.StorageClient
+
 /**
   * Trait which can be implemented by any producer/consumer to apply group checkpoint
   */
@@ -18,6 +20,8 @@ trait GroupParticipant {
     * Info to commit
     */
   def getCheckpointInfoAndClear(): List[CheckpointInfo]
+
+  def getStorageClient(): StorageClient
 
 }
 

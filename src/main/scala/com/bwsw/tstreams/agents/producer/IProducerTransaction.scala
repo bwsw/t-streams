@@ -8,7 +8,7 @@ import com.bwsw.tstreams.agents.group.ProducerCheckpointInfo
 trait IProducerTransaction {
   def awaitMaterialized(): Unit
 
-  def send(obj: T): Unit
+  def send(obj: Array[Byte]): Unit
 
   def finalizeDataSend(): Unit
 

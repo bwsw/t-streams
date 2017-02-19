@@ -27,7 +27,7 @@ sealed trait CheckpointInfo
   * @param totalCnt       Total info in transaction
   * @param ttl            Transaction time to live in seconds
   */
-case class ProducerCheckpointInfo(transactionRef: ProducerTransaction[_],
+case class ProducerCheckpointInfo(transactionRef: ProducerTransaction,
                                   agent: PeerAgent,
                                   checkpointEvent: TransactionStateMessage,
                                   streamName: String,

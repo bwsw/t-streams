@@ -4,8 +4,16 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.locks.ReentrantLock
 
-import com.bwsw.tstreams.common.{FirstFailLockableTaskExecutor, GeneralOptions, LockUtil}
+import com.bwsw.tstreams.agents.consumer.RPCConsumerTransaction
+import com.bwsw.tstreams.agents.producer.RPCProducerTransaction
+import com.bwsw.tstreams.common.{FirstFailLockableTaskExecutor, GeneralOptions, LockUtil, StorageClient}
 import org.slf4j.LoggerFactory
+import transactionService.rpc.TransactionStates
+
+import scala.collection.mutable.ListBuffer
+import scala.concurrent.Await
+import scala.concurrent.duration._
+
 
 object CheckpointGroup {
   var SHUTDOWN_WAIT_MAX_SECONDS = GeneralOptions.SHUTDOWN_WAIT_MAX_SECONDS
@@ -20,21 +28,11 @@ class CheckpointGroup(val executors: Int = 1) {
   /**
     * Group of agents (producers/consumer)
     */
-  private var agents        = scala.collection.mutable.Map[String, GroupParticipant]()
-  private val lockTimeout   = (CheckpointGroup.LOCK_TIMEOUT_SECONDS, TimeUnit.SECONDS)
-  private val lock          = new ReentrantLock()
-  private val executorPool  = new FirstFailLockableTaskExecutor("CheckpointGroup-Workers", executors)
-  private val isStopped     = new AtomicBoolean(false)
-
-  /**
-    * Validate that all agents has the same metadata storage
-    */
-  private def checkIfAgentsUseSameMetadataStorage() = {
-    var set = Set[String]()
-    agents.map(x => x._2.getMetadataRef().id).foreach(id => set += id)
-    if (set.size != 1)
-      throw new IllegalStateException("All agents in a group must use the same metadata storage.")
-  }
+  private var agents = scala.collection.mutable.Map[String, GroupParticipant]()
+  private val lockTimeout = (CheckpointGroup.LOCK_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+  private val lock = new ReentrantLock()
+  private val executorPool = new FirstFailLockableTaskExecutor("CheckpointGroup-Workers", executors)
+  private val isStopped = new AtomicBoolean(false)
 
   /**
     * Add new agent in group
@@ -49,7 +47,6 @@ class CheckpointGroup(val executors: Int = 1) {
         throw new IllegalArgumentException(s"Agent with specified name ${agent.getAgentName} is already in the group. Names of added agents must be unique.")
       }
       agents += ((agent.getAgentName, agent))
-      checkIfAgentsUseSameMetadataStorage()
     })
   }
 
@@ -94,25 +91,22 @@ class CheckpointGroup(val executors: Int = 1) {
   /**
     * Group agents commit
     *
-    * @param info Info to commit
-    *             (used only for consumers now; producers is not atomic)
+    * @param checkpointRequests Info to commit
+    *                           (used only for consumers now; producers is not atomic)
     */
-  private def doGroupCheckpoint(metadata: MetadataStorage, info: List[CheckpointInfo]): Unit = {
-    val batchStatement = new BatchStatement()
-    val session = metadata.getSession()
-    val requests = RequestsRepository.getStatements(session)
-    info foreach {
-      case ConsumerCheckpointInfo(name, stream, partition, offset) =>
-        batchStatement.add(requests.consumerCheckpointStatement.bind(name, stream, new Integer(partition), new java.lang.Long(offset)))
+  private def doGroupCheckpoint(storageClient: StorageClient, checkpointRequests: List[CheckpointInfo]): Unit = {
+    val producerRequests = ListBuffer[RPCProducerTransaction]()
+    val consumerRequests = ListBuffer[RPCConsumerTransaction]()
+
+    checkpointRequests foreach {
+      case ConsumerCheckpointInfo(consumerName, streamName, partition, offset) =>
+        consumerRequests.append(new RPCConsumerTransaction(streamName, consumerName, partition, offset))
 
       case ProducerCheckpointInfo(_, _, _, streamName, partition, transaction, totalCnt, ttl) =>
-
-        val interval = new java.lang.Long(TransactionDatabase.getAggregationInterval(transaction))
-
-        batchStatement.add(requests.commitLogPutStatement.bind(streamName, new Integer(partition),
-          interval , new java.lang.Long(transaction), new Integer(totalCnt), new Integer(ttl)))
+        producerRequests.append(new RPCProducerTransaction(streamName, partition, transaction, ttl, TransactionStates.Checkpointed, totalCnt))
     }
-    metadata.getSession().execute(batchStatement)
+
+    Await.result(storageClient.client.putTransactions(producerRequests, consumerRequests), 1.minute)
   }
 
   /**
@@ -139,7 +133,7 @@ class CheckpointGroup(val executors: Int = 1) {
       }.reduceRight((l1, l2) => l1 ++ l2)
 
       //assume all agents use the same metadata entity
-      doGroupCheckpoint(agents.head._2.getMetadataRef(), checkpointStateInfo)
+      doGroupCheckpoint(agents.head._2.getStorageClient, checkpointStateInfo)
 
       // do publish post events for all producers
       publishCheckpointEventForAllProducers(checkpointStateInfo)
