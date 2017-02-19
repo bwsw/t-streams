@@ -1,15 +1,39 @@
-package services
+package entities
 
-import com.bwsw.tstreams.common.StorageClient
 import com.bwsw.tstreams.streams.{Stream, StreamService}
+import com.bwsw.tstreamstransactionserver.exception.Throwables.StreamNotExist
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import testutils.{TestStorageServer, TestUtils}
 
 
 class TStreamServiceTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
 
-  val storageClient: StorageClient = null
-  val storageServer = TestStorageServer.get()
+  val srv = TestStorageServer.get()
+  val storageClient = f.getStorageClient()
+
+  it should "check correctly dummy absent streams" in {
+    StreamService.checkExists(storageClient, "dummytrashy") shouldBe false
+  }
+
+  it should "create new stream" in {
+    val name = getRandomString
+    StreamService.createStream(storageClient, name, 1, 24 * 3600, "sample-desc")
+
+    val s = StreamService.loadStream(storageClient, name)
+
+    s.name shouldBe name
+    s.description shouldBe "sample-desc"
+    s.ttl shouldBe 24 * 3600
+    s.partitionsCount shouldBe 1
+  }
+
+  it should "delete created stream" in {
+    val name = getRandomString
+    StreamService.createStream(storageClient, name, 1, 24 * 3600, "sample-desc")
+    StreamService.checkExists(storageClient, name) shouldBe true
+    StreamService.deleteStream(storageClient, name)
+    StreamService.checkExists(storageClient, name) shouldBe false
+  }
 
   "BasicStreamService.createStream()" should "create stream" in {
     val name = getRandomString
@@ -81,7 +105,7 @@ class TStreamServiceTest extends FlatSpec with Matchers with BeforeAndAfterAll w
   "BasicStreamService.loadStream()" should "throw exception if stream not exist" in {
     val name = getRandomString
 
-    intercept[IllegalArgumentException] {
+    intercept[StreamNotExist] {
       StreamService.loadStream(storageClient = storageClient,name)
     }
   }
@@ -98,21 +122,18 @@ class TStreamServiceTest extends FlatSpec with Matchers with BeforeAndAfterAll w
 
     StreamService.deleteStream(storageClient = storageClient,name)
 
-    intercept[IllegalArgumentException] {
+    intercept[StreamNotExist] {
       StreamService.loadStream(storageClient = storageClient, name)
     }
   }
 
   "BasicStreamService.deleteStream()" should "throw exception if stream was not created before" in {
     val name = getRandomString
-
-    intercept[IllegalArgumentException] {
-      StreamService.deleteStream(storageClient = storageClient, name)
-    }
+    StreamService.deleteStream(storageClient = storageClient, name)
   }
 
   override def afterAll(): Unit = {
-    TestStorageServer.dispose(storageServer)
+    TestStorageServer.dispose(srv)
     onAfterAll()
   }
 }

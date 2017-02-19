@@ -22,18 +22,10 @@ object StreamService {
     * @return Stream instance
     */
   def loadStream(storageClient: StorageClient, streamName: String): Stream = {
-    val settingsOpt: Option[StreamSettings] = Stream.getStream(storageClient, streamName)
-    if (settingsOpt.isEmpty)
-      throw new IllegalArgumentException("stream with this name can not be loaded")
-    else {
-      val settings = settingsOpt.get
-      val (name: String, partitionsCount: Int, ttl: Int, description: String) =
-        (settings.name, settings.partitionsCount, settings.ttl, settings.description)
+    val settings = Stream.getStream(storageClient, streamName)
 
-      val stream: Stream = new Stream(storageClient = storageClient, name = name, partitionsCount = partitionsCount,
-        ttl = ttl, description = description)
-      stream
-    }
+    new Stream(storageClient = storageClient, name = settings.name, partitionsCount = settings.partitionsCount,
+      ttl = settings.ttl, description = settings.description)
   }
 
   /**
@@ -47,7 +39,8 @@ object StreamService {
     */
   def createStream(storageClient: StorageClient, streamName: String, partitionsCount: Int, ttl: Long, description: String): Stream = {
 
-    Stream.createStream(storageClient, streamName, partitionsCount, ttl, description)
+    if (Stream.createStream(storageClient, streamName, partitionsCount, ttl, description) == false)
+      throw new IllegalArgumentException(s"Stream ${streamName} already exists.")
     new Stream(storageClient, streamName, partitionsCount, ttl, description)
   }
 

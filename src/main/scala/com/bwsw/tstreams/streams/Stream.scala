@@ -26,9 +26,9 @@ object Stream {
     * @param name Stream name to fetch from database
     * @return StreamSettings
     */
-  def getStream(storageClient: StorageClient, name: String): Option[StreamSettings] = {
+  def getStream(storageClient: StorageClient, name: String): StreamSettings = {
     val stream = Await.result(storageClient.client.getStream(name), OP_TIMEOUT)
-    Some(StreamSettings(name = stream.name, partitionsCount = stream.partitions, ttl = stream.ttl, description = stream.description.fold("")(x => x)))
+    StreamSettings(name = stream.name, partitionsCount = stream.partitions, ttl = stream.ttl, description = stream.description.fold("")(x => x))
   }
 
   /**
@@ -40,8 +40,8 @@ object Stream {
     * @param description Stream arbitrary description and com.bwsw.tstreams.metadata, etc.
     * @return StreamSettings
     */
-  def createStream(storageClient: StorageClient, name: String, partitions: Int, ttl: Long, description: String): Unit = {
-    //TODO: fixit
+  def createStream(storageClient: StorageClient, name: String, partitions: Int, ttl: Long, description: String): Boolean = {
+    //TODO: fixit Long -> Int (TTL)
     Await.result(storageClient.client.putStream(name, partitions, Some(description), ttl.toInt), OP_TIMEOUT)
   }
 
