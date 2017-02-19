@@ -2,12 +2,24 @@ package com.bwsw.tstreams.agents.consumer
 
 import com.bwsw.tstreams.common.StorageClient
 
+import scala.collection.mutable.ListBuffer
+import scala.concurrent.Await
+import scala.concurrent.duration._
+
+class RPCConsumerTransaction(s: String, n: String, p: Int, id: Long) extends transactionService.rpc.ConsumerTransaction {
+  override def stream: String = s
+  override def name: String = n
+  override def partition: Int = p
+  override def transactionID: Long = id
+}
 /**
   * Consumer entity for interact with consumers metadata
   *
-  * @param storageClient    Session with metadata
+  * @param storageClient Session with metadata
   */
 class ConsumerService(storageClient: StorageClient) {
+
+
 
   /**
     * Checking exist or not concrete consumer
@@ -16,51 +28,46 @@ class ConsumerService(storageClient: StorageClient) {
     * @return Exist or not concrete consumer
     */
   def offsetExists(consumerName: String, stream: String, partition: Int): Boolean = {
-    val boundStatement = requests.consumerGetCheckpointStatement.bind(consumerName, stream, new Integer(partition))
-    Option(session.execute(boundStatement).one()).isDefined
+    Await.result(storageClient.client.getConsumerState((consumerName, stream, partition)), 1.minute) > 0
   }
 
   /**
     * Saving offset batch
     *
-    * @param name                        Name of the consumer
+    * @param consumerName                        Name of the consumer
     * @param stream                      Name of the specific stream
     * @param partitionAndLastTransaction Set of partition and last transaction pairs to save
     */
-  def saveBatchOffset(name: String, stream: String, partitionAndLastTransaction: scala.collection.mutable.Map[Int, Long]): Unit = {
-    val batchStatement = new BatchStatement()
-    partitionAndLastTransaction.map { case (partition, lastTransaction) =>
-      val values: List[AnyRef] = List(name, stream, new Integer(partition), new java.lang.Long(lastTransaction))
-      val boundStatement = requests.consumerCheckpointStatement.bind(values: _*)
-      batchStatement.add(boundStatement)
-    }
-    session.execute(batchStatement)
+  def saveBatchOffset(consumerName: String, stream: String, partitionAndLastTransaction: scala.collection.mutable.Map[Int, Long]): Unit = {
+    val batch = ListBuffer[transactionService.rpc.ConsumerTransaction]()
+    batch.appendAll(partitionAndLastTransaction.map { case (partition, offset) =>
+      new RPCConsumerTransaction(consumerName, stream, partition, offset)
+    })
+
+    Await.result(storageClient.client.putTransactions(Nil, batch), 1.minute)
   }
 
   /**
     * Saving single offset
     *
-    * @param name      Name of the specific consumer
+    * @param consumerName      Name of the specific consumer
     * @param stream    Name of the specific stream
     * @param partition Name of the specific partition
     * @param offset    Offset to save
     */
-  def saveSingleOffset(name: String, stream: String, partition: Int, offset: Long): Unit = {
-    val values: List[AnyRef] = List(name, stream, new Integer(partition), new java.lang.Long(offset))
-    session.execute(requests.consumerCheckpointStatement.bind(values: _*))
+  def saveSingleOffset(consumerName: String, stream: String, partition: Int, offset: Long): Unit = {
+    Await.result(storageClient.client.putTransaction(new RPCConsumerTransaction(consumerName, stream, partition, offset)), 1.minute)
   }
 
   /**
     * Retrieving specific offset for particular consumer
     *
-    * @param name      Name of the specific consumer
+    * @param consumerName      Name of the specific consumer
     * @param stream    Name of the specific stream
     * @param partition Name of the specific partition
     * @return Offset
     */
-  def getLastSavedOffset(name: String, stream: String, partition: Int): Long = {
-    val values = List(name, stream, new Integer(partition))
-    Option(session.execute(requests.consumerGetCheckpointStatement.bind(values: _*)).one())
-      .fold(-1L)(row => row.getLong("last_transaction"))
+  def getLastSavedOffset(consumerName: String, stream: String, partition: Int): Long = {
+    Await.result(storageClient.client.getConsumerState((consumerName, stream, partition)), 1.minute)
   }
 }

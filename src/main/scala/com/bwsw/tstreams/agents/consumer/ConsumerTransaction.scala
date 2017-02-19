@@ -1,6 +1,9 @@
 package com.bwsw.tstreams.agents.consumer
 
 import scala.collection.mutable
+import scala.concurrent.Await
+import scala.concurrent.duration._
+
 
 /**
   *
@@ -10,9 +13,9 @@ import scala.collection.mutable
   * @param ttl
   */
 class ConsumerTransaction(partition: Int,
-                             transactionID: Long,
-                             count: Int,
-                             ttl: Int) {
+                          transactionID: Long,
+                          count: Int,
+                          ttl: Long) {
 
   override def toString(): String = {
     s"consumer.Transaction(id=$transactionID,partition=$partition, count=$count, ttl=$ttl)"
@@ -30,25 +33,13 @@ class ConsumerTransaction(partition: Int,
       throw new IllegalStateException("The transaction is already attached to consumer")
   }
 
-  /**
-    * Return transaction ID
-    */
   def getTransactionID() = transactionID
 
-  /**
-    * Return transaction partition
-    */
-  def getPartition(): Int = partition
+  def getPartition() = partition
 
-  /**
-    * Return count of items in transaction
-    */
-  def getCount(): Int = count
+  def getCount() = count
 
-  /**
-    * Return TTL
-    */
-  def getTTL(): Int = ttl
+  def getTTL() = ttl
 
   /**
     * Transaction data pointer
@@ -58,7 +49,7 @@ class ConsumerTransaction(partition: Int,
   /**
     * Buffer to preload some amount of current transaction data
     */
-  private var buffer: scala.collection.mutable.Queue[Array[Byte]] = null
+  private val buffer = mutable.Queue[Array[Byte]]()
 
   /**
     * @return Next piece of data from current transaction
@@ -72,9 +63,10 @@ class ConsumerTransaction(partition: Int,
       throw new IllegalStateException("There is no data to receive from data storage")
 
     //try to update buffer
-    if (buffer == null || buffer.isEmpty) {
-      val newCount = min2(cnt + consumer.options.dataPreload, count - 1)
-      buffer = consumer.stream.dataStorage.get(consumer.stream.name, partition, transactionID, cnt, newCount)
+    if (buffer.isEmpty) {
+      val newCount = (cnt + consumer.options.dataPreload).min(count - 1)
+      buffer ++= Await.result(consumer.stream.storageClient.client.getTransactionData(
+        new RPCConsumerTransaction(consumer.stream.name, consumer.name, partition, transactionID), cnt, newCount), 1.minute)
       cnt = newCount + 1
     }
 
@@ -102,20 +94,10 @@ class ConsumerTransaction(partition: Int,
     * @return All consumed transaction
     */
   def getAll() = this.synchronized {
-
     if (consumer == null)
       throw new IllegalArgumentException("Transaction is not yet attached to consumer. Attach it first.")
-
-    val data: mutable.Queue[Array[Byte]] = consumer.stream.dataStorage.get(consumer.stream.name, partition, transactionID, cnt, count - 1)
-    data
+    mutable.Queue[Array[Byte]]() ++ Await.result(consumer.stream.storageClient.client.getTransactionData(
+      new RPCConsumerTransaction(consumer.stream.name, consumer.name, partition, transactionID), cnt, count-1), 1.minute)
   }
 
-  /**
-    * Helper function to find min value
-    *
-    * @param a First value
-    * @param b Second value
-    * @return Min value
-    */
-  private def min2(a: Int, b: Int): Int = if (a < b) a else b
 }

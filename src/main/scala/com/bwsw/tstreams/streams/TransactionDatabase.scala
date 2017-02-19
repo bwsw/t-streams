@@ -22,9 +22,8 @@ object TransactionDatabase {
   /* second */
   var ACTIVITY_CACHE_SIZE = 10000
 
-  var READ_SINGLE_OP_TIMEOUT = 1.minute
-  var READ_MULTIPLE_OP_TIMEOUT = 10.minute
-
+  var READ_SINGLE_OP_TIMEOUT = 10.second
+  var READ_MULTIPLE_OP_TIMEOUT = 1.minute
 
   def getAggregationInterval(transactionID: Long, interval: Int = TransactionDatabase.AGGREGATION_INTERVAL): Long =
     Math.floorDiv(transactionID, interval)
@@ -42,20 +41,23 @@ class TransactionDatabase(storageClient: StorageClient, stream: String) {
 
   def getSession() = storageClient
 
-  def put[T](transaction: TransactionRecord)(onComplete: TransactionRecord => T) = {
+  def put[T](transaction: TransactionRecord)(onComplete: ProducerTransaction => T) = {
     val s = stream
-    val f = storageClient.client.putTransaction(new ProducerTransaction {
+
+    val tr = new ProducerTransaction {
       override def stream: String = s
       override def partition: Int = transaction.partition
       override def transactionID: Long = transaction.transactionID
       override def state: TransactionStates = transaction.state
       override def quantity: Int = transaction.count
       override def keepAliveTTL: Long = transaction.ttl
-    })
+    }
+
+    val f = storageClient.client.putTransaction(tr)
 
     f onComplete {
-      case Success(res) => res
-      case Failure(t) => throw t
+      case Success(res) => onComplete(tr)
+      case Failure(reason) => throw reason
     }
   }
 

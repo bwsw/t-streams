@@ -22,13 +22,12 @@ object Consumer {
   * @param options Basic consumer options
   */
 class Consumer(val name: String,
-                  val stream: Stream,
-                  val options: ConsumerOptions)
-  extends GroupParticipant
-    with TransactionOperator {
+               val stream: Stream,
+               val options: ConsumerOptions)
+  extends GroupParticipant with TransactionOperator {
 
   val tsdb = new TransactionDatabase(stream.storageClient, stream.name)
-  val consumerService = new ConsumerService(stream.metadataStorage.getSession())
+  val consumerService = new ConsumerService(stream.storageClient)
 
   /**
     * Temporary checkpoints (will be cleared after every checkpoint() invokes)
@@ -78,7 +77,7 @@ class Consumer(val name: String,
 
   private def loadNextTransactionsForPartition(partition: Int, currentOffset: Long): mutable.Queue[ConsumerTransaction] = {
     var count: Int = 0
-    val transactionsRecords = tsdb.takeWhileForward(partition, currentOffset + 1, options.transactionGenerator.getTransaction()) (r => {
+    val transactionsRecords = tsdb.takeWhileForward(partition, currentOffset + 1, options.transactionGenerator.getTransaction())(r => {
       count += 1
       count <= options.transactionsPreload
     })
@@ -126,7 +125,7 @@ class Consumer(val name: String,
 
     isStarted.set(true)
 
-    if(options.checkpointAtStart) checkpoint()
+    if (options.checkpointAtStart) checkpoint()
 
   }
 
@@ -189,17 +188,16 @@ class Consumer(val name: String,
 
     val transactionFrom = new java.lang.Long(options.transactionGenerator.getTransaction())
     val transactionsRecord = tsdb.searchBackward(new Integer(partition),
-      transactionFrom, currentOffsets(partition)) (rec => rec.count > 0)
+      transactionFrom, currentOffsets(partition))(rec => rec.count > 0)
     transactionsRecord
       .map(rec => new ConsumerTransaction(partition = partition, transactionID = rec.transactionID, count = rec.count, ttl = rec.ttl))
   }
 
 
-
   /**
     *
-    * @param partition Partition from which historic transaction will be retrieved
-    * @param transactionID      ID for this transaction
+    * @param partition     Partition from which historic transaction will be retrieved
+    * @param transactionID ID for this transaction
     * @return BasicConsumerTransaction
     */
   def getTransactionById(partition: Int, transactionID: Long): Option[ConsumerTransaction] = this.synchronized {
@@ -231,7 +229,7 @@ class Consumer(val name: String,
     * Sets offset on concrete partition
     *
     * @param partition partition to set offset
-    * @param offset      offset value
+    * @param offset    offset value
     */
   def setStreamPartitionOffset(partition: Int, offset: Long): Unit = this.synchronized {
     if (!isStarted.get())
@@ -321,7 +319,8 @@ class Consumer(val name: String,
     data.foreach(rec => {
       val t = new ConsumerTransaction(partition = partition, transactionID = rec.transactionID, count = rec.count, ttl = rec.ttl)
       t.attach(this)
-      result.append(t) })
+      result.append(t)
+    })
     result
   }
 

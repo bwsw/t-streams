@@ -19,10 +19,6 @@ trait GroupParticipant {
     */
   def getCheckpointInfoAndClear(): List[CheckpointInfo]
 
-  /**
-    * Metadata storage link for concrete agent
-    */
-  def getMetadataRef(): MetadataStorage
 }
 
 /**
