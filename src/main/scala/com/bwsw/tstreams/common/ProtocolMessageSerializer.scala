@@ -142,7 +142,7 @@ object ProtocolMessageSerializer {
       case "PTM" =>
         assert(tokens.size == 8)
         TransactionStateMessage(tokens(1).toString.toLong,
-          tokens(2).toString.toInt,
+          tokens(2).toString.toLong,
           tokens(3).asInstanceOf[TransactionStatus.ProducerTransactionStatus],
           tokens(4).toString.toInt,
           tokens(5).toString.toInt,
