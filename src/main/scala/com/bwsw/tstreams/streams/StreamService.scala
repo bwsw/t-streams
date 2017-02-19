@@ -41,18 +41,14 @@ object StreamService {
     *
     * @param storageClient   Storage of concrete stream
     * @param streamName      Name of the stream
-    * @param partitions      Number of stream partitions
+    * @param partitionsCount Number of stream partitions
     * @param description     Some additional info about stream
     * @param ttl             Expiration time of single transaction in seconds
     */
-  def createStream(storageClient: StorageClient,
-                      streamName: String,
-                      partitions: Int,
-                      ttl: Int,
-                      description: String): Stream = {
+  def createStream(storageClient: StorageClient, streamName: String, partitionsCount: Int, ttl: Long, description: String): Stream = {
 
-    Stream.createStream(storageClient, streamName, partitions, ttl, description)
-    new Stream(storageClient, streamName, partitions, ttl, description)
+    Stream.createStream(storageClient, streamName, partitionsCount, ttl, description)
+    new Stream(storageClient, streamName, partitionsCount, ttl, description)
   }
 
 
@@ -73,7 +69,7 @@ object StreamService {
     * @param storageClient   Storage of concrete stream
     * @param streamName      Name of the stream to check
     */
-  def doesExist(storageClient: StorageClient, streamName: String): Boolean =
-    Stream.isExist(storageClient, streamName)
+  def checkExists(storageClient: StorageClient, streamName: String): Boolean =
+    Stream.checkExists(storageClient, streamName)
 
 }

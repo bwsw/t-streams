@@ -17,7 +17,7 @@ class TStreamServiceTest extends FlatSpec with Matchers with BeforeAndAfterAll w
     val stream: Stream = StreamService.createStream(
       storageClient = storageClient,
       streamName = name,
-      partitions = 3,
+      partitionsCount = 3,
       ttl = 100,
       description = "some_description")
 
@@ -33,14 +33,14 @@ class TStreamServiceTest extends FlatSpec with Matchers with BeforeAndAfterAll w
       StreamService.createStream(
         storageClient = storageClient,
         streamName = name,
-        partitions = 3,
+        partitionsCount = 3,
         ttl = 100,
         description = "some_description")
 
       StreamService.createStream(
         storageClient = storageClient,
         streamName = name,
-        partitions = 3,
+        partitionsCount = 3,
         ttl = 100,
         description = "some_description")
     }
@@ -52,7 +52,7 @@ class TStreamServiceTest extends FlatSpec with Matchers with BeforeAndAfterAll w
     StreamService.createStream(
       storageClient = storageClient,
       streamName = name,
-      partitions = 3,
+      partitionsCount = 3,
       ttl = 100,
       description = "some_description")
 
@@ -68,13 +68,13 @@ class TStreamServiceTest extends FlatSpec with Matchers with BeforeAndAfterAll w
     StreamService.createStream(
       storageClient = storageClient,
       streamName = name,
-      partitions = 3,
+      partitionsCount = 3,
       ttl = 100,
       description = "some_description")
 
-    val isPresent = StreamService.doesExist(storageClient = storageClient,name)
+    val isPresent = StreamService.checkExists(storageClient = storageClient, name)
     isPresent shouldBe true
-    val isAbsent = !StreamService.doesExist(storageClient = storageClient, dummyName)
+    val isAbsent = !StreamService.checkExists(storageClient = storageClient, dummyName)
     isAbsent shouldBe true
   }
 
@@ -92,7 +92,7 @@ class TStreamServiceTest extends FlatSpec with Matchers with BeforeAndAfterAll w
     StreamService.createStream(
       storageClient = storageClient,
       streamName = name,
-      partitions = 3,
+      partitionsCount = 3,
       ttl = 100,
       description = "some_description")
 

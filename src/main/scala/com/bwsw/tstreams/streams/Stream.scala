@@ -40,8 +40,9 @@ object Stream {
     * @param description Stream arbitrary description and com.bwsw.tstreams.metadata, etc.
     * @return StreamSettings
     */
-  def createStream(storageClient: StorageClient, name: String, partitions: Int, ttl: Int, description: String): Unit = {
-    Await.result(storageClient.client.putStream(name, partitions, Some(description), ttl), OP_TIMEOUT)
+  def createStream(storageClient: StorageClient, name: String, partitions: Int, ttl: Long, description: String): Unit = {
+    //TODO: fixit
+    Await.result(storageClient.client.putStream(name, partitions, Some(description), ttl.toInt), OP_TIMEOUT)
   }
 
   /**
@@ -72,8 +73,7 @@ object Stream {
     * @param name Stream name to check if exists
     * @return Exist stream or not
     */
-  def isExist(storageClient: StorageClient, name: String): Boolean = {
-    //TODO: fix doesStreamExists
+  def checkExists(storageClient: StorageClient, name: String): Boolean = {
     Await.result(storageClient.client.doesStreamExist(name), OP_TIMEOUT)
   }
 

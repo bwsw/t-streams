@@ -8,9 +8,7 @@ import testutils.{LocalGeneratorCreator, TestStorageServer, TestUtils}
 
 class ConsumerServiceTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
 
-  logger.info(s"to get storage server: ${TestUtils.getTmpDir()}")
   val srv = TestStorageServer.get()
-  logger.info("to get storage client")
   val storageClient = f.getStorageClient()
 
   "ConsumerEntity.saveSingleOffset() ConsumerEntity.exist() ConsumerEntity.getOffset()" should "create new consumer with particular offset," +
