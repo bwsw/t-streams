@@ -18,7 +18,7 @@ sealed trait CheckpointInfo
   * @param agent          Producer agent for sending events
   *                       every transaction followed with three actions
   *                       first - do pre checkpoint event for all subscribers
-  *                       second - commit transaction metadata in cassandra
+  *                       second - commit transaction metadata in database
   *                       third - do final checkpoint event for all subscribers
   * @param checkpointEvent
   * @param streamName     Stream name

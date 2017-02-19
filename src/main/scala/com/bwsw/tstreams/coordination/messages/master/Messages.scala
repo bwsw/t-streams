@@ -81,15 +81,14 @@ case class NewTransactionRequest(senderID: String, receiverID: String, partition
       if (IMessage.logger.isDebugEnabled)
         IMessage.logger.debug(s"Responded with early ready virtual transaction: $transactionID")
 
-      agent.submitPipelinedTaskToCassandraExecutor(partition, () => {
-        agent.getProducer.openTransactionLocal(transactionID, partition,
-          onComplete = () => {
-            agent.notifyMaterialize(TransactionStateMessage(transactionID, -1, TransactionStatus.materialize, partition, agent.getUniqueAgentID(), -1, 0), senderID)
+      agent.getProducer.openTransactionLocal(transactionID, partition,
+        onComplete = () => {
+          agent.notifyMaterialize(TransactionStateMessage(transactionID, -1, TransactionStatus.materialize, partition, agent.getUniqueAgentID(), -1, 0), senderID)
 
-            if (IMessage.logger.isDebugEnabled)
-              IMessage.logger.debug(s"Responded with complete ready transaction: $transactionID")
-          })
-      })
+          if (IMessage.logger.isDebugEnabled)
+            IMessage.logger.debug(s"Responded with complete ready transaction: $transactionID")
+        })
+
     } else {
       val response = EmptyResponse(receiverID, senderID, partition)
       response.msgID = msgID

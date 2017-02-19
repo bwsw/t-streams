@@ -294,16 +294,6 @@ class PeerAgent(curatorClient: CuratorFramework,
     * public method which allows to submit delayed task for execution
     *
     * @param task
-    */
-  def submitPipelinedTaskToCassandraExecutor(partition: Int, task: () => Unit) = {
-    val execNum = partitionsToExecutors(partition)
-    executorGraphs(execNum).submitToCassandra("<CassandraTask>", task)
-  }
-
-  /**
-    * public method which allows to submit delayed task for execution
-    *
-    * @param task
     * @param partition
     */
   def submitPipelinedTaskToNewTransactionExecutors(partition: Int, task: () => Unit) = {

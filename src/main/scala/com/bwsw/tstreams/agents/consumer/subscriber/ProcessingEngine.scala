@@ -110,7 +110,7 @@ class ProcessingEngine(consumer: TransactionOperator,
 
 
   /**
-    * Enqueues in queue last transaction from Cassandra
+    * Enqueues in queue last transaction from database
     */
   def enqueueLastTransactionFromDB(partition: Int): Unit = {
     assert(partitions.contains(partition))
