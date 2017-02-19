@@ -132,7 +132,7 @@ class ProducerTransaction(partition: Int,
     val transactionRecord = TransactionRecord(partition = partition, transactionID = transactionID, count = -1,
       ttl = -1L, state = TransactionStates.Invalid)
 
-    transactionOwner.tsdb.put(transaction = transactionRecord, true)(rec => {})
+    transactionOwner.stream.client.putTransaction(transactionOwner.stream.name, transaction = transactionRecord, true)(rec => {})
 
     val msg = TransactionStateMessage(transactionID = transactionID,
       ttl = -1,
@@ -217,7 +217,7 @@ class ProducerTransaction(partition: Int,
         }
       }
       val record = TransactionRecord(partition = partition, transactionID = transactionID, count = getDataItemsCount(), ttl = transactionOwner.stream.ttl, state = TransactionStates.Checkpointed)
-      transactionOwner.tsdb.put(record, true)(record => {
+      transactionOwner.stream.client.putTransaction(transactionOwner.stream.name, record, true)(record => {
         checkpointPostEventPart()
       })
     }
@@ -261,7 +261,7 @@ class ProducerTransaction(partition: Int,
 
           val latch = new CountDownLatch(1)
           val record = TransactionRecord(partition = partition, transactionID = transactionID, state = TransactionStates.Checkpointed, count = getDataItemsCount(), ttl = transactionOwner.stream.ttl)
-          transactionOwner.tsdb.put(record, true)(record => {
+          transactionOwner.stream.client.putTransaction(transactionOwner.stream.name, record, true)(record => {
             latch.countDown()
           })
           latch.await()
@@ -324,11 +324,11 @@ class ProducerTransaction(partition: Int,
       return
     // atomically check state and launch update process
     val stateOnUpdateClosed =
-      LockUtil.withLockOrDieDo[Boolean](transactionLock, (100, TimeUnit.SECONDS), Some(ProducerTransaction.logger), () => {
-        val s = state.isClosed()
-        if (!s) state.setUpdateInProgress()
-        s
-      })
+    LockUtil.withLockOrDieDo[Boolean](transactionLock, (100, TimeUnit.SECONDS), Some(ProducerTransaction.logger), () => {
+      val s = state.isClosed()
+      if (!s) state.setUpdateInProgress()
+      s
+    })
 
     // if atomic state was closed then update process should be aborted
     // immediately
@@ -345,7 +345,7 @@ class ProducerTransaction(partition: Int,
     }
 
     val record = TransactionRecord(partition = partition, transactionID = transactionID, state = TransactionStates.Opened, count = -1, ttl = transactionOwner.stream.ttl)
-    transactionOwner.tsdb.put(record, true)(record => {
+    transactionOwner.stream.client.putTransaction(transactionOwner.stream.name, record, true)(record => {
       doSendUpdateMessage()
     })
 

@@ -245,7 +245,7 @@ class Consumer(val name: String,
     if (!isStarted.get())
       throw new IllegalStateException("Consumer is not started. Start consumer first.")
 
-    tsdb.get(partition, transactionID)
+    stream.client.getTransaction(stream.name, partition, transactionID)
       .map(rec => new ConsumerTransaction(partition, transactionID, rec.count, rec.ttl))
   }
 

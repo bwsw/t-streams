@@ -4,12 +4,8 @@ import java.util.concurrent.atomic.AtomicInteger
 
 import com.bwsw.tstreams.common.StorageClient
 import org.slf4j.LoggerFactory
-import transactionService.rpc.{ProducerTransaction, TransactionStates}
 
 import scala.annotation.tailrec
-import scala.concurrent.duration._
-import scala.concurrent.{Await, ExecutionContext}
-import scala.util.{Failure, Success}
 
 case class TransactionRecord(partition: Int, transactionID: Long, state: transactionService.rpc.TransactionStates, count: Int, ttl: Long)
 
@@ -18,8 +14,6 @@ object TransactionDatabase {
   var AGGREGATION_FACTOR = 1000
 
   val logger = LoggerFactory.getLogger(this.getClass)
-  val READ_SINGLE_OP_TIMEOUT = 10.second
-  val READ_MULTIPLE_OP_TIMEOUT = 1.minute
 
   def AGGREGATION_INTERVAL = SCALE * AGGREGATION_FACTOR
 
@@ -34,7 +28,7 @@ object TransactionDatabase {
 /**
   * Created by Ivan Kudryavtsev on 24.09.16.
   */
-class TransactionDatabase(storageClient: StorageClient, stream: String) {
+class TransactionDatabase(storageClient: StorageClient, streamName: String) {
 
   val resourceCounter = new AtomicInteger(0)
 
@@ -42,54 +36,13 @@ class TransactionDatabase(storageClient: StorageClient, stream: String) {
 
   def getSession() = storageClient
 
-  def put[T](transaction: TransactionRecord, async: Boolean)(onComplete: ProducerTransaction => T) = {
-    val s = stream
-
-    val tr = new ProducerTransaction {
-      override def stream: String = s
-      override def partition: Int = transaction.partition
-      override def transactionID: Long = transaction.transactionID
-      override def state: TransactionStates = transaction.state
-      override def quantity: Int = transaction.count
-      override def keepAliveTTL: Long = transaction.ttl
-    }
-
-    val f = storageClient.client.putTransaction(tr)
-    if (async) {
-      import ExecutionContext.Implicits.global
-
-      f onComplete {
-        case Success(res) => onComplete(tr)
-        case Failure(reason) => throw reason
-      }
-    } else {
-      Await.result(f, 1.minute)
-      onComplete(tr)
-    }
-  }
-
-  def get(partition: Integer, transactionID: Long): Option[TransactionRecord] = {
-    val txnSeq = Await.result(storageClient.client.scanTransactions(stream, partition, transactionID, transactionID), TransactionDatabase.READ_SINGLE_OP_TIMEOUT)
-    txnSeq.headOption.map(t => TransactionRecord(partition = partition, transactionID = transactionID, state = t.state, count = t.quantity, ttl = t.keepAliveTTL))
-  }
-
-  private def scanTransactionsInterval(partition: Integer, interval: Long): Seq[TransactionRecord] = {
-    val from = interval * TransactionDatabase.AGGREGATION_INTERVAL
-    val to   = (interval+1) * TransactionDatabase.AGGREGATION_INTERVAL - 1
-    TransactionDatabase.logger.info(s"scanTransactionsInterval(${partition},${interval})")
-    TransactionDatabase.logger.info(s"client.scanTransactions(${stream}, ${partition}, ${from},${to}")
-    val txnSeq = Await.result(storageClient.client.scanTransactions(stream, partition, from, to), TransactionDatabase.READ_MULTIPLE_OP_TIMEOUT)
-    println(txnSeq)
-    txnSeq.map(t => TransactionRecord(partition, t.transactionID, t.state, t.quantity, t.keepAliveTTL))
-  }
-
   @tailrec
   private def scanForwardInt(partition: Integer, transactionFrom: Long, transactionTo: Long)(interval: Long, intervalDeadHigh: Long, list: List[TransactionRecord], predicate: TransactionRecord => Boolean): List[TransactionRecord] = {
     TransactionDatabase.logger.info(s"scanForwardInt(${partition},${transactionFrom},${transactionTo})(${interval},${intervalDeadHigh},${list})")
     if (interval > intervalDeadHigh)
       return list
 
-    val intervalTransactions = scanTransactionsInterval(partition, interval)
+    val intervalTransactions = storageClient.scanTransactionsInterval(streamName, partition, interval)
 
     val candidateTransactions = intervalTransactions
       .filter(rec => rec.transactionID >= transactionFrom && rec.transactionID <= transactionTo)
@@ -113,7 +66,7 @@ class TransactionDatabase(storageClient: StorageClient, stream: String) {
     if (interval < intervalDeadLow)
       return list
 
-    val intervalTransactions = scanTransactionsInterval(partition, interval)
+    val intervalTransactions = storageClient.scanTransactionsInterval(streamName, partition, interval)
 
     val candidateTransactions = intervalTransactions
       .filter(rec => rec.transactionID >= transactionTo && rec.transactionID <= transactionFrom)
@@ -140,7 +93,7 @@ class TransactionDatabase(storageClient: StorageClient, stream: String) {
     if (interval < intervalDeadLow)
       return None
 
-    val intervalTransactions = scanTransactionsInterval(partition, interval)
+    val intervalTransactions = storageClient.scanTransactionsInterval(streamName, partition, interval)
 
     val findOpt = intervalTransactions
       .filter(rec => rec.transactionID >= transactionTo && rec.transactionID <= transactionFrom)

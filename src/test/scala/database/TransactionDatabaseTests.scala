@@ -19,7 +19,7 @@ class TransactionDatabaseTests extends FlatSpec with Matchers with BeforeAndAfte
 
   storageClient.createStream(stream, 1, 24 * 3600, "")
 
-  val tsdb = new TransactionDatabase(storageClient, stream = stream)
+  val tsdb = new TransactionDatabase(storageClient, streamName = stream)
 
   it should "return none if no transaction" in {
     tsdb.get(0, LocalGeneratorCreator.getTransaction()) shouldBe None

@@ -1,13 +1,15 @@
 package com.bwsw.tstreams.common
 
 import com.bwsw.tstreams.agents.consumer.RPCConsumerTransaction
-import com.bwsw.tstreams.streams.Stream
+import com.bwsw.tstreams.streams.{Stream, TransactionDatabase, TransactionRecord}
 import com.bwsw.tstreamstransactionserver.options.{AuthOptions, ClientBuilder, ClientOptions, ZookeeperOptions}
 import org.slf4j.LoggerFactory
+import transactionService.rpc.{ProducerTransaction, TransactionStates}
 
 import scala.collection.mutable.ListBuffer
-import scala.concurrent.Await
 import scala.concurrent.duration._
+import scala.concurrent.{Await, ExecutionContext}
+import scala.util.{Failure, Success}
 
 
 object StorageClient {
@@ -122,4 +124,44 @@ class StorageClient(clientOptions: ClientOptions, authOptions: AuthOptions, zook
   def getLastSavedConsumerOffset(consumerName: String, stream: String, partition: Int, timeout: Duration = 1.minute): Long = {
     Await.result(client.getConsumerState((consumerName, stream, partition)), timeout)
   }
+
+  def putTransaction[T](streamName: String, transaction: TransactionRecord, async: Boolean, timeout: Duration = 1.minute)(onComplete: ProducerTransaction => T) = {
+
+    val tr = new ProducerTransaction {
+      override def stream: String = streamName
+      override def partition: Int = transaction.partition
+      override def transactionID: Long = transaction.transactionID
+      override def state: TransactionStates = transaction.state
+      override def quantity: Int = transaction.count
+      override def keepAliveTTL: Long = transaction.ttl
+    }
+
+    val f = client.putTransaction(tr)
+    if (async) {
+      import ExecutionContext.Implicits.global
+
+      f onComplete {
+        case Success(res) => onComplete(tr)
+        case Failure(reason) => throw reason
+      }
+    } else {
+      Await.result(f, timeout)
+      onComplete(tr)
+    }
+  }
+
+  def getTransaction(streamName: String, partition: Integer, transactionID: Long, timeout: Duration = 1.minute): Option[TransactionRecord] = {
+    val txnSeq = Await.result(client.scanTransactions(streamName, partition, transactionID, transactionID), timeout)
+    txnSeq.headOption.map(t => TransactionRecord(partition = partition, transactionID = transactionID, state = t.state, count = t.quantity, ttl = t.keepAliveTTL))
+  }
+
+  def scanTransactionsInterval(streamName: String, partition: Integer, interval: Long, timeout: Duration = 1.minute): Seq[TransactionRecord] = {
+    val from = interval * TransactionDatabase.AGGREGATION_INTERVAL
+    val to   = (interval+1) * TransactionDatabase.AGGREGATION_INTERVAL - 1
+    StorageClient.logger.info(s"scanTransactionsInterval(${partition},${interval})")
+    StorageClient.logger.info(s"client.scanTransactions(${streamName}, ${partition}, ${from},${to}")
+    val txnSeq = Await.result(client.scanTransactions(streamName, partition, from, to), timeout)
+    txnSeq.map(t => TransactionRecord(partition, t.transactionID, t.state, t.quantity, t.keepAliveTTL))
+  }
+
 }
