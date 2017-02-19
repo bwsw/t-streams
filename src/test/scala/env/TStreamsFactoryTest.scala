@@ -74,7 +74,6 @@ class TStreamsFactoryTest extends FlatSpec with Matchers with BeforeAndAfterAll 
     StreamService.createStream(storageClient, sub.stream.name, 1, 24 * 3600, "sample-desc")
 
     sub.start()
-    Thread.sleep(1000) // TODO: fix it. Bug #31
     sub.stop()
   }
 
