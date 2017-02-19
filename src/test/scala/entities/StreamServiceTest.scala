@@ -6,7 +6,7 @@ import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import testutils.{TestStorageServer, TestUtils}
 
 
-class TStreamServiceTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
+class StreamServiceTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
 
   val srv = TestStorageServer.get()
   val storageClient = f.getStorageClient()

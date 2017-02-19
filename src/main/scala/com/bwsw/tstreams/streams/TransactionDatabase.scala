@@ -3,6 +3,7 @@ package com.bwsw.tstreams.streams
 import java.util.concurrent.atomic.AtomicInteger
 
 import com.bwsw.tstreams.common.StorageClient
+import org.slf4j.LoggerFactory
 import transactionService.rpc.{ProducerTransaction, TransactionStates}
 
 import scala.annotation.tailrec
@@ -13,18 +14,20 @@ import scala.util.{Failure, Success}
 case class TransactionRecord(partition: Int, transactionID: Long, state: transactionService.rpc.TransactionStates, count: Int, ttl: Long)
 
 object TransactionDatabase {
-  def AGGREGATION_INTERVAL = SCALE * AGGREGATION_FACTOR
-
   var SCALE = 10000
   var AGGREGATION_FACTOR = 1000
-  /* second */
-  var ACTIVITY_CACHE_SIZE = 10000
 
-  var READ_SINGLE_OP_TIMEOUT = 10.second
-  var READ_MULTIPLE_OP_TIMEOUT = 1.minute
+  val logger = LoggerFactory.getLogger(this.getClass)
+  val READ_SINGLE_OP_TIMEOUT = 10.second
+  val READ_MULTIPLE_OP_TIMEOUT = 1.minute
+
+  def AGGREGATION_INTERVAL = SCALE * AGGREGATION_FACTOR
 
   def getAggregationInterval(transactionID: Long, interval: Int = TransactionDatabase.AGGREGATION_INTERVAL): Long =
     Math.floorDiv(transactionID, interval)
+
+
+
 
 }
 
@@ -67,17 +70,22 @@ class TransactionDatabase(storageClient: StorageClient, stream: String) {
 
   def get(partition: Integer, transactionID: Long): Option[TransactionRecord] = {
     val txnSeq = Await.result(storageClient.client.scanTransactions(stream, partition, transactionID, transactionID), TransactionDatabase.READ_SINGLE_OP_TIMEOUT)
-    txnSeq.headOption.map(t => TransactionRecord(partition, transactionID, t.state, t.quantity,  t.keepAliveTTL))
+    txnSeq.headOption.map(t => TransactionRecord(partition = partition, transactionID = transactionID, state = t.state, count = t.quantity, ttl = t.keepAliveTTL))
   }
 
   private def scanTransactionsInterval(partition: Integer, interval: Long): Seq[TransactionRecord] = {
-    val txnSeq = Await.result(storageClient.client.scanTransactions(stream, partition, interval * TransactionDatabase.AGGREGATION_INTERVAL, (interval+1) * TransactionDatabase.AGGREGATION_INTERVAL - 1), TransactionDatabase.READ_MULTIPLE_OP_TIMEOUT)
+    val from = interval * TransactionDatabase.AGGREGATION_INTERVAL
+    val to   = (interval+1) * TransactionDatabase.AGGREGATION_INTERVAL - 1
+    TransactionDatabase.logger.info(s"scanTransactionsInterval(${partition},${interval})")
+    TransactionDatabase.logger.info(s"client.scanTransactions(${stream}, ${partition}, ${from},${to}")
+    val txnSeq = Await.result(storageClient.client.scanTransactions(stream, partition, from, to), TransactionDatabase.READ_MULTIPLE_OP_TIMEOUT)
+    println(txnSeq)
     txnSeq.map(t => TransactionRecord(partition, t.transactionID, t.state, t.quantity, t.keepAliveTTL))
   }
 
   @tailrec
   private def scanForwardInt(partition: Integer, transactionFrom: Long, transactionTo: Long)(interval: Long, intervalDeadHigh: Long, list: List[TransactionRecord], predicate: TransactionRecord => Boolean): List[TransactionRecord] = {
-
+    TransactionDatabase.logger.info(s"scanForwardInt(${partition},${transactionFrom},${transactionTo})(${interval},${intervalDeadHigh},${list})")
     if (interval > intervalDeadHigh)
       return list
 

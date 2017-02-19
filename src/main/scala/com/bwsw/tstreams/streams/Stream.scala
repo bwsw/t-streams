@@ -6,16 +6,6 @@ import com.bwsw.tstreams.env.defaults.TStreamsFactoryStreamDefaults
 import scala.concurrent.Await
 import scala.concurrent.duration._
 
-/**
-  * Settings of stream in metadata storage
-  *
-  * @param name            Stream name
-  * @param partitionsCount Number of stream partitions
-  * @param ttl             Time in seconds of transaction expiration
-  * @param description     Some stream additional info
-  */
-case class StreamSettings(name: String, partitionsCount: Int, ttl: Int, description: String)
-
 object Stream {
 
   var OP_TIMEOUT = 1.minute
@@ -26,9 +16,10 @@ object Stream {
     * @param name Stream name to fetch from database
     * @return StreamSettings
     */
-  def getStream(storageClient: StorageClient, name: String): StreamSettings = {
-    val stream = Await.result(storageClient.client.getStream(name), OP_TIMEOUT)
-    StreamSettings(name = stream.name, partitionsCount = stream.partitions, ttl = stream.ttl, description = stream.description.fold("")(x => x))
+  def getStream(storageClient: StorageClient, name: String): Stream = {
+    val rpcStream = Await.result(storageClient.client.getStream(name), OP_TIMEOUT)
+    new Stream(storageClient = storageClient, name = rpcStream.name, partitionsCount = rpcStream.partitions,
+      ttl = rpcStream.ttl, description = rpcStream.description.fold("")(x => x))
   }
 
   /**
@@ -43,19 +34,6 @@ object Stream {
   def createStream(storageClient: StorageClient, name: String, partitions: Int, ttl: Long, description: String): Boolean = {
     //TODO: fixit Long -> Int (TTL)
     Await.result(storageClient.client.putStream(name, partitions, Some(description), ttl.toInt), OP_TIMEOUT)
-  }
-
-  /**
-    * Alternate stream with parameters
-    *
-    * @param name        Stream name to use (unique id)
-    * @param partitions  Number of stream partitions
-    * @param ttl         Amount of expiration time of transaction
-    * @param description Stream arbitrary description and com.bwsw.tstreams.metadata, etc.
-    * @return StreamSettings
-    */
-  def changeStream(storageClient: StorageClient, name: String, partitions: Int, ttl: Int, description: String): Unit = {
-    Await.result(storageClient.client.putStream(name, partitions, Some(description), ttl), OP_TIMEOUT)
   }
 
   /**
@@ -91,13 +69,4 @@ class Stream(val storageClient: StorageClient, val name: String, val partitionsC
 
   if (ttl < TStreamsFactoryStreamDefaults.Stream.ttlSec.min)
     throw new IllegalArgumentException(s"The TTL must be greater or equal than ${TStreamsFactoryStreamDefaults.Stream.ttlSec.min} seconds.")
-
-  /**
-    * Save stream info in metadata
-    */
-  def save(): Unit = {
-    //TODO: wrong TTL (must be long)!
-    Stream.changeStream(storageClient, name, partitionsCount, ttl.toInt, description)
-  }
-
 }
