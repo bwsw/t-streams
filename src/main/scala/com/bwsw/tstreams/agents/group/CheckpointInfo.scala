@@ -34,7 +34,7 @@ case class ProducerCheckpointInfo(transactionRef: ProducerTransaction,
                                   partition: Int,
                                   transaction: Long,
                                   totalCnt: Int,
-                                  ttl: Int) extends CheckpointInfo
+                                  ttl: Long) extends CheckpointInfo
 
 /**
   * BasicConsumer commit information

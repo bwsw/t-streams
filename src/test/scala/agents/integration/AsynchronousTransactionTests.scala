@@ -7,7 +7,7 @@ import com.bwsw.tstreams.agents.producer.NewTransactionProducerPolicy
 import com.bwsw.tstreams.debug.GlobalHooks
 import com.bwsw.tstreams.env.ConfigurationOptions
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
-import testutils.{LocalGeneratorCreator, TestUtils}
+import testutils.TestUtils
 
 /**
   * Created by Ivan Kudryavtsev on 02.08.16.
@@ -33,7 +33,6 @@ class AsynchronousTransactionTests extends FlatSpec with Matchers
 
   val producer = f.getProducer(
     name = "test_producer",
-    transactionGenerator = LocalGeneratorCreator.getGen(),
     partitions = Set(0))
 
   "Fire async checkpoint by producer and wait when complete" should "consumer get transaction from DB" in {
@@ -44,13 +43,12 @@ class AsynchronousTransactionTests extends FlatSpec with Matchers
 
     val c = f.getConsumer(
       name = "test_subscriber",
-      transactionGenerator = LocalGeneratorCreator.getGen(),
       partitions = Set(0),
       offset = Oldest,
       useLastOffset = true)
 
     val pTransaction = producer.newTransaction(policy = NewTransactionProducerPolicy.ErrorIfOpened)
-    pTransaction.send("test")
+    pTransaction.send("test".getBytes())
     pTransaction.checkpoint(isSynchronous = false)
     l.await()
     c.start()
@@ -71,13 +69,12 @@ class AsynchronousTransactionTests extends FlatSpec with Matchers
 
     val c = f.getConsumer(
       name = "test_subscriber",
-      transactionGenerator = LocalGeneratorCreator.getGen(),
       partitions = Set(0),
       offset = Oldest,
       useLastOffset = true)
 
     val pTransaction = producer.newTransaction(policy = NewTransactionProducerPolicy.ErrorIfOpened)
-    pTransaction.send("test")
+    pTransaction.send("test".getBytes())
     pTransaction.checkpoint(isSynchronous = false)
     l.await()
     c.start()
@@ -96,13 +93,12 @@ class AsynchronousTransactionTests extends FlatSpec with Matchers
 
     val c = f.getConsumer(
       name = "test_subscriber",
-      transactionGenerator = LocalGeneratorCreator.getGen(),
       partitions = Set(0),
       offset = Oldest,
       useLastOffset = true)
 
     val pTransaction = producer.newTransaction(policy = NewTransactionProducerPolicy.ErrorIfOpened)
-    pTransaction.send("test")
+    pTransaction.send("test".getBytes())
     pTransaction.checkpoint(isSynchronous = false)
     c.start()
     val cTransaction = c.getTransaction(0)

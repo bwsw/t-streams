@@ -32,7 +32,6 @@ class ProducerTest extends FlatSpec with Matchers with BeforeAndAfterAll with Te
 
   val producer = f.getProducer(
     name = "test_producer",
-    transactionGenerator = LocalGeneratorCreator.getGen(),
     partitions = (0 until ALL_PARTITIONS).toSet)
 
   "Producer.isMeAMasterOfPartition" should "return true" in {

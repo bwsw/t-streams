@@ -86,7 +86,7 @@ object Stream {
   * @param ttl             Time of transaction time expiration in seconds
   * @param description     Some additional info about stream
   */
-class Stream(val storageClient: StorageClient, val name: String, val partitionsCount: Int, val ttl: Int, val description: String) {
+class Stream(val storageClient: StorageClient, val name: String, val partitionsCount: Int, val ttl: Long, val description: String) {
 
 
   if (ttl < TStreamsFactoryStreamDefaults.Stream.ttlSec.min)
@@ -96,7 +96,8 @@ class Stream(val storageClient: StorageClient, val name: String, val partitionsC
     * Save stream info in metadata
     */
   def save(): Unit = {
-    Stream.changeStream(storageClient, name, partitionsCount, ttl, description)
+    //TODO: wrong TTL (must be long)!
+    Stream.changeStream(storageClient, name, partitionsCount, ttl.toInt, description)
   }
 
 }

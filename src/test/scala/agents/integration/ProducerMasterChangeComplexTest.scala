@@ -7,12 +7,11 @@ package agents.integration
 import java.util.concurrent.{CountDownLatch, TimeUnit}
 
 import com.bwsw.tstreams.agents.consumer.Offset.Newest
-import com.bwsw.tstreams.agents.consumer.subscriber.Callback
 import com.bwsw.tstreams.agents.consumer.{ConsumerTransaction, TransactionOperator}
 import com.bwsw.tstreams.agents.producer.{NewTransactionProducerPolicy, Producer}
 import com.bwsw.tstreams.env.{ConfigurationOptions, TStreamsFactory}
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
-import testutils.{LocalGeneratorCreator, TestUtils}
+import testutils.TestUtils
 
 import scala.collection.mutable.ListBuffer
 import scala.util.Random
@@ -32,7 +31,7 @@ class ProducerMasterChangeComplexTest  extends FlatSpec with Matchers with Befor
 
         while(probability < Random.nextDouble() && counter < amount) {
           val t = producer.newTransaction(policy = NewTransactionProducerPolicy.CheckpointIfOpened)
-          t.send("test")
+          t.send("test".getBytes())
           t.checkpoint(checkpointModeSync)
           producerBuffer.synchronized {
             producerBuffer.append(t.getTransactionID())
@@ -45,9 +44,7 @@ class ProducerMasterChangeComplexTest  extends FlatSpec with Matchers with Befor
     }
 
     def run(partitions: Set[Int], checkpointModeSync: Boolean = true): Thread = {
-      val thread = new Thread(new Runnable {
-        override def run(): Unit = loop(partitions, checkpointModeSync)
-      })
+      val thread = new Thread(() => loop(partitions, checkpointModeSync))
       thread.start()
       thread
     }
@@ -56,7 +53,6 @@ class ProducerMasterChangeComplexTest  extends FlatSpec with Matchers with Befor
     private def makeNewProducer(partitions: Set[Int]) = {
       factory.getProducer(
         name = "test_producer1",
-        transactionGenerator = LocalGeneratorCreator.getGen(),
         partitions = partitions)
     }
   }
@@ -83,19 +79,16 @@ class ProducerMasterChangeComplexTest  extends FlatSpec with Matchers with Befor
 
   var subscriberCounter = 0
   val subscriber = f.getSubscriber(name = "s",
-    transactionGenerator = LocalGeneratorCreator.getGen(),
     partitions = PARTITIONS,     // Set(0),
     offset = Newest,
     useLastOffset = false, // true
-    callback = new Callback {
-      override def onTransaction(consumer: TransactionOperator, transaction: ConsumerTransaction): Unit = this.synchronized {
-        subscriberCounter += 1
-        subscriberBuffer.synchronized {
-          subscriberBuffer.append(transaction.getTransactionID())
-        }
-        if(subscriberCounter == PRODUCERS_AMOUNT * TRANSACTIONS_AMOUNT_EACH)
-          waitCompleteLatch.countDown()
+    callback = (consumer: TransactionOperator, transaction: ConsumerTransaction) => this.synchronized {
+      subscriberCounter += 1
+      subscriberBuffer.synchronized {
+        subscriberBuffer.append(transaction.getTransactionID())
       }
+      if (subscriberCounter == PRODUCERS_AMOUNT * TRANSACTIONS_AMOUNT_EACH)
+        waitCompleteLatch.countDown()
     })
 
   it should "handle multiple master change correctly" in {

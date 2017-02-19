@@ -25,17 +25,14 @@ class ProducerAndConsumerLongLastingTransactionsTests extends FlatSpec with Matc
 
   val producer1 = f.getProducer(
     name = "test_producer",
-    transactionGenerator = LocalGeneratorCreator.getGen(),
     partitions = Set(0))
 
   val producer2 = f.getProducer(
     name = "test_producer",
-    transactionGenerator = LocalGeneratorCreator.getGen(),
     partitions = Set(0))
 
   val consumer = f.getConsumer(
     name = "test_consumer",
-    transactionGenerator = LocalGeneratorCreator.getGen(),
     partitions = Set(0),
     offset = Oldest,
     useLastOffset = true)
@@ -53,29 +50,25 @@ class ProducerAndConsumerLongLastingTransactionsTests extends FlatSpec with Matc
     val waitSecondAtSubscriber = new CountDownLatch(1)
     val waitFirstAtProducer = new CountDownLatch(1)
 
-    val producer1Thread = new Thread(new Runnable {
-      def run() {
-        val transaction = producer1.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
-        waitFirstAtProducer.countDown()
-        dataToSend1.foreach { x =>
-          transaction.send(x)
-          Thread.sleep(2000)
-        }
-        transaction.checkpoint()
-        waitFirstAtSubscriber.countDown()
+    val producer1Thread = new Thread(() => {
+      val transaction = producer1.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
+      waitFirstAtProducer.countDown()
+      dataToSend1.foreach { x =>
+        transaction.send(x.getBytes())
+        Thread.sleep(2000)
       }
+      transaction.checkpoint()
+      waitFirstAtSubscriber.countDown()
     })
 
-    val producer2Thread = new Thread(new Runnable {
-      def run() {
-        waitFirstAtProducer.await()
-        val transaction = producer2.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
-        dataToSend2.foreach { x =>
-          transaction.send(x)
-        }
-        transaction.checkpoint()
-        waitSecondAtSubscriber.countDown()
+    val producer2Thread = new Thread(() => {
+      waitFirstAtProducer.await()
+      val transaction = producer2.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
+      dataToSend2.foreach { x =>
+        transaction.send(x.getBytes())
       }
+      transaction.checkpoint()
+      waitSecondAtSubscriber.countDown()
     })
 
     producer1Thread.start()
@@ -83,12 +76,12 @@ class ProducerAndConsumerLongLastingTransactionsTests extends FlatSpec with Matc
 
     waitFirstAtSubscriber.await()
     val transaction1Opt = consumer.getTransaction(0)
-    val data1 = transaction1Opt.get.getAll().sorted
+    val data1 = transaction1Opt.get.getAll().map(i => i.toString).sorted
     data1 shouldBe dataToSend1
 
     waitSecondAtSubscriber.await()
     val transaction2Opt = consumer.getTransaction(0)
-    val data2 = transaction2Opt.get.getAll().sorted
+    val data2 = transaction2Opt.get.getAll().map(i => i.toString).sorted
     data2 shouldBe dataToSend2
 
     producer1Thread.join()

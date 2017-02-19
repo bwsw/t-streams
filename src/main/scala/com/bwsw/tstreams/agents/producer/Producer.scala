@@ -301,7 +301,7 @@ class Producer(var name: String,
     val transactionRecord = TransactionRecord(partition = partition, transactionID = transactionID, count = -1,
       ttl = producerOptions.transactionTtlMs, state = TransactionStates.Opened)
 
-    tsdb.put(transaction = transactionRecord) (rec => {
+    tsdb.put(transaction = transactionRecord, true)(rec => {
       p2pAgent.submitPipelinedTaskToMaterializeExecutor(partition, onComplete)
     })
 

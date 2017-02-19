@@ -2,7 +2,7 @@ package agents.subscriber
 
 import java.util.concurrent.{CountDownLatch, TimeUnit}
 
-import com.bwsw.tstreams.agents.consumer.subscriber.{Callback, TransactionFullLoader, TransactionState}
+import com.bwsw.tstreams.agents.consumer.subscriber.{TransactionFullLoader, TransactionState}
 import com.bwsw.tstreams.agents.consumer.{ConsumerTransaction, TransactionOperator}
 import com.bwsw.tstreams.common.FirstFailLockableTaskExecutor
 import com.bwsw.tstreams.coordination.messages.state.TransactionStatus
@@ -12,22 +12,22 @@ import testutils.LocalGeneratorCreator
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 
-class FullLoaderOperatorTestImpl extends TransactionOperator[String] {
+class FullLoaderOperatorTestImpl extends TransactionOperator {
 
   val TOTAL = 10
-  val transactions = new ListBuffer[ConsumerTransaction[String]]()
+  val transactions = new ListBuffer[ConsumerTransaction]()
   for (i <- 0 until TOTAL)
-    transactions += new ConsumerTransaction[String](0, LocalGeneratorCreator.getTransaction(), 1, -1)
+    transactions += new ConsumerTransaction(0, LocalGeneratorCreator.getTransaction(), 1, -1)
 
-  override def getLastTransaction(partition: Int): Option[ConsumerTransaction[String]] = None
+  override def getLastTransaction(partition: Int): Option[ConsumerTransaction] = None
 
-  override def getTransactionById(partition: Int, id: Long): Option[ConsumerTransaction[String]] = None
+  override def getTransactionById(partition: Int, id: Long): Option[ConsumerTransaction] = None
 
   override def setStreamPartitionOffset(partition: Int, id: Long): Unit = {}
 
-  override def loadTransactionFromDB(partition: Int, transaction: Long): Option[ConsumerTransaction[String]] = None
+  override def loadTransactionFromDB(partition: Int, transaction: Long): Option[ConsumerTransaction] = None
 
-  override def getTransactionsFromTo(partition: Int, from: Long, to: Long): ListBuffer[ConsumerTransaction[String]] =
+  override def getTransactionsFromTo(partition: Int, from: Long, to: Long): ListBuffer[ConsumerTransaction] =
     transactions
 
   override def checkpoint(): Unit = {}
@@ -36,7 +36,7 @@ class FullLoaderOperatorTestImpl extends TransactionOperator[String] {
 
   override def getCurrentOffset(partition: Int) = LocalGeneratorCreator.getTransaction()
 
-  override def buildTransactionObject(partition: Int, id: Long, count: Int): Option[ConsumerTransaction[String]] = Some(new ConsumerTransaction[String](0, LocalGeneratorCreator.getTransaction(), 1, -1))
+  override def buildTransactionObject(partition: Int, id: Long, count: Int): Option[ConsumerTransaction] = Some(new ConsumerTransaction(0, LocalGeneratorCreator.getTransaction(), 1, -1))
 
   override def getProposedTransactionId(): Long = LocalGeneratorCreator.getTransaction()
 }
@@ -103,15 +103,13 @@ class TransactionFullLoaderTests extends FlatSpec with Matchers {
       override def test(): Unit = {
         var ctr: Int = 0
         val l = new CountDownLatch(1)
-        fullLoader2.load[String](nextTransactionState,
+        fullLoader2.load(nextTransactionState,
           consumerOuter,
           new FirstFailLockableTaskExecutor("lf"),
-          new Callback[String] {
-            override def onTransaction(consumer: TransactionOperator[String], transaction: ConsumerTransaction[String]): Unit = {
-              ctr += 1
-              if (ctr == consumerOuter.TOTAL)
-                l.countDown()
-            }
+          (consumer: TransactionOperator, transaction: ConsumerTransaction) => {
+            ctr += 1
+            if (ctr == consumerOuter.TOTAL)
+              l.countDown()
           })
         l.await(1, TimeUnit.SECONDS)
         ctr shouldBe consumerOuter.TOTAL
@@ -134,15 +132,13 @@ class TransactionFullLoaderTests extends FlatSpec with Matchers {
       override def test(): Unit = {
         var ctr: Int = 0
         val l = new CountDownLatch(1)
-        fullLoader2.load[String](nextTransactionState,
+        fullLoader2.load(nextTransactionState,
           consumerOuter,
           new FirstFailLockableTaskExecutor("lf"),
-          new Callback[String] {
-            override def onTransaction(consumer: TransactionOperator[String], transaction: ConsumerTransaction[String]): Unit = {
-              ctr += 1
-              if (ctr == consumerOuter.TOTAL)
-                l.countDown()
-            }
+          (consumer: TransactionOperator, transaction: ConsumerTransaction) => {
+            ctr += 1
+            if (ctr == consumerOuter.TOTAL)
+              l.countDown()
           })
         l.await(1, TimeUnit.SECONDS)
         ctr shouldBe consumerOuter.TOTAL

@@ -3,11 +3,9 @@ package agents.integration
 import java.util.concurrent.{CountDownLatch, TimeUnit}
 
 import com.bwsw.tstreams.agents.consumer.Offset.Newest
-import com.bwsw.tstreams.agents.consumer.subscriber.Callback
 import com.bwsw.tstreams.agents.consumer.{ConsumerTransaction, TransactionOperator}
 import com.bwsw.tstreams.agents.producer.NewTransactionProducerPolicy
 import com.bwsw.tstreams.env.ConfigurationOptions
-import com.bwsw.tstreams.generator.LocalTransactionGenerator
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import testutils.TestUtils
 
@@ -40,45 +38,37 @@ class SubscriberWithManyProcessingEnginesThreadsTest extends FlatSpec with Match
 
     val subscriber = f.getSubscriber(
       name = "test_subscriber", // name of the subscribing consumer
-      transactionGenerator = new LocalTransactionGenerator, // where it can get transaction ids
       partitions = PARTITIONS, // active partitions
       offset = Newest, // it will start from newest available partitions
       useLastOffset = false, // will ignore history
-      callback = new Callback {
-        override def onTransaction(op: TransactionOperator, transaction: ConsumerTransaction): Unit = this.synchronized {
-          transactionsCounter += 1
-          if (transactionsCounter % 1000 == 0) {
-            logger.info(s"I have read $transactionsCounter transactions up to now.")
-            op.checkpoint()
-          }
-          if (transactionsCounter == TOTAL_TRANSACTIONS) // if the producer sent all information, then end
-            awaitTransactionsLatch.countDown()
+      callback = (op: TransactionOperator, transaction: ConsumerTransaction) => this.synchronized {
+        transactionsCounter += 1
+        if (transactionsCounter % 1000 == 0) {
+          logger.info(s"I have read $transactionsCounter transactions up to now.")
+          op.checkpoint()
         }
+        if (transactionsCounter == TOTAL_TRANSACTIONS) // if the producer sent all information, then end
+          awaitTransactionsLatch.countDown()
       })
 
     subscriber.start() // start subscriber to operate
 
-    val producerThread = new Thread(new Runnable {
-      override def run(): Unit = {
-        // create producer
-        val producer = f.getProducer(
-          name = "test_producer", // name of the producer
-          transactionGenerator = new LocalTransactionGenerator, // where it will get new transactions
-          partitions = PARTITIONS) // agent can be a master
+    val producerThread = new Thread(() => {
+      // create producer
+      val producer = f.getProducer(
+        name = "test_producer", // name of the producer
+        partitions = PARTITIONS) // agent can be a master
 
-        (0 until TOTAL_TRANSACTIONS).foreach(
-          i => {
-            val t = producer.newTransaction(policy = NewTransactionProducerPolicy.CheckpointIfOpened) // create new transaction
-            (0 until TOTAL_ITEMS).foreach(j => {
-              val v = Random.nextInt()
-              t.send(s"$v")
-            })
-            //if (i % 100 == 0)
-            //  logger.info(s"I have written $i transactions up to now.")
-            t.checkpoint(false) // checkpoint the transaction
+      (0 until TOTAL_TRANSACTIONS).foreach(
+        i => {
+          val t = producer.newTransaction(policy = NewTransactionProducerPolicy.CheckpointIfOpened) // create new transaction
+          (0 until TOTAL_ITEMS).foreach(j => {
+            val v = Random.nextInt()
+            t.send(s"$v")
           })
-        producer.stop() // stop operation
-      }
+          t.checkpoint(false) // checkpoint the transaction
+        })
+      producer.stop() // stop operation
     })
 
     producerThread.start()

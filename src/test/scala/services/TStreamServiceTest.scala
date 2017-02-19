@@ -16,14 +16,14 @@ class TStreamServiceTest extends FlatSpec with Matchers with BeforeAndAfterAll w
   "BasicStreamService.createStream()" should "create stream" in {
     val name = randomVal
 
-    val stream: Stream[_] = StreamService.createStream(
+    val stream: Stream = StreamService.createStream(
       storageClient = storageClient,
       streamName = name,
       partitions = 3,
       ttl = 100,
       description = "some_description")
 
-    val checkVal = stream.isInstanceOf[Stream[_]]
+    val checkVal = stream.isInstanceOf[Stream]
 
     checkVal shouldBe true
   }
@@ -58,8 +58,8 @@ class TStreamServiceTest extends FlatSpec with Matchers with BeforeAndAfterAll w
       ttl = 100,
       description = "some_description")
 
-    val stream: Stream[_] = StreamService.loadStream(storageClient = storageClient, name)
-    val checkVal = stream.isInstanceOf[Stream[_]]
+    val stream: Stream = StreamService.loadStream(storageClient = storageClient, name)
+    val checkVal = stream.isInstanceOf[Stream]
     checkVal shouldBe true
   }
 

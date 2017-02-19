@@ -3,12 +3,11 @@ package agents.integration
 import java.util.concurrent.{CountDownLatch, TimeUnit}
 
 import com.bwsw.tstreams.agents.consumer.Offset.Oldest
-import com.bwsw.tstreams.agents.consumer.subscriber.Callback
 import com.bwsw.tstreams.agents.consumer.{ConsumerTransaction, TransactionOperator}
 import com.bwsw.tstreams.agents.producer.NewTransactionProducerPolicy
 import com.bwsw.tstreams.env.ConfigurationOptions
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
-import testutils.{LocalGeneratorCreator, TestUtils}
+import testutils.TestUtils
 
 /**
   * Created by Ivan Kudryavtsev on 24.08.16.
@@ -27,30 +26,23 @@ class SubscriberBasicFunctionsTests extends FlatSpec with Matchers with BeforeAn
 
   val producer = f.getProducer(
     name = "test_producer",
-    transactionGenerator = LocalGeneratorCreator.getGen(),
     partitions = Set(0, 1, 2))
 
   it should "start and stop with default options" in {
     val s = f.getSubscriber(name = "sv2",
-      transactionGenerator = LocalGeneratorCreator.getGen(),
       partitions = Set(0, 1, 2),
       offset = Oldest,
       useLastOffset = true,
-      callback = new Callback {
-        override def onTransaction(consumer: TransactionOperator, transaction: ConsumerTransaction): Unit = {}
-      })
+      callback = (consumer: TransactionOperator, transaction: ConsumerTransaction) => {})
     s.start()
     s.stop()
   }
 
   it should "allow start and stop several times" in {
     val s = f.getSubscriber(name = "sv2",
-      transactionGenerator = LocalGeneratorCreator.getGen(),
       offset = Oldest, partitions = Set(0, 1, 2),
       useLastOffset = true,
-      callback = new Callback {
-        override def onTransaction(consumer: TransactionOperator, transaction: ConsumerTransaction): Unit = {}
-      })
+      callback = (consumer: TransactionOperator, transaction: ConsumerTransaction) => {})
     s.start()
     s.stop()
     s.start()
@@ -59,13 +51,10 @@ class SubscriberBasicFunctionsTests extends FlatSpec with Matchers with BeforeAn
 
   it should "not allow double start" in {
     val s = f.getSubscriber(name = "sv2",
-      transactionGenerator = LocalGeneratorCreator.getGen(),
       partitions = Set(0, 1, 2),
       offset = Oldest,
       useLastOffset = true,
-      callback = new Callback {
-        override def onTransaction(consumer: TransactionOperator, transaction: ConsumerTransaction): Unit = {}
-      })
+      callback = (consumer: TransactionOperator, transaction: ConsumerTransaction) => {})
     s.start()
     var flag = false
     flag = try {
@@ -81,13 +70,10 @@ class SubscriberBasicFunctionsTests extends FlatSpec with Matchers with BeforeAn
 
   it should "not allow double stop" in {
     val s = f.getSubscriber(name = "sv2",
-      transactionGenerator = LocalGeneratorCreator.getGen(),
       partitions = Set(0, 1, 2),
       offset = Oldest,
       useLastOffset = true,
-      callback = new Callback {
-        override def onTransaction(consumer: TransactionOperator, transaction: ConsumerTransaction): Unit = {}
-      })
+      callback = (consumer: TransactionOperator, transaction: ConsumerTransaction) => {})
     s.start()
     s.stop()
     var flag = false
@@ -104,13 +90,10 @@ class SubscriberBasicFunctionsTests extends FlatSpec with Matchers with BeforeAn
   it should "allow to be created with in memory queues" in {
     val f1 = f.copy()
     val s = f1.getSubscriber(name = "sv2_inram",
-      transactionGenerator = LocalGeneratorCreator.getGen(),
       partitions = Set(0, 1, 2),
       offset = Oldest,
       useLastOffset = true,
-      callback = new Callback {
-        override def onTransaction(consumer: TransactionOperator, transaction: ConsumerTransaction): Unit = {}
-      })
+      callback = (consumer: TransactionOperator, transaction: ConsumerTransaction) => {})
     s.start()
     s.stop()
   }
@@ -129,16 +112,13 @@ class SubscriberBasicFunctionsTests extends FlatSpec with Matchers with BeforeAn
     producer.stop()
 
     val s = f.getSubscriber(name = "sv2",
-      transactionGenerator = LocalGeneratorCreator.getGen(),
       partitions = Set(0, 1, 2),
       offset = Oldest,
       useLastOffset = true,
-      callback = new Callback {
-        override def onTransaction(consumer: TransactionOperator, transaction: ConsumerTransaction): Unit = this.synchronized {
-          i += 1
-          if (i == TOTAL)
-            l.countDown()
-        }
+      callback = (consumer: TransactionOperator, transaction: ConsumerTransaction) => this.synchronized {
+        i += 1
+        if (i == TOTAL)
+          l.countDown()
       })
     s.start()
     l.await(10, TimeUnit.SECONDS)

@@ -7,12 +7,11 @@ package agents.integration
 import java.util.concurrent.{CountDownLatch, TimeUnit}
 
 import com.bwsw.tstreams.agents.consumer.Offset.Newest
-import com.bwsw.tstreams.agents.consumer.subscriber.Callback
 import com.bwsw.tstreams.agents.consumer.{ConsumerTransaction, TransactionOperator}
 import com.bwsw.tstreams.agents.producer.NewTransactionProducerPolicy
 import com.bwsw.tstreams.env.ConfigurationOptions
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
-import testutils.{LocalGeneratorCreator, TestUtils}
+import testutils.TestUtils
 
 import scala.collection.mutable.ListBuffer
 
@@ -39,51 +38,46 @@ class ProducerMasterChangeTest extends FlatSpec with Matchers with BeforeAndAfte
 
     val producer1 = f.getProducer(
       name = "test_producer1",
-      transactionGenerator = LocalGeneratorCreator.getGen(),
       partitions = Set(0))
 
 
     val producer2 = f.getProducer(
       name = "test_producer2",
-      transactionGenerator = LocalGeneratorCreator.getGen(),
       partitions = Set(0))
 
     val s = f.getSubscriber(name = "ss+2",
-      transactionGenerator = LocalGeneratorCreator.getGen(),
       partitions = Set(0),
       offset = Newest,
       useLastOffset = false,
-      callback = new Callback {
-        override def onTransaction(consumer: TransactionOperator, transaction: ConsumerTransaction): Unit = this.synchronized {
-          bs.append(transaction.getTransactionID())
-          if (bs.size == 1100) {
-            ls.countDown()
-          }
+      callback = (consumer: TransactionOperator, transaction: ConsumerTransaction) => this.synchronized {
+        bs.append(transaction.getTransactionID())
+        if (bs.size == 1100) {
+          ls.countDown()
         }
       })
-    val t1 = new Thread(new Runnable {
-      override def run(): Unit = {
-        logger.info(s"Producer-1 is master of partition: ${producer1.isMasterOfPartition(0)}")
-        for (i <- 0 until 100) {
-          val t = producer1.newTransaction(policy = NewTransactionProducerPolicy.CheckpointIfOpened)
-          bp.synchronized { bp.append(t.getTransactionID()) }
-          lp2.countDown()
-          t.send("test")
-          t.checkpoint()
+    val t1 = new Thread(() => {
+      logger.info(s"Producer-1 is master of partition: ${producer1.isMasterOfPartition(0)}")
+      for (i <- 0 until 100) {
+        val t = producer1.newTransaction(policy = NewTransactionProducerPolicy.CheckpointIfOpened)
+        bp.synchronized {
+          bp.append(t.getTransactionID())
         }
-        producer1.stop()
+        lp2.countDown()
+        t.send("test".getBytes())
+        t.checkpoint()
       }
+      producer1.stop()
     })
-    val t2 = new Thread(new Runnable {
-      override def run(): Unit = {
-        logger.info(s"Producer-2 is master of partition: ${producer2.isMasterOfPartition(0)}")
-        for (i <- 0 until 1000) {
-          lp2.await()
-          val t = producer2.newTransaction(policy = NewTransactionProducerPolicy.CheckpointIfOpened)
-          bp.synchronized { bp.append(t.getTransactionID()) }
-          t.send("test")
-          t.checkpoint()
+    val t2 = new Thread(() => {
+      logger.info(s"Producer-2 is master of partition: ${producer2.isMasterOfPartition(0)}")
+      for (i <- 0 until 1000) {
+        lp2.await()
+        val t = producer2.newTransaction(policy = NewTransactionProducerPolicy.CheckpointIfOpened)
+        bp.synchronized {
+          bp.append(t.getTransactionID())
         }
+        t.send("test".getBytes())
+        t.checkpoint()
       }
     })
     s.start()

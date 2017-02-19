@@ -7,22 +7,22 @@ import testutils.LocalGeneratorCreator
 
 import scala.collection.mutable.ListBuffer
 
-class ProcessingEngineOperatorTestImpl extends TransactionOperator[String] {
+class ProcessingEngineOperatorTestImpl extends TransactionOperator {
 
   val TOTAL = 10
-  val transactions = new ListBuffer[ConsumerTransaction[String]]()
+  val transactions = new ListBuffer[ConsumerTransaction]()
   for (i <- 0 until TOTAL)
-    transactions += new ConsumerTransaction[String](0, LocalGeneratorCreator.getTransaction(), 1, -1)
+    transactions += new ConsumerTransaction(0, LocalGeneratorCreator.getTransaction(), 1, -1)
 
-  var lastTransaction: Option[ConsumerTransaction[String]] = None
+  var lastTransaction: Option[ConsumerTransaction] = None
 
-  override def getLastTransaction(partition: Int): Option[ConsumerTransaction[String]] = lastTransaction
+  override def getLastTransaction(partition: Int): Option[ConsumerTransaction] = lastTransaction
 
-  override def getTransactionById(partition: Int, id: Long): Option[ConsumerTransaction[String]] = None
+  override def getTransactionById(partition: Int, id: Long): Option[ConsumerTransaction] = None
 
   override def setStreamPartitionOffset(partition: Int, id: Long): Unit = {}
 
-  override def loadTransactionFromDB(partition: Int, transactionID: Long): Option[ConsumerTransaction[String]] = None
+  override def loadTransactionFromDB(partition: Int, transactionID: Long): Option[ConsumerTransaction] = None
 
   override def checkpoint(): Unit = {}
 
@@ -30,9 +30,9 @@ class ProcessingEngineOperatorTestImpl extends TransactionOperator[String] {
 
   override def getCurrentOffset(partition: Int): Long = LocalGeneratorCreator.getTransaction()
 
-  override def buildTransactionObject(partition: Int, id: Long, count: Int): Option[ConsumerTransaction[String]] = None
+  override def buildTransactionObject(partition: Int, id: Long, count: Int): Option[ConsumerTransaction] = None
 
-  override def getTransactionsFromTo(partition: Int, from: Long, to: Long): ListBuffer[ConsumerTransaction[String]] = transactions
+  override def getTransactionsFromTo(partition: Int, from: Long, to: Long): ListBuffer[ConsumerTransaction] = transactions
 
   override def getProposedTransactionId(): Long = LocalGeneratorCreator.getTransaction()
 }
@@ -42,8 +42,8 @@ class ProcessingEngineOperatorTestImpl extends TransactionOperator[String] {
   */
 class ProcessingEngineTests extends FlatSpec with Matchers {
 
-  val cb = new Callback[String] {
-    override def onTransaction(consumer: TransactionOperator[String], transaction: ConsumerTransaction[String]): Unit = {}
+  val cb = new Callback {
+    override def onTransaction(consumer: TransactionOperator, transaction: ConsumerTransaction): Unit = {}
   }
   val qb = new QueueBuilder.InMemory()
 
@@ -51,12 +51,12 @@ class ProcessingEngineTests extends FlatSpec with Matchers {
 
 
   "constructor" should "create Processing engine" in {
-    val pe = new ProcessingEngine[String](new ProcessingEngineOperatorTestImpl(), Set[Int](0), qb, cb)
+    val pe = new ProcessingEngine(new ProcessingEngineOperatorTestImpl(), Set[Int](0), qb, cb)
   }
 
   "handleQueue" should "do nothing if there is nothing in queue" in {
     val c = new ProcessingEngineOperatorTestImpl()
-    val pe = new ProcessingEngine[String](c, Set[Int](0), qb, cb)
+    val pe = new ProcessingEngine(c, Set[Int](0), qb, cb)
     val act1 = pe.getLastPartitionActivity(0)
     pe.handleQueue(500)
     val act2 = pe.getLastPartitionActivity(0)
@@ -65,8 +65,8 @@ class ProcessingEngineTests extends FlatSpec with Matchers {
 
   "handleQueue" should "do fast/full load if there is seq in queue" in {
     val c = new ProcessingEngineOperatorTestImpl()
-    val pe = new ProcessingEngine[String](c, Set[Int](0), qb, cb)
-    c.lastTransaction = Option[ConsumerTransaction[String]](new ConsumerTransaction(0, LocalGeneratorCreator.getTransaction(), 1, -1))
+    val pe = new ProcessingEngine(c, Set[Int](0), qb, cb)
+    c.lastTransaction = Option[ConsumerTransaction](new ConsumerTransaction(0, LocalGeneratorCreator.getTransaction(), 1, -1))
     pe.enqueueLastTransactionFromDB(0)
     val act1 = pe.getLastPartitionActivity(0)
     pe.handleQueue(500)

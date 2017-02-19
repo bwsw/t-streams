@@ -8,11 +8,10 @@ import testutils.{LocalGeneratorCreator, RandomStringCreator, TestUtils}
 class ConsumerServiceTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
   def randomVal: String = RandomStringCreator.randomAlphaString(10)
 
-  val connectedSession = cluster.connect(randomKeyspace)
 
   "ConsumerEntity.saveSingleOffset() ConsumerEntity.exist() ConsumerEntity.getOffset()" should "create new consumer with particular offset," +
     " then check consumer existence, then get this consumer offset" in {
-    val consumerEntity = new ConsumerService(connectedSession)
+    val consumerEntity = new ConsumerService(null)
     val consumer = randomVal
     val stream = randomVal
     val partition = 1
@@ -26,7 +25,7 @@ class ConsumerServiceTest extends FlatSpec with Matchers with BeforeAndAfterAll 
   }
 
   "ConsumerEntity.exist()" should "return false if consumer not exist" in {
-    val consumerEntity = new ConsumerService(connectedSession)
+    val consumerEntity = new ConsumerService(null)
     val consumer = randomVal
     val stream = randomVal
     val partition = 1
@@ -34,7 +33,7 @@ class ConsumerServiceTest extends FlatSpec with Matchers with BeforeAndAfterAll 
   }
 
   "ConsumerEntity.getOffset()" should "throw java.lang.IndexOutOfBoundsException if consumer not exist" in {
-    val consumerEntity = new ConsumerService(connectedSession)
+    val consumerEntity = new ConsumerService(null)
     val consumer = randomVal
     val stream = randomVal
     val partition = 1
@@ -43,7 +42,7 @@ class ConsumerServiceTest extends FlatSpec with Matchers with BeforeAndAfterAll 
 
   "ConsumerEntity.saveBatchOffset(); ConsumerEntity.getOffset()" should "create new consumer with particular offsets and " +
     "then validate this consumer offsets" in {
-    val consumerEntity = new ConsumerService(connectedSession)
+    val consumerEntity = new ConsumerService(null)
     val consumer = randomVal
     val stream = randomVal
     val offsets = scala.collection.mutable.Map[Int, Long]()

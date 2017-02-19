@@ -25,19 +25,16 @@ class ProducerAndConsumerCheckpointTest extends FlatSpec with Matchers with Befo
 
   val producer = f.getProducer(
     name = "test_producer",
-    transactionGenerator = LocalGeneratorCreator.getGen(),
     partitions = Set(0))
 
   val consumer = f.getConsumer(
     name = "test_consumer",
-    transactionGenerator = LocalGeneratorCreator.getGen(),
     partitions = Set(0),
     offset = Oldest,
     useLastOffset = true)
 
   val consumer2 = f.getConsumer(
     name = "test_consumer",
-    transactionGenerator = LocalGeneratorCreator.getGen(),
     partitions = Set(0),
     offset = Oldest,
     useLastOffset = true)
@@ -52,7 +49,7 @@ class ProducerAndConsumerCheckpointTest extends FlatSpec with Matchers with Befo
       val transaction = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
       TimeTracker.update_end("newTransaction")
       dataToSend foreach { part =>
-        transaction.send(part)
+        transaction.send(part.getBytes())
       }
       TimeTracker.update_start("checkpoint")
       transaction.checkpoint()
@@ -66,7 +63,7 @@ class ProducerAndConsumerCheckpointTest extends FlatSpec with Matchers with Befo
     consumer.start
     (0 until firstPart) foreach { _ =>
       val transaction: ConsumerTransaction = consumer.getTransaction(0).get
-      val data = transaction.getAll().sorted
+      val data = transaction.getAll().map(i => i.toString).sorted
       consumer.checkpoint()
       checkVal &= data == dataToSend
     }
@@ -74,7 +71,7 @@ class ProducerAndConsumerCheckpointTest extends FlatSpec with Matchers with Befo
     consumer2.start
     (0 until secondPart) foreach { _ =>
       val transaction: ConsumerTransaction = consumer2.getTransaction(0).get
-      val data = transaction.getAll().sorted
+      val data = transaction.getAll().map(i => i.toString).sorted
       checkVal &= data == dataToSend
     }
 

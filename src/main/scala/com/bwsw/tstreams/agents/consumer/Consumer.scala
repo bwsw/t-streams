@@ -4,6 +4,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.locks.ReentrantLock
 
 import com.bwsw.tstreams.agents.group.{CheckpointInfo, ConsumerCheckpointInfo, GroupParticipant}
+import com.bwsw.tstreams.common.StorageClient
 import com.bwsw.tstreams.streams.{Stream, TransactionDatabase}
 import org.slf4j.LoggerFactory
 
@@ -325,4 +326,6 @@ class Consumer(val name: String,
   }
 
   override def getProposedTransactionId(): Long = options.transactionGenerator.getTransaction()
+
+  override def getStorageClient(): StorageClient = stream.storageClient
 }

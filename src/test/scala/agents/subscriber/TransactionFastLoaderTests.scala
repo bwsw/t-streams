@@ -2,7 +2,7 @@ package agents.subscriber
 
 import java.util.concurrent.CountDownLatch
 
-import com.bwsw.tstreams.agents.consumer.subscriber.{Callback, TransactionFastLoader, TransactionState}
+import com.bwsw.tstreams.agents.consumer.subscriber.{TransactionFastLoader, TransactionState}
 import com.bwsw.tstreams.agents.consumer.{ConsumerTransaction, TransactionOperator}
 import com.bwsw.tstreams.common.FirstFailLockableTaskExecutor
 import com.bwsw.tstreams.coordination.messages.state.TransactionStatus
@@ -21,22 +21,22 @@ trait FastLoaderTestContainer {
   def test()
 }
 
-class FastLoaderOperatorTestImpl extends TransactionOperator[String] {
+class FastLoaderOperatorTestImpl extends TransactionOperator {
   val TOTAL = 10
-  val transactions = new ListBuffer[ConsumerTransaction[String]]()
+  val transactions = new ListBuffer[ConsumerTransaction]()
 
   for (i <- 0 until TOTAL)
-    transactions += new ConsumerTransaction[String](0, LocalGeneratorCreator.getTransaction(), 1, -1)
+    transactions += new ConsumerTransaction(0, LocalGeneratorCreator.getTransaction(), 1, -1)
 
-  override def getLastTransaction(partition: Int): Option[ConsumerTransaction[String]] = None
+  override def getLastTransaction(partition: Int): Option[ConsumerTransaction] = None
 
-  override def getTransactionById(partition: Int, id: Long): Option[ConsumerTransaction[String]] = None
+  override def getTransactionById(partition: Int, id: Long): Option[ConsumerTransaction] = None
 
   override def setStreamPartitionOffset(partition: Int, id: Long): Unit = {}
 
-  override def loadTransactionFromDB(partition: Int, transaction: Long): Option[ConsumerTransaction[String]] = None
+  override def loadTransactionFromDB(partition: Int, transaction: Long): Option[ConsumerTransaction] = None
 
-  override def getTransactionsFromTo(partition: Int, from: Long, to: Long): ListBuffer[ConsumerTransaction[String]] =
+  override def getTransactionsFromTo(partition: Int, from: Long, to: Long): ListBuffer[ConsumerTransaction] =
     transactions
 
   override def checkpoint(): Unit = {}
@@ -45,7 +45,7 @@ class FastLoaderOperatorTestImpl extends TransactionOperator[String] {
 
   override def getCurrentOffset(partition: Int) = LocalGeneratorCreator.getTransaction()
 
-  override def buildTransactionObject(partition: Int, id: Long, count: Int): Option[ConsumerTransaction[String]] = Some(new ConsumerTransaction[String](0, LocalGeneratorCreator.getTransaction(), 1, -1))
+  override def buildTransactionObject(partition: Int, id: Long, count: Int): Option[ConsumerTransaction] = Some(new ConsumerTransaction(0, LocalGeneratorCreator.getTransaction(), 1, -1))
 
   override def getProposedTransactionId(): Long = LocalGeneratorCreator.getTransaction()
 }
@@ -195,11 +195,9 @@ class TransactionFastLoaderTests extends FlatSpec with Matchers {
       val l = new CountDownLatch(1)
 
       override def test(): Unit = {
-        fastLoader.load[String](nextTransactionState, new FastLoaderOperatorTestImpl, new FirstFailLockableTaskExecutor("lf"), new Callback[String] {
-          override def onTransaction(consumer: TransactionOperator[String], transaction: ConsumerTransaction[String]): Unit = {
-            ctr += 1
-            l.countDown()
-          }
+        fastLoader.load(nextTransactionState, new FastLoaderOperatorTestImpl, new FirstFailLockableTaskExecutor("lf"), (consumer: TransactionOperator, transaction: ConsumerTransaction) => {
+          ctr += 1
+          l.countDown()
         })
         l.await()
         ctr shouldBe 1
@@ -224,12 +222,10 @@ class TransactionFastLoaderTests extends FlatSpec with Matchers {
       val l = new CountDownLatch(1)
 
       override def test(): Unit = {
-        fastLoader.load[String](nextTransactionState, new FastLoaderOperatorTestImpl, new FirstFailLockableTaskExecutor("lf"), new Callback[String] {
-          override def onTransaction(consumer: TransactionOperator[String], transaction: ConsumerTransaction[String]): Unit = {
-            ctr += 1
-            if (ctr == 3)
-              l.countDown()
-          }
+        fastLoader.load(nextTransactionState, new FastLoaderOperatorTestImpl, new FirstFailLockableTaskExecutor("lf"), (consumer: TransactionOperator, transaction: ConsumerTransaction) => {
+          ctr += 1
+          if (ctr == 3)
+            l.countDown()
         })
         l.await()
         ctr shouldBe 3

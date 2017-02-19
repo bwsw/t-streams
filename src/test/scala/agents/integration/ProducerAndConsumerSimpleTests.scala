@@ -26,12 +26,10 @@ class ProducerAndConsumerSimpleTests extends FlatSpec with Matchers with BeforeA
 
   val producer = f.getProducer(
     name = "test_producer",
-    transactionGenerator = LocalGeneratorCreator.getGen(),
     partitions = Set(0))
 
   val consumer = f.getConsumer(
     name = "test_consumer",
-    transactionGenerator = LocalGeneratorCreator.getGen(),
     partitions = Set(0),
     offset = Oldest,
     useLastOffset = true)
@@ -44,13 +42,13 @@ class ProducerAndConsumerSimpleTests extends FlatSpec with Matchers with BeforeA
     val producerTransaction = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
     val sendData = (for (part <- 0 until totalDataInTransaction) yield "data_part_" + randomString).sorted
     sendData.foreach { x =>
-      producerTransaction.send(x)
+      producerTransaction.send(x.getBytes())
     }
     producerTransaction.checkpoint()
     Thread.sleep(100)
     val transaction = consumer.getTransaction(0).get
 
-    var checkVal = transaction.getAll().sorted == sendData
+    var checkVal = transaction.getAll().map(i => i.toString).sorted == sendData
 
     //assert that is nothing to read
     (0 until consumer.stream.partitionsCount) foreach { _ =>
@@ -65,7 +63,7 @@ class ProducerAndConsumerSimpleTests extends FlatSpec with Matchers with BeforeA
     val producerTransaction = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
     val sendData = (for (part <- 0 until totalDataInTransaction) yield "data_part_" + randomString).sorted
     sendData.foreach { x =>
-      producerTransaction.send(x)
+      producerTransaction.send(x.getBytes())
     }
     producerTransaction.checkpoint()
     val transactionOpt = consumer.getTransaction(0)
@@ -83,7 +81,7 @@ class ProducerAndConsumerSimpleTests extends FlatSpec with Matchers with BeforeA
       checkVal &= consumer.getTransaction(0).isEmpty
     }
 
-    checkVal &= dataToAssert.toList.sorted == sendData
+    checkVal &= dataToAssert.toList.map(i => i.toString).sorted == sendData
 
     checkVal shouldEqual true
   }
@@ -96,7 +94,7 @@ class ProducerAndConsumerSimpleTests extends FlatSpec with Matchers with BeforeA
     (0 until transactionsAmount).foreach { _ =>
       val producerTransaction = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
       sendData.foreach { x =>
-        producerTransaction.send(x)
+        producerTransaction.send(x.getBytes())
       }
       producerTransaction.checkpoint()
     }
@@ -106,7 +104,7 @@ class ProducerAndConsumerSimpleTests extends FlatSpec with Matchers with BeforeA
     (0 until transactionsAmount).foreach { _ =>
       val transaction = consumer.getTransaction(0)
       checkVal &= transaction.nonEmpty
-      checkVal &= transaction.get.getAll().sorted == sendData
+      checkVal &= transaction.get.getAll().map(i => i.toString).sorted == sendData
     }
 
     //assert that is nothing to read
@@ -126,7 +124,7 @@ class ProducerAndConsumerSimpleTests extends FlatSpec with Matchers with BeforeA
       def run() {
         val transaction = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
         sendData.foreach { x =>
-          transaction.send(x)
+          transaction.send(x.getBytes())
           Thread.sleep(1000)
         }
         transaction.checkpoint()
@@ -135,17 +133,15 @@ class ProducerAndConsumerSimpleTests extends FlatSpec with Matchers with BeforeA
 
     var checkVal = true
 
-    val consumerThread = new Thread(new Runnable {
-      def run() {
-        breakable {
-          while (true) {
-            val consumedTransaction: Option[ConsumerTransaction] = consumer.getTransaction(0)
-            if (consumedTransaction.isDefined) {
-              checkVal &= consumedTransaction.get.getAll().sorted == sendData
-              break()
-            }
-            Thread.sleep(1000)
+    val consumerThread = new Thread(() => {
+      breakable {
+        while (true) {
+          val consumedTransaction: Option[ConsumerTransaction] = consumer.getTransaction(0)
+          if (consumedTransaction.isDefined) {
+            checkVal &= consumedTransaction.get.getAll().map(i => i.toString).sorted == sendData
+            break()
           }
+          Thread.sleep(1000)
         }
       }
     })

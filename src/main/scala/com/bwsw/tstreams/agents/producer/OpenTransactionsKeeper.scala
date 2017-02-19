@@ -4,7 +4,7 @@ import java.util.concurrent.ConcurrentHashMap
 
 import com.bwsw.tstreams.agents.producer.NewTransactionProducerPolicy.ProducerPolicy
 
-import scala.collection.JavaConversions._
+import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
 
 
@@ -22,7 +22,7 @@ class OpenTransactionsKeeper {
     * @return
     */
   def forallKeysDo[RV](f: (Int, IProducerTransaction) => RV): Iterable[RV] = {
-    val keys = openTransactionsMap.keys()
+    val keys = openTransactionsMap.keys().asScala
     val res = ListBuffer[RV]()
     for (k <- keys) {
       val v = openTransactionsMap.getOrDefault(k, null)

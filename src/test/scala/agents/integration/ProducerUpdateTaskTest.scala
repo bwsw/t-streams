@@ -5,7 +5,7 @@ import com.bwsw.tstreams.common.ResettableCountDownLatch
 import com.bwsw.tstreams.debug.GlobalHooks
 import com.bwsw.tstreams.env.ConfigurationOptions
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
-import testutils.{LocalGeneratorCreator, TestUtils}
+import testutils.TestUtils
 
 /**
   * Created by Ivan Kudryavtsev on 05.08.16.
@@ -41,7 +41,6 @@ class ProducerUpdateTaskTest extends FlatSpec with Matchers with BeforeAndAfterA
 
   val producer = f.getProducer(
     name = "test_producer",
-    transactionGenerator = LocalGeneratorCreator.getGen(),
     partitions = Set(0, 1, 2))
 
 
@@ -49,7 +48,7 @@ class ProducerUpdateTaskTest extends FlatSpec with Matchers with BeforeAndAfterA
     blockCheckpoint1.setValue(1)
     blockCheckpoint2.setValue(1)
     val t = producer.newTransaction(policy = NewTransactionProducerPolicy.CheckpointIfOpened)
-    t.send("data")
+    t.send("data".getBytes())
     blockCheckpoint1.await()
     t.checkpoint()
     flag = 1

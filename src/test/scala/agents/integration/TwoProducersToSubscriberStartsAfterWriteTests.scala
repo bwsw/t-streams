@@ -7,7 +7,7 @@ import com.bwsw.tstreams.agents.consumer.{ConsumerTransaction, TransactionOperat
 import com.bwsw.tstreams.agents.producer.NewTransactionProducerPolicy
 import com.bwsw.tstreams.env.ConfigurationOptions
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
-import testutils.{LocalGeneratorCreator, TestUtils}
+import testutils.TestUtils
 
 import scala.collection.mutable.ListBuffer
 
@@ -38,17 +38,14 @@ class TwoProducersToSubscriberStartsAfterWriteTests extends FlatSpec with Matche
 
     val producer1 = f.getProducer(
       name = "test_producer1",
-      transactionGenerator = LocalGeneratorCreator.getGen(),
       partitions = Set(0))
 
 
     val producer2 = f.getProducer(
       name = "test_producer2",
-      transactionGenerator = LocalGeneratorCreator.getGen(),
       partitions = Set(0))
 
     val s = f.getSubscriber(name = "ss+2",
-      transactionGenerator = LocalGeneratorCreator.getGen(),
       partitions = Set(0),
       offset = Oldest,
       useLastOffset = true,

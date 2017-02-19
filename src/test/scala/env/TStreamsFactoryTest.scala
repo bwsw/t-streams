@@ -1,10 +1,8 @@
 package env
 
 import com.bwsw.tstreams.agents.consumer.Offset.Oldest
-import com.bwsw.tstreams.agents.consumer.subscriber.Callback
 import com.bwsw.tstreams.agents.consumer.{ConsumerTransaction, TransactionOperator}
 import com.bwsw.tstreams.env.ConfigurationOptions
-import com.bwsw.tstreams.generator.LocalTransactionGenerator
 
 /**
   * Created by Ivan Kudryavtsev on 23.07.16.
@@ -40,7 +38,6 @@ class TStreamsFactoryTest extends FlatSpec with Matchers with BeforeAndAfterAll 
   "UniversalFactory.getProducer" should "return producer object" in {
     val p = f.getProducer(
       name = "test-producer-1",
-      transactionGenerator = new LocalTransactionGenerator,
       partitions = Set(0))
 
     p != null shouldEqual true
@@ -52,7 +49,6 @@ class TStreamsFactoryTest extends FlatSpec with Matchers with BeforeAndAfterAll 
   "UniversalFactory.getConsumer" should "return consumer object" in {
     val c = f.getConsumer(
       name = "test-consumer-1",
-      transactionGenerator = new LocalTransactionGenerator,
       partitions = Set(0),
       offset = Oldest)
 
@@ -63,12 +59,9 @@ class TStreamsFactoryTest extends FlatSpec with Matchers with BeforeAndAfterAll 
   "UniversalFactory.getSubscriber" should "return subscriber object" in {
     val sub = f.getSubscriber(
       name = "test-subscriber",
-      transactionGenerator = new LocalTransactionGenerator,
       partitions = Set(0),
       offset = Oldest,
-      callback = new Callback {
-        override def onTransaction(consumer: TransactionOperator, transaction: ConsumerTransaction): Unit = {}
-      })
+      callback = (consumer: TransactionOperator, transaction: ConsumerTransaction) => {})
 
     sub != null shouldEqual true
     sub.start()

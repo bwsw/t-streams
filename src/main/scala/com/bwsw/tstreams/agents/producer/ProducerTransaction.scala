@@ -7,7 +7,9 @@ import com.bwsw.tstreams.agents.group.ProducerCheckpointInfo
 import com.bwsw.tstreams.common.LockUtil
 import com.bwsw.tstreams.coordination.messages.state.{TransactionStateMessage, TransactionStatus}
 import com.bwsw.tstreams.debug.GlobalHooks
+import com.bwsw.tstreams.streams.TransactionRecord
 import org.slf4j.LoggerFactory
+import transactionService.rpc.TransactionStates
 
 import scala.collection.mutable.ListBuffer
 
@@ -20,16 +22,15 @@ object ProducerTransaction {
   *
   * @param partition        Concrete partition for saving this transaction
   * @param transactionOwner Producer class which was invoked newTransaction method
-  * @param transactionID  ID for this transaction
-  * @tparam T User data type
+  * @param transactionID    ID for this transaction
   */
 class ProducerTransaction(partition: Int,
-                             transactionID: Long,
-                             transactionOwner: Producer) extends IProducerTransaction {
+                          transactionID: Long,
+                          transactionOwner: Producer) extends IProducerTransaction {
 
   private val transactionLock = new ReentrantLock()
 
-  private val data = new ProducerTransactionData(this, transactionOwner.stream.ttl, transactionOwner.stream.dataStorage)
+  private val data = new ProducerTransactionData(this, transactionOwner.stream.ttl, transactionOwner.stream.storageClient)
 
   /**
     * state of transaction
@@ -117,6 +118,8 @@ class ProducerTransaction(partition: Int,
     if (job != null) jobs += job
   }
 
+  def send(string: String): Unit = send(string.getBytes())
+
   /**
     * Does actual send of the data that is not sent yet
     */
@@ -126,7 +129,11 @@ class ProducerTransaction(partition: Int,
   }
 
   private def cancelAsync() = {
-    transactionOwner.tsdb.del(partition, transactionID)
+    val transactionRecord = TransactionRecord(partition = partition, transactionID = transactionID, count = -1,
+      ttl = -1L, state = TransactionStates.Invalid)
+
+    transactionOwner.tsdb.put(transaction = transactionRecord, true)(rec => {})
+
     val msg = TransactionStateMessage(transactionID = transactionID,
       ttl = -1,
       status = TransactionStatus.cancel,
@@ -146,9 +153,7 @@ class ProducerTransaction(partition: Int,
     LockUtil.withLockOrDieDo[Unit](transactionLock, (100, TimeUnit.SECONDS), Some(ProducerTransaction.logger), () => {
       state.awaitUpdateComplete
       state.closeOrDie
-      transactionOwner.asyncActivityService.submit("<CancelAsyncTask>", new Runnable {
-        override def run(): Unit = cancelAsync()
-      }, Option(transactionLock))
+      transactionOwner.asyncActivityService.submit("<CancelAsyncTask>", () => cancelAsync(), Option(transactionLock))
     })
   }
 
@@ -211,8 +216,10 @@ class ProducerTransaction(partition: Int,
           return
         }
       }
-      val record = TransactionRecord(partition = partition, transactionID = transactionID, count = getDataItemsCount(), ttl = transactionOwner.stream.ttl)
-      transactionOwner.tsdb.put(record, transactionOwner.backendActivityService) (record => { checkpointPostEventPart() })
+      val record = TransactionRecord(partition = partition, transactionID = transactionID, count = getDataItemsCount(), ttl = transactionOwner.stream.ttl, state = TransactionStates.Checkpointed)
+      transactionOwner.tsdb.put(record, true)(record => {
+        checkpointPostEventPart()
+      })
     }
     else {
       transactionOwner.p2pAgent.publish(TransactionStateMessage(
@@ -253,8 +260,10 @@ class ProducerTransaction(partition: Int,
           GlobalHooks.invoke(GlobalHooks.preCommitFailure)
 
           val latch = new CountDownLatch(1)
-          val record = TransactionRecord(partition = partition, transactionID = transactionID, count = getDataItemsCount(), ttl = transactionOwner.stream.ttl)
-          transactionOwner.tsdb.put(record, transactionOwner.backendActivityService) (record => { latch.countDown() })
+          val record = TransactionRecord(partition = partition, transactionID = transactionID, state = TransactionStates.Checkpointed, count = getDataItemsCount(), ttl = transactionOwner.stream.ttl)
+          transactionOwner.tsdb.put(record, true)(record => {
+            latch.countDown()
+          })
           latch.await()
 
           if (ProducerTransaction.logger.isDebugEnabled) {
@@ -335,8 +344,10 @@ class ProducerTransaction(partition: Int,
       ProducerTransaction.logger.debug("Update event for Transaction {}, partition: {}", transactionID, partition)
     }
 
-    val record = TransactionRecord(partition = partition, transactionID = transactionID, count = -1, ttl = transactionOwner.stream.ttl)
-    transactionOwner.tsdb.put(record, transactionOwner.backendActivityService) (record => { doSendUpdateMessage() })
+    val record = TransactionRecord(partition = partition, transactionID = transactionID, state = TransactionStates.Opened, count = -1, ttl = transactionOwner.stream.ttl)
+    transactionOwner.tsdb.put(record, true)(record => {
+      doSendUpdateMessage()
+    })
 
   }
 

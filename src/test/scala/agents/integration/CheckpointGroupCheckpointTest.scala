@@ -24,24 +24,18 @@ class CheckpointGroupCheckpointTest extends FlatSpec with Matchers with BeforeAn
     setProperty(ConfigurationOptions.Consumer.transactionPreload, 10).
     setProperty(ConfigurationOptions.Consumer.dataPreload, 10)
 
-  val producer = f.getProducer[String](
+  val producer = f.getProducer(
     name = "test_producer",
-    transactionGenerator = LocalGeneratorCreator.getGen(),
-    converter = stringToArrayByteConverter,
     partitions = Set(0, 1, 2))
 
-  val consumer = f.getConsumer[String](
+  val consumer = f.getConsumer(
     name = "test_consumer",
-    transactionGenerator = LocalGeneratorCreator.getGen(),
-    converter = arrayByteToStringConverter,
     partitions = Set(0, 1, 2),
     offset = Oldest,
     useLastOffset = true)
 
-  val consumer2 = f.getConsumer[String](
+  val consumer2 = f.getConsumer(
     name = "test_consumer",
-    transactionGenerator = LocalGeneratorCreator.getGen(),
-    converter = arrayByteToStringConverter,
     partitions = Set(0, 1, 2),
     offset = Oldest,
     useLastOffset = true)
@@ -55,7 +49,7 @@ class CheckpointGroupCheckpointTest extends FlatSpec with Matchers with BeforeAn
 
     val transaction1 = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
     logger.info("Transaction 1 is " + transaction1.getTransactionID.toString)
-    transaction1.send("info1")
+    transaction1.send("info1".getBytes())
     transaction1.checkpoint()
 
     //move consumer offsets
@@ -64,14 +58,14 @@ class CheckpointGroupCheckpointTest extends FlatSpec with Matchers with BeforeAn
     //open transaction without close
     val transaction2 = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened, 1)
     logger.info("Transaction 2 is " + transaction2.getTransactionID.toString)
-    transaction2.send("info2")
+    transaction2.send("info2".getBytes())
 
     group.checkpoint()
 
 
     consumer2.start()
     //assert that the second transaction was closed and consumer offsets was moved
-    assert(consumer2.getTransaction(1).get.getAll().head == "info2")
+    assert(consumer2.getTransaction(1).get.getAll().head == "info2".getBytes())
   }
 
   override def afterAll(): Unit = {

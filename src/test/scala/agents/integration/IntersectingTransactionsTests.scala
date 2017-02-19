@@ -3,12 +3,11 @@ package agents.integration
 import java.util.concurrent.CountDownLatch
 
 import com.bwsw.tstreams.agents.consumer.Offset.Newest
-import com.bwsw.tstreams.agents.consumer.subscriber.Callback
 import com.bwsw.tstreams.agents.consumer.{ConsumerTransaction, TransactionOperator}
 import com.bwsw.tstreams.agents.producer.NewTransactionProducerPolicy
 import com.bwsw.tstreams.env.ConfigurationOptions
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
-import testutils.{LocalGeneratorCreator, TestUtils}
+import testutils.TestUtils
 
 import scala.collection.mutable.ListBuffer
 
@@ -39,48 +38,39 @@ class IntersectingTransactionsTests extends FlatSpec with Matchers with BeforeAn
 
     val producer1 = f.getProducer(
       name = "test_producer1",
-      transactionGenerator = LocalGeneratorCreator.getGen(),
       partitions = Set(0))
 
     val producer2 = f.getProducer(
       name = "test_producer2",
-      transactionGenerator = LocalGeneratorCreator.getGen(),
       partitions = Set(0))
 
     val s = f.getSubscriber(name = "ss+2",
-      transactionGenerator = LocalGeneratorCreator.getGen(),
       partitions = Set(0),
       offset = Newest,
       useLastOffset = true,
-      callback = new Callback {
-        override def onTransaction(consumer: TransactionOperator, transaction: ConsumerTransaction): Unit = this.synchronized {
-          bs.append(transaction.getTransactionID())
-          if (bs.size == 2) {
-            ls.countDown()
-          }
+      callback = (consumer: TransactionOperator, transaction: ConsumerTransaction) => this.synchronized {
+        bs.append(transaction.getTransactionID())
+        if (bs.size == 2) {
+          ls.countDown()
         }
       })
 
-    val t1 = new Thread(new Runnable {
-      override def run(): Unit = {
-        val t = producer1.newTransaction(policy = NewTransactionProducerPolicy.CheckpointIfOpened)
-        bp.append(t.getTransactionID())
-        lp2.countDown()
-        lp1.await()
-        t.send("test")
-        t.checkpoint()
-      }
+    val t1 = new Thread(() => {
+      val t = producer1.newTransaction(policy = NewTransactionProducerPolicy.CheckpointIfOpened)
+      bp.append(t.getTransactionID())
+      lp2.countDown()
+      lp1.await()
+      t.send("test".getBytes())
+      t.checkpoint()
     })
 
-    val t2 = new Thread(new Runnable {
-      override def run(): Unit = {
-        lp2.await()
-        val t = producer2.newTransaction(policy = NewTransactionProducerPolicy.CheckpointIfOpened)
-        bp.append(t.getTransactionID())
-        t.send("test")
-        t.checkpoint()
-        lp1.countDown()
-      }
+    val t2 = new Thread(() => {
+      lp2.await()
+      val t = producer2.newTransaction(policy = NewTransactionProducerPolicy.CheckpointIfOpened)
+      bp.append(t.getTransactionID())
+      t.send("test".getBytes())
+      t.checkpoint()
+      lp1.countDown()
     })
 
     s.start()

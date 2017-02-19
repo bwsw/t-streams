@@ -5,7 +5,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 import com.bwsw.tstreams.coordination.messages.state.TransactionStateMessage
 import org.apache.curator.framework.CuratorFramework
 
-import scala.collection.JavaConversions._
+import scala.collection.JavaConverters._
 
 
 /**
@@ -22,12 +22,10 @@ class BroadcastCommunicationClient(curatorClient: CuratorFramework, partitions: 
 
   private val partitionSubscribers = new java.util.concurrent.ConcurrentHashMap[Int, Set[String]]()
 
-  private val updateThread = new Thread(new Runnable {
-    override def run(): Unit = {
-      while(!isStopped.get()) {
-        Thread.sleep(UPDATE_PERIOD_MS)
-        partitions.foreach(p => updateSubscribers(p))
-      }
+  private val updateThread = new Thread(() => {
+    while (!isStopped.get()) {
+      Thread.sleep(UPDATE_PERIOD_MS)
+      partitions.foreach(p => updateSubscribers(p))
     }
   })
 
@@ -62,7 +60,7 @@ class BroadcastCommunicationClient(curatorClient: CuratorFramework, partitions: 
   private def updateSubscribers(partition: Int) = {
     val oldPeers = partitionSubscribers.get(partition)
     if(curatorClient.checkExists.forPath(s"/subscribers/${partition}") != null) {
-      val newPeers = curatorClient.getChildren.forPath(s"/subscribers/${partition}").toSet ++ oldPeers
+      val newPeers = curatorClient.getChildren.forPath(s"/subscribers/${partition}").asScala.toSet ++ oldPeers
       partitionSubscribers.put(partition, newPeers)
     }
   }

@@ -1,16 +1,14 @@
 package com.bwsw.tstreams.streams
 
-import java.lang.Long
 import java.util.concurrent.atomic.AtomicInteger
 
 import com.bwsw.tstreams.common.StorageClient
 import transactionService.rpc.{ProducerTransaction, TransactionStates}
 
 import scala.annotation.tailrec
-import scala.concurrent.Await
 import scala.concurrent.duration._
+import scala.concurrent.{Await, ExecutionContext}
 import scala.util.{Failure, Success}
-
 
 case class TransactionRecord(partition: Int, transactionID: Long, state: transactionService.rpc.TransactionStates, count: Int, ttl: Long)
 
@@ -41,7 +39,7 @@ class TransactionDatabase(storageClient: StorageClient, stream: String) {
 
   def getSession() = storageClient
 
-  def put[T](transaction: TransactionRecord)(onComplete: ProducerTransaction => T) = {
+  def put[T](transaction: TransactionRecord, async: Boolean)(onComplete: ProducerTransaction => T) = {
     val s = stream
 
     val tr = new ProducerTransaction {
@@ -54,10 +52,16 @@ class TransactionDatabase(storageClient: StorageClient, stream: String) {
     }
 
     val f = storageClient.client.putTransaction(tr)
+    if (async) {
+      import ExecutionContext.Implicits.global
 
-    f onComplete {
-      case Success(res) => onComplete(tr)
-      case Failure(reason) => throw reason
+      f onComplete {
+        case Success(res) => onComplete(tr)
+        case Failure(reason) => throw reason
+      }
+    } else {
+      Await.result(f, 1.minute)
+      onComplete(tr)
     }
   }
 

@@ -4,7 +4,7 @@ import com.bwsw.tstreams.agents.consumer.Offset.Oldest
 import com.bwsw.tstreams.agents.producer.NewTransactionProducerPolicy
 import com.bwsw.tstreams.env.ConfigurationOptions
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
-import testutils.{LocalGeneratorCreator, TestUtils}
+import testutils.TestUtils
 
 /**
   * Created by Ivan Kudryavtsev on 09.09.16.
@@ -25,34 +25,28 @@ class ConsumerCheckpointTests extends FlatSpec with Matchers with BeforeAndAfter
 
     val CONSUMER_NAME = "test_consumer"
 
-    val producer = f.getProducer[String](
+    val producer = f.getProducer(
       name = "test_producer",
-      transactionGenerator = LocalGeneratorCreator.getGen(),
-      converter = stringToArrayByteConverter,
       partitions = Set(0))
 
-    val c1 = f.getConsumer[String](
+    val c1 = f.getConsumer(
       name = CONSUMER_NAME,
-      transactionGenerator = LocalGeneratorCreator.getGen(),
-      converter = arrayByteToStringConverter,
       partitions = Set(0),
       offset = Oldest,
       useLastOffset = false)
 
-    val c2 = f.getConsumer[String](
+    val c2 = f.getConsumer(
       name = CONSUMER_NAME,
-      transactionGenerator = LocalGeneratorCreator.getGen(),
-      converter = arrayByteToStringConverter,
       partitions = Set(0),
       offset = Oldest,
       useLastOffset = true)
 
     val t1 = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened, 0)
-    t1.send("data")
+    t1.send("data".getBytes())
     producer.checkpoint()
 
     val t2 = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened, 0)
-    t2.send("data")
+    t2.send("data".getBytes())
     producer.checkpoint()
 
     c1.start()
