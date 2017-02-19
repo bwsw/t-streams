@@ -27,8 +27,7 @@ class Consumer(val name: String,
                val options: ConsumerOptions)
   extends GroupParticipant with TransactionOperator {
 
-  val tsdb = new TransactionDatabase(stream.storageClient, stream.name)
-  val consumerService = new ConsumerService(stream.storageClient)
+  val tsdb = new TransactionDatabase(stream.client, stream.name)
 
   /**
     * Temporary checkpoints (will be cleared after every checkpoint() invokes)
@@ -44,11 +43,6 @@ class Consumer(val name: String,
     * Buffer for transactions preload
     */
   private val transactionBuffer = scala.collection.mutable.Map[Int, scala.collection.mutable.Queue[ConsumerTransaction]]()
-
-  /**
-    * Indicate set offsets or not
-    */
-  private var isReadOffsetsAreSet = false
 
   /**
     * Flag which defines either object is running or not
@@ -103,8 +97,8 @@ class Consumer(val name: String,
 
     for (partition <- options.readPolicy.getUsedPartitions()) {
       val bootstrapOffset =
-        if (consumerService.offsetExists(name, stream.name, partition) && options.useLastOffset) {
-          consumerService.getLastSavedOffset(name, stream.name, partition)
+        if (stream.client.checkConsumerOffsetExists(name, stream.name, partition) && options.useLastOffset) {
+          stream.client.getLastSavedConsumerOffset(name, stream.name, partition)
         } else {
           options.offset match {
             case Offset.Oldest =>
@@ -267,7 +261,7 @@ class Consumer(val name: String,
       Consumer.logger.debug(s"Start saving checkpoints for " +
         s"consumer with name : $name, streamName : ${stream.name}, streamPartitions : ${stream.partitionsCount}")
     }
-    consumerService.saveBatchOffset(name, stream.name, checkpointOffsets)
+    stream.client.saveConsumerOffsetBatch(name, stream.name, checkpointOffsets)
     checkpointOffsets.clear()
   }
 
@@ -327,5 +321,5 @@ class Consumer(val name: String,
 
   override def getProposedTransactionId(): Long = options.transactionGenerator.getTransaction()
 
-  override def getStorageClient(): StorageClient = stream.storageClient
+  override def getStorageClient(): StorageClient = stream.client
 }

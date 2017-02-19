@@ -65,7 +65,7 @@ class ConsumerTransaction(partition: Int,
     //try to update buffer
     if (buffer.isEmpty) {
       val newCount = (cnt + consumer.options.dataPreload).min(count - 1)
-      buffer ++= Await.result(consumer.stream.storageClient.client.getTransactionData(
+      buffer ++= Await.result(consumer.stream.client.client.getTransactionData(
         new RPCConsumerTransaction(consumer.stream.name, consumer.name, partition, transactionID), cnt, newCount), 1.minute)
       cnt = newCount + 1
     }
@@ -96,7 +96,7 @@ class ConsumerTransaction(partition: Int,
   def getAll() = this.synchronized {
     if (consumer == null)
       throw new IllegalArgumentException("Transaction is not yet attached to consumer. Attach it first.")
-    mutable.Queue[Array[Byte]]() ++ Await.result(consumer.stream.storageClient.client.getTransactionData(
+    mutable.Queue[Array[Byte]]() ++ Await.result(consumer.stream.client.client.getTransactionData(
       new RPCConsumerTransaction(consumer.stream.name, consumer.name, partition, transactionID), cnt, count-1), 1.minute)
   }
 

@@ -3,7 +3,6 @@ package env
 import com.bwsw.tstreams.agents.consumer.Offset.Oldest
 import com.bwsw.tstreams.agents.consumer.{ConsumerTransaction, TransactionOperator}
 import com.bwsw.tstreams.env.ConfigurationOptions
-import com.bwsw.tstreams.streams.StreamService
 import testutils.TestStorageServer
 
 /**
@@ -71,7 +70,7 @@ class TStreamsFactoryTest extends FlatSpec with Matchers with BeforeAndAfterAll 
 
     sub != null shouldEqual true
 
-    StreamService.createStream(storageClient, sub.stream.name, 1, 24 * 3600, "sample-desc")
+    storageClient.createStream(sub.stream.name, 1, 24 * 3600, "sample-desc")
 
     sub.start()
     sub.stop()

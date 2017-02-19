@@ -30,7 +30,7 @@ class ProducerTransaction(partition: Int,
 
   private val transactionLock = new ReentrantLock()
 
-  private val data = new ProducerTransactionData(this, transactionOwner.stream.ttl, transactionOwner.stream.storageClient)
+  private val data = new ProducerTransactionData(this, transactionOwner.stream.ttl, transactionOwner.stream.client)
 
   /**
     * state of transaction

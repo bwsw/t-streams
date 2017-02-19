@@ -44,7 +44,7 @@ class Producer(var name: String,
     this.name = name
   }
 
-  val tsdb = new TransactionDatabase(stream.storageClient, stream.name)
+  val tsdb = new TransactionDatabase(stream.client, stream.name)
 
 
   // short key
@@ -377,5 +377,5 @@ class Producer(var name: String,
 
   }
 
-  override def getStorageClient(): StorageClient = stream.storageClient
+  override def getStorageClient(): StorageClient = stream.client
 }

@@ -151,7 +151,7 @@ class TStreamsFactory() {
 
     // construct stream
     val stream = new Stream(
-      storageClient = getStorageClient(),
+      client = getStorageClient(),
       name = pAsString(co.Stream.name),
       partitionsCount = pAsInt(co.Stream.partitionsCount, streamDefaults.Stream.partitionsCount.default),
       ttl = pAsLong(co.Stream.ttlSec, streamDefaults.Stream.ttlSec.default),

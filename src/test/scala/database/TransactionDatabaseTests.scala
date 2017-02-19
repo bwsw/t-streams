@@ -3,7 +3,7 @@ package database
 
 import java.util.concurrent.CountDownLatch
 
-import com.bwsw.tstreams.streams.{StreamService, TransactionDatabase, TransactionRecord}
+import com.bwsw.tstreams.streams.{TransactionDatabase, TransactionRecord}
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import testutils.{LocalGeneratorCreator, TestStorageServer, TestUtils}
 import transactionService.rpc.TransactionStates
@@ -17,7 +17,7 @@ class TransactionDatabaseTests extends FlatSpec with Matchers with BeforeAndAfte
   val storageClient = f.getStorageClient()
   val stream = "test"
 
-  StreamService.createStream(storageClient, stream, 1, 24 * 3600, "")
+  storageClient.createStream(stream, 1, 24 * 3600, "")
 
   val tsdb = new TransactionDatabase(storageClient, stream = stream)
 
