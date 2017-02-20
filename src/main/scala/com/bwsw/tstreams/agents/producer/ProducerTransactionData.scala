@@ -1,7 +1,6 @@
 package com.bwsw.tstreams.agents.producer
 
 import com.bwsw.tstreams.common.StorageClient
-import transactionService.rpc.TransactionStates
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
@@ -22,10 +21,8 @@ class ProducerTransactionData(transaction: ProducerTransaction, ttl: Long, stora
   }
 
   def save(): () => Unit = this.synchronized {
-    val job = storageClient.client.putTransactionData(
-      new RPCProducerTransaction(streamName, transaction.getPartition, transaction.getTransactionID(), -1, TransactionStates.Opened, -1),
-      items,
-      lastOffset)
+    val job = storageClient.client.putTransactionData(streamName, transaction.getPartition,
+      transaction.getTransactionID(), items, lastOffset)
 
     items = new scala.collection.mutable.ListBuffer[Array[Byte]]()
     () => Await.result(job, 1.minute)

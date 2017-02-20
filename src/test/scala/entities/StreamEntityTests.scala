@@ -1,7 +1,7 @@
 package entities
 
 import com.bwsw.tstreams.streams.Stream
-import com.bwsw.tstreamstransactionserver.exception.Throwables.StreamNotExist
+import com.bwsw.tstreamstransactionserver.exception.Throwables.StreamDoesNotExist
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import testutils.{TestStorageServer, TestUtils}
 
@@ -100,7 +100,7 @@ class StreamEntityTests extends FlatSpec with Matchers with BeforeAndAfterAll wi
   "BasicStreamService.loadStream()" should "throw exception if stream not exist" in {
     val name = getRandomString
 
-    intercept[StreamNotExist] {
+    intercept[StreamDoesNotExist] {
       storageClient.loadStream(name)
     }
   }
@@ -116,7 +116,7 @@ class StreamEntityTests extends FlatSpec with Matchers with BeforeAndAfterAll wi
 
     storageClient.deleteStream(name)
 
-    intercept[StreamNotExist] {
+    intercept[StreamDoesNotExist] {
       storageClient.loadStream(name)
     }
   }

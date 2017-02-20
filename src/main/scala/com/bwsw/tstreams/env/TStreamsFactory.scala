@@ -13,7 +13,8 @@ import com.bwsw.tstreams.coordination.client.TcpTransport
 import com.bwsw.tstreams.env.defaults.TStreamsFactoryProducerDefaults.PortRange
 import com.bwsw.tstreams.generator.{ITransactionGenerator, LocalTransactionGenerator}
 import com.bwsw.tstreams.streams.Stream
-import com.bwsw.tstreamstransactionserver.options.{AuthOptions, ClientOptions, ZookeeperOptions}
+import com.bwsw.tstreamstransactionserver.options.ClientOptions.{AuthOptions, ConnectionOptions}
+import com.bwsw.tstreamstransactionserver.options.CommonOptions.ZookeeperOptions
 import org.slf4j.LoggerFactory
 
 import scala.collection.mutable
@@ -112,22 +113,17 @@ class TStreamsFactory() {
   }
 
   def getStorageClient() = this.synchronized {
-    val clientOptions = new ClientOptions(connectionTimeoutMs = pAsInt(co.StorageClient.connectionTimeoutMs),
+    val clientOptions = new ConnectionOptions(connectionTimeoutMs = pAsInt(co.StorageClient.connectionTimeoutMs),
       retryDelayMs = pAsInt(co.StorageClient.retryDelayMs),
       threadPool = pAsInt(co.StorageClient.threadPool))
 
-    val authOptions = new AuthOptions(key = pAsString(co.StorageClient.Auth.key),
-      connectionTimeoutMs = pAsInt(co.StorageClient.Auth.connectionTimeoutMs),
-      retryDelayMs = pAsInt(co.StorageClient.Auth.retryDelayMs),
-      tokenConnectionTimeoutMs = pAsInt(co.StorageClient.Auth.tokenConnectionTimeoutMs),
-      tokenRetryDelayMs = pAsInt(co.StorageClient.Auth.tokenRetryDelayMs))
+    val authOptions = new AuthOptions(key = pAsString(co.StorageClient.Auth.key))
 
     val zookeeperOptions = new ZookeeperOptions(endpoints = pAsString(co.StorageClient.Zookeeper.endpoints),
       prefix = pAsString(co.StorageClient.Zookeeper.prefix),
       sessionTimeoutMs = pAsInt(co.StorageClient.Zookeeper.sessionTimeoutMs),
       connectionTimeoutMs = pAsInt(co.StorageClient.Zookeeper.connectionTimeoutMs),
-      retryDelayMs = pAsInt(co.StorageClient.Zookeeper.retryDelayMs),
-      retryCount = pAsInt(co.StorageClient.Zookeeper.retryCount))
+      retryDelayMs = pAsInt(co.StorageClient.Zookeeper.retryDelayMs))
 
     new StorageClient(clientOptions = clientOptions, authOptions = authOptions, zookeeperOptions = zookeeperOptions)
   }

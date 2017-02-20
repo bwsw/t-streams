@@ -12,7 +12,7 @@ class RPCProducerTransaction(_stream: String, _partition: Int, _transactionID: L
 
   override def transactionID: Long = _transactionID
 
-  override def keepAliveTTL: Long = _ttl
+  override def ttl: Long = _ttl
 
   override def state: TransactionStates = _state
 

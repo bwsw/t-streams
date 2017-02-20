@@ -2,7 +2,9 @@ package com.bwsw.tstreams.common
 
 import com.bwsw.tstreams.agents.consumer.RPCConsumerTransaction
 import com.bwsw.tstreams.streams.{Stream, TransactionDatabase, TransactionRecord}
-import com.bwsw.tstreamstransactionserver.options.{AuthOptions, ClientBuilder, ClientOptions, ZookeeperOptions}
+import com.bwsw.tstreamstransactionserver.options.ClientBuilder
+import com.bwsw.tstreamstransactionserver.options.ClientOptions.{AuthOptions, ConnectionOptions}
+import com.bwsw.tstreamstransactionserver.options.CommonOptions.ZookeeperOptions
 import org.slf4j.LoggerFactory
 import transactionService.rpc.{ProducerTransaction, TransactionStates}
 
@@ -15,14 +17,15 @@ import scala.util.{Failure, Success}
 object StorageClient {
   private val logger = LoggerFactory.getLogger(this.getClass)
 }
+
 /**
   *
   * @param clientOptions
   * @param authOptions
   * @param zookeeperOptions
   */
-class StorageClient(clientOptions: ClientOptions, authOptions: AuthOptions, zookeeperOptions: ZookeeperOptions) {
-  private val map = scala.collection.mutable.Map[String,String]()
+class StorageClient(clientOptions: ConnectionOptions, authOptions: AuthOptions, zookeeperOptions: ZookeeperOptions) {
+  private val map = scala.collection.mutable.Map[String, String]()
   private val clientBuilder = new ClientBuilder()
 
   val client = clientBuilder.withClientOptions(clientOptions).withAuthOptions(authOptions).withZookeeperOptions(zookeeperOptions).build()
@@ -30,7 +33,7 @@ class StorageClient(clientOptions: ClientOptions, authOptions: AuthOptions, zook
   /**
     * Getting existing stream
     *
-    * @param streamName      Name of the stream
+    * @param streamName Name of the stream
     * @return Stream instance
     */
   def loadStream(streamName: String, timeout: Duration = 1.minute): Stream = {
@@ -50,7 +53,7 @@ class StorageClient(clientOptions: ClientOptions, authOptions: AuthOptions, zook
     */
   def createStream(streamName: String, partitionsCount: Int, ttl: Long, description: String, timeout: Duration = 1.minute): Stream = {
     //TODO: fixit Long -> Int (TTL)
-    if (Await.result(client.putStream(streamName, partitionsCount, Some(description), ttl.toInt), timeout) == false)
+    if (Await.result(client.putStream(streamName, partitionsCount, Some(description), ttl), timeout) == false)
       throw new IllegalArgumentException(s"Stream ${streamName} already exists.")
 
     new Stream(this, streamName, partitionsCount, ttl, description)
@@ -60,19 +63,17 @@ class StorageClient(clientOptions: ClientOptions, authOptions: AuthOptions, zook
   /**
     * Deleting concrete stream
     *
-    * @param streamName      Name of the stream to delete
+    * @param streamName Name of the stream to delete
     */
   def deleteStream(streamName: String, timeout: Duration = 1.minute) = Await.result(client.delStream(streamName), timeout)
-
-
 
 
   /**
     * Checking exist concrete stream or not
     *
-    * @param streamName      Name of the stream to check
+    * @param streamName Name of the stream to check
     */
-  def checkStreamExists(streamName: String, timeout: Duration = 1.minute) = Await.result(client.doesStreamExist(streamName), timeout)
+  def checkStreamExists(streamName: String, timeout: Duration = 1.minute) = Await.result(client.checkStreamExists(streamName), timeout)
 
 
   /**
@@ -82,13 +83,13 @@ class StorageClient(clientOptions: ClientOptions, authOptions: AuthOptions, zook
     * @return Exist or not concrete consumer
     */
   def checkConsumerOffsetExists(consumerName: String, stream: String, partition: Int, timeout: Duration = 1.minute) = {
-    Await.result(client.getConsumerState((consumerName, stream, partition)), timeout) > 0
+    Await.result(client.getConsumerState(name = consumerName, stream = stream, partition = partition), timeout) > 0
   }
 
   /**
     * Saving offset batch
     *
-    * @param consumerName                        Name of the consumer
+    * @param consumerName                Name of the consumer
     * @param stream                      Name of the specific stream
     * @param partitionAndLastTransaction Set of partition and last transaction pairs to save
     */
@@ -104,10 +105,10 @@ class StorageClient(clientOptions: ClientOptions, authOptions: AuthOptions, zook
   /**
     * Saving single offset
     *
-    * @param consumerName      Name of the specific consumer
-    * @param stream    Name of the specific stream
-    * @param partition Name of the specific partition
-    * @param offset    Offset to save
+    * @param consumerName Name of the specific consumer
+    * @param stream       Name of the specific stream
+    * @param partition    Name of the specific partition
+    * @param offset       Offset to save
     */
   def saveConsumerOffset(consumerName: String, stream: String, partition: Int, offset: Long, timeout: Duration = 1.minute): Unit = {
     Await.result(client.putTransaction(new RPCConsumerTransaction(consumerName, stream, partition, offset)), timeout)
@@ -116,24 +117,29 @@ class StorageClient(clientOptions: ClientOptions, authOptions: AuthOptions, zook
   /**
     * Retrieving specific offset for particular consumer
     *
-    * @param consumerName      Name of the specific consumer
-    * @param stream    Name of the specific stream
-    * @param partition Name of the specific partition
+    * @param consumerName Name of the specific consumer
+    * @param stream       Name of the specific stream
+    * @param partition    Name of the specific partition
     * @return Offset
     */
   def getLastSavedConsumerOffset(consumerName: String, stream: String, partition: Int, timeout: Duration = 1.minute): Long = {
-    Await.result(client.getConsumerState((consumerName, stream, partition)), timeout)
+    Await.result(client.getConsumerState(name = consumerName, stream = stream, partition = partition), timeout)
   }
 
   def putTransaction[T](streamName: String, transaction: TransactionRecord, async: Boolean, timeout: Duration = 1.minute)(onComplete: ProducerTransaction => T) = {
 
     val tr = new ProducerTransaction {
       override def stream: String = streamName
+
       override def partition: Int = transaction.partition
+
       override def transactionID: Long = transaction.transactionID
+
       override def state: TransactionStates = transaction.state
+
       override def quantity: Int = transaction.count
-      override def keepAliveTTL: Long = transaction.ttl
+
+      override def ttl: Long = transaction.ttl
     }
 
     val f = client.putTransaction(tr)
@@ -152,16 +158,16 @@ class StorageClient(clientOptions: ClientOptions, authOptions: AuthOptions, zook
 
   def getTransaction(streamName: String, partition: Integer, transactionID: Long, timeout: Duration = 1.minute): Option[TransactionRecord] = {
     val txnSeq = Await.result(client.scanTransactions(streamName, partition, transactionID, transactionID), timeout)
-    txnSeq.headOption.map(t => TransactionRecord(partition = partition, transactionID = transactionID, state = t.state, count = t.quantity, ttl = t.keepAliveTTL))
+    txnSeq.headOption.map(t => TransactionRecord(partition = partition, transactionID = transactionID, state = t.state, count = t.quantity, ttl = t.ttl))
   }
 
   def scanTransactionsInterval(streamName: String, partition: Integer, interval: Long, timeout: Duration = 1.minute): Seq[TransactionRecord] = {
     val from = interval * TransactionDatabase.AGGREGATION_INTERVAL
-    val to   = (interval+1) * TransactionDatabase.AGGREGATION_INTERVAL - 1
+    val to = (interval + 1) * TransactionDatabase.AGGREGATION_INTERVAL - 1
     StorageClient.logger.info(s"scanTransactionsInterval(${partition},${interval})")
     StorageClient.logger.info(s"client.scanTransactions(${streamName}, ${partition}, ${from},${to}")
     val txnSeq = Await.result(client.scanTransactions(streamName, partition, from, to), timeout)
-    txnSeq.map(t => TransactionRecord(partition, t.transactionID, t.state, t.quantity, t.keepAliveTTL))
+    txnSeq.map(t => TransactionRecord(partition, t.transactionID, t.state, t.quantity, t.ttl))
   }
 
 }

@@ -15,7 +15,6 @@ object ConfigurationOptions {
       val prefix = "storage-client.zk.prefix"
       val sessionTimeoutMs = "storage-client.zk.session-timeout-ms"
       val connectionTimeoutMs = "storage-client.zk.connection-timeout-ms"
-      val retryCount = "storage-client.zk.retry-count"
       val retryDelayMs = "storage-client.zk.retry-delay-ms"
     }
 
