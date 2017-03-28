@@ -157,5 +157,7 @@ class StorageClient(clientOptions: ConnectionOptions, authOptions: AuthOptions, 
 
   def scanTransactions(streamName: String, partition: Integer, from: Long, to: Long, lambda: ProducerTransaction => Boolean = txn => true, timeout: Duration = 1.minute): (Long, Seq[ProducerTransaction]) = {
     val txnInfo = Await.result(client.scanTransactions(streamName, partition, from, to, lambda), timeout)
-    (txnInfo.isResponseCompleted, txnInfo.producerTransactions)
+    (txnInfo.lastOpenedTransactionID, txnInfo.producerTransactions)
+  }
+
 }
