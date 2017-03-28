@@ -35,7 +35,7 @@ class ExecutorGraph(name: String = "", publisherThreadsAmount: Int = 1) {
     List(general, newTransaction, materialize, publish)
       .foreach(e => if (e.isFailed.get()) throw new IllegalStateException(s"Executor ${e.toString} is failed. No new tasks are allowed."))
 
-    ex.submit(s"<ExecutorGraphTask> :: $name", new Runnable { override def run(): Unit = f() })
+    ex.submit(s"<ExecutorGraphTask> :: $name", () => f())
 
   }
 

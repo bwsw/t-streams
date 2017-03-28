@@ -120,15 +120,13 @@ class ProducerAndConsumerSimpleTests extends FlatSpec with Matchers with BeforeA
     val totalDataInTransaction = 10
     val sendData = (for (part <- 0 until totalDataInTransaction) yield "data_part_" + part).sorted
 
-    val producerThread = new Thread(new Runnable {
-      def run() {
-        val transaction = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
-        sendData.foreach { x =>
-          transaction.send(x.getBytes())
-          Thread.sleep(1000)
-        }
-        transaction.checkpoint()
+    val producerThread = new Thread(() => {
+      val transaction = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
+      sendData.foreach { x =>
+        transaction.send(x.getBytes())
+        Thread.sleep(1000)
       }
+      transaction.checkpoint()
     })
 
     var checkVal = true

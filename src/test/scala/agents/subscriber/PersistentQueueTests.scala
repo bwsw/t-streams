@@ -67,11 +67,9 @@ class PersistentQueueTests extends FlatSpec with Matchers {
 
   "InMemoryQueue" should "be signalled" in {
     val q = new TransactionStatePersistentQueue(s"target/${System.currentTimeMillis().toString}")
-    val t = new Thread(new Runnable {
-      override def run(): Unit = {
-        Thread.sleep(10)
-        q.put(Nil)
-      }
+    val t = new Thread(() => {
+      Thread.sleep(10)
+      q.put(Nil)
     })
     t.start
     val start = System.currentTimeMillis()

@@ -21,12 +21,10 @@ class MaterializationGovernorTests extends FlatSpec with Matchers {
     mg.protect(0)
     var end: Long = 0
     val l = new CountDownLatch(1)
-    val t = new Thread(new Runnable {
-      override def run(): Unit = {
-        mg.awaitUnprotected(0)
-        end = System.currentTimeMillis()
-        l.countDown()
-      }
+    val t = new Thread(() => {
+      mg.awaitUnprotected(0)
+      end = System.currentTimeMillis()
+      l.countDown()
     })
     t.start()
     val start = System.currentTimeMillis()

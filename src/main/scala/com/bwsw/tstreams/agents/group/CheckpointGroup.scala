@@ -5,10 +5,8 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.locks.ReentrantLock
 
 import com.bwsw.tstreams.agents.consumer.RPCConsumerTransaction
-import com.bwsw.tstreams.agents.producer.RPCProducerTransaction
 import com.bwsw.tstreams.common.{FirstFailLockableTaskExecutor, GeneralOptions, LockUtil, StorageClient}
 import org.slf4j.LoggerFactory
-import transactionService.rpc.TransactionStates
 
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.Await
@@ -155,9 +153,7 @@ class CheckpointGroup(val executors: Int = 1) {
   private def publishCheckpointEventForAllProducers(producers: List[CheckpointInfo]) = {
     producers foreach {
       case ProducerCheckpointInfo(_, agent, checkpointEvent, _, _, _, _, _) =>
-        executorPool.submit("<CheckpointEvent>", new Runnable {
-          override def run(): Unit = agent.publish(checkpointEvent)
-        })
+        executorPool.submit("<CheckpointEvent>", () => agent.publish(checkpointEvent))
       case _ =>
     }
   }

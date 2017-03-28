@@ -9,12 +9,11 @@ import com.bwsw.tstreams.agents.producer.NewTransactionProducerPolicy.ProducerPo
 import com.bwsw.tstreams.common._
 import com.bwsw.tstreams.coordination.client.BroadcastCommunicationClient
 import com.bwsw.tstreams.coordination.messages.state.{TransactionStateMessage, TransactionStatus}
-import com.bwsw.tstreams.streams.{Stream, TransactionDatabase, TransactionRecord}
+import com.bwsw.tstreams.streams.{Stream}
 import org.apache.curator.framework.CuratorFrameworkFactory
 import org.apache.curator.retry.ExponentialBackoffRetry
 import org.apache.zookeeper.KeeperException
 import org.slf4j.LoggerFactory
-import transactionService.rpc.TransactionStates
 
 import scala.util.control.Breaks._
 
@@ -137,22 +136,18 @@ class Producer(var name: String,
     */
   def getTransactionKeepAliveThread: Thread = {
     val latch = new CountDownLatch(1)
-    val transactionKeepAliveThread = new Thread(new Runnable {
-      override def run(): Unit = {
-        Thread.currentThread().setName(s"Producer-$name-KeepAlive")
-        latch.countDown()
-        Producer.logger.info(s"Producer $name - object is started, launched open transaction update thread")
-        breakable {
-          while (true) {
-            val value: Boolean = shutdownKeepAliveThread.wait(producerOptions.transactionKeepAliveMs * 1000)
-            if (value) {
-              Producer.logger.info(s"Producer $name - object either checkpointed or cancelled. Exit KeepAliveThread.")
-              break()
-            }
-            asyncActivityService.submit("<UpdateOpenedTransactionsTask>", new Runnable {
-              override def run(): Unit = updateOpenedTransactions()
-            }, Option(threadLock))
+    val transactionKeepAliveThread = new Thread(() => {
+      Thread.currentThread().setName(s"Producer-$name-KeepAlive")
+      latch.countDown()
+      Producer.logger.info(s"Producer $name - object is started, launched open transaction update thread")
+      breakable {
+        while (true) {
+          val value: Boolean = shutdownKeepAliveThread.wait(producerOptions.transactionKeepAliveMs * 1000)
+          if (value) {
+            Producer.logger.info(s"Producer $name - object either checkpointed or cancelled. Exit KeepAliveThread.")
+            break()
           }
+          asyncActivityService.submit("<UpdateOpenedTransactionsTask>", () => updateOpenedTransactions(), Option(threadLock))
         }
       }
     })
@@ -198,9 +193,7 @@ class Producer(var name: String,
     materializationGovernor.unprotect(p)
 
     if (previousTransactionAction != null)
-      asyncActivityService.submit("<PreviousTransactionActionTask>", new Runnable {
-        override def run(): Unit = previousTransactionAction()
-      })
+      asyncActivityService.submit("<PreviousTransactionActionTask>", () => previousTransactionAction())
     transaction
   }
 

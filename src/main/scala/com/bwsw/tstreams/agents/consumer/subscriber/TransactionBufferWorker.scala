@@ -16,12 +16,10 @@ class TransactionBufferWorker() {
   val transactionBufferMap = mutable.Map[Int, TransactionBuffer]()
   val isComplete = new AtomicBoolean(false)
 
-  val signalThread = new Thread(new Runnable {
-    override def run(): Unit = {
-      while(!isComplete.get) {
-        signalTransactionStateSequences()
-        Thread.sleep(TransactionBuffer.MAX_POST_CHECKPOINT_WAIT * 2)
-      }
+  val signalThread = new Thread(() => {
+    while (!isComplete.get) {
+      signalTransactionStateSequences()
+      Thread.sleep(TransactionBuffer.MAX_POST_CHECKPOINT_WAIT * 2)
     }
   })
 
@@ -46,12 +44,10 @@ class TransactionBufferWorker() {
     * @param transactionState
     */
   def update(transactionState: TransactionState) = {
-    updateExecutor.submit(s"<UpdateAndNotifyTask($transactionState)>", new Runnable {
-      override def run(): Unit = {
-        transactionBufferMap(transactionState.partition).update(transactionState)
-        if(transactionState.state == TransactionStatus.checkpointed)
-          transactionBufferMap(transactionState.partition).signalCompleteTransactions()
-      }
+    updateExecutor.submit(s"<UpdateAndNotifyTask($transactionState)>", () => {
+      transactionBufferMap(transactionState.partition).update(transactionState)
+      if (transactionState.state == TransactionStatus.checkpointed)
+        transactionBufferMap(transactionState.partition).signalCompleteTransactions()
     })
   }
 

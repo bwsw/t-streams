@@ -155,18 +155,7 @@ class StorageClient(clientOptions: ConnectionOptions, authOptions: AuthOptions, 
     return None
   }
 
-  def scanTransactions(streamName: String, partition: Integer, from: Long, to: Long, lambda: ProducerTransaction => Boolean = txn => true, timeout: Duration = 1.minute): Seq[ProducerTransaction] = {
+  def scanTransactions(streamName: String, partition: Integer, from: Long, to: Long, lambda: ProducerTransaction => Boolean = txn => true, timeout: Duration = 1.minute): (Long, Seq[ProducerTransaction]) = {
     val txnInfo = Await.result(client.scanTransactions(streamName, partition, from, to, lambda), timeout)
-
-    (txnInfo.isResponseCompleted, txnInfo.producerTransactions) match {
-      case (false, Nil) =>
-      case (true, t: List[ProducerTransaction]) =>
-        return t.map(txn => TransactionRecord(partition = partition, transactionID = transactionID, state = txn.state, count = txn.quantity, ttl = txn.ttl))
-      case (false, _) =>
-      case what: _ => throw new BadArgumentsException(s"Expected to get (Boolean, Option[ProducerTransaction]). Got ${what}.")
-    }
-
-    txnSeq.map(t => TransactionRecord(partition, t.transactionID, t.state, t.quantity, t.ttl))
-  }
-
+    (txnInfo.isResponseCompleted, txnInfo.producerTransactions)
 }

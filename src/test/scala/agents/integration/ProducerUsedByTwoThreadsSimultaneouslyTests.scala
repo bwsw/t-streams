@@ -33,16 +33,14 @@ class ProducerUsedByTwoThreadsSimultaneouslyTests extends FlatSpec with Matchers
   it should "work correctly if two different threads uses different partitions" in {
     val l = new CountDownLatch(2)
 
-    val t1 = new Thread(new Runnable {
-      override def run(): Unit = {
-        (0 until COUNT)
-          .foreach(i => {
-            val t = producer.newTransaction(NewTransactionProducerPolicy.CheckpointAsyncIfOpened, 0)
-            t.send("data")
-            t.checkpoint(false)
-          })
-        l.countDown()
-      }
+    val t1 = new Thread(() => {
+      (0 until COUNT)
+        .foreach(i => {
+          val t = producer.newTransaction(NewTransactionProducerPolicy.CheckpointAsyncIfOpened, 0)
+          t.send("data")
+          t.checkpoint(false)
+        })
+      l.countDown()
     })
 
     val t2 = new Thread(() => {

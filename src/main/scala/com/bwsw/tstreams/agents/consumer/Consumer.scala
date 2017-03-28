@@ -5,7 +5,7 @@ import java.util.concurrent.locks.ReentrantLock
 
 import com.bwsw.tstreams.agents.group.{CheckpointInfo, ConsumerCheckpointInfo, GroupParticipant}
 import com.bwsw.tstreams.common.StorageClient
-import com.bwsw.tstreams.streams.{Stream, TransactionDatabase}
+import com.bwsw.tstreams.streams.Stream
 import org.slf4j.LoggerFactory
 
 import scala.collection.mutable

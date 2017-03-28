@@ -24,11 +24,9 @@ class TcpTransport(address: String, timeoutMs: Int, retryCount: Int = 3, retryDe
   class ChannelHandler extends SimpleChannelInboundHandler[String] {
     override def channelRead0(ctx: ChannelHandlerContext, msg: String): Unit = {
       if (!isIgnore.get)
-        executor.submit("<NettyNewMessageTask>", new Runnable {
-          override def run(): Unit = {
-            callback(ctx.channel, msg)
-            ReferenceCountUtil.release(msg)
-          }
+        executor.submit("<NettyNewMessageTask>", () => {
+          callback(ctx.channel, msg)
+          ReferenceCountUtil.release(msg)
         })
     }
 

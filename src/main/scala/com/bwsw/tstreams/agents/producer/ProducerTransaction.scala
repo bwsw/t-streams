@@ -7,9 +7,8 @@ import com.bwsw.tstreams.agents.group.ProducerCheckpointInfo
 import com.bwsw.tstreams.common.LockUtil
 import com.bwsw.tstreams.coordination.messages.state.{TransactionStateMessage, TransactionStatus}
 import com.bwsw.tstreams.debug.GlobalHooks
-import com.bwsw.tstreams.streams.TransactionRecord
+import com.bwsw.tstreamstransactionserver.rpc.TransactionStates
 import org.slf4j.LoggerFactory
-import transactionService.rpc.TransactionStates
 
 import scala.collection.mutable.ListBuffer
 
@@ -242,9 +241,7 @@ class ProducerTransaction(partition: Int,
       state.awaitUpdateComplete()
       state.closeOrDie()
       if (!isSynchronous) {
-        transactionOwner.asyncActivityService.submit("<CheckpointAsyncTask>", new Runnable {
-          override def run(): Unit = checkpointAsync()
-        }, Option(transactionLock))
+        transactionOwner.asyncActivityService.submit("<CheckpointAsyncTask>", () => checkpointAsync(), Option(transactionLock))
       }
       else {
         finalizeDataSend()

@@ -37,32 +37,30 @@ class RequestsTcpServer(host: String, port: Int, handler: SimpleChannelInboundHa
   def start() = {
     assert(listenerThread == null || !listenerThread.isAlive)
     val syncPoint = new CountDownLatch(1)
-    listenerThread = new Thread(new Runnable {
-      override def run(): Unit = {
-        try {
-          val b = new ServerBootstrap()
-          b.group(bossGroup, workerGroup).channel(classOf[NioServerSocketChannel])
-            .handler(new LoggingHandler(LogLevel.DEBUG))
-            .childHandler(new ChannelInitializer[SocketChannel]() {
-              override def initChannel(ch: SocketChannel) {
-                ch.config().setTcpNoDelay(true)
-                ch.config().setKeepAlive(true)
-                ch.config().setTrafficClass(0x10)
-                ch.config().setPerformancePreferences(0, 1, 0)
-                val p = ch.pipeline()
-                p.addLast("framer", new DelimiterBasedFrameDecoder(MAX_FRAME_LENGTH, Delimiters.lineDelimiter(): _*))
-                p.addLast("decoder", new StringDecoder())
-                p.addLast("encoder", new StringEncoder())
-                p.addLast("handler", handler)
-              }
-            })
-          val f = b.bind(host, port).sync()
-          syncPoint.countDown()
-          f.channel().closeFuture().sync()
-        } finally {
-          workerGroup.shutdownGracefully(0, 0, TimeUnit.SECONDS)
-          bossGroup.shutdownGracefully(0, 0, TimeUnit.SECONDS)
-        }
+    listenerThread = new Thread(() => {
+      try {
+        val b = new ServerBootstrap()
+        b.group(bossGroup, workerGroup).channel(classOf[NioServerSocketChannel])
+          .handler(new LoggingHandler(LogLevel.DEBUG))
+          .childHandler(new ChannelInitializer[SocketChannel]() {
+            override def initChannel(ch: SocketChannel) {
+              ch.config().setTcpNoDelay(true)
+              ch.config().setKeepAlive(true)
+              ch.config().setTrafficClass(0x10)
+              ch.config().setPerformancePreferences(0, 1, 0)
+              val p = ch.pipeline()
+              p.addLast("framer", new DelimiterBasedFrameDecoder(MAX_FRAME_LENGTH, Delimiters.lineDelimiter(): _*))
+              p.addLast("decoder", new StringDecoder())
+              p.addLast("encoder", new StringEncoder())
+              p.addLast("handler", handler)
+            }
+          })
+        val f = b.bind(host, port).sync()
+        syncPoint.countDown()
+        f.channel().closeFuture().sync()
+      } finally {
+        workerGroup.shutdownGracefully(0, 0, TimeUnit.SECONDS)
+        bossGroup.shutdownGracefully(0, 0, TimeUnit.SECONDS)
       }
     })
     listenerThread.start()

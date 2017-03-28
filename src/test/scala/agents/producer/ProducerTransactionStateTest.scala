@@ -15,16 +15,14 @@ class ProducerTransactionStateTest extends FlatSpec with Matchers {
     v.foreach(i => v(i) = -1)
     var idx = 0
     val l = new CountDownLatch(1)
-    val t = new Thread(new Runnable {
-      override def run(): Unit = {
-        s.setUpdateInProgress
-        v(idx) = 1
-        idx += 1
-        l.countDown()
-        v(idx) = 2
-        idx += 1
-        s.setUpdateFinished
-      }
+    val t = new Thread(() => {
+      s.setUpdateInProgress
+      v(idx) = 1
+      idx += 1
+      l.countDown()
+      v(idx) = 2
+      idx += 1
+      s.setUpdateFinished
     })
     t.run()
     l.await()
@@ -75,13 +73,11 @@ class ProducerTransactionStateTest extends FlatSpec with Matchers {
     var idx = 0
     val l = new CountDownLatch(1)
 
-    val t = new Thread(new Runnable {
-      override def run(): Unit = {
-        l.countDown()
-        v(idx) = 1
-        idx += 1
-        s.makeMaterialized
-      }
+    val t = new Thread(() => {
+      l.countDown()
+      v(idx) = 1
+      idx += 1
+      s.makeMaterialized
     })
     t.run()
     l.await()
