@@ -17,11 +17,13 @@ class ConsumerOffsetsTests extends FlatSpec with Matchers with BeforeAndAfterAll
     val partition = 1
     val offset: Long = LocalGeneratorCreator.getTransaction()
     storageClient.saveConsumerOffset(consumer, stream, partition, offset)
+
+    Thread.sleep(500) // wait while server handle it.
+
     val checkExist: Boolean = storageClient.checkConsumerOffsetExists(consumer, stream, partition)
+    checkExist shouldBe true
     val retValOffset: Long = storageClient.getLastSavedConsumerOffset(consumer, stream, partition)
-    println(retValOffset)
-    val checkVal = checkExist && retValOffset == offset
-    checkVal shouldBe true
+    retValOffset shouldBe offset
   }
 
   "ConsumerEntity.exist()" should "return false if consumer not exist" in {
@@ -32,7 +34,7 @@ class ConsumerOffsetsTests extends FlatSpec with Matchers with BeforeAndAfterAll
     storageClient.checkConsumerOffsetExists(consumer, stream, partition) shouldEqual false
   }
 
-  "ConsumerEntity.getOffset()" should "throw java.lang.IndexOutOfBoundsException if consumer not exist" in {
+  "ConsumerEntity.getOffset()" should "return -1 if consumer offset does not exist" in {
     val consumer = getRandomString
     val stream = getRandomString
     storageClient.createStream(stream, 1, 24 * 3600, "")
@@ -51,6 +53,8 @@ class ConsumerOffsetsTests extends FlatSpec with Matchers with BeforeAndAfterAll
       offsets(i) = LocalGeneratorCreator.getTransaction()
 
     storageClient.saveConsumerOffsetBatch(consumer, stream, offsets)
+
+    Thread.sleep(500) // wait while server handle it.
 
     var checkVal = true
 

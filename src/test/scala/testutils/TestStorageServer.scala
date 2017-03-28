@@ -4,7 +4,7 @@ import java.util.concurrent.CountDownLatch
 
 import com.bwsw.tstreamstransactionserver.netty.server.Server
 import com.bwsw.tstreamstransactionserver.options.CommonOptions.ZookeeperOptions
-import com.bwsw.tstreamstransactionserver.options.ServerOptions.StorageOptions
+import com.bwsw.tstreamstransactionserver.options.ServerOptions.{CommitLogOptions, StorageOptions}
 import com.bwsw.tstreamstransactionserver.options.{ServerBuilder}
 
 /**
@@ -16,7 +16,10 @@ object TestStorageServer {
     .withZookeeperOptions(new ZookeeperOptions(endpoints = s"127.0.0.1:${TestUtils.ZOOKEEPER_PORT}"))
 
   def get(): Server = {
-    val transactionServer = serverBuilder.withServerStorageOptions(new StorageOptions(path = TestUtils.getTmpDir())).build()
+    val transactionServer = serverBuilder
+      .withServerStorageOptions(new StorageOptions(path = TestUtils.getTmpDir()))
+      .withCommitLogOptions(new CommitLogOptions(commitLogCloseDelayMs = 100, commitLogToBerkeleyDBTaskDelayMs = 100))
+      .build()
     val l = new CountDownLatch(1)
     new Thread(() => {
       l.countDown()
