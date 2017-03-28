@@ -59,7 +59,7 @@ libraryDependencies ++= Seq(
   "log4j" % "log4j" % "1.2.17",
   "org.apache.curator" % "curator-recipes" % "2.11.0",
   "com.google.guava" % "guava" % "18.0",
-  "com.bwsw" % "tstreams-transaction-server_2.12" % "1.1.1-SNAPSHOT")
+  "com.bwsw" % "tstreams-transaction-server_2.12" % "1.2.1-SNAPSHOT")
 
 
 //ASSEMBLY STRATEGY

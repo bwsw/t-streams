@@ -5,8 +5,9 @@ import com.bwsw.tstreams.streams.{Stream, TransactionDatabase, TransactionRecord
 import com.bwsw.tstreamstransactionserver.options.ClientBuilder
 import com.bwsw.tstreamstransactionserver.options.ClientOptions.{AuthOptions, ConnectionOptions}
 import com.bwsw.tstreamstransactionserver.options.CommonOptions.ZookeeperOptions
+import com.bwsw.tstreamstransactionserver.rpc.{ConsumerTransaction, ProducerTransaction, TransactionStates}
+import org.apache.zookeeper.KeeperException.BadArgumentsException
 import org.slf4j.LoggerFactory
-import transactionService.rpc.{ProducerTransaction, TransactionStates}
 
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.duration._
@@ -28,7 +29,7 @@ class StorageClient(clientOptions: ConnectionOptions, authOptions: AuthOptions, 
   private val map = scala.collection.mutable.Map[String, String]()
   private val clientBuilder = new ClientBuilder()
 
-  val client = clientBuilder.withClientOptions(clientOptions).withAuthOptions(authOptions).withZookeeperOptions(zookeeperOptions).build()
+  val client = clientBuilder.withConnectionOptions(clientOptions).withAuthOptions(authOptions).withZookeeperOptions(zookeeperOptions).build()
 
   /**
     * Getting existing stream
@@ -94,7 +95,7 @@ class StorageClient(clientOptions: ConnectionOptions, authOptions: AuthOptions, 
     * @param partitionAndLastTransaction Set of partition and last transaction pairs to save
     */
   def saveConsumerOffsetBatch(consumerName: String, stream: String, partitionAndLastTransaction: scala.collection.mutable.Map[Int, Long], timeout: Duration = 1.minute) = {
-    val batch = ListBuffer[transactionService.rpc.ConsumerTransaction]()
+    val batch = ListBuffer[ConsumerTransaction]()
     batch.appendAll(partitionAndLastTransaction.map { case (partition, offset) =>
       new RPCConsumerTransaction(consumerName, stream, partition, offset)
     })
@@ -157,8 +158,16 @@ class StorageClient(clientOptions: ConnectionOptions, authOptions: AuthOptions, 
   }
 
   def getTransaction(streamName: String, partition: Integer, transactionID: Long, timeout: Duration = 1.minute): Option[TransactionRecord] = {
-    val txnSeq = Await.result(client.scanTransactions(streamName, partition, transactionID, transactionID), timeout)
-    txnSeq.headOption.map(t => TransactionRecord(partition = partition, transactionID = transactionID, state = t.state, count = t.quantity, ttl = t.ttl))
+    var isComplete = false
+    while(!isComplete) {
+      val txnInfo = Await.result(client.getTransaction(streamName, partition, transactionID), timeout)
+      (txnInfo.exists, txnInfo.transaction) match {
+        case (false, _) => isComplete = false
+        case (true, t: Option[ProducerTransaction]) =>
+          return t.map(txn => TransactionRecord(partition = partition, transactionID = transactionID, state = t., count = txn.quantity, ttl = txn.ttl))
+        case what: _ => throw new BadArgumentsException(s"Expected to get (Boolean, Option[ProducerTransaction]). Got ${what}.")
+      }
+    }
   }
 
   def scanTransactionsInterval(streamName: String, partition: Integer, interval: Long, timeout: Duration = 1.minute): Seq[TransactionRecord] = {
