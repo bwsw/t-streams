@@ -1,11 +1,11 @@
 package com.bwsw.tstreams.common
 
 import com.bwsw.tstreams.agents.consumer.RPCConsumerTransaction
-import com.bwsw.tstreams.streams.{Stream, TransactionDatabase, TransactionRecord}
+import com.bwsw.tstreams.streams.Stream
 import com.bwsw.tstreamstransactionserver.options.ClientBuilder
 import com.bwsw.tstreamstransactionserver.options.ClientOptions.{AuthOptions, ConnectionOptions}
 import com.bwsw.tstreamstransactionserver.options.CommonOptions.ZookeeperOptions
-import com.bwsw.tstreamstransactionserver.rpc.{ConsumerTransaction, ProducerTransaction, TransactionStates}
+import com.bwsw.tstreamstransactionserver.rpc.{ConsumerTransaction, ProducerTransaction}
 import org.apache.zookeeper.KeeperException.BadArgumentsException
 import org.slf4j.LoggerFactory
 
@@ -127,55 +127,45 @@ class StorageClient(clientOptions: ConnectionOptions, authOptions: AuthOptions, 
     Await.result(client.getConsumerState(name = consumerName, stream = stream, partition = partition), timeout)
   }
 
-  def putTransaction[T](streamName: String, transaction: TransactionRecord, async: Boolean, timeout: Duration = 1.minute)(onComplete: ProducerTransaction => T) = {
+  def putTransaction[T](streamName: String, transaction: ProducerTransaction, async: Boolean, timeout: Duration = 1.minute)(onComplete: ProducerTransaction => T) = {
 
-    val tr = new ProducerTransaction {
-      override def stream: String = streamName
-
-      override def partition: Int = transaction.partition
-
-      override def transactionID: Long = transaction.transactionID
-
-      override def state: TransactionStates = transaction.state
-
-      override def quantity: Int = transaction.count
-
-      override def ttl: Long = transaction.ttl
-    }
-
-    val f = client.putTransaction(tr)
+    val f = client.putProducerState(transaction)
     if (async) {
       import ExecutionContext.Implicits.global
 
       f onComplete {
-        case Success(res) => onComplete(tr)
+        case Success(res) => onComplete(transaction)
         case Failure(reason) => throw reason
       }
     } else {
       Await.result(f, timeout)
-      onComplete(tr)
+      onComplete(transaction)
     }
   }
 
-  def getTransaction(streamName: String, partition: Integer, transactionID: Long, timeout: Duration = 1.minute): Option[TransactionRecord] = {
-    var isComplete = false
-    while(!isComplete) {
+  def getTransaction(streamName: String, partition: Integer, transactionID: Long, timeout: Duration = 1.minute): Option[ProducerTransaction] = {
+    while(true) {
       val txnInfo = Await.result(client.getTransaction(streamName, partition, transactionID), timeout)
       (txnInfo.exists, txnInfo.transaction) match {
-        case (false, _) => isComplete = false
-        case (true, t: Option[ProducerTransaction]) =>
-          return t.map(txn => TransactionRecord(partition = partition, transactionID = transactionID, state = t., count = txn.quantity, ttl = txn.ttl))
+        case (true, t: Option[ProducerTransaction]) => return t
+        case (false, _) =>
         case what: _ => throw new BadArgumentsException(s"Expected to get (Boolean, Option[ProducerTransaction]). Got ${what}.")
       }
     }
+    return None
   }
 
-  def scanTransactionsInterval(streamName: String, partition: Integer, interval: Long, timeout: Duration = 1.minute): Seq[TransactionRecord] = {
-    val from = interval * TransactionDatabase.AGGREGATION_INTERVAL
-    val to = (interval + 1) * TransactionDatabase.AGGREGATION_INTERVAL - 1
-    StorageClient.logger.info(s"scanTransactionsInterval(${partition},${interval})")
-    StorageClient.logger.info(s"client.scanTransactions(${streamName}, ${partition}, ${from},${to}")
-    val txnSeq = Await.result(client.scanTransactions(streamName, partition, from, to), timeout)
+  def scanTransactions(streamName: String, partition: Integer, from: Long, to: Long, lambda: ProducerTransaction => Boolean = txn => true, timeout: Duration = 1.minute): Seq[ProducerTransaction] = {
+    val txnInfo = Await.result(client.scanTransactions(streamName, partition, from, to, lambda), timeout)
+
+    (txnInfo.isResponseCompleted, txnInfo.producerTransactions) match {
+      case (false, Nil) =>
+      case (true, t: List[ProducerTransaction]) =>
+        return t.map(txn => TransactionRecord(partition = partition, transactionID = transactionID, state = txn.state, count = txn.quantity, ttl = txn.ttl))
+      case (false, _) =>
+      case what: _ => throw new BadArgumentsException(s"Expected to get (Boolean, Option[ProducerTransaction]). Got ${what}.")
+    }
+
     txnSeq.map(t => TransactionRecord(partition, t.transactionID, t.state, t.quantity, t.ttl))
   }
 
