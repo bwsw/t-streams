@@ -61,7 +61,6 @@ libraryDependencies ++= Seq(
   "com.google.guava" % "guava" % "18.0",
   "com.bwsw" % "tstreams-transaction-server_2.12" % "1.2.2-SNAPSHOT")
 
-
 //ASSEMBLY STRATEGY
 assemblyJarName in assembly := "t-streams-" + tstreamsVersion + ".jar"
 
