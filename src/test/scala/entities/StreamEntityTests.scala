@@ -1,7 +1,7 @@
 package entities
 
 import com.bwsw.tstreams.streams.Stream
-import com.bwsw.tstreamstransactionserver.exception.Throwables.StreamDoesNotExist
+import com.bwsw.tstreamstransactionserver.exception.Throwable.StreamDoesNotExist
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import testutils.{TestStorageServer, TestUtils}
 

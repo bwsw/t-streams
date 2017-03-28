@@ -3,10 +3,12 @@ package testutils
 import java.util.concurrent.CountDownLatch
 
 import com.bwsw.tstreamstransactionserver.netty.server.Server
-import com.bwsw.tstreamstransactionserver.options.{ServerBuilder, StorageOptions, ZookeeperOptions}
+import com.bwsw.tstreamstransactionserver.options.CommonOptions.ZookeeperOptions
+import com.bwsw.tstreamstransactionserver.options.ServerOptions.StorageOptions
+import com.bwsw.tstreamstransactionserver.options.{ServerBuilder}
 
 /**
-  * Created by ivan on 29.01.17.
+  * Created by Ivan Kudryavtsev on 29.01.17.
   */
 object TestStorageServer {
 
