@@ -28,7 +28,7 @@ class ConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll with Te
 
   val srv = TestStorageServer.get()
   val storageClient = f.getStorageClient()
-  storageClient.createStream("test_stream", 1, 24 * 3600, "")
+  storageClient.createStream("test_stream", 2, 24 * 3600, "")
 
 
   val consumer = f.getConsumer(
@@ -49,7 +49,8 @@ class ConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll with Te
   "consumer.getTransactionById" should "return sent transaction" in {
     val transactionID = LocalGeneratorCreator.getTransaction()
     val putCounter = new CountDownLatch(1)
-    storageClient.putTransaction(new RPCProducerTransaction("test_stream", 1, transactionID, TransactionStates.Opened, 2, 120), true) { r => putCounter.countDown() }
+    storageClient.putTransaction(new RPCProducerTransaction("test_stream", 1, transactionID, TransactionStates.Opened, -1, 120), true) { r => true }
+    storageClient.putTransaction(new RPCProducerTransaction("test_stream", 1, transactionID, TransactionStates.Checkpointed, 2, 120), true) { r => putCounter.countDown() }
     putCounter.await()
     Thread.sleep(500) // wait while server handle it.
 
@@ -57,14 +58,12 @@ class ConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll with Te
     consumedTransaction.getPartition shouldBe 1
     consumedTransaction.getTransactionID shouldBe transactionID
     consumedTransaction.getCount() shouldBe 2
-  }
 
-  "consumer.getTransaction" should "return sent transaction" in {
     val transaction = consumer.getTransaction(1)
     transaction.isDefined shouldEqual true
   }
 
-  "consumer.getLastTransaction" should "return last closed transaction" in {
+  "consumer.getLastTransaction" should "return last checkpointed transaction" in {
     val ALL = 100
     val putCounter = new CountDownLatch(ALL - 1)
     val transactions = for (i <- 0 until ALL) yield LocalGeneratorCreator.getTransaction()
@@ -81,7 +80,7 @@ class ConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll with Te
     putCounter.await()
     Thread.sleep(500) // wait while server handle it.
 
-    val retrievedTransaction = consumer.getLastTransaction(partition = 1).get
+    val retrievedTransaction = consumer.getLastTransaction(1).get
     retrievedTransaction.getTransactionID shouldEqual transaction
   }
 
