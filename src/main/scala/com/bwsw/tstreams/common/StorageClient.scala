@@ -127,7 +127,7 @@ class StorageClient(clientOptions: ConnectionOptions, authOptions: AuthOptions, 
     Await.result(client.getConsumerState(name = consumerName, stream = stream, partition = partition), timeout)
   }
 
-  def putTransaction[T](streamName: String, transaction: ProducerTransaction, async: Boolean, timeout: Duration = 1.minute)(onComplete: ProducerTransaction => T) = {
+  def putTransaction[T](transaction: ProducerTransaction, async: Boolean, timeout: Duration = 1.minute)(onComplete: ProducerTransaction => T) = {
 
     val f = client.putProducerState(transaction)
     if (async) {
@@ -149,7 +149,7 @@ class StorageClient(clientOptions: ConnectionOptions, authOptions: AuthOptions, 
       (txnInfo.exists, txnInfo.transaction) match {
         case (true, t: Option[ProducerTransaction]) => return t
         case (false, _) =>
-        case what: _ => throw new BadArgumentsException(s"Expected to get (Boolean, Option[ProducerTransaction]). Got ${what}.")
+        case _ => throw new BadArgumentsException(s"Expected to get (Boolean, Option[ProducerTransaction]).")
       }
     }
     return None

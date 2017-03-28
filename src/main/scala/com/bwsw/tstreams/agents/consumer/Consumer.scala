@@ -27,8 +27,6 @@ class Consumer(val name: String,
                val options: ConsumerOptions)
   extends GroupParticipant with TransactionOperator {
 
-  val tsdb = new TransactionDatabase(stream.client, stream.name)
-
   /**
     * Temporary checkpoints (will be cleared after every checkpoint() invokes)
     */
@@ -246,7 +244,7 @@ class Consumer(val name: String,
       throw new IllegalStateException("Consumer is not started. Start consumer first.")
 
     stream.client.getTransaction(stream.name, partition, transactionID)
-      .map(rec => new ConsumerTransaction(partition, transactionID, rec.count, rec.ttl))
+      .map(rec => new ConsumerTransaction(partition, transactionID, rec.quantity, rec.ttl))
   }
 
   /**

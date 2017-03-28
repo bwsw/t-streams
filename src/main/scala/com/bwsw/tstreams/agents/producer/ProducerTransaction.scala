@@ -128,10 +128,9 @@ class ProducerTransaction(partition: Int,
   }
 
   private def cancelAsync() = {
-    val transactionRecord = TransactionRecord(partition = partition, transactionID = transactionID, count = -1,
-      ttl = -1L, state = TransactionStates.Invalid)
+    val transactionRecord = new RPCProducerTransaction(transactionOwner.stream.name, partition, transactionID, TransactionStates.Invalid, -1, -1L)
 
-    transactionOwner.stream.client.putTransaction(transactionOwner.stream.name, transaction = transactionRecord, true)(rec => {})
+    transactionOwner.stream.client.putTransaction(transactionRecord, true)(rec => {})
 
     val msg = TransactionStateMessage(transactionID = transactionID,
       ttl = -1,
@@ -215,10 +214,13 @@ class ProducerTransaction(partition: Int,
           return
         }
       }
-      val record = TransactionRecord(partition = partition, transactionID = transactionID, count = getDataItemsCount(), ttl = transactionOwner.stream.ttl, state = TransactionStates.Checkpointed)
-      transactionOwner.stream.client.putTransaction(transactionOwner.stream.name, record, true)(record => {
+      val transactionRecord = new RPCProducerTransaction(transactionOwner.stream.name, partition, transactionID, TransactionStates.Checkpointed, getDataItemsCount(), transactionOwner.stream.ttl)
+
+      transactionOwner.stream.client.putTransaction(transactionRecord, true)(record => {
         checkpointPostEventPart()
       })
+
+
     }
     else {
       transactionOwner.p2pAgent.publish(TransactionStateMessage(
@@ -257,8 +259,9 @@ class ProducerTransaction(partition: Int,
           GlobalHooks.invoke(GlobalHooks.preCommitFailure)
 
           val latch = new CountDownLatch(1)
-          val record = TransactionRecord(partition = partition, transactionID = transactionID, state = TransactionStates.Checkpointed, count = getDataItemsCount(), ttl = transactionOwner.stream.ttl)
-          transactionOwner.stream.client.putTransaction(transactionOwner.stream.name, record, true)(record => {
+          val transactionRecord = new RPCProducerTransaction(transactionOwner.stream.name, partition, transactionID, TransactionStates.Checkpointed, getDataItemsCount(), transactionOwner.stream.ttl)
+
+          transactionOwner.stream.client.putTransaction(transactionRecord, true)(record => {
             latch.countDown()
           })
           latch.await()
@@ -340,9 +343,9 @@ class ProducerTransaction(partition: Int,
     if (ProducerTransaction.logger.isDebugEnabled) {
       ProducerTransaction.logger.debug("Update event for Transaction {}, partition: {}", transactionID, partition)
     }
+    val transactionRecord = new RPCProducerTransaction(transactionOwner.stream.name, partition, transactionID, TransactionStates.Opened, -1, transactionOwner.producerOptions.transactionTtlMs)
 
-    val record = TransactionRecord(partition = partition, transactionID = transactionID, state = TransactionStates.Opened, count = -1, ttl = transactionOwner.stream.ttl)
-    transactionOwner.stream.client.putTransaction(transactionOwner.stream.name, record, true)(record => {
+    transactionOwner.stream.client.putTransaction(transactionRecord, true)(record => {
       doSendUpdateMessage()
     })
 

@@ -5,7 +5,9 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.locks.ReentrantLock
 
 import com.bwsw.tstreams.agents.consumer.RPCConsumerTransaction
+import com.bwsw.tstreams.agents.producer.{RPCProducerTransaction, ProducerTransaction}
 import com.bwsw.tstreams.common.{FirstFailLockableTaskExecutor, GeneralOptions, LockUtil, StorageClient}
+import com.bwsw.tstreamstransactionserver.rpc.TransactionStates
 import org.slf4j.LoggerFactory
 
 import scala.collection.mutable.ListBuffer
@@ -101,7 +103,7 @@ class CheckpointGroup(val executors: Int = 1) {
         consumerRequests.append(new RPCConsumerTransaction(streamName, consumerName, partition, offset))
 
       case ProducerCheckpointInfo(_, _, _, streamName, partition, transaction, totalCnt, ttl) =>
-        producerRequests.append(new RPCProducerTransaction(streamName, partition, transaction, ttl, TransactionStates.Checkpointed, totalCnt))
+        producerRequests.append(new RPCProducerTransaction(streamName, partition, transaction, TransactionStates.Checkpointed, totalCnt, ttl))
     }
 
     Await.result(storageClient.client.putTransactions(producerRequests, consumerRequests), 1.minute)
@@ -153,7 +155,7 @@ class CheckpointGroup(val executors: Int = 1) {
   private def publishCheckpointEventForAllProducers(producers: List[CheckpointInfo]) = {
     producers foreach {
       case ProducerCheckpointInfo(_, agent, checkpointEvent, _, _, _, _, _) =>
-        executorPool.submit("<CheckpointEvent>", () => agent.publish(checkpointEvent))
+        executorPool.submit("<CheckpointEvent>", () => agent.publish(checkpointEvent), None)
       case _ =>
     }
   }

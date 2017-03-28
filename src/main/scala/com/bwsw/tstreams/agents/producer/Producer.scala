@@ -10,6 +10,7 @@ import com.bwsw.tstreams.common._
 import com.bwsw.tstreams.coordination.client.BroadcastCommunicationClient
 import com.bwsw.tstreams.coordination.messages.state.{TransactionStateMessage, TransactionStatus}
 import com.bwsw.tstreams.streams.{Stream}
+import com.bwsw.tstreamstransactionserver.rpc.TransactionStates
 import org.apache.curator.framework.CuratorFrameworkFactory
 import org.apache.curator.retry.ExponentialBackoffRetry
 import org.apache.zookeeper.KeeperException
@@ -42,9 +43,6 @@ class Producer(var name: String,
   def setAgentName(name: String) = {
     this.name = name
   }
-
-  val tsdb = new TransactionDatabase(stream.client, stream.name)
-
 
   // short key
   val pcs = producerOptions.coordinationOptions
@@ -291,10 +289,9 @@ class Producer(var name: String,
         Producer.logger.debug(s"Producer $name - [GET_LOCAL_TRANSACTION] update with message partition=$partition ID=$transactionID opened")
     })
 
-    val transactionRecord = TransactionRecord(partition = partition, transactionID = transactionID, count = -1,
-      ttl = producerOptions.transactionTtlMs, state = TransactionStates.Opened)
+    val transactionRecord = new RPCProducerTransaction(stream.name, partition, transactionID, TransactionStates.Opened, -1, producerOptions.transactionTtlMs)
 
-    stream.client.putTransaction(stream.name, transaction = transactionRecord, true)(rec => {
+    stream.client.putTransaction(transactionRecord, true)(rec => {
       p2pAgent.submitPipelinedTaskToMaterializeExecutor(partition, onComplete)
     })
 
@@ -316,10 +313,13 @@ class Producer(var name: String,
     // stop executor
 
     asyncActivityService.shutdownOrDie(Producer.SHUTDOWN_WAIT_MAX_SECONDS, TimeUnit.SECONDS)
-    while (tsdb.getResourceCounter() != 0) {
-      Producer.logger.info(s"Waiting for all database async callbacks will be executed. Pending: ${tsdb.getResourceCounter()}.")
-      Thread.sleep(200)
-    }
+
+    // TODO: fixit
+    Thread.sleep(1000)
+//    while (tsdb.getResourceCounter() != 0) {
+//      Producer.logger.info(s"Waiting for all database async callbacks will be executed. Pending: ${tsdb.getResourceCounter()}.")
+//      Thread.sleep(200)
+//    }
     backendActivityService.shutdownOrDie(Producer.SHUTDOWN_WAIT_MAX_SECONDS, TimeUnit.SECONDS)
 
     // stop provide master features to public

@@ -2,7 +2,9 @@ package com.bwsw.tstreams.generator
 
 import java.util.concurrent.atomic.{AtomicInteger, AtomicLong}
 
-import com.bwsw.tstreams.streams.TransactionDatabase
+object LocalTransactionGenerator {
+  val SCALE = 100000
+}
 
 /**
   * Entity for generating new transaction time
@@ -21,12 +23,12 @@ class LocalTransactionGenerator() extends ITransactionGenerator {
       currentMillis.set(now)
       counter.set(0)
     }
-    now * TransactionDatabase.SCALE + counter.getAndIncrement()
+    now * LocalTransactionGenerator.SCALE + counter.getAndIncrement()
   }
 
   /**
     * @return time based on transaction
     */
-  override def getTransaction(timestamp: Long) = timestamp * TransactionDatabase.SCALE
+  override def getTransaction(timestamp: Long) = timestamp * LocalTransactionGenerator.SCALE
 
 }

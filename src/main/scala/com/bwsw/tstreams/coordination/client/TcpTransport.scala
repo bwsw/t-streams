@@ -27,7 +27,7 @@ class TcpTransport(address: String, timeoutMs: Int, retryCount: Int = 3, retryDe
         executor.submit("<NettyNewMessageTask>", () => {
           callback(ctx.channel, msg)
           ReferenceCountUtil.release(msg)
-        })
+        }, None)
     }
 
     override def exceptionCaught(ctx: ChannelHandlerContext, cause: Throwable) = {
