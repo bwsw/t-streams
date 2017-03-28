@@ -6,7 +6,7 @@ import java.util.concurrent.locks.ReentrantLock
 import com.bwsw.tstreams.agents.group.{CheckpointInfo, ConsumerCheckpointInfo, GroupParticipant}
 import com.bwsw.tstreams.common.StorageClient
 import com.bwsw.tstreams.streams.Stream
-import com.bwsw.tstreamstransactionserver.rpc.TransactionStates
+import com.bwsw.tstreamstransactionserver.rpc.{TransactionStates, ProducerTransaction}
 import org.slf4j.LoggerFactory
 
 import scala.collection.mutable
@@ -14,6 +14,23 @@ import scala.collection.mutable.ListBuffer
 
 object Consumer {
   val logger = LoggerFactory.getLogger(this.getClass)
+}
+
+private class ScanPredicate(preload: Int) extends Function[ProducerTransaction, Boolean] with Serializable {
+  var quantity = 0
+  override def apply(transaction: ProducerTransaction): Boolean = {
+    quantity = quantity + 1
+    quantity < preload
+  }
+}
+
+private class ScanCheckpointedPredicate(preload: Int) extends Function[ProducerTransaction, Boolean] with Serializable {
+  var quantity = 0
+  override def apply(transaction: ProducerTransaction): Boolean = {
+    quantity = quantity + 1
+    quantity < preload && TransactionStates.Opened != transaction.state
+
+  }
 }
 
 /**
@@ -70,12 +87,9 @@ class Consumer(val name: String,
   }
 
   private def loadNextTransactionsForPartition(partition: Int, currentOffset: Long): mutable.Queue[ConsumerTransaction] = {
-    var quantity = 0
-    val (last, seq) = stream.client.scanTransactions(stream.name, partition, currentOffset + 1, options.transactionGenerator.getTransaction(),
-      transaction => {
-        quantity = quantity + 1
-        quantity < options.transactionsPreload
-      })
+
+    val (last, seq) = stream.client.scanTransactions(stream.name, partition, currentOffset + 1,
+      options.transactionGenerator.getTransaction(), new ScanCheckpointedPredicate(options.transactionsPreload))
 
     val transactionsQueue = mutable.Queue[ConsumerTransaction]()
     seq.foreach(record => {
@@ -312,10 +326,7 @@ class Consumer(val name: String,
   override def getTransactionsFromTo(partition: Int, from: Long, to: Long): ListBuffer[ConsumerTransaction] = {
     var quantity = 0
     val (_, seq) = stream.client.scanTransactions(stream.name, partition, from + 1, to,
-      transaction => {
-          quantity = quantity + 1
-          TransactionStates.Opened != transaction.state && quantity < options.transactionsPreload
-      })
+      new ScanCheckpointedPredicate(options.transactionsPreload))
 
     val result = ListBuffer[ConsumerTransaction]()
     seq.foreach(rec => {
