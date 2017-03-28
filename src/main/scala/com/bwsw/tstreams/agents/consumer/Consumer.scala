@@ -6,6 +6,7 @@ import java.util.concurrent.locks.ReentrantLock
 import com.bwsw.tstreams.agents.group.{CheckpointInfo, ConsumerCheckpointInfo, GroupParticipant}
 import com.bwsw.tstreams.common.StorageClient
 import com.bwsw.tstreams.streams.Stream
+import com.bwsw.tstreamstransactionserver.rpc.TransactionStates
 import org.slf4j.LoggerFactory
 
 import scala.collection.mutable
@@ -69,15 +70,16 @@ class Consumer(val name: String,
   }
 
   private def loadNextTransactionsForPartition(partition: Int, currentOffset: Long): mutable.Queue[ConsumerTransaction] = {
-    var count: Int = 0
-    val transactionsRecords = tsdb.takeWhileForward(partition, currentOffset + 1, options.transactionGenerator.getTransaction())(r => {
-      count += 1
-      count <= options.transactionsPreload
-    })
+    var quantity = 0
+    val (last, seq) = stream.client.scanTransactions(stream.name, partition, currentOffset + 1, options.transactionGenerator.getTransaction(),
+      transaction => {
+        quantity = quantity + 1
+        quantity < options.transactionsPreload
+      })
 
     val transactionsQueue = mutable.Queue[ConsumerTransaction]()
-    transactionsRecords.foreach(record => {
-      val consumerTransaction = new ConsumerTransaction(partition, record.transactionID, record.count, record.ttl)
+    seq.foreach(record => {
+      val consumerTransaction = new ConsumerTransaction(partition, record.transactionID, record.quantity, record.ttl)
       transactionsQueue.enqueue(consumerTransaction)
     })
     transactionsQueue
@@ -179,11 +181,12 @@ class Consumer(val name: String,
     if (!isStarted.get())
       throw new IllegalStateException(s"Consumer $name is not started. Start it first.")
 
-    val transactionFrom = new java.lang.Long(options.transactionGenerator.getTransaction())
-    val transactionsRecord = tsdb.searchBackward(new Integer(partition),
-      transactionFrom, currentOffsets(partition))(rec => rec.count > 0)
-    transactionsRecord
-      .map(rec => new ConsumerTransaction(partition = partition, transactionID = rec.transactionID, count = rec.count, ttl = rec.ttl))
+    val transactionId = stream.client.getLastTransactionId(stream.name, partition)
+    if (transactionId > 0) {
+      val txn = stream.client.getTransaction(stream.name, partition, transactionId)
+      txn.map(t => new ConsumerTransaction(partition = partition, transactionID = t.transactionID, count = t.quantity, ttl = t.ttl))
+    } else
+      None
   }
 
 
@@ -307,10 +310,16 @@ class Consumer(val name: String,
   }
 
   override def getTransactionsFromTo(partition: Int, from: Long, to: Long): ListBuffer[ConsumerTransaction] = {
-    val data = tsdb.takeWhileForward(partition, from + 1, to)(transaction => transaction.count > 0)
+    var quantity = 0
+    val (_, seq) = stream.client.scanTransactions(stream.name, partition, from + 1, to,
+      transaction => {
+          quantity = quantity + 1
+          TransactionStates.Opened != transaction.state && quantity < options.transactionsPreload
+      })
+
     val result = ListBuffer[ConsumerTransaction]()
-    data.foreach(rec => {
-      val t = new ConsumerTransaction(partition = partition, transactionID = rec.transactionID, count = rec.count, ttl = rec.ttl)
+    seq.foreach(rec => {
+      val t = new ConsumerTransaction(partition = partition, transactionID = rec.transactionID, count = rec.quantity, ttl = rec.ttl)
       t.attach(this)
       result.append(t)
     })

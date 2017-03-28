@@ -160,4 +160,7 @@ class StorageClient(clientOptions: ConnectionOptions, authOptions: AuthOptions, 
     (txnInfo.lastOpenedTransactionID, txnInfo.producerTransactions)
   }
 
+  def getLastTransactionId(streamName: String, partition: Integer, timeout: Duration = 1.minute): Long = {
+    Await.result(client.getLastCheckpointedTransaction(streamName, partition), timeout)
+  }
 }

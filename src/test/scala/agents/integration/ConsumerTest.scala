@@ -4,12 +4,12 @@ package agents.integration
 import java.util.concurrent.CountDownLatch
 
 import com.bwsw.tstreams.agents.consumer.Offset.Oldest
+import com.bwsw.tstreams.agents.producer.RPCProducerTransaction
 import com.bwsw.tstreams.common.FirstFailLockableTaskExecutor
 import com.bwsw.tstreams.env.ConfigurationOptions
-import com.bwsw.tstreams.streams.{TransactionDatabase, TransactionRecord}
+import com.bwsw.tstreamstransactionserver.rpc.TransactionStates
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import testutils._
-import transactionService.rpc.TransactionStates
 
 
 class ConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
@@ -33,7 +33,6 @@ class ConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll with Te
     useLastOffset = true)
 
   val executor = new FirstFailLockableTaskExecutor("executor")
-  val tsdb = new TransactionDatabase(null, "test_stream")
 
   "consumer.getTransaction" should "return None if nothing was sent" in {
     consumer.start
@@ -44,7 +43,7 @@ class ConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll with Te
   "consumer.getTransactionById" should "return sent transaction" in {
     val transactionID = LocalGeneratorCreator.getTransaction()
     val putCounter = new CountDownLatch(1)
-    tsdb.put(TransactionRecord(1, transactionID, TransactionStates.Opened, 2, 120), true) { r => putCounter.countDown() }
+    f.getStorageClient().putTransaction(new RPCProducerTransaction("test_stream", 1, transactionID, TransactionStates.Opened, 2, 120), true) { r => putCounter.countDown() }
     putCounter.await()
     val consumedTransaction = consumer.getTransactionById(1, transactionID).get
     consumedTransaction.getPartition shouldBe 1
@@ -62,9 +61,10 @@ class ConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll with Te
     val putCounter = new CountDownLatch(ALL - 1)
     val transactions = for (i <- 0 until ALL) yield LocalGeneratorCreator.getTransaction()
     val transaction = transactions.head
-    tsdb.put(TransactionRecord(1, transactions.head, TransactionStates.Opened, 1, 120), true) { r => true }
+    f.getStorageClient().putTransaction(new RPCProducerTransaction("test_stream", 1, transactions.head, TransactionStates.Opened, 2, 120), true) { r => true }
+
     transactions.drop(1) foreach { t =>
-      tsdb.put(TransactionRecord(1, t, TransactionStates.Opened, -1, 120), true) { r => {
+      f.getStorageClient().putTransaction(new RPCProducerTransaction("test_stream", 1, t, TransactionStates.Opened, -1, 120), true) { r => {
         putCounter.countDown()
       }}
     }
@@ -80,8 +80,10 @@ class ConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll with Te
     val firstTransaction = transactions.head
     val lastTransaction = transactions.last
     transactions foreach { t =>
-      tsdb.put(TransactionRecord(1, t, TransactionStates.Opened, 1, 120), true) { r => {
-        putCounter.countDown()
+      f.getStorageClient().putTransaction(
+        new RPCProducerTransaction("test_stream", 1, t, TransactionStates.Opened, 2, 120), true) {
+        r => {
+          putCounter.countDown()
       }}
     }
     putCounter.await()
@@ -98,14 +100,14 @@ class ConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll with Te
 
     val transactions1 = for (i <- 0 until FIRST) yield LocalGeneratorCreator.getTransaction()
     transactions1 foreach { t =>
-      tsdb.put(TransactionRecord(1, t, TransactionStates.Opened, 1, 120), true) { r => {
+      f.getStorageClient().putTransaction(new RPCProducerTransaction("test_stream", 1, t, TransactionStates.Opened, 1, 120), true) { r => {
         putCounter1.countDown()
       }}
     }
-    tsdb.put(TransactionRecord(1, LocalGeneratorCreator.getTransaction(), TransactionStates.Opened, -1, 120), true) { r => true }
+    f.getStorageClient().putTransaction(new RPCProducerTransaction("test_stream", 1, LocalGeneratorCreator.getTransaction(), TransactionStates.Opened, 1, 120), true) { r => true }
     val transactions2 = for (i <- FIRST until LAST) yield LocalGeneratorCreator.getTransaction()
     transactions2 foreach { t =>
-      tsdb.put(TransactionRecord(1, t, TransactionStates.Opened, 1, 120), true) { r => {
+      f.getStorageClient().putTransaction(new RPCProducerTransaction("test_stream", 1, t, TransactionStates.Opened, 1, 120), true) { r => {
         putCounter2.countDown()
       }}
     }
@@ -136,7 +138,7 @@ class ConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll with Te
     val firstTransaction = transactions.head
     val lastTransaction = transactions.tail.tail.tail.head
     transactions foreach { t =>
-      tsdb.put(TransactionRecord(1, t, TransactionStates.Opened, 1, 120), true) { r => {
+      f.getStorageClient().putTransaction(new RPCProducerTransaction("test_stream", 1, t, TransactionStates.Opened, 1, 120), true) { r => {
         putCounter.countDown()
       }}
     }
