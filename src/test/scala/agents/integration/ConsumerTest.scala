@@ -49,10 +49,10 @@ class ConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll with Te
   "consumer.getTransactionById" should "return sent transaction" in {
     val transactionID = LocalGeneratorCreator.getTransaction()
     val putCounter = new CountDownLatch(1)
+    srv.notifyProducerTransactionCompleted(t => t.transactionID == transactionID && t.state == TransactionStates.Checkpointed, putCounter.countDown())
     storageClient.putTransaction(new RPCProducerTransaction("test_stream", 1, transactionID, TransactionStates.Opened, -1, 120), true) { r => true }
-    storageClient.putTransaction(new RPCProducerTransaction("test_stream", 1, transactionID, TransactionStates.Checkpointed, 2, 120), true) { r => putCounter.countDown() }
+    storageClient.putTransaction(new RPCProducerTransaction("test_stream", 1, transactionID, TransactionStates.Checkpointed, 2, 120), true) { r => true }
     putCounter.await()
-    Thread.sleep(500) // wait while server handle it.
 
     val consumedTransaction = consumer.getTransactionById(1, transactionID).get
     consumedTransaction.getPartition shouldBe 1
@@ -65,46 +65,36 @@ class ConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll with Te
 
   "consumer.getLastTransaction" should "return last checkpointed transaction" in {
     val ALL = 100
-    val putCounter = new CountDownLatch(ALL - 1)
+    val putCounter = new CountDownLatch(1)
     val transactions = for (i <- 0 until ALL) yield LocalGeneratorCreator.getTransaction()
     val transaction = transactions.head
+    srv.notifyProducerTransactionCompleted(t => t.transactionID == transactions.last, putCounter.countDown())
 
     storageClient.putTransaction(new RPCProducerTransaction("test_stream", 1, transactions.head, TransactionStates.Opened, -1, 120), true) { r => true }
     storageClient.putTransaction(new RPCProducerTransaction("test_stream", 1, transactions.head, TransactionStates.Checkpointed, 1, 120), true) { r => true }
 
     transactions.drop(1) foreach { t =>
-      storageClient.putTransaction(new RPCProducerTransaction("test_stream", 1, t, TransactionStates.Opened, -1, 120), true) { r => {
-        putCounter.countDown()
-      }}
+      storageClient.putTransaction(new RPCProducerTransaction("test_stream", 1, t, TransactionStates.Opened, -1, 120), true) { r => true }
     }
     putCounter.await()
-    Thread.sleep(500) // wait while server handle it.
 
     val retrievedTransaction = consumer.getLastTransaction(1).get
     retrievedTransaction.getTransactionID shouldEqual transaction
   }
 
   "consumer.getTransactionsFromTo" should "return all transactions if no incomplete" in {
-    val ALL = 100
-    val putCounter = new CountDownLatch(ALL)
+    val ALL = 80
+    val putCounter = new CountDownLatch(1)
     val transactions = for (i <- 0 until ALL) yield LocalGeneratorCreator.getTransaction()
     val firstTransaction = transactions.head
     val lastTransaction = transactions.last
-    transactions foreach { t =>
-      storageClient.putTransaction(
-        new RPCProducerTransaction("test_stream", 1, t, TransactionStates.Opened, -1, 120), true) {
-        r => {
-          putCounter.countDown()
-      }}
-      storageClient.putTransaction(
-        new RPCProducerTransaction("test_stream", 1, t, TransactionStates.Checkpointed, 1, 120), true) {
-        r => {
-          putCounter.countDown()
-        }}
+    srv.notifyProducerTransactionCompleted(t => t.transactionID == lastTransaction && t.state == TransactionStates.Checkpointed, putCounter.countDown())
 
+    transactions foreach { t =>
+      storageClient.putTransaction(new RPCProducerTransaction("test_stream", 1, t, TransactionStates.Opened, -1, 120), true) { r => true }
+      storageClient.putTransaction(new RPCProducerTransaction("test_stream", 1, t, TransactionStates.Checkpointed, 1, 120), true) { r => true }
     }
     putCounter.await()
-    Thread.sleep(500) // wait while server handle it.
 
     val res = consumer.getTransactionsFromTo(1, firstTransaction, lastTransaction)
     res.size shouldBe transactions.drop(1).size
@@ -113,24 +103,23 @@ class ConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll with Te
   "consumer.getTransactionsFromTo" should "return only transactions up to 1st incomplete" in {
     val FIRST = 30
     val LAST = 100
-    val putCounter1 = new CountDownLatch(FIRST)
-    val putCounter2 = new CountDownLatch(LAST - FIRST)
+    val putCounter = new CountDownLatch(1)
 
     val transactions1 = for (i <- 0 until FIRST) yield LocalGeneratorCreator.getTransaction()
     transactions1 foreach { t =>
-      storageClient.putTransaction(new RPCProducerTransaction("test_stream", 1, t, TransactionStates.Opened, 1, 120), true) { r => {
-        putCounter1.countDown()
-      }}
+      storageClient.putTransaction(new RPCProducerTransaction("test_stream", 1, t, TransactionStates.Opened, -1, 120), true) { r => true }
+      storageClient.putTransaction(new RPCProducerTransaction("test_stream", 1, t, TransactionStates.Checkpointed, 1, 120), true) { r => true }
     }
-    storageClient.putTransaction(new RPCProducerTransaction("test_stream", 1, LocalGeneratorCreator.getTransaction(), TransactionStates.Opened, 1, 120), true) { r => true }
+    storageClient.putTransaction(new RPCProducerTransaction("test_stream", 1, LocalGeneratorCreator.getTransaction(), TransactionStates.Opened, -1, 120), true) { r => true }
     val transactions2 = for (i <- FIRST until LAST) yield LocalGeneratorCreator.getTransaction()
+
+    srv.notifyProducerTransactionCompleted(t => t.transactionID == transactions2.last && t.state == TransactionStates.Checkpointed, putCounter.countDown())
+
     transactions2 foreach { t =>
-      storageClient.putTransaction(new RPCProducerTransaction("test_stream", 1, t, TransactionStates.Opened, 1, 120), true) { r => {
-        putCounter2.countDown()
-      }}
+      storageClient.putTransaction(new RPCProducerTransaction("test_stream", 1, t, TransactionStates.Opened, -1, 120), true) { r => true }
+      storageClient.putTransaction(new RPCProducerTransaction("test_stream", 1, t, TransactionStates.Checkpointed, 1, 120), true) { r => true }
     }
-    putCounter1.await()
-    putCounter2.await()
+    putCounter.await()
 
     val transactions = transactions1 ++ transactions2
     val firstTransaction = transactions.head
