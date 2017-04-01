@@ -50,7 +50,7 @@ class ProducerTransactionState {
 
     def throwExc = throw new MaterializationException(s"Master didn't materialized the transaction during $masterTimeout.")
 
-    val mtMs = masterTimeout * 1000
+    val mtMs = masterTimeout
     val mt = this.synchronized {
       if (0 == materializationTime)
         System.currentTimeMillis()

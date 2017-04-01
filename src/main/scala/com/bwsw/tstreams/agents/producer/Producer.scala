@@ -51,16 +51,16 @@ class Producer(var name: String,
   private val openTransactions = new OpenTransactionsKeeper()
 
   // stores latches for materialization await (protects from materialization before main transaction response)
-  private val materializationGovernor = new MaterializationGovernor(producerOptions.writePolicy.getUsedPartitions().toSet)
+  private val materializationGovernor = new MaterializationGovernor(producerOptions.writePolicy.getUsedPartitions())
   private val threadLock = new ReentrantLock(true)
 
-  private val peerKeepAliveTimeout = pcs.zkSessionTimeoutMs * 1000 * 2
+  private val peerKeepAliveTimeout = pcs.zkSessionTimeoutMs * 2
 
   val fullPrefix = java.nio.file.Paths.get(pcs.zkPrefix, stream.name).toString.substring(1)
   private val curatorClient = CuratorFrameworkFactory.builder()
     .namespace(fullPrefix)
-    .connectionTimeoutMs(pcs.zkConnectionTimeoutMs * 1000)
-    .sessionTimeoutMs( pcs.zkSessionTimeoutMs * 1000)
+    .connectionTimeoutMs(pcs.zkConnectionTimeoutMs)
+    .sessionTimeoutMs( pcs.zkSessionTimeoutMs)
     .retryPolicy(new ExponentialBackoffRetry(1000, 3))
     .connectString(pcs.zkEndpoints).build()
 
@@ -140,7 +140,7 @@ class Producer(var name: String,
       Producer.logger.info(s"Producer $name - object is started, launched open transaction update thread")
       breakable {
         while (true) {
-          val value: Boolean = shutdownKeepAliveThread.wait(producerOptions.transactionKeepAliveMs * 1000)
+          val value: Boolean = shutdownKeepAliveThread.wait(producerOptions.transactionKeepAliveMs)
           if (value) {
             Producer.logger.info(s"Producer $name - object either checkpointed or cancelled. Exit KeepAliveThread.")
             break()
