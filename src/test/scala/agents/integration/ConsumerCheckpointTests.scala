@@ -69,6 +69,7 @@ class ConsumerCheckpointTests extends FlatSpec with Matchers with BeforeAndAfter
     c1.checkpoint()
     c1.stop()
 
+    //todo: fixit
     Thread.sleep(1000)
 
     c2.start()
