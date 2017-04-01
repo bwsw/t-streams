@@ -96,8 +96,11 @@ class StorageClient(clientOptions: ConnectionOptions, authOptions: AuthOptions, 
     */
   def saveConsumerOffsetBatch(consumerName: String, stream: String, partitionAndLastTransaction: scala.collection.mutable.Map[Int, Long], timeout: Duration = 1.minute) = {
     val batch = ListBuffer[ConsumerTransaction]()
-    batch.appendAll(partitionAndLastTransaction.map { case (partition, offset) =>
-      new RPCConsumerTransaction(consumerName, stream, partition, offset)
+    batch.appendAll(partitionAndLastTransaction.map { case (partition, offset) => {
+      val t = new RPCConsumerTransaction(consumerName, stream, partition, offset)
+      println(s"Consumer Batch Checkpoint Add: ${t}")
+      t
+    }
     })
 
     Await.result(client.putTransactions(Nil, batch), timeout)

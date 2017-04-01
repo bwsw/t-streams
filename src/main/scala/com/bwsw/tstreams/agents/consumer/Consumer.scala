@@ -112,9 +112,11 @@ class Consumer(val name: String,
     for (partition <- options.readPolicy.getUsedPartitions()) {
       val bootstrapOffset =
         if (stream.client.checkConsumerOffsetExists(name, stream.name, partition) && options.useLastOffset) {
-          stream.client.getLastSavedConsumerOffset(name, stream.name, partition)
+          val off = stream.client.getLastSavedConsumerOffset(name, stream.name, partition)
+          println(s"Bootstrap offset load: ${off}")
+          off
         } else {
-          options.offset match {
+          val off = options.offset match {
             case Offset.Oldest =>
               options.transactionGenerator.getTransaction(System.currentTimeMillis() - (stream.ttl + 1) * 1000)
             case Offset.Newest =>
@@ -126,8 +128,9 @@ class Consumer(val name: String,
             case _ =>
               throw new IllegalStateException(s"Offset option for consumer $name cannot be resolved to known Offset.* object.")
           }
+          println(s"Bootstrap offset historical: ${off}")
+          off
         }
-
       updateOffsets(partition, bootstrapOffset)
       transactionBuffer(partition) = mutable.Queue[ConsumerTransaction]()
     }
