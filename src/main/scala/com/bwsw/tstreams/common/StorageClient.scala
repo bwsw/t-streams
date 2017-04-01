@@ -98,7 +98,8 @@ class StorageClient(clientOptions: ConnectionOptions, authOptions: AuthOptions, 
     val batch = ListBuffer[ConsumerTransaction]()
     batch.appendAll(partitionAndLastTransaction.map { case (partition, offset) => {
       val t = new RPCConsumerTransaction(consumerName, stream, partition, offset)
-      println(s"Consumer Batch Checkpoint Add: ${t}")
+      //todo: replace with debug
+      //println(s"Consumer Batch Checkpoint Add: ${t}")
       t
     }
     })

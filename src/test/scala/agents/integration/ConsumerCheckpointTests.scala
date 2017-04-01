@@ -53,19 +53,12 @@ class ConsumerCheckpointTests extends FlatSpec with Matchers with BeforeAndAfter
     val t1 = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened, 0)
     t1.send("data".getBytes())
     producer.checkpoint()
-    println(t1.getTransactionID())
-
-    val l1 = new CountDownLatch(1)
-    srv.notifyProducerTransactionCompleted(t => t.transactionID == t1.getTransactionID() && t.state == TransactionStates.Checkpointed, l1.countDown())
-    l1.await()
 
     val t2 = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened, 0)
-    t2.send("data".getBytes())
-    producer.checkpoint()
-    println(t2.getTransactionID())
-
     val l2 = new CountDownLatch(1)
     srv.notifyProducerTransactionCompleted(t => t.transactionID == t2.getTransactionID() && t.state == TransactionStates.Checkpointed, l2.countDown())
+    t2.send("data".getBytes())
+    producer.checkpoint()
     l2.await()
 
     c1.start()
@@ -74,9 +67,9 @@ class ConsumerCheckpointTests extends FlatSpec with Matchers with BeforeAndAfter
 
     c1.getTransaction(0).get.getTransactionID() shouldBe t1.getTransactionID()
     c1.checkpoint()
-    c1.getTransaction(0).get.getTransactionID() shouldBe t2.getTransactionID()
-    c1.checkpoint()
     c1.stop()
+
+    Thread.sleep(1000)
 
     c2.start()
     c2.getTransaction(0).get.getTransactionID() shouldBe t2.getTransactionID()

@@ -113,7 +113,8 @@ class Consumer(val name: String,
       val bootstrapOffset =
         if (stream.client.checkConsumerOffsetExists(name, stream.name, partition) && options.useLastOffset) {
           val off = stream.client.getLastSavedConsumerOffset(name, stream.name, partition)
-          println(s"Bootstrap offset load: ${off}")
+          //todo: replace with debug
+          //println(s"Bootstrap offset load: ${off}")
           off
         } else {
           val off = options.offset match {
@@ -128,7 +129,8 @@ class Consumer(val name: String,
             case _ =>
               throw new IllegalStateException(s"Offset option for consumer $name cannot be resolved to known Offset.* object.")
           }
-          println(s"Bootstrap offset historical: ${off}")
+          //todo: replace with debug
+          //println(s"Bootstrap offset historical: ${off}")
           off
         }
       updateOffsets(partition, bootstrapOffset)
