@@ -1,4 +1,4 @@
-package agents.integration
+package agents.integration.v20
 
 import java.util.concurrent.CountDownLatch
 
@@ -6,8 +6,9 @@ import com.bwsw.tstreams.agents.consumer.Offset.Oldest
 import com.bwsw.tstreams.agents.producer.NewTransactionProducerPolicy
 import com.bwsw.tstreams.debug.GlobalHooks
 import com.bwsw.tstreams.env.ConfigurationOptions
+import com.bwsw.tstreamstransactionserver.rpc.TransactionStates
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
-import testutils.TestUtils
+import testutils.{TestStorageServer, TestUtils}
 
 /**
   * Created by Ivan Kudryavtsev on 02.08.16.
@@ -21,14 +22,17 @@ class AsynchronousTransactionTests extends FlatSpec with Matchers
   f.setProperty(ConfigurationOptions.Stream.name, "test_stream").
     setProperty(ConfigurationOptions.Stream.partitionsCount, 3).
     setProperty(ConfigurationOptions.Stream.ttlSec, 60 * 10).
-    setProperty(ConfigurationOptions.Coordination.connectionTimeoutMs, 7).
-    setProperty(ConfigurationOptions.Coordination.sessionTimeoutMs, 7).
-    setProperty(ConfigurationOptions.Producer.transportTimeoutMs, 5).
-    setProperty(ConfigurationOptions.Producer.Transaction.ttlMs, 3).
-    setProperty(ConfigurationOptions.Producer.Transaction.keepAliveMs, 1).
+    setProperty(ConfigurationOptions.Coordination.connectionTimeoutMs, 7000).
+    setProperty(ConfigurationOptions.Coordination.sessionTimeoutMs, 7000).
+    setProperty(ConfigurationOptions.Producer.transportTimeoutMs, 5000).
+    setProperty(ConfigurationOptions.Producer.Transaction.ttlMs, 6000).
+    setProperty(ConfigurationOptions.Producer.Transaction.keepAliveMs, 2000).
     setProperty(ConfigurationOptions.Consumer.transactionPreload, 10).
     setProperty(ConfigurationOptions.Consumer.dataPreload, 10)
 
+  val srv = TestStorageServer.get()
+  val storageClient = f.getStorageClient()
+  storageClient.createStream("test_stream", 3, 24 * 3600, "")
 
   val producer = f.getProducer(
     name = "test_producer",
@@ -47,9 +51,13 @@ class AsynchronousTransactionTests extends FlatSpec with Matchers
       useLastOffset = true)
 
     val pTransaction = producer.newTransaction(policy = NewTransactionProducerPolicy.ErrorIfOpened)
+    val pl = new CountDownLatch(1)
+    srv.notifyProducerTransactionCompleted(t => t.transactionID == pTransaction.getTransactionID() && t.state == TransactionStates.Checkpointed, pl.countDown())
     pTransaction.send("test".getBytes())
     pTransaction.checkpoint(isSynchronous = false)
     l.await()
+    pl.await()
+
     c.start()
     val cTransaction = c.getTransaction(0)
 
@@ -63,6 +71,7 @@ class AsynchronousTransactionTests extends FlatSpec with Matchers
     val l = new CountDownLatch(1)
     GlobalHooks.addHook(GlobalHooks.preCommitFailure, () => {
       l.countDown()
+      GlobalHooks.clear()
       throw new Exception("expected")
     })
 
@@ -73,41 +82,25 @@ class AsynchronousTransactionTests extends FlatSpec with Matchers
       useLastOffset = true)
 
     val pTransaction = producer.newTransaction(policy = NewTransactionProducerPolicy.ErrorIfOpened)
+
     pTransaction.send("test".getBytes())
     pTransaction.checkpoint(isSynchronous = false)
     l.await()
+
+    val pTransaction2 = producer.newTransaction(policy = NewTransactionProducerPolicy.ErrorIfOpened)
+    val pl = new CountDownLatch(1)
+    srv.notifyProducerTransactionCompleted(t => t.transactionID == pTransaction2.getTransactionID() && t.state == TransactionStates.Opened, pl.countDown())
+
+    pl.await()
     c.start()
     val cTransaction = c.getTransaction(0)
 
-    cTransaction.isDefined shouldBe false
-  }
-
-
-  "Fire async checkpoint by producer (with pre delay) and wait when complete" should "consumer not get transaction from DB" in {
-    val l = new CountDownLatch(1)
-    GlobalHooks.addHook(GlobalHooks.preCommitFailure, () => {
-      l.await()
-      throw new Exception("expected")
-    })
-
-    val c = f.getConsumer(
-      name = "test_subscriber",
-      partitions = Set(0),
-      offset = Oldest,
-      useLastOffset = true)
-
-    val pTransaction = producer.newTransaction(policy = NewTransactionProducerPolicy.ErrorIfOpened)
-    pTransaction.send("test".getBytes())
-    pTransaction.checkpoint(isSynchronous = false)
-    c.start()
-    val cTransaction = c.getTransaction(0)
-    l.countDown()
     cTransaction.isDefined shouldBe false
   }
 
   override def afterAll() = {
     producer.stop()
-    System.setProperty("DEBUG", "false")
+    TestStorageServer.dispose(srv)
     onAfterAll()
   }
 }
