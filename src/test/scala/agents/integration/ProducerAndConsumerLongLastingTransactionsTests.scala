@@ -5,6 +5,7 @@ import java.util.concurrent.CountDownLatch
 import com.bwsw.tstreams.agents.consumer.Offset.Oldest
 import com.bwsw.tstreams.agents.producer.NewTransactionProducerPolicy
 import com.bwsw.tstreams.env.ConfigurationOptions
+import com.bwsw.tstreamstransactionserver.rpc.TransactionStates
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import testutils._
 
@@ -15,13 +16,17 @@ class ProducerAndConsumerLongLastingTransactionsTests extends FlatSpec with Matc
   f.setProperty(ConfigurationOptions.Stream.name, "test_stream").
     setProperty(ConfigurationOptions.Stream.partitionsCount, 3).
     setProperty(ConfigurationOptions.Stream.ttlSec, 60 * 10).
-    setProperty(ConfigurationOptions.Coordination.connectionTimeoutMs, 7).
-    setProperty(ConfigurationOptions.Coordination.sessionTimeoutMs, 7).
-    setProperty(ConfigurationOptions.Producer.transportTimeoutMs, 5).
-    setProperty(ConfigurationOptions.Producer.Transaction.ttlMs, 6).
-    setProperty(ConfigurationOptions.Producer.Transaction.keepAliveMs, 2).
+    setProperty(ConfigurationOptions.Coordination.connectionTimeoutMs, 7000).
+    setProperty(ConfigurationOptions.Coordination.sessionTimeoutMs, 7000).
+    setProperty(ConfigurationOptions.Producer.transportTimeoutMs, 5000).
+    setProperty(ConfigurationOptions.Producer.Transaction.ttlMs, 6000).
+    setProperty(ConfigurationOptions.Producer.Transaction.keepAliveMs, 2000).
     setProperty(ConfigurationOptions.Consumer.transactionPreload, 10).
     setProperty(ConfigurationOptions.Consumer.dataPreload, 10)
+
+  val srv = TestStorageServer.get()
+  val storageClient = f.getStorageClient()
+  storageClient.createStream("test_stream", 2, 24 * 3600, "")
 
   val producer1 = f.getProducer(
     name = "test_producer",
@@ -41,47 +46,46 @@ class ProducerAndConsumerLongLastingTransactionsTests extends FlatSpec with Matc
 
   "two producers, consumer" should "first producer - generate transactions lazily, second producer - generate transactions faster" +
     " than the first one but with pause at the very beginning, consumer - retrieve all transactions which was sent" in {
-    val timeoutForWaiting = 120
     val totalElementsInTransaction = 10
     val dataToSend1: List[String] = (for (part <- 0 until totalElementsInTransaction) yield "data_to_send_pr1_" + randomKeyspace).toList.sorted
     val dataToSend2: List[String] = (for (part <- 0 until totalElementsInTransaction) yield "data_to_send_pr2_" + randomKeyspace).toList.sorted
 
-    val waitFirstAtSubscriber = new CountDownLatch(1)
-    val waitSecondAtSubscriber = new CountDownLatch(1)
+    val waitFirstAtConsumer = new CountDownLatch(1)
+    val waitSecondAtConsumer = new CountDownLatch(1)
     val waitFirstAtProducer = new CountDownLatch(1)
+    val waitSecondAtProducer = new CountDownLatch(1)
+
+    val transaction1 = producer1.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
+    val transaction2 = producer2.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
+    srv.notifyProducerTransactionCompleted(t => t.transactionID == transaction1.getTransactionID() && t.state == TransactionStates.Checkpointed, waitFirstAtConsumer.countDown())
+    srv.notifyProducerTransactionCompleted(t => t.transactionID == transaction2.getTransactionID() && t.state == TransactionStates.Checkpointed, waitSecondAtConsumer.countDown())
 
     val producer1Thread = new Thread(() => {
-      val transaction = producer1.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
       waitFirstAtProducer.countDown()
-      dataToSend1.foreach { x =>
-        transaction.send(x.getBytes())
-        Thread.sleep(2000)
-      }
-      transaction.checkpoint()
-      waitFirstAtSubscriber.countDown()
+      dataToSend1.foreach { x => transaction1.send(x.getBytes()) }
+      waitSecondAtProducer.await()
+      transaction1.checkpoint()
     })
 
     val producer2Thread = new Thread(() => {
       waitFirstAtProducer.await()
-      val transaction = producer2.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
-      dataToSend2.foreach { x =>
-        transaction.send(x.getBytes())
-      }
-      transaction.checkpoint()
-      waitSecondAtSubscriber.countDown()
+      dataToSend2.foreach { x => transaction2.send(x.getBytes()) }
+      transaction2.checkpoint()
+      waitSecondAtProducer.countDown()
     })
 
-    producer1Thread.start()
-    producer2Thread.start()
+    Seq(producer1Thread, producer2Thread).foreach(t => t.start())
 
-    waitFirstAtSubscriber.await()
+    waitFirstAtConsumer.await()
     val transaction1Opt = consumer.getTransaction(0)
-    val data1 = transaction1Opt.get.getAll().map(i => i.toString).sorted
+    transaction1Opt.get.getTransactionID() shouldBe transaction1.getTransactionID()
+    val data1 = transaction1Opt.get.getAll().map(i => new String(i)).toList.sorted
     data1 shouldBe dataToSend1
 
-    waitSecondAtSubscriber.await()
+    waitSecondAtConsumer.await()
     val transaction2Opt = consumer.getTransaction(0)
-    val data2 = transaction2Opt.get.getAll().map(i => i.toString).sorted
+    transaction2Opt.get.getTransactionID() shouldBe transaction2.getTransactionID()
+    val data2 = transaction2Opt.get.getAll().map(i => new String(i)).toList.sorted
     data2 shouldBe dataToSend2
 
     producer1Thread.join()
@@ -91,6 +95,7 @@ class ProducerAndConsumerLongLastingTransactionsTests extends FlatSpec with Matc
   override def afterAll(): Unit = {
     producer1.stop()
     producer2.stop()
+    TestStorageServer.dispose(srv)
     onAfterAll()
   }
 }

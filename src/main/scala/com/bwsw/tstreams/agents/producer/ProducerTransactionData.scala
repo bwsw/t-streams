@@ -16,14 +16,15 @@ class ProducerTransactionData(transaction: ProducerTransaction, ttl: Long, stora
 
   def put(elt: Array[Byte]): Int = this.synchronized {
     items += elt
-    lastOffset += 1
     return lastOffset
   }
 
   def save(): () => Unit = this.synchronized {
-    val job = storageClient.client.putTransactionData(streamName, transaction.getPartition,
-      transaction.getTransactionID(), items, lastOffset)
-
+    val job = storageClient.client.putTransactionData(streamName, transaction.getPartition, transaction.getTransactionID(), items, lastOffset)
+    //todo: replace with debug
+    //println((streamName, transaction.getPartition, transaction.getTransactionID(), items, lastOffset))
+    //println(s"Saved ${transaction.getTransactionID()}: ${items}")
+    lastOffset += items.size
     items = new scala.collection.mutable.ListBuffer[Array[Byte]]()
     () => Await.result(job, 1.minute)
   }
