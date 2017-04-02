@@ -36,75 +36,75 @@ class SubscriberBasicFunctionsTests extends FlatSpec with Matchers with BeforeAn
     name = "test_producer",
     partitions = Set(0, 1, 2))
 
-  it should "start and stop with default options" in {
-    val s = f.getSubscriber(name = "sv2",
-      partitions = Set(0, 1, 2),
-      offset = Oldest,
-      useLastOffset = true,
-      callback = (consumer: TransactionOperator, transaction: ConsumerTransaction) => {})
-    s.start()
-    s.stop()
-  }
-
-  it should "allow start and stop several times" in {
-    val s = f.getSubscriber(name = "sv2",
-      offset = Oldest, partitions = Set(0, 1, 2),
-      useLastOffset = true,
-      callback = (consumer: TransactionOperator, transaction: ConsumerTransaction) => {})
-    s.start()
-    s.stop()
-    s.start()
-    s.stop()
-  }
-
-  it should "not allow double start" in {
-    val s = f.getSubscriber(name = "sv2",
-      partitions = Set(0, 1, 2),
-      offset = Oldest,
-      useLastOffset = true,
-      callback = (consumer: TransactionOperator, transaction: ConsumerTransaction) => {})
-    s.start()
-    var flag = false
-    flag = try {
-      s.start()
-      false
-    } catch {
-      case e: IllegalStateException =>
-        true
-    }
-    flag shouldBe true
-    s.stop()
-  }
-
-  it should "not allow double stop" in {
-    val s = f.getSubscriber(name = "sv2",
-      partitions = Set(0, 1, 2),
-      offset = Oldest,
-      useLastOffset = true,
-      callback = (consumer: TransactionOperator, transaction: ConsumerTransaction) => {})
-    s.start()
-    s.stop()
-    var flag = false
-    flag = try {
-      s.stop()
-      false
-    } catch {
-      case e: IllegalStateException =>
-        true
-    }
-    flag shouldBe true
-  }
-
-  it should "allow to be created with in memory queues" in {
-    val f1 = f.copy()
-    val s = f1.getSubscriber(name = "sv2_inram",
-      partitions = Set(0, 1, 2),
-      offset = Oldest,
-      useLastOffset = true,
-      callback = (consumer: TransactionOperator, transaction: ConsumerTransaction) => {})
-    s.start()
-    s.stop()
-  }
+//  it should "start and stop with default options" in {
+//    val s = f.getSubscriber(name = "sv2",
+//      partitions = Set(0, 1, 2),
+//      offset = Oldest,
+//      useLastOffset = true,
+//      callback = (consumer: TransactionOperator, transaction: ConsumerTransaction) => {})
+//    s.start()
+//    s.stop()
+//  }
+//
+//  it should "allow start and stop several times" in {
+//    val s = f.getSubscriber(name = "sv2",
+//      offset = Oldest, partitions = Set(0, 1, 2),
+//      useLastOffset = true,
+//      callback = (consumer: TransactionOperator, transaction: ConsumerTransaction) => {})
+//    s.start()
+//    s.stop()
+//    s.start()
+//    s.stop()
+//  }
+//
+//  it should "not allow double start" in {
+//    val s = f.getSubscriber(name = "sv2",
+//      partitions = Set(0, 1, 2),
+//      offset = Oldest,
+//      useLastOffset = true,
+//      callback = (consumer: TransactionOperator, transaction: ConsumerTransaction) => {})
+//    s.start()
+//    var flag = false
+//    flag = try {
+//      s.start()
+//      false
+//    } catch {
+//      case e: IllegalStateException =>
+//        true
+//    }
+//    flag shouldBe true
+//    s.stop()
+//  }
+//
+//  it should "not allow double stop" in {
+//    val s = f.getSubscriber(name = "sv2",
+//      partitions = Set(0, 1, 2),
+//      offset = Oldest,
+//      useLastOffset = true,
+//      callback = (consumer: TransactionOperator, transaction: ConsumerTransaction) => {})
+//    s.start()
+//    s.stop()
+//    var flag = false
+//    flag = try {
+//      s.stop()
+//      false
+//    } catch {
+//      case e: IllegalStateException =>
+//        true
+//    }
+//    flag shouldBe true
+//  }
+//
+//  it should "allow to be created with in memory queues" in {
+//    val f1 = f.copy()
+//    val s = f1.getSubscriber(name = "sv2_inram",
+//      partitions = Set(0, 1, 2),
+//      offset = Oldest,
+//      useLastOffset = true,
+//      callback = (consumer: TransactionOperator, transaction: ConsumerTransaction) => {})
+//    s.start()
+//    s.stop()
+//  }
 
   it should "receive all transactions producer by producer previously" in {
     val l = new CountDownLatch(1)

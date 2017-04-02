@@ -35,7 +35,6 @@ class TransactionFullLoader(partitions: Set[Int],
     * @param consumer consumer which loads
     * @param executor executor which adds to callback
     * @param callback callback which handles
-    * @tparam T
     */
   override def load(seq: QueueItemType,
                        consumer: TransactionOperator,
@@ -44,6 +43,7 @@ class TransactionFullLoader(partitions: Set[Int],
     val last = seq.last
     val first = lastTransactionsMap(last.partition).transactionID
     val data = consumer.getTransactionsFromTo(last.partition, first, last.transactionID)
+
     data.foreach(elt =>
       executor.submit(s"<CallbackTask#Full>", new ProcessingEngine.CallbackTask(consumer,
         TransactionState(elt.getTransactionID(), last.partition, -1, -1, elt.getCount(), TransactionStatus.checkpointed, -1), callback)))
@@ -51,4 +51,5 @@ class TransactionFullLoader(partitions: Set[Int],
     if (data.nonEmpty)
       lastTransactionsMap(last.partition) = TransactionState(data.last.getTransactionID(), last.partition, last.masterSessionID, last.queueOrderID, data.last.getCount(), TransactionStatus.checkpointed, -1)
   }
+  
 }

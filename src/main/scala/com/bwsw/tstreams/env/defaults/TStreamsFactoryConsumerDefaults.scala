@@ -21,7 +21,7 @@ object TStreamsFactoryConsumerDefaults {
       val persistentQueuePath = null
       val transactionBufferThreadPoolSize = IntMinMaxDefault(1, 64, 4)
       val processingEnginesThreadPoolSize = IntMinMaxDefault(1, 64, 1)
-      val pollingFrequencyDelayMs = IntMinMaxDefault(10, 100000, 50)
+      val pollingFrequencyDelayMs = IntMinMaxDefault(10, 100000, 1000)
     }
 
   }

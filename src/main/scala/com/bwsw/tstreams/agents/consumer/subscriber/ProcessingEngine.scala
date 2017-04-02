@@ -23,12 +23,13 @@ class ProcessingEngine(consumer: TransactionOperator,
   private val id = Math.abs(Random.nextInt())
   // keeps last transaction states processed
   private val lastTransactionsMap = mutable.Map[Int, TransactionState]()
-  private val lastTransactionsEventsMap = mutable.Map[Int, Long]()
+  private val lastPartitionsEventsMap = mutable.Map[Int, Long]()
+
   private val executor = new FirstFailLockableTaskExecutor(s"pe-$id-executor")
+  private val loadExecutor = new FirstFailLockableTaskExecutor(s"pe-$id-loadExecutor")
 
   val isThresholdsSet = new AtomicBoolean(false)
 
-  private val loadExecutor = new FirstFailLockableTaskExecutor(s"pe-$id-loadExecutor")
   private val queue = queueBuilder.generateQueueObject(Math.abs(Random.nextInt()))
   private var isFirstTime = true
 
@@ -39,10 +40,10 @@ class ProcessingEngine(consumer: TransactionOperator,
 
   def getQueue() = queue
 
-  def getLastPartitionActivity(partition: Int) = lastTransactionsEventsMap(partition)
+  def getLastPartitionActivity(partition: Int) = lastPartitionsEventsMap(partition)
 
-  def setLastPartitionActivity(partition: Int): Unit = {
-    lastTransactionsEventsMap(partition) = System.currentTimeMillis()
+  def setLastPartitionActivity(partition: Int) = {
+    lastPartitionsEventsMap(partition) = System.currentTimeMillis()
   }
 
   def getLastTransactionHandled(partition: Int) = lastTransactionsMap(partition)
@@ -101,7 +102,7 @@ class ProcessingEngine(consumer: TransactionOperator,
       .foreach(p =>
         if (isFirstTime
           || (System.currentTimeMillis() - getLastPartitionActivity(p) > pollTimeMs && queue.getInFlight() == 0)
-          || (System.currentTimeMillis() - getLastPartitionActivity(p) > pollTimeMs * 10)) {
+          /*|| (System.currentTimeMillis() - getLastPartitionActivity(p) > pollTimeMs * ProcessingEngine.PROTECTION_INTERVAL)*/) {
           enqueueLastTransactionFromDB(p)
         })
 
@@ -139,6 +140,9 @@ class ProcessingEngine(consumer: TransactionOperator,
 
 
 object ProcessingEngine {
+
+  // val PROTECTION_INTERVAL = 10
+
   val logger = LoggerFactory.getLogger(this.getClass)
 
   type LastTransactionStateMapType = mutable.Map[Int, TransactionState]
