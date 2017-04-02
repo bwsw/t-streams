@@ -72,8 +72,8 @@ class ProducerUpdateTaskTest extends FlatSpec with Matchers with BeforeAndAfterA
   }
 
   override def afterAll(): Unit = {
-    TestStorageServer.dispose(srv)
     producer.stop()
+    TestStorageServer.dispose(srv)
     onAfterAll()
   }
 }

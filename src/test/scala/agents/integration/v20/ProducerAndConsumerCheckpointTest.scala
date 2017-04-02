@@ -55,9 +55,6 @@ class ProducerAndConsumerCheckpointTest extends FlatSpec with Matchers with Befo
 
     val l = new CountDownLatch(1)
 
-    //todo: fixit
-    val start = System.currentTimeMillis()
-
     (0 until TRANSACTIONS_COUNT) foreach { _ =>
       TimeTracker.update_start("newTransaction")
       val transaction = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
@@ -76,9 +73,6 @@ class ProducerAndConsumerCheckpointTest extends FlatSpec with Matchers with Befo
       transaction.checkpoint()
       TimeTracker.update_end("checkpoint")
     }
-
-    val end = System.currentTimeMillis()
-    println(end - start)
 
     val firstPart = TRANSACTIONS_COUNT / 3
     val secondPart = TRANSACTIONS_COUNT - firstPart

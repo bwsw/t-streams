@@ -96,7 +96,7 @@ class ConsumerTransaction(partition: Int,
   def getAll() = this.synchronized {
     if (consumer == null)
       throw new IllegalArgumentException("Transaction is not yet attached to consumer. Attach it first.")
-    val r = Await.result(consumer.stream.client.client.getTransactionData(consumer.stream.name, partition, transactionID, cnt, count - 1), 1.minute)
+    val r = Await.result(consumer.stream.client.client.getTransactionData(consumer.stream.name, partition, transactionID, cnt, count), 1.minute)
     //todo: replace with debug
     //println((consumer.stream.name, partition, transactionID, cnt, count - 1))
     //println(r)
