@@ -1,4 +1,4 @@
-package agents.integration
+package agents.integration.v20
 
 import com.bwsw.tstreams.agents.producer.NewTransactionProducerPolicy
 import com.bwsw.tstreams.common.ResettableCountDownLatch

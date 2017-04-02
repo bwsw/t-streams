@@ -1,10 +1,13 @@
-package agents.integration
+package agents.integration.v20
+
+import java.util.concurrent.CountDownLatch
 
 import com.bwsw.tstreams.agents.consumer.ConsumerTransaction
 import com.bwsw.tstreams.agents.consumer.Offset.Oldest
 import com.bwsw.tstreams.agents.producer.NewTransactionProducerPolicy
 import com.bwsw.tstreams.common.TimeTracker
 import com.bwsw.tstreams.env.ConfigurationOptions
+import com.bwsw.tstreamstransactionserver.rpc.TransactionStates
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import testutils._
 
@@ -45,46 +48,63 @@ class ProducerAndConsumerCheckpointTest extends FlatSpec with Matchers with Befo
 
 
   "producer, consumer" should "producer - generate many transactions, consumer - retrieve all of them with reinitialization after some time" in {
-    val dataToSend = (for (i <- 0 until 100) yield randomKeyspace).sorted
-    val transactionsAmount = 1000
+    val TRANSACTIONS_COUNT = 1000
+    val dataToSend = (for (i <- 0 until 10000) yield randomKeyspace).sorted
 
-    (0 until transactionsAmount) foreach { _ =>
+    var counter = 0
+
+    val l = new CountDownLatch(1)
+
+    //todo: fixit
+    val start = System.currentTimeMillis()
+
+    (0 until TRANSACTIONS_COUNT) foreach { _ =>
       TimeTracker.update_start("newTransaction")
       val transaction = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
+
+      counter += 1
+      if(counter == TRANSACTIONS_COUNT)
+        srv.notifyProducerTransactionCompleted(t => t.transactionID == transaction.getTransactionID() && t.state == TransactionStates.Checkpointed, l.countDown())
+
       TimeTracker.update_end("newTransaction")
-      dataToSend foreach { part =>
-        transaction.send(part.getBytes())
-      }
+
+      TimeTracker.update_start("Send")
+      dataToSend foreach { part => transaction.send(part.getBytes()) }
+      TimeTracker.update_end("Send")
+
       TimeTracker.update_start("checkpoint")
       transaction.checkpoint()
       TimeTracker.update_end("checkpoint")
     }
-    val firstPart = transactionsAmount / 3
-    val secondPart = transactionsAmount - firstPart
 
-    var checkVal = true
+    val end = System.currentTimeMillis()
+    println(end - start)
+
+    val firstPart = TRANSACTIONS_COUNT / 3
+    val secondPart = TRANSACTIONS_COUNT - firstPart
+
+    l.await()
 
     consumer.start
     (0 until firstPart) foreach { _ =>
       val transaction: ConsumerTransaction = consumer.getTransaction(0).get
-      val data = transaction.getAll().map(i => i.toString).sorted
+      transaction.getAll().map(i => new String(i)).sorted shouldBe dataToSend
       consumer.checkpoint()
-      checkVal &= data == dataToSend
     }
+
+    //todo: fixit
+    Thread.sleep(1000)
 
     consumer2.start
     (0 until secondPart) foreach { _ =>
       val transaction: ConsumerTransaction = consumer2.getTransaction(0).get
-      val data = transaction.getAll().map(i => i.toString).sorted
-      checkVal &= data == dataToSend
+      transaction.getAll().map(i => new String(i)).sorted shouldBe dataToSend
     }
 
     //assert that is nothing to read
     (0 until Integer.parseInt(f.getProperty(ConfigurationOptions.Stream.partitionsCount).toString)) foreach { _ =>
-      checkVal &= consumer2.getTransaction(0).isEmpty
+      consumer2.getTransaction(0).isEmpty shouldBe true
     }
-
-    checkVal shouldBe true
   }
 
   override def afterAll(): Unit = {
