@@ -1,4 +1,4 @@
-package agents.integration
+package agents.integration.v20
 
 import java.util.concurrent.{CountDownLatch, TimeUnit}
 
@@ -8,26 +8,27 @@ import com.bwsw.tstreams.agents.group.CheckpointGroup
 import com.bwsw.tstreams.agents.producer.NewTransactionProducerPolicy
 import com.bwsw.tstreams.env.ConfigurationOptions
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
-import testutils.TestUtils
+import testutils.{TestStorageServer, TestUtils}
 
 /**
   * Created by ivan on 13.09.16.
   */
 class CheckpointGroupAndSubscriberEventsTests extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
 
-  System.setProperty("DEBUG", "true")
+  f.setProperty(ConfigurationOptions.Stream.name, "test_stream").
+    setProperty(ConfigurationOptions.Stream.partitionsCount, 3).
+    setProperty(ConfigurationOptions.Stream.ttlSec, 60 * 10).
+    setProperty(ConfigurationOptions.Coordination.connectionTimeoutMs, 7000).
+    setProperty(ConfigurationOptions.Coordination.sessionTimeoutMs, 7000).
+    setProperty(ConfigurationOptions.Producer.transportTimeoutMs, 5000).
+    setProperty(ConfigurationOptions.Producer.Transaction.ttlMs, 6000).
+    setProperty(ConfigurationOptions.Producer.Transaction.keepAliveMs, 2000).
+    setProperty(ConfigurationOptions.Consumer.transactionPreload, 500).
+    setProperty(ConfigurationOptions.Consumer.dataPreload, 10)
 
-  f.setProperty(ConfigurationOptions.Stream.name, "test_stream")
-    .setProperty(ConfigurationOptions.Stream.partitionsCount, 3)
-    .setProperty(ConfigurationOptions.Stream.ttlSec, 60 * 10)
-    .setProperty(ConfigurationOptions.Coordination.connectionTimeoutMs, 7)
-    .setProperty(ConfigurationOptions.Coordination.sessionTimeoutMs, 7)
-    .setProperty(ConfigurationOptions.Producer.transportTimeoutMs, 5)
-    .setProperty(ConfigurationOptions.Producer.Transaction.ttlMs, 6)
-    .setProperty(ConfigurationOptions.Producer.Transaction.keepAliveMs, 2)
-    .setProperty(ConfigurationOptions.Consumer.transactionPreload, 10)
-    .setProperty(ConfigurationOptions.Consumer.dataPreload, 10)
-    .setProperty(ConfigurationOptions.Consumer.Subscriber.pollingFrequencyDelayMs, 2000)
+  val srv = TestStorageServer.get()
+  val storageClient = f.getStorageClient()
+  storageClient.createStream("test_stream", 3, 24 * 3600, "")
 
   val producer = f.getProducer(
     name = "test_producer",
@@ -65,6 +66,7 @@ class CheckpointGroupAndSubscriberEventsTests extends FlatSpec with Matchers wit
 
   override def afterAll(): Unit = {
     producer.stop()
+    TestStorageServer.dispose(srv)
     onAfterAll()
   }
 }

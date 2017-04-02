@@ -12,7 +12,7 @@ import scala.collection.mutable
 object TStreamsFactoryConsumerDefaults {
 
   object Consumer {
-    val transactionPreload = IntMinMaxDefault(1, 1000, 100)
+    val transactionPreload = IntMinMaxDefault(1, 10000, 1000)
     val dataPreload = IntMinMaxDefault(10, 200, 100)
 
     object Subscriber {
