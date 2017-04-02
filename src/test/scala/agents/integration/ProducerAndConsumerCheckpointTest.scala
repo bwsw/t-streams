@@ -25,7 +25,7 @@ class ProducerAndConsumerCheckpointTest extends FlatSpec with Matchers with Befo
 
   val srv = TestStorageServer.get()
   val storageClient = f.getStorageClient()
-  storageClient.createStream("test_stream", 2, 24 * 3600, "")
+  storageClient.createStream("test_stream", 3, 24 * 3600, "")
 
   val producer = f.getProducer(
     name = "test_producer",

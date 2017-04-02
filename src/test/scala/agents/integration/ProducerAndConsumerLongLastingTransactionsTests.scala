@@ -26,7 +26,7 @@ class ProducerAndConsumerLongLastingTransactionsTests extends FlatSpec with Matc
 
   val srv = TestStorageServer.get()
   val storageClient = f.getStorageClient()
-  storageClient.createStream("test_stream", 2, 24 * 3600, "")
+  storageClient.createStream("test_stream", 3, 24 * 3600, "")
 
   val producer1 = f.getProducer(
     name = "test_producer",
