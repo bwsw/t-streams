@@ -1,8 +1,11 @@
-package agents.integration
+package agents.integration.v20
+
+import java.util.concurrent.CountDownLatch
 
 import com.bwsw.tstreams.agents.consumer.Offset.Oldest
 import com.bwsw.tstreams.agents.producer._
 import com.bwsw.tstreams.env.ConfigurationOptions
+import com.bwsw.tstreamstransactionserver.rpc.TransactionStates
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import testutils._
 
@@ -12,13 +15,17 @@ class ProducerWithManyOpenedTransactionsTest extends FlatSpec with Matchers with
   f.setProperty(ConfigurationOptions.Stream.name, "test_stream").
     setProperty(ConfigurationOptions.Stream.partitionsCount, 3).
     setProperty(ConfigurationOptions.Stream.ttlSec, 60 * 10).
-    setProperty(ConfigurationOptions.Coordination.connectionTimeoutMs, 7).
-    setProperty(ConfigurationOptions.Coordination.sessionTimeoutMs, 7).
-    setProperty(ConfigurationOptions.Producer.transportTimeoutMs, 5).
-    setProperty(ConfigurationOptions.Producer.Transaction.ttlMs, 6).
-    setProperty(ConfigurationOptions.Producer.Transaction.keepAliveMs, 2).
+    setProperty(ConfigurationOptions.Coordination.connectionTimeoutMs, 7000).
+    setProperty(ConfigurationOptions.Coordination.sessionTimeoutMs, 7000).
+    setProperty(ConfigurationOptions.Producer.transportTimeoutMs, 5000).
+    setProperty(ConfigurationOptions.Producer.Transaction.ttlMs, 6000).
+    setProperty(ConfigurationOptions.Producer.Transaction.keepAliveMs, 2000).
     setProperty(ConfigurationOptions.Consumer.transactionPreload, 10).
     setProperty(ConfigurationOptions.Consumer.dataPreload, 10)
+
+  val srv = TestStorageServer.get()
+  val storageClient = f.getStorageClient()
+  storageClient.createStream("test_stream", 3, 24 * 3600, "")
 
   val producer = f.getProducer(
     name = "test_producer",
@@ -35,27 +42,37 @@ class ProducerWithManyOpenedTransactionsTest extends FlatSpec with Matchers with
     val data1 = (for (i <- 0 until 10) yield randomKeyspace).sorted
     val data2 = (for (i <- 0 until 10) yield randomKeyspace).sorted
     val data3 = (for (i <- 0 until 10) yield randomKeyspace).sorted
+
+
     val transaction1: ProducerTransaction = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
     val transaction2: ProducerTransaction = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
     val transaction3: ProducerTransaction = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
+
+    val l = new CountDownLatch(1)
+    srv.notifyProducerTransactionCompleted(t => t.transactionID == transaction1.getTransactionID() && t.state == TransactionStates.Checkpointed, l.countDown())
+
     data1.foreach(x => transaction1.send(x))
     data2.foreach(x => transaction2.send(x))
     data3.foreach(x => transaction3.send(x))
+
     transaction3.checkpoint()
     transaction2.checkpoint()
     transaction1.checkpoint()
 
-    assert(consumer.getTransaction(0).get.getAll().map(i => i.toString).sorted == data1)
-    assert(consumer.getTransaction(1).get.getAll().map(i => i.toString).sorted == data2)
-    assert(consumer.getTransaction(2).get.getAll().map(i => i.toString).sorted == data3)
+    l.await()
 
-    (0 to 2).foreach(p => assert(consumer.getTransaction(p).isEmpty))
+    consumer.getTransaction(0).get.getAll().map(i => new String(i)).sorted shouldBe data1
+    consumer.getTransaction(1).get.getAll().map(i => new String(i)).sorted shouldBe data2
+    consumer.getTransaction(2).get.getAll().map(i => new String(i)).sorted shouldBe data3
+
+    (0 to 2).foreach(p => consumer.getTransaction(p).isEmpty shouldBe true)
   }
 
   "BasicProducer.newTransaction()" should "return error if try to open more than 3 transactions for 3 partitions if ProducerPolicies.errorIfOpened" in {
     producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
     producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
     producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
+
     val r: Boolean = try {
       producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
       false
@@ -70,6 +87,7 @@ class ProducerWithManyOpenedTransactionsTest extends FlatSpec with Matchers with
     producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
     producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
     producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
+
     val r: Boolean = try {
       producer.newTransaction(NewTransactionProducerPolicy.CheckpointIfOpened)
       true
@@ -84,6 +102,7 @@ class ProducerWithManyOpenedTransactionsTest extends FlatSpec with Matchers with
     producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
     producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
     producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
+
     val r: Boolean = try {
       producer.newTransaction(NewTransactionProducerPolicy.CancelIfOpened)
       true
@@ -96,6 +115,7 @@ class ProducerWithManyOpenedTransactionsTest extends FlatSpec with Matchers with
 
   override def afterAll(): Unit = {
     producer.stop()
+    TestStorageServer.dispose(srv)
     onAfterAll()
   }
 }
