@@ -12,7 +12,7 @@ import scala.collection.mutable
 object TStreamsFactoryConsumerDefaults {
 
   object Consumer {
-    val transactionPreload = IntMinMaxDefault(1, 100, 10)
+    val transactionPreload = IntMinMaxDefault(1, 1000, 100)
     val dataPreload = IntMinMaxDefault(10, 200, 100)
 
     object Subscriber {
@@ -21,7 +21,7 @@ object TStreamsFactoryConsumerDefaults {
       val persistentQueuePath = null
       val transactionBufferThreadPoolSize = IntMinMaxDefault(1, 64, 4)
       val processingEnginesThreadPoolSize = IntMinMaxDefault(1, 64, 1)
-      val pollingFrequencyDelayMs = IntMinMaxDefault(100, 100000, 1000)
+      val pollingFrequencyDelayMs = IntMinMaxDefault(10, 100000, 50)
     }
 
   }
