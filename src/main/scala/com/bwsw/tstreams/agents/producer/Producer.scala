@@ -314,13 +314,9 @@ class Producer(var name: String,
 
     asyncActivityService.shutdownOrDie(Producer.SHUTDOWN_WAIT_MAX_SECONDS, TimeUnit.SECONDS)
 
-    // TODO: fixit
-    Thread.sleep(1000)
-//    while (tsdb.getResourceCounter() != 0) {
-//      Producer.logger.info(s"Waiting for all database async callbacks will be executed. Pending: ${tsdb.getResourceCounter()}.")
-//      Thread.sleep(200)
-//    }
     backendActivityService.shutdownOrDie(Producer.SHUTDOWN_WAIT_MAX_SECONDS, TimeUnit.SECONDS)
+
+    stream.client.shutdown()
 
     // stop provide master features to public
     p2pAgent.stop()

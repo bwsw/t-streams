@@ -1,9 +1,11 @@
 package com.bwsw.tstreams.agents.consumer.subscriber
 
-import com.bwsw.tstreams.agents.consumer.TransactionOperator
+import com.bwsw.tstreams.agents.consumer.{ConsumerTransaction, TransactionOperator}
 import com.bwsw.tstreams.agents.consumer.subscriber.QueueBuilder.QueueItemType
 import com.bwsw.tstreams.common.FirstFailLockableTaskExecutor
 import com.bwsw.tstreams.coordination.messages.state.TransactionStatus
+
+import scala.collection.mutable.ListBuffer
 
 /**
   * Created by Ivan Kudryavtsev on 22.08.16.
@@ -42,9 +44,22 @@ class TransactionFullLoader(partitions: Set[Int],
                        callback: Callback): Unit = {
     val last = seq.last
     val first = lastTransactionsMap(last.partition).transactionID
-    println(s"First: ${first}, last: ${last.transactionID}, ${last.transactionID - first}")
-    val data = consumer.getTransactionsFromTo(last.partition, first, last.transactionID + 1)
-    println(s"Data:  ${data}")
+    // todo: add proper logging (debug)
+    //println(s"First: ${first}, last: ${last.transactionID}, ${last.transactionID - first}")
+    var data: ListBuffer[ConsumerTransaction] = null
+    var flag = true
+    while(flag) {
+      data = consumer.getTransactionsFromTo(last.partition, first, last.transactionID + 1)
+      if(last.masterSessionID > 0) {
+        // we wait for certain item
+        // to switch to fast load next
+        if(data.size > 0 && data.last.getTransactionID() == last.transactionID)
+          flag = false
+      } else
+        flag = false
+    }
+    // todo: add proper logging (debug)
+    //println(s"Data:  ${data}")
 
     data.foreach(elt =>
       executor.submit(s"<CallbackTask#Full>", new ProcessingEngine.CallbackTask(consumer,

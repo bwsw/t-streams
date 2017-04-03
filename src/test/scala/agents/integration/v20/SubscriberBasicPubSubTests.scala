@@ -1,4 +1,4 @@
-package agents.integration
+package agents.integration.v20
 
 import java.util.concurrent.{CountDownLatch, TimeUnit}
 
@@ -40,12 +40,11 @@ class SubscriberBasicPubSubTests extends FlatSpec with Matchers with BeforeAndAf
       partitions = Set(0, 1, 2))
 
     val s = f.getSubscriber(name = "sv2",
-      partitions = Set(0, 1, 2),
+      partitions = Set(0, 1 , 2),
       offset = Oldest,
       useLastOffset = false,
       callback = (consumer: TransactionOperator, transaction: ConsumerTransaction) => this.synchronized {
         subscriberTransactionsAmount += 1
-        println(s"S:  ${transaction.getTransactionID()}")
         transaction.getAll()
         if (subscriberTransactionsAmount == TOTAL)
           latch.countDown()
@@ -55,55 +54,53 @@ class SubscriberBasicPubSubTests extends FlatSpec with Matchers with BeforeAndAf
       val transaction = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
       transaction.send("test")
       transaction.checkpoint()
-      println(s"Pr: ${transaction.getTransactionID()}")
     }
-    Thread.sleep(1000)
     producer.stop()
     latch.await(60, TimeUnit.SECONDS) shouldBe true
     s.stop()
     subscriberTransactionsAmount shouldBe TOTAL
   }
 
-//  it should "handle all transactions produced by two different producers" in {
-//
-//    val TOTAL = 100
-//    var subscriberTransactionsAmount = 0
-//    val latch = new CountDownLatch(1)
-//
-//    val producer1 = f.getProducer(
-//      name = "test_producer",
-//      partitions = Set(0, 1, 2))
-//
-//    val s = f.getSubscriber(name = "sv2",
-//      partitions = Set(0, 1, 2),
-//      offset = Newest,
-//      useLastOffset = false,
-//      callback = (consumer: TransactionOperator, transaction: ConsumerTransaction) => this.synchronized {
-//        subscriberTransactionsAmount += 1
-//        if (subscriberTransactionsAmount == TOTAL * 2)
-//          latch.countDown()
-//      })
-//    s.start()
-//    for (it <- 0 until TOTAL) {
-//      val transaction = producer1.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
-//      transaction.send("test")
-//      transaction.checkpoint()
-//    }
-//    producer1.stop()
-//    val producer2 = f.getProducer(
-//      name = "test_producer2",
-//      partitions = Set(0, 1, 2))
-//
-//    for (it <- 0 until TOTAL) {
-//      val transaction = producer2.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
-//      transaction.send("test")
-//      transaction.checkpoint()
-//    }
-//    producer2.stop()
-//    latch.await(10, TimeUnit.SECONDS) shouldBe true
-//    s.stop()
-//    subscriberTransactionsAmount shouldBe TOTAL * 2
-//  }
+  it should "handle all transactions produced by two different producers" in {
+
+    val TOTAL = 100
+    var subscriberTransactionsAmount = 0
+    val latch = new CountDownLatch(1)
+
+    val producer1 = f.getProducer(
+      name = "test_producer",
+      partitions = Set(0, 1, 2))
+
+    val s = f.getSubscriber(name = "sv2",
+      partitions = Set(0, 1, 2),
+      offset = Newest,
+      useLastOffset = false,
+      callback = (consumer: TransactionOperator, transaction: ConsumerTransaction) => this.synchronized {
+        subscriberTransactionsAmount += 1
+        if (subscriberTransactionsAmount == TOTAL * 2)
+          latch.countDown()
+      })
+    s.start()
+    for (it <- 0 until TOTAL) {
+      val transaction = producer1.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
+      transaction.send("test")
+      transaction.checkpoint()
+    }
+    producer1.stop()
+    val producer2 = f.getProducer(
+      name = "test_producer2",
+      partitions = Set(0, 1, 2))
+
+    for (it <- 0 until TOTAL) {
+      val transaction = producer2.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
+      transaction.send("test")
+      transaction.checkpoint()
+    }
+    producer2.stop()
+    latch.await(10, TimeUnit.SECONDS) shouldBe true
+    s.stop()
+    subscriberTransactionsAmount shouldBe TOTAL * 2
+  }
 
   override def afterAll(): Unit = {
     TestStorageServer.dispose(srv)

@@ -31,6 +31,8 @@ class StorageClient(clientOptions: ConnectionOptions, authOptions: AuthOptions, 
 
   val client = clientBuilder.withConnectionOptions(clientOptions).withAuthOptions(authOptions).withZookeeperOptions(zookeeperOptions).build()
 
+  def shutdown() = client.shutdown()
+
   /**
     * Getting existing stream
     *
