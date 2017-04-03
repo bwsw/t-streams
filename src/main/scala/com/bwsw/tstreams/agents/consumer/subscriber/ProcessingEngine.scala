@@ -79,6 +79,7 @@ class ProcessingEngine(consumer: TransactionOperator,
     }
 
     val seq = queue.get(pollTimeMs, TimeUnit.MILLISECONDS)
+    println(seq)
     if (seq != null) {
       isFirstTime = false
       if (seq.nonEmpty) {
