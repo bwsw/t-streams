@@ -59,11 +59,12 @@ class TransactionFastLoader(partitions: Set[Int],
   override def load(seq: QueueBuilder.QueueItemType,
                        consumer: TransactionOperator,
                        executor: FirstFailLockableTaskExecutor,
-                       callback: Callback) = {
+                       callback: Callback): Int = {
     seq foreach (elt =>
       executor.submit(s"<CallbackTask#Fast>", new ProcessingEngine.CallbackTask(consumer, elt, callback)))
     val last = seq.last
     lastTransactionsMap(last.partition) = last
+    seq.size
   }
 
 }

@@ -41,7 +41,7 @@ class TransactionFullLoader(partitions: Set[Int],
   override def load(seq: QueueItemType,
                        consumer: TransactionOperator,
                        executor: FirstFailLockableTaskExecutor,
-                       callback: Callback): Unit = {
+                       callback: Callback): Int = {
     val last = seq.last
     val first = lastTransactionsMap(last.partition).transactionID
     // todo: add proper logging (debug)
@@ -53,8 +53,9 @@ class TransactionFullLoader(partitions: Set[Int],
       if(last.masterSessionID > 0) {
         // we wait for certain item
         // to switch to fast load next
-        if(data.size > 0 && data.last.getTransactionID() == last.transactionID)
+        if(data.size > 0 && data.last.getTransactionID() == last.transactionID) {
           flag = false
+        }
       } else
         flag = false
     }
@@ -67,6 +68,8 @@ class TransactionFullLoader(partitions: Set[Int],
 
     if (data.nonEmpty)
       lastTransactionsMap(last.partition) = TransactionState(data.last.getTransactionID(), last.partition, last.masterSessionID, last.queueOrderID, data.last.getCount(), TransactionStatus.checkpointed, -1)
+
+    data.size
   }
 
 }

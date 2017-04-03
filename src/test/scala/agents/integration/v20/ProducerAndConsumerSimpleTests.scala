@@ -176,7 +176,6 @@ class ProducerAndConsumerSimpleTests extends FlatSpec with Matchers with BeforeA
   override def afterAll(): Unit = {
     producer.stop()
     TestStorageServer.dispose(srv)
-
     onAfterAll()
   }
 }

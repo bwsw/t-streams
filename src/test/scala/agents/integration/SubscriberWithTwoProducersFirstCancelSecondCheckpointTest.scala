@@ -11,22 +11,28 @@ import com.bwsw.tstreams.agents.consumer.{ConsumerTransaction, TransactionOperat
 import com.bwsw.tstreams.agents.producer.NewTransactionProducerPolicy
 import com.bwsw.tstreams.env.ConfigurationOptions
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
-import testutils.TestUtils
+import testutils.{TestStorageServer, TestUtils}
 
 import scala.collection.mutable.ListBuffer
 
 
 class SubscriberWithTwoProducersFirstCancelSecondCheckpointTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
+
   f.setProperty(ConfigurationOptions.Stream.name, "test_stream").
     setProperty(ConfigurationOptions.Stream.partitionsCount, 3).
     setProperty(ConfigurationOptions.Stream.ttlSec, 60 * 10).
-    setProperty(ConfigurationOptions.Coordination.connectionTimeoutMs, 7).
-    setProperty(ConfigurationOptions.Coordination.sessionTimeoutMs, 7).
-    setProperty(ConfigurationOptions.Producer.transportTimeoutMs, 5).
-    setProperty(ConfigurationOptions.Producer.Transaction.ttlMs, 3).
-    setProperty(ConfigurationOptions.Producer.Transaction.keepAliveMs, 1).
-    setProperty(ConfigurationOptions.Consumer.transactionPreload, 10).
+    setProperty(ConfigurationOptions.Coordination.connectionTimeoutMs, 7000).
+    setProperty(ConfigurationOptions.Coordination.sessionTimeoutMs, 7000).
+    setProperty(ConfigurationOptions.Producer.transportTimeoutMs, 5000).
+    setProperty(ConfigurationOptions.Producer.Transaction.ttlMs, 6000).
+    setProperty(ConfigurationOptions.Producer.Transaction.keepAliveMs, 2000).
+    setProperty(ConfigurationOptions.Consumer.transactionPreload, 500).
     setProperty(ConfigurationOptions.Consumer.dataPreload, 10)
+
+  val srv = TestStorageServer.get()
+  val storageClient = f.getStorageClient()
+  storageClient.createStream("test_stream", 3, 24 * 3600, "")
+
   it should "Integration MixIn checkpoint and cancel must be correctly processed on Subscriber " in {
 
     val bp1 = ListBuffer[Long]()
@@ -63,14 +69,16 @@ class SubscriberWithTwoProducersFirstCancelSecondCheckpointTest extends FlatSpec
       bp1.append(transaction.getTransactionID())
       transaction.send("test")
       transaction.cancel()
+      println(s"Cancel: ${transaction.getTransactionID()}")
     })
 
     val t2 = new Thread(() => {
       lp2.await()
-      val t = producer2.newTransaction(policy = NewTransactionProducerPolicy.CheckpointIfOpened)
-      bp2.append(t.getTransactionID())
-      t.send("test")
-      t.checkpoint()
+      val transaction = producer2.newTransaction(policy = NewTransactionProducerPolicy.CheckpointIfOpened)
+      bp2.append(transaction.getTransactionID())
+      transaction.send("test")
+      transaction.checkpoint()
+      println(s"Checkpoint: ${transaction.getTransactionID()}")
     })
 
     t1.start()
@@ -91,6 +99,7 @@ class SubscriberWithTwoProducersFirstCancelSecondCheckpointTest extends FlatSpec
   }
 
   override def afterAll(): Unit = {
+    TestStorageServer.dispose(srv)
     onAfterAll()
   }
 }

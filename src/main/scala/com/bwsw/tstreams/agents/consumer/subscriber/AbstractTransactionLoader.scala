@@ -12,5 +12,5 @@ trait AbstractTransactionLoader {
   def load(seq: QueueBuilder.QueueItemType,
               consumer: TransactionOperator,
               executor: FirstFailLockableTaskExecutor,
-              callback: Callback)
+              callback: Callback): Int
 }

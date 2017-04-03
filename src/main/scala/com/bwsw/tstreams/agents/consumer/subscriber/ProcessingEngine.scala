@@ -78,6 +78,8 @@ class ProcessingEngine(consumer: TransactionOperator,
         taskDelayThresholdMs = 100, taskRunDelayThresholdMs = 50)
     }
 
+    var loadFullDataExist = false
+
     val seq = queue.get(pollTimeMs, TimeUnit.MILLISECONDS)
     // todo: proper logging (debug)
     //println(seq)
@@ -90,7 +92,8 @@ class ProcessingEngine(consumer: TransactionOperator,
         else {
           if (fullLoader.checkIfTransactionLoadingIsPossible(seq)) {
             ProcessingEngine.logger.info(s"PE $id - Load full occurred for seq $seq")
-            fullLoader.load(seq, consumer, loadExecutor, callback)
+            if(fullLoader.load(seq, consumer, loadExecutor, callback) > 0)
+              loadFullDataExist = true
           } else {
             Subscriber.logger.warn(s"Fast and Full loading failed for $seq.")
           }
@@ -102,7 +105,8 @@ class ProcessingEngine(consumer: TransactionOperator,
 
     partitions
       .foreach(p =>
-        if (isFirstTime
+        if (loadFullDataExist
+          || isFirstTime
           || (System.currentTimeMillis() - getLastPartitionActivity(p) > pollTimeMs && queue.getInFlight() == 0)
           /*|| (System.currentTimeMillis() - getLastPartitionActivity(p) > pollTimeMs * ProcessingEngine.PROTECTION_INTERVAL)*/) {
           enqueueLastTransactionFromDB(p)

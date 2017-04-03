@@ -16,14 +16,14 @@ import scala.util.Random
   */
 class SubscriberWithManyProcessingEnginesThreadsTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
 
-  val TOTAL_TRANSACTIONS = 100000
+  val TOTAL_TRANSACTIONS = 1000
   val TOTAL_ITEMS = 1
   val TOTAL_PARTITIONS = 100
   val PARTITIONS = (0 until TOTAL_PARTITIONS).toSet
   val PROCESSING_ENGINES_THREAD_POOL = 10
   val TRANSACTION_BUFFER_THREAD_POOL = 10
 
-  val POLLING_FREQUENCY_DELAY = 10000
+  val POLLING_FREQUENCY_DELAY_MS = 1000
 
   f.setProperty(ConfigurationOptions.Stream.ttlSec, 60 * 10).
     setProperty(ConfigurationOptions.Coordination.connectionTimeoutMs, 7000).
@@ -34,7 +34,7 @@ class SubscriberWithManyProcessingEnginesThreadsTest extends FlatSpec with Match
     setProperty(ConfigurationOptions.Consumer.transactionPreload, 500).
     setProperty(ConfigurationOptions.Consumer.dataPreload, 10).
     setProperty(ConfigurationOptions.Stream.name, "test_stream").
-    setProperty(ConfigurationOptions.Consumer.Subscriber.pollingFrequencyDelayMs, POLLING_FREQUENCY_DELAY).
+    setProperty(ConfigurationOptions.Consumer.Subscriber.pollingFrequencyDelayMs, POLLING_FREQUENCY_DELAY_MS).
     setProperty(ConfigurationOptions.Consumer.Subscriber.processingEnginesThreadPoolSize, PROCESSING_ENGINES_THREAD_POOL).
     setProperty(ConfigurationOptions.Consumer.Subscriber.transactionBufferThreadPoolSize, TRANSACTION_BUFFER_THREAD_POOL).
     setProperty(ConfigurationOptions.Stream.partitionsCount, TOTAL_PARTITIONS)
@@ -87,12 +87,13 @@ class SubscriberWithManyProcessingEnginesThreadsTest extends FlatSpec with Match
 
     producerThread.start()
     producerThread.join()
-    awaitTransactionsLatch.await(POLLING_FREQUENCY_DELAY + 1000, TimeUnit.MILLISECONDS)
+    awaitTransactionsLatch.await(POLLING_FREQUENCY_DELAY_MS + 1000, TimeUnit.MILLISECONDS)
     subscriber.stop() // stop operation
     transactionsCounter shouldBe TOTAL_TRANSACTIONS
   }
 
   override def afterAll(): Unit = {
+    TestStorageServer.dispose(srv)
     onAfterAll()
   }
 
