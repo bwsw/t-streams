@@ -1,4 +1,4 @@
-package agents.integration
+package agents.integration.v20
 
 import java.util.concurrent.{CountDownLatch, TimeUnit}
 
@@ -7,7 +7,7 @@ import com.bwsw.tstreams.agents.consumer.{ConsumerTransaction, TransactionOperat
 import com.bwsw.tstreams.agents.producer.NewTransactionProducerPolicy
 import com.bwsw.tstreams.env.ConfigurationOptions
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
-import testutils.TestUtils
+import testutils.{TestStorageServer, TestUtils}
 
 import scala.util.Random
 
@@ -25,12 +25,23 @@ class SubscriberWithManyProcessingEnginesThreadsTest extends FlatSpec with Match
 
   val POLLING_FREQUENCY_DELAY = 10000
 
-  f.setProperty(ConfigurationOptions.Stream.name, "test_stream")
-    .setProperty(ConfigurationOptions.Stream.name, "test-stream")
-    .setProperty(ConfigurationOptions.Consumer.Subscriber.pollingFrequencyDelayMs, POLLING_FREQUENCY_DELAY)
-    .setProperty(ConfigurationOptions.Consumer.Subscriber.processingEnginesThreadPoolSize, PROCESSING_ENGINES_THREAD_POOL)
-    .setProperty(ConfigurationOptions.Consumer.Subscriber.transactionBufferThreadPoolSize, TRANSACTION_BUFFER_THREAD_POOL)
-    .setProperty(ConfigurationOptions.Stream.partitionsCount, TOTAL_PARTITIONS)
+  f.setProperty(ConfigurationOptions.Stream.ttlSec, 60 * 10).
+    setProperty(ConfigurationOptions.Coordination.connectionTimeoutMs, 7000).
+    setProperty(ConfigurationOptions.Coordination.sessionTimeoutMs, 7000).
+    setProperty(ConfigurationOptions.Producer.transportTimeoutMs, 5000).
+    setProperty(ConfigurationOptions.Producer.Transaction.ttlMs, 6000).
+    setProperty(ConfigurationOptions.Producer.Transaction.keepAliveMs, 2000).
+    setProperty(ConfigurationOptions.Consumer.transactionPreload, 500).
+    setProperty(ConfigurationOptions.Consumer.dataPreload, 10).
+    setProperty(ConfigurationOptions.Stream.name, "test_stream").
+    setProperty(ConfigurationOptions.Consumer.Subscriber.pollingFrequencyDelayMs, POLLING_FREQUENCY_DELAY).
+    setProperty(ConfigurationOptions.Consumer.Subscriber.processingEnginesThreadPoolSize, PROCESSING_ENGINES_THREAD_POOL).
+    setProperty(ConfigurationOptions.Consumer.Subscriber.transactionBufferThreadPoolSize, TRANSACTION_BUFFER_THREAD_POOL).
+    setProperty(ConfigurationOptions.Stream.partitionsCount, TOTAL_PARTITIONS)
+
+  val srv = TestStorageServer.get()
+  val storageClient = f.getStorageClient()
+  storageClient.createStream("test_stream", TOTAL_PARTITIONS, 24 * 3600, "")
 
   it should s"Start and work correctly with PROCESSING_ENGINES_THREAD_POOL=$PROCESSING_ENGINES_THREAD_POOL" in {
     val awaitTransactionsLatch = new CountDownLatch(1)
@@ -67,6 +78,9 @@ class SubscriberWithManyProcessingEnginesThreadsTest extends FlatSpec with Match
             t.send(s"$v")
           })
           t.checkpoint(false) // checkpoint the transaction
+          if (i % 1000 == 0) {
+            logger.info(s"I have wrote $i transactions up to now.")
+          }
         })
       producer.stop() // stop operation
     })
