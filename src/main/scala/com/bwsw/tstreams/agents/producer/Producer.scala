@@ -213,6 +213,8 @@ class Producer(var name: String,
       transaction
     } catch {
       case e: MaterializationException =>
+        //todo: fixit (magic)
+        Thread.sleep(1000)
         newTransaction(policy, retry - 1)
     }
   }
@@ -316,13 +318,12 @@ class Producer(var name: String,
 
     backendActivityService.shutdownOrDie(Producer.SHUTDOWN_WAIT_MAX_SECONDS, TimeUnit.SECONDS)
 
-    stream.client.shutdown()
-
     // stop provide master features to public
     p2pAgent.stop()
     // stop function which works with subscribers
     subscriberNotifier.stop()
     curatorClient.close()
+    stream.client.shutdown()
   }
 
   /**

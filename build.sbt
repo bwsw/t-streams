@@ -1,6 +1,6 @@
 name := "t-streams"
 
-val tstreamsVersion = "2.0.1-SNAPSHOT"
+val tstreamsVersion = "2.0.2-SNAPSHOT"
 
 version := tstreamsVersion
 organization := "com.bwsw"
@@ -59,7 +59,7 @@ libraryDependencies ++= Seq(
   "log4j" % "log4j" % "1.2.17",
   "org.apache.curator" % "curator-recipes" % "2.11.0",
   "com.google.guava" % "guava" % "18.0",
-  "com.bwsw" % "tstreams-transaction-server_2.12" % "1.2.2-SNAPSHOT")
+  "com.bwsw" % "tstreams-transaction-server_2.12" % "1.2.3-SNAPSHOT")
 
 
 //ASSEMBLY STRATEGY

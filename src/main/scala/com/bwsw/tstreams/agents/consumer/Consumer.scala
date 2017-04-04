@@ -169,7 +169,6 @@ class Consumer(val name: String,
     }
 
     val transaction = transactionBuffer(partition).head
-    println(transaction)
 
     // We found invalid transaction, so just skip it and move forward
     if (transaction.getCount() == 0) {

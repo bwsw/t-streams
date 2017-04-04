@@ -1,4 +1,4 @@
-package agents.integration
+package agents.integration.v20
 
 /**
   * Created by Ivan Kudryavtsev on 21.09.16.
@@ -11,12 +11,15 @@ import com.bwsw.tstreams.agents.consumer.{ConsumerTransaction, TransactionOperat
 import com.bwsw.tstreams.agents.producer.{NewTransactionProducerPolicy, Producer}
 import com.bwsw.tstreams.env.{ConfigurationOptions, TStreamsFactory}
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
-import testutils.TestUtils
+import testutils.{TestStorageServer, TestUtils}
 
 import scala.collection.mutable.ListBuffer
 import scala.util.Random
 
 class ProducerMasterChangeComplexTest  extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
+
+
+
 
   val producerBuffer = ListBuffer[Long]()
   val subscriberBuffer = ListBuffer[Long]()
@@ -57,7 +60,7 @@ class ProducerMasterChangeComplexTest  extends FlatSpec with Matchers with Befor
     }
   }
   val PRODUCERS_AMOUNT          = 10
-  val TRANSACTIONS_AMOUNT_EACH  = 100
+  val TRANSACTIONS_AMOUNT_EACH  = 1000
   val PROBABILITY               = 0.01 // 0.01=1%
   val PARTITIONS_COUNT          = 10
   val PARTITIONS                = (0 until PARTITIONS_COUNT).toSet
@@ -69,13 +72,17 @@ class ProducerMasterChangeComplexTest  extends FlatSpec with Matchers with Befor
   f.setProperty(ConfigurationOptions.Stream.name, "test_stream").
     setProperty(ConfigurationOptions.Stream.partitionsCount, PARTITIONS_COUNT).
     setProperty(ConfigurationOptions.Stream.ttlSec, 60 * 10).
-    setProperty(ConfigurationOptions.Coordination.connectionTimeoutMs, 7).
-    setProperty(ConfigurationOptions.Coordination.sessionTimeoutMs, 7).
-    setProperty(ConfigurationOptions.Producer.transportTimeoutMs, 5).
-    setProperty(ConfigurationOptions.Producer.Transaction.ttlMs, 3).
-    setProperty(ConfigurationOptions.Producer.Transaction.keepAliveMs, 1).
-    setProperty(ConfigurationOptions.Consumer.transactionPreload, 10).
+    setProperty(ConfigurationOptions.Coordination.connectionTimeoutMs, 7000).
+    setProperty(ConfigurationOptions.Coordination.sessionTimeoutMs, 7000).
+    setProperty(ConfigurationOptions.Producer.transportTimeoutMs, 5000).
+    setProperty(ConfigurationOptions.Producer.Transaction.ttlMs, 6000).
+    setProperty(ConfigurationOptions.Producer.Transaction.keepAliveMs, 2000).
+    setProperty(ConfigurationOptions.Consumer.transactionPreload, 500).
     setProperty(ConfigurationOptions.Consumer.dataPreload, 10)
+
+  val srv = TestStorageServer.get()
+  val storageClient = f.getStorageClient()
+  storageClient.createStream("test_stream", PARTITIONS_COUNT, 24 * 3600, "")
 
   var subscriberCounter = 0
   val subscriber = f.getSubscriber(name = "s",
@@ -113,6 +120,7 @@ class ProducerMasterChangeComplexTest  extends FlatSpec with Matchers with Befor
   }
 
   override def afterAll() {
+    TestStorageServer.dispose(srv)
     onAfterAll()
   }
 }

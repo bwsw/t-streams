@@ -148,7 +148,6 @@ class ProducerAndConsumerSimpleTests extends FlatSpec with Matchers with BeforeA
 
     val producerTransaction = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
     producerTransaction.cancel()
-    println(producerTransaction.getTransactionID())
 
     (0 until TRANSACTIONS_COUNT).foreach { _ =>
       val producerTransaction = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
@@ -164,9 +163,7 @@ class ProducerAndConsumerSimpleTests extends FlatSpec with Matchers with BeforeA
     }
 
     l.await()
-    println(pl)
     (0 until TRANSACTIONS_COUNT).foreach { i =>
-      println(i)
       val transactionOpt = consumer.getTransaction(0)
       transactionOpt.nonEmpty shouldBe true
       cl.append(transactionOpt.get.getTransactionID())
