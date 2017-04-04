@@ -228,9 +228,6 @@ class TStreamsFactory() {
     val transportRetryCount = pAsInt(co.Producer.transportRetryCount, producerDefaults.transportRetryCount.default)
     producerDefaults.transportRetryCount.check(transportRetryCount)
 
-    val partitionsRedistributionDelaySec = pAsInt(co.Coordination.partitionsRedistributionDelaySec, coordinationDefaults.partitionsRedistributionDelaySec.default)
-    coordinationDefaults.partitionsRedistributionDelaySec.check(partitionsRedistributionDelaySec)
-
     val threadPoolSize = pAsInt(co.Producer.threadPoolSize, producerDefaults.threadPoolSize.default)
     producerDefaults.threadPoolSize.check(threadPoolSize)
 
@@ -260,9 +257,7 @@ class TStreamsFactory() {
       zkConnectionTimeoutMs = connectionTimeoutMs,
       transport = transport,
       threadPoolSize = threadPoolSize,
-      notifyThreadPoolSize = notifyThreadPoolSize,
-      partitionRedistributionDelaySec = partitionsRedistributionDelaySec
-    )
+      notifyThreadPoolSize = notifyThreadPoolSize)
 
     var writePolicy: AbstractPolicy = null
 

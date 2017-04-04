@@ -1,8 +1,4 @@
-package agents.integration.v20
-
-/**
-  * Created by mendelbaum_ma on 06.09.16.
-  */
+package agents.integration
 
 import java.util.concurrent.{CountDownLatch, TimeUnit}
 
@@ -15,8 +11,10 @@ import testutils.{TestStorageServer, TestUtils}
 
 import scala.collection.mutable.ListBuffer
 
-
-class ProducerMasterChangeTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
+/**
+  * Created by Ivan Kudryavtsev on 07.09.16.
+  */
+class TwoProducersAndSubscriberStartsBeforeWriteTests extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
 
   f.setProperty(ConfigurationOptions.Stream.name, "test_stream").
     setProperty(ConfigurationOptions.Stream.partitionsCount, 3).
@@ -26,14 +24,16 @@ class ProducerMasterChangeTest extends FlatSpec with Matchers with BeforeAndAfte
     setProperty(ConfigurationOptions.Producer.transportTimeoutMs, 5000).
     setProperty(ConfigurationOptions.Producer.Transaction.ttlMs, 6000).
     setProperty(ConfigurationOptions.Producer.Transaction.keepAliveMs, 2000).
-    setProperty(ConfigurationOptions.Consumer.transactionPreload, 500).
+    setProperty(ConfigurationOptions.Consumer.transactionPreload, 50).
     setProperty(ConfigurationOptions.Consumer.dataPreload, 10)
 
   val srv = TestStorageServer.get()
   val storageClient = f.getStorageClient()
   storageClient.createStream("test_stream", 3, 24 * 3600, "")
 
-  it should "switching the master after 100 transactions " in {
+  val COUNT = 1000
+
+  it should s"Two producers send $COUNT transactions each, subscriber receives ${2 * COUNT} when started after." in {
 
     val bp = ListBuffer[Long]()
     val bs = ListBuffer[Long]()
@@ -53,35 +53,31 @@ class ProducerMasterChangeTest extends FlatSpec with Matchers with BeforeAndAfte
     val s = f.getSubscriber(name = "ss+2",
       partitions = Set(0),
       offset = Newest,
-      useLastOffset = false,
+      useLastOffset = true,
       callback = (consumer: TransactionOperator, transaction: ConsumerTransaction) => this.synchronized {
         bs.append(transaction.getTransactionID())
-        if (bs.size == 1100) {
+        if (bs.size == 2 * COUNT) {
           ls.countDown()
         }
       })
+
     val t1 = new Thread(() => {
       logger.info(s"Producer-1 is master of partition: ${producer1.isMasterOfPartition(0)}")
-      for (i <- 0 until 100) {
+      for (i <- 0 until COUNT) {
         val t = producer1.newTransaction(policy = NewTransactionProducerPolicy.CheckpointIfOpened)
-        bp.synchronized {
-          bp.append(t.getTransactionID())
-        }
+        bp.append(t.getTransactionID())
         lp2.countDown()
-        t.send("test".getBytes())
+        t.send("test")
         t.checkpoint()
       }
-      producer1.stop()
     })
     val t2 = new Thread(() => {
       logger.info(s"Producer-2 is master of partition: ${producer2.isMasterOfPartition(0)}")
-      for (i <- 0 until 1000) {
+      for (i <- 0 until COUNT) {
         lp2.await()
         val t = producer2.newTransaction(policy = NewTransactionProducerPolicy.CheckpointIfOpened)
-        bp.synchronized {
-          bp.append(t.getTransactionID())
-        }
-        t.send("test".getBytes())
+        bp.append(t.getTransactionID())
+        t.send("test")
         t.checkpoint()
       }
     })
@@ -93,17 +89,16 @@ class ProducerMasterChangeTest extends FlatSpec with Matchers with BeforeAndAfte
     t1.join()
     t2.join()
 
-    ls.await(60, TimeUnit.SECONDS)
+    ls.await(10, TimeUnit.SECONDS)
+    producer1.stop()
     producer2.stop()
     s.stop()
-    bs.size shouldBe 1100
-
-    bp.toSet.intersect(bs.toSet).size shouldBe 1100
+    bs.size shouldBe 2 * COUNT
   }
 
-  override def afterAll() {
+
+  override def afterAll(): Unit = {
     TestStorageServer.dispose(srv)
     onAfterAll()
   }
 }
-

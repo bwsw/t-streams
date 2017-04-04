@@ -1,4 +1,4 @@
-package agents.integration.v20
+package agents.integration
 
 import java.util.concurrent.CountDownLatch
 
@@ -8,8 +8,6 @@ import com.bwsw.tstreams.env.ConfigurationOptions
 import com.bwsw.tstreamstransactionserver.rpc.TransactionStates
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import testutils._
-
-// TODO: FAILED
 
 class ProducerAndConsumerLongLastingTransactionsTests extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
 

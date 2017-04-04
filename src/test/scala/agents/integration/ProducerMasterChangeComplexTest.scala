@@ -1,4 +1,4 @@
-package agents.integration.v20
+package agents.integration
 
 /**
   * Created by Ivan Kudryavtsev on 21.09.16.
@@ -17,9 +17,6 @@ import scala.collection.mutable.ListBuffer
 import scala.util.Random
 
 class ProducerMasterChangeComplexTest  extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
-
-
-
 
   val producerBuffer = ListBuffer[Long]()
   val subscriberBuffer = ListBuffer[Long]()

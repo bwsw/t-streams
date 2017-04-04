@@ -1,19 +1,18 @@
-package agents.integration.v20
+package agents.integration
 
 import java.util.concurrent.{CountDownLatch, TimeUnit}
 
 import com.bwsw.tstreams.agents.consumer.Offset.Newest
 import com.bwsw.tstreams.agents.consumer.{ConsumerTransaction, TransactionOperator}
-import com.bwsw.tstreams.agents.group.CheckpointGroup
 import com.bwsw.tstreams.agents.producer.NewTransactionProducerPolicy
 import com.bwsw.tstreams.env.ConfigurationOptions
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import testutils.{TestStorageServer, TestUtils}
 
 /**
-  * Created by ivan on 13.09.16.
+  * Created by Ivan Kudryavtsev on 14.09.16.
   */
-class CheckpointGroupAndSubscriberEventsTests extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
+class ProducerWritesToOneSubscriberReadsFromAllTests extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
 
   f.setProperty(ConfigurationOptions.Stream.name, "test_stream").
     setProperty(ConfigurationOptions.Stream.partitionsCount, 3).
@@ -23,50 +22,46 @@ class CheckpointGroupAndSubscriberEventsTests extends FlatSpec with Matchers wit
     setProperty(ConfigurationOptions.Producer.transportTimeoutMs, 5000).
     setProperty(ConfigurationOptions.Producer.Transaction.ttlMs, 6000).
     setProperty(ConfigurationOptions.Producer.Transaction.keepAliveMs, 2000).
-    setProperty(ConfigurationOptions.Consumer.transactionPreload, 500).
+    setProperty(ConfigurationOptions.Consumer.transactionPreload, 50).
     setProperty(ConfigurationOptions.Consumer.dataPreload, 10)
 
   val srv = TestStorageServer.get()
   val storageClient = f.getStorageClient()
   storageClient.createStream("test_stream", 3, 24 * 3600, "")
 
-  val producer = f.getProducer(
-    name = "test_producer",
-    partitions = Set(0))
+  val TOTAL = 1000
+  val l = new CountDownLatch(1)
 
-  "Group commit" should "checkpoint all AgentsGroup state" in {
-    val l = new CountDownLatch(1)
-    var transactionsCounter: Int = 0
+  it should "handle all transactions produced by producer" in {
+    var subscriberTransactionsAmount = 0
+    val producer = f.getProducer(
+      name = "test_producer",
+      partitions = Set(0))
 
-    val group = new CheckpointGroup()
-
-    group.add(producer)
-
-    val subscriber = f.getSubscriber(name = "ss+2",
-      partitions = Set(0),
+    val s = f.getSubscriber(name = "sv2",
+      partitions = Set(0, 1, 2),
       offset = Newest,
       useLastOffset = true,
       callback = (consumer: TransactionOperator, transaction: ConsumerTransaction) => this.synchronized {
-        transactionsCounter += 1
-        if (transactionsCounter == 2) {
+        subscriberTransactionsAmount += 1
+        if (subscriberTransactionsAmount == TOTAL)
           l.countDown()
-        }
       })
-    subscriber.start()
-    val txn1 = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened, 0)
-    txn1.send("test".getBytes())
-    group.checkpoint()
-    val txn2 = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened, 0)
-    txn2.send("test".getBytes())
-    group.checkpoint()
-    l.await(5, TimeUnit.SECONDS) shouldBe true
-    transactionsCounter shouldBe 2
-    subscriber.stop()
+    s.start()
+    for (it <- 0 until TOTAL) {
+      val transaction = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
+      transaction.send("test")
+      transaction.checkpoint()
+    }
+    producer.stop()
+    l.await(1000, TimeUnit.MILLISECONDS)
+    s.stop()
+    subscriberTransactionsAmount shouldBe TOTAL
   }
 
   override def afterAll(): Unit = {
-    producer.stop()
     TestStorageServer.dispose(srv)
     onAfterAll()
   }
 }
+

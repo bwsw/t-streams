@@ -1,4 +1,4 @@
-package agents.integration.v20
+package agents.integration
 
 import java.util.concurrent.CountDownLatch
 
@@ -65,12 +65,15 @@ class ConsumerCheckpointTests extends FlatSpec with Matchers with BeforeAndAfter
     c1.getTransactionById(0, t1.getTransactionID()).isDefined shouldBe true
     c1.getTransactionById(0, t2.getTransactionID()).isDefined shouldBe true
 
+    val l = new CountDownLatch(1)
+    srv.notifyConsumerTransactionCompleted(ct => t1.getTransactionID() == ct.transactionID, l.countDown())
+
     c1.getTransaction(0).get.getTransactionID() shouldBe t1.getTransactionID()
     c1.checkpoint()
     c1.stop()
 
-    //todo: fixit with server notify
-    Thread.sleep(1000)
+
+    l.await()
 
     c2.start()
     c2.getTransaction(0).get.getTransactionID() shouldBe t2.getTransactionID()

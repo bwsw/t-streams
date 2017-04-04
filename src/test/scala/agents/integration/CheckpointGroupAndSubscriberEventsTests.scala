@@ -1,22 +1,19 @@
-package agents.integration.v20
-
-/**
-  * Created by mendelbaum_ma on 08.09.16.
-  */
+package agents.integration
 
 import java.util.concurrent.{CountDownLatch, TimeUnit}
 
 import com.bwsw.tstreams.agents.consumer.Offset.Newest
 import com.bwsw.tstreams.agents.consumer.{ConsumerTransaction, TransactionOperator}
+import com.bwsw.tstreams.agents.group.CheckpointGroup
 import com.bwsw.tstreams.agents.producer.NewTransactionProducerPolicy
 import com.bwsw.tstreams.env.ConfigurationOptions
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import testutils.{TestStorageServer, TestUtils}
 
-import scala.collection.mutable.ListBuffer
-
-
-class SubscriberWithTwoProducersFirstCancelSecondCheckpointTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
+/**
+  * Created by ivan on 13.09.16.
+  */
+class CheckpointGroupAndSubscriberEventsTests extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
 
   f.setProperty(ConfigurationOptions.Stream.name, "test_stream").
     setProperty(ConfigurationOptions.Stream.partitionsCount, 3).
@@ -33,70 +30,42 @@ class SubscriberWithTwoProducersFirstCancelSecondCheckpointTest extends FlatSpec
   val storageClient = f.getStorageClient()
   storageClient.createStream("test_stream", 3, 24 * 3600, "")
 
-  it should "Integration MixIn checkpoint and cancel must be correctly processed on Subscriber " in {
+  val producer = f.getProducer(
+    name = "test_producer",
+    partitions = Set(0))
 
-    val bp1 = ListBuffer[Long]()
-    val bp2 = ListBuffer[Long]()
-    val bs = ListBuffer[Long]()
+  "Group commit" should "checkpoint all AgentsGroup state" in {
+    val l = new CountDownLatch(1)
+    var transactionsCounter: Int = 0
 
-    val lp2 = new CountDownLatch(1)
-    val ls = new CountDownLatch(1)
+    val group = new CheckpointGroup()
+
+    group.add(producer)
 
     val subscriber = f.getSubscriber(name = "ss+2",
       partitions = Set(0),
       offset = Newest,
       useLastOffset = true,
       callback = (consumer: TransactionOperator, transaction: ConsumerTransaction) => this.synchronized {
-        bs.append(transaction.getTransactionID())
-        ls.countDown()
+        transactionsCounter += 1
+        if (transactionsCounter == 2) {
+          l.countDown()
+        }
       })
-
     subscriber.start()
-
-    val producer1 = f.getProducer(
-      name = "test_producer1",
-      partitions = Set(0))
-
-    val producer2 = f.getProducer(
-      name = "test_producer2",
-      partitions = Set(0))
-
-
-
-    val t1 = new Thread(() => {
-      val transaction = producer1.newTransaction(policy = NewTransactionProducerPolicy.CheckpointIfOpened)
-      lp2.countDown()
-      bp1.append(transaction.getTransactionID())
-      transaction.send("test")
-      transaction.cancel()
-    })
-
-    val t2 = new Thread(() => {
-      lp2.await()
-      val transaction = producer2.newTransaction(policy = NewTransactionProducerPolicy.CheckpointIfOpened)
-      bp2.append(transaction.getTransactionID())
-      transaction.send("test")
-      transaction.checkpoint()
-    })
-
-    t1.start()
-    t2.start()
-
-    t1.join()
-    t2.join()
-
-    ls.await(10, TimeUnit.SECONDS)
-
-    producer1.stop()
-    producer2.stop()
-
+    val txn1 = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened, 0)
+    txn1.send("test".getBytes())
+    group.checkpoint()
+    val txn2 = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened, 0)
+    txn2.send("test".getBytes())
+    group.checkpoint()
+    l.await(5, TimeUnit.SECONDS) shouldBe true
+    transactionsCounter shouldBe 2
     subscriber.stop()
-
-    bs.size shouldBe 1 // Adopted by only one and it is from second
-    bp2.head shouldBe bs.head
   }
 
   override def afterAll(): Unit = {
+    producer.stop()
     TestStorageServer.dispose(srv)
     onAfterAll()
   }

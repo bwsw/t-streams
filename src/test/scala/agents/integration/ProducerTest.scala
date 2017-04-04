@@ -1,4 +1,4 @@
-package agents.integration.v20
+package agents.integration
 
 import com.bwsw.tstreams.agents.producer._
 import com.bwsw.tstreams.env.ConfigurationOptions

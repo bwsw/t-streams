@@ -99,8 +99,7 @@ class Producer(var name: String,
     usedPartitions          = producerOptions.writePolicy.getUsedPartitions(),
     transport               = pcs.transport,
     threadPoolAmount        = threadPoolSize,
-    threadPoolPublisherThreadsAmount  = pcs.notifyThreadPoolSize,
-    partitionRedistributionDelay      = pcs.partitionRedistributionDelaySec)
+    threadPoolPublisherThreadsAmount  = pcs.notifyThreadPoolSize)
 
 
   /**

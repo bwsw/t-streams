@@ -73,10 +73,6 @@ class TransactionBuffer(queue: QueueBuilder.QueueType) {
       * state switching system (almost finite automate)
       * */
       (ts.state, update.state) match {
-        /*
-        from opened to *
-         */
-        case (TransactionStatus.opened, TransactionStatus.opened) =>
 
         case (TransactionStatus.opened, TransactionStatus.update) =>
           ts.queueOrderID = orderID
@@ -94,24 +90,7 @@ class TransactionBuffer(queue: QueueBuilder.QueueType) {
           ts.itemCount = update.itemCount
           ts.ttl = Long.MaxValue
 
-        /*
-        from update -> * no implement because opened
-         */
-        case (TransactionStatus.update, _) =>
-
-        /*
-           */
-        case (TransactionStatus.invalid, _) =>
-
-        /*
-        from cancel -> * no implement because removed
-        */
-        case (TransactionStatus.cancel, _) =>
-
-        /*
-        from post -> *
-         */
-        case (TransactionStatus.`checkpointed`, _) =>
+        case  (_,_) => Subscriber.logger.warn(s"Transaction ${update} switched from ${ts.state} to ${update.state} which is incorrect.")
       }
 
     } else {

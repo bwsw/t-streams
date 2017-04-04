@@ -1,6 +1,10 @@
-package agents.integration.v20
+package agents.integration
 
-import java.util.concurrent.CountDownLatch
+/**
+  * Created by mendelbaum_ma on 06.09.16.
+  */
+
+import java.util.concurrent.{CountDownLatch, TimeUnit}
 
 import com.bwsw.tstreams.agents.consumer.Offset.Newest
 import com.bwsw.tstreams.agents.consumer.{ConsumerTransaction, TransactionOperator}
@@ -11,10 +15,8 @@ import testutils.{TestStorageServer, TestUtils}
 
 import scala.collection.mutable.ListBuffer
 
-/**
-  * Created by Mikhail Mendelbaum on 02.09.16.
-  */
-class IntersectingTransactionsTests extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
+
+class ProducerMasterChangeTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
 
   f.setProperty(ConfigurationOptions.Stream.name, "test_stream").
     setProperty(ConfigurationOptions.Stream.partitionsCount, 3).
@@ -27,21 +29,22 @@ class IntersectingTransactionsTests extends FlatSpec with Matchers with BeforeAn
     setProperty(ConfigurationOptions.Consumer.transactionPreload, 500).
     setProperty(ConfigurationOptions.Consumer.dataPreload, 10)
 
-
   val srv = TestStorageServer.get()
   val storageClient = f.getStorageClient()
   storageClient.createStream("test_stream", 3, 24 * 3600, "")
 
-  it should "handle all transactions produced by two different producers, the first ends first started " in {
+  it should "switching the master after 100 transactions " in {
+
     val bp = ListBuffer[Long]()
     val bs = ListBuffer[Long]()
-    val lp1 = new CountDownLatch(1)
+
     val lp2 = new CountDownLatch(1)
     val ls = new CountDownLatch(1)
 
     val producer1 = f.getProducer(
       name = "test_producer1",
       partitions = Set(0))
+
 
     val producer2 = f.getProducer(
       name = "test_producer2",
@@ -50,32 +53,38 @@ class IntersectingTransactionsTests extends FlatSpec with Matchers with BeforeAn
     val s = f.getSubscriber(name = "ss+2",
       partitions = Set(0),
       offset = Newest,
-      useLastOffset = true,
+      useLastOffset = false,
       callback = (consumer: TransactionOperator, transaction: ConsumerTransaction) => this.synchronized {
         bs.append(transaction.getTransactionID())
-        if (bs.size == 2) {
+        if (bs.size == 1100) {
           ls.countDown()
         }
       })
-
     val t1 = new Thread(() => {
-      val t = producer1.newTransaction(policy = NewTransactionProducerPolicy.CheckpointIfOpened)
-      bp.append(t.getTransactionID())
-      lp2.countDown()
-      lp1.await()
-      t.send("test".getBytes())
-      t.checkpoint()
+      logger.info(s"Producer-1 is master of partition: ${producer1.isMasterOfPartition(0)}")
+      for (i <- 0 until 100) {
+        val t = producer1.newTransaction(policy = NewTransactionProducerPolicy.CheckpointIfOpened)
+        bp.synchronized {
+          bp.append(t.getTransactionID())
+        }
+        lp2.countDown()
+        t.send("test".getBytes())
+        t.checkpoint()
+      }
+      producer1.stop()
     })
-
     val t2 = new Thread(() => {
-      lp2.await()
-      val t = producer2.newTransaction(policy = NewTransactionProducerPolicy.CheckpointIfOpened)
-      bp.append(t.getTransactionID())
-      t.send("test".getBytes())
-      t.checkpoint()
-      lp1.countDown()
+      logger.info(s"Producer-2 is master of partition: ${producer2.isMasterOfPartition(0)}")
+      for (i <- 0 until 1000) {
+        lp2.await()
+        val t = producer2.newTransaction(policy = NewTransactionProducerPolicy.CheckpointIfOpened)
+        bp.synchronized {
+          bp.append(t.getTransactionID())
+        }
+        t.send("test".getBytes())
+        t.checkpoint()
+      }
     })
-
     s.start()
 
     t1.start()
@@ -84,19 +93,17 @@ class IntersectingTransactionsTests extends FlatSpec with Matchers with BeforeAn
     t1.join()
     t2.join()
 
-    ls.await()
-
-    producer1.stop()
+    ls.await(60, TimeUnit.SECONDS)
     producer2.stop()
     s.stop()
+    bs.size shouldBe 1100
 
-    bp.head shouldBe bs.head
-    bp.tail.head shouldBe bs.tail.head
+    bp.toSet.intersect(bs.toSet).size shouldBe 1100
   }
 
-  override def afterAll(): Unit = {
+  override def afterAll() {
     TestStorageServer.dispose(srv)
     onAfterAll()
   }
-
 }
+

@@ -52,8 +52,7 @@ class PeerAgent(curatorClient: CuratorFramework,
                 usedPartitions: Set[Int],
                 transport: TcpTransport,
                 threadPoolAmount: Int,
-                threadPoolPublisherThreadsAmount: Int,
-                partitionRedistributionDelay: Int) {
+                threadPoolPublisherThreadsAmount: Int) {
 
 
 

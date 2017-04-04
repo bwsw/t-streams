@@ -15,7 +15,6 @@ object TStreamsFactoryCoordinationDefaults {
     val prefix = "/t-streams"
     val sessionTimeoutMs = IntMinMaxDefault(1000, 10000, 5000)
     val connectionTimeoutMs = IntMinMaxDefault(1000, 10000, 5000)
-    val partitionsRedistributionDelaySec = IntMinMaxDefault(1, 100, 2)
   }
 
   def get = {
@@ -26,9 +25,6 @@ object TStreamsFactoryCoordinationDefaults {
     m(co.prefix) = Coordination.prefix
     m(co.sessionTimeoutMs) = Coordination.sessionTimeoutMs.default
     m(co.connectionTimeoutMs) = Coordination.connectionTimeoutMs.default
-
-    // TODO: check deprecated
-    m(co.partitionsRedistributionDelaySec) = Coordination.partitionsRedistributionDelaySec.default
 
     m
   }

@@ -58,5 +58,4 @@ class CoordinationOptions(val zkEndpoints: String,
                           val zkConnectionTimeoutMs: Int,
                           val transport: TcpTransport,
                           val threadPoolSize: Int,
-                          val notifyThreadPoolSize: Int,
-                          val partitionRedistributionDelaySec: Int)
+                          val notifyThreadPoolSize: Int)

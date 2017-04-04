@@ -1,4 +1,4 @@
-package agents.integration.v20
+package agents.integration
 
 import java.util.concurrent.CountDownLatch
 
@@ -79,15 +79,20 @@ class ProducerAndConsumerCheckpointTest extends FlatSpec with Matchers with Befo
 
     l.await()
 
+    val l1 = new CountDownLatch(1)
+
     consumer.start
-    (0 until firstPart) foreach { _ =>
+    (0 until firstPart) foreach { counter =>
       val transaction: ConsumerTransaction = consumer.getTransaction(0).get
+
+      if(counter == firstPart - 1)
+        srv.notifyConsumerTransactionCompleted(ct => transaction.getTransactionID() == ct.transactionID, l1.countDown())
+
       transaction.getAll().map(i => new String(i)).sorted shouldBe dataToSend
       consumer.checkpoint()
     }
 
-    //todo: fixit
-    Thread.sleep(1000)
+    l1.await()
 
     consumer2.start
     (0 until secondPart) foreach { _ =>

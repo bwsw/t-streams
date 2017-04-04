@@ -1,6 +1,6 @@
-package agents.integration.v20
+package agents.integration
 
-import java.util.concurrent.{CountDownLatch, TimeUnit}
+import java.util.concurrent.CountDownLatch
 
 import com.bwsw.tstreams.agents.consumer.Offset.Newest
 import com.bwsw.tstreams.agents.consumer.{ConsumerTransaction, TransactionOperator}
@@ -12,9 +12,9 @@ import testutils.{TestStorageServer, TestUtils}
 import scala.collection.mutable.ListBuffer
 
 /**
-  * Created by Ivan Kudryavtsev on 07.09.16.
+  * Created by Mikhail Mendelbaum on 02.09.16.
   */
-class TwoProducersAndSubscriberStartsBeforeWriteTests extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
+class IntersectingTransactionsTests extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
 
   f.setProperty(ConfigurationOptions.Stream.name, "test_stream").
     setProperty(ConfigurationOptions.Stream.partitionsCount, 3).
@@ -24,27 +24,24 @@ class TwoProducersAndSubscriberStartsBeforeWriteTests extends FlatSpec with Matc
     setProperty(ConfigurationOptions.Producer.transportTimeoutMs, 5000).
     setProperty(ConfigurationOptions.Producer.Transaction.ttlMs, 6000).
     setProperty(ConfigurationOptions.Producer.Transaction.keepAliveMs, 2000).
-    setProperty(ConfigurationOptions.Consumer.transactionPreload, 50).
+    setProperty(ConfigurationOptions.Consumer.transactionPreload, 500).
     setProperty(ConfigurationOptions.Consumer.dataPreload, 10)
+
 
   val srv = TestStorageServer.get()
   val storageClient = f.getStorageClient()
   storageClient.createStream("test_stream", 3, 24 * 3600, "")
 
-  val COUNT = 1000
-
-  it should s"Two producers send $COUNT transactions each, subscriber receives ${2 * COUNT} when started after." in {
-
+  it should "handle all transactions produced by two different producers, the first ends first started " in {
     val bp = ListBuffer[Long]()
     val bs = ListBuffer[Long]()
-
+    val lp1 = new CountDownLatch(1)
     val lp2 = new CountDownLatch(1)
     val ls = new CountDownLatch(1)
 
     val producer1 = f.getProducer(
       name = "test_producer1",
       partitions = Set(0))
-
 
     val producer2 = f.getProducer(
       name = "test_producer2",
@@ -56,31 +53,29 @@ class TwoProducersAndSubscriberStartsBeforeWriteTests extends FlatSpec with Matc
       useLastOffset = true,
       callback = (consumer: TransactionOperator, transaction: ConsumerTransaction) => this.synchronized {
         bs.append(transaction.getTransactionID())
-        if (bs.size == 2 * COUNT) {
+        if (bs.size == 2) {
           ls.countDown()
         }
       })
 
     val t1 = new Thread(() => {
-      logger.info(s"Producer-1 is master of partition: ${producer1.isMasterOfPartition(0)}")
-      for (i <- 0 until COUNT) {
-        val t = producer1.newTransaction(policy = NewTransactionProducerPolicy.CheckpointIfOpened)
-        bp.append(t.getTransactionID())
-        lp2.countDown()
-        t.send("test")
-        t.checkpoint()
-      }
+      val t = producer1.newTransaction(policy = NewTransactionProducerPolicy.CheckpointIfOpened)
+      bp.append(t.getTransactionID())
+      lp2.countDown()
+      lp1.await()
+      t.send("test".getBytes())
+      t.checkpoint()
     })
+
     val t2 = new Thread(() => {
-      logger.info(s"Producer-2 is master of partition: ${producer2.isMasterOfPartition(0)}")
-      for (i <- 0 until COUNT) {
-        lp2.await()
-        val t = producer2.newTransaction(policy = NewTransactionProducerPolicy.CheckpointIfOpened)
-        bp.append(t.getTransactionID())
-        t.send("test")
-        t.checkpoint()
-      }
+      lp2.await()
+      val t = producer2.newTransaction(policy = NewTransactionProducerPolicy.CheckpointIfOpened)
+      bp.append(t.getTransactionID())
+      t.send("test".getBytes())
+      t.checkpoint()
+      lp1.countDown()
     })
+
     s.start()
 
     t1.start()
@@ -89,16 +84,19 @@ class TwoProducersAndSubscriberStartsBeforeWriteTests extends FlatSpec with Matc
     t1.join()
     t2.join()
 
-    ls.await(10, TimeUnit.SECONDS)
+    ls.await()
+
     producer1.stop()
     producer2.stop()
     s.stop()
-    bs.size shouldBe 2 * COUNT
-  }
 
+    bp.head shouldBe bs.head
+    bp.tail.head shouldBe bs.tail.head
+  }
 
   override def afterAll(): Unit = {
     TestStorageServer.dispose(srv)
     onAfterAll()
   }
+
 }

@@ -64,10 +64,6 @@ object ConfigurationOptions {
       */
     val connectionTimeoutMs = "coordination.connection-timeout"
 
-    /**
-      * partition redistribution delay
-      */
-    val partitionsRedistributionDelaySec = "coordination.partition-redistribution-delay"
   }
 
 
