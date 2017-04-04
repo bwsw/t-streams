@@ -44,8 +44,8 @@ class TransactionFullLoader(partitions: Set[Int],
                        callback: Callback): Int = {
     val last = seq.last
     var first = lastTransactionsMap(last.partition).transactionID
-    // todo: add proper logging (debug)
-    //println(s"First: ${first}, last: ${last.transactionID}, ${last.transactionID - first}")
+    if(Subscriber.logger.isDebugEnabled())
+      Subscriber.logger.debug(s"TransactionFullLoader.load: First: ${first}, last: ${last.transactionID}, ${last.transactionID - first}")
     var data = ListBuffer[ConsumerTransaction]()
     var flag = true
     while(flag) {
@@ -62,8 +62,9 @@ class TransactionFullLoader(partitions: Set[Int],
       } else
         flag = false
     }
-    // todo: add proper logging (debug)
-    //println(s"Data:  ${data}")
+
+    if(Subscriber.logger.isDebugEnabled())
+      Subscriber.logger.debug(s"Data:  ${data}")
 
     data.foreach(elt =>
       executor.submit(s"<CallbackTask#Full>", new ProcessingEngine.CallbackTask(consumer,

@@ -21,9 +21,11 @@ class ProducerTransactionData(transaction: ProducerTransaction, ttl: Long, stora
 
   def save(): () => Unit = this.synchronized {
     val job = storageClient.client.putTransactionData(streamName, transaction.getPartition, transaction.getTransactionID(), items, lastOffset)
-    //todo: replace with debug
-    //println((streamName, transaction.getPartition, transaction.getTransactionID(), items, lastOffset))
-    //println(s"Saved ${transaction.getTransactionID()}: ${items}")
+
+    if(Producer.logger.isDebugEnabled()) {
+      Producer.logger.debug(s"putTransactionData($streamName, ${transaction.getPartition}, ${transaction.getTransactionID()}, $items, $lastOffset)")
+    }
+
     lastOffset += items.size
     items = new scala.collection.mutable.ListBuffer[Array[Byte]]()
     () => Await.result(job, 1.minute)

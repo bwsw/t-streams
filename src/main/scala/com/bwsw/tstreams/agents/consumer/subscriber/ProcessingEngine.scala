@@ -81,8 +81,10 @@ class ProcessingEngine(consumer: TransactionOperator,
     var loadFullDataExist = false
 
     val seq = queue.get(pollTimeMs, TimeUnit.MILLISECONDS)
-    // todo: proper logging (debug)
-    //println(seq)
+
+    if(Subscriber.logger.isDebugEnabled())
+      Subscriber.logger.debug(s"$seq")
+
     if (seq != null) {
       isFirstTime = false
       if (seq.nonEmpty) {

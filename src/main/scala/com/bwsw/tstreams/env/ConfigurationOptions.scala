@@ -18,7 +18,6 @@ object ConfigurationOptions {
       val retryDelayMs = "storage-client.zk.retry-delay-ms"
     }
 
-    // TODO: fixit bad scope
     object Auth {
       val key = "storage-client.auth.key"
       val connectionTimeoutMs = "storage-client.auth.connection-timeout-ms"
