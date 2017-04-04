@@ -55,7 +55,6 @@ class StorageClient(clientOptions: ConnectionOptions, authOptions: AuthOptions, 
     * @param ttl             Expiration time of single transaction in seconds
     */
   def createStream(streamName: String, partitionsCount: Int, ttl: Long, description: String, timeout: Duration = 1.minute): Stream = {
-    //TODO: fixit Long -> Int (TTL)
     if (Await.result(client.putStream(streamName, partitionsCount, Some(description), ttl), timeout) == false)
       throw new IllegalArgumentException(s"Stream ${streamName} already exists.")
 
