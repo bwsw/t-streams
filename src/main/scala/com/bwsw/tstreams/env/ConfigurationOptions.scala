@@ -132,8 +132,6 @@ object ConfigurationOptions {
         */
       val distributionPolicy = "producer.transaction.distribution-policy"
 
-      // TODO: fix internals write->distribution
-
       /**
         * TSF_Dictionary.Producer.Transaction consts scope
         */
