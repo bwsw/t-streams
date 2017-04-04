@@ -24,7 +24,7 @@ class TwoProducersAndSubscriberStartsBeforeWriteTests extends FlatSpec with Matc
     setProperty(ConfigurationOptions.Producer.transportTimeoutMs, 5000).
     setProperty(ConfigurationOptions.Producer.Transaction.ttlMs, 6000).
     setProperty(ConfigurationOptions.Producer.Transaction.keepAliveMs, 2000).
-    setProperty(ConfigurationOptions.Consumer.transactionPreload, 500).
+    setProperty(ConfigurationOptions.Consumer.transactionPreload, 50).
     setProperty(ConfigurationOptions.Consumer.dataPreload, 10)
 
   val srv = TestStorageServer.get()

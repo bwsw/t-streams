@@ -43,18 +43,21 @@ class TransactionFullLoader(partitions: Set[Int],
                        executor: FirstFailLockableTaskExecutor,
                        callback: Callback): Int = {
     val last = seq.last
-    val first = lastTransactionsMap(last.partition).transactionID
+    var first = lastTransactionsMap(last.partition).transactionID
     // todo: add proper logging (debug)
     //println(s"First: ${first}, last: ${last.transactionID}, ${last.transactionID - first}")
-    var data: ListBuffer[ConsumerTransaction] = null
+    var data = ListBuffer[ConsumerTransaction]()
     var flag = true
     while(flag) {
-      data = consumer.getTransactionsFromTo(last.partition, first, last.transactionID + 1)
+      data ++= consumer.getTransactionsFromTo(last.partition, first, last.transactionID)
       if(last.masterSessionID > 0) {
         // we wait for certain item
         // to switch to fast load next
-        if(data.size > 0 && data.last.getTransactionID() == last.transactionID) {
-          flag = false
+        if(data.size > 0) {
+          if(data.last.getTransactionID() == last.transactionID)
+            flag = false
+          else
+            first = data.last.getTransactionID()
         }
       } else
         flag = false

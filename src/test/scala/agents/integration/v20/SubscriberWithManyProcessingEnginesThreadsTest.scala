@@ -16,7 +16,7 @@ import scala.util.Random
   */
 class SubscriberWithManyProcessingEnginesThreadsTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
 
-  val TOTAL_TRANSACTIONS = 1000
+  val TOTAL_TRANSACTIONS = 10000
   val TOTAL_ITEMS = 1
   val TOTAL_PARTITIONS = 100
   val PARTITIONS = (0 until TOTAL_PARTITIONS).toSet
