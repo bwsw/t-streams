@@ -128,7 +128,7 @@ class ProducerTransaction(partition: Int,
   }
 
   private def cancelAsync() = {
-    val transactionRecord = new RPCProducerTransaction(transactionOwner.stream.name, partition, transactionID, TransactionStates.Invalid, -1, -1L)
+    val transactionRecord = new RPCProducerTransaction(transactionOwner.stream.name, partition, transactionID, TransactionStates.Invalid, 0, -1L)
 
     transactionOwner.stream.client.putTransaction(transactionRecord, true)(rec => {})
 

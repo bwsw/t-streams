@@ -6,7 +6,7 @@ import java.util.concurrent.locks.ReentrantLock
 import com.bwsw.tstreams.agents.group.{CheckpointInfo, ConsumerCheckpointInfo, GroupParticipant}
 import com.bwsw.tstreams.common.StorageClient
 import com.bwsw.tstreams.streams.Stream
-import com.bwsw.tstreamstransactionserver.rpc.{TransactionStates, ProducerTransaction}
+import com.bwsw.tstreamstransactionserver.rpc.{ProducerTransaction, TransactionStates}
 import org.slf4j.LoggerFactory
 
 import scala.collection.mutable
@@ -18,6 +18,7 @@ object Consumer {
 
 private class ScanPredicate(preload: Int) extends Function[ProducerTransaction, Boolean] with Serializable {
   var quantity = 0
+
   override def apply(transaction: ProducerTransaction): Boolean = {
     quantity = quantity + 1
     quantity < preload
@@ -26,6 +27,7 @@ private class ScanPredicate(preload: Int) extends Function[ProducerTransaction, 
 
 private class ScanCheckpointedPredicate(preload: Int) extends Function[ProducerTransaction, Boolean] with Serializable {
   var quantity = 0
+
   override def apply(transaction: ProducerTransaction): Boolean = {
     quantity = quantity + 1
     quantity < preload && TransactionStates.Opened != transaction.state
@@ -168,6 +170,14 @@ class Consumer(val name: String,
 
     val transaction = transactionBuffer(partition).head
 
+    // We found invalid transaction, so just skip it and move forward
+    if (transaction.getCount() == 0) {
+      transactionBuffer(partition).dequeue()
+      updateOffsets(partition, transaction.getTransactionID())
+      return getTransaction(partition)
+    }
+
+    // we found valid transaction transaction
     if (transaction.getCount() != -1) {
       updateOffsets(partition, transaction.getTransactionID())
       transactionBuffer(partition).dequeue()
@@ -175,6 +185,7 @@ class Consumer(val name: String,
       return Some(transaction)
     }
 
+    // we found open one, try to update it.
     val transactionUpdatedOpt = getTransactionById(partition, transaction.getTransactionID())
     if (transactionUpdatedOpt.isDefined) {
       updateOffsets(partition, transactionUpdatedOpt.get.getTransactionID())
