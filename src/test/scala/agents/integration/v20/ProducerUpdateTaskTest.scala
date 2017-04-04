@@ -1,9 +1,13 @@
 package agents.integration.v20
 
+import java.util.concurrent.CountDownLatch
+
+import com.bwsw.tstreams.agents.consumer.Offset.Oldest
 import com.bwsw.tstreams.agents.producer.NewTransactionProducerPolicy
 import com.bwsw.tstreams.common.ResettableCountDownLatch
 import com.bwsw.tstreams.debug.GlobalHooks
 import com.bwsw.tstreams.env.ConfigurationOptions
+import com.bwsw.tstreamstransactionserver.rpc.TransactionStates
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import testutils.{TestStorageServer, TestUtils}
 
@@ -15,6 +19,8 @@ class ProducerUpdateTaskTest extends FlatSpec with Matchers with BeforeAndAfterA
   val blockCheckpoint1 = new ResettableCountDownLatch(1)
   val blockCheckpoint2 = new ResettableCountDownLatch(1)
   var flag: Int = 0
+
+  val TRANSACTION_TTLMS = 2000
 
   System.setProperty("DEBUG", "true")
   GlobalHooks.addHook(GlobalHooks.transactionUpdateTaskBegin, () => {
@@ -33,8 +39,8 @@ class ProducerUpdateTaskTest extends FlatSpec with Matchers with BeforeAndAfterA
     setProperty(ConfigurationOptions.Coordination.connectionTimeoutMs, 7000).
     setProperty(ConfigurationOptions.Coordination.sessionTimeoutMs, 7000).
     setProperty(ConfigurationOptions.Producer.transportTimeoutMs, 5000).
-    setProperty(ConfigurationOptions.Producer.Transaction.ttlMs, 6000).
-    setProperty(ConfigurationOptions.Producer.Transaction.keepAliveMs, 2000).
+    setProperty(ConfigurationOptions.Producer.Transaction.ttlMs, TRANSACTION_TTLMS).
+    setProperty(ConfigurationOptions.Producer.Transaction.keepAliveMs, TRANSACTION_TTLMS / 4).
     setProperty(ConfigurationOptions.Consumer.transactionPreload, 10).
     setProperty(ConfigurationOptions.Consumer.dataPreload, 10)
 
@@ -45,7 +51,6 @@ class ProducerUpdateTaskTest extends FlatSpec with Matchers with BeforeAndAfterA
   val producer = f.getProducer(
     name = "test_producer",
     partitions = Set(0, 1, 2))
-
 
   "BasicProducer.checkpoint with delay in update (test latch in update)" should "complete in ordered way" in {
     blockCheckpoint1.setValue(1)
@@ -69,6 +74,31 @@ class ProducerUpdateTaskTest extends FlatSpec with Matchers with BeforeAndAfterA
     flag = 1
     blockCheckpoint2.await()
     flag shouldBe 1
+  }
+
+  "BasicProducer.checkpoint with delay in update (test latch in update)" should "complete in ordered way with delay" in {
+
+    val l = new CountDownLatch(1)
+
+    val consumer = f.getConsumer(
+      name = "test_consumer",
+      partitions = Set(0, 1, 2),
+      offset = Oldest,
+      useLastOffset = true)
+    consumer.start()
+
+    val t = producer.newTransaction(policy = NewTransactionProducerPolicy.CheckpointIfOpened,0)
+    val transactionID = t.getTransactionID()
+    srv.notifyProducerTransactionCompleted(t => t.transactionID == transactionID  && t.state == TransactionStates.Checkpointed, l.countDown())
+    t.send("data".getBytes())
+    Thread.sleep(TRANSACTION_TTLMS * 3)
+    t.checkpoint()
+    l.await()
+
+    val consumerTransactionOpt = consumer.getTransactionById(0, t.getTransactionID())
+    consumerTransactionOpt.isDefined shouldBe true
+    consumerTransactionOpt.get.getTransactionID() shouldBe t.getTransactionID()
+    consumerTransactionOpt.get.getCount() shouldBe 1
   }
 
   override def afterAll(): Unit = {

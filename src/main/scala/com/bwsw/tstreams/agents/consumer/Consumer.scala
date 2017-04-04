@@ -91,7 +91,7 @@ class Consumer(val name: String,
   private def loadNextTransactionsForPartition(partition: Int, currentOffset: Long): mutable.Queue[ConsumerTransaction] = {
 
     val (last, seq) = stream.client.scanTransactions(stream.name, partition, currentOffset + 1,
-      options.transactionGenerator.getTransaction(), new ScanCheckpointedPredicate(options.transactionsPreload))
+      options.transactionGenerator.getTransaction(), new ScanPredicate(options.transactionsPreload))
 
     val transactionsQueue = mutable.Queue[ConsumerTransaction]()
     seq.foreach(record => {
@@ -169,6 +169,7 @@ class Consumer(val name: String,
     }
 
     val transaction = transactionBuffer(partition).head
+    println(transaction)
 
     // We found invalid transaction, so just skip it and move forward
     if (transaction.getCount() == 0) {

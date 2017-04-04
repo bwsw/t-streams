@@ -133,6 +133,49 @@ class ProducerAndConsumerSimpleTests extends FlatSpec with Matchers with BeforeA
     }
   }
 
+  "producer, consumer" should "producer - generate some set of transactions after cancel, consumer - retrieve them all" in {
+    val TRANSACTIONS_COUNT = 100
+    val DATA_IN_TRANSACTION = 1
+
+    val pl = ListBuffer[Long]()
+    val cl = ListBuffer[Long]()
+
+    val sendData = (for (part <- 0 until DATA_IN_TRANSACTION) yield "data_part_" + randomKeyspace).sorted
+
+    val l = new CountDownLatch(1)
+
+    var counter = 0
+
+    val producerTransaction = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
+    producerTransaction.cancel()
+    println(producerTransaction.getTransactionID())
+
+    (0 until TRANSACTIONS_COUNT).foreach { _ =>
+      val producerTransaction = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
+
+      pl.append(producerTransaction.getTransactionID())
+
+      counter += 1
+      if(counter == TRANSACTIONS_COUNT)
+        srv.notifyProducerTransactionCompleted(t => t.transactionID == producerTransaction.getTransactionID() && t.state == TransactionStates.Checkpointed, l.countDown())
+
+      sendData.foreach { x => producerTransaction.send(x.getBytes()) }
+      producerTransaction.checkpoint()
+    }
+
+    l.await()
+    println(pl)
+    (0 until TRANSACTIONS_COUNT).foreach { i =>
+      println(i)
+      val transactionOpt = consumer.getTransaction(0)
+      transactionOpt.nonEmpty shouldBe true
+      cl.append(transactionOpt.get.getTransactionID())
+    }
+
+    cl shouldBe pl
+
+  }
+
   "producer, consumer" should "producer - generate transaction, consumer retrieve it (both start async)" in {
     val timeoutForWaiting = 5
     val DATA_IN_TRANSACTION = 10

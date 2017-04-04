@@ -134,6 +134,8 @@ class StorageClient(clientOptions: ConnectionOptions, authOptions: AuthOptions, 
   }
 
   def putTransaction[T](transaction: ProducerTransaction, async: Boolean, timeout: Duration = 1.minute)(onComplete: ProducerTransaction => T) = {
+    //todo: debug
+    //println(transaction)
     val f = client.putProducerState(transaction)
     if (async) {
       import ExecutionContext.Implicits.global

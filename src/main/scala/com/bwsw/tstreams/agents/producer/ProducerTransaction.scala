@@ -128,7 +128,7 @@ class ProducerTransaction(partition: Int,
   }
 
   private def cancelAsync() = {
-    val transactionRecord = new RPCProducerTransaction(transactionOwner.stream.name, partition, transactionID, TransactionStates.Invalid, 0, -1L)
+    val transactionRecord = new RPCProducerTransaction(transactionOwner.stream.name, partition, transactionID, TransactionStates.Cancel, 0, -1L)
 
     transactionOwner.stream.client.putTransaction(transactionRecord, true)(rec => {})
 
@@ -343,7 +343,7 @@ class ProducerTransaction(partition: Int,
     if (ProducerTransaction.logger.isDebugEnabled) {
       ProducerTransaction.logger.debug("Update event for Transaction {}, partition: {}", transactionID, partition)
     }
-    val transactionRecord = new RPCProducerTransaction(transactionOwner.stream.name, partition, transactionID, TransactionStates.Opened, -1, transactionOwner.producerOptions.transactionTtlMs)
+    val transactionRecord = new RPCProducerTransaction(transactionOwner.stream.name, partition, transactionID, TransactionStates.Updated, -1, transactionOwner.producerOptions.transactionTtlMs)
 
     transactionOwner.stream.client.putTransaction(transactionRecord, true)(record => {
       doSendUpdateMessage()
