@@ -1,4 +1,4 @@
-package agents.integration
+package agents.integration.v20
 
 /**
   * Created by mendelbaum_ma on 08.09.16.
@@ -69,7 +69,6 @@ class SubscriberWithTwoProducersFirstCancelSecondCheckpointTest extends FlatSpec
       bp1.append(transaction.getTransactionID())
       transaction.send("test")
       transaction.cancel()
-      println(s"Cancel: ${transaction.getTransactionID()}")
     })
 
     val t2 = new Thread(() => {
@@ -78,7 +77,6 @@ class SubscriberWithTwoProducersFirstCancelSecondCheckpointTest extends FlatSpec
       bp2.append(transaction.getTransactionID())
       transaction.send("test")
       transaction.checkpoint()
-      println(s"Checkpoint: ${transaction.getTransactionID()}")
     })
 
     t1.start()

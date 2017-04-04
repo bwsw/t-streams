@@ -346,9 +346,11 @@ class Consumer(val name: String,
 
     val result = ListBuffer[ConsumerTransaction]()
     seq.foreach(rec => {
-      val t = new ConsumerTransaction(partition = partition, transactionID = rec.transactionID, count = rec.quantity, ttl = rec.ttl)
-      t.attach(this)
-      result.append(t)
+      if(rec.quantity > 0 && rec.state != TransactionStates.Invalid) {
+        val t = new ConsumerTransaction(partition = partition, transactionID = rec.transactionID, count = rec.quantity, ttl = rec.ttl)
+        t.attach(this)
+        result.append(t)
+      }
     })
     result
   }
