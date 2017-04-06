@@ -10,9 +10,9 @@ import java.util.concurrent.atomic.AtomicLong
   * @param updateEvents
   * @param checkpointEvents
   */
-case class TransactionBufferCounters(openEvents: AtomicLong          = new AtomicLong(0),
-                                     cancelEvents: AtomicLong         = new AtomicLong(0),
-                                     updateEvents: AtomicLong         = new AtomicLong(0),
+case class TransactionBufferCounters(openEvents: AtomicLong = new AtomicLong(0),
+                                     cancelEvents: AtomicLong = new AtomicLong(0),
+                                     updateEvents: AtomicLong = new AtomicLong(0),
                                      checkpointEvents: AtomicLong = new AtomicLong(0)) {
   def dump(partition: Int): Unit = {
     Subscriber.logger.info(s"Partitions $partition - Open Events received: ${openEvents.get()}")

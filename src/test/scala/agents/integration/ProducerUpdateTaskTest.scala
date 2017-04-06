@@ -87,9 +87,9 @@ class ProducerUpdateTaskTest extends FlatSpec with Matchers with BeforeAndAfterA
       useLastOffset = true)
     consumer.start()
 
-    val t = producer.newTransaction(policy = NewTransactionProducerPolicy.CheckpointIfOpened,0)
+    val t = producer.newTransaction(policy = NewTransactionProducerPolicy.CheckpointIfOpened, 0)
     val transactionID = t.getTransactionID()
-    srv.notifyProducerTransactionCompleted(t => t.transactionID == transactionID  && t.state == TransactionStates.Checkpointed, l.countDown())
+    srv.notifyProducerTransactionCompleted(t => t.transactionID == transactionID && t.state == TransactionStates.Checkpointed, l.countDown())
     t.send("data".getBytes())
     Thread.sleep(TRANSACTION_TTLMS * 3)
     t.checkpoint()

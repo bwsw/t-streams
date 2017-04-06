@@ -324,11 +324,11 @@ class ProducerTransaction(partition: Int,
       return
     // atomically check state and launch update process
     val stateOnUpdateClosed =
-    LockUtil.withLockOrDieDo[Boolean](transactionLock, (100, TimeUnit.SECONDS), Some(ProducerTransaction.logger), () => {
-      val s = state.isClosed()
-      if (!s) state.setUpdateInProgress()
-      s
-    })
+      LockUtil.withLockOrDieDo[Boolean](transactionLock, (100, TimeUnit.SECONDS), Some(ProducerTransaction.logger), () => {
+        val s = state.isClosed()
+        if (!s) state.setUpdateInProgress()
+        s
+      })
 
     // if atomic state was closed then update process should be aborted
     // immediately

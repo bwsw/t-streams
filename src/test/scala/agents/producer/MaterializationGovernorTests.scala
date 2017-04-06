@@ -9,14 +9,14 @@ import org.scalatest.{FlatSpec, Matchers}
   * Created by Ivan Kudryavtsev on 28.08.16.
   */
 class MaterializationGovernorTests extends FlatSpec with Matchers {
-  it should "init, protect, unprotect, await unprotection in single thread" in {
+  it should "init, protect, unprotect, await protection release in single thread" in {
     val mg = new MaterializationGovernor(Set(0))
     mg.protect(0)
     mg.unprotect(0)
     mg.awaitUnprotected(0)
   }
 
-  it should "init, protect, unprotect, await unprotection in two threads" in {
+  it should "init, protect, unprotect, await protection release in two threads" in {
     val mg = new MaterializationGovernor(Set(0))
     mg.protect(0)
     var end: Long = 0
@@ -34,7 +34,7 @@ class MaterializationGovernorTests extends FlatSpec with Matchers {
     end - start >= 10 shouldBe true
   }
 
-  it should "complete await unprotection immediately if no protection set" in {
+  it should "complete await protection release immediately if no protection set" in {
     val mg = new MaterializationGovernor(Set(0))
     val start = System.currentTimeMillis()
     mg.awaitUnprotected(0)

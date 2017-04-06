@@ -42,7 +42,7 @@ case class SubscriberOptions(val transactionsPreload: Int,
                              val pollingFrequencyDelayMs: Int = 1000,
                              val transactionQueueMaxLengthThreshold: Int = 10000,
                              val transactionsQueueBuilder: QueueBuilder.Abstract = new InMemory
-                               ) {
+                            ) {
 
   def getConsumerOptions() = consumer.ConsumerOptions(
     transactionsPreload = transactionsPreload,

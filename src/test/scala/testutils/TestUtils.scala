@@ -26,7 +26,7 @@ trait TestUtils {
     */
   val id = TestUtils.moveId()
   val randomKeyspace = TestUtils.getKeyspace(id)
-  val coordinationRoot = s"/${randomKeyspace}"
+  val coordinationRoot = s"/$randomKeyspace"
 
   val zookeeperPort = TestUtils.ZOOKEEPER_PORT
 
