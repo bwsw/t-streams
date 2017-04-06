@@ -9,19 +9,19 @@ import com.bwsw.tstreams.common.StorageClient
   */
 trait GroupParticipant {
 
-  def getAgentName(): String
+  private[tstreams] def getAgentName(): String
 
   /**
     * Agent lock on any actions which has to do with checkpoint
     */
-  def getThreadLock(): ReentrantLock
+  private[tstreams] def getThreadLock(): ReentrantLock
 
   /**
     * Info to commit
     */
-  def getCheckpointInfoAndClear(): List[CheckpointInfo]
+  private[tstreams] def getCheckpointInfoAndClear(): List[CheckpointInfo]
 
-  def getStorageClient(): StorageClient
+  private[tstreams] def getStorageClient(): StorageClient
 
 }
 
@@ -29,5 +29,5 @@ trait GroupParticipant {
   * Agent which sends data into transactions
   */
 trait SendingAgent {
-  def finalizeDataSend(): Unit
+  private[agents] def finalizeDataSend(): Unit
 }

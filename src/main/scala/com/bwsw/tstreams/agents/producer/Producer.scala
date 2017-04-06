@@ -9,7 +9,7 @@ import com.bwsw.tstreams.agents.producer.NewTransactionProducerPolicy.ProducerPo
 import com.bwsw.tstreams.common._
 import com.bwsw.tstreams.coordination.client.BroadcastCommunicationClient
 import com.bwsw.tstreams.coordination.messages.state.{TransactionStateMessage, TransactionStatus}
-import com.bwsw.tstreams.streams.{Stream}
+import com.bwsw.tstreams.streams.Stream
 import com.bwsw.tstreamstransactionserver.rpc.TransactionStates
 import org.apache.curator.framework.CuratorFrameworkFactory
 import org.apache.curator.retry.ExponentialBackoffRetry
@@ -38,7 +38,7 @@ class Producer(var name: String,
   /**
     * agent name
     */
-  override def getAgentName() = name
+  override private[tstreams] def getAgentName() = name
 
   def setAgentName(name: String) = {
     this.name = name
@@ -92,7 +92,7 @@ class Producer(var name: String,
     * P2P Agent for producers interaction
     * (getNewTransaction id; publish openTransaction event; publish closeTransaction event)
     */
-  override val p2pAgent: PeerAgent = new PeerAgent(
+  override private[tstreams] val p2pAgent: PeerAgent = new PeerAgent(
     curatorClient           = curatorClient,
     peerKeepAliveTimeout    = peerKeepAliveTimeout,
     producer                = this,
@@ -199,7 +199,7 @@ class Producer(var name: String,
     * @param partition Next partition to use for transaction (default -1 which mean that write policy will be used)
     * @return BasicProducerTransaction instance
     */
-  def newTransaction(policy: ProducerPolicy, partition: Int = -1, retry: Int = 1): ProducerTransaction = {
+  def newTransaction(policy: ProducerPolicy, partition: Int = -1, retry: Int = 6): ProducerTransaction = {
     if (isStop.get())
       throw new IllegalStateException(s"Producer ${this.name} is already stopped. Unable to get new transaction.")
 
@@ -255,7 +255,7 @@ class Producer(var name: String,
   /**
     * Info to commit
     */
-  override def getCheckpointInfoAndClear(): List[CheckpointInfo] = {
+  override private[tstreams] def getCheckpointInfoAndClear(): List[CheckpointInfo] = {
     val checkpointInfo = openTransactions.forallKeysDo((k: Int, v: IProducerTransaction) => v.getTransactionInfo()).toList
     openTransactions.clear()
     checkpointInfo
@@ -274,7 +274,7 @@ class Producer(var name: String,
     *
     * @return ID
     */
-  override def openTransactionLocal(transactionID: Long, partition: Int, onComplete: () => Unit): Unit = {
+  override private[tstreams] def openTransactionLocal(transactionID: Long, partition: Int, onComplete: () => Unit): Unit = {
 
     p2pAgent.submitPipelinedTaskToPublishExecutors(partition, () => {
       val msg = TransactionStateMessage(
@@ -328,7 +328,7 @@ class Producer(var name: String,
   /**
     * Agent lock on any actions which has to do with checkpoint
     */
-  override def getThreadLock(): ReentrantLock = threadLock
+  override private[tstreams] def getThreadLock(): ReentrantLock = threadLock
 
 
   /**
@@ -338,7 +338,7 @@ class Producer(var name: String,
     *
     * @param msg
     */
-  def materialize(msg: TransactionStateMessage):Unit = {
+  private[tstreams] def materialize(msg: TransactionStateMessage): Unit = {
 
     if (Producer.logger.isDebugEnabled)
       Producer.logger.debug(s"Start handling MaterializeRequest at partition: ${msg.partition}")
@@ -366,5 +366,5 @@ class Producer(var name: String,
 
   }
 
-  override def getStorageClient(): StorageClient = stream.client
+  override private[tstreams] def getStorageClient(): StorageClient = stream.client
 }
