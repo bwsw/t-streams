@@ -22,8 +22,8 @@ object TStreamsFactoryConsumerDefaults {
       val transactionBufferThreadPoolSize = IntMinMaxDefault(1, 64, 4)
       val processingEnginesThreadPoolSize = IntMinMaxDefault(1, 64, 1)
       val pollingFrequencyDelayMs = IntMinMaxDefault(10, 100000, 1000)
+      val transactionQueueMaxLengthThreshold = IntMinMaxDefault(100, 1000000, 10000)
     }
-
   }
 
   def get = {
@@ -37,6 +37,7 @@ object TStreamsFactoryConsumerDefaults {
     m(co.Subscriber.transactionBufferThreadPoolSize) = Consumer.Subscriber.transactionBufferThreadPoolSize.default
     m(co.Subscriber.processingEnginesThreadPoolSize) = Consumer.Subscriber.processingEnginesThreadPoolSize.default
     m(co.Subscriber.pollingFrequencyDelayMs) = Consumer.Subscriber.pollingFrequencyDelayMs.default
+    m(co.Subscriber.transactionQueueMaxLengthThreshold) = Consumer.Subscriber.transactionQueueMaxLengthThreshold.default
     m
   }
 }

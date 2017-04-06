@@ -14,14 +14,14 @@ object TransactionBuffer {
 /**
   * Created by ivan on 15.09.16.
   */
-class TransactionBuffer(queue: QueueBuilder.QueueType) {
+class TransactionBuffer(queue: QueueBuilder.QueueType, transactionQueueMaxLengthThreshold: Int = 1000) {
 
 
   val counters = TransactionBufferCounters()
   var lastTransaction = 0L
 
-  var stateList = ListBuffer[TransactionState]()
-  val stateMap = mutable.HashMap[Long, TransactionState]()
+  private val stateList = ListBuffer[TransactionState]()
+  private val stateMap = mutable.HashMap[Long, TransactionState]()
 
   def getQueue(): QueueBuilder.QueueType = queue
 
@@ -32,6 +32,12 @@ class TransactionBuffer(queue: QueueBuilder.QueueType) {
     * @return
     */
   def getState(id: Long): Option[TransactionState] = this.synchronized(stateMap.get(id))
+
+  /**
+    * returns size of the list
+    * @return
+    */
+  def getSize(): Int = stateList.size
 
   /**
     * This method updates buffer with new state
@@ -77,25 +83,27 @@ class TransactionBuffer(queue: QueueBuilder.QueueType) {
         case (TransactionStatus.opened, TransactionStatus.update) =>
           ts.queueOrderID = orderID
           ts.state = TransactionStatus.opened
-          ts.ttl = System.currentTimeMillis() + update.ttl * 1000
+          ts.ttlMs = System.currentTimeMillis() + update.ttlMs
 
         case (TransactionStatus.opened, TransactionStatus.cancel) =>
           ts.state = TransactionStatus.invalid
-          ts.ttl = 0L
+          ts.ttlMs = 0L
           stateMap.remove(update.transactionID)
 
         case (TransactionStatus.opened, TransactionStatus.`checkpointed`) =>
           ts.queueOrderID = orderID
           ts.state = TransactionStatus.checkpointed
           ts.itemCount = update.itemCount
-          ts.ttl = Long.MaxValue
+          ts.ttlMs = Long.MaxValue
 
-        case  (_,_) => Subscriber.logger.warn(s"Transaction ${update} switched from ${ts.state} to ${update.state} which is incorrect.")
+        case  (_,_) =>
+          Subscriber.logger.warn(s"Transaction update ${update} switched from ${ts.state} to ${update.state} which is incorrect. " +
+            "It might be that we cleared StateList because it's size has became greater than ${subscriberOptions.transactionQueueMaxLengthThreshold}. Try to find clearing notification before.")
       }
 
     } else {
       if (update.state == TransactionStatus.opened) {
-        update.ttl = System.currentTimeMillis() + update.ttl * 1000
+        update.ttlMs = System.currentTimeMillis() + update.ttlMs
         stateMap.put(update.transactionID, update)
         stateList.append(update)
       }
@@ -115,7 +123,15 @@ class TransactionBuffer(queue: QueueBuilder.QueueType) {
       queue.put(meetCheckpoint.toList)
     }
 
-    val meetTimeoutAndInvalid = stateList.takeWhile(ts => ts.ttl < time)
+    if(transactionQueueMaxLengthThreshold <= stateList.size) {
+      Subscriber.logger.warn(s"Transaction StateList achieved ${stateList.size} items. The threshold is ${transactionQueueMaxLengthThreshold} items. Clear it to protect the memory. " +
+        "It seems that the user part handles transactions slower than producers feed me.")
+      stateList.clear()
+      stateMap.clear()
+      return
+    }
+
+    val meetTimeoutAndInvalid = stateList.takeWhile(ts => ts.ttlMs < time)
 
     if(meetTimeoutAndInvalid.nonEmpty) {
       meetTimeoutAndInvalid.foreach(ts => stateMap.remove(ts.transactionID))

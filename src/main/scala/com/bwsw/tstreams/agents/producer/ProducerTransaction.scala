@@ -133,7 +133,7 @@ class ProducerTransaction(partition: Int,
     transactionOwner.stream.client.putTransaction(transactionRecord, true)(rec => {})
 
     val msg = TransactionStateMessage(transactionID = transactionID,
-      ttl = -1,
+      ttlMs = -1,
       status = TransactionStatus.cancel,
       partition = partition,
       masterID = transactionOwner.getPartitionMasterIDLocalInfo(partition),
@@ -176,7 +176,7 @@ class ProducerTransaction(partition: Int,
 
     transactionOwner.p2pAgent.publish(TransactionStateMessage(
       transactionID = transactionID,
-      ttl = -1,
+      ttlMs = -1,
       status = TransactionStatus.checkpointed,
       partition = partition,
       masterID = transactionOwner.getPartitionMasterIDLocalInfo(partition),
@@ -225,7 +225,7 @@ class ProducerTransaction(partition: Int,
     else {
       transactionOwner.p2pAgent.publish(TransactionStateMessage(
         transactionID = transactionID,
-        ttl = -1,
+        ttlMs = -1,
         status = TransactionStatus.cancel,
         partition = partition,
         masterID = transactionOwner.getPartitionMasterIDLocalInfo(partition),
@@ -274,7 +274,7 @@ class ProducerTransaction(partition: Int,
 
           transactionOwner.p2pAgent.publish(TransactionStateMessage(
             transactionID = transactionID,
-            ttl = -1,
+            ttlMs = -1,
             status = TransactionStatus.checkpointed,
             partition = partition,
             masterID = transactionOwner.getPartitionMasterIDLocalInfo(partition),
@@ -288,7 +288,7 @@ class ProducerTransaction(partition: Int,
         else {
           transactionOwner.p2pAgent.publish(TransactionStateMessage(
             transactionID = transactionID,
-            ttl = -1,
+            ttlMs = -1,
             status = TransactionStatus.cancel,
             partition = partition,
             masterID = transactionOwner.getPartitionMasterIDLocalInfo(partition),
@@ -307,7 +307,7 @@ class ProducerTransaction(partition: Int,
     state.setUpdateFinished
     transactionOwner.p2pAgent.publish(TransactionStateMessage(
       transactionID = transactionID,
-      ttl = transactionOwner.producerOptions.transactionTtlMs,
+      ttlMs = transactionOwner.producerOptions.transactionTtlMs,
       status = TransactionStatus.update,
       partition = partition,
       masterID = transactionOwner.p2pAgent.getUniqueAgentID(),
@@ -364,7 +364,7 @@ class ProducerTransaction(partition: Int,
 
     val checkpoint = TransactionStateMessage(
       transactionID = getTransactionID(),
-      ttl = -1,
+      ttlMs = -1,
       status = TransactionStatus.checkpointed,
       partition = partition,
       masterID = transactionOwner.getPartitionMasterIDLocalInfo(partition),

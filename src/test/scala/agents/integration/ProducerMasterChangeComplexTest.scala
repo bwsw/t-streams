@@ -18,6 +18,8 @@ import scala.util.Random
 
 class ProducerMasterChangeComplexTest  extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
 
+  val MAX_NEW_TXN_RETRY = 10
+
   val producerBuffer = ListBuffer[Long]()
   val subscriberBuffer = ListBuffer[Long]()
 
@@ -30,7 +32,7 @@ class ProducerMasterChangeComplexTest  extends FlatSpec with Matchers with Befor
         producer = makeNewProducer(partitions)
 
         while(probability < Random.nextDouble() && counter < amount) {
-          val t = producer.newTransaction(policy = NewTransactionProducerPolicy.CheckpointIfOpened)
+          val t = producer.newTransaction(policy = NewTransactionProducerPolicy.CheckpointIfOpened, -1, MAX_NEW_TXN_RETRY)
           t.send("test".getBytes())
           t.checkpoint(checkpointModeSync)
           producerBuffer.synchronized {
@@ -69,10 +71,10 @@ class ProducerMasterChangeComplexTest  extends FlatSpec with Matchers with Befor
   f.setProperty(ConfigurationOptions.Stream.name, "test_stream").
     setProperty(ConfigurationOptions.Stream.partitionsCount, PARTITIONS_COUNT).
     setProperty(ConfigurationOptions.Stream.ttlSec, 60 * 10).
-    setProperty(ConfigurationOptions.Coordination.connectionTimeoutMs, 7000).
-    setProperty(ConfigurationOptions.Coordination.sessionTimeoutMs, 7000).
-    setProperty(ConfigurationOptions.Producer.transportTimeoutMs, 5000).
-    setProperty(ConfigurationOptions.Producer.Transaction.ttlMs, 6000).
+    setProperty(ConfigurationOptions.Coordination.connectionTimeoutMs, 4000).
+    setProperty(ConfigurationOptions.Coordination.sessionTimeoutMs, 4000).
+    setProperty(ConfigurationOptions.Producer.transportTimeoutMs, 2000).
+    setProperty(ConfigurationOptions.Producer.Transaction.ttlMs, 12000).
     setProperty(ConfigurationOptions.Producer.Transaction.keepAliveMs, 2000).
     setProperty(ConfigurationOptions.Consumer.transactionPreload, 500).
     setProperty(ConfigurationOptions.Consumer.dataPreload, 10)
