@@ -116,8 +116,8 @@ class Consumer(val name: String,
         if (stream.client.checkConsumerOffsetExists(name, stream.name, partition) && options.useLastOffset) {
           val off = stream.client.getLastSavedConsumerOffset(name, stream.name, partition)
 
-          if(Consumer.logger.isDebugEnabled())
-            Consumer.logger.debug(s"Bootstrap offset load: ${off}")
+          if (Consumer.logger.isDebugEnabled())
+            Consumer.logger.debug(s"Bootstrap offset load: $off")
 
           off
         } else {
@@ -134,8 +134,8 @@ class Consumer(val name: String,
               throw new IllegalStateException(s"Offset option for consumer $name cannot be resolved to known Offset.* object.")
           }
 
-          if(Consumer.logger.isDebugEnabled())
-            Consumer.logger.debug(s"Bootstrap offset historical: ${off}")
+          if (Consumer.logger.isDebugEnabled())
+            Consumer.logger.debug(s"Bootstrap offset historical: $off")
 
           off
         }
@@ -350,7 +350,7 @@ class Consumer(val name: String,
 
     val result = ListBuffer[ConsumerTransaction]()
     seq.foreach(rec => {
-      if(rec.quantity > 0 && rec.state != TransactionStates.Invalid) {
+      if (rec.quantity > 0 && rec.state != TransactionStates.Invalid) {
         val t = new ConsumerTransaction(partition = partition, transactionID = rec.transactionID, count = rec.quantity, ttl = rec.ttl)
         t.attach(this)
         result.append(t)

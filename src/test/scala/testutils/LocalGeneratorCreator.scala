@@ -7,6 +7,8 @@ import com.bwsw.tstreams.generator.LocalTransactionGenerator
   */
 object LocalGeneratorCreator {
   val gen = new LocalTransactionGenerator
+
   def getGen() = gen
+
   def getTransaction() = gen.getTransaction()
 }

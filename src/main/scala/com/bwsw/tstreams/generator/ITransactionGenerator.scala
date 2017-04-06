@@ -6,5 +6,6 @@ package com.bwsw.tstreams.generator
   */
 trait ITransactionGenerator {
   def getTransaction(): Long
+
   def getTransaction(timestamp: Long): Long
 }

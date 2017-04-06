@@ -35,9 +35,9 @@ class BroadcastCommunicationClient(curatorClient: CuratorFramework, partitions: 
   def init(): Unit = {
     isStopped.set(false)
     partitions.foreach { p => {
-        partitionSubscribers.put(p, Set[String]().empty)
-        updateSubscribers(p)
-      }
+      partitionSubscribers.put(p, Set[String]().empty)
+      updateSubscribers(p)
+    }
     }
     updateThread.start()
   }
@@ -59,8 +59,8 @@ class BroadcastCommunicationClient(curatorClient: CuratorFramework, partitions: 
     */
   private def updateSubscribers(partition: Int) = {
     val oldPeers = partitionSubscribers.get(partition)
-    if(curatorClient.checkExists.forPath(s"/subscribers/${partition}") != null) {
-      val newPeers = curatorClient.getChildren.forPath(s"/subscribers/${partition}").asScala.toSet ++ oldPeers
+    if (curatorClient.checkExists.forPath(s"/subscribers/$partition") != null) {
+      val newPeers = curatorClient.getChildren.forPath(s"/subscribers/$partition").asScala.toSet ++ oldPeers
       partitionSubscribers.put(partition, newPeers)
     }
   }

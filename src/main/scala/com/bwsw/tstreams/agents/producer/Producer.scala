@@ -31,8 +31,8 @@ object Producer {
   * @param producerOptions This producer options
   */
 class Producer(var name: String,
-                  val stream: Stream,
-                  val producerOptions: ProducerOptions)
+               val stream: Stream,
+               val producerOptions: ProducerOptions)
   extends GroupParticipant with SendingAgent with Interaction {
 
   /**
@@ -60,7 +60,7 @@ class Producer(var name: String,
   private val curatorClient = CuratorFrameworkFactory.builder()
     .namespace(fullPrefix)
     .connectionTimeoutMs(pcs.zkConnectionTimeoutMs)
-    .sessionTimeoutMs( pcs.zkSessionTimeoutMs)
+    .sessionTimeoutMs(pcs.zkSessionTimeoutMs)
     .retryPolicy(new ExponentialBackoffRetry(1000, 3))
     .connectString(pcs.zkEndpoints).build()
 
@@ -70,7 +70,7 @@ class Producer(var name: String,
     curatorClient.create().creatingParentContainersIfNeeded().forPath("/subscribers")
   } catch {
     case e: KeeperException =>
-      if(e.code() != KeeperException.Code.NODEEXISTS)
+      if (e.code() != KeeperException.Code.NODEEXISTS)
         throw e
   }
 
@@ -93,13 +93,13 @@ class Producer(var name: String,
     * (getNewTransaction id; publish openTransaction event; publish closeTransaction event)
     */
   override private[tstreams] val p2pAgent: PeerAgent = new PeerAgent(
-    curatorClient           = curatorClient,
-    peerKeepAliveTimeout    = peerKeepAliveTimeout,
-    producer                = this,
-    usedPartitions          = producerOptions.writePolicy.getUsedPartitions(),
-    transport               = pcs.transport,
-    threadPoolAmount        = threadPoolSize,
-    threadPoolPublisherThreadsAmount  = pcs.notifyThreadPoolSize)
+    curatorClient = curatorClient,
+    peerKeepAliveTimeout = peerKeepAliveTimeout,
+    producer = this,
+    usedPartitions = producerOptions.writePolicy.getUsedPartitions(),
+    transport = pcs.transport,
+    threadPoolAmount = threadPoolSize,
+    threadPoolPublisherThreadsAmount = pcs.notifyThreadPoolSize)
 
 
   /**
@@ -203,7 +203,7 @@ class Producer(var name: String,
     if (isStop.get())
       throw new IllegalStateException(s"Producer ${this.name} is already stopped. Unable to get new transaction.")
 
-    if(retry < 0)
+    if (retry < 0)
       throw new IllegalStateException("Failed to get a new transaction.")
 
     try {
@@ -346,7 +346,7 @@ class Producer(var name: String,
     materializationGovernor.awaitUnprotected(msg.partition)
     val opt = getOpenedTransactionForPartition(msg.partition)
 
-    if(opt.isEmpty) {
+    if (opt.isEmpty) {
       Producer.logger.warn(s"There is no opened transaction for ${msg.partition}.")
       return
     }
@@ -354,7 +354,7 @@ class Producer(var name: String,
     if (Producer.logger.isDebugEnabled)
       Producer.logger.debug(s"In Map Transaction: ${opt.get.getTransactionID.toString}\nIn Request Transaction: ${msg.transactionID}")
 
-    if(!(opt.get.getTransactionID == msg.transactionID && msg.status == TransactionStatus.materialize)) {
+    if (!(opt.get.getTransactionID == msg.transactionID && msg.status == TransactionStatus.materialize)) {
       Producer.logger.warn(s"Materialization is requested for transaction ${msg.transactionID} but expected transaction is ${opt.get.getTransactionID}.")
       opt.get.markAsClosed()
       return

@@ -16,7 +16,7 @@ import testutils.{TestStorageServer, TestUtils}
 import scala.collection.mutable.ListBuffer
 import scala.util.Random
 
-class ProducerMasterChangeComplexTest  extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
+class ProducerMasterChangeComplexTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
 
   val MAX_NEW_TXN_RETRY = 10
 
@@ -26,12 +26,13 @@ class ProducerMasterChangeComplexTest  extends FlatSpec with Matchers with Befor
   class ProducerWorker(val factory: TStreamsFactory, val onCompleteLatch: CountDownLatch, val amount: Int, val probability: Double) {
     var producer: Producer = null
     var counter: Int = 0
+
     // public because will be called
     def loop(partitions: Set[Int], checkpointModeSync: Boolean = true) = {
-      while(counter < amount) {
+      while (counter < amount) {
         producer = makeNewProducer(partitions)
 
-        while(probability < Random.nextDouble() && counter < amount) {
+        while (probability < Random.nextDouble() && counter < amount) {
           val t = producer.newTransaction(policy = NewTransactionProducerPolicy.CheckpointIfOpened, -1, MAX_NEW_TXN_RETRY)
           t.send("test".getBytes())
           t.checkpoint(checkpointModeSync)
@@ -58,14 +59,15 @@ class ProducerMasterChangeComplexTest  extends FlatSpec with Matchers with Befor
         partitions = partitions)
     }
   }
-  val PRODUCERS_AMOUNT          = 10
-  val TRANSACTIONS_AMOUNT_EACH  = 1000
-  val PROBABILITY               = 0.01 // 0.01=1%
-  val PARTITIONS_COUNT          = 10
-  val PARTITIONS                = (0 until PARTITIONS_COUNT).toSet
+
+  val PRODUCERS_AMOUNT = 10
+  val TRANSACTIONS_AMOUNT_EACH = 100
+  val PROBABILITY = 0.01
+  val PARTITIONS_COUNT = 10
+  val PARTITIONS = (0 until PARTITIONS_COUNT).toSet
   val MAX_WAIT_AFTER_ALL_PRODUCERS = 5
 
-  val onCompleteLatch   = new CountDownLatch(PRODUCERS_AMOUNT)
+  val onCompleteLatch = new CountDownLatch(PRODUCERS_AMOUNT)
   val waitCompleteLatch = new CountDownLatch(1)
 
   f.setProperty(ConfigurationOptions.Stream.name, "test_stream").
@@ -85,7 +87,7 @@ class ProducerMasterChangeComplexTest  extends FlatSpec with Matchers with Befor
 
   var subscriberCounter = 0
   val subscriber = f.getSubscriber(name = "s",
-    partitions = PARTITIONS,     // Set(0),
+    partitions = PARTITIONS, // Set(0),
     offset = Newest,
     useLastOffset = false, // true
     callback = (consumer: TransactionOperator, transaction: ConsumerTransaction) => this.synchronized {

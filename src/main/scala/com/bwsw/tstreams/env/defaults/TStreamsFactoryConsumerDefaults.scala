@@ -24,6 +24,7 @@ object TStreamsFactoryConsumerDefaults {
       val pollingFrequencyDelayMs = IntMinMaxDefault(10, 100000, 1000)
       val transactionQueueMaxLengthThreshold = IntMinMaxDefault(100, 1000000, 10000)
     }
+
   }
 
   def get = {

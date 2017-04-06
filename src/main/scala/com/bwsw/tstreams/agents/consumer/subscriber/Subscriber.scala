@@ -19,9 +19,9 @@ object Subscriber {
   * Class implements subscriber
   */
 class Subscriber(val name: String,
-                    val stream: Stream,
-                    val options: SubscriberOptions,
-                    val callback: Callback) {
+                 val stream: Stream,
+                 val options: SubscriberOptions,
+                 val callback: Callback) {
 
   private val transactionsBufferWorkers = mutable.Map[Int, TransactionBufferWorker]()
   private val processingEngines = mutable.Map[Int, ProcessingEngine]()

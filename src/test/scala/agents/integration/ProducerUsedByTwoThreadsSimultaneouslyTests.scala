@@ -68,7 +68,6 @@ class ProducerUsedByTwoThreadsSimultaneouslyTests extends FlatSpec with Matchers
   }
 
 
-
   override def afterAll(): Unit = {
     producer.stop()
     TestStorageServer.dispose(srv)

@@ -35,6 +35,7 @@ class TransactionBuffer(queue: QueueBuilder.QueueType, transactionQueueMaxLength
 
   /**
     * returns size of the list
+    *
     * @return
     */
   def getSize(): Int = stateList.size
@@ -67,11 +68,11 @@ class TransactionBuffer(queue: QueueBuilder.QueueType, transactionQueueMaxLength
 
 
     if (stateMap.contains(update.transactionID)) {
-      val ts      = stateMap(update.transactionID)
+      val ts = stateMap(update.transactionID)
       val orderID = ts.queueOrderID
 
       // If master is changed and we the event has been received via another master then it's bad case.
-      // Set new master to avoid fast loading (additional protection is done thru orderID.
+      // Set new master to avoid fast loading (additional protection is done through orderID.
       //
       ts.masterSessionID = update.masterSessionID
 
@@ -96,8 +97,8 @@ class TransactionBuffer(queue: QueueBuilder.QueueType, transactionQueueMaxLength
           ts.itemCount = update.itemCount
           ts.ttlMs = Long.MaxValue
 
-        case  (_,_) =>
-          Subscriber.logger.warn(s"Transaction update ${update} switched from ${ts.state} to ${update.state} which is incorrect. " +
+        case (_, _) =>
+          Subscriber.logger.warn(s"Transaction update $update switched from ${ts.state} to ${update.state} which is incorrect. " +
             "It might be that we cleared StateList because it's size has became greater than ${subscriberOptions.transactionQueueMaxLengthThreshold}. Try to find clearing notification before.")
       }
 
@@ -118,13 +119,13 @@ class TransactionBuffer(queue: QueueBuilder.QueueType, transactionQueueMaxLength
 
     meetCheckpoint.foreach(ts => stateMap.remove(ts.transactionID))
 
-    if(meetCheckpoint.nonEmpty) {
+    if (meetCheckpoint.nonEmpty) {
       stateList.remove(0, meetCheckpoint.size)
       queue.put(meetCheckpoint.toList)
     }
 
-    if(transactionQueueMaxLengthThreshold <= stateList.size) {
-      Subscriber.logger.warn(s"Transaction StateList achieved ${stateList.size} items. The threshold is ${transactionQueueMaxLengthThreshold} items. Clear it to protect the memory. " +
+    if (transactionQueueMaxLengthThreshold <= stateList.size) {
+      Subscriber.logger.warn(s"Transaction StateList achieved ${stateList.size} items. The threshold is $transactionQueueMaxLengthThreshold items. Clear it to protect the memory. " +
         "It seems that the user part handles transactions slower than producers feed me.")
       stateList.clear()
       stateMap.clear()
@@ -133,7 +134,7 @@ class TransactionBuffer(queue: QueueBuilder.QueueType, transactionQueueMaxLength
 
     val meetTimeoutAndInvalid = stateList.takeWhile(ts => ts.ttlMs < time)
 
-    if(meetTimeoutAndInvalid.nonEmpty) {
+    if (meetTimeoutAndInvalid.nonEmpty) {
       meetTimeoutAndInvalid.foreach(ts => stateMap.remove(ts.transactionID))
       stateList.remove(0, meetTimeoutAndInvalid.size)
     }

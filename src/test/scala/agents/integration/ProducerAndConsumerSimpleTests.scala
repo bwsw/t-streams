@@ -112,7 +112,7 @@ class ProducerAndConsumerSimpleTests extends FlatSpec with Matchers with BeforeA
       val producerTransaction = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
 
       counter += 1
-      if(counter == TRANSACTIONS_COUNT)
+      if (counter == TRANSACTIONS_COUNT)
         srv.notifyProducerTransactionCompleted(t => t.transactionID == producerTransaction.getTransactionID() && t.state == TransactionStates.Checkpointed, l.countDown())
 
       sendData.foreach { x => producerTransaction.send(x.getBytes()) }
@@ -155,7 +155,7 @@ class ProducerAndConsumerSimpleTests extends FlatSpec with Matchers with BeforeA
       pl.append(producerTransaction.getTransactionID())
 
       counter += 1
-      if(counter == TRANSACTIONS_COUNT)
+      if (counter == TRANSACTIONS_COUNT)
         srv.notifyProducerTransactionCompleted(t => t.transactionID == producerTransaction.getTransactionID() && t.state == TransactionStates.Checkpointed, l.countDown())
 
       sendData.foreach { x => producerTransaction.send(x.getBytes()) }

@@ -33,7 +33,8 @@ pomExtra := (
         <name>Bitworks Software, Ltd.</name>
         <url>http://bitworks.software/</url>
       </developer>
-    </developers>)
+    </developers>
+  )
 
 publishTo := {
   val nexus = "https://oss.sonatype.org/"

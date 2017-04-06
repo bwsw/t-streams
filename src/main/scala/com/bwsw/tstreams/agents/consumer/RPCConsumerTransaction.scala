@@ -1,7 +1,6 @@
 package com.bwsw.tstreams.agents.consumer
 
 
-
 /**
   * Created by ivan on 19.02.17.
   */

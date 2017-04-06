@@ -55,7 +55,7 @@ class OpenTransactionsKeeper {
     */
   def getTransactionOption(partition: Int) = {
     val transactionOpt = getTransactionOptionNaive(partition)
-    transactionOpt.flatMap(transaction => if(!transaction.isClosed()) Some(transaction) else None)
+    transactionOpt.flatMap(transaction => if (!transaction.isClosed()) Some(transaction) else None)
   }
 
   /**

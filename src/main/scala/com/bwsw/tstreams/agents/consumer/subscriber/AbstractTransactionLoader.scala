@@ -10,7 +10,7 @@ trait AbstractTransactionLoader {
   def checkIfTransactionLoadingIsPossible(seq: QueueBuilder.QueueItemType): Boolean
 
   def load(seq: QueueBuilder.QueueItemType,
-              consumer: TransactionOperator,
-              executor: FirstFailLockableTaskExecutor,
-              callback: Callback): Int
+           consumer: TransactionOperator,
+           executor: FirstFailLockableTaskExecutor,
+           callback: Callback): Int
 }

@@ -1,7 +1,7 @@
 package agents.integration
 
 /**
-  * Created by mendelbaum_ma on 06.09.16.
+  * Created by Mendelbaum MA on 06.09.16.
   */
 
 import java.util.concurrent.{CountDownLatch, TimeUnit}
