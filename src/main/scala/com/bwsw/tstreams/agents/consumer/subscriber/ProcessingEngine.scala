@@ -133,7 +133,7 @@ class ProcessingEngine(consumer: TransactionOperator,
       queueOrderID    = 0,
       itemCount       = -1,
       state           = TransactionStatus.checkpointed,
-      ttl             = -1))
+      ttlMs             = -1))
 
     if (Subscriber.logger.isDebugEnabled())
       Subscriber.logger.debug(s"Enqueued $transactionStateList")

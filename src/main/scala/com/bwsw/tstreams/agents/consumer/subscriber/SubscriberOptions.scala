@@ -20,27 +20,28 @@ import com.bwsw.tstreams.generator.ITransactionGenerator
   * @param agentAddress
   * @param zkRootPath
   * @param zkHosts
-  * @param zkSessionTimeout
-  * @param zkConnectionTimeout
+  * @param zkSessionTimeoutMs
+  * @param zkConnectionTimeoutMs
   * @param transactionBufferWorkersThreadPoolAmount
   * @param useLastOffset
   */
 case class SubscriberOptions(val transactionsPreload: Int,
-                                val dataPreload: Int,
-                                val readPolicy: AbstractPolicy,
-                                val offset: IOffset,
-                                val transactionGenerator: ITransactionGenerator,
-                                val useLastOffset: Boolean,
-                                val rememberFirstStartOffset: Boolean = true,
-                                val agentAddress: String,
-                                val zkRootPath: String,
-                                val zkHosts: String,
-                                val zkSessionTimeout: Int,
-                                val zkConnectionTimeout: Int,
-                                val transactionBufferWorkersThreadPoolAmount: Int = 1,
-                                val processingEngineWorkersThreadAmount: Int = 1,
-                                val pollingFrequencyDelay: Int = 1000,
-                                val transactionsQueueBuilder: QueueBuilder.Abstract = new InMemory
+                             val dataPreload: Int,
+                             val readPolicy: AbstractPolicy,
+                             val offset: IOffset,
+                             val transactionGenerator: ITransactionGenerator,
+                             val useLastOffset: Boolean,
+                             val rememberFirstStartOffset: Boolean = true,
+                             val agentAddress: String,
+                             val zkRootPath: String,
+                             val zkHosts: String,
+                             val zkSessionTimeoutMs: Int,
+                             val zkConnectionTimeoutMs: Int,
+                             val transactionBufferWorkersThreadPoolAmount: Int = 1,
+                             val processingEngineWorkersThreadAmount: Int = 1,
+                             val pollingFrequencyDelayMs: Int = 1000,
+                             val transactionQueueMaxLengthThreshold: Int = 10000,
+                             val transactionsQueueBuilder: QueueBuilder.Abstract = new InMemory
                                ) {
 
   def getConsumerOptions() = consumer.ConsumerOptions(

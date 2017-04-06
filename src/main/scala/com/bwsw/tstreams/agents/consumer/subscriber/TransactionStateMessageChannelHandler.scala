@@ -31,7 +31,7 @@ class TransactionStateMessageChannelHandler(transactionsBufferWorkers: mutable.M
             queueOrderID = m.orderID,
             itemCount = m.count,
             state = m.status,
-            ttl = m.ttl))
+            ttlMs = m.ttlMs))
       else
         Subscriber.logger.warn(s"Unknown partition ${m.partition} found in Message: $msg.")
     } catch {

@@ -188,6 +188,11 @@ object ConfigurationOptions {
         */
       val pollingFrequencyDelayMs = "consumer.subscriber.polling-frequency-delay"
 
+      /**
+        * maximum amount of transactions in-flight in a map
+        */
+      val transactionQueueMaxLengthThreshold = "consumer.subscriber.transaction-queue-max-length-threshold"
+
     }
 
   }

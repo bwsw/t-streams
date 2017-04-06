@@ -279,7 +279,7 @@ class Producer(var name: String,
     p2pAgent.submitPipelinedTaskToPublishExecutors(partition, () => {
       val msg = TransactionStateMessage(
         transactionID = transactionID,
-        ttl = producerOptions.transactionTtlMs,
+        ttlMs = producerOptions.transactionTtlMs,
         status = TransactionStatus.opened,
         partition = partition,
         masterID = p2pAgent.getUniqueAgentID(),
