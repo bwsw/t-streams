@@ -18,7 +18,7 @@ object TestStorageServer {
   def get(): Server = {
     val transactionServer = serverBuilder
       .withServerStorageOptions(new StorageOptions(path = TestUtils.getTmpDir()))
-      .withCommitLogOptions(new CommitLogOptions(commitLogCloseDelayMs = 100, commitLogToBerkeleyDBTaskDelayMs = 100))
+      .withCommitLogOptions(new CommitLogOptions(commitLogCloseDelayMs = 100))
       .build()
     val l = new CountDownLatch(1)
     new Thread(() => {
