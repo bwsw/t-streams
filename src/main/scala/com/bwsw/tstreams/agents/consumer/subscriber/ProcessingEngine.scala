@@ -16,9 +16,9 @@ import scala.util.Random
   * Does top-level management tasks for new events.
   */
 class ProcessingEngine(consumer: TransactionOperator,
-                          partitions: Set[Int],
-                          queueBuilder: QueueBuilder.Abstract,
-                          callback: Callback) {
+                       partitions: Set[Int],
+                       queueBuilder: QueueBuilder.Abstract,
+                       callback: Callback) {
 
   private val id = Math.abs(Random.nextInt())
   // keeps last transaction states processed
@@ -58,7 +58,7 @@ class ProcessingEngine(consumer: TransactionOperator,
     throw new IllegalArgumentException("PE ${id} - Partition set which is used in ProcessingEngine is not subset of Consumer's partitions.")
 
   partitions
-    .foreach (p => {
+    .foreach(p => {
       setLastPartitionActivity(p)
       lastTransactionsMap(p) = TransactionState(consumer.getCurrentOffset(p), p, -1, -1, -1, TransactionStatus.checkpointed, -1)
     })
@@ -82,7 +82,7 @@ class ProcessingEngine(consumer: TransactionOperator,
 
     val seq = queue.get(pollTimeMs, TimeUnit.MILLISECONDS)
 
-    if(Subscriber.logger.isDebugEnabled())
+    if (Subscriber.logger.isDebugEnabled())
       Subscriber.logger.debug(s"$seq")
 
     if (seq != null) {
@@ -94,7 +94,7 @@ class ProcessingEngine(consumer: TransactionOperator,
         else {
           if (fullLoader.checkIfTransactionLoadingIsPossible(seq)) {
             ProcessingEngine.logger.info(s"PE $id - Load full occurred for seq $seq")
-            if(fullLoader.load(seq, consumer, loadExecutor, callback) > 0)
+            if (fullLoader.load(seq, consumer, loadExecutor, callback) > 0)
               loadFullDataExist = true
           } else {
             Subscriber.logger.warn(s"Fast and Full loading failed for $seq.")
@@ -110,7 +110,7 @@ class ProcessingEngine(consumer: TransactionOperator,
         if (loadFullDataExist
           || isFirstTime
           || (System.currentTimeMillis() - getLastPartitionActivity(p) > pollTimeMs && queue.getInFlight() == 0)
-          /*|| (System.currentTimeMillis() - getLastPartitionActivity(p) > pollTimeMs * ProcessingEngine.PROTECTION_INTERVAL)*/) {
+        /*|| (System.currentTimeMillis() - getLastPartitionActivity(p) > pollTimeMs * ProcessingEngine.PROTECTION_INTERVAL)*/ ) {
           enqueueLastTransactionFromDB(p)
         })
 
@@ -127,13 +127,13 @@ class ProcessingEngine(consumer: TransactionOperator,
     val proposedTransactionId = consumer.getProposedTransactionId()
 
     val transactionStateList = List(TransactionState(
-      transactionID   = proposedTransactionId,
-      partition       = partition,
+      transactionID = proposedTransactionId,
+      partition = partition,
       masterSessionID = 0,
-      queueOrderID    = 0,
-      itemCount       = -1,
-      state           = TransactionStatus.checkpointed,
-      ttl             = -1))
+      queueOrderID = 0,
+      itemCount = -1,
+      state = TransactionStatus.checkpointed,
+      ttlMs = -1))
 
     if (Subscriber.logger.isDebugEnabled())
       Subscriber.logger.debug(s"Enqueued $transactionStateList")

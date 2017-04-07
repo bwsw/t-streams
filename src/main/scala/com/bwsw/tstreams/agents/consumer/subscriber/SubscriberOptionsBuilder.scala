@@ -13,6 +13,7 @@ object SubscriberOptionsBuilder {
                           transactionsBufferWorkersThreadPoolSize: Int = 1,
                           processingEngineWorkersThreadSize: Int = 1,
                           pollingFrequencyDelayMs: Int = 1000,
+                          transactionQueueMaxLengthThreshold: Int = 10000,
                           transactionsQueueBuilder: QueueBuilder.Abstract = new InMemory): SubscriberOptions =
     new SubscriberOptions(
       transactionsPreload = consumerOpts.transactionsPreload,
@@ -24,11 +25,12 @@ object SubscriberOptionsBuilder {
       agentAddress = agentAddress,
       zkRootPath = zkPrefixPath,
       zkHosts = zkEndpoints,
-      zkSessionTimeout = zkSessionTimeoutMs,
-      zkConnectionTimeout = zkConnectionTimeoutMs,
+      zkSessionTimeoutMs = zkSessionTimeoutMs,
+      zkConnectionTimeoutMs = zkConnectionTimeoutMs,
       transactionBufferWorkersThreadPoolAmount = transactionsBufferWorkersThreadPoolSize,
       processingEngineWorkersThreadAmount = processingEngineWorkersThreadSize,
-      pollingFrequencyDelay = pollingFrequencyDelayMs,
+      pollingFrequencyDelayMs = pollingFrequencyDelayMs,
+      transactionQueueMaxLengthThreshold = transactionQueueMaxLengthThreshold,
       transactionsQueueBuilder = transactionsQueueBuilder)
 }
 

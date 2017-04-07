@@ -36,7 +36,7 @@ object ConfigurationOptions {
     val description = "stream.description"
     val partitionsCount = "stream.partitions-count"
     /**
-      * stream time to leave (data expunged from datastore after that time)
+      * stream time to leave (data expunged from data store after that time)
       */
     val ttlSec = "stream.ttl"
   }
@@ -169,7 +169,7 @@ object ConfigurationOptions {
       val bindPort = "consumer.subscriber.bind-port"
 
       /**
-        * persistent queue path (fast disk where to store bursted data
+        * persistent queue path (fast disk where to store burst data
         */
       val persistentQueuePath = "consumer.subscriber.persistent-queue.path"
 
@@ -187,6 +187,11 @@ object ConfigurationOptions {
         * thread pool size
         */
       val pollingFrequencyDelayMs = "consumer.subscriber.polling-frequency-delay"
+
+      /**
+        * maximum amount of transactions in-flight in a map
+        */
+      val transactionQueueMaxLengthThreshold = "consumer.subscriber.transaction-queue-max-length-threshold"
 
     }
 

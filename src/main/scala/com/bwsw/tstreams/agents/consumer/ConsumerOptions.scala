@@ -16,12 +16,12 @@ import com.bwsw.tstreams.generator.ITransactionGenerator
   * @param transactionGenerator Generator for generating IDs
   */
 case class ConsumerOptions(transactionsPreload: Int,
-                              dataPreload: Int,
-                              readPolicy: AbstractPolicy,
-                              offset: IOffset,
-                              transactionGenerator: ITransactionGenerator,
-                              useLastOffset: Boolean,
-                              checkpointAtStart: Boolean) {
+                           dataPreload: Int,
+                           readPolicy: AbstractPolicy,
+                           offset: IOffset,
+                           transactionGenerator: ITransactionGenerator,
+                           useLastOffset: Boolean,
+                           checkpointAtStart: Boolean) {
   if (transactionsPreload < 1)
     throw new IllegalArgumentException("Incorrect transactionPreload value, should be greater than or equal to one.")
 

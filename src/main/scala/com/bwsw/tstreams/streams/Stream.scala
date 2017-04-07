@@ -4,7 +4,7 @@ import com.bwsw.tstreams.common.StorageClient
 import com.bwsw.tstreams.env.defaults.TStreamsFactoryStreamDefaults
 
 /**
-  * @param client   Client to storage
+  * @param client          Client to storage
   * @param name            Name of the stream
   * @param partitionsCount Number of stream partitions
   * @param ttl             Time of transaction time expiration in seconds

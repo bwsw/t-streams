@@ -4,8 +4,8 @@ import java.util.concurrent.CountDownLatch
 
 import com.bwsw.tstreamstransactionserver.netty.server.Server
 import com.bwsw.tstreamstransactionserver.options.CommonOptions.ZookeeperOptions
+import com.bwsw.tstreamstransactionserver.options.ServerBuilder
 import com.bwsw.tstreamstransactionserver.options.ServerOptions.{CommitLogOptions, StorageOptions}
-import com.bwsw.tstreamstransactionserver.options.{ServerBuilder}
 
 /**
   * Created by Ivan Kudryavtsev on 29.01.17.
@@ -18,7 +18,7 @@ object TestStorageServer {
   def get(): Server = {
     val transactionServer = serverBuilder
       .withServerStorageOptions(new StorageOptions(path = TestUtils.getTmpDir()))
-      .withCommitLogOptions(new CommitLogOptions(commitLogCloseDelayMs = 100, commitLogToBerkeleyDBTaskDelayMs = 100))
+      .withCommitLogOptions(new CommitLogOptions(commitLogCloseDelayMs = 100))
       .build()
     val l = new CountDownLatch(1)
     new Thread(() => {

@@ -40,7 +40,7 @@ class SubscriberBasicPubSubTests extends FlatSpec with Matchers with BeforeAndAf
       partitions = Set(0, 1, 2))
 
     val s = f.getSubscriber(name = "sv2",
-      partitions = Set(0, 1 , 2),
+      partitions = Set(0, 1, 2),
       offset = Oldest,
       useLastOffset = false,
       callback = (consumer: TransactionOperator, transaction: ConsumerTransaction) => this.synchronized {

@@ -18,7 +18,7 @@ class InMemoryQueue[T] extends AbstractQueue[T] {
 
   override def get(delay: Long, units: TimeUnit): T = {
     val r = q.poll(delay, units)
-    if(r != null) inFlight.decrementAndGet()
+    if (r != null) inFlight.decrementAndGet()
     r
-}
+  }
 }
