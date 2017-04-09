@@ -1,7 +1,7 @@
 package com.bwsw.tstreams.agents.consumer.subscriber
 
-import com.bwsw.tstreams.agents.consumer.{ConsumerTransaction, TransactionOperator}
 import com.bwsw.tstreams.agents.consumer.subscriber.QueueBuilder.QueueItemType
+import com.bwsw.tstreams.agents.consumer.{ConsumerTransaction, TransactionOperator}
 import com.bwsw.tstreams.common.FirstFailLockableTaskExecutor
 import com.bwsw.tstreams.coordination.messages.state.TransactionStatus
 
@@ -39,22 +39,22 @@ class TransactionFullLoader(partitions: Set[Int],
     * @param callback callback which handles
     */
   override def load(seq: QueueItemType,
-                       consumer: TransactionOperator,
-                       executor: FirstFailLockableTaskExecutor,
-                       callback: Callback): Int = {
+                    consumer: TransactionOperator,
+                    executor: FirstFailLockableTaskExecutor,
+                    callback: Callback): Int = {
     val last = seq.last
     var first = lastTransactionsMap(last.partition).transactionID
-    if(Subscriber.logger.isDebugEnabled())
-      Subscriber.logger.debug(s"TransactionFullLoader.load: First: ${first}, last: ${last.transactionID}, ${last.transactionID - first}")
+    if (Subscriber.logger.isDebugEnabled())
+      Subscriber.logger.debug(s"TransactionFullLoader.load: First: $first, last: ${last.transactionID}, ${last.transactionID - first}")
     var data = ListBuffer[ConsumerTransaction]()
     var flag = true
-    while(flag) {
+    while (flag) {
       data ++= consumer.getTransactionsFromTo(last.partition, first, last.transactionID)
-      if(last.masterSessionID > 0) {
+      if (last.masterSessionID > 0) {
         // we wait for certain item
         // to switch to fast load next
-        if(data.size > 0) {
-          if(data.last.getTransactionID() == last.transactionID)
+        if (data.size > 0) {
+          if (data.last.getTransactionID() == last.transactionID)
             flag = false
           else
             first = data.last.getTransactionID()
@@ -63,8 +63,8 @@ class TransactionFullLoader(partitions: Set[Int],
         flag = false
     }
 
-    if(Subscriber.logger.isDebugEnabled())
-      Subscriber.logger.debug(s"Data:  ${data}")
+    if (Subscriber.logger.isDebugEnabled())
+      Subscriber.logger.debug(s"Data:  $data")
 
     data.foreach(elt =>
       executor.submit(s"<CallbackTask#Full>", new ProcessingEngine.CallbackTask(consumer,

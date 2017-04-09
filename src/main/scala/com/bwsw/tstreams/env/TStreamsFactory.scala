@@ -369,6 +369,9 @@ class TStreamsFactory() {
     val pollingFrequencyDelayMs = pAsInt(co.Consumer.Subscriber.pollingFrequencyDelayMs, consumerDefaults.Consumer.Subscriber.pollingFrequencyDelayMs.default)
     consumerDefaults.Consumer.Subscriber.pollingFrequencyDelayMs.check(pollingFrequencyDelayMs)
 
+    val transactionQueueMaxLengthThreshold = pAsInt(co.Consumer.Subscriber.transactionQueueMaxLengthThreshold, consumerDefaults.Consumer.Subscriber.transactionQueueMaxLengthThreshold.default)
+    consumerDefaults.Consumer.Subscriber.transactionQueueMaxLengthThreshold.check(transactionQueueMaxLengthThreshold)
+
     val queue_path = pAsString(co.Consumer.Subscriber.persistentQueuePath)
 
     val opts = SubscriberOptionsBuilder.fromConsumerOptions(consumerOptions,
@@ -380,6 +383,7 @@ class TStreamsFactory() {
       transactionsBufferWorkersThreadPoolSize = transactionBufferThreadPoolSize,
       processingEngineWorkersThreadSize = processingEnginesThreadPoolSize,
       pollingFrequencyDelayMs = pollingFrequencyDelayMs,
+      transactionQueueMaxLengthThreshold = transactionQueueMaxLengthThreshold,
       transactionsQueueBuilder = if (queue_path == null) new QueueBuilder.InMemory() else new Persistent(queue_path))
 
     new Subscriber(name, stream, opts, callback)

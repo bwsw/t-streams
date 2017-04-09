@@ -25,9 +25,9 @@ object LockUtil {
   }
 
   def withLockOrDieDo[T](l: ReentrantLock,
-                             lt: (Int, TimeUnit),
-                             logger: Option[Logger] = None,
-                             lambda: () => T): T = {
+                         lt: (Int, TimeUnit),
+                         logger: Option[Logger] = None,
+                         lambda: () => T): T = {
 
     val lStartTime = System.currentTimeMillis()
     val token = randomGenerator.nextInt().toString

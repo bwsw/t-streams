@@ -19,9 +19,9 @@ object Subscriber {
   * Class implements subscriber
   */
 class Subscriber(val name: String,
-                    val stream: Stream,
-                    val options: SubscriberOptions,
-                    val callback: Callback) {
+                 val stream: Stream,
+                 val options: SubscriberOptions,
+                 val callback: Callback) {
 
   private val transactionsBufferWorkers = mutable.Map[Int, TransactionBufferWorker]()
   private val processingEngines = mutable.Map[Int, ProcessingEngine]()
@@ -108,7 +108,7 @@ class Subscriber(val name: String,
     options.readPolicy.getUsedPartitions() foreach (part =>
       for (thID <- 0 until peWorkerThreads) {
         if (part % peWorkerThreads == thID) {
-          transactionsBuffers(part) = new TransactionBuffer(processingEngines(thID).getQueue())
+          transactionsBuffers(part) = new TransactionBuffer(processingEngines(thID).getQueue(), options.transactionQueueMaxLengthThreshold)
           Subscriber.logger.info(s"[INIT] Subscriber $name: TransactionBuffer $part is bound to PE $thID.")
         }
       })
@@ -137,8 +137,8 @@ class Subscriber(val name: String,
       partitions = Set[Int]().empty ++ options.readPolicy.getUsedPartitions(),
       zkRootPath = options.zkRootPath,
       zkHosts = options.zkHosts,
-      zkConnectionTimeout = options.zkConnectionTimeout,
-      zkSessionTimeout = options.zkSessionTimeout)
+      zkConnectionTimeout = options.zkConnectionTimeoutMs,
+      zkSessionTimeout = options.zkSessionTimeoutMs)
 
     Subscriber.logger.info(s"[INIT] Subscriber $name: has launched the coordinator.")
     Subscriber.logger.info(s"[INIT] Subscriber $name: is about to launch the tcp server.")
@@ -150,7 +150,7 @@ class Subscriber(val name: String,
     Subscriber.logger.info(s"[INIT] Subscriber $name: is about to launch Polling tasks to executors.")
 
     for (thID <- 0 until peWorkerThreads) {
-      processingEngines(thID).getExecutor().submit(s"<Poller ${processingEngines(thID)}>", new Poller(processingEngines(thID), options.pollingFrequencyDelay))
+      processingEngines(thID).getExecutor().submit(s"<Poller ${processingEngines(thID)}>", new Poller(processingEngines(thID), options.pollingFrequencyDelayMs))
     }
 
     Subscriber.logger.info(s"[INIT] Subscriber $name: has launched Polling tasks to executors.")

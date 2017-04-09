@@ -40,8 +40,11 @@ class ExecutorGraph(name: String = "", publisherThreadsAmount: Int = 1) {
   }
 
   def submitToGeneral(name: String, f: () => Unit) = submitTo(name, general, f)
+
   def submitToNewTransaction(name: String, f: () => Unit) = submitTo(name, newTransaction, f)
+
   def submitToMaterialize(name: String, f: () => Unit) = submitTo(name, materialize, f)
+
   def submitToPublish(name: String, f: () => Unit) = submitTo(name, publish, f)
 
 }

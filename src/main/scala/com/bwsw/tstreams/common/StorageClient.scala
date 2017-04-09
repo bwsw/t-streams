@@ -55,8 +55,8 @@ class StorageClient(clientOptions: ConnectionOptions, authOptions: AuthOptions, 
     * @param ttl             Expiration time of single transaction in seconds
     */
   def createStream(streamName: String, partitionsCount: Int, ttl: Long, description: String, timeout: Duration = 1.minute): Stream = {
-    if (Await.result(client.putStream(streamName, partitionsCount, Some(description), ttl), timeout) == false)
-      throw new IllegalArgumentException(s"Stream ${streamName} already exists.")
+    if (!Await.result(client.putStream(streamName, partitionsCount, Some(description), ttl), timeout))
+      throw new IllegalArgumentException(s"Stream $streamName already exists.")
 
     new Stream(this, streamName, partitionsCount, ttl, description)
   }
@@ -97,10 +97,8 @@ class StorageClient(clientOptions: ConnectionOptions, authOptions: AuthOptions, 
     */
   def saveConsumerOffsetBatch(consumerName: String, stream: String, partitionAndLastTransaction: scala.collection.mutable.Map[Int, Long], timeout: Duration = 1.minute) = {
     val batch = ListBuffer[ConsumerTransaction]()
-    batch.appendAll(partitionAndLastTransaction.map { case (partition, offset) => {
-      val t = new RPCConsumerTransaction(consumerName, stream, partition, offset)
-      t
-    }
+    batch.appendAll(partitionAndLastTransaction.map { case (partition, offset) =>
+      new RPCConsumerTransaction(consumerName, stream, partition, offset)
     })
 
     Await.result(client.putTransactions(Nil, batch), timeout)
@@ -146,7 +144,7 @@ class StorageClient(clientOptions: ConnectionOptions, authOptions: AuthOptions, 
   }
 
   def getTransaction(streamName: String, partition: Integer, transactionID: Long, timeout: Duration = 1.minute): Option[ProducerTransaction] = {
-    while(true) {
+    while (true) {
       val txnInfo = Await.result(client.getTransaction(streamName, partition, transactionID), timeout)
       (txnInfo.exists, txnInfo.transaction) match {
         case (true, t: Option[ProducerTransaction]) => return t
@@ -154,7 +152,7 @@ class StorageClient(clientOptions: ConnectionOptions, authOptions: AuthOptions, 
         case _ => throw new BadArgumentsException(s"Expected to get (Boolean, Option[ProducerTransaction]).")
       }
     }
-    return None
+    None
   }
 
   def scanTransactions(streamName: String, partition: Integer, from: Long, to: Long, lambda: ProducerTransaction => Boolean = txn => true, timeout: Duration = 1.minute): (Long, Seq[ProducerTransaction]) = {

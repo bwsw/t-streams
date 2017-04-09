@@ -60,7 +60,7 @@ class ProducerAndConsumerCheckpointTest extends FlatSpec with Matchers with Befo
       val transaction = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
 
       counter += 1
-      if(counter == TRANSACTIONS_COUNT)
+      if (counter == TRANSACTIONS_COUNT)
         srv.notifyProducerTransactionCompleted(t => t.transactionID == transaction.getTransactionID() && t.state == TransactionStates.Checkpointed, l.countDown())
 
       TimeTracker.update_end("newTransaction")
@@ -85,7 +85,7 @@ class ProducerAndConsumerCheckpointTest extends FlatSpec with Matchers with Befo
     (0 until firstPart) foreach { counter =>
       val transaction: ConsumerTransaction = consumer.getTransaction(0).get
 
-      if(counter == firstPart - 1)
+      if (counter == firstPart - 1)
         srv.notifyConsumerTransactionCompleted(ct => transaction.getTransactionID() == ct.transactionID, l1.countDown())
 
       transaction.getAll().map(i => new String(i)).sorted shouldBe dataToSend

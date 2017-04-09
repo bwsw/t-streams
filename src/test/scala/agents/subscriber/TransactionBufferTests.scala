@@ -14,7 +14,7 @@ object TransactionBufferTests {
   val POST = 2
   val CANCEL = 3
   val UPDATE_TTL = 20
-  val OPEN_TTL = 10
+  val OPEN_TTL = 1000
   val cntr = new AtomicLong(0)
 
   def generateAllStates(): Array[TransactionState] = {
@@ -92,7 +92,7 @@ class TransactionBufferTests extends FlatSpec with Matchers {
     b.update(ts0(OPENED))
     b.update(ts0(UPDATE))
     b.getState(ts0(UPDATE).transactionID).isDefined shouldBe true
-    Math.abs(b.getState(ts0(UPDATE).transactionID).get.ttl - UPDATE_TTL * 1000 - System.currentTimeMillis()) < 20 shouldBe true
+    Math.abs(b.getState(ts0(UPDATE).transactionID).get.ttlMs - UPDATE_TTL - System.currentTimeMillis()) < 20 shouldBe true
     b.getState(ts0(UPDATE).transactionID).get.state shouldBe TransactionStatus.opened
   }
 
@@ -111,7 +111,7 @@ class TransactionBufferTests extends FlatSpec with Matchers {
     b.update(ts0(OPENED))
     b.update(ts0(POST))
     b.getState(ts0(POST).transactionID).isDefined shouldBe true
-    b.getState(ts0(POST).transactionID).get.ttl shouldBe Long.MaxValue
+    b.getState(ts0(POST).transactionID).get.ttlMs shouldBe Long.MaxValue
   }
 
   it should "move to checkpoint impossible" in {
@@ -218,5 +218,15 @@ class TransactionBufferTests extends FlatSpec with Matchers {
     r.size shouldBe 2
     r.head.transactionID shouldBe ts0(OPENED).transactionID
     r.tail.head.transactionID shouldBe ts1(OPENED).transactionID
+  }
+
+  it should "handle queue length thresholds properly" in {
+    val b = new TransactionBuffer(new QueueBuilder.InMemory().generateQueueObject(0), 100)
+    (0 until 100).foreach(_ => {
+      val ts0 = generateAllStates()
+      b.update(ts0(OPENED))
+    })
+    b.signalCompleteTransactions()
+    b.getSize() shouldBe 0
   }
 }

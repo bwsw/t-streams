@@ -42,9 +42,9 @@ object PeerAgent {
   *
   * @param curatorClient
   * @param peerKeepAliveTimeout
-  * @param producer                Producer reference
-  * @param usedPartitions          List of used producer partitions
-  * @param transport               Transport to provide interaction
+  * @param producer       Producer reference
+  * @param usedPartitions List of used producer partitions
+  * @param transport      Transport to provide interaction
   */
 class PeerAgent(curatorClient: CuratorFramework,
                 peerKeepAliveTimeout: Int,
@@ -53,7 +53,6 @@ class PeerAgent(curatorClient: CuratorFramework,
                 transport: TcpTransport,
                 threadPoolAmount: Int,
                 threadPoolPublisherThreadsAmount: Int) {
-
 
 
   val myInetAddress: String = producer.producerOptions.coordinationOptions.transport.getInetAddress()
@@ -119,25 +118,25 @@ class PeerAgent(curatorClient: CuratorFramework,
   }
 
   private def updatePartitionMasterInetAddress(partition: Int): Unit = leaderMap.synchronized {
-    if(!usedPartitions.contains(partition))
+    if (!usedPartitions.contains(partition))
       return
 
-    if(!leaderMap.contains(partition)) {
+    if (!leaderMap.contains(partition)) {
       try {
-        curatorClient.create.forPath(s"/master-${partition}")
+        curatorClient.create.forPath(s"/master-$partition")
       } catch {
         case e: KeeperException =>
-          if(e.code() != KeeperException.Code.NODEEXISTS)
+          if (e.code() != KeeperException.Code.NODEEXISTS)
             throw e
       }
 
-      val leader = new LeaderLatch(curatorClient, s"/master-${partition}", s"${transport.getInetAddress()}#$uniqueAgentId")
+      val leader = new LeaderLatch(curatorClient, s"/master-$partition", s"${transport.getInetAddress()}#$uniqueAgentId")
       leaderMap(partition) = leader
       leader.start()
     }
 
     var leaderInfo = getLeaderId(partition)
-    while(leaderInfo == "") {
+    while (leaderInfo == "") {
       leaderInfo = getLeaderId(partition)
       Thread.sleep(50)
     }
@@ -159,7 +158,7 @@ class PeerAgent(curatorClient: CuratorFramework,
   }
 
   def isMasterOfPartition(partition: Int): Boolean = leaderMap.synchronized {
-    if(!usedPartitions.contains(partition))
+    if (!usedPartitions.contains(partition))
       return false
 
     if (!leaderMap.contains(partition)) {
@@ -183,19 +182,19 @@ class PeerAgent(curatorClient: CuratorFramework,
 
     val res =
       transport.transactionRequest(master, partition) match {
-      case null =>
-        updatePartitionMasterInetAddress(partition)
-        generateNewTransaction(partition)
+        case null =>
+          updatePartitionMasterInetAddress(partition)
+          generateNewTransaction(partition)
 
-      case EmptyResponse(snd, rcv, p) =>
-        updatePartitionMasterInetAddress(partition)
-        generateNewTransaction(partition)
+        case EmptyResponse(snd, rcv, p) =>
+          updatePartitionMasterInetAddress(partition)
+          generateNewTransaction(partition)
 
-      case TransactionResponse(snd, rcv, id, p) =>
-        if (PeerAgent.logger.isDebugEnabled) {
-          PeerAgent.logger.debug(s"[GET TRANSACTION] Finish retrieve transaction for agent with address: $myInetAddress, stream: $streamName, partition: $partition with ID: $id from [MASTER: $master]s")
-        }
-        id
+        case TransactionResponse(snd, rcv, id, p) =>
+          if (PeerAgent.logger.isDebugEnabled) {
+            PeerAgent.logger.debug(s"[GET TRANSACTION] Finish retrieve transaction for agent with address: $myInetAddress, stream: $streamName, partition: $partition with ID: $id from [MASTER: $master]s")
+          }
+          id
       }
     res
   }
