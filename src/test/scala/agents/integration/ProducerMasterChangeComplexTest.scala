@@ -33,7 +33,7 @@ class ProducerMasterChangeComplexTest extends FlatSpec with Matchers with Before
         producer = makeNewProducer(partitions)
 
         while (probability < Random.nextDouble() && counter < amount) {
-          val t = producer.newTransaction(policy = NewTransactionProducerPolicy.CheckpointIfOpened, -1, MAX_NEW_TXN_RETRY)
+          val t = producer.newTransaction(policy = NewTransactionProducerPolicy.CheckpointIfOpened, -1)
           t.send("test".getBytes())
           t.checkpoint(checkpointModeSync)
           producerBuffer.synchronized {

@@ -155,7 +155,7 @@ class ConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll with Te
   }
 
   it should "benchmark" in {
-    val N = 4000
+    val N = 40000
     val start = System.currentTimeMillis()
     (0 until N).foreach(_ => {
       val txn = LocalGeneratorCreator.getTransaction()

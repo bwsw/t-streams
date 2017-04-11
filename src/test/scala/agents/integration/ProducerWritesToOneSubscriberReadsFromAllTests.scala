@@ -29,7 +29,7 @@ class ProducerWritesToOneSubscriberReadsFromAllTests extends FlatSpec with Match
   val storageClient = f.getStorageClient()
   storageClient.createStream("test_stream", 3, 24 * 3600, "")
 
-  val TOTAL = 1000
+  val TOTAL = 10000
   val l = new CountDownLatch(1)
 
   it should "handle all transactions produced by producer" in {

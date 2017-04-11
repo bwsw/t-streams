@@ -28,7 +28,7 @@ class TcpTransportTest extends FlatSpec with Matchers {
 
     val socket = CommunicationClient.openSocket("127.0.0.1:8123", 1000)
 
-    val N = 4000
+    val N = 40000
     val start = System.currentTimeMillis()
     (0 until N).foreach(i => {
       writeMsgAndWaitResponse(socket, "test: $i\r\n")

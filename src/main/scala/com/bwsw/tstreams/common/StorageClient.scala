@@ -128,6 +128,11 @@ class StorageClient(clientOptions: ConnectionOptions, authOptions: AuthOptions, 
     Await.result(client.getConsumerState(name = consumerName, stream = stream, partition = partition), timeout)
   }
 
+  def putTransactionSync(transaction: ProducerTransaction, timeout: Duration = 1.minute) = {
+    val f = client.putProducerState(transaction)
+    Await.result(f, timeout)
+  }
+
   def putTransaction[T](transaction: ProducerTransaction, async: Boolean, timeout: Duration = 1.minute)(onComplete: ProducerTransaction => T) = {
     val f = client.putProducerState(transaction)
     if (async) {

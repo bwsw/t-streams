@@ -1,10 +1,11 @@
 package com.bwsw.tstreams.agents.producer
 
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.locks.ReentrantLock
 import java.util.concurrent.{CountDownLatch, TimeUnit}
 
 import com.bwsw.tstreams.agents.group.ProducerCheckpointInfo
-import com.bwsw.tstreams.common.LockUtil
+import com.bwsw.tstreams.common.{LockUtil, ResettableCountDownLatch}
 import com.bwsw.tstreams.coordination.messages.state.{TransactionStateMessage, TransactionStatus}
 import com.bwsw.tstreams.debug.GlobalHooks
 import com.bwsw.tstreamstransactionserver.rpc.TransactionStates
@@ -31,17 +32,44 @@ class ProducerTransaction(partition: Int,
 
   private val data = new ProducerTransactionData(this, transactionOwner.stream.ttl, transactionOwner.stream.client)
 
+  private val isTransactionClosed = new AtomicBoolean(false)
+
   /**
-    * state of transaction
+    * This special trigger is used to avoid a very specific race, which could happen if
+    * checkpoint/cancel will be called same time when update will do update. So, we actually
+    * must protect from this situation, that's why during update, latch must be set to make
+    * cancel/checkpoint wait until update will complete
+    * We also need special test for it.
     */
-  private val state = new ProducerTransactionState
+  private val updateSignalVar = new ResettableCountDownLatch(0)
 
   /**
     * State indicator of the transaction
     *
     * @return Closed transaction or not
     */
-  def isClosed() = state.isClosed
+  def isClosed() = isTransactionClosed.get
+
+  /**
+    * changes transaction state to updating
+    */
+  def setUpdateInProgress() = updateSignalVar.setValue(1)
+
+  /**
+    * changes transaction state to finished updating
+    */
+  def setUpdateFinished() = updateSignalVar.countDown
+
+  /**
+    * awaits while transaction updates
+    *
+    * @return
+    */
+  def awaitUpdateComplete(): Unit = {
+    if (!updateSignalVar.await(10, TimeUnit.SECONDS))
+      throw new IllegalStateException("Update takes too long (> 10 seconds). Probably failure.")
+  }
+
 
   /**
     * BasicProducerTransaction logger for logging
@@ -51,31 +79,15 @@ class ProducerTransaction(partition: Int,
   /**
     *
     */
-  def markAsClosed() = state.closeOrDie
+  def markAsClosed() = isTransactionClosed.set(true)
 
   /**
     * Return transaction partition
     */
   def getPartition(): Int = partition
 
-  /**
-    * makes transaction materialized
-    */
-  def makeMaterialized(): Unit = {
-    state.makeMaterialized()
-  }
 
   override def toString(): String = s"producer.Transaction(ID=$transactionID, partition=$partition, count=${getDataItemsCount()})"
-
-  def awaitMaterialized(): Unit = {
-    if (ProducerTransaction.logger.isDebugEnabled) {
-      ProducerTransaction.logger.debug(s"Await for transaction $getTransactionID to be materialized\nfor stream,partition : ${transactionOwner.stream.name},$partition")
-    }
-    state.awaitMaterialization(transactionOwner.producerOptions.coordinationOptions.transport.getTimeout())
-    if (ProducerTransaction.logger.isDebugEnabled) {
-      ProducerTransaction.logger.debug(s"Transaction $getTransactionID is materialized\nfor stream,partition : ${transactionOwner.stream.name}, $partition")
-    }
-  }
 
   /**
     * Return transaction ID
@@ -104,7 +116,9 @@ class ProducerTransaction(partition: Int,
     * @param obj some user object
     */
   def send(obj: Array[Byte]): Unit = {
-    state.isOpenedOrDie()
+    if (isTransactionClosed.get())
+      throw new IllegalStateException(s"Transaction $transactionID is closed. New data items are prohibited.")
+
     val number = data.put(obj)
     val job = {
       if (number % transactionOwner.producerOptions.batchSize == 0) {
@@ -127,7 +141,16 @@ class ProducerTransaction(partition: Int,
     if (job != null) jobs += job
   }
 
-  private def cancelAsync() = {
+
+  /**
+    * Canceling current transaction
+    */
+  def cancel(): Unit = this.synchronized {
+    if (isTransactionClosed.get())
+      throw new IllegalStateException(s"Transaction $transactionID is closed. New data items are prohibited.")
+
+    awaitUpdateComplete
+    isTransactionClosed.set(true)
     val transactionRecord = new RPCProducerTransaction(transactionOwner.stream.name, partition, transactionID, TransactionStates.Cancel, 0, -1L)
 
     transactionOwner.stream.client.putTransaction(transactionRecord, true)(rec => {})
@@ -140,19 +163,6 @@ class ProducerTransaction(partition: Int,
       orderID = -1,
       count = 0)
     transactionOwner.p2pAgent.publish(msg)
-  }
-
-  /**
-    * Canceling current transaction
-    */
-  def cancel(): Unit = {
-    state.isOpenedOrDie()
-    state.awaitMaterialization(transactionOwner.producerOptions.coordinationOptions.transport.getTimeout())
-    LockUtil.withLockOrDieDo[Unit](transactionLock, (100, TimeUnit.SECONDS), Some(ProducerTransaction.logger), () => {
-      state.awaitUpdateComplete
-      state.closeOrDie
-      transactionOwner.asyncActivityService.submit("<CancelAsyncTask>", () => cancelAsync(), Option(transactionLock))
-    })
   }
 
   private def checkpointPostEventPart(): Unit = {
@@ -237,11 +247,12 @@ class ProducerTransaction(partition: Int,
     * Submit transaction(transaction will be available by consumer only after closing)
     */
   def checkpoint(isSynchronous: Boolean = true): Unit = {
-    state.isOpenedOrDie()
-    state.awaitMaterialization(transactionOwner.producerOptions.coordinationOptions.transport.getTimeout())
+    if (isTransactionClosed.get())
+      throw new IllegalStateException(s"Transaction $transactionID is closed. New data items are prohibited.")
     LockUtil.withLockOrDieDo[Unit](transactionLock, (100, TimeUnit.SECONDS), Some(ProducerTransaction.logger), () => {
-      state.awaitUpdateComplete()
-      state.closeOrDie()
+      awaitUpdateComplete()
+      isTransactionClosed.set(true)
+
       if (!isSynchronous) {
         transactionOwner.asyncActivityService.submit("<CheckpointAsyncTask>", () => checkpointAsync(), Option(transactionLock))
       }
@@ -272,28 +283,30 @@ class ProducerTransaction(partition: Int,
           //debug purposes only
           GlobalHooks.invoke(GlobalHooks.afterCommitFailure)
 
-          transactionOwner.p2pAgent.publish(TransactionStateMessage(
-            transactionID = transactionID,
-            ttlMs = -1,
-            status = TransactionStatus.checkpointed,
-            partition = partition,
-            masterID = transactionOwner.getPartitionMasterIDLocalInfo(partition),
-            orderID = -1,
-            count = getDataItemsCount()))
+          transactionOwner.p2pAgent.submitPipelinedTaskToPublishExecutors(partition, () =>
+            transactionOwner.p2pAgent.publish(TransactionStateMessage(
+              transactionID = transactionID,
+              ttlMs = -1,
+              status = TransactionStatus.checkpointed,
+              partition = partition,
+              masterID = transactionOwner.getPartitionMasterIDLocalInfo(partition),
+              orderID = -1,
+              count = getDataItemsCount())))
 
           if (ProducerTransaction.logger.isDebugEnabled) {
             ProducerTransaction.logger.debug("[FINAL CHECKPOINT PARTITION_{}] ts={}", partition, transactionID.toString)
           }
         }
         else {
-          transactionOwner.p2pAgent.publish(TransactionStateMessage(
-            transactionID = transactionID,
-            ttlMs = -1,
-            status = TransactionStatus.cancel,
-            partition = partition,
-            masterID = transactionOwner.getPartitionMasterIDLocalInfo(partition),
-            orderID = -1,
-            count = 0))
+          transactionOwner.p2pAgent.submitPipelinedTaskToPublishExecutors(partition, () =>
+            transactionOwner.p2pAgent.publish(TransactionStateMessage(
+              transactionID = transactionID,
+              ttlMs = -1,
+              status = TransactionStatus.cancel,
+              partition = partition,
+              masterID = transactionOwner.getPartitionMasterIDLocalInfo(partition),
+              orderID = -1,
+              count = 0)))
         }
       }
     })
@@ -304,7 +317,8 @@ class ProducerTransaction(partition: Int,
       GlobalHooks.invoke(GlobalHooks.transactionUpdateTaskEnd)
     }
 
-    state.setUpdateFinished
+    setUpdateFinished
+
     transactionOwner.p2pAgent.publish(TransactionStateMessage(
       transactionID = transactionID,
       ttlMs = transactionOwner.producerOptions.transactionTtlMs,
@@ -320,13 +334,11 @@ class ProducerTransaction(partition: Int,
   }
 
   def updateTransactionKeepAliveState(): Unit = {
-    if (!state.isMaterialized())
-      return
     // atomically check state and launch update process
     val stateOnUpdateClosed =
       LockUtil.withLockOrDieDo[Boolean](transactionLock, (100, TimeUnit.SECONDS), Some(ProducerTransaction.logger), () => {
-        val s = state.isClosed()
-        if (!s) state.setUpdateInProgress()
+        val s = isClosed()
+        if (!s) setUpdateInProgress()
         s
       })
 
@@ -360,7 +372,6 @@ class ProducerTransaction(partition: Int,
 
 
   def getTransactionInfo(): ProducerCheckpointInfo = {
-    state.awaitMaterialization(transactionOwner.producerOptions.coordinationOptions.transport.getTimeout())
 
     val checkpoint = TransactionStateMessage(
       transactionID = getTransactionID(),

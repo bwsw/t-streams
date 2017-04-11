@@ -6,7 +6,6 @@ import com.bwsw.tstreams.agents.group.ProducerCheckpointInfo
   * Created by Ivan Kudryavtsev on 29.08.16.
   */
 trait IProducerTransaction {
-  def awaitMaterialized(): Unit
 
   def send(obj: Array[Byte]): Unit
 
@@ -23,8 +22,6 @@ trait IProducerTransaction {
   def isClosed(): Boolean
 
   def getTransactionID(): Long
-
-  def makeMaterialized(): Unit
 
   def markAsClosed(): Unit
 }

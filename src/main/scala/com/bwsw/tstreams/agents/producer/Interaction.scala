@@ -10,7 +10,7 @@ trait Interaction {
     *
     * @return ID
     */
-  private[tstreams] def openTransactionLocal(transactionID: Long, partition: Int, onComplete: () => Unit): Unit
+  private[tstreams] def openTransactionLocal(transactionID: Long, partition: Int): Unit
 
   /**
     * Agent for producer to provide producers communication

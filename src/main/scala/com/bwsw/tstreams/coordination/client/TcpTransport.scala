@@ -66,16 +66,6 @@ class TcpTransport(address: String, timeoutMs: Int, retryCount: Int = 3, retryDe
   }
 
   /**
-    * Request to publish event about Transaction
-    *
-    * @param to
-    * @param msg Message
-    */
-  def materializeRequest(to: String, msg: TransactionStateMessage): Unit = {
-    client.sendAndNoWaitResponse(MaterializeRequest(address, to, msg), isExceptionIfFails = true, () => false)
-  }
-
-  /**
     * Bind local agent address in transport
     */
   def start(callback: (Channel, String) => Unit): Unit = {

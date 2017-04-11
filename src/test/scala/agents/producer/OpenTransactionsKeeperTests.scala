@@ -16,8 +16,6 @@ class OpenTransactionsKeeperTests extends FlatSpec with Matchers {
   class TransactionStub extends IProducerTransaction {
     var lastMethod: String = null
 
-    override def awaitMaterialized(): Unit = {}
-
     override def finalizeDataSend(): Unit = {}
 
     override def cancel(): Unit = {
@@ -38,8 +36,6 @@ class OpenTransactionsKeeperTests extends FlatSpec with Matchers {
 
     override def getTransactionID(): Long = LocalGeneratorCreator.getTransaction()
 
-    override def makeMaterialized(): Unit = {}
-
     override def markAsClosed(): Unit = {}
 
     override def send(obj: Array[Byte]): Unit = {}
@@ -56,12 +52,12 @@ class OpenTransactionsKeeperTests extends FlatSpec with Matchers {
     val keeper = new OpenTransactionsKeeper()
     val t = new TransactionStub
     keeper.put(0, t)
-    keeper.awaitOpenTransactionMaterialized(0, NewTransactionProducerPolicy.CheckpointIfOpened)()
+    keeper.handlePreviousOpenTransaction(0, NewTransactionProducerPolicy.CheckpointIfOpened)()
     t.lastMethod shouldBe "checkpoint"
-    keeper.awaitOpenTransactionMaterialized(0, NewTransactionProducerPolicy.CancelIfOpened)()
+    keeper.handlePreviousOpenTransaction(0, NewTransactionProducerPolicy.CancelIfOpened)()
     t.lastMethod shouldBe "cancel"
     (try {
-      keeper.awaitOpenTransactionMaterialized(0, NewTransactionProducerPolicy.ErrorIfOpened)()
+      keeper.handlePreviousOpenTransaction(0, NewTransactionProducerPolicy.ErrorIfOpened)()
       false
     } catch {
       case e: IllegalStateException =>

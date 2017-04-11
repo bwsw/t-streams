@@ -51,7 +51,6 @@ class Producer(var name: String,
   private val openTransactions = new OpenTransactionsKeeper()
 
   // stores latches for materialization await (protects from materialization before main transaction response)
-  private val materializationGovernor = new MaterializationGovernor(producerOptions.writePolicy.getUsedPartitions())
   private val threadLock = new ReentrantLock(true)
 
   private val peerKeepAliveTimeout = pcs.zkSessionTimeoutMs * 2
@@ -161,7 +160,7 @@ class Producer(var name: String,
     openTransactions.forallKeysDo((part: Int, transaction: IProducerTransaction) => transaction.updateTransactionKeepAliveState())
   }
 
-  private def newTransactionUnsafe(policy: ProducerPolicy, partition: Int = -1): ProducerTransaction = {
+  def newTransaction(policy: ProducerPolicy, partition: Int = -1): ProducerTransaction = {
     if (isStop.get())
       throw new IllegalStateException(s"Producer ${this.name} is already stopped. Unable to get new transaction.")
 
@@ -175,47 +174,19 @@ class Producer(var name: String,
     if (!(p >= 0 && p < stream.partitionsCount))
       throw new IllegalArgumentException(s"Producer $name - invalid partition")
 
-    val previousTransactionAction: () => Unit =
-      openTransactions.awaitOpenTransactionMaterialized(p, policy)
-
-    materializationGovernor.protect(p)
-
+    val previousTransactionAction = openTransactions.handlePreviousOpenTransaction(p, policy)
+    if (previousTransactionAction != null)
+      previousTransactionAction()
 
     val transactionID = p2pAgent.generateNewTransaction(p)
+
     if (Producer.logger.isDebugEnabled)
       Producer.logger.debug(s"[NEW_TRANSACTION PARTITION_$p] ID=$transactionID")
+
     val transaction = new ProducerTransaction(p, transactionID, this)
-
     openTransactions.put(p, transaction)
-    materializationGovernor.unprotect(p)
 
-    if (previousTransactionAction != null)
-      asyncActivityService.submit("<PreviousTransactionActionTask>", () => previousTransactionAction())
     transaction
-  }
-
-  /**
-    * @param policy    Policy for previous transaction on concrete partition
-    * @param partition Next partition to use for transaction (default -1 which mean that write policy will be used)
-    * @return BasicProducerTransaction instance
-    */
-  def newTransaction(policy: ProducerPolicy, partition: Int = -1, retry: Int = 6): ProducerTransaction = {
-    if (isStop.get())
-      throw new IllegalStateException(s"Producer ${this.name} is already stopped. Unable to get new transaction.")
-
-    if (retry < 0)
-      throw new IllegalStateException("Failed to get a new transaction.")
-
-    try {
-      val transaction = newTransactionUnsafe(policy, partition)
-      transaction.awaitMaterialized()
-      transaction
-    } catch {
-      case e: MaterializationException =>
-        //todo: fixit (magic)
-        Thread.sleep(1000)
-        newTransaction(policy, retry - 1)
-    }
   }
 
 
@@ -274,8 +245,13 @@ class Producer(var name: String,
     *
     * @return ID
     */
-  override private[tstreams] def openTransactionLocal(transactionID: Long, partition: Int, onComplete: () => Unit): Unit = {
+  override private[tstreams] def openTransactionLocal(transactionID: Long, partition: Int): Unit = {
 
+    val transactionRecord = new RPCProducerTransaction(stream.name, partition, transactionID, TransactionStates.Opened, -1, producerOptions.transactionTtlMs)
+    stream.client.putTransactionSync(transactionRecord)
+  }
+
+  private[tstreams] def notifyOpenTransaction(transactionID: Long, partition: Int): Unit = {
     p2pAgent.submitPipelinedTaskToPublishExecutors(partition, () => {
       val msg = TransactionStateMessage(
         transactionID = transactionID,
@@ -289,13 +265,6 @@ class Producer(var name: String,
       if (Producer.logger.isDebugEnabled)
         Producer.logger.debug(s"Producer $name - [GET_LOCAL_TRANSACTION] update with message partition=$partition ID=$transactionID opened")
     })
-
-    val transactionRecord = new RPCProducerTransaction(stream.name, partition, transactionID, TransactionStates.Opened, -1, producerOptions.transactionTtlMs)
-
-    stream.client.putTransaction(transactionRecord, true)(rec => {
-      p2pAgent.submitPipelinedTaskToMaterializeExecutor(partition, onComplete)
-    })
-
   }
 
 
@@ -329,42 +298,6 @@ class Producer(var name: String,
     * Agent lock on any actions which has to do with checkpoint
     */
   override private[tstreams] def getThreadLock(): ReentrantLock = threadLock
-
-
-  /**
-    * Special method which waits until newTransaction method will be completed and after
-    * does materialization. It's called from another thread (p2pAgent), not from thread of
-    * Producer.
-    *
-    * @param msg
-    */
-  private[tstreams] def materialize(msg: TransactionStateMessage): Unit = {
-
-    if (Producer.logger.isDebugEnabled)
-      Producer.logger.debug(s"Start handling MaterializeRequest at partition: ${msg.partition}")
-
-    materializationGovernor.awaitUnprotected(msg.partition)
-    val opt = getOpenedTransactionForPartition(msg.partition)
-
-    if (opt.isEmpty) {
-      Producer.logger.warn(s"There is no opened transaction for ${msg.partition}.")
-      return
-    }
-
-    if (Producer.logger.isDebugEnabled)
-      Producer.logger.debug(s"In Map Transaction: ${opt.get.getTransactionID.toString}\nIn Request Transaction: ${msg.transactionID}")
-
-    if (!(opt.get.getTransactionID == msg.transactionID && msg.status == TransactionStatus.materialize)) {
-      Producer.logger.warn(s"Materialization is requested for transaction ${msg.transactionID} but expected transaction is ${opt.get.getTransactionID}.")
-      opt.get.markAsClosed()
-      return
-    }
-
-    opt.get.makeMaterialized()
-    if (Producer.logger.isDebugEnabled)
-      Producer.logger.debug("End handling MaterializeRequest")
-
-  }
 
   override private[tstreams] def getStorageClient(): StorageClient = stream.client
 }

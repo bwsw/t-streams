@@ -199,13 +199,6 @@ class PeerAgent(curatorClient: CuratorFramework,
     res
   }
 
-  def notifyMaterialize(msg: TransactionStateMessage, to: String): Unit = {
-    if (PeerAgent.logger.isDebugEnabled) {
-      PeerAgent.logger.debug(s"[MATERIALIZE] Send materialize request address\nMe: $myInetAddress\nTransaction owner: $to\nStream: $streamName\npartition: ${msg.partition}\nTransaction: ${msg.transactionID}")
-    }
-    transport.materializeRequest(to, msg)
-  }
-
   /**
     * Allows to publish update/pre/post/cancel messages.
     *
@@ -257,7 +250,6 @@ class PeerAgent(curatorClient: CuratorFramework,
       request match {
         case _: PublishRequest => executorGraphs(execNo).submitToPublish("<PublishTask>", task)
         case _: NewTransactionRequest => executorGraphs(execNo).submitToNewTransaction("<NewTransactionTask>", task)
-        case _: MaterializeRequest => executorGraphs(execNo).submitToMaterialize("<MaterializeTask>", task)
         case _ => executorGraphs(execNo).submitToGeneral("<GeneralTask>", task)
       }
     } catch {
