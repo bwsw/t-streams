@@ -7,7 +7,7 @@ import java.util.concurrent.{CountDownLatch, TimeUnit}
 import com.bwsw.tstreams.agents.group.{CheckpointInfo, GroupParticipant, SendingAgent}
 import com.bwsw.tstreams.agents.producer.NewTransactionProducerPolicy.ProducerPolicy
 import com.bwsw.tstreams.common._
-import com.bwsw.tstreams.coordination.client.BroadcastCommunicationClient
+import com.bwsw.tstreams.coordination.client.UdpEventsBroadcastClient
 import com.bwsw.tstreams.coordination.messages.state.{TransactionStateMessage, TransactionStatus}
 import com.bwsw.tstreams.streams.Stream
 import com.bwsw.tstreamstransactionserver.rpc.TransactionStates
@@ -84,7 +84,7 @@ class Producer(var name: String,
   Producer.logger.info(s"Start new Basic producer with name : $name, streamName : ${stream.name}, streamPartitions : ${stream.partitionsCount}")
 
   // this client is used to find new subscribers
-  val subscriberNotifier = new BroadcastCommunicationClient(curatorClient, partitions = producerOptions.writePolicy.getUsedPartitions())
+  val subscriberNotifier = new UdpEventsBroadcastClient(curatorClient, partitions = producerOptions.writePolicy.getUsedPartitions())
   subscriberNotifier.init()
 
   /**

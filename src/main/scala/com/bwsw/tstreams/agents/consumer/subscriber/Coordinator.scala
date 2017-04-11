@@ -54,6 +54,9 @@ class Coordinator() {
     if (!isInitialized.getAndSet(false))
       throw new IllegalStateException("Failed to stop object as it's already stopped.")
 
+    partitions.foreach(p =>
+      curatorClient.delete().forPath(s"/subscribers/$p/$agentAddress"))
+
     curatorClient.close()
   }
 

@@ -21,11 +21,7 @@ import scala.util.Random
   *
   */
 object PeerAgent {
-  /**
-    * For making low priority masters
-    *
-    */
-  val LOW_PRIORITY_PENALTY = 1000 * 1000
+
   /**
     * How long to sleep during master elections actions
     */

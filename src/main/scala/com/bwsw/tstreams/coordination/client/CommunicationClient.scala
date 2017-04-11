@@ -7,7 +7,6 @@ import java.util.concurrent.atomic.AtomicBoolean
 import com.bwsw.tstreams.common.ProtocolMessageSerializer
 import com.bwsw.tstreams.common.ProtocolMessageSerializer.ProtocolMessageSerializerException
 import com.bwsw.tstreams.coordination.messages.master.IMessage
-import com.bwsw.tstreams.coordination.messages.state.TransactionStateMessage
 import org.slf4j.LoggerFactory
 
 import scala.collection.mutable
@@ -150,27 +149,6 @@ class CommunicationClient(timeoutMs: Int, retryCount: Int = 3, retryDelayMs: Int
           onFailCallback()
       }
     }, retryCount, isExceptionOnFail = isExceptionIfFails)
-  }
-
-  /**
-    * Send broadcast message to several recipients
-    *
-    * @param peers
-    * @param msg
-    * @return Set of not  peers (to exclude failed from further send-outs until next update)
-    */
-  def broadcast(peers: Set[String], msg: TransactionStateMessage): Unit = {
-    val req = ProtocolMessageSerializer
-      .wrapMsg(ProtocolMessageSerializer
-        .serialize(msg))
-
-    peers.foreach(peer =>
-      try {
-        writeMsgAndNoWaitResponse(getSocket(peer), req)
-      } catch {
-        case e@(_: ConnectException | _: IOException) =>
-          CommunicationClient.logger.warn(s"An exception occurred when opening connection to peer $peer: ${e.getMessage}")
-      })
   }
 
   /**
