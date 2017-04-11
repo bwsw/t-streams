@@ -3,7 +3,7 @@ package com.bwsw.tstreams.agents.consumer.subscriber
 import java.util.concurrent.atomic.AtomicBoolean
 
 import com.bwsw.tstreams.common.{Functions, GeneralOptions}
-import com.bwsw.tstreams.coordination.server.RequestsTcpServer
+import com.bwsw.tstreams.coordination.server.EventUpdatesUdpServer
 import com.bwsw.tstreams.streams.Stream
 import org.slf4j.LoggerFactory
 
@@ -32,7 +32,7 @@ class Subscriber(val name: String,
   val l = options.agentAddress.split(":")
   val host = l.head
   val port = l.tail.head
-  private var tcpServer: RequestsTcpServer = null
+  private var udpServer: EventUpdatesUdpServer = null
   private val consumer = new com.bwsw.tstreams.agents.consumer.Consumer(
     name,
     stream,
@@ -143,8 +143,8 @@ class Subscriber(val name: String,
     Subscriber.logger.info(s"[INIT] Subscriber $name: has launched the coordinator.")
     Subscriber.logger.info(s"[INIT] Subscriber $name: is about to launch the tcp server.")
 
-    tcpServer = new RequestsTcpServer(host, Integer.parseInt(port), new TransactionStateMessageChannelHandler(transactionsBufferWorkers))
-    tcpServer.start()
+    udpServer = new EventUpdatesUdpServer(host, Integer.parseInt(port), new TransactionStateMessageChannelHandler(transactionsBufferWorkers))
+    udpServer.start()
 
     Subscriber.logger.info(s"[INIT] Subscriber $name: has launched the tcp server.")
     Subscriber.logger.info(s"[INIT] Subscriber $name: is about to launch Polling tasks to executors.")
@@ -170,7 +170,7 @@ class Subscriber(val name: String,
     transactionsBufferWorkers.foreach(kv => kv._2.stop())
     transactionsBufferWorkers.clear()
 
-    tcpServer.stop()
+    udpServer.stop()
     coordinator.shutdown()
     consumer.stop()
   }

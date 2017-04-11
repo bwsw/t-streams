@@ -3,8 +3,9 @@ package com.bwsw.tstreams.agents.consumer.subscriber
 import com.bwsw.tstreams.common.ProtocolMessageSerializer
 import com.bwsw.tstreams.common.ProtocolMessageSerializer.ProtocolMessageSerializerException
 import com.bwsw.tstreams.coordination.messages.state.TransactionStateMessage
+import io.netty.channel.socket.DatagramPacket
 import io.netty.channel.{ChannelHandler, ChannelHandlerContext, SimpleChannelInboundHandler}
-import io.netty.util.ReferenceCountUtil
+import io.netty.util.CharsetUtil
 
 import scala.collection.mutable
 
@@ -13,16 +14,16 @@ import scala.collection.mutable
   * Handler for netty which handles updates from producers.
   */
 @ChannelHandler.Sharable
-class TransactionStateMessageChannelHandler(transactionsBufferWorkers: mutable.Map[Int, TransactionBufferWorker]) extends SimpleChannelInboundHandler[String] {
+class TransactionStateMessageChannelHandler(transactionsBufferWorkers: mutable.Map[Int, TransactionBufferWorker]) extends SimpleChannelInboundHandler[DatagramPacket] {
 
   private val partitionCache = mutable.Map[Int, TransactionBufferWorker]()
 
   transactionsBufferWorkers
     .foreach(id_w => id_w._2.getPartitions().foreach(p => partitionCache(p) = id_w._2))
 
-  override def channelRead0(ctx: ChannelHandlerContext, msg: String): Unit = {
+  override def channelRead0(ctx: ChannelHandlerContext, msg: DatagramPacket): Unit = {
     try {
-      val m = ProtocolMessageSerializer.deserialize[TransactionStateMessage](msg)
+      val m = ProtocolMessageSerializer.deserialize[TransactionStateMessage](msg.content().toString(CharsetUtil.UTF_8))
       if (partitionCache.contains(m.partition))
         partitionCache(m.partition)
           .update(TransactionState(transactionID = m.transactionID,
@@ -37,7 +38,10 @@ class TransactionStateMessageChannelHandler(transactionsBufferWorkers: mutable.M
     } catch {
       case e: ProtocolMessageSerializerException =>
     }
-    ReferenceCountUtil.release(msg)
+  }
+
+  override def channelReadComplete(ctx: ChannelHandlerContext) = {
+    ctx.flush()
   }
 
   override def exceptionCaught(ctx: ChannelHandlerContext, cause: Throwable) = {

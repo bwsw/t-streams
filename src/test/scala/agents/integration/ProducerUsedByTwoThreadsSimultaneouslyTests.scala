@@ -13,7 +13,7 @@ class ProducerUsedByTwoThreadsSimultaneouslyTests extends FlatSpec with Matchers
 
   // keep it greater than 3
   val ALL_PARTITIONS = 2
-  val COUNT = 10000
+  val COUNT = 1000
 
   f.setProperty(ConfigurationOptions.Stream.name, "test_stream").
     setProperty(ConfigurationOptions.Stream.partitionsCount, ALL_PARTITIONS).

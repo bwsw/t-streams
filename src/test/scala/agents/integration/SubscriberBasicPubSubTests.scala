@@ -63,7 +63,7 @@ class SubscriberBasicPubSubTests extends FlatSpec with Matchers with BeforeAndAf
 
   it should "handle all transactions produced by two different producers" in {
 
-    val TOTAL = 100
+    val TOTAL = 1000
     var subscriberTransactionsAmount = 0
     val latch = new CountDownLatch(1)
 

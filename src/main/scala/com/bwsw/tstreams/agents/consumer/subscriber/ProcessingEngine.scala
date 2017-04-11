@@ -122,7 +122,8 @@ class ProcessingEngine(consumer: TransactionOperator,
     * Enqueues in queue last transaction from database
     */
   def enqueueLastTransactionFromDB(partition: Int): Unit = {
-    assert(partitions.contains(partition))
+    //println(s"Partition is: ${partition} in ${partitions}")
+    //assert(partitions.contains(partition))
 
     val proposedTransactionId = consumer.getProposedTransactionId()
 

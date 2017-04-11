@@ -53,12 +53,18 @@ class UdpEventsBroadcastClient(curatorClient: CuratorFramework, partitions: Set[
   private def broadcast(set: Set[String], msg: TransactionStateMessage) = {
     set.foreach(address => {
       val splits = address.split(":")
-      assert(splits.size == 2)
+      //assert(splits.size == 2)
       val host = InetAddress.getByName(splits(0))
       val port = splits(1).toInt
-      val bytes = ProtocolMessageSerializer.wrapMsg(ProtocolMessageSerializer.serialize(msg)).getBytes()
+      val msgString = ProtocolMessageSerializer.serialize(msg)
+      val bytes = msgString.getBytes()
       val sendPacket = new java.net.DatagramPacket(bytes, bytes.length, host, port)
-      clientSocket.send(sendPacket)
+      try {
+        clientSocket.send(sendPacket)
+      } catch {
+        case e: Exception =>
+          UdpEventsBroadcastClient.logger.warn(s"Send $msgString to $host:$port failed. Exception is: $e")
+      }
     })
   }
 
