@@ -84,6 +84,7 @@ class ProducerMasterChangeComplexTest extends FlatSpec with Matchers with Before
   val srv = TestStorageServer.get()
   val storageClient = f.getStorageClient()
   storageClient.createStream("test_stream", PARTITIONS_COUNT, 24 * 3600, "")
+  storageClient.shutdown()
 
   var subscriberCounter = 0
   val subscriber = f.getSubscriber(name = "s",

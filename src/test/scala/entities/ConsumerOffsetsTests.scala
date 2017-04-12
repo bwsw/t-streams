@@ -66,6 +66,7 @@ class ConsumerOffsetsTests extends FlatSpec with Matchers with BeforeAndAfterAll
   }
 
   override def afterAll(): Unit = {
+    storageClient.shutdown()
     TestStorageServer.dispose(srv)
     onAfterAll()
   }

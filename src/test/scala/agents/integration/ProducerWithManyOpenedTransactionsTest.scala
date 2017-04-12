@@ -26,6 +26,7 @@ class ProducerWithManyOpenedTransactionsTest extends FlatSpec with Matchers with
   val srv = TestStorageServer.get()
   val storageClient = f.getStorageClient()
   storageClient.createStream("test_stream", 3, 24 * 3600, "")
+  storageClient.shutdown()
 
   val producer = f.getProducer(
     name = "test_producer",

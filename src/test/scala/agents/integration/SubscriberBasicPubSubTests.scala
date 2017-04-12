@@ -28,6 +28,7 @@ class SubscriberBasicPubSubTests extends FlatSpec with Matchers with BeforeAndAf
   val srv = TestStorageServer.get()
   val storageClient = f.getStorageClient()
   storageClient.createStream("test_stream", 3, 24 * 3600, "")
+  storageClient.shutdown()
 
   it should "handle all transactions produced by producer" in {
 

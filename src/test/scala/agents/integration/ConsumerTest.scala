@@ -29,7 +29,6 @@ class ConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll with Te
   val storageClient = f.getStorageClient()
   storageClient.createStream("test_stream", 2, 24 * 3600, "")
 
-
   val consumer = f.getConsumer(
     name = "test_consumer",
     partitions = Set(0, 1, 2),
@@ -167,6 +166,7 @@ class ConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll with Te
   }
 
   override def afterAll(): Unit = {
+    storageClient.shutdown()
     TestStorageServer.dispose(srv)
     onAfterAll()
   }

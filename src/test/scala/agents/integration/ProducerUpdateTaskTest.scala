@@ -20,7 +20,7 @@ class ProducerUpdateTaskTest extends FlatSpec with Matchers with BeforeAndAfterA
   val blockCheckpoint2 = new ResettableCountDownLatch(1)
   var flag: Int = 0
 
-  val TRANSACTION_TTLMS = 2000
+  val TRANSACTION_TTL_MS = 2000
 
   System.setProperty("DEBUG", "true")
   GlobalHooks.addHook(GlobalHooks.transactionUpdateTaskBegin, () => {
@@ -39,14 +39,15 @@ class ProducerUpdateTaskTest extends FlatSpec with Matchers with BeforeAndAfterA
     setProperty(ConfigurationOptions.Coordination.connectionTimeoutMs, 7000).
     setProperty(ConfigurationOptions.Coordination.sessionTimeoutMs, 7000).
     setProperty(ConfigurationOptions.Producer.transportTimeoutMs, 5000).
-    setProperty(ConfigurationOptions.Producer.Transaction.ttlMs, TRANSACTION_TTLMS).
-    setProperty(ConfigurationOptions.Producer.Transaction.keepAliveMs, TRANSACTION_TTLMS / 4).
+    setProperty(ConfigurationOptions.Producer.Transaction.ttlMs, TRANSACTION_TTL_MS).
+    setProperty(ConfigurationOptions.Producer.Transaction.keepAliveMs, TRANSACTION_TTL_MS / 4).
     setProperty(ConfigurationOptions.Consumer.transactionPreload, 10).
     setProperty(ConfigurationOptions.Consumer.dataPreload, 10)
 
   val srv = TestStorageServer.get()
   val storageClient = f.getStorageClient()
   storageClient.createStream("test_stream", 2, 24 * 3600, "")
+  storageClient.shutdown()
 
   val producer = f.getProducer(
     name = "test_producer",
@@ -91,7 +92,7 @@ class ProducerUpdateTaskTest extends FlatSpec with Matchers with BeforeAndAfterA
     val transactionID = t.getTransactionID()
     srv.notifyProducerTransactionCompleted(t => t.transactionID == transactionID && t.state == TransactionStates.Checkpointed, l.countDown())
     t.send("data".getBytes())
-    Thread.sleep(TRANSACTION_TTLMS * 3)
+    Thread.sleep(TRANSACTION_TTL_MS * 3)
     t.checkpoint()
     l.await()
 

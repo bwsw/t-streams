@@ -42,6 +42,7 @@ class SubscriberWithManyProcessingEnginesThreadsTest extends FlatSpec with Match
   val srv = TestStorageServer.get()
   val storageClient = f.getStorageClient()
   storageClient.createStream("test_stream", TOTAL_PARTITIONS, 24 * 3600, "")
+  storageClient.shutdown()
 
   it should s"Start and work correctly with PROCESSING_ENGINES_THREAD_POOL=$PROCESSING_ENGINES_THREAD_POOL" in {
     val awaitTransactionsLatch = new CountDownLatch(1)

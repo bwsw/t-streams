@@ -29,6 +29,7 @@ class ConsumerCheckpointTests extends FlatSpec with Matchers with BeforeAndAfter
   val srv = TestStorageServer.get()
   val storageClient = f.getStorageClient()
   storageClient.createStream("test_stream", 2, 24 * 3600, "")
+  storageClient.shutdown()
 
   it should "handle checkpoints correctly" in {
 

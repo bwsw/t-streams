@@ -32,6 +32,7 @@ class ProducerMasterChangeTest extends FlatSpec with Matchers with BeforeAndAfte
   val srv = TestStorageServer.get()
   val storageClient = f.getStorageClient()
   storageClient.createStream("test_stream", 3, 24 * 3600, "")
+  storageClient.shutdown()
 
   it should "switching the master after 100 transactions " in {
 

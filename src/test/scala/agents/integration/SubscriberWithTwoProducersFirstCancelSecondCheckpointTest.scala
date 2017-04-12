@@ -32,6 +32,7 @@ class SubscriberWithTwoProducersFirstCancelSecondCheckpointTest extends FlatSpec
   val srv = TestStorageServer.get()
   val storageClient = f.getStorageClient()
   storageClient.createStream("test_stream", 3, 24 * 3600, "")
+  storageClient.shutdown()
 
   it should "Integration MixIn checkpoint and cancel must be correctly processed on Subscriber " in {
 

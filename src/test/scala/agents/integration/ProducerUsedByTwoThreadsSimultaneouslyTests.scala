@@ -29,6 +29,7 @@ class ProducerUsedByTwoThreadsSimultaneouslyTests extends FlatSpec with Matchers
   val srv = TestStorageServer.get()
   val storageClient = f.getStorageClient()
   storageClient.createStream("test_stream", ALL_PARTITIONS, 24 * 3600, "")
+  storageClient.shutdown()
 
   val producer = f.getProducer(
     name = "test_producer",

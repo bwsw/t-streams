@@ -39,6 +39,7 @@ class Subscriber(val name: String,
     options.getConsumerOptions())
 
   private val isStarted = new AtomicBoolean(false)
+  private val isStopped = new AtomicBoolean(false)
 
   private val coordinator = new Coordinator()
 
@@ -69,8 +70,11 @@ class Subscriber(val name: String,
     Subscriber.logger.info(s"[INIT] Subscriber $name: Address ${options.agentAddress}")
     Subscriber.logger.info(s"[INIT] Subscriber $name: Partitions $usedPartitionsSet")
 
-    if (isStarted.getAndSet(true))
-      throw new IllegalStateException("Double start is detected. Please stop it first.")
+    if (isStopped.get())
+      throw new IllegalStateException(s"Subscriber $name is stopped already. Start after stop is no longer possible.")
+
+    if (isStarted.get())
+      throw new IllegalStateException(s"Subscriber $name is started already. Double start is detected.")
 
     val transactionsBuffers = mutable.Map[Int, TransactionBuffer]()
 
@@ -141,12 +145,12 @@ class Subscriber(val name: String,
       zkSessionTimeout = options.zkSessionTimeoutMs)
 
     Subscriber.logger.info(s"[INIT] Subscriber $name: has launched the coordinator.")
-    Subscriber.logger.info(s"[INIT] Subscriber $name: is about to launch the tcp server.")
+    Subscriber.logger.info(s"[INIT] Subscriber $name: is about to launch the UDP server.")
 
     udpServer = new EventUpdatesUdpServer(host, Integer.parseInt(port), new TransactionStateMessageChannelHandler(transactionsBufferWorkers))
     udpServer.start()
 
-    Subscriber.logger.info(s"[INIT] Subscriber $name: has launched the tcp server.")
+    Subscriber.logger.info(s"[INIT] Subscriber $name: has launched the UDP server.")
     Subscriber.logger.info(s"[INIT] Subscriber $name: is about to launch Polling tasks to executors.")
 
     for (thID <- 0 until peWorkerThreads) {
@@ -156,14 +160,20 @@ class Subscriber(val name: String,
     Subscriber.logger.info(s"[INIT] Subscriber $name: has launched Polling tasks to executors.")
     Subscriber.logger.info(s"[INIT] Subscriber $name: END INIT.")
 
+    isStarted.set(true)
+
   }
 
   /**
     *
     */
   def stop() = {
+
+    if (isStopped.getAndSet(true))
+      throw new IllegalStateException(s"Subscriber $name is stopped already. Double stop is impossible.")
+
     if (!isStarted.getAndSet(false))
-      throw new IllegalStateException("Double stop is detected. Please start it first.")
+      throw new IllegalStateException(s"Subscriber $name is not started yet. Stop is impossible.")
 
     processingEngines.foreach(kv => kv._2.stop())
     processingEngines.clear()

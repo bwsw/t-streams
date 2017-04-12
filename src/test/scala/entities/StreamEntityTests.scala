@@ -127,6 +127,7 @@ class StreamEntityTests extends FlatSpec with Matchers with BeforeAndAfterAll wi
   }
 
   override def afterAll(): Unit = {
+    storageClient.shutdown()
     TestStorageServer.dispose(srv)
     onAfterAll()
   }

@@ -28,6 +28,7 @@ class ProducerWritesToOneSubscriberReadsFromAllTests extends FlatSpec with Match
   val srv = TestStorageServer.get()
   val storageClient = f.getStorageClient()
   storageClient.createStream("test_stream", 3, 24 * 3600, "")
+  storageClient.shutdown()
 
   val TOTAL = 10000
   val l = new CountDownLatch(1)

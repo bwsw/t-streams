@@ -31,6 +31,7 @@ class SubscriberBasicFunctionsTests extends FlatSpec with Matchers with BeforeAn
   val srv = TestStorageServer.get()
   val storageClient = f.getStorageClient()
   storageClient.createStream("test_stream", 3, 24 * 3600, "")
+  storageClient.shutdown()
 
   val producer = f.getProducer(
     name = "test_producer",
@@ -42,17 +43,6 @@ class SubscriberBasicFunctionsTests extends FlatSpec with Matchers with BeforeAn
       offset = Oldest,
       useLastOffset = true,
       callback = (consumer: TransactionOperator, transaction: ConsumerTransaction) => {})
-    s.start()
-    s.stop()
-  }
-
-  it should "allow start and stop several times" in {
-    val s = f.getSubscriber(name = "sv2",
-      offset = Oldest, partitions = Set(0, 1, 2),
-      useLastOffset = true,
-      callback = (consumer: TransactionOperator, transaction: ConsumerTransaction) => {})
-    s.start()
-    s.stop()
     s.start()
     s.stop()
   }

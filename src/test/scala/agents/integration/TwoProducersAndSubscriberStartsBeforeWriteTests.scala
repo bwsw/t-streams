@@ -30,6 +30,7 @@ class TwoProducersAndSubscriberStartsBeforeWriteTests extends FlatSpec with Matc
   val srv = TestStorageServer.get()
   val storageClient = f.getStorageClient()
   storageClient.createStream("test_stream", 3, 24 * 3600, "")
+  storageClient.shutdown()
 
   val COUNT = 1000
 
