@@ -51,12 +51,12 @@ class ProcessingEngineTests extends FlatSpec with Matchers {
 
 
   "constructor" should "create Processing engine" in {
-    val pe = new ProcessingEngine(new ProcessingEngineOperatorTestImpl(), Set[Int](0), qb, cb)
+    val pe = new ProcessingEngine(new ProcessingEngineOperatorTestImpl(), Set[Int](0), qb, cb, 100)
   }
 
   "handleQueue" should "do nothing if there is nothing in queue" in {
     val c = new ProcessingEngineOperatorTestImpl()
-    val pe = new ProcessingEngine(c, Set[Int](0), qb, cb)
+    val pe = new ProcessingEngine(c, Set[Int](0), qb, cb, 100)
     val act1 = pe.getLastPartitionActivity(0)
     pe.handleQueue(500)
     val act2 = pe.getLastPartitionActivity(0)
@@ -65,7 +65,7 @@ class ProcessingEngineTests extends FlatSpec with Matchers {
 
   "handleQueue" should "do fast/full load if there is seq in queue" in {
     val c = new ProcessingEngineOperatorTestImpl()
-    val pe = new ProcessingEngine(c, Set[Int](0), qb, cb)
+    val pe = new ProcessingEngine(c, Set[Int](0), qb, cb, 100)
     c.lastTransaction = Option[ConsumerTransaction](new ConsumerTransaction(0, LocalGeneratorCreator.getTransaction(), 1, -1))
     pe.enqueueLastTransactionFromDB(0)
     val act1 = pe.getLastPartitionActivity(0)

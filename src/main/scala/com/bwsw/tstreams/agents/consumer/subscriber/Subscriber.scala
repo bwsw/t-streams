@@ -98,7 +98,8 @@ class Subscriber(val name: String,
 
       Subscriber.logger.info(s"[INIT] Subscriber $name PE $thID got $parts")
 
-      processingEngines(thID) = new ProcessingEngine(consumer, parts, options.transactionsQueueBuilder, callback)
+      processingEngines(thID) = new ProcessingEngine(consumer, parts, options.transactionsQueueBuilder,
+        callback, options.pollingFrequencyDelayMs)
     }
 
     Subscriber.logger.info(s"[INIT] Subscriber $name: has created PEs.")
@@ -156,7 +157,7 @@ class Subscriber(val name: String,
     Subscriber.logger.info(s"[INIT] Subscriber $name: is about to launch Polling tasks to executors.")
 
     for (thID <- 0 until peWorkerThreads) {
-      processingEngines(thID).getExecutor().submit(s"<Poller ${processingEngines(thID)}>", new Poller(processingEngines(thID), options.pollingFrequencyDelayMs))
+      processingEngines(thID).start()
     }
 
     Subscriber.logger.info(s"[INIT] Subscriber $name: has launched Polling tasks to executors.")

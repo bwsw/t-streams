@@ -60,7 +60,7 @@ class ProducerMasterChangeComplexTest extends FlatSpec with Matchers with Before
   }
 
   val PRODUCERS_AMOUNT = 10
-  val TRANSACTIONS_AMOUNT_EACH = 1000
+  val TRANSACTIONS_AMOUNT_EACH = 100
   val PROBABILITY = 0.01
   val PARTITIONS_COUNT = 10
   val PARTITIONS = (0 until PARTITIONS_COUNT).toSet

@@ -79,12 +79,12 @@ class ProducerToSubscriberStartsAfterWriteWithCheckpointGroupTests extends FlatS
 
     group.add(subscriber)
     subscriber.start()
-    ls.await(60, TimeUnit.SECONDS) shouldBe true
+    ls.await(10, TimeUnit.SECONDS) shouldBe true
     group.checkpoint()
     subscriber.stop()
     bs.size shouldBe COUNT
 
-    l.await()
+    l.await(10, TimeUnit.SECONDS) shouldBe true
 
     val bs2 = ListBuffer[Long]()
     val ls2 = new CountDownLatch(1)
@@ -101,7 +101,7 @@ class ProducerToSubscriberStartsAfterWriteWithCheckpointGroupTests extends FlatS
       })
 
     s2.start()
-    ls2.await(60, TimeUnit.SECONDS) shouldBe false
+    ls2.await(10, TimeUnit.SECONDS) shouldBe false
     s2.stop()
     bs2.size shouldBe 0
   }
