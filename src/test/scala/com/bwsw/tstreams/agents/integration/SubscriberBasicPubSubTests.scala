@@ -8,12 +8,12 @@ import com.bwsw.tstreams.agents.producer.NewTransactionProducerPolicy
 import com.bwsw.tstreams.env.ConfigurationOptions
 import com.bwsw.tstreams.testutils.{TestStorageServer, TestUtils}
 import com.bwsw.tstreamstransactionserver.netty.server.Server
-import org.scalatest.{BeforeAndAfterEach, FlatSpec, Matchers}
+import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 
 /**
   * Created by Ivan Kudryavtsev on 26.08.16.
   */
-class SubscriberBasicPubSubTests extends FlatSpec with Matchers with BeforeAndAfterEach with TestUtils {
+class SubscriberBasicPubSubTests extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
 
   f.setProperty(ConfigurationOptions.Stream.name, "test_stream").
     setProperty(ConfigurationOptions.Stream.partitionsCount, 3).
@@ -27,13 +27,10 @@ class SubscriberBasicPubSubTests extends FlatSpec with Matchers with BeforeAndAf
     setProperty(ConfigurationOptions.Consumer.dataPreload, 10)
 
   var srv: Server = _
-
-  override protected def beforeEach(): Unit = {
-    srv = TestStorageServer.get()
-    val storageClient = f.getStorageClient()
-    storageClient.createStream("test_stream", 3, 24 * 3600, "")
-    storageClient.shutdown()
-  }
+  srv = TestStorageServer.get()
+  val storageClient = f.getStorageClient()
+  storageClient.createStream("test_stream", 3, 24 * 3600, "")
+  storageClient.shutdown()
 
   it should "handle all transactions produced by producer" in {
 
@@ -108,7 +105,7 @@ class SubscriberBasicPubSubTests extends FlatSpec with Matchers with BeforeAndAf
     subscriberTransactionsAmount shouldBe TOTAL * 2
   }
 
-  override def afterEach(): Unit = {
+  override def afterAll(): Unit = {
     TestStorageServer.dispose(srv)
     onAfterAll()
   }

@@ -69,8 +69,10 @@ class ProcessingEngine(consumer: TransactionOperator,
     * @param pollTimeMs
     */
   def handleQueue(pollTimeMs: Int) = {
+
     if (!isThresholdsSet.get()) {
       isThresholdsSet.set(true)
+
       executor.setThresholds(queueLengthThreshold = 10, taskFullDelayThresholdMs = pollTimeMs + 50,
         taskDelayThresholdMs = pollTimeMs + 5, taskRunDelayThresholdMs = 50)
 

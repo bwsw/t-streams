@@ -27,7 +27,6 @@ class ProducerMasterChangeComplexTest extends FlatSpec with Matchers with Before
     var producer: Producer = null
     var counter: Int = 0
 
-    // public because will be called
     def loop(partitions: Set[Int], checkpointModeSync: Boolean = true) = {
       while (counter < amount) {
         producer = makeNewProducer(partitions)
@@ -61,7 +60,7 @@ class ProducerMasterChangeComplexTest extends FlatSpec with Matchers with Before
   }
 
   val PRODUCERS_AMOUNT = 10
-  val TRANSACTIONS_AMOUNT_EACH = 100
+  val TRANSACTIONS_AMOUNT_EACH = 1000
   val PROBABILITY = 0.01
   val PARTITIONS_COUNT = 10
   val PARTITIONS = (0 until PARTITIONS_COUNT).toSet
@@ -93,9 +92,7 @@ class ProducerMasterChangeComplexTest extends FlatSpec with Matchers with Before
     useLastOffset = false, // true
     callback = (consumer: TransactionOperator, transaction: ConsumerTransaction) => this.synchronized {
       subscriberCounter += 1
-      subscriberBuffer.synchronized {
-        subscriberBuffer.append(transaction.getTransactionID())
-      }
+      subscriberBuffer.append(transaction.getTransactionID())
       if (subscriberCounter == PRODUCERS_AMOUNT * TRANSACTIONS_AMOUNT_EACH)
         waitCompleteLatch.countDown()
     })

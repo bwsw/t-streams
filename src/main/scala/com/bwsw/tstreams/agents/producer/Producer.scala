@@ -16,7 +16,9 @@ import org.apache.curator.retry.ExponentialBackoffRetry
 import org.apache.zookeeper.KeeperException
 import org.slf4j.LoggerFactory
 
+import scala.concurrent.duration._
 import scala.util.control.Breaks._
+
 
 object Producer {
   val logger = LoggerFactory.getLogger(this.getClass)
@@ -248,7 +250,9 @@ class Producer(var name: String,
   override private[tstreams] def openTransactionLocal(transactionID: Long, partition: Int): Unit = {
 
     val transactionRecord = new RPCProducerTransaction(stream.name, partition, transactionID, TransactionStates.Opened, -1, producerOptions.transactionTtlMs)
-    stream.client.putTransactionSync(transactionRecord)
+    val extTransportTimeOutMs = producerOptions.coordinationOptions.transport.getTimeoutMs()
+
+    stream.client.putTransactionSync(transactionRecord, extTransportTimeOutMs.milliseconds)
   }
 
   private[tstreams] def notifyOpenTransaction(transactionID: Long, partition: Int): Unit = {

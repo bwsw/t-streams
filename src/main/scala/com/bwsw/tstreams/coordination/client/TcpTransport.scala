@@ -40,7 +40,7 @@ class TcpTransport(address: String, timeoutMs: Int, retryCount: Int = 3, retryDe
   private val server: RequestsTcpServer = new RequestsTcpServer(splits(0), splits(1).toInt, new ChannelHandler())
   private val client: CommunicationClient = new CommunicationClient(timeoutMs, retryCount, retryDelayMs)
 
-  def getTimeout() = timeoutMs
+  def getTimeoutMs() = timeoutMs
 
   /**
     * Request to get Transaction

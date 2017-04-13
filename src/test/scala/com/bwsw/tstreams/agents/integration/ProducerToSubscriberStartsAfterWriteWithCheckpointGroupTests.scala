@@ -46,7 +46,7 @@ class ProducerToSubscriberStartsAfterWriteWithCheckpointGroupTests extends FlatS
       name = "test_producer1",
       partitions = Set(0))
 
-    val s = f.getSubscriber(name = "ss+2",
+    val subscriber = f.getSubscriber(name = "ss+2",
       partitions = Set(0),
       offset = Oldest,
       useLastOffset = true,
@@ -61,19 +61,15 @@ class ProducerToSubscriberStartsAfterWriteWithCheckpointGroupTests extends FlatS
     val t = new Thread(() => {
       logger.info(s"Producer is master of partition: ${producer.isMasterOfPartition(0)}")
       lp.countDown()
-      for (i <- 0 until COUNT) {
-        val t: ProducerTransaction = producer.newTransaction(policy = NewTransactionProducerPolicy.CheckpointIfOpened)
-        t.send("test")
-        t.checkpoint()
-
-        bp.synchronized {
-          bp.append(t.getTransactionID())
-        }
-      }
     })
 
-    t.start()
-    t.join()
+    for (i <- 0 until COUNT) {
+      val t: ProducerTransaction = producer.newTransaction(policy = NewTransactionProducerPolicy.CheckpointIfOpened)
+      t.send("test")
+      t.checkpoint()
+
+      bp.append(t.getTransactionID())
+    }
 
     producer.stop()
 
@@ -81,11 +77,11 @@ class ProducerToSubscriberStartsAfterWriteWithCheckpointGroupTests extends FlatS
     val l = new CountDownLatch(1)
     srv.notifyConsumerTransactionCompleted(ct => lastTxn == ct.transactionID, l.countDown())
 
-    group.add(s.getConsumer())
-    s.start()
+    group.add(subscriber)
+    subscriber.start()
     ls.await(60, TimeUnit.SECONDS) shouldBe true
     group.checkpoint()
-    s.stop()
+    subscriber.stop()
     bs.size shouldBe COUNT
 
     l.await()

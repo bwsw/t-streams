@@ -1,8 +1,10 @@
 package com.bwsw.tstreams.agents.consumer.subscriber
 
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.locks.ReentrantLock
 
-import com.bwsw.tstreams.common.{Functions, GeneralOptions}
+import com.bwsw.tstreams.agents.group.{CheckpointInfo, GroupParticipant}
+import com.bwsw.tstreams.common.{Functions, GeneralOptions, StorageClient}
 import com.bwsw.tstreams.coordination.server.EventUpdatesUdpServer
 import com.bwsw.tstreams.streams.Stream
 import org.slf4j.LoggerFactory
@@ -21,7 +23,7 @@ object Subscriber {
 class Subscriber(val name: String,
                  val stream: Stream,
                  val options: SubscriberOptions,
-                 val callback: Callback) {
+                 val callback: Callback) extends GroupParticipant {
 
   private val transactionsBufferWorkers = mutable.Map[Int, TransactionBufferWorker]()
   private val processingEngines = mutable.Map[Int, ProcessingEngine]()
@@ -215,5 +217,18 @@ class Subscriber(val name: String,
     */
   def getConsumer() = consumer
 
+  override private[tstreams] def getAgentName(): String = consumer.getAgentName()
+
+  /**
+    * Info to commit
+    */
+  override private[tstreams] def getCheckpointInfoAndClear(): List[CheckpointInfo] = consumer.getCheckpointInfoAndClear()
+
+  override private[tstreams] def getStorageClient(): StorageClient = consumer.getStorageClient()
+
+  /**
+    * Agent lock on any actions which has to do with checkpoint
+    */
+  override private[tstreams] def getThreadLock(): ReentrantLock = consumer.getThreadLock()
 }
 
