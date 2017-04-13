@@ -1,6 +1,6 @@
 package com.bwsw.tstreams.common
 
-import java.util.concurrent.CountDownLatch
+import java.util.concurrent.{CountDownLatch, TimeUnit}
 
 import org.scalatest.{FlatSpec, Matchers}
 
@@ -37,5 +37,20 @@ class ResettableCountDownLatchTests extends FlatSpec with Matchers {
     resettable.countDown
     l.await()
     v shouldBe 4
+  }
+
+  "Mass usage" should "work properly" in {
+    val THREADS = 200
+    val THREAD_COUNT = 100000
+    val l = new ResettableCountDownLatch(THREADS * THREAD_COUNT)
+    val threads = (0 until THREADS).map(_ => new Thread(() => {
+      (0 until THREAD_COUNT).foreach(_ => l.countDown())
+    }))
+    threads.foreach(t => t.start())
+
+    l.await(10, TimeUnit.SECONDS) shouldBe true
+
+    threads.foreach(t => t.join(1000))
+
   }
 }
