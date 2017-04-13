@@ -1,5 +1,7 @@
 package com.bwsw.tstreams.common
 
+import java.util.concurrent.atomic.AtomicBoolean
+
 import com.bwsw.tstreams.agents.consumer.RPCConsumerTransaction
 import com.bwsw.tstreams.streams.Stream
 import com.bwsw.tstreamstransactionserver.options.ClientBuilder
@@ -31,7 +33,12 @@ class StorageClient(clientOptions: ConnectionOptions, authOptions: AuthOptions, 
 
   val client = clientBuilder.withConnectionOptions(clientOptions).withAuthOptions(authOptions).withZookeeperOptions(zookeeperOptions).build()
 
-  def shutdown() = client.shutdown()
+  val isShutdown = new AtomicBoolean(false)
+
+  def shutdown() = {
+    isShutdown.set(true)
+    client.shutdown()
+  }
 
   /**
     * Getting existing stream

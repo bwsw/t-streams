@@ -1,0 +1,135 @@
+package com.bwsw.tstreams.agents.integration
+
+/**
+  * Created by Ivan Kudryavtsev on 21.09.16.
+  */
+
+import java.util.concurrent.{CountDownLatch, TimeUnit}
+
+import com.bwsw.tstreams.agents.consumer.Offset.Newest
+import com.bwsw.tstreams.agents.consumer.{ConsumerTransaction, TransactionOperator}
+import com.bwsw.tstreams.agents.producer.{NewTransactionProducerPolicy, Producer}
+import com.bwsw.tstreams.env.{ConfigurationOptions, TStreamsFactory}
+import com.bwsw.tstreams.testutils.{TestStorageServer, TestUtils}
+import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
+
+import scala.collection.mutable.ListBuffer
+import scala.util.Random
+
+class ProducerMasterChangeComplexTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
+
+  val MAX_NEW_TXN_RETRY = 10
+
+  val producerBuffer = ListBuffer[Long]()
+  val subscriberBuffer = ListBuffer[Long]()
+
+  class ProducerWorker(val factory: TStreamsFactory, val onCompleteLatch: CountDownLatch, val amount: Int, val probability: Double) {
+    var producer: Producer = null
+    var counter: Int = 0
+
+    // public because will be called
+    def loop(partitions: Set[Int], checkpointModeSync: Boolean = true) = {
+      while (counter < amount) {
+        producer = makeNewProducer(partitions)
+
+        while (probability < Random.nextDouble() && counter < amount) {
+          val t = producer.newTransaction(policy = NewTransactionProducerPolicy.CheckpointIfOpened, -1)
+          t.send("test".getBytes())
+          t.checkpoint(checkpointModeSync)
+          producerBuffer.synchronized {
+            producerBuffer.append(t.getTransactionID())
+          }
+          counter += 1
+        }
+        producer.stop()
+      }
+      onCompleteLatch.countDown()
+    }
+
+    def run(partitions: Set[Int], checkpointModeSync: Boolean = true): Thread = {
+      val thread = new Thread(() => loop(partitions, checkpointModeSync))
+      thread.start()
+      thread
+    }
+
+    // private - will not be called outside
+    private def makeNewProducer(partitions: Set[Int]) = {
+      factory.getProducer(
+        name = "test_producer1",
+        partitions = partitions)
+    }
+  }
+
+  val PRODUCERS_AMOUNT = 10
+  val TRANSACTIONS_AMOUNT_EACH = 100
+  val PROBABILITY = 0.01
+  val PARTITIONS_COUNT = 10
+  val PARTITIONS = (0 until PARTITIONS_COUNT).toSet
+  val MAX_WAIT_AFTER_ALL_PRODUCERS = 5
+
+  val onCompleteLatch = new CountDownLatch(PRODUCERS_AMOUNT)
+  val waitCompleteLatch = new CountDownLatch(1)
+
+  f.setProperty(ConfigurationOptions.Stream.name, "test_stream").
+    setProperty(ConfigurationOptions.Stream.partitionsCount, PARTITIONS_COUNT).
+    setProperty(ConfigurationOptions.Stream.ttlSec, 60 * 10).
+    setProperty(ConfigurationOptions.Coordination.connectionTimeoutMs, 4000).
+    setProperty(ConfigurationOptions.Coordination.sessionTimeoutMs, 4000).
+    setProperty(ConfigurationOptions.Producer.transportTimeoutMs, 2000).
+    setProperty(ConfigurationOptions.Producer.Transaction.ttlMs, 12000).
+    setProperty(ConfigurationOptions.Producer.Transaction.keepAliveMs, 2000).
+    setProperty(ConfigurationOptions.Consumer.transactionPreload, 500).
+    setProperty(ConfigurationOptions.Consumer.dataPreload, 10)
+
+  val srv = TestStorageServer.get()
+  val storageClient = f.getStorageClient()
+  storageClient.createStream("test_stream", PARTITIONS_COUNT, 24 * 3600, "")
+  storageClient.shutdown()
+
+  var subscriberCounter = 0
+  val subscriber = f.getSubscriber(name = "s",
+    partitions = PARTITIONS, // Set(0),
+    offset = Newest,
+    useLastOffset = false, // true
+    callback = (consumer: TransactionOperator, transaction: ConsumerTransaction) => this.synchronized {
+      subscriberCounter += 1
+      subscriberBuffer.synchronized {
+        subscriberBuffer.append(transaction.getTransactionID())
+      }
+      if (subscriberCounter == PRODUCERS_AMOUNT * TRANSACTIONS_AMOUNT_EACH)
+        waitCompleteLatch.countDown()
+    })
+
+  it should "handle multiple master change correctly" in {
+
+    subscriber.start()
+
+    val producersThreads = (0 until PRODUCERS_AMOUNT)
+      .map(producer => new ProducerWorker(f, onCompleteLatch, TRANSACTIONS_AMOUNT_EACH, PROBABILITY).run(PARTITIONS))
+
+    onCompleteLatch.await()
+    producersThreads.foreach(thread => thread.join())
+    waitCompleteLatch.await(MAX_WAIT_AFTER_ALL_PRODUCERS, TimeUnit.SECONDS)
+    subscriber.stop()
+
+    subscriberCounter shouldBe TRANSACTIONS_AMOUNT_EACH * PRODUCERS_AMOUNT
+
+    val intersectionSize = producerBuffer.toSet.intersect(subscriberBuffer.toSet).size
+
+    intersectionSize shouldBe producerBuffer.size
+    intersectionSize shouldBe subscriberBuffer.size
+
+  }
+
+  override def afterAll() {
+    TestStorageServer.dispose(srv)
+    onAfterAll()
+  }
+}
+
+
+
+
+
+
+
