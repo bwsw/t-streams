@@ -108,61 +108,6 @@ class SubscriberBasicPubSubTests extends FlatSpec with Matchers with BeforeAndAf
     subscriberTransactionsAmount shouldBe TOTAL * 2
   }
 
-  it should "handle all transactions produced by producer. " +
-    "Next do a consumer checkpoint and stop it. " +
-    "Then re-created consumer with the same name, start it and any transactions shouldn't be received" in {
-
-    val TOTAL = 10
-    val latch = new CountDownLatch(1)
-
-    var subscriberTransactionsAmount = 0
-    val producer = f.getProducer(
-      name = "test_producer",
-      partitions = Set(0, 1, 2))
-
-    val s = f.getSubscriber(name = "sv2",
-      partitions = Set(0, 1, 2),
-      offset = Oldest,
-      useLastOffset = false,
-      callback = (_: TransactionOperator, transaction: ConsumerTransaction) => this.synchronized {
-        subscriberTransactionsAmount += 1
-        transaction.getAll()
-        if (subscriberTransactionsAmount == TOTAL)
-          latch.countDown()
-      })
-    s.start()
-    for (it <- 0 until TOTAL) {
-      val transaction = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
-      transaction.send("test")
-      transaction.checkpoint()
-    }
-    producer.stop()
-    latch.await(60, TimeUnit.SECONDS) shouldBe true
-    subscriberTransactionsAmount shouldBe TOTAL
-
-    //do checkpoint and stop
-    s.getConsumer().checkpoint()
-    s.stop()
-
-    val latch2 = new CountDownLatch(1)
-    subscriberTransactionsAmount = 0
-    val s2 = f.getSubscriber(name = "sv2",
-      partitions = Set(0, 1, 2),
-      offset = Oldest,
-      useLastOffset = false,
-      callback = (_: TransactionOperator, transaction: ConsumerTransaction) => this.synchronized {
-        subscriberTransactionsAmount += 1
-        transaction.getAll()
-        if (subscriberTransactionsAmount == TOTAL)
-          latch2.countDown()
-      })
-    s2.start()
-    latch2.await(60, TimeUnit.SECONDS) shouldBe false
-    s2.stop()
-    subscriberTransactionsAmount shouldBe 0
-  }
-
-
   override def afterEach(): Unit = {
     TestStorageServer.dispose(srv)
     onAfterAll()
