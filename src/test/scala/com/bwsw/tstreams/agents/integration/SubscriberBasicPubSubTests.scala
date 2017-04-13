@@ -7,7 +7,6 @@ import com.bwsw.tstreams.agents.consumer.{ConsumerTransaction, TransactionOperat
 import com.bwsw.tstreams.agents.producer.NewTransactionProducerPolicy
 import com.bwsw.tstreams.env.ConfigurationOptions
 import com.bwsw.tstreams.testutils.{TestStorageServer, TestUtils}
-import com.bwsw.tstreamstransactionserver.netty.server.Server
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 
 /**
@@ -26,8 +25,7 @@ class SubscriberBasicPubSubTests extends FlatSpec with Matchers with BeforeAndAf
     setProperty(ConfigurationOptions.Consumer.transactionPreload, 500).
     setProperty(ConfigurationOptions.Consumer.dataPreload, 10)
 
-  var srv: Server = _
-  srv = TestStorageServer.get()
+  val srv = TestStorageServer.get()
   val storageClient = f.getStorageClient()
   storageClient.createStream("test_stream", 3, 24 * 3600, "")
   storageClient.shutdown()
