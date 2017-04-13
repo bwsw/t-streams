@@ -7,12 +7,13 @@ import com.bwsw.tstreams.agents.consumer.{ConsumerTransaction, TransactionOperat
 import com.bwsw.tstreams.agents.producer.NewTransactionProducerPolicy
 import com.bwsw.tstreams.env.ConfigurationOptions
 import com.bwsw.tstreams.testutils.{TestStorageServer, TestUtils}
-import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
+import com.bwsw.tstreamstransactionserver.netty.server.Server
+import org.scalatest.{BeforeAndAfterEach, FlatSpec, Matchers}
 
 /**
   * Created by Ivan Kudryavtsev on 26.08.16.
   */
-class SubscriberBasicPubSubTests extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
+class SubscriberBasicPubSubTests extends FlatSpec with Matchers with BeforeAndAfterEach with TestUtils {
 
   f.setProperty(ConfigurationOptions.Stream.name, "test_stream").
     setProperty(ConfigurationOptions.Stream.partitionsCount, 3).
@@ -25,10 +26,14 @@ class SubscriberBasicPubSubTests extends FlatSpec with Matchers with BeforeAndAf
     setProperty(ConfigurationOptions.Consumer.transactionPreload, 500).
     setProperty(ConfigurationOptions.Consumer.dataPreload, 10)
 
-  val srv = TestStorageServer.get()
-  val storageClient = f.getStorageClient()
-  storageClient.createStream("test_stream", 3, 24 * 3600, "")
-  storageClient.shutdown()
+  var srv: Server = _
+
+  override protected def beforeEach(): Unit = {
+    srv = TestStorageServer.get()
+    val storageClient = f.getStorageClient()
+    storageClient.createStream("test_stream", 3, 24 * 3600, "")
+    storageClient.shutdown()
+  }
 
   it should "handle all transactions produced by producer" in {
 
@@ -103,7 +108,62 @@ class SubscriberBasicPubSubTests extends FlatSpec with Matchers with BeforeAndAf
     subscriberTransactionsAmount shouldBe TOTAL * 2
   }
 
-  override def afterAll(): Unit = {
+  it should "handle all transactions produced by producer. " +
+    "Next do a consumer checkpoint and stop it. " +
+    "Then re-created consumer with the same name, start it and any transactions shouldn't be received" in {
+
+    val TOTAL = 10
+    val latch = new CountDownLatch(1)
+
+    var subscriberTransactionsAmount = 0
+    val producer = f.getProducer(
+      name = "test_producer",
+      partitions = Set(0, 1, 2))
+
+    val s = f.getSubscriber(name = "sv2",
+      partitions = Set(0, 1, 2),
+      offset = Oldest,
+      useLastOffset = false,
+      callback = (_: TransactionOperator, transaction: ConsumerTransaction) => this.synchronized {
+        subscriberTransactionsAmount += 1
+        transaction.getAll()
+        if (subscriberTransactionsAmount == TOTAL)
+          latch.countDown()
+      })
+    s.start()
+    for (it <- 0 until TOTAL) {
+      val transaction = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
+      transaction.send("test")
+      transaction.checkpoint()
+    }
+    producer.stop()
+    latch.await(60, TimeUnit.SECONDS) shouldBe true
+    subscriberTransactionsAmount shouldBe TOTAL
+
+    //do checkpoint and stop
+    s.getConsumer().checkpoint()
+    s.stop()
+
+    val latch2 = new CountDownLatch(1)
+    subscriberTransactionsAmount = 0
+    val s2 = f.getSubscriber(name = "sv2",
+      partitions = Set(0, 1, 2),
+      offset = Oldest,
+      useLastOffset = false,
+      callback = (_: TransactionOperator, transaction: ConsumerTransaction) => this.synchronized {
+        subscriberTransactionsAmount += 1
+        transaction.getAll()
+        if (subscriberTransactionsAmount == TOTAL)
+          latch2.countDown()
+      })
+    s2.start()
+    latch2.await(60, TimeUnit.SECONDS) shouldBe false
+    s2.stop()
+    subscriberTransactionsAmount shouldBe 0
+  }
+
+
+  override def afterEach(): Unit = {
     TestStorageServer.dispose(srv)
     onAfterAll()
   }
