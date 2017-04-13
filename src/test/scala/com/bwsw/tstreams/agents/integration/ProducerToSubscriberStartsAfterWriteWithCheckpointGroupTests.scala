@@ -33,7 +33,7 @@ class ProducerToSubscriberStartsAfterWriteWithCheckpointGroupTests extends FlatS
   val COUNT = 10
 
   it should s"The producer sends $COUNT transactions, subscriber receives $COUNT when started after." +
-    s"Then do group checkpoint" in {
+    s"Then do group checkpoint and start new Subscriber from checkpointed place" in {
     val group = new CheckpointGroup()
 
     val bp = ListBuffer[Long]()
