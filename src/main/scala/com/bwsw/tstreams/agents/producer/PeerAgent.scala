@@ -200,7 +200,6 @@ class PeerAgent(curatorClient: CuratorFramework,
     * Allows to publish update/pre/post/cancel messages.
     *
     * @param msg
-    * @param isUpdateMaster
     * @return
     */
   def publish(msg: TransactionStateMessage) =
