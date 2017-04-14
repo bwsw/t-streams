@@ -153,18 +153,6 @@ class ConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll with Te
     res.size shouldBe 0
   }
 
-  it should "benchmark" in {
-    val N = 40000
-    val start = System.currentTimeMillis()
-    (0 until N).foreach(_ => {
-      val txn = LocalGeneratorCreator.getTransaction()
-      storageClient.putTransaction(new RPCProducerTransaction("test_stream", 1, txn, TransactionStates.Opened, -1, 120), false) { r => true }
-    })
-    val end = System.currentTimeMillis()
-    println(end - start)
-    println((end - start).toFloat / N.toFloat)
-  }
-
   override def afterAll(): Unit = {
     consumer.stop()
     storageClient.shutdown()

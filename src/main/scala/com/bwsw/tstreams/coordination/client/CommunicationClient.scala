@@ -98,55 +98,12 @@ class CommunicationClient(timeoutMs: Int, retryCount: Int = 3, retryDelayMs: Int
           CommunicationClient.logger.error("Request: " + msg.toString())
           CommunicationClient.logger.error("Response: " + r.toString())
           throw new IllegalStateException(s"Sent message with ID ${msg.msgID}, received ${r.msgID}. ID must be the same.")
-
         }
         r
       } catch {
         case e@(_: ConnectException | _: IOException) =>
           onFailCallback()
           null
-      }
-    }, retryCount, isExceptionOnFail = isExceptionIfFails)
-  }
-
-  /**
-    * @param msg Message to send
-    * @return Response message
-    */
-  def sendAndWaitResponseSimple(msg: IMessage): IMessage = {
-    if (isClosed.get)
-      throw new IllegalStateException("Communication Client is closed. Unable to operate.")
-
-    CommunicationClient.logger.info(msg.toString())
-
-    try {
-      val sock = getSocket(msg.receiverID)
-      val reqString = ProtocolMessageSerializer.wrapMsg(ProtocolMessageSerializer.serialize(msg))
-      val r = writeMsgAndWaitResponse(sock, reqString)
-      if (r != null && msg.msgID != r.msgID)
-        throw new IllegalStateException(s"Sent message with ID ${msg.msgID}, received ${r.msgID}. ID must be the same.")
-      r
-    } catch {
-      case e@(_: ConnectException | _: IOException) =>
-        null
-    }
-  }
-
-  /**
-    * @param msg Message to send
-    * @return Response message
-    */
-  def sendAndNoWaitResponse(msg: IMessage, isExceptionIfFails: Boolean, onFailCallback: () => Boolean): Boolean = {
-    if (isClosed.get)
-      throw new IllegalStateException("Communication Client is closed. Unable to operate.")
-    withRetryDo[Boolean](false, () => {
-      try {
-        val sock = getSocket(msg.receiverID)
-        val reqString = ProtocolMessageSerializer.wrapMsg(ProtocolMessageSerializer.serialize(msg))
-        writeMsgAndNoWaitResponse(sock, reqString)
-      } catch {
-        case e@(_: ConnectException | _: IOException) =>
-          onFailCallback()
       }
     }, retryCount, isExceptionOnFail = isExceptionIfFails)
   }
@@ -219,33 +176,6 @@ class CommunicationClient(timeoutMs: Int, retryCount: Int = 3, retryDelayMs: Int
       closeSocketAndCleanPeerMap(sock)
 
     answer
-  }
-
-  /**
-    * Helper method for [[sendAndNoWaitResponse]]]
-    *
-    * @param sock      Socket to send msg
-    * @param reqString Msg to send
-    * @return true or false if operation failed
-    */
-  private def writeMsgAndNoWaitResponse(sock: Socket, reqString: String): Boolean = {
-    //do request
-    try {
-      if (CommunicationClient.logger.isDebugEnabled)
-        CommunicationClient.logger.debug(s"To send message $reqString to peer ${sock.getInetAddress.toString}:${sock.getPort}.")
-      val outputStream = sock.getOutputStream
-      outputStream.write(reqString.getBytes)
-      outputStream.flush()
-      if (CommunicationClient.logger.isDebugEnabled)
-        CommunicationClient.logger.debug(s"Sent message $reqString to peer ${sock.getInetAddress.toString}:${sock.getPort}.")
-    }
-    catch {
-      case e@(_: ConnectException | _: IOException) =>
-        CommunicationClient.logger.warn(s"An exception occurred when sending response to peer ${sock.getInetAddress.toString}:${sock.getPort} - ${e.getMessage}")
-        closeSocketAndCleanPeerMap(sock)
-        return false
-    }
-    true
   }
 
   /**

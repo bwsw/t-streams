@@ -53,6 +53,7 @@ class PeerAgent(curatorClient: CuratorFramework,
 
   val myInetAddress: String = producer.producerOptions.coordinationOptions.transport.getInetAddress()
 
+  def getSubscriberNotifier() = producer.subscriberNotifier
 
   /**
     * Job Executors
@@ -202,21 +203,9 @@ class PeerAgent(curatorClient: CuratorFramework,
     * @param isUpdateMaster
     * @return
     */
-  def publish(msg: TransactionStateMessage, isUpdateMaster: Boolean = false): Boolean = {
+  def publish(msg: TransactionStateMessage) =
+    getSubscriberNotifier().publish(msg)
 
-    if (isUpdateMaster) {
-      PeerAgent.logger.warn(s"Master update is requested for ${msg.partition}.")
-      updatePartitionMasterInetAddress(msg.partition)
-    }
-
-    val master = getPartitionMasterInetAddressLocal(msg.partition)._1
-
-    if (PeerAgent.logger.isDebugEnabled)
-      PeerAgent.logger.debug(s"[PUBLISH] SEND PTM:{$msg} to [MASTER:{$master}] from agent:{$myInetAddress}," +
-        s"stream:{$streamName}")
-
-    transport.publishRequest(master, msg, onFailCallback = () => publish(msg, isUpdateMaster = true))
-  }
 
   /**
     * Stop this agent

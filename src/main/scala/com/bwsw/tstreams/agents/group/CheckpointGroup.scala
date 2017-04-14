@@ -155,7 +155,7 @@ class CheckpointGroup(val executors: Int = 1) {
   private def publishCheckpointEventForAllProducers(producers: List[CheckpointInfo]) = {
     producers foreach {
       case ProducerCheckpointInfo(_, agent, checkpointEvent, _, _, _, _, _) =>
-        executorPool.submit("<CheckpointEvent>", () => agent.publish(checkpointEvent), None)
+        executorPool.submit("<CheckpointEvent>", () => agent.getSubscriberNotifier.publish(checkpointEvent), None)
       case _ =>
     }
   }
