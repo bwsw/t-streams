@@ -12,7 +12,7 @@ import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 /**
   * Created by Ivan Kudryavtsev on 13.04.17.
   */
-class ProducersComeAndLeaveSubscribersListensTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
+class ProducersComeAndLeaveSubscriberListensTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
   f.setProperty(ConfigurationOptions.Stream.name, "test_stream").
     setProperty(ConfigurationOptions.Stream.partitionsCount, 3).
     setProperty(ConfigurationOptions.Stream.ttlSec, 60 * 10).
