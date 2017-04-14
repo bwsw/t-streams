@@ -21,11 +21,7 @@ import scala.util.Random
   *
   */
 object PeerAgent {
-  /**
-    * For making low priority masters
-    *
-    */
-  val LOW_PRIORITY_PENALTY = 1000 * 1000
+
   /**
     * How long to sleep during master elections actions
     */
@@ -57,6 +53,7 @@ class PeerAgent(curatorClient: CuratorFramework,
 
   val myInetAddress: String = producer.producerOptions.coordinationOptions.transport.getInetAddress()
 
+  def getSubscriberNotifier() = producer.subscriberNotifier
 
   /**
     * Job Executors
@@ -199,35 +196,15 @@ class PeerAgent(curatorClient: CuratorFramework,
     res
   }
 
-  def notifyMaterialize(msg: TransactionStateMessage, to: String): Unit = {
-    if (PeerAgent.logger.isDebugEnabled) {
-      PeerAgent.logger.debug(s"[MATERIALIZE] Send materialize request address\nMe: $myInetAddress\nTransaction owner: $to\nStream: $streamName\npartition: ${msg.partition}\nTransaction: ${msg.transactionID}")
-    }
-    transport.materializeRequest(to, msg)
-  }
-
   /**
     * Allows to publish update/pre/post/cancel messages.
     *
     * @param msg
-    * @param isUpdateMaster
     * @return
     */
-  def publish(msg: TransactionStateMessage, isUpdateMaster: Boolean = false): Boolean = {
+  def publish(msg: TransactionStateMessage) =
+    getSubscriberNotifier().publish(msg)
 
-    if (isUpdateMaster) {
-      PeerAgent.logger.warn(s"Master update is requested for ${msg.partition}.")
-      updatePartitionMasterInetAddress(msg.partition)
-    }
-
-    val master = getPartitionMasterInetAddressLocal(msg.partition)._1
-
-    if (PeerAgent.logger.isDebugEnabled)
-      PeerAgent.logger.debug(s"[PUBLISH] SEND PTM:{$msg} to [MASTER:{$master}] from agent:{$myInetAddress}," +
-        s"stream:{$streamName}")
-
-    transport.publishRequest(master, msg, onFailCallback = () => publish(msg, isUpdateMaster = true))
-  }
 
   /**
     * Stop this agent
@@ -257,7 +234,6 @@ class PeerAgent(curatorClient: CuratorFramework,
       request match {
         case _: PublishRequest => executorGraphs(execNo).submitToPublish("<PublishTask>", task)
         case _: NewTransactionRequest => executorGraphs(execNo).submitToNewTransaction("<NewTransactionTask>", task)
-        case _: MaterializeRequest => executorGraphs(execNo).submitToMaterialize("<MaterializeTask>", task)
         case _ => executorGraphs(execNo).submitToGeneral("<GeneralTask>", task)
       }
     } catch {

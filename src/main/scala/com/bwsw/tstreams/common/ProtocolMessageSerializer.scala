@@ -26,10 +26,6 @@ object ProtocolMessageSerializer {
         val serializedMsg = serializeInternal(x.msg)
         s"{PuRq,${x.senderID},${x.receiverID},$serializedMsg,${x.msgID},${x.remotePeerTimestamp}}"
 
-      case x: MaterializeRequest =>
-        val serializedMsg = serializeInternal(x.msg)
-        s"{MRq,${x.senderID},${x.receiverID},$serializedMsg,${x.msgID},${x.remotePeerTimestamp}}"
-
       case x: PublishResponse =>
         val serializedMsg = serializeInternal(x.msg)
         s"{PuRs,${x.senderID},${x.receiverID},$serializedMsg,${x.msgID},${x.remotePeerTimestamp}}"
@@ -110,12 +106,6 @@ object ProtocolMessageSerializer {
       case "PuRq" =>
         assert(tokens.size == 6)
         val res = PublishRequest(tokens(1).toString, tokens(2).toString, tokens(3).asInstanceOf[TransactionStateMessage])
-        res.msgID = tokens(4).toString.toLong
-        res.remotePeerTimestamp = tokens(5).toString.toLong
-        res
-      case "MRq" =>
-        assert(tokens.size == 6)
-        val res = MaterializeRequest(tokens(1).toString, tokens(2).toString, tokens(3).asInstanceOf[TransactionStateMessage])
         res.msgID = tokens(4).toString.toLong
         res.remotePeerTimestamp = tokens(5).toString.toLong
         res

@@ -1,9 +1,11 @@
 package com.bwsw.tstreams.agents.consumer.subscriber
 
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.locks.ReentrantLock
 
-import com.bwsw.tstreams.common.{Functions, GeneralOptions}
-import com.bwsw.tstreams.coordination.server.RequestsTcpServer
+import com.bwsw.tstreams.agents.group.{CheckpointInfo, GroupParticipant}
+import com.bwsw.tstreams.common.{Functions, GeneralOptions, StorageClient}
+import com.bwsw.tstreams.coordination.server.EventUpdatesUdpServer
 import com.bwsw.tstreams.streams.Stream
 import org.slf4j.LoggerFactory
 
@@ -21,7 +23,7 @@ object Subscriber {
 class Subscriber(val name: String,
                  val stream: Stream,
                  val options: SubscriberOptions,
-                 val callback: Callback) {
+                 val callback: Callback) extends GroupParticipant {
 
   private val transactionsBufferWorkers = mutable.Map[Int, TransactionBufferWorker]()
   private val processingEngines = mutable.Map[Int, ProcessingEngine]()
@@ -32,13 +34,14 @@ class Subscriber(val name: String,
   val l = options.agentAddress.split(":")
   val host = l.head
   val port = l.tail.head
-  private var tcpServer: RequestsTcpServer = null
+  private var udpServer: EventUpdatesUdpServer = null
   private val consumer = new com.bwsw.tstreams.agents.consumer.Consumer(
     name,
     stream,
     options.getConsumerOptions())
 
   private val isStarted = new AtomicBoolean(false)
+  private val isStopped = new AtomicBoolean(false)
 
   private val coordinator = new Coordinator()
 
@@ -69,8 +72,11 @@ class Subscriber(val name: String,
     Subscriber.logger.info(s"[INIT] Subscriber $name: Address ${options.agentAddress}")
     Subscriber.logger.info(s"[INIT] Subscriber $name: Partitions $usedPartitionsSet")
 
-    if (isStarted.getAndSet(true))
-      throw new IllegalStateException("Double start is detected. Please stop it first.")
+    if (isStopped.get())
+      throw new IllegalStateException(s"Subscriber $name is stopped already. Start after stop is no longer possible.")
+
+    if (isStarted.get())
+      throw new IllegalStateException(s"Subscriber $name is started already. Double start is detected.")
 
     val transactionsBuffers = mutable.Map[Int, TransactionBuffer]()
 
@@ -92,7 +98,8 @@ class Subscriber(val name: String,
 
       Subscriber.logger.info(s"[INIT] Subscriber $name PE $thID got $parts")
 
-      processingEngines(thID) = new ProcessingEngine(consumer, parts, options.transactionsQueueBuilder, callback)
+      processingEngines(thID) = new ProcessingEngine(consumer, parts, options.transactionsQueueBuilder,
+        callback, options.pollingFrequencyDelayMs)
     }
 
     Subscriber.logger.info(s"[INIT] Subscriber $name: has created PEs.")
@@ -141,20 +148,22 @@ class Subscriber(val name: String,
       zkSessionTimeout = options.zkSessionTimeoutMs)
 
     Subscriber.logger.info(s"[INIT] Subscriber $name: has launched the coordinator.")
-    Subscriber.logger.info(s"[INIT] Subscriber $name: is about to launch the tcp server.")
+    Subscriber.logger.info(s"[INIT] Subscriber $name: is about to launch the UDP server.")
 
-    tcpServer = new RequestsTcpServer(host, Integer.parseInt(port), new TransactionStateMessageChannelHandler(transactionsBufferWorkers))
-    tcpServer.start()
+    udpServer = new EventUpdatesUdpServer(host, Integer.parseInt(port), new TransactionStateMessageChannelHandler(transactionsBufferWorkers))
+    udpServer.start()
 
-    Subscriber.logger.info(s"[INIT] Subscriber $name: has launched the tcp server.")
+    Subscriber.logger.info(s"[INIT] Subscriber $name: has launched the UDP server.")
     Subscriber.logger.info(s"[INIT] Subscriber $name: is about to launch Polling tasks to executors.")
 
     for (thID <- 0 until peWorkerThreads) {
-      processingEngines(thID).getExecutor().submit(s"<Poller ${processingEngines(thID)}>", new Poller(processingEngines(thID), options.pollingFrequencyDelayMs))
+      processingEngines(thID).start()
     }
 
     Subscriber.logger.info(s"[INIT] Subscriber $name: has launched Polling tasks to executors.")
     Subscriber.logger.info(s"[INIT] Subscriber $name: END INIT.")
+
+    isStarted.set(true)
 
   }
 
@@ -162,15 +171,19 @@ class Subscriber(val name: String,
     *
     */
   def stop() = {
+
+    if (isStopped.getAndSet(true))
+      throw new IllegalStateException(s"Subscriber $name is stopped already. Double stop is impossible.")
+
     if (!isStarted.getAndSet(false))
-      throw new IllegalStateException("Double stop is detected. Please start it first.")
+      throw new IllegalStateException(s"Subscriber $name is not started yet. Stop is impossible.")
 
     processingEngines.foreach(kv => kv._2.stop())
     processingEngines.clear()
     transactionsBufferWorkers.foreach(kv => kv._2.stop())
     transactionsBufferWorkers.clear()
 
-    tcpServer.stop()
+    udpServer.stop()
     coordinator.shutdown()
     consumer.stop()
   }
@@ -205,5 +218,18 @@ class Subscriber(val name: String,
     */
   def getConsumer() = consumer
 
+  override private[tstreams] def getAgentName(): String = consumer.getAgentName()
+
+  /**
+    * Info to commit
+    */
+  override private[tstreams] def getCheckpointInfoAndClear(): List[CheckpointInfo] = consumer.getCheckpointInfoAndClear()
+
+  override private[tstreams] def getStorageClient(): StorageClient = consumer.getStorageClient()
+
+  /**
+    * Agent lock on any actions which has to do with checkpoint
+    */
+  override private[tstreams] def getThreadLock(): ReentrantLock = consumer.getThreadLock()
 }
 

@@ -18,14 +18,19 @@ import scala.util.Random
 class ProcessingEngine(consumer: TransactionOperator,
                        partitions: Set[Int],
                        queueBuilder: QueueBuilder.Abstract,
-                       callback: Callback) {
+                       callback: Callback, pollingInterval: Int) {
 
   private val id = Math.abs(Random.nextInt())
   // keeps last transaction states processed
   private val lastTransactionsMap = mutable.Map[Int, TransactionState]()
   private val lastPartitionsEventsMap = mutable.Map[Int, Long]()
 
-  private val executor = new FirstFailLockableTaskExecutor(s"pe-$id-executor")
+  private val isRunning = new AtomicBoolean(false)
+
+  private val executor = new Thread(() => {
+    while (isRunning.get) handleQueue(pollingInterval)
+  }, s"pe-$id-executor")
+
   private val loadExecutor = new FirstFailLockableTaskExecutor(s"pe-$id-loadExecutor")
 
   val isThresholdsSet = new AtomicBoolean(false)
@@ -35,8 +40,6 @@ class ProcessingEngine(consumer: TransactionOperator,
 
 
   ProcessingEngine.logger.info(s"Processing engine $id will serve $partitions.")
-
-  def getExecutor() = executor
 
   def getQueue() = queue
 
@@ -69,10 +72,9 @@ class ProcessingEngine(consumer: TransactionOperator,
     * @param pollTimeMs
     */
   def handleQueue(pollTimeMs: Int) = {
+
     if (!isThresholdsSet.get()) {
       isThresholdsSet.set(true)
-      executor.setThresholds(queueLengthThreshold = 10, taskFullDelayThresholdMs = pollTimeMs + 50,
-        taskDelayThresholdMs = pollTimeMs + 5, taskRunDelayThresholdMs = 50)
 
       loadExecutor.setThresholds(queueLengthThreshold = 1000, taskFullDelayThresholdMs = 150,
         taskDelayThresholdMs = 100, taskRunDelayThresholdMs = 50)
@@ -122,6 +124,8 @@ class ProcessingEngine(consumer: TransactionOperator,
     * Enqueues in queue last transaction from database
     */
   def enqueueLastTransactionFromDB(partition: Int): Unit = {
+    //println(s"Partition is: ${partition} in ${partitions}")
+
     assert(partitions.contains(partition))
 
     val proposedTransactionId = consumer.getProposedTransactionId()
@@ -141,8 +145,14 @@ class ProcessingEngine(consumer: TransactionOperator,
     queue.put(transactionStateList)
   }
 
+  def start() = {
+    isRunning.set(true)
+    executor.start()
+  }
+
   def stop() = {
-    executor.shutdownOrDie(Subscriber.SHUTDOWN_WAIT_MAX_SECONDS, TimeUnit.SECONDS)
+    isRunning.set(false)
+    executor.join(Subscriber.SHUTDOWN_WAIT_MAX_SECONDS * 1000)
   }
 }
 

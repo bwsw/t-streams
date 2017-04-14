@@ -1,5 +1,7 @@
 package com.bwsw.tstreams.common
 
+import java.util.concurrent.atomic.AtomicBoolean
+
 import com.bwsw.tstreams.agents.consumer.RPCConsumerTransaction
 import com.bwsw.tstreams.streams.Stream
 import com.bwsw.tstreamstransactionserver.options.ClientBuilder
@@ -31,7 +33,12 @@ class StorageClient(clientOptions: ConnectionOptions, authOptions: AuthOptions, 
 
   val client = clientBuilder.withConnectionOptions(clientOptions).withAuthOptions(authOptions).withZookeeperOptions(zookeeperOptions).build()
 
-  def shutdown() = client.shutdown()
+  val isShutdown = new AtomicBoolean(false)
+
+  def shutdown() = {
+    isShutdown.set(true)
+    client.shutdown()
+  }
 
   /**
     * Getting existing stream
@@ -128,8 +135,33 @@ class StorageClient(clientOptions: ConnectionOptions, authOptions: AuthOptions, 
     Await.result(client.getConsumerState(name = consumerName, stream = stream, partition = partition), timeout)
   }
 
+  def putTransactionSync(transaction: ProducerTransaction, timeout: Duration = 1.minute) = {
+    val f = client.putProducerState(transaction)
+    Await.result(f, timeout)
+  }
+
   def putTransaction[T](transaction: ProducerTransaction, async: Boolean, timeout: Duration = 1.minute)(onComplete: ProducerTransaction => T) = {
     val f = client.putProducerState(transaction)
+    if (async) {
+      import ExecutionContext.Implicits.global
+
+      f onComplete {
+        case Success(res) => onComplete(transaction)
+        case Failure(reason) => throw reason
+      }
+    } else {
+      Await.result(f, timeout)
+      onComplete(transaction)
+    }
+  }
+
+  def putTransactionWithDataSync[T](transaction: ProducerTransaction, data: ListBuffer[Array[Byte]], lastOffset: Int, timeout: Duration = 1.minute) = {
+    val f = client.putProducerStateWithData(transaction, data, lastOffset)
+    Await.result(f, timeout)
+  }
+
+  def putTransactionWithData[T](transaction: ProducerTransaction, data: ListBuffer[Array[Byte]], lastOffset: Int, async: Boolean, timeout: Duration = 1.minute)(onComplete: ProducerTransaction => T) = {
+    val f = client.putProducerStateWithData(transaction, data, lastOffset)
     if (async) {
       import ExecutionContext.Implicits.global
 
