@@ -6,7 +6,6 @@ import java.util.concurrent.atomic.AtomicBoolean
 import com.bwsw.tstreams.agents.producer.Producer
 import com.bwsw.tstreams.common.FirstFailLockableTaskExecutor
 import com.bwsw.tstreams.coordination.messages.master._
-import com.bwsw.tstreams.coordination.messages.state.TransactionStateMessage
 import com.bwsw.tstreams.coordination.server.RequestsTcpServer
 import io.netty.channel.{Channel, ChannelHandler, ChannelHandlerContext, SimpleChannelInboundHandler}
 import io.netty.util.ReferenceCountUtil
@@ -40,7 +39,7 @@ class TcpTransport(address: String, timeoutMs: Int, retryCount: Int = 3, retryDe
   private val server: RequestsTcpServer = new RequestsTcpServer(splits(0), splits(1).toInt, new ChannelHandler())
   private val client: CommunicationClient = new CommunicationClient(timeoutMs, retryCount, retryDelayMs)
 
-  def getTimeout() = timeoutMs
+  def getTimeoutMs() = timeoutMs
 
   /**
     * Request to get Transaction
@@ -53,26 +52,6 @@ class TcpTransport(address: String, timeoutMs: Int, retryCount: Int = 3, retryDe
     val r = NewTransactionRequest(address, to, partition)
     val response: IMessage = client.sendAndWaitResponse(r, isExceptionIfFails = false, () => null)
     response
-  }
-
-  /**
-    * Request to publish event about Transaction
-    *
-    * @param to
-    * @param msg Message
-    */
-  def publishRequest(to: String, msg: TransactionStateMessage, onFailCallback: () => Boolean): Boolean = {
-    client.sendAndNoWaitResponse(PublishRequest(address, to, msg), isExceptionIfFails = true, onFailCallback)
-  }
-
-  /**
-    * Request to publish event about Transaction
-    *
-    * @param to
-    * @param msg Message
-    */
-  def materializeRequest(to: String, msg: TransactionStateMessage): Unit = {
-    client.sendAndNoWaitResponse(MaterializeRequest(address, to, msg), isExceptionIfFails = true, () => false)
   }
 
   /**

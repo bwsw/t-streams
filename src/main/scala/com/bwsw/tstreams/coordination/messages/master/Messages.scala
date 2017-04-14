@@ -3,7 +3,7 @@ package com.bwsw.tstreams.coordination.messages.master
 import com.bwsw.tstreams.agents.producer
 import com.bwsw.tstreams.agents.producer.PeerAgent
 import com.bwsw.tstreams.common.ProtocolMessageSerializer
-import com.bwsw.tstreams.coordination.messages.state.{TransactionStateMessage, TransactionStatus}
+import com.bwsw.tstreams.coordination.messages.state.TransactionStateMessage
 import io.netty.channel.Channel
 import org.slf4j.LoggerFactory
 
@@ -76,19 +76,9 @@ case class NewTransactionRequest(senderID: String, receiverID: String, partition
       val transactionID = agent.getProducer.generateNewTransactionIDLocal()
       val response = TransactionResponse(receiverID, senderID, transactionID, partition)
       response.msgID = msgID
+      agent.getProducer.openTransactionLocal(transactionID, partition)
       this.respond(response)
-
-      if (IMessage.logger.isDebugEnabled)
-        IMessage.logger.debug(s"Responded with early ready virtual transaction: $transactionID")
-
-      agent.getProducer.openTransactionLocal(transactionID, partition,
-        onComplete = () => {
-          agent.notifyMaterialize(TransactionStateMessage(transactionID, -1, TransactionStatus.materialize, partition, agent.getUniqueAgentID(), -1, 0), senderID)
-
-          if (IMessage.logger.isDebugEnabled)
-            IMessage.logger.debug(s"Responded with complete ready transaction: $transactionID")
-        })
-
+      agent.getProducer().notifyOpenTransaction(transactionID, partition)
     } else {
       val response = EmptyResponse(receiverID, senderID, partition)
       response.msgID = msgID
@@ -155,17 +145,3 @@ case class EmptyRequest(senderID: String, receiverID: String, partition: Int) ex
   */
 case class EmptyResponse(senderID: String, receiverID: String, partition: Int) extends IMessage
 
-/**
-  * Just empty dump request
-  *
-  * @param senderID
-  * @param receiverID
-  * @param msg
-  */
-case class MaterializeRequest(senderID: String, receiverID: String, msg: TransactionStateMessage) extends IMessage {
-  override val partition: Int = msg.partition
-
-  override def handleP2PRequest(agent: PeerAgent) = {
-    agent.getProducer.materialize(msg)
-  }
-}

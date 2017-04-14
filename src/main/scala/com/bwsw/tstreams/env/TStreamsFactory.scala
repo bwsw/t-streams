@@ -24,7 +24,9 @@ import scala.collection.mutable
   */
 class TStreamsFactory() {
   private val logger = LoggerFactory.getLogger(this.getClass)
-  val propertyMap = mutable.HashMap[String, Any]()
+  private val propertyMap = mutable.HashMap[String, Any]()
+  private val storageClientList = mutable.ListBuffer[StorageClient]()
+
   val isClosed = new AtomicBoolean(false)
   val isLocked = new AtomicBoolean(false)
   val co = ConfigurationOptions
@@ -125,7 +127,22 @@ class TStreamsFactory() {
       connectionTimeoutMs = pAsInt(co.StorageClient.Zookeeper.connectionTimeoutMs),
       retryDelayMs = pAsInt(co.StorageClient.Zookeeper.retryDelayMs))
 
-    new StorageClient(clientOptions = clientOptions, authOptions = authOptions, zookeeperOptions = zookeeperOptions)
+    val client = new StorageClient(clientOptions = clientOptions, authOptions = authOptions, zookeeperOptions = zookeeperOptions)
+
+    if (logger.isDebugEnabled)
+      storageClientList.append(client)
+
+    client
+  }
+
+  /**
+    * Special debugging method to find leaks in factory. Used only in tests.
+    * To accumulate requested storage client allocations DEBUG must be enabled.
+    **/
+  private[tstreams] def dumpStorageClients() = {
+    storageClientList.foreach(clt => {
+      logger.debug(s"$clt -> ${clt.isShutdown}")
+    })
   }
 
   /**

@@ -66,6 +66,7 @@ class Consumer(val name: String,
     * Flag which defines either object is running or not
     */
   val isStarted = new AtomicBoolean(false)
+  val isStopped = new AtomicBoolean(false)
 
   /**
     * agent name
@@ -106,6 +107,9 @@ class Consumer(val name: String,
     */
   def start(): Unit = this.synchronized {
     Consumer.logger.info(s"[INIT] Consumer with name: $name, streamName : ${stream.name}, streamPartitions : ${stream.partitionsCount} is about to start.")
+
+    if (isStopped.get())
+      throw new IllegalStateException(s"Consumer $name is stopped already. Unable to start it again.")
 
     if (isStarted.get())
       throw new IllegalStateException(s"Consumer $name is started already. Double start is detected.")
@@ -321,12 +325,17 @@ class Consumer(val name: String,
   override def getThreadLock(): ReentrantLock = null
 
   def stop() = {
+
+    if (isStopped.getAndSet(true))
+      throw new IllegalStateException(s"Consumer $name is stopped already. Unable to stop it again.")
+
     if (!isStarted.getAndSet(false))
-      throw new IllegalStateException("Consumer is not started. Start consumer first.")
+      throw new IllegalStateException(s"Consumer $name is not started. Start consumer first.")
 
     checkpointOffsets.clear()
     currentOffsets.clear()
     transactionBuffer.clear()
+    stream.client.shutdown()
   }
 
   /**

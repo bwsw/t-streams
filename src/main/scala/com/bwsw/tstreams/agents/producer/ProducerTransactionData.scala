@@ -2,6 +2,7 @@ package com.bwsw.tstreams.agents.producer
 
 import com.bwsw.tstreams.common.StorageClient
 
+import scala.collection.mutable.ListBuffer
 import scala.concurrent.Await
 import scala.concurrent.duration._
 
@@ -10,13 +11,14 @@ import scala.concurrent.duration._
   * Created by Ivan Kudryavtsev on 15.08.16.
   */
 class ProducerTransactionData(transaction: ProducerTransaction, ttl: Long, storageClient: StorageClient) {
-  private var items = new scala.collection.mutable.ListBuffer[Array[Byte]]()
-  var lastOffset: Int = 0
+  private[tstreams] var items = ListBuffer[Array[Byte]]()
+  private[tstreams] var lastOffset: Int = 0
+
   private val streamName = transaction.getTransactionOwner().stream.name
 
   def put(elt: Array[Byte]): Int = this.synchronized {
     items += elt
-    return lastOffset
+    return items.size
   }
 
   def save(): () => Unit = this.synchronized {
@@ -27,7 +29,7 @@ class ProducerTransactionData(transaction: ProducerTransaction, ttl: Long, stora
     }
 
     lastOffset += items.size
-    items = new scala.collection.mutable.ListBuffer[Array[Byte]]()
+    items = ListBuffer[Array[Byte]]()
     () => Await.result(job, 1.minute)
   }
 }

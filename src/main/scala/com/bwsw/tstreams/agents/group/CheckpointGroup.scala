@@ -100,7 +100,7 @@ class CheckpointGroup(val executors: Int = 1) {
 
     checkpointRequests foreach {
       case ConsumerCheckpointInfo(consumerName, streamName, partition, offset) =>
-        consumerRequests.append(new RPCConsumerTransaction(streamName, consumerName, partition, offset))
+        consumerRequests.append(new RPCConsumerTransaction(consumerName, streamName, partition, offset))
 
       case ProducerCheckpointInfo(_, _, _, streamName, partition, transaction, totalCnt, ttl) =>
         producerRequests.append(new RPCProducerTransaction(streamName, partition, transaction, TransactionStates.Checkpointed, totalCnt, ttl))
@@ -155,7 +155,7 @@ class CheckpointGroup(val executors: Int = 1) {
   private def publishCheckpointEventForAllProducers(producers: List[CheckpointInfo]) = {
     producers foreach {
       case ProducerCheckpointInfo(_, agent, checkpointEvent, _, _, _, _, _) =>
-        executorPool.submit("<CheckpointEvent>", () => agent.publish(checkpointEvent), None)
+        executorPool.submit("<CheckpointEvent>", () => agent.getSubscriberNotifier.publish(checkpointEvent), None)
       case _ =>
     }
   }

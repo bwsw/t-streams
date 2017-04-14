@@ -65,11 +65,9 @@ class OpenTransactionsKeeper {
     * @param policy
     * @return
     */
-  def awaitOpenTransactionMaterialized(partition: Int, policy: ProducerPolicy): () => Unit = {
+  def handlePreviousOpenTransaction(partition: Int, policy: ProducerPolicy): () => Unit = {
     val partOpt = getTransactionOption(partition)
-    if (partOpt.isDefined) {
-      partOpt.get.awaitMaterialized()
-    }
+
     var action: () => Unit = null
     if (partOpt.isDefined) {
       if (!partOpt.get.isClosed) {

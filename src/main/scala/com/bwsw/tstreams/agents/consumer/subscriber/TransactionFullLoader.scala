@@ -53,7 +53,7 @@ class TransactionFullLoader(partitions: Set[Int],
       if (last.masterSessionID > 0) {
         // we wait for certain item
         // to switch to fast load next
-        if (data.size > 0) {
+        if (data.nonEmpty) {
           if (data.last.getTransactionID() == last.transactionID)
             flag = false
           else
