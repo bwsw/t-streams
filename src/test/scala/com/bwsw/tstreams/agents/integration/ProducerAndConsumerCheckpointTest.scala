@@ -47,16 +47,16 @@ class ProducerAndConsumerCheckpointTest extends FlatSpec with Matchers with Befo
     offset = Oldest,
     useLastOffset = true)
 
-
   "producer, consumer" should "producer - generate many transactions, consumer - retrieve all of them with reinitialization after some time" in {
-    val TRANSACTIONS_COUNT = 1000
-    val dataToSend = (for (i <- 0 until 10000) yield randomKeyspace).sorted
+    val TRANSACTIONS_COUNT = 10000
+    val dataToSend = (for (i <- 0 until 1) yield randomKeyspace).sorted
 
     var counter = 0
 
     val l = new CountDownLatch(1)
 
     (0 until TRANSACTIONS_COUNT) foreach { _ =>
+      TimeTracker.update_start("Overall")
       TimeTracker.update_start("newTransaction")
       val transaction = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
 
@@ -73,6 +73,7 @@ class ProducerAndConsumerCheckpointTest extends FlatSpec with Matchers with Befo
       TimeTracker.update_start("checkpoint")
       transaction.checkpoint()
       TimeTracker.update_end("checkpoint")
+      TimeTracker.update_end("Overall")
     }
 
     val firstPart = TRANSACTIONS_COUNT / 3

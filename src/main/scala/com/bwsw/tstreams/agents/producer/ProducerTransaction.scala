@@ -1,8 +1,8 @@
 package com.bwsw.tstreams.agents.producer
 
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.locks.ReentrantLock
-import java.util.concurrent.{CountDownLatch, TimeUnit}
 
 import com.bwsw.tstreams.agents.group.ProducerCheckpointInfo
 import com.bwsw.tstreams.common.{LockUtil, ResettableCountDownLatch}
@@ -97,7 +97,7 @@ class ProducerTransaction(partition: Int,
   /**
     * Return current transaction amount of data
     */
-  def getDataItemsCount() = data.lastOffset
+  def getDataItemsCount() = data.lastOffset + data.items.size
 
   /**
     * Returns Transaction owner
@@ -122,6 +122,9 @@ class ProducerTransaction(partition: Int,
     val number = data.put(obj)
     val job = {
       if (number % transactionOwner.producerOptions.batchSize == 0) {
+        if (ProducerTransaction.logger.isDebugEnabled) {
+          ProducerTransaction.logger.debug(s"call data save ${number} / ${transactionOwner.producerOptions.batchSize}")
+        }
         data.save()
       }
       else {
@@ -201,7 +204,6 @@ class ProducerTransaction(partition: Int,
 
 
   private def checkpointAsync(): Unit = {
-    finalizeDataSend()
     //close transaction using stream ttl
     if (getDataItemsCount > 0) {
       jobs.foreach(x => x())
@@ -226,7 +228,7 @@ class ProducerTransaction(partition: Int,
       }
       val transactionRecord = new RPCProducerTransaction(transactionOwner.stream.name, partition, transactionID, TransactionStates.Checkpointed, getDataItemsCount(), transactionOwner.stream.ttl)
 
-      transactionOwner.stream.client.putTransaction(transactionRecord, true)(record => {
+      transactionOwner.stream.client.putTransactionWithData(transactionRecord, data.items, data.lastOffset, true)(record => {
         checkpointPostEventPart()
       })
 
@@ -257,9 +259,7 @@ class ProducerTransaction(partition: Int,
         transactionOwner.asyncActivityService.submit("<CheckpointAsyncTask>", () => checkpointAsync(), Option(transactionLock))
       }
       else {
-        finalizeDataSend()
-
-        if (getDataItemsCount > 0) {
+        if (getDataItemsCount() > 0) {
           jobs.foreach(x => x())
 
           if (ProducerTransaction.logger.isDebugEnabled) {
@@ -269,13 +269,16 @@ class ProducerTransaction(partition: Int,
           //debug purposes only
           GlobalHooks.invoke(GlobalHooks.preCommitFailure)
 
-          val latch = new CountDownLatch(1)
-          val transactionRecord = new RPCProducerTransaction(transactionOwner.stream.name, partition, transactionID, TransactionStates.Checkpointed, getDataItemsCount(), transactionOwner.stream.ttl)
+          val transactionRecord = new RPCProducerTransaction(transactionOwner.stream.name,
+            partition, transactionID, TransactionStates.Checkpointed, getDataItemsCount(),
+            transactionOwner.stream.ttl)
 
-          transactionOwner.stream.client.putTransaction(transactionRecord, true)(record => {
-            latch.countDown()
-          })
-          latch.await()
+          transactionOwner.stream.client.putTransactionWithDataSync(transactionRecord, data.items, data.lastOffset)
+
+          //          if(data.items.nonEmpty) {
+          //          } else {
+          //            transactionOwner.stream.client.putTransactionSync(transactionRecord)
+          //          }
 
           if (ProducerTransaction.logger.isDebugEnabled) {
             ProducerTransaction.logger.debug("[COMMIT PARTITION_{}] ts={}", partition, transactionID.toString)

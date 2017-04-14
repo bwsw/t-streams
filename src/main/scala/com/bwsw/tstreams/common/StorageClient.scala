@@ -155,6 +155,26 @@ class StorageClient(clientOptions: ConnectionOptions, authOptions: AuthOptions, 
     }
   }
 
+  def putTransactionWithDataSync[T](transaction: ProducerTransaction, data: ListBuffer[Array[Byte]], lastOffset: Int, timeout: Duration = 1.minute) = {
+    val f = client.putProducerStateWithData(transaction, data, lastOffset)
+    Await.result(f, timeout)
+  }
+
+  def putTransactionWithData[T](transaction: ProducerTransaction, data: ListBuffer[Array[Byte]], lastOffset: Int, async: Boolean, timeout: Duration = 1.minute)(onComplete: ProducerTransaction => T) = {
+    val f = client.putProducerStateWithData(transaction, data, lastOffset)
+    if (async) {
+      import ExecutionContext.Implicits.global
+
+      f onComplete {
+        case Success(res) => onComplete(transaction)
+        case Failure(reason) => throw reason
+      }
+    } else {
+      Await.result(f, timeout)
+      onComplete(transaction)
+    }
+  }
+
   def getTransaction(streamName: String, partition: Integer, transactionID: Long, timeout: Duration = 1.minute): Option[ProducerTransaction] = {
     while (true) {
       val txnInfo = Await.result(client.getTransaction(streamName, partition, transactionID), timeout)
