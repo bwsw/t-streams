@@ -11,7 +11,7 @@ import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import scala.collection.mutable.ListBuffer
 
 /**
-  * Created by ivan on 14.04.17.
+  * Created by Ivan Kudryavtsev on 14.04.17.
   */
 class NMastersMProducersKSubscribersTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
 
