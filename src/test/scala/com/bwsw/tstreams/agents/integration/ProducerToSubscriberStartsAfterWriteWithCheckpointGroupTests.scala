@@ -39,8 +39,7 @@ class ProducerToSubscriberStartsAfterWriteWithCheckpointGroupTests extends FlatS
     val bp = ListBuffer[Long]()
     val bs = ListBuffer[Long]()
 
-    val lp = new CountDownLatch(1)
-    val ls = new CountDownLatch(1)
+    val subscriber1Latch = new CountDownLatch(1)
 
     val producer = f.getProducer(
       name = "test_producer1",
@@ -54,57 +53,45 @@ class ProducerToSubscriberStartsAfterWriteWithCheckpointGroupTests extends FlatS
         bs.append(transaction.getTransactionID())
         consumer.setStreamPartitionOffset(transaction.getPartition(), transaction.getTransactionID())
         if (bs.size == COUNT) {
-          ls.countDown()
+          subscriber1Latch.countDown()
         }
       })
-
-    val t = new Thread(() => {
-      logger.info(s"Producer is master of partition: ${producer.isMasterOfPartition(0)}")
-      lp.countDown()
-    })
 
     for (i <- 0 until COUNT) {
       val t: ProducerTransaction = producer.newTransaction(policy = NewTransactionProducerPolicy.CheckpointIfOpened)
       t.send("test")
       t.checkpoint()
-
       bp.append(t.getTransactionID())
     }
 
     producer.stop()
 
     val lastTxn = bp.sorted.last
-    println(lastTxn)
-    val l = new CountDownLatch(1)
-    srv.notifyConsumerTransactionCompleted(ct => lastTxn == ct.transactionID, l.countDown())
+    val ttsSynchronizationLatch = new CountDownLatch(1)
+    srv.notifyConsumerTransactionCompleted(ct => lastTxn == ct.transactionID, ttsSynchronizationLatch.countDown())
 
     group.add(subscriber)
     subscriber.start()
-    ls.await(10, TimeUnit.SECONDS) shouldBe true
+    subscriber1Latch.await(10, TimeUnit.SECONDS) shouldBe true
     group.checkpoint()
     subscriber.stop()
     bs.size shouldBe COUNT
 
-    l.await(10, TimeUnit.SECONDS) shouldBe true
+    ttsSynchronizationLatch.await(10, TimeUnit.SECONDS) shouldBe true
 
     val bs2 = ListBuffer[Long]()
-    val ls2 = new CountDownLatch(1)
+    val subscriber2Latch = new CountDownLatch(1)
 
     val s2 = f.getSubscriber(name = "ss+2",
       partitions = Set(0),
       offset = Oldest,
       useLastOffset = true,
       callback = (consumer: TransactionOperator, transaction: ConsumerTransaction) => this.synchronized {
-        bs2.append(transaction.getTransactionID())
-        if (bs2.size == COUNT) {
-          ls2.countDown()
-        }
+        subscriber2Latch.countDown()
       })
-
     s2.start()
-    ls2.await(10, TimeUnit.SECONDS) shouldBe false
+    subscriber2Latch.await(5, TimeUnit.SECONDS) shouldBe false
     s2.stop()
-    bs2.size shouldBe 0
   }
 
   override def afterAll(): Unit = {
