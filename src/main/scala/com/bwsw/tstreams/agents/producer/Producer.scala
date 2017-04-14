@@ -162,7 +162,7 @@ class Producer(var name: String,
     openTransactions.forallKeysDo((part: Int, transaction: IProducerTransaction) => transaction.updateTransactionKeepAliveState())
   }
 
-  def newTransaction(policy: ProducerPolicy, partition: Int = -1): ProducerTransaction = {
+  def newTransaction(policy: ProducerPolicy = NewTransactionProducerPolicy.ErrorIfOpened, partition: Int = -1): ProducerTransaction = {
     if (isStop.get())
       throw new IllegalStateException(s"Producer ${this.name} is already stopped. Unable to get new transaction.")
 
