@@ -49,6 +49,8 @@ class CheckpointGroupAndSubscriberEventsTests extends FlatSpec with Matchers wit
       useLastOffset = true,
       callback = (consumer: TransactionOperator, transaction: ConsumerTransaction) => this.synchronized {
         transactionsCounter += 1
+        val data = new String(transaction.getAll().head)
+        data shouldBe "test"
         if (transactionsCounter == 2) {
           l.countDown()
         }
