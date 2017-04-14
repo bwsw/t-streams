@@ -100,7 +100,7 @@ class CheckpointGroup(val executors: Int = 1) {
 
     checkpointRequests foreach {
       case ConsumerCheckpointInfo(consumerName, streamName, partition, offset) =>
-        consumerRequests.append(new RPCConsumerTransaction(streamName, consumerName, partition, offset))
+        consumerRequests.append(new RPCConsumerTransaction(consumerName, streamName, partition, offset))
 
       case ProducerCheckpointInfo(_, _, _, streamName, partition, transaction, totalCnt, ttl) =>
         producerRequests.append(new RPCProducerTransaction(streamName, partition, transaction, TransactionStates.Checkpointed, totalCnt, ttl))

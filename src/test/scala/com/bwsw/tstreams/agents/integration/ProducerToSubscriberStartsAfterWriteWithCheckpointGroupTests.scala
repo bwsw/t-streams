@@ -74,6 +74,7 @@ class ProducerToSubscriberStartsAfterWriteWithCheckpointGroupTests extends FlatS
     producer.stop()
 
     val lastTxn = bp.sorted.last
+    println(lastTxn)
     val l = new CountDownLatch(1)
     srv.notifyConsumerTransactionCompleted(ct => lastTxn == ct.transactionID, l.countDown())
 
