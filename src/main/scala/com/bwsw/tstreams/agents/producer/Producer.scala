@@ -306,17 +306,17 @@ class Producer(var name: String,
       throw new IllegalStateException(s"Producer ${this.name} is already stopped. Duplicate action.")
 
     openTransactionClient.close()
+    // stop provide master features to public
+    transactionOpenerService.stop()
 
     // stop update state of all open transactions
     shutdownKeepAliveThread.signal(true)
     transactionKeepAliveThread.join()
-    // stop executor
 
+    // stop executors
     asyncActivityService.shutdownOrDie(Producer.SHUTDOWN_WAIT_MAX_SECONDS, TimeUnit.SECONDS)
     notifyService.shutdownOrDie(Producer.SHUTDOWN_WAIT_MAX_SECONDS, TimeUnit.SECONDS)
 
-    // stop provide master features to public
-    transactionOpenerService.stop()
     // stop function which works with subscribers
     subscriberNotifier.stop()
     curatorClient.close()
