@@ -7,7 +7,7 @@ import com.bwsw.tstreams.streams.Stream
 import com.bwsw.tstreamstransactionserver.options.ClientBuilder
 import com.bwsw.tstreamstransactionserver.options.ClientOptions.{AuthOptions, ConnectionOptions}
 import com.bwsw.tstreamstransactionserver.options.CommonOptions.ZookeeperOptions
-import com.bwsw.tstreamstransactionserver.rpc.{ConsumerTransaction, ProducerTransaction}
+import com.bwsw.tstreamstransactionserver.rpc.{CommitLogInfo, ConsumerTransaction, ProducerTransaction}
 import org.apache.zookeeper.KeeperException.BadArgumentsException
 import org.slf4j.LoggerFactory
 
@@ -195,4 +195,9 @@ class StorageClient(clientOptions: ConnectionOptions, authOptions: AuthOptions, 
   def getLastTransactionId(streamName: String, partition: Integer, timeout: Duration = 1.minute): Long = {
     Await.result(client.getLastCheckpointedTransaction(streamName, partition), timeout)
   }
+
+  def getCommitLogOffsets(timeout: Duration = 1.minute): CommitLogInfo = {
+    Await.result(client.getCommitLogOffsets(), timeout)
+  }
+
 }

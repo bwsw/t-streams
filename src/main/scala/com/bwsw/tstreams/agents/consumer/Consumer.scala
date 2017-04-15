@@ -14,6 +14,7 @@ import scala.collection.mutable.ListBuffer
 
 object Consumer {
   val logger = LoggerFactory.getLogger(this.getClass)
+  val SYNC_SLEEP_MS = 100
 }
 
 private class ScanPredicate(preload: Int) extends Function[ProducerTransaction, Boolean] with Serializable {
@@ -114,6 +115,23 @@ class Consumer(val name: String,
     if (isStarted.get())
       throw new IllegalStateException(s"Consumer $name is started already. Double start is detected.")
 
+    //    /**
+    //      * this is important code. It waits util the server transformed raw commitlog which is now is under construction
+    //      * to rocksdb. This is  important because in that raw log can be checkpoint information that we need to bootstrap
+    //      * the consumer properly.
+    //      *
+    //      * That's why we have to wait while server processes it for sure.
+    //      */
+    //    val offsetsStart = stream.client.getCommitLogOffsets()
+    //    var isSynchronized = false
+    //    while (!isSynchronized) {
+    //      val offsetsNow = stream.client.getCommitLogOffsets()
+    //      if (offsetsNow.currentProcessedCommitLog > offsetsStart.currentConstructedCommitLog)
+    //        isSynchronized = true
+    //      else {
+    //        Thread.sleep(Consumer.SYNC_SLEEP_MS)
+    //      }
+    //    }
 
     for (partition <- options.readPolicy.getUsedPartitions()) {
       val bootstrapOffset =
