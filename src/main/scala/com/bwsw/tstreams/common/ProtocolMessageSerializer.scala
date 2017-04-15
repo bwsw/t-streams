@@ -16,19 +16,8 @@ object ProtocolMessageSerializer {
       case AgentConfiguration(id, prior, penalty, uniqueID) =>
         s"{AS,$id,$prior,$penalty,$uniqueID}"
 
-      case x: EmptyRequest =>
-        s"{ERq,${x.senderID},${x.receiverID},${x.partition},${x.msgID},${x.remotePeerTimestamp}}"
-
       case x: EmptyResponse =>
         s"{ERs,${x.senderID},${x.receiverID},${x.partition},${x.msgID},${x.remotePeerTimestamp}}"
-
-      case x: PublishRequest =>
-        val serializedMsg = serializeInternal(x.msg)
-        s"{PuRq,${x.senderID},${x.receiverID},$serializedMsg,${x.msgID},${x.remotePeerTimestamp}}"
-
-      case x: PublishResponse =>
-        val serializedMsg = serializeInternal(x.msg)
-        s"{PuRs,${x.senderID},${x.receiverID},$serializedMsg,${x.msgID},${x.remotePeerTimestamp}}"
 
       case x: NewTransactionRequest =>
         s"{TRq,${x.senderID},${x.receiverID},${x.partition},${x.msgID},${x.remotePeerTimestamp}}"
@@ -91,28 +80,9 @@ object ProtocolMessageSerializer {
     tokens += temp
 
     tokens.head.toString match {
-      case "ERq" =>
-        assert(tokens.size == 6)
-        val res = EmptyRequest(tokens(1).toString, tokens(2).toString, tokens(3).toString.toInt)
-        res.msgID = tokens(4).toString.toLong
-        res.remotePeerTimestamp = tokens(5).toString.toLong
-        res
       case "ERs" =>
         assert(tokens.size == 6)
         val res = EmptyResponse(tokens(1).toString, tokens(2).toString, tokens(3).toString.toInt)
-        res.msgID = tokens(4).toString.toLong
-        res.remotePeerTimestamp = tokens(5).toString.toLong
-        res
-      case "PuRq" =>
-        assert(tokens.size == 6)
-        val res = PublishRequest(tokens(1).toString, tokens(2).toString, tokens(3).asInstanceOf[TransactionStateMessage])
-        res.msgID = tokens(4).toString.toLong
-        res.remotePeerTimestamp = tokens(5).toString.toLong
-        res
-
-      case "PuRs" =>
-        assert(tokens.size == 6)
-        val res = PublishResponse(tokens(1).toString, tokens(2).toString, tokens(3).asInstanceOf[TransactionStateMessage])
         res.msgID = tokens(4).toString.toLong
         res.remotePeerTimestamp = tokens(5).toString.toLong
         res

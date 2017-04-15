@@ -13,7 +13,7 @@ import io.netty.util.ReferenceCountUtil
 /**
   * Transport implementation
   */
-class TcpTransport(address: String, timeoutMs: Int, retryCount: Int = 3, retryDelayMs: Int = 5000) {
+class TcpNewTransactionServer(address: String) {
   val isIgnore = new AtomicBoolean(false)
   var callback: (Channel, String) => Unit = null
 
@@ -37,22 +37,7 @@ class TcpTransport(address: String, timeoutMs: Int, retryCount: Int = 3, retryDe
   private val executor = new FirstFailLockableTaskExecutor("PeerAgent-TcpTransportExecutor")
   private val splits = address.split(":")
   private val server: RequestsTcpServer = new RequestsTcpServer(splits(0), splits(1).toInt, new ChannelHandler())
-  private val client: CommunicationClient = new CommunicationClient(timeoutMs, retryCount, retryDelayMs)
 
-  def getTimeoutMs() = timeoutMs
-
-  /**
-    * Request to get Transaction
-    *
-    * @param to
-    * @param partition
-    * @return TransactionResponse or null
-    */
-  def transactionRequest(to: String, partition: Int): IMessage = {
-    val r = NewTransactionRequest(address, to, partition)
-    val response: IMessage = client.sendAndWaitResponse(r, isExceptionIfFails = false, () => null)
-    response
-  }
 
   /**
     * Bind local agent address in transport
@@ -60,14 +45,6 @@ class TcpTransport(address: String, timeoutMs: Int, retryCount: Int = 3, retryDe
   def start(callback: (Channel, String) => Unit): Unit = {
     this.callback = callback
     server.start()
-  }
-
-  /**
-    * Stop transport listen incoming messages
-    */
-  def stopClient(): Unit = {
-    IMessage.logger.info(s"Transport (for client) is shutting down.")
-    client.close()
   }
 
   /**

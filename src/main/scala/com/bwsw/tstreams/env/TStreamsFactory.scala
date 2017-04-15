@@ -9,7 +9,7 @@ import com.bwsw.tstreams.agents.consumer.subscriber.{QueueBuilder, Subscriber, S
 import com.bwsw.tstreams.agents.consumer.{Consumer, ConsumerOptions}
 import com.bwsw.tstreams.agents.producer.{CoordinationOptions, Producer}
 import com.bwsw.tstreams.common.{RoundRobinPolicy, _}
-import com.bwsw.tstreams.coordination.client.TcpTransport
+import com.bwsw.tstreams.coordination.client.TcpNewTransactionServer
 import com.bwsw.tstreams.env.defaults.TStreamsFactoryProducerDefaults.PortRange
 import com.bwsw.tstreams.generator.{ITransactionGenerator, LocalTransactionGenerator}
 import com.bwsw.tstreams.streams.Stream
@@ -236,14 +236,14 @@ class TStreamsFactory() {
     val connectionTimeoutMs = pAsInt(co.Coordination.connectionTimeoutMs, coordinationDefaults.connectionTimeoutMs.default)
     coordinationDefaults.connectionTimeoutMs.check(connectionTimeoutMs)
 
-    val transportTimeoutMs = pAsInt(co.Producer.transportTimeoutMs, producerDefaults.transportTimeoutMs.default)
-    producerDefaults.transportTimeoutMs.check(transportTimeoutMs)
+    val transportClientTimeoutMs = pAsInt(co.Producer.transportTimeoutMs, producerDefaults.transportTimeoutMs.default)
+    producerDefaults.transportTimeoutMs.check(transportClientTimeoutMs)
 
-    val transportRetryDelayMs = pAsInt(co.Producer.transportRetryDelayMs, producerDefaults.transportRetryDelayMs.default)
-    producerDefaults.transportRetryDelayMs.check(transportRetryDelayMs)
+    val transportClientRetryDelayMs = pAsInt(co.Producer.transportRetryDelayMs, producerDefaults.transportRetryDelayMs.default)
+    producerDefaults.transportRetryDelayMs.check(transportClientRetryDelayMs)
 
-    val transportRetryCount = pAsInt(co.Producer.transportRetryCount, producerDefaults.transportRetryCount.default)
-    producerDefaults.transportRetryCount.check(transportRetryCount)
+    val transportClientRetryCount = pAsInt(co.Producer.transportRetryCount, producerDefaults.transportRetryCount.default)
+    producerDefaults.transportRetryCount.check(transportClientRetryCount)
 
     val threadPoolSize = pAsInt(co.Producer.threadPoolSize, producerDefaults.threadPoolSize.default)
     producerDefaults.threadPoolSize.check(threadPoolSize)
@@ -260,11 +260,8 @@ class TStreamsFactory() {
     val batchSize = pAsInt(co.Producer.Transaction.batchSize, producerDefaults.Transaction.batchSize.default)
     producerDefaults.Transaction.batchSize.check(batchSize)
 
-    val transport = new TcpTransport(
-      pAsString(co.Producer.bindHost) + ":" + port.toString,
-      transportTimeoutMs,
-      transportRetryCount,
-      transportRetryDelayMs)
+    val transport = new TcpNewTransactionServer(
+      pAsString(co.Producer.bindHost) + ":" + port.toString)
 
 
     val cao = new CoordinationOptions(
@@ -272,9 +269,12 @@ class TStreamsFactory() {
       zkPrefix = pAsString(co.Coordination.prefix),
       zkSessionTimeoutMs = sessionTimeoutMs,
       zkConnectionTimeoutMs = connectionTimeoutMs,
-      transport = transport,
+      transaportServer = transport,
       threadPoolSize = threadPoolSize,
-      notifyThreadPoolSize = notifyThreadPoolSize)
+      notifyThreadPoolSize = notifyThreadPoolSize,
+      transportClientTimeoutMs = transportClientTimeoutMs,
+      transportClientRetryCount = transportClientRetryCount,
+      transportClientRetryDelayMs = transportClientRetryDelayMs)
 
     var writePolicy: AbstractPolicy = null
 

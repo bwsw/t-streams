@@ -1,4 +1,4 @@
-package com.bwsw.tstreams.agents.integration
+package com.bwsw.tstreams.agents.integration.sophisticated
 
 /**
   * Created by Ivan Kudryavtsev on 21.09.16.
@@ -19,9 +19,34 @@ import scala.util.Random
 class ProducerMasterChangeComplexTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
 
   val MAX_NEW_TXN_RETRY = 10
+  val PRODUCERS_AMOUNT = 10
+  val TRANSACTIONS_AMOUNT_EACH = 1000
+  val PROBABILITY = 0.01
+  val PARTITIONS_COUNT = 10
+  val PARTITIONS = (0 until PARTITIONS_COUNT).toSet
+  val MAX_WAIT_AFTER_ALL_PRODUCERS = 5
 
-  val producerBuffer = ListBuffer[Long]()
-  val subscriberBuffer = ListBuffer[Long]()
+  val onCompleteLatch = new CountDownLatch(PRODUCERS_AMOUNT)
+  val waitCompleteLatch = new CountDownLatch(1)
+
+  f.setProperty(ConfigurationOptions.Stream.name, "test_stream").
+    setProperty(ConfigurationOptions.Stream.partitionsCount, PARTITIONS_COUNT).
+    setProperty(ConfigurationOptions.Stream.ttlSec, 60 * 10).
+    setProperty(ConfigurationOptions.Coordination.connectionTimeoutMs, 4000).
+    setProperty(ConfigurationOptions.Coordination.sessionTimeoutMs, 4000).
+    setProperty(ConfigurationOptions.Producer.transportTimeoutMs, 2000).
+    setProperty(ConfigurationOptions.Producer.Transaction.ttlMs, 30000).
+    setProperty(ConfigurationOptions.Producer.Transaction.keepAliveMs, 2000).
+    setProperty(ConfigurationOptions.Consumer.transactionPreload, 500).
+    setProperty(ConfigurationOptions.Consumer.dataPreload, 10)
+
+  val srv = TestStorageServer.get()
+  val storageClient = f.getStorageClient()
+  storageClient.createStream("test_stream", PARTITIONS_COUNT, 24 * 3600, "")
+  storageClient.shutdown()
+
+  val producerBuffer = PARTITIONS.toList.map(_ => ListBuffer[Long]()).toArray
+  val subscriberBuffer = PARTITIONS.toList.map(_ => ListBuffer[Long]()).toArray
 
   class ProducerWorker(val factory: TStreamsFactory, val onCompleteLatch: CountDownLatch, val amount: Int, val probability: Double) {
     var producer: Producer = null
@@ -35,8 +60,8 @@ class ProducerMasterChangeComplexTest extends FlatSpec with Matchers with Before
           val t = producer.newTransaction(policy = NewTransactionProducerPolicy.CheckpointIfOpened, -1)
           t.send("test".getBytes())
           t.checkpoint(checkpointModeSync)
-          producerBuffer.synchronized {
-            producerBuffer.append(t.getTransactionID())
+          producerBuffer(t.getPartition()).synchronized {
+            producerBuffer(t.getPartition()).append(t.getTransactionID())
           }
           counter += 1
         }
@@ -59,31 +84,6 @@ class ProducerMasterChangeComplexTest extends FlatSpec with Matchers with Before
     }
   }
 
-  val PRODUCERS_AMOUNT = 10
-  val TRANSACTIONS_AMOUNT_EACH = 100
-  val PROBABILITY = 0.01
-  val PARTITIONS_COUNT = 10
-  val PARTITIONS = (0 until PARTITIONS_COUNT).toSet
-  val MAX_WAIT_AFTER_ALL_PRODUCERS = 5
-
-  val onCompleteLatch = new CountDownLatch(PRODUCERS_AMOUNT)
-  val waitCompleteLatch = new CountDownLatch(1)
-
-  f.setProperty(ConfigurationOptions.Stream.name, "test_stream").
-    setProperty(ConfigurationOptions.Stream.partitionsCount, PARTITIONS_COUNT).
-    setProperty(ConfigurationOptions.Stream.ttlSec, 60 * 10).
-    setProperty(ConfigurationOptions.Coordination.connectionTimeoutMs, 4000).
-    setProperty(ConfigurationOptions.Coordination.sessionTimeoutMs, 4000).
-    setProperty(ConfigurationOptions.Producer.transportTimeoutMs, 2000).
-    setProperty(ConfigurationOptions.Producer.Transaction.ttlMs, 12000).
-    setProperty(ConfigurationOptions.Producer.Transaction.keepAliveMs, 2000).
-    setProperty(ConfigurationOptions.Consumer.transactionPreload, 500).
-    setProperty(ConfigurationOptions.Consumer.dataPreload, 10)
-
-  val srv = TestStorageServer.get()
-  val storageClient = f.getStorageClient()
-  storageClient.createStream("test_stream", PARTITIONS_COUNT, 24 * 3600, "")
-  storageClient.shutdown()
 
   var subscriberCounter = 0
   val subscriber = f.getSubscriber(name = "s",
@@ -92,7 +92,7 @@ class ProducerMasterChangeComplexTest extends FlatSpec with Matchers with Before
     useLastOffset = false, // true
     callback = (consumer: TransactionOperator, transaction: ConsumerTransaction) => this.synchronized {
       subscriberCounter += 1
-      subscriberBuffer.append(transaction.getTransactionID())
+      subscriberBuffer(transaction.getPartition()).append(transaction.getTransactionID())
       if (subscriberCounter == PRODUCERS_AMOUNT * TRANSACTIONS_AMOUNT_EACH)
         waitCompleteLatch.countDown()
     })
@@ -109,12 +109,19 @@ class ProducerMasterChangeComplexTest extends FlatSpec with Matchers with Before
     waitCompleteLatch.await(MAX_WAIT_AFTER_ALL_PRODUCERS, TimeUnit.SECONDS)
     subscriber.stop()
 
+    //val consumer = f.getConsumer("cons", partitions = PARTITIONS, offset = Oldest, useLastOffset = false)
+
+    //PARTITIONS.map(p => {
+    //
+    //})
+
     subscriberCounter shouldBe TRANSACTIONS_AMOUNT_EACH * PRODUCERS_AMOUNT
 
-    val intersectionSize = producerBuffer.toSet.intersect(subscriberBuffer.toSet).size
-
-    intersectionSize shouldBe producerBuffer.size
-    intersectionSize shouldBe subscriberBuffer.size
+    PARTITIONS.foreach(p => {
+      val intersectionSize = producerBuffer(p).toSet.intersect(subscriberBuffer(p).toSet).size
+      intersectionSize shouldBe producerBuffer(p).size
+      intersectionSize shouldBe subscriberBuffer(p).size
+    })
 
   }
 

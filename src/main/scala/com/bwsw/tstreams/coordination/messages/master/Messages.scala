@@ -1,9 +1,8 @@
 package com.bwsw.tstreams.coordination.messages.master
 
 import com.bwsw.tstreams.agents.producer
-import com.bwsw.tstreams.agents.producer.PeerAgent
+import com.bwsw.tstreams.agents.producer.TransactionOpenerService
 import com.bwsw.tstreams.common.ProtocolMessageSerializer
-import com.bwsw.tstreams.coordination.messages.state.TransactionStateMessage
 import io.netty.channel.Channel
 import org.slf4j.LoggerFactory
 
@@ -17,7 +16,7 @@ object IMessage {
 
 /**
   * Messages which used for providing
-  * interaction between [[producer.PeerAgent]]]
+  * interaction between [[producer.TransactionOpenerService]]]
   */
 trait IMessage {
   var msgID: Long = Random.nextLong()
@@ -38,9 +37,9 @@ trait IMessage {
     *
     * @param agent
     */
-  def handleP2PRequest(agent: PeerAgent) = {}
+  def handleP2PRequest(agent: TransactionOpenerService) = {}
 
-  def run(agent: PeerAgent) = {
+  def run(agent: TransactionOpenerService) = {
     val start = System.currentTimeMillis()
     if (IMessage.isDebugMessages) {
       IMessage.logger.info(s"${getClass.toString} / ${msgID.toString} - Start handling at $start, was-sent-at $remotePeerTimestamp, re-created $localPeerTimestamp")
@@ -67,7 +66,7 @@ trait IMessage {
   * @param partition
   */
 case class NewTransactionRequest(senderID: String, receiverID: String, partition: Int) extends IMessage {
-  override def handleP2PRequest(agent: PeerAgent) = {
+  override def handleP2PRequest(agent: TransactionOpenerService) = {
     assert(receiverID == agent.getAgentAddress)
 
     val master = agent.isMasterOfPartition(partition)
@@ -96,45 +95,6 @@ case class NewTransactionRequest(senderID: String, receiverID: String, partition
   * @param partition
   */
 case class TransactionResponse(senderID: String, receiverID: String, transactionID: Long, partition: Int) extends IMessage
-
-/**
-  * Request which is received when producer does publish operation through master and master proxies it to subscribers
-  *
-  * @param senderID
-  * @param receiverID
-  * @param msg
-  */
-case class PublishRequest(senderID: String, receiverID: String, msg: TransactionStateMessage) extends IMessage {
-  override val partition: Int = msg.partition
-
-  override def handleP2PRequest(agent: PeerAgent) = {
-    if (agent.isMasterOfPartition(partition)) {
-      agent.submitPipelinedTaskToPublishExecutors(partition,
-        () => agent.getProducer.subscriberNotifier.publish(msg))
-    }
-  }
-}
-
-/**
-  * Publish response is sent to producer to acknowledge it that request is accepted
-  *
-  * @param senderID
-  * @param receiverID
-  * @param msg
-  */
-case class PublishResponse(senderID: String, receiverID: String, msg: TransactionStateMessage) extends IMessage {
-  override val partition: Int = msg.partition
-}
-
-/**
-  * Just empty dump request
-  *
-  * @param senderID
-  * @param receiverID
-  * @param partition
-  */
-case class EmptyRequest(senderID: String, receiverID: String, partition: Int) extends IMessage {
-}
 
 /**
   * Response on empty request

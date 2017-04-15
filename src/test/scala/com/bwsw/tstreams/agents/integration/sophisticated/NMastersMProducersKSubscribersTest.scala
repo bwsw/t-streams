@@ -1,4 +1,4 @@
-package com.bwsw.tstreams.agents.integration
+package com.bwsw.tstreams.agents.integration.sophisticated
 
 import java.util.concurrent.{CountDownLatch, TimeUnit}
 
