@@ -17,8 +17,8 @@ class NMastersMProducersKSubscribersTest extends FlatSpec with Matchers with Bef
 
   val ALL_PARTITIONS = 4
   val PRODUCER_COUNT = 4
-  val SUBSCRIBER_COUNT = 2
-  val TRANSACTION_COUNT = 1000
+  val SUBSCRIBER_COUNT = 1
+  val TRANSACTION_COUNT = 10000
 
   f.setProperty(ConfigurationOptions.Stream.name, "test_stream").
     setProperty(ConfigurationOptions.Stream.partitionsCount, ALL_PARTITIONS).
@@ -26,10 +26,11 @@ class NMastersMProducersKSubscribersTest extends FlatSpec with Matchers with Bef
     setProperty(ConfigurationOptions.Coordination.connectionTimeoutMs, 7000).
     setProperty(ConfigurationOptions.Coordination.sessionTimeoutMs, 7000).
     setProperty(ConfigurationOptions.Producer.transportTimeoutMs, 5000).
-    setProperty(ConfigurationOptions.Producer.Transaction.ttlMs, 6000).
-    setProperty(ConfigurationOptions.Producer.Transaction.keepAliveMs, 2000).
-    setProperty(ConfigurationOptions.Consumer.transactionPreload, 10).
-    setProperty(ConfigurationOptions.Consumer.dataPreload, 10)
+    setProperty(ConfigurationOptions.Producer.Transaction.ttlMs, 500).
+    setProperty(ConfigurationOptions.Producer.Transaction.keepAliveMs, 100).
+    setProperty(ConfigurationOptions.Consumer.transactionPreload, 1000).
+    setProperty(ConfigurationOptions.Consumer.dataPreload, 10).
+    setProperty(ConfigurationOptions.Consumer.Subscriber.pollingFrequencyDelayMs, 1000)
 
   val srv = TestStorageServer.get()
   val storageClient = f.getStorageClient()
@@ -65,21 +66,25 @@ class NMastersMProducersKSubscribersTest extends FlatSpec with Matchers with Bef
     val subscriberAccumulators = (0 until SUBSCRIBER_COUNT).map(_ => ListBuffer[Long]()).toArray
     val subscribersLatch = new CountDownLatch(SUBSCRIBER_COUNT)
 
-    val subscribers = (0 until SUBSCRIBER_COUNT).map(id =>
+    val subscribers = (0 until SUBSCRIBER_COUNT).map(id => {
       f.getSubscriber(s"s${id}",
         partitions = (0 until ALL_PARTITIONS).toSet,
         offset = Newest,
         useLastOffset = false,
-        callback = (consumer: TransactionOperator, transaction: ConsumerTransaction) => subscriberAccumulators(id).synchronized {
+        callback = (consumer: TransactionOperator, transaction: ConsumerTransaction) => this.synchronized {
           subscriberAccumulators(id).append(transaction.getTransactionID())
+          if (subscriberAccumulators(id).size % 100 == 0) {
+            println(s"${id} -> ${subscriberAccumulators(id).size}")
+          }
           if (subscriberAccumulators(id).size == PRODUCER_COUNT * TRANSACTION_COUNT)
             subscribersLatch.countDown()
-        }))
+        })
+    })
 
     subscribers.foreach(subscriber => subscriber.start())
     producerThreads.foreach(t => t.start())
 
-    subscribersLatch.await(30, TimeUnit.SECONDS) shouldBe true
+    subscribersLatch.await(200, TimeUnit.SECONDS) shouldBe true
     subscriberAccumulators.foreach(acc => acc.sorted shouldBe producerTransactions.sorted)
 
     producerThreads.foreach(t => t.join())

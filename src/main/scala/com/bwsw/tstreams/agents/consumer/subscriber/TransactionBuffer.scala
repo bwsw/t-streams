@@ -129,6 +129,7 @@ class TransactionBuffer(queue: QueueBuilder.QueueType, transactionQueueMaxLength
         "It seems that the user part handles transactions slower than producers feed me.")
       stateList.clear()
       stateMap.clear()
+
       return
     }
 

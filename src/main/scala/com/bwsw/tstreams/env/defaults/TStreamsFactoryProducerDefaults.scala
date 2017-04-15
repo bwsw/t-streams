@@ -22,9 +22,9 @@ object TStreamsFactoryProducerDefaults {
     val notifyThreadPoolSize = IntMinMaxDefault(1, 32, 1)
 
     object Transaction {
-      val ttlMs = IntMinMaxDefault(2000, 120000, 30000)
-      val openMaxWayMs = IntMinMaxDefault(1000, 10000, 5000)
-      val keepAliveMs = IntMinMaxDefault(500, 2000, 1000)
+      val ttlMs = IntMinMaxDefault(500, 120000, 1000)
+      val openMaxWayMs = IntMinMaxDefault(1000, 10000, 200)
+      val keepAliveMs = IntMinMaxDefault(100, 2000, 1000)
       val batchSize = IntMinMaxDefault(1, 1000, 100)
       val distributionPolicy = ConfigurationOptions.Producer.Transaction.Consts.DISTRIBUTION_POLICY_RR
     }

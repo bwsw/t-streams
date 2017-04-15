@@ -75,9 +75,8 @@ case class NewTransactionRequest(senderID: String, receiverID: String, partition
       val transactionID = agent.getProducer.generateNewTransactionIDLocal()
       val response = TransactionResponse(receiverID, senderID, transactionID, partition)
       response.msgID = msgID
-      agent.getProducer.openTransactionLocal(transactionID, partition)
+      agent.getProducer().openTransactionLocal(transactionID, partition)
       this.respond(response)
-      agent.getProducer().notifyOpenTransaction(transactionID, partition)
     } else {
       val response = EmptyResponse(receiverID, senderID, partition)
       response.msgID = msgID

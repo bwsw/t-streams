@@ -277,22 +277,16 @@ class Producer(var name: String,
     val extTransportTimeOutMs = producerOptions.coordinationOptions.transportClientTimeoutMs
 
     stream.client.putTransactionSync(transactionRecord, extTransportTimeOutMs.milliseconds)
-  }
 
-  private[tstreams] def notifyOpenTransaction(transactionID: Long, partition: Int): Unit = {
-    notifyService.submit(s"NotifyTask-Part[${partition}]-Txn[${transactionID}]", () => {
-      val msg = TransactionStateMessage(
-        transactionID = transactionID,
-        ttlMs = producerOptions.transactionTtlMs,
-        status = TransactionStatus.opened,
-        partition = partition,
-        masterID = transactionOpenerService.getUniqueAgentID(),
-        orderID = transactionOpenerService.getAndIncSequentialID(partition),
-        count = 0)
-      subscriberNotifier.publish(msg)
-      if (Producer.logger.isDebugEnabled)
-        Producer.logger.debug(s"Producer $name - [GET_LOCAL_TRANSACTION] update with message partition=$partition ID=$transactionID opened")
-    })
+    val msg = TransactionStateMessage(
+      transactionID = transactionID,
+      ttlMs = producerOptions.transactionTtlMs,
+      status = TransactionStatus.opened,
+      partition = partition,
+      masterID = transactionOpenerService.getUniqueAgentID(),
+      orderID = transactionOpenerService.getAndIncSequentialID(partition),
+      count = 0)
+    subscriberNotifier.publish(msg)
   }
 
 
