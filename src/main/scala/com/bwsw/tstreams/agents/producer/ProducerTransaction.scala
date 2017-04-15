@@ -275,11 +275,6 @@ class ProducerTransaction(partition: Int,
 
           transactionOwner.stream.client.putTransactionWithDataSync(transactionRecord, data.items, data.lastOffset)
 
-          //          if(data.items.nonEmpty) {
-          //          } else {
-          //            transactionOwner.stream.client.putTransactionSync(transactionRecord)
-          //          }
-
           if (ProducerTransaction.logger.isDebugEnabled) {
             ProducerTransaction.logger.debug("[COMMIT PARTITION_{}] ts={}", partition, transactionID.toString)
           }
