@@ -45,6 +45,8 @@ class NMastersMProducersKSubscribersTest extends FlatSpec with Matchers with Bef
     val masters = (0 until ALL_PARTITIONS)
       .map(partition => f.getProducer(name = s"m${partition}", partitions = Set(partition)))
 
+    masters.foreach(m => m.newTransaction().cancel())
+
     val producerTransactions = ListBuffer[Long]()
     val producerThreads = (0 until PRODUCER_COUNT)
       .map(id => {
