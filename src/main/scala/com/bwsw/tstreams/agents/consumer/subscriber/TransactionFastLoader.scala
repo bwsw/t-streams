@@ -5,6 +5,7 @@ import java.util.concurrent.atomic.AtomicInteger
 
 import com.bwsw.tstreams.agents.consumer.TransactionOperator
 import com.bwsw.tstreams.common.FirstFailLockableTaskExecutor
+import com.bwsw.tstreams.coordination.messages.state.TransactionStatus
 
 /**
   * Created by Ivan Kudryavtsev on 21.08.16.
@@ -66,8 +67,9 @@ class TransactionFastLoader(partitions: Set[Int],
                     executor: FirstFailLockableTaskExecutor,
                     callback: Callback): Int = {
 
-    seq foreach (elt =>
-      executor.submit(s"<CallbackTask#Fast>", new ProcessingEngine.CallbackTask(consumer, elt, callback)))
+    seq.foreach(elt =>
+      if (elt.state == TransactionStatus.checkpointed)
+        executor.submit(s"<CallbackTask#Fast>", new ProcessingEngine.CallbackTask(consumer, elt, callback)))
 
     val last = seq.last
     lastTransactionsMap(last.partition) = last

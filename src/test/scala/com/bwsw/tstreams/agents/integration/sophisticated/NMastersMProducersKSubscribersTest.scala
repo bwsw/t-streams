@@ -17,7 +17,7 @@ class NMastersMProducersKSubscribersTest extends FlatSpec with Matchers with Bef
 
   val ALL_PARTITIONS = 4
   val PRODUCER_COUNT = 4
-  val SUBSCRIBER_COUNT = 1
+  val SUBSCRIBER_COUNT = 4
   val TRANSACTION_COUNT = 10000
 
   f.setProperty(ConfigurationOptions.Stream.name, "test_stream").

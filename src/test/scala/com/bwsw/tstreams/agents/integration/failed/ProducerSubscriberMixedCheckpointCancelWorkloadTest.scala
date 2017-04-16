@@ -1,6 +1,5 @@
-package com.bwsw.tstreams.agents.integration
+package com.bwsw.tstreams.agents.integration.failed
 
-import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.{CountDownLatch, TimeUnit}
 
 import com.bwsw.tstreams.agents.consumer.Offset.Oldest
@@ -16,7 +15,7 @@ import scala.util.Random
   * Created by Ivan Kudryavtsev on 14.04.17.
   */
 class ProducerSubscriberMixedCheckpointCancelWorkloadTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
-  val TRANSACTION_COUNT = 1000
+  val TRANSACTION_COUNT = 20000
   val CANCEL_PROBABILITY = 0.05
 
   f.setProperty(ConfigurationOptions.Stream.name, "test_stream").
@@ -34,7 +33,6 @@ class ProducerSubscriberMixedCheckpointCancelWorkloadTest extends FlatSpec with 
   def test(startBeforeProducerSend: Boolean = false) = {
     val producerAccumulator = ListBuffer[Long]()
     val subscriberAccumulator = ListBuffer[Long]()
-    val isSentAll = new AtomicBoolean(false)
     val subscriberLatch = new CountDownLatch(1)
 
     val srv = TestStorageServer.get()
@@ -48,7 +46,7 @@ class ProducerSubscriberMixedCheckpointCancelWorkloadTest extends FlatSpec with 
       useLastOffset = false,
       callback = (consumer: TransactionOperator, transaction: ConsumerTransaction) => this.synchronized {
         subscriberAccumulator.append(transaction.getTransactionID())
-        if (isSentAll.get() && producerAccumulator.size == subscriberAccumulator.size)
+        if (producerAccumulator.size == subscriberAccumulator.size)
           subscriberLatch.countDown()
       })
 
@@ -70,8 +68,6 @@ class ProducerSubscriberMixedCheckpointCancelWorkloadTest extends FlatSpec with 
       }
     })
     producer.stop()
-
-    isSentAll.set(true)
 
     if (!startBeforeProducerSend)
       subscriber.start()

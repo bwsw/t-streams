@@ -89,7 +89,9 @@ class TransactionBuffer(queue: QueueBuilder.QueueType, transactionQueueMaxLength
         case (TransactionStatus.opened, TransactionStatus.cancel) =>
           ts.state = TransactionStatus.invalid
           ts.ttlMs = 0L
-          stateMap.remove(update.transactionID)
+          ts.queueOrderID = orderID
+        // added
+        //stateMap.remove(update.transactionID)
 
         case (TransactionStatus.opened, TransactionStatus.`checkpointed`) =>
           ts.queueOrderID = orderID
@@ -115,7 +117,8 @@ class TransactionBuffer(queue: QueueBuilder.QueueType, transactionQueueMaxLength
   def signalCompleteTransactions(): Unit = this.synchronized {
     val time = System.currentTimeMillis()
 
-    val meetCheckpoint = stateList.takeWhile(ts => ts.state == TransactionStatus.checkpointed)
+    val meetCheckpoint = stateList.takeWhile(ts =>
+      (ts.state == TransactionStatus.checkpointed || ts.state == TransactionStatus.invalid))
 
     meetCheckpoint.foreach(ts => stateMap.remove(ts.transactionID))
 
