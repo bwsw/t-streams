@@ -25,8 +25,8 @@ class ProducerSubscriberMixedCheckpointCancelWorkloadTest extends FlatSpec with 
     setProperty(ConfigurationOptions.Coordination.connectionTimeoutMs, 7000).
     setProperty(ConfigurationOptions.Coordination.sessionTimeoutMs, 7000).
     setProperty(ConfigurationOptions.Producer.transportTimeoutMs, 5000).
-    setProperty(ConfigurationOptions.Producer.Transaction.ttlMs, 6000).
-    setProperty(ConfigurationOptions.Producer.Transaction.keepAliveMs, 2000).
+    setProperty(ConfigurationOptions.Producer.Transaction.ttlMs, 500).
+    setProperty(ConfigurationOptions.Producer.Transaction.keepAliveMs, 100).
     setProperty(ConfigurationOptions.Consumer.transactionPreload, 500).
     setProperty(ConfigurationOptions.Consumer.dataPreload, 10)
 
