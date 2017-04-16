@@ -287,6 +287,8 @@ class TStreamsFactory() {
         "is supported currently in UniversalFactory.")
     }
 
+    println(transactionTtlMs)
+    println(transactionKeepAliveMs)
     assert(transactionTtlMs >= transactionKeepAliveMs * 3)
 
 

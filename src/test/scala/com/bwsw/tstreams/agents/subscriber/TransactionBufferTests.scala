@@ -101,7 +101,7 @@ class TransactionBufferTests extends FlatSpec with Matchers {
     val ts0 = generateAllStates()
     b.update(ts0(OPENED))
     b.update(ts0(CANCEL))
-    b.getState(ts0(UPDATE).transactionID).isDefined shouldBe false
+    b.getState(ts0(UPDATE).transactionID).isDefined shouldBe true
   }
 
 
