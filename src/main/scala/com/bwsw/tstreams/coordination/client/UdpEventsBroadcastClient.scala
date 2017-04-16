@@ -1,6 +1,7 @@
 package com.bwsw.tstreams.coordination.client
 
 import java.net.{DatagramSocket, InetAddress}
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.atomic.AtomicBoolean
 
 import com.bwsw.tstreams.common.ProtocolMessageSerializer
@@ -30,10 +31,13 @@ class UdpEventsBroadcastClient(curatorClient: CuratorFramework, partitions: Set[
 
   private val partitionSubscribers = new java.util.concurrent.ConcurrentHashMap[Int, Set[String]]()
 
+  val startUpdateThreadLatch = new CountDownLatch(1)
+
   private val updateThread = new Thread(() => {
     while (!isStopped.get()) {
-      Thread.sleep(UPDATE_PERIOD_MS)
       partitions.foreach(p => updateSubscribers(p))
+      startUpdateThreadLatch.countDown()
+      Thread.sleep(UPDATE_PERIOD_MS)
     }
   })
 
@@ -42,28 +46,33 @@ class UdpEventsBroadcastClient(curatorClient: CuratorFramework, partitions: Set[
     */
   def init(): Unit = {
     isStopped.set(false)
+
     partitions.foreach { p => {
       partitionSubscribers.put(p, Set[String]().empty)
       updateSubscribers(p)
     }
     }
     updateThread.start()
+    startUpdateThreadLatch.await()
   }
 
   private def broadcast(set: Set[String], msg: TransactionStateMessage) = {
+    val msgString = ProtocolMessageSerializer.serialize(msg)
     set.foreach(address => {
       val splits = address.split(":")
-      //assert(splits.size == 2)
       val host = InetAddress.getByName(splits(0))
       val port = splits(1).toInt
-      val msgString = ProtocolMessageSerializer.serialize(msg)
       val bytes = msgString.getBytes()
       val sendPacket = new java.net.DatagramPacket(bytes, bytes.length, host, port)
-      try {
-        clientSocket.send(sendPacket)
-      } catch {
-        case e: Exception =>
-          UdpEventsBroadcastClient.logger.warn(s"Send $msgString to $host:$port failed. Exception is: $e")
+      var isSent = false
+      while (!isSent) {
+        try {
+          clientSocket.send(sendPacket)
+          isSent = true
+        } catch {
+          case e: Exception =>
+            UdpEventsBroadcastClient.logger.warn(s"Send $msgString to $host:$port failed. Exception is: $e")
+        }
       }
     })
   }

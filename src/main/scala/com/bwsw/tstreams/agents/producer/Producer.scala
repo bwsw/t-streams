@@ -7,7 +7,8 @@ import java.util.concurrent.{CountDownLatch, TimeUnit}
 import com.bwsw.tstreams.agents.group.{CheckpointInfo, GroupParticipant, SendingAgent}
 import com.bwsw.tstreams.agents.producer.NewTransactionProducerPolicy.ProducerPolicy
 import com.bwsw.tstreams.common._
-import com.bwsw.tstreams.coordination.client.UdpEventsBroadcastClient
+import com.bwsw.tstreams.coordination.client.{CommunicationClient, UdpEventsBroadcastClient}
+import com.bwsw.tstreams.coordination.messages.master.{IMessage, NewTransactionRequest}
 import com.bwsw.tstreams.coordination.messages.state.{TransactionStateMessage, TransactionStatus}
 import com.bwsw.tstreams.streams.Stream
 import com.bwsw.tstreamstransactionserver.rpc.TransactionStates
@@ -86,21 +87,44 @@ class Producer(var name: String,
   Producer.logger.info(s"Start new Basic producer with name : $name, streamName : ${stream.name}, streamPartitions : ${stream.partitionsCount}")
 
   // this client is used to find new subscribers
-  val subscriberNotifier = new UdpEventsBroadcastClient(curatorClient, partitions = producerOptions.writePolicy.getUsedPartitions())
+  private[tstreams] val subscriberNotifier = new UdpEventsBroadcastClient(curatorClient, partitions = producerOptions.writePolicy.getUsedPartitions())
   subscriberNotifier.init()
+
+  /**
+    * Allows to publish update/pre/post/cancel messages.
+    *
+    * @param msg
+    * @return
+    */
+  def publish(msg: TransactionStateMessage) = subscriberNotifier.publish(msg)
+
+  private[tstreams] val openTransactionClient = new CommunicationClient(pcs.transportClientTimeoutMs, pcs.transportClientRetryCount, pcs.transportClientRetryDelayMs)
+
+  /**
+    * Request to get Transaction
+    *
+    * @param to
+    * @param partition
+    * @return TransactionResponse or null
+    */
+  def transactionRequest(to: String, partition: Int): IMessage = {
+    val r = NewTransactionRequest(pcs.transaportServer.getInetAddress(), to, partition)
+    val response: IMessage = openTransactionClient.sendAndWaitResponse(r, isExceptionIfFails = false, () => null)
+    response
+  }
+
 
   /**
     * P2P Agent for producers interaction
     * (getNewTransaction id; publish openTransaction event; publish closeTransaction event)
     */
-  override private[tstreams] val p2pAgent: PeerAgent = new PeerAgent(
+  override private[tstreams] val transactionOpenerService: TransactionOpenerService = new TransactionOpenerService(
     curatorClient = curatorClient,
     peerKeepAliveTimeout = peerKeepAliveTimeout,
     producer = this,
     usedPartitions = producerOptions.writePolicy.getUsedPartitions(),
-    transport = pcs.transport,
-    threadPoolAmount = threadPoolSize,
-    threadPoolPublisherThreadsAmount = pcs.notifyThreadPoolSize)
+    transport = pcs.transaportServer,
+    threadPoolAmount = threadPoolSize)
 
 
   /**
@@ -108,8 +132,8 @@ class Producer(var name: String,
     */
   private val shutdownKeepAliveThread = new ThreadSignalSleepVar[Boolean](1)
   private val transactionKeepAliveThread = getTransactionKeepAliveThread
-  val backendActivityService = new FirstFailLockableTaskExecutor(s"Producer $name-BackendWorker")
   val asyncActivityService = new FirstFailLockableTaskExecutor(s"Producer $name-AsyncWorker")
+  val notifyService = new FirstFailLockableTaskExecutor(s"NotifyService-$name", pcs.notifyThreadPoolSize)
 
 
   /**
@@ -119,10 +143,10 @@ class Producer(var name: String,
     * @return
     */
   def isMasterOfPartition(partition: Int): Boolean =
-    p2pAgent.isMasterOfPartition(partition)
+    transactionOpenerService.isMasterOfPartition(partition)
 
   def getPartitionMasterIDLocalInfo(partition: Int): Int =
-    p2pAgent.getPartitionMasterInetAddressLocal(partition)._2
+    transactionOpenerService.getPartitionMasterInetAddressLocal(partition)._2
 
   /**
     * Utility method which allows waiting while the producer completes partition redistribution process.
@@ -180,7 +204,7 @@ class Producer(var name: String,
     if (previousTransactionAction != null)
       previousTransactionAction()
 
-    val transactionID = p2pAgent.generateNewTransaction(p)
+    val transactionID = transactionOpenerService.generateNewTransaction(p)
 
     if (Producer.logger.isDebugEnabled)
       Producer.logger.debug(s"[NEW_TRANSACTION PARTITION_$p] ID=$transactionID")
@@ -250,25 +274,19 @@ class Producer(var name: String,
   override private[tstreams] def openTransactionLocal(transactionID: Long, partition: Int): Unit = {
 
     val transactionRecord = new RPCProducerTransaction(stream.name, partition, transactionID, TransactionStates.Opened, -1, producerOptions.transactionTtlMs)
-    val extTransportTimeOutMs = producerOptions.coordinationOptions.transport.getTimeoutMs()
+    val extTransportTimeOutMs = producerOptions.coordinationOptions.transportClientTimeoutMs
 
     stream.client.putTransactionSync(transactionRecord, extTransportTimeOutMs.milliseconds)
-  }
 
-  private[tstreams] def notifyOpenTransaction(transactionID: Long, partition: Int): Unit = {
-    p2pAgent.submitPipelinedTaskToPublishExecutors(partition, () => {
-      val msg = TransactionStateMessage(
-        transactionID = transactionID,
-        ttlMs = producerOptions.transactionTtlMs,
-        status = TransactionStatus.opened,
-        partition = partition,
-        masterID = p2pAgent.getUniqueAgentID(),
-        orderID = p2pAgent.getAndIncSequentialID(partition),
-        count = 0)
-      subscriberNotifier.publish(msg)
-      if (Producer.logger.isDebugEnabled)
-        Producer.logger.debug(s"Producer $name - [GET_LOCAL_TRANSACTION] update with message partition=$partition ID=$transactionID opened")
-    })
+    val msg = TransactionStateMessage(
+      transactionID = transactionID,
+      ttlMs = producerOptions.transactionTtlMs,
+      status = TransactionStatus.opened,
+      partition = partition,
+      masterID = transactionOpenerService.getUniqueAgentID(),
+      orderID = transactionOpenerService.getAndIncSequentialID(partition),
+      count = 0)
+    subscriberNotifier.publish(msg)
   }
 
 
@@ -281,17 +299,18 @@ class Producer(var name: String,
     if (isStop.getAndSet(true))
       throw new IllegalStateException(s"Producer ${this.name} is already stopped. Duplicate action.")
 
+    openTransactionClient.close()
+    // stop provide master features to public
+    transactionOpenerService.stop()
+
     // stop update state of all open transactions
     shutdownKeepAliveThread.signal(true)
     transactionKeepAliveThread.join()
-    // stop executor
 
+    // stop executors
     asyncActivityService.shutdownOrDie(Producer.SHUTDOWN_WAIT_MAX_SECONDS, TimeUnit.SECONDS)
+    notifyService.shutdownOrDie(Producer.SHUTDOWN_WAIT_MAX_SECONDS, TimeUnit.SECONDS)
 
-    backendActivityService.shutdownOrDie(Producer.SHUTDOWN_WAIT_MAX_SECONDS, TimeUnit.SECONDS)
-
-    // stop provide master features to public
-    p2pAgent.stop()
     // stop function which works with subscribers
     subscriberNotifier.stop()
     curatorClient.close()

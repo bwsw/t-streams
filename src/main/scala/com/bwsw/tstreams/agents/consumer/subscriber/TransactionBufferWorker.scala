@@ -8,12 +8,14 @@ import com.bwsw.tstreams.coordination.messages.state.TransactionStatus
 
 import scala.collection.mutable
 
+
 /**
   * Created by Ivan Kudryavtsev at 20.08.2016
   */
 class TransactionBufferWorker() {
   private val updateExecutor = new FirstFailLockableTaskExecutor("TransactionBufferWorker-updateExecutor")
   val transactionBufferMap = mutable.Map[Int, TransactionBuffer]()
+
   val isComplete = new AtomicBoolean(false)
 
   val signalThread = new Thread(() => {
@@ -26,8 +28,9 @@ class TransactionBufferWorker() {
   signalThread.start()
 
   def assign(partition: Int, transactionBuffer: TransactionBuffer) = this.synchronized {
-    if (!transactionBufferMap.contains(partition))
+    if (!transactionBufferMap.contains(partition)) {
       transactionBufferMap(partition) = transactionBuffer
+    }
     else
       throw new IllegalStateException(s"Partition $partition is bound already.")
   }
@@ -44,10 +47,12 @@ class TransactionBufferWorker() {
     * @param transactionState
     */
   def update(transactionState: TransactionState) = {
+
     updateExecutor.submit(s"<UpdateAndNotifyTask($transactionState)>", () => {
       transactionBufferMap(transactionState.partition).update(transactionState)
-      if (transactionState.state == TransactionStatus.checkpointed)
+      if (transactionState.state == TransactionStatus.checkpointed) {
         transactionBufferMap(transactionState.partition).signalCompleteTransactions()
+      }
     })
   }
 
