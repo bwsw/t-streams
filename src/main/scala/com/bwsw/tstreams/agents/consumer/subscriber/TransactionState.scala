@@ -13,6 +13,6 @@ case class TransactionState(transactionID: Long,
                             var state: ProducerTransactionStatus,
                             var ttlMs: Long) {
   override def toString() = {
-    s"TransactionState($transactionID, $partition, $masterSessionID, $queueOrderID, $itemCount, $state, $ttlMs)"
+    s"TransactionState(id=$transactionID, partition=$partition, master=$masterSessionID, order=$queueOrderID, count=$itemCount, state=$state, ttl=$ttlMs)"
   }
 }

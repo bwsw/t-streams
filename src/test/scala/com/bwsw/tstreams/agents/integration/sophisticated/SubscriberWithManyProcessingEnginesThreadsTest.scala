@@ -1,4 +1,4 @@
-package com.bwsw.tstreams.agents.integration
+package com.bwsw.tstreams.agents.integration.sophisticated
 
 import java.util.concurrent.{CountDownLatch, TimeUnit}
 
@@ -23,7 +23,7 @@ class SubscriberWithManyProcessingEnginesThreadsTest extends FlatSpec with Match
   val PROCESSING_ENGINES_THREAD_POOL = 10
   val TRANSACTION_BUFFER_THREAD_POOL = 10
 
-  val POLLING_FREQUENCY_DELAY_MS = 1000
+  val POLLING_FREQUENCY_DELAY_MS = 5000
 
   f.setProperty(ConfigurationOptions.Stream.ttlSec, 60 * 10).
     setProperty(ConfigurationOptions.Coordination.connectionTimeoutMs, 7000).

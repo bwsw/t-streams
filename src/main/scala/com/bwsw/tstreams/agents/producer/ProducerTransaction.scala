@@ -20,17 +20,17 @@ object ProducerTransaction {
 /**
   * Transaction retrieved by BasicProducer.newTransaction method
   *
-  * @param partition        Concrete partition for saving this transaction
-  * @param transactionOwner Producer class which was invoked newTransaction method
-  * @param transactionID    ID for this transaction
+  * @param partition     Concrete partition for saving this transaction
+  * @param producer      Producer class which was invoked newTransaction method
+  * @param transactionID ID for this transaction
   */
 class ProducerTransaction(partition: Int,
                           transactionID: Long,
-                          transactionOwner: Producer) extends IProducerTransaction {
+                          producer: Producer) extends IProducerTransaction {
 
   private val transactionLock = new ReentrantLock()
 
-  private val data = new ProducerTransactionData(this, transactionOwner.stream.ttl, transactionOwner.stream.client)
+  private val data = new ProducerTransactionData(this, producer.stream.ttl, producer.stream.client)
 
   private val isTransactionClosed = new AtomicBoolean(false)
 
@@ -74,7 +74,7 @@ class ProducerTransaction(partition: Int,
   /**
     * BasicProducerTransaction logger for logging
     */
-  ProducerTransaction.logger.debug(s"Open transaction $getTransactionID for\nstream, partition: ${transactionOwner.stream.name}, ${}")
+  ProducerTransaction.logger.debug(s"Open transaction $getTransactionID for\nstream, partition: ${producer.stream.name}, ${}")
 
   /**
     *
@@ -102,7 +102,7 @@ class ProducerTransaction(partition: Int,
   /**
     * Returns Transaction owner
     */
-  def getTransactionOwner() = transactionOwner
+  def getTransactionOwner() = producer
 
   /**
     * All inserts (can be async) in storage (must be waited before closing this transaction)
@@ -121,9 +121,9 @@ class ProducerTransaction(partition: Int,
 
     val number = data.put(obj)
     val job = {
-      if (number % transactionOwner.producerOptions.batchSize == 0) {
+      if (number % producer.producerOptions.batchSize == 0) {
         if (ProducerTransaction.logger.isDebugEnabled) {
-          ProducerTransaction.logger.debug(s"call data save ${number} / ${transactionOwner.producerOptions.batchSize}")
+          ProducerTransaction.logger.debug(s"call data save ${number} / ${producer.producerOptions.batchSize}")
         }
         data.save()
       }
@@ -154,18 +154,18 @@ class ProducerTransaction(partition: Int,
 
     awaitUpdateComplete
     isTransactionClosed.set(true)
-    val transactionRecord = new RPCProducerTransaction(transactionOwner.stream.name, partition, transactionID, TransactionStates.Cancel, 0, -1L)
+    val transactionRecord = new RPCProducerTransaction(producer.stream.name, partition, transactionID, TransactionStates.Cancel, 0, -1L)
 
-    transactionOwner.stream.client.putTransaction(transactionRecord, true)(rec => {})
+    producer.stream.client.putTransaction(transactionRecord, true)(rec => {})
 
     val msg = TransactionStateMessage(transactionID = transactionID,
       ttlMs = -1,
       status = TransactionStatus.cancel,
       partition = partition,
-      masterID = transactionOwner.getPartitionMasterIDLocalInfo(partition),
+      masterID = producer.getPartitionMasterIDLocalInfo(partition),
       orderID = -1,
       count = 0)
-    transactionOwner.p2pAgent.publish(msg)
+    producer.publish(msg)
   }
 
   private def checkpointPostEventPart(): Unit = {
@@ -187,12 +187,12 @@ class ProducerTransaction(partition: Int,
         return
     }
 
-    transactionOwner.p2pAgent.publish(TransactionStateMessage(
+    producer.publish(TransactionStateMessage(
       transactionID = transactionID,
       ttlMs = -1,
       status = TransactionStatus.checkpointed,
       partition = partition,
-      masterID = transactionOwner.getPartitionMasterIDLocalInfo(partition),
+      masterID = producer.getPartitionMasterIDLocalInfo(partition),
       orderID = -1,
       count = getDataItemsCount()
     ))
@@ -226,21 +226,21 @@ class ProducerTransaction(partition: Int,
           return
         }
       }
-      val transactionRecord = new RPCProducerTransaction(transactionOwner.stream.name, partition, transactionID, TransactionStates.Checkpointed, getDataItemsCount(), transactionOwner.stream.ttl)
+      val transactionRecord = new RPCProducerTransaction(producer.stream.name, partition, transactionID, TransactionStates.Checkpointed, getDataItemsCount(), producer.stream.ttl)
 
-      transactionOwner.stream.client.putTransactionWithData(transactionRecord, data.items, data.lastOffset, true)(record => {
+      producer.stream.client.putTransactionWithData(transactionRecord, data.items, data.lastOffset, true)(record => {
         checkpointPostEventPart()
       })
 
 
     }
     else {
-      transactionOwner.p2pAgent.publish(TransactionStateMessage(
+      producer.publish(TransactionStateMessage(
         transactionID = transactionID,
         ttlMs = -1,
         status = TransactionStatus.cancel,
         partition = partition,
-        masterID = transactionOwner.getPartitionMasterIDLocalInfo(partition),
+        masterID = producer.getPartitionMasterIDLocalInfo(partition),
         orderID = -1, count = 0))
     }
   }
@@ -256,7 +256,7 @@ class ProducerTransaction(partition: Int,
       isTransactionClosed.set(true)
 
       if (!isSynchronous) {
-        transactionOwner.asyncActivityService.submit("<CheckpointAsyncTask>", () => checkpointAsync(), Option(transactionLock))
+        producer.asyncActivityService.submit("<CheckpointAsyncTask>", () => checkpointAsync(), Option(transactionLock))
       }
       else {
         if (getDataItemsCount() > 0) {
@@ -269,11 +269,11 @@ class ProducerTransaction(partition: Int,
           //debug purposes only
           GlobalHooks.invoke(GlobalHooks.preCommitFailure)
 
-          val transactionRecord = new RPCProducerTransaction(transactionOwner.stream.name,
+          val transactionRecord = new RPCProducerTransaction(producer.stream.name,
             partition, transactionID, TransactionStates.Checkpointed, getDataItemsCount(),
-            transactionOwner.stream.ttl)
+            producer.stream.ttl)
 
-          transactionOwner.stream.client.putTransactionWithDataSync(transactionRecord, data.items, data.lastOffset)
+          producer.stream.client.putTransactionWithDataSync(transactionRecord, data.items, data.lastOffset)
 
           if (ProducerTransaction.logger.isDebugEnabled) {
             ProducerTransaction.logger.debug("[COMMIT PARTITION_{}] ts={}", partition, transactionID.toString)
@@ -281,13 +281,13 @@ class ProducerTransaction(partition: Int,
           //debug purposes only
           GlobalHooks.invoke(GlobalHooks.afterCommitFailure)
 
-          transactionOwner.p2pAgent.submitPipelinedTaskToPublishExecutors(partition, () =>
-            transactionOwner.p2pAgent.publish(TransactionStateMessage(
+          producer.notifyService.submit(s"NotifyTask-Part[${partition}]-Txn[${transactionID}]", () =>
+            producer.publish(TransactionStateMessage(
               transactionID = transactionID,
               ttlMs = -1,
               status = TransactionStatus.checkpointed,
               partition = partition,
-              masterID = transactionOwner.getPartitionMasterIDLocalInfo(partition),
+              masterID = producer.getPartitionMasterIDLocalInfo(partition),
               orderID = -1,
               count = getDataItemsCount())))
 
@@ -296,13 +296,13 @@ class ProducerTransaction(partition: Int,
           }
         }
         else {
-          transactionOwner.p2pAgent.submitPipelinedTaskToPublishExecutors(partition, () =>
-            transactionOwner.p2pAgent.publish(TransactionStateMessage(
+          producer.notifyService.submit(s"NotifyTask-Part[${partition}]-Txn[${transactionID}]", () =>
+            producer.publish(TransactionStateMessage(
               transactionID = transactionID,
               ttlMs = -1,
               status = TransactionStatus.cancel,
               partition = partition,
-              masterID = transactionOwner.getPartitionMasterIDLocalInfo(partition),
+              masterID = producer.getPartitionMasterIDLocalInfo(partition),
               orderID = -1,
               count = 0)))
         }
@@ -317,12 +317,12 @@ class ProducerTransaction(partition: Int,
 
     setUpdateFinished
 
-    transactionOwner.p2pAgent.publish(TransactionStateMessage(
+    producer.publish(TransactionStateMessage(
       transactionID = transactionID,
-      ttlMs = transactionOwner.producerOptions.transactionTtlMs,
+      ttlMs = producer.producerOptions.transactionTtlMs,
       status = TransactionStatus.update,
       partition = partition,
-      masterID = transactionOwner.p2pAgent.getUniqueAgentID(),
+      masterID = producer.transactionOpenerService.getUniqueAgentID(),
       orderID = -1,
       count = 0))
 
@@ -353,9 +353,9 @@ class ProducerTransaction(partition: Int,
     if (ProducerTransaction.logger.isDebugEnabled) {
       ProducerTransaction.logger.debug("Update event for Transaction {}, partition: {}", transactionID, partition)
     }
-    val transactionRecord = new RPCProducerTransaction(transactionOwner.stream.name, partition, transactionID, TransactionStates.Updated, -1, transactionOwner.producerOptions.transactionTtlMs)
+    val transactionRecord = new RPCProducerTransaction(producer.stream.name, partition, transactionID, TransactionStates.Updated, -1, producer.producerOptions.transactionTtlMs)
 
-    transactionOwner.stream.client.putTransaction(transactionRecord, true)(record => {
+    producer.stream.client.putTransaction(transactionRecord, true)(record => {
       doSendUpdateMessage()
     })
 
@@ -376,17 +376,17 @@ class ProducerTransaction(partition: Int,
       ttlMs = -1,
       status = TransactionStatus.checkpointed,
       partition = partition,
-      masterID = transactionOwner.getPartitionMasterIDLocalInfo(partition),
+      masterID = producer.getPartitionMasterIDLocalInfo(partition),
       orderID = -1,
       count = getDataItemsCount())
 
     ProducerCheckpointInfo(transactionRef = this,
-      agent = transactionOwner.p2pAgent,
+      agent = producer.transactionOpenerService,
       checkpointEvent = checkpoint,
-      streamName = transactionOwner.stream.name,
+      streamName = producer.stream.name,
       partition = partition,
       transaction = getTransactionID(),
       totalCnt = getDataItemsCount(),
-      ttl = transactionOwner.stream.ttl)
+      ttl = producer.stream.ttl)
   }
 }

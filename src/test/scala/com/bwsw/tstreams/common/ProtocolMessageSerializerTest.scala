@@ -9,29 +9,10 @@ import org.scalatest.{FlatSpec, Matchers}
 
 class ProtocolMessageSerializerTest extends FlatSpec with Matchers {
 
-  "TStreams serializer" should "serialize and deserialize EmptyRequest" in {
-    val clazz = EmptyRequest("snd", "rcv", 0)
-    val string = ProtocolMessageSerializer.serialize(clazz)
-    val req = ProtocolMessageSerializer.deserialize[EmptyRequest](string)
-    clazz shouldEqual req
-  }
   "TStreams serializer" should "serialize and deserialize EmptyResponse" in {
     val clazz = EmptyResponse("snd", "rcv", 0)
     val string = ProtocolMessageSerializer.serialize(clazz)
     val req = ProtocolMessageSerializer.deserialize[EmptyResponse](string)
-    clazz shouldEqual req
-  }
-
-  "TStreams serializer" should "serialize and deserialize PublishRequest" in {
-    val clazz = PublishRequest("snd", "rcv", TransactionStateMessage(LocalGeneratorCreator.getTransaction(), 228, TransactionStatus.cancel, 1488, 1, 0, 2))
-    val string = ProtocolMessageSerializer.serialize(clazz)
-    val req = ProtocolMessageSerializer.deserialize[PublishRequest](string)
-    clazz shouldEqual req
-  }
-  "TStreams serializer" should "serialize and deserialize PublishResponse" in {
-    val clazz = PublishResponse("snd", "rcv", TransactionStateMessage(LocalGeneratorCreator.getTransaction(), 228, TransactionStatus.cancel, 1488, 1, 0, 2))
-    val string = ProtocolMessageSerializer.serialize(clazz)
-    val req = ProtocolMessageSerializer.deserialize[PublishResponse](string)
     clazz shouldEqual req
   }
 

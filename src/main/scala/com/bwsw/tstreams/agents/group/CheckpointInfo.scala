@@ -1,6 +1,6 @@
 package com.bwsw.tstreams.agents.group
 
-import com.bwsw.tstreams.agents.producer.{PeerAgent, ProducerTransaction}
+import com.bwsw.tstreams.agents.producer.{ProducerTransaction, TransactionOpenerService}
 import com.bwsw.tstreams.coordination.messages.state.TransactionStateMessage
 
 import scala.language.existentials
@@ -28,7 +28,7 @@ sealed trait CheckpointInfo
   * @param ttl            Transaction time to live in seconds
   */
 case class ProducerCheckpointInfo(transactionRef: ProducerTransaction,
-                                  agent: PeerAgent,
+                                  agent: TransactionOpenerService,
                                   checkpointEvent: TransactionStateMessage,
                                   streamName: String,
                                   partition: Int,

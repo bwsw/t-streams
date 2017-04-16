@@ -61,6 +61,12 @@ class Subscriber(val name: String,
     set.toSet
   }
 
+  val transactionsBuffers = mutable.Map[Int, TransactionBuffer]()
+
+  def dumpCounters() = {
+    transactionsBuffers.foreach(kv => kv._2.counters.dump(kv._1))
+  }
+
   /**
     * Starts the subscriber
     */
@@ -77,8 +83,6 @@ class Subscriber(val name: String,
 
     if (isStarted.get())
       throw new IllegalStateException(s"Subscriber $name is started already. Double start is detected.")
-
-    val transactionsBuffers = mutable.Map[Int, TransactionBuffer]()
 
     Subscriber.logger.info(s"[INIT] Subscriber $name: Consumer $name is about to start for subscriber.")
 

@@ -9,6 +9,8 @@ import com.bwsw.tstreams.env.ConfigurationOptions
 import com.bwsw.tstreams.testutils.{TestStorageServer, TestUtils}
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 
+import scala.collection.mutable.ListBuffer
+
 /**
   * Created by Ivan Kudryavtsev on 13.04.17.
   */
@@ -19,8 +21,8 @@ class ProducersComeAndLeaveSubscriberListensTest extends FlatSpec with Matchers 
     setProperty(ConfigurationOptions.Coordination.connectionTimeoutMs, 7000).
     setProperty(ConfigurationOptions.Coordination.sessionTimeoutMs, 7000).
     setProperty(ConfigurationOptions.Producer.transportTimeoutMs, 5000).
-    setProperty(ConfigurationOptions.Producer.Transaction.ttlMs, 6000).
-    setProperty(ConfigurationOptions.Producer.Transaction.keepAliveMs, 2000).
+    setProperty(ConfigurationOptions.Producer.Transaction.ttlMs, 500).
+    setProperty(ConfigurationOptions.Producer.Transaction.keepAliveMs, 100).
     setProperty(ConfigurationOptions.Consumer.transactionPreload, 500).
     setProperty(ConfigurationOptions.Consumer.dataPreload, 10)
 
@@ -31,32 +33,41 @@ class ProducersComeAndLeaveSubscriberListensTest extends FlatSpec with Matchers 
 
   it should "handle all transactions and do not loose them" in {
     val TRANSACTIONS_PER_PRODUCER = 100
-    val PRODUCERS = 10
-    val TXNS_PER_SEC = 100
+    val PRODUCERS = 100
+    val TXNS_PER_SEC = 100 // don't change it
+    val producerAccumulator = ListBuffer[Long]()
+    val subscriberAccumulator = ListBuffer[Long]()
+
 
     val latch = new CountDownLatch(PRODUCERS * TRANSACTIONS_PER_PRODUCER)
 
     val subscriber = f.getSubscriber(name = "sv2",
-      partitions = Set(0, 1, 2),
+      partitions = Set(0),
       offset = Oldest,
       useLastOffset = false,
-      callback = (consumer: TransactionOperator, transaction: ConsumerTransaction) => latch.countDown())
+      callback = (consumer: TransactionOperator, transaction: ConsumerTransaction) => this.synchronized {
+        subscriberAccumulator.append(transaction.getTransactionID())
+        latch.countDown()
+      })
 
     subscriber.start()
 
     (0 until PRODUCERS).foreach(_ => {
       val producer = f.getProducer(
         name = "test_producer",
-        partitions = Set(0, 1, 2))
+        partitions = Set(0))
       (0 until TRANSACTIONS_PER_PRODUCER).foreach(_ => {
         val transaction = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
         transaction.send("test")
         transaction.checkpoint()
+        producerAccumulator.append(transaction.getTransactionID())
       })
       producer.stop()
     })
 
-    latch.await(100 + TRANSACTIONS_PER_PRODUCER * PRODUCERS / TXNS_PER_SEC, TimeUnit.SECONDS)
+    latch.await(100 + TRANSACTIONS_PER_PRODUCER * PRODUCERS / TXNS_PER_SEC, TimeUnit.SECONDS) shouldBe true
+    producerAccumulator shouldBe subscriberAccumulator
+
     subscriber.stop()
   }
 

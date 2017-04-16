@@ -15,5 +15,5 @@ trait Interaction {
   /**
     * Agent for producer to provide producers communication
     */
-  private[tstreams] val p2pAgent: PeerAgent
+  private[tstreams] val transactionOpenerService: TransactionOpenerService
 }
