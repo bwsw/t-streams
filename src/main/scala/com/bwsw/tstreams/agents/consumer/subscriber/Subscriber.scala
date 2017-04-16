@@ -67,7 +67,6 @@ class Subscriber(val name: String,
     transactionsBuffers.foreach(kv => kv._2.counters.dump(kv._1))
   }
 
-
   /**
     * Starts the subscriber
     */

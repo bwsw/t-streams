@@ -288,8 +288,6 @@ class Consumer(val name: String,
       throw new IllegalStateException(s"Consumer $name is not started. Start it first.")
 
     updateOffsets(partition, offset)
-
-    transactionBuffer(partition) = loadNextTransactionsForPartition(partition, offset)
   }
 
   /**

@@ -73,9 +73,6 @@ class NMastersMProducersKSubscribersTest extends FlatSpec with Matchers with Bef
         useLastOffset = false,
         callback = (consumer: TransactionOperator, transaction: ConsumerTransaction) => this.synchronized {
           subscriberAccumulators(id).append(transaction.getTransactionID())
-          if (subscriberAccumulators(id).size % 100 == 0) {
-            println(s"${id} -> ${subscriberAccumulators(id).size}")
-          }
           if (subscriberAccumulators(id).size == PRODUCER_COUNT * TRANSACTION_COUNT)
             subscribersLatch.countDown()
         })
