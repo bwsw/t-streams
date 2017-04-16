@@ -15,7 +15,7 @@ import scala.util.Random
   * Created by Ivan Kudryavtsev on 14.04.17.
   */
 class ProducerSubscriberMixedCheckpointCancelWorkloadTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
-  val TRANSACTION_COUNT = 20000
+  val TRANSACTION_COUNT = 10000
   val CANCEL_PROBABILITY = 0.05
 
   f.setProperty(ConfigurationOptions.Stream.name, "test_stream").
