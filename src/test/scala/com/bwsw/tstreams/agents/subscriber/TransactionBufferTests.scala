@@ -160,7 +160,7 @@ class TransactionBufferTests extends FlatSpec with Matchers {
     b.update(ts0(POST))
     b.update(ts1(POST))
     b.signalCompleteTransactions()
-    val r = q.get(10, TimeUnit.MILLISECONDS)
+    val r = q.get(1, TimeUnit.MILLISECONDS)
     r.size shouldBe 2
     r.head.transactionID shouldBe ts0(OPENED).transactionID
     r.tail.head.transactionID shouldBe ts1(OPENED).transactionID

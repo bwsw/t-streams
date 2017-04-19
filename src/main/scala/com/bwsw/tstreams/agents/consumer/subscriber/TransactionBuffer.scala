@@ -20,7 +20,7 @@ class TransactionBuffer(queue: QueueBuilder.QueueType, transactionQueueMaxLength
   val counters = TransactionBufferCounters()
   var lastTransaction = 0L
 
-  private val stateList = ListBuffer[TransactionState]()
+  private val stateList = ListBuffer[Long]()
   private val stateMap = mutable.HashMap[Long, TransactionState]()
 
   def getQueue(): QueueBuilder.QueueType = queue
@@ -123,7 +123,7 @@ class TransactionBuffer(queue: QueueBuilder.QueueType, transactionQueueMaxLength
       if (update.status == TransactionState.Status.Opened) {
         val upd = update.withTtlMs(System.currentTimeMillis() + update.ttlMs)
         stateMap(update.transactionID) = upd
-        stateList.append(upd)
+        stateList.append(upd.transactionID)
       }
     }
 
@@ -132,15 +132,18 @@ class TransactionBuffer(queue: QueueBuilder.QueueType, transactionQueueMaxLength
   def signalCompleteTransactions(): Unit = this.synchronized {
     val time = System.currentTimeMillis()
 
-    val meetCheckpoint = stateList.takeWhile(ts =>
-      (ts.status == TransactionState.Status.Checkpointed || ts.status == TransactionState.Status.Invalid))
+    val meetCheckpoint = stateList.takeWhile(ts => {
+      val s = stateMap(ts)
+      (s.status == TransactionState.Status.Checkpointed || s.status == TransactionState.Status.Invalid)
+    })
 
-    meetCheckpoint.foreach(ts => stateMap.remove(ts.transactionID))
 
     if (meetCheckpoint.nonEmpty) {
       stateList.remove(0, meetCheckpoint.size)
-      queue.put(meetCheckpoint.toList)
+      queue.put(meetCheckpoint.map(transaction => stateMap(transaction)).toList)
     }
+
+    meetCheckpoint.foreach(ts => stateMap.remove(ts))
 
     if (transactionQueueMaxLengthThreshold <= stateList.size) {
       Subscriber.logger.warn(s"Transaction StateList achieved ${stateList.size} items. The threshold is $transactionQueueMaxLengthThreshold items. Clear it to protect the memory. " +
@@ -151,11 +154,11 @@ class TransactionBuffer(queue: QueueBuilder.QueueType, transactionQueueMaxLength
       return
     }
 
-    val meetTimeoutAndInvalid = stateList.takeWhile(ts => ts.ttlMs < time)
+    val meetTimeoutAndInvalid = stateList.takeWhile(ts => stateMap(ts).ttlMs < time)
 
     if (meetTimeoutAndInvalid.nonEmpty) {
-      meetTimeoutAndInvalid.foreach(ts => stateMap.remove(ts.transactionID))
       stateList.remove(0, meetTimeoutAndInvalid.size)
+      meetTimeoutAndInvalid.foreach(ts => stateMap.remove(ts))
     }
 
   }
