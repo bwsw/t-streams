@@ -11,7 +11,7 @@ import io.netty.channel.socket.nio.NioDatagramChannel
 /**
   * Created by ivan on 11.04.17.
   */
-class EventUpdatesUdpServer(host: String, port: Int, handler: SimpleChannelInboundHandler[DatagramPacket]) {
+class UdpMessageServer(host: String, port: Int, handler: SimpleChannelInboundHandler[DatagramPacket]) {
   //channel workers
   private val workerGroup = new NioEventLoopGroup()
   private var listenerThread: Thread = null

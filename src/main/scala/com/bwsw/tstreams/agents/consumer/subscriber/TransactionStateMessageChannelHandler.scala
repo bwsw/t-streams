@@ -23,7 +23,9 @@ class TransactionStateMessageChannelHandler(transactionsBufferWorkers: mutable.M
 
   override def channelRead0(ctx: ChannelHandlerContext, msg: DatagramPacket): Unit = {
     try {
-      val m = TransactionState.parseFrom(msg.content().array())
+      val bytes = new Array[Byte](msg.content().readableBytes())
+      val buf = msg.content().readBytes(bytes)
+      val m = TransactionState.parseFrom(bytes)
       if (partitionCache.contains(m.partition))
         partitionCache(m.partition).update(m)
       else

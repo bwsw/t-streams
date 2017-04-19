@@ -5,7 +5,7 @@ import java.util.concurrent.locks.ReentrantLock
 
 import com.bwsw.tstreams.agents.group.{CheckpointInfo, GroupParticipant}
 import com.bwsw.tstreams.common.{Functions, GeneralOptions, StorageClient}
-import com.bwsw.tstreams.coordination.server.EventUpdatesUdpServer
+import com.bwsw.tstreams.coordination.server.UdpMessageServer
 import com.bwsw.tstreams.streams.Stream
 import org.slf4j.LoggerFactory
 
@@ -34,7 +34,7 @@ class Subscriber(val name: String,
   val l = options.agentAddress.split(":")
   val host = l.head
   val port = l.tail.head
-  private var udpServer: EventUpdatesUdpServer = null
+  private var udpServer: UdpMessageServer = null
   private val consumer = new com.bwsw.tstreams.agents.consumer.Consumer(
     name,
     stream,
@@ -154,7 +154,7 @@ class Subscriber(val name: String,
     Subscriber.logger.info(s"[INIT] Subscriber $name: has launched the coordinator.")
     Subscriber.logger.info(s"[INIT] Subscriber $name: is about to launch the UDP server.")
 
-    udpServer = new EventUpdatesUdpServer(host, Integer.parseInt(port), new TransactionStateMessageChannelHandler(transactionsBufferWorkers))
+    udpServer = new UdpMessageServer(host, Integer.parseInt(port), new TransactionStateMessageChannelHandler(transactionsBufferWorkers))
     udpServer.start()
 
     Subscriber.logger.info(s"[INIT] Subscriber $name: has launched the UDP server.")

@@ -47,7 +47,7 @@ publishTo := {
 publishArtifact in Test := false
 
 PB.targets in Compile := Seq(
-  scalapb.gen() -> (sourceManaged in Compile).value
+  scalapb.gen(singleLineToString = true) -> (sourceManaged in Compile).value
 )
 
 //COMMON
