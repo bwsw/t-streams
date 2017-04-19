@@ -5,7 +5,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 
 import com.bwsw.tstreams.agents.consumer.TransactionOperator
 import com.bwsw.tstreams.common.FirstFailLockableTaskExecutor
-import com.bwsw.tstreams.coordination.messages.state.TransactionStatus
+import com.bwsw.tstreams.proto.protocol.TransactionState
 import org.slf4j.LoggerFactory
 
 import scala.collection.mutable
@@ -63,7 +63,9 @@ class ProcessingEngine(consumer: TransactionOperator,
   partitions
     .foreach(p => {
       setLastPartitionActivity(p)
-      lastTransactionsMap(p) = TransactionState(consumer.getCurrentOffset(p), p, -1, -1, -1, TransactionStatus.checkpointed, -1)
+      lastTransactionsMap(p) = TransactionState(transactionID = consumer.getCurrentOffset(p),
+        status = TransactionState.Status.Checkpointed, partition = p, masterID = -1,
+        orderID = -1, count = -1, ttlMs = -1)
     })
 
   /**
@@ -131,13 +133,8 @@ class ProcessingEngine(consumer: TransactionOperator,
     val proposedTransactionId = consumer.getProposedTransactionId()
 
     val transactionStateList = List(TransactionState(
-      transactionID = proposedTransactionId,
-      partition = partition,
-      masterSessionID = 0,
-      queueOrderID = 0,
-      itemCount = -1,
-      state = TransactionStatus.checkpointed,
-      ttlMs = -1))
+      transactionID = proposedTransactionId, partition = partition, masterID = 0, orderID = 0,
+      count = -1, status = TransactionState.Status.Checkpointed, ttlMs = -1))
 
     if (Subscriber.logger.isDebugEnabled())
       Subscriber.logger.debug(s"Enqueued $transactionStateList")
@@ -170,7 +167,7 @@ object ProcessingEngine {
     override def toString() = s"CallbackTask($transactionState)"
 
     override def run() = {
-      callback.onTransactionCall(consumer = consumer, partition = transactionState.partition, transactionID = transactionState.transactionID, count = transactionState.itemCount)
+      callback.onTransactionCall(consumer = consumer, partition = transactionState.partition, transactionID = transactionState.transactionID, count = transactionState.count)
     }
   }
 

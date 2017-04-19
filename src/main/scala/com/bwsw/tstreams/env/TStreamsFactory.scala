@@ -4,7 +4,6 @@ import java.security.InvalidParameterException
 import java.util.concurrent.atomic.AtomicBoolean
 
 import com.bwsw.tstreams.agents.consumer.Offset.IOffset
-import com.bwsw.tstreams.agents.consumer.subscriber.QueueBuilder.Persistent
 import com.bwsw.tstreams.agents.consumer.subscriber.{QueueBuilder, Subscriber, SubscriberOptionsBuilder}
 import com.bwsw.tstreams.agents.consumer.{Consumer, ConsumerOptions}
 import com.bwsw.tstreams.agents.producer.{CoordinationOptions, Producer}
@@ -401,7 +400,7 @@ class TStreamsFactory() {
       processingEngineWorkersThreadSize = processingEnginesThreadPoolSize,
       pollingFrequencyDelayMs = pollingFrequencyDelayMs,
       transactionQueueMaxLengthThreshold = transactionQueueMaxLengthThreshold,
-      transactionsQueueBuilder = if (queue_path == null) new QueueBuilder.InMemory() else new Persistent(queue_path))
+      transactionsQueueBuilder = new QueueBuilder.InMemory())
 
     new Subscriber(name, stream, opts, callback)
   }

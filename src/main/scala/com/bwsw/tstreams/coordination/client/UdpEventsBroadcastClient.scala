@@ -4,13 +4,11 @@ import java.net.{DatagramSocket, InetAddress}
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.atomic.AtomicBoolean
 
-import com.bwsw.tstreams.common.ProtocolMessageSerializer
-import com.bwsw.tstreams.coordination.messages.state.TransactionStateMessage
+import com.bwsw.tstreams.proto.protocol.TransactionState
 import org.apache.curator.framework.CuratorFramework
 import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters._
-
 
 object UdpEventsBroadcastClient {
   val logger = LoggerFactory.getLogger(this.getClass)
@@ -56,25 +54,26 @@ class UdpEventsBroadcastClient(curatorClient: CuratorFramework, partitions: Set[
     startUpdateThreadLatch.await()
   }
 
-  private def broadcast(set: Set[String], msg: TransactionStateMessage) = {
-    val msgString = ProtocolMessageSerializer.serialize(msg)
-    set.foreach(address => {
-      val splits = address.split(":")
-      val host = InetAddress.getByName(splits(0))
-      val port = splits(1).toInt
-      val bytes = msgString.getBytes()
-      val sendPacket = new java.net.DatagramPacket(bytes, bytes.length, host, port)
-      var isSent = false
-      while (!isSent) {
-        try {
-          clientSocket.send(sendPacket)
-          isSent = true
-        } catch {
-          case e: Exception =>
-            UdpEventsBroadcastClient.logger.warn(s"Send $msgString to $host:$port failed. Exception is: $e")
+  private def broadcast(set: Set[String], msg: TransactionState): Unit = {
+    if(!set.isEmpty) {
+      val bytes = msg.toByteArray
+      set.foreach(address => {
+        val splits = address.split(":")
+        val host = InetAddress.getByName(splits(0))
+        val port = splits(1).toInt
+        val sendPacket = new java.net.DatagramPacket(bytes, bytes.length, host, port)
+        var isSent = false
+        while (!isSent) {
+          try {
+            clientSocket.send(sendPacket)
+            isSent = true
+          } catch {
+            case e: Exception =>
+              UdpEventsBroadcastClient.logger.warn(s"Send $msg to $host:$port failed. Exception is: $e")
+          }
         }
-      }
-    })
+      })
+    }
   }
 
   /**
@@ -82,7 +81,7 @@ class UdpEventsBroadcastClient(curatorClient: CuratorFramework, partitions: Set[
     *
     * @param msg Message
     */
-  def publish(msg: TransactionStateMessage): Unit = {
+  def publish(msg: TransactionState): Unit = {
     if (!isStopped.get) {
       val set = partitionSubscribers.get(msg.partition)
       broadcast(set, msg)

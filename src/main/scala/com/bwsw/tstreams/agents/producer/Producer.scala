@@ -9,7 +9,7 @@ import com.bwsw.tstreams.agents.producer.NewTransactionProducerPolicy.ProducerPo
 import com.bwsw.tstreams.common._
 import com.bwsw.tstreams.coordination.client.{CommunicationClient, UdpEventsBroadcastClient}
 import com.bwsw.tstreams.coordination.messages.master.{IMessage, NewTransactionRequest}
-import com.bwsw.tstreams.coordination.messages.state.{TransactionStateMessage, TransactionStatus}
+import com.bwsw.tstreams.proto.protocol.TransactionState
 import com.bwsw.tstreams.streams.Stream
 import com.bwsw.tstreamstransactionserver.rpc.TransactionStates
 import org.apache.curator.framework.CuratorFrameworkFactory
@@ -96,7 +96,7 @@ class Producer(var name: String,
     * @param msg
     * @return
     */
-  def publish(msg: TransactionStateMessage) = subscriberNotifier.publish(msg)
+  def publish(msg: TransactionState) = subscriberNotifier.publish(msg)
 
   private[tstreams] val openTransactionClient = new CommunicationClient(pcs.transportClientTimeoutMs, pcs.transportClientRetryCount, pcs.transportClientRetryDelayMs)
 
@@ -278,10 +278,10 @@ class Producer(var name: String,
 
     stream.client.putTransactionSync(transactionRecord, extTransportTimeOutMs.milliseconds)
 
-    val msg = TransactionStateMessage(
+    val msg = TransactionState(
       transactionID = transactionID,
       ttlMs = producerOptions.transactionTtlMs,
-      status = TransactionStatus.opened,
+      status = TransactionState.Status.Opened,
       partition = partition,
       masterID = transactionOpenerService.getUniqueAgentID(),
       orderID = transactionOpenerService.getAndIncSequentialID(partition),

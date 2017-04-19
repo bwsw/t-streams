@@ -2,7 +2,7 @@ package com.bwsw.tstreams.agents.consumer.subscriber
 
 import com.bwsw.tstreams.common.ProtocolMessageSerializer
 import com.bwsw.tstreams.common.ProtocolMessageSerializer.ProtocolMessageSerializerException
-import com.bwsw.tstreams.coordination.messages.state.TransactionStateMessage
+import com.bwsw.tstreams.proto.protocol.TransactionState
 import io.netty.channel.socket.DatagramPacket
 import io.netty.channel.{ChannelHandler, ChannelHandlerContext, SimpleChannelInboundHandler}
 import io.netty.util.CharsetUtil
@@ -23,16 +23,9 @@ class TransactionStateMessageChannelHandler(transactionsBufferWorkers: mutable.M
 
   override def channelRead0(ctx: ChannelHandlerContext, msg: DatagramPacket): Unit = {
     try {
-      val m = ProtocolMessageSerializer.deserialize[TransactionStateMessage](msg.content().toString(CharsetUtil.UTF_8))
+      val m = TransactionState.parseFrom(msg.content().array())
       if (partitionCache.contains(m.partition))
-        partitionCache(m.partition)
-          .update(TransactionState(transactionID = m.transactionID,
-            partition = m.partition,
-            masterSessionID = m.masterID,
-            queueOrderID = m.orderID,
-            itemCount = m.count,
-            state = m.status,
-            ttlMs = m.ttlMs))
+        partitionCache(m.partition).update(m)
       else
         Subscriber.logger.warn(s"Unknown partition ${m.partition} found in Message: $msg.")
     } catch {

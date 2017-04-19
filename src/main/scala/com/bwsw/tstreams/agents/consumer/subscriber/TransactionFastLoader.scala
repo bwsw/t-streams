@@ -5,7 +5,7 @@ import java.util.concurrent.atomic.AtomicInteger
 
 import com.bwsw.tstreams.agents.consumer.TransactionOperator
 import com.bwsw.tstreams.common.FirstFailLockableTaskExecutor
-import com.bwsw.tstreams.coordination.messages.state.TransactionStatus
+import com.bwsw.tstreams.proto.protocol.TransactionState
 
 /**
   * Created by Ivan Kudryavtsev on 21.08.16.
@@ -21,9 +21,7 @@ class TransactionFastLoader(partitions: Set[Int],
     * @return
     */
   private def compareIfStrictlySequentialFast(e1: TransactionState, e2: TransactionState): Boolean =
-    (e1.masterSessionID == e2.masterSessionID) &&
-      (e2.queueOrderID - e1.queueOrderID == 1) &&
-      partitions.contains(e2.partition)
+    (e1.masterID == e2.masterID) && (e2.orderID - e1.orderID == 1) && partitions.contains(e2.partition)
 
 
   /**
@@ -68,7 +66,7 @@ class TransactionFastLoader(partitions: Set[Int],
                     callback: Callback): Int = {
 
     seq.foreach(elt =>
-      if (elt.state == TransactionStatus.checkpointed)
+      if (elt.status == TransactionState.Status.Checkpointed)
         executor.submit(s"<CallbackTask#Fast>", new ProcessingEngine.CallbackTask(consumer, elt, callback)))
 
     val last = seq.last

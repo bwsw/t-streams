@@ -4,7 +4,7 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 
 import com.bwsw.tstreams.common.FirstFailLockableTaskExecutor
-import com.bwsw.tstreams.coordination.messages.state.TransactionStatus
+import com.bwsw.tstreams.proto.protocol.TransactionState
 
 import scala.collection.mutable
 
@@ -50,7 +50,7 @@ class TransactionBufferWorker() {
 
     updateExecutor.submit(s"<UpdateAndNotifyTask($transactionState)>", () => {
       transactionBufferMap(transactionState.partition).update(transactionState)
-      if (transactionState.state == TransactionStatus.checkpointed) {
+      if (transactionState.status == TransactionState.Status.Checkpointed) {
         transactionBufferMap(transactionState.partition).signalCompleteTransactions()
       }
     })

@@ -2,7 +2,6 @@ package com.bwsw.tstreams.common
 
 import com.bwsw.tstreams.agents.producer.AgentConfiguration
 import com.bwsw.tstreams.coordination.messages.master._
-import com.bwsw.tstreams.coordination.messages.state.{TransactionStateMessage, TransactionStatus}
 import com.bwsw.tstreams.testutils.LocalGeneratorCreator
 import org.scalatest.{FlatSpec, Matchers}
 
@@ -27,24 +26,6 @@ class ProtocolMessageSerializerTest extends FlatSpec with Matchers {
     val string = ProtocolMessageSerializer.serialize(clazz)
     val req = ProtocolMessageSerializer.deserialize[TransactionResponse](string)
     clazz shouldEqual req
-  }
-  "TStreams serializer" should "serialize and deserialize PTM" in {
-    val clazz = TransactionStateMessage(LocalGeneratorCreator.getTransaction(), 17179869184L, TransactionStatus.checkpointed, 5, 1, 2, 3)
-    val string = ProtocolMessageSerializer.serialize(clazz)
-    val req = ProtocolMessageSerializer.deserialize[TransactionStateMessage](string)
-    clazz shouldEqual req
-  }
-  "TStreams serializer" should "serialize and deserialize PTS" in {
-    val fin = TransactionStatus.checkpointed
-    val canceled = TransactionStatus.cancel
-    val updated = TransactionStatus.update
-    val opened = TransactionStatus.opened
-    val materialize = TransactionStatus.materialize
-    val invalid = TransactionStatus.invalid
-
-    List(fin, canceled, updated, opened, materialize, invalid).foreach(i =>
-      assert(ProtocolMessageSerializer
-        .deserialize[TransactionStatus.ProducerTransactionStatus](ProtocolMessageSerializer.serialize(i)) == i))
   }
 
   "TStreams serializer" should "serialize and deserialize AgentSettings" in {

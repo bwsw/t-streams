@@ -2,7 +2,6 @@ package com.bwsw.tstreams.common
 
 import com.bwsw.tstreams.agents.producer.AgentConfiguration
 import com.bwsw.tstreams.coordination.messages.master._
-import com.bwsw.tstreams.coordination.messages.state.{TransactionStateMessage, TransactionStatus}
 
 import scala.collection.mutable
 import scala.util.control.Breaks._
@@ -25,16 +24,6 @@ object ProtocolMessageSerializer {
       case x: TransactionResponse =>
         s"{TRs,${x.senderID},${x.receiverID},${x.transactionID.toString},${x.partition},${x.msgID},${x.remotePeerTimestamp}}"
 
-      case TransactionStateMessage(transactionID, ttl, status, partition, masterID, orderID, count) =>
-        val serializedStatus = serializeInternal(status)
-        s"{PTM,${transactionID.toString},$ttl,$serializedStatus,$partition,$masterID,$orderID,$count}"
-
-      case TransactionStatus.`checkpointed` => "{F}"
-      case TransactionStatus.update => "{U}"
-      case TransactionStatus.cancel => "{C}"
-      case TransactionStatus.opened => "{O}"
-      case TransactionStatus.materialize => "{M}"
-      case TransactionStatus.invalid => "{I}"
     }
   }
 
@@ -99,36 +88,9 @@ object ProtocolMessageSerializer {
         res.msgID = tokens(5).toString.toLong
         res.remotePeerTimestamp = tokens(6).toString.toLong
         res
-      case "PTM" =>
-        assert(tokens.size == 8)
-        TransactionStateMessage(tokens(1).toString.toLong,
-          tokens(2).toString.toLong,
-          tokens(3).asInstanceOf[TransactionStatus.ProducerTransactionStatus],
-          tokens(4).toString.toInt,
-          tokens(5).toString.toInt,
-          tokens(6).toString.toLong,
-          tokens(7).toString.toInt)
       case "AS" =>
         assert(tokens.size == 5)
         AgentConfiguration(tokens(1).toString, tokens(2).toString.toInt, tokens(3).toString.toInt, tokens(4).toString.toInt)
-      case "F" =>
-        assert(tokens.size == 1)
-        TransactionStatus.checkpointed
-      case "U" =>
-        assert(tokens.size == 1)
-        TransactionStatus.update
-      case "C" =>
-        assert(tokens.size == 1)
-        TransactionStatus.cancel
-      case "O" =>
-        assert(tokens.size == 1)
-        TransactionStatus.opened
-      case "M" =>
-        assert(tokens.size == 1)
-        TransactionStatus.materialize
-      case "I" =>
-        assert(tokens.size == 1)
-        TransactionStatus.invalid
     }
   }
 
