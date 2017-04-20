@@ -35,3 +35,4 @@ message TransactionState {
 message TransactionStateList {
     repeated TransactionState states = 1;
 }
+

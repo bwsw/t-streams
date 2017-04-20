@@ -1,6 +1,5 @@
 package com.bwsw.tstreams.common
 
-import com.bwsw.tstreams.agents.producer.AgentConfiguration
 import com.bwsw.tstreams.coordination.messages.master._
 import com.bwsw.tstreams.testutils.LocalGeneratorCreator
 import org.scalatest.{FlatSpec, Matchers}
@@ -28,10 +27,4 @@ class ProtocolMessageSerializerTest extends FlatSpec with Matchers {
     clazz shouldEqual req
   }
 
-  "TStreams serializer" should "serialize and deserialize AgentSettings" in {
-    val clazz = new AgentConfiguration("agent", 21212, 12121212, 22)
-    val string = ProtocolMessageSerializer.serialize(clazz)
-    val req = ProtocolMessageSerializer.deserialize[AgentConfiguration](string)
-    clazz shouldEqual req
-  }
 }

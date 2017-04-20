@@ -1,6 +1,5 @@
 package com.bwsw.tstreams.common
 
-import com.bwsw.tstreams.agents.producer.AgentConfiguration
 import com.bwsw.tstreams.coordination.messages.master._
 
 import scala.collection.mutable
@@ -12,9 +11,6 @@ import scala.util.control.Breaks._
 object ProtocolMessageSerializer {
   private def serializeInternal(value: Any): String = {
     value match {
-      case AgentConfiguration(id, prior, penalty, uniqueID) =>
-        s"{AS,$id,$prior,$penalty,$uniqueID}"
-
       case x: EmptyResponse =>
         s"{ERs,${x.senderID},${x.receiverID},${x.partition},${x.msgID},${x.remotePeerTimestamp}}"
 
@@ -88,9 +84,6 @@ object ProtocolMessageSerializer {
         res.msgID = tokens(5).toString.toLong
         res.remotePeerTimestamp = tokens(6).toString.toLong
         res
-      case "AS" =>
-        assert(tokens.size == 5)
-        AgentConfiguration(tokens(1).toString, tokens(2).toString.toInt, tokens(3).toString.toInt, tokens(4).toString.toInt)
     }
   }
 
