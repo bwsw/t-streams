@@ -54,6 +54,7 @@ class TransactionBuffer(queue: QueueBuilder.QueueType, transactionQueueMaxLength
       case TransactionState.Status.Cancelled => counters.cancelEvents.incrementAndGet()
       case TransactionState.Status.Updated => counters.updateEvents.incrementAndGet()
       case TransactionState.Status.Checkpointed => counters.checkpointEvents.incrementAndGet()
+      case _ =>
     }
 
     // avoid transactions which are delayed
