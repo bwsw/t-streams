@@ -8,7 +8,6 @@ import com.bwsw.tstreams.agents.consumer.subscriber.{QueueBuilder, Subscriber, S
 import com.bwsw.tstreams.agents.consumer.{Consumer, ConsumerOptions}
 import com.bwsw.tstreams.agents.producer.{CoordinationOptions, Producer}
 import com.bwsw.tstreams.common.{RoundRobinPolicy, _}
-import com.bwsw.tstreams.coordination.client.TcpNewTransactionServer
 import com.bwsw.tstreams.env.defaults.TStreamsFactoryProducerDefaults.PortRange
 import com.bwsw.tstreams.generator.{ITransactionGenerator, LocalTransactionGenerator}
 import com.bwsw.tstreams.streams.Stream
@@ -259,16 +258,13 @@ class TStreamsFactory() {
     val batchSize = pAsInt(co.Producer.Transaction.batchSize, producerDefaults.Transaction.batchSize.default)
     producerDefaults.Transaction.batchSize.check(batchSize)
 
-    val transport = new TcpNewTransactionServer(
-      pAsString(co.Producer.bindHost) + ":" + port.toString)
-
-
     val cao = new CoordinationOptions(
       zkEndpoints = pAsString(co.Coordination.endpoints),
       zkPrefix = pAsString(co.Coordination.prefix),
       zkSessionTimeoutMs = sessionTimeoutMs,
       zkConnectionTimeoutMs = connectionTimeoutMs,
-      transaportServer = transport,
+      openerServerHost = pAsString(co.Producer.bindHost),
+      openerServerPort = port,
       threadPoolSize = threadPoolSize,
       notifyThreadPoolSize = notifyThreadPoolSize,
       transportClientTimeoutMs = transportClientTimeoutMs,

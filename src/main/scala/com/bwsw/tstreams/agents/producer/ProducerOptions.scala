@@ -1,7 +1,6 @@
 package com.bwsw.tstreams.agents.producer
 
 import com.bwsw.tstreams.common.AbstractPolicy
-import com.bwsw.tstreams.coordination.client.TcpNewTransactionServer
 import com.bwsw.tstreams.generator.ITransactionGenerator
 
 import scala.language.existentials
@@ -43,20 +42,12 @@ class ProducerOptions(val transactionTtlMs: Long,
 }
 
 
-/**
-  * @param zkEndpoints        Zk hosts to connect
-  * @param zkPrefix           Zk root path for all metadata
-  * @param zkSessionTimeoutMs Zk session timeout
-  * @param transaportServer   Transport providing interaction between agents
-  * @param threadPoolSize     Thread pool amount which is used by
-  *                           PeerAgent
-  *                           by default (threads_amount == used_producer_partitions)
-  */
 class CoordinationOptions(val zkEndpoints: String,
                           val zkPrefix: String,
                           val zkSessionTimeoutMs: Int,
                           val zkConnectionTimeoutMs: Int,
-                          val transaportServer: TcpNewTransactionServer,
+                          val openerServerHost: String,
+                          val openerServerPort: Int,
                           val threadPoolSize: Int,
                           val notifyThreadPoolSize: Int,
                           val transportClientTimeoutMs: Int,

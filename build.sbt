@@ -56,13 +56,11 @@ libraryDependencies ++= Seq(
   "org.slf4j" % "slf4j-simple" % "1.7.21",
   "org.scalatest" % "scalatest_2.12" % "3.0.1",
   "org.scalamock" % "scalamock-scalatest-support_2.12" % "3.5.0",
-  "io.netty" % "netty-all" % "4.1.7.Final",
   "org.scala-lang" % "scala-reflect" % "2.12.1",
   "org.scala-lang.modules" % "scala-xml_2.12" % "1.0.6",
   "log4j" % "log4j" % "1.2.17",
   "org.apache.curator" % "curator-recipes" % "2.11.0",
-  "com.google.guava" % "guava" % "18.0",
-  "com.bwsw" % "tstreams-transaction-server_2.12" % "1.2.9-SNAPSHOT",
+  "com.bwsw" % "tstreams-transaction-server_2.12" % "1.3.0-SNAPSHOT",
   "com.trueaccord.scalapb" %% "compilerplugin" % "0.6.0-pre3")
 
 //ASSEMBLY STRATEGY

@@ -4,8 +4,9 @@ import java.net.{DatagramPacket, SocketAddress}
 import java.util.concurrent.CountDownLatch
 
 import com.bwsw.tstreams.common.{UdpServer, UdpClient}
+import com.bwsw.tstreams.coordination.server.RequestsServer
 import com.bwsw.tstreams.generator.LocalTransactionGenerator
-import com.bwsw.tstreams.proto.protocol.{TransactionResponse, TransactionRequest}
+import com.bwsw.tstreams.proto.protocol.{TransactionState, TransactionResponse, TransactionRequest}
 import org.scalatest.{FlatSpec, Matchers}
 
 /**
@@ -16,8 +17,9 @@ class UdpClientServerTest extends FlatSpec with Matchers {
 
     val g = new LocalTransactionGenerator()
 
-    val server = new UdpServer("127.0.0.1", 8123, 8) {
-      override def handleRequest(client: SocketAddress, req: TransactionRequest): Unit = {
+    val server = new RequestsServer("127.0.0.1", 8123, 8) {
+      override def handleRequest(client: SocketAddress, reqAny: AnyRef): Unit = {
+        val req = reqAny.asInstanceOf[TransactionRequest]
         val response = TransactionResponse()
           .withId(req.id)
           .withTransaction(g.getTransaction())
@@ -53,9 +55,9 @@ class UdpClientServerTest extends FlatSpec with Matchers {
     lEnd.await()
     val etime = System.currentTimeMillis()
 
-//    println(s"Request time: ${(etime - stime) * 1.0f / N / NT}")
-//    println(s"Requests per second on client side: ${1000f / ((etime - stime) * 1.0f / N / NT)}")
-//    println(s"Requests per ms: ${N * NT * 1.0f / (etime - stime)}")
+    println(s"Request time: ${(etime - stime) * 1.0f / N / NT}")
+    println(s"Requests per second on client side: ${1000f / ((etime - stime) * 1.0f / N / NT)}")
+    println(s"Requests per ms: ${N * NT * 1.0f / (etime - stime)}")
 
     client.stop()
     server.stop()

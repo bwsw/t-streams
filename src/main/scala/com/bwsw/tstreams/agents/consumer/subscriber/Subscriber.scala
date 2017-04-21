@@ -5,7 +5,7 @@ import java.util.concurrent.locks.ReentrantLock
 
 import com.bwsw.tstreams.agents.group.{CheckpointInfo, GroupParticipant}
 import com.bwsw.tstreams.common.{Functions, GeneralOptions, StorageClient}
-import com.bwsw.tstreams.coordination.server.UdpMessageServer
+import com.bwsw.tstreams.coordination.server.StateUpdateServer
 import com.bwsw.tstreams.streams.Stream
 import org.slf4j.LoggerFactory
 
@@ -34,7 +34,7 @@ class Subscriber(val name: String,
   val l = options.agentAddress.split(":")
   val host = l.head
   val port = l.tail.head
-  private var udpServer: UdpMessageServer = null
+  private var stateUpdateServer: StateUpdateServer = null
   private val consumer = new com.bwsw.tstreams.agents.consumer.Consumer(
     name,
     stream,
@@ -72,7 +72,7 @@ class Subscriber(val name: String,
     */
   def start() = {
 
-    val usedPartitionsSet = options.readPolicy.getUsedPartitions().toSet
+    val usedPartitionsSet = options.readPolicy.getUsedPartitions()
 
     Subscriber.logger.info(s"[INIT] Subscriber $name: BEGIN INIT.")
     Subscriber.logger.info(s"[INIT] Subscriber $name: Address ${options.agentAddress}")
@@ -154,8 +154,8 @@ class Subscriber(val name: String,
     Subscriber.logger.info(s"[INIT] Subscriber $name: has launched the coordinator.")
     Subscriber.logger.info(s"[INIT] Subscriber $name: is about to launch the UDP server.")
 
-    udpServer = new UdpMessageServer(host, Integer.parseInt(port), new TransactionStateMessageChannelHandler(transactionsBufferWorkers))
-    udpServer.start()
+    stateUpdateServer = new StateUpdateServer(host, Integer.parseInt(port), 1, transactionsBufferWorkers)
+    stateUpdateServer.start()
 
     Subscriber.logger.info(s"[INIT] Subscriber $name: has launched the UDP server.")
     Subscriber.logger.info(s"[INIT] Subscriber $name: is about to launch Polling tasks to executors.")
@@ -187,7 +187,7 @@ class Subscriber(val name: String,
     transactionsBufferWorkers.foreach(kv => kv._2.stop())
     transactionsBufferWorkers.clear()
 
-    udpServer.stop()
+    stateUpdateServer.stop()
     coordinator.shutdown()
     consumer.stop()
   }
