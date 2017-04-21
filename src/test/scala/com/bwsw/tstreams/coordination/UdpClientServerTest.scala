@@ -3,10 +3,10 @@ package com.bwsw.tstreams.coordination
 import java.net.{DatagramPacket, SocketAddress}
 import java.util.concurrent.CountDownLatch
 
-import com.bwsw.tstreams.common.{UdpServer, UdpClient}
+import com.bwsw.tstreams.common.UdpClient
 import com.bwsw.tstreams.coordination.server.RequestsServer
 import com.bwsw.tstreams.generator.LocalTransactionGenerator
-import com.bwsw.tstreams.proto.protocol.{TransactionState, TransactionResponse, TransactionRequest}
+import com.bwsw.tstreams.proto.protocol.{TransactionRequest, TransactionResponse}
 import org.scalatest.{FlatSpec, Matchers}
 
 /**

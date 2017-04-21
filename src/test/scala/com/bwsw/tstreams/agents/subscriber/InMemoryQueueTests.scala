@@ -1,6 +1,7 @@
 package com.bwsw.tstreams.agents.subscriber
 
 import java.util.concurrent.TimeUnit
+
 import com.bwsw.tstreams.common.InMemoryQueue
 import com.bwsw.tstreams.proto.protocol.TransactionState
 import com.bwsw.tstreams.testutils.LocalGeneratorCreator

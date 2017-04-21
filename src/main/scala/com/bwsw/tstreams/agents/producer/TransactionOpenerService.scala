@@ -83,8 +83,10 @@ class TransactionOpenerService(curatorClient: CuratorFramework,
     override def handleRequest(client: SocketAddress, reqAny: AnyRef): Unit = {
       if (!isRunning.get())
         return
+
       val req = reqAny.asInstanceOf[TransactionRequest]
       val master = agent.isMasterOfPartition(req.partition)
+
       val newTransactionId = master match {
         case true =>
           val newId = agent.getProducer.generateNewTransactionIDLocal()
@@ -101,6 +103,8 @@ class TransactionOpenerService(curatorClient: CuratorFramework,
       socket.send(new DatagramPacket(response, response.size, client))
     }
   }
+
+  openerServer.start()
 
   // fill initial sequential counters
   usedPartitions foreach { p => sequentialIds += (p -> new AtomicLong(0)) }

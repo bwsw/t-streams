@@ -1,7 +1,7 @@
 package com.bwsw.tstreams.common
 
-import java.net.{SocketException, InetAddress, DatagramPacket, DatagramSocket}
-import java.util.concurrent.{TimeUnit, Executors, ArrayBlockingQueue, ConcurrentHashMap}
+import java.net.{DatagramPacket, DatagramSocket, InetAddress, SocketException}
+import java.util.concurrent.{ArrayBlockingQueue, ConcurrentHashMap, Executors, TimeUnit}
 
 import com.bwsw.tstreams.proto.protocol.{TransactionRequest, TransactionResponse}
 import com.google.protobuf.InvalidProtocolBufferException

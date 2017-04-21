@@ -1,6 +1,6 @@
 package com.bwsw.tstreams.common
 
-import java.net.{SocketException, DatagramPacket, DatagramSocket}
+import java.net.{DatagramPacket, DatagramSocket, SocketException}
 import java.util.concurrent.CountDownLatch
 
 import org.slf4j.LoggerFactory
