@@ -30,6 +30,38 @@ class SubscriberBasicPubSubTests extends FlatSpec with Matchers with BeforeAndAf
   storageClient.createStream("test_stream", 3, 24 * 3600, "")
   storageClient.shutdown()
 
+  def testCase(isReliable: Boolean) {
+    val TOTAL = 100
+    val latch = new CountDownLatch(TOTAL)
+
+    val producer = f.getProducer(
+      name = "test_producer",
+      partitions = Set(0))
+
+    val s = f.getSubscriber(name = "sv2_instant",
+      partitions = Set(0),
+      offset = Newest,
+      useLastOffset = false,
+      callback = (consumer: TransactionOperator, transaction: ConsumerTransaction) => latch.countDown())
+
+    s.start()
+    for (it <- 0 until TOTAL) {
+      producer.instantTransaction(0, Seq("data".getBytes), isReliable = isReliable)
+    }
+    producer.stop()
+    latch.await(60, TimeUnit.SECONDS) shouldBe true
+    s.stop()
+  }
+
+  it should "handle all transactions producer by producer with instant transactions (reliable)" in {
+    testCase(isReliable = true)
+  }
+
+  it should "handle all transactions producer by producer with instant transactions (unreliable)" in {
+    testCase(isReliable = false)
+  }
+
+
   it should "handle all transactions produced by producer" in {
 
     val TOTAL = 1000
@@ -42,7 +74,7 @@ class SubscriberBasicPubSubTests extends FlatSpec with Matchers with BeforeAndAf
 
     val s = f.getSubscriber(name = "sv2",
       partitions = Set(0, 1, 2),
-      offset = Oldest,
+      offset = Newest,
       useLastOffset = false,
       callback = (consumer: TransactionOperator, transaction: ConsumerTransaction) => this.synchronized {
         subscriberTransactionsAmount += 1
