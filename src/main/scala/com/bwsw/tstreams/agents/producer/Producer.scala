@@ -107,10 +107,11 @@ class Producer(var name: String,
     * @param partition
     * @return TransactionResponse or null
     */
-  def transactionRequest(to: String, partition: Int): Option[TransactionResponse] = {
+  def transactionRequest(to: String, partition: Int, isInstant: Boolean, data: Seq[Array[Byte]]): Option[TransactionResponse] = {
     val splits = to.split(":")
     val (host, port) = (splits(0), splits(1).toInt)
-    val r = TransactionRequest(partition = partition)
+    val r = TransactionRequest(partition = partition,
+      isInstant = isInstant, data = data.map(com.google.protobuf.ByteString.copyFrom(_)))
     openTransactionClient.sendAndWait(host, port, r)
   }
 

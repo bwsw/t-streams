@@ -39,12 +39,13 @@ class UdpClientServerTest extends FlatSpec with Matchers {
     val lBegin = new CountDownLatch(NT)
     val lEnd = new CountDownLatch(NT)
 
-
     val threads = (0 until NT).map(_ => new Thread(() => {
       lBegin.countDown()
       lBegin.await()
       (0 until N).foreach(i => {
-        val resOpt = client.sendAndWait("127.0.0.1", 8123, TransactionRequest(partition = i % 8))
+        val data = new Array[Byte](400)
+        val resOpt = client.sendAndWait("127.0.0.1", 8123, TransactionRequest(partition = i % 8,
+          isInstant = true, data = Seq(com.google.protobuf.ByteString.copyFrom(data))))
         resOpt.isDefined shouldBe true
       })
       lEnd.countDown()
