@@ -1,11 +1,12 @@
 package com.bwsw.tstreams.common
 
 import java.net._
-import java.util.concurrent.atomic.{AtomicLong, AtomicInteger}
+import java.util.concurrent.atomic.{AtomicInteger, AtomicLong}
 import java.util.concurrent.{ConcurrentHashMap, ExecutorService, Executors}
-import collection.JavaConverters._
 
 import com.google.protobuf.InvalidProtocolBufferException
+
+import scala.collection.JavaConverters._
 
 /**
   * Created by Ivan Kudryavtsev on 20.04.17.

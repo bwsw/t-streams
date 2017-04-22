@@ -69,7 +69,7 @@ class ProducersComeAndLeaveSubscriberListensTest extends FlatSpec with Matchers 
       Thread.sleep(100)
       newID = subscriberAccumulator.size
 
-      println(s"Last: $lastID, New: $newID, Counter: $counter")
+      logger.info(s"Last: $lastID, New: $newID, Counter: $counter")
       lastID = newID
     })
     latch.await(100 + TRANSACTIONS_PER_PRODUCER * PRODUCERS / TXNS_PER_SEC, TimeUnit.SECONDS) shouldBe true

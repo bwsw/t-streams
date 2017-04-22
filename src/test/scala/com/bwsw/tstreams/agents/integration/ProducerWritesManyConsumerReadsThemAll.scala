@@ -1,10 +1,8 @@
 package com.bwsw.tstreams.agents.integration
 
-import java.util.concurrent.atomic.{AtomicInteger, AtomicBoolean}
-import java.util.concurrent.{CountDownLatch, TimeUnit}
+import java.util.concurrent.atomic.{AtomicBoolean, AtomicInteger}
 
 import com.bwsw.tstreams.agents.consumer.Offset.Oldest
-import com.bwsw.tstreams.agents.consumer.{ConsumerTransaction, TransactionOperator}
 import com.bwsw.tstreams.agents.producer.NewTransactionProducerPolicy
 import com.bwsw.tstreams.env.ConfigurationOptions
 import com.bwsw.tstreams.testutils.{TestStorageServer, TestUtils}

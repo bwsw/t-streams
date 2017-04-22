@@ -1,6 +1,6 @@
 package com.bwsw.tstreams.agents.producer
 
-import java.util.concurrent.atomic.{AtomicLong, AtomicBoolean}
+import java.util.concurrent.atomic.{AtomicBoolean, AtomicLong}
 import java.util.concurrent.locks.ReentrantLock
 import java.util.concurrent.{CountDownLatch, TimeUnit}
 

@@ -8,11 +8,15 @@ import com.bwsw.tstreams.coordination.server.RequestsServer
 import com.bwsw.tstreams.generator.LocalTransactionGenerator
 import com.bwsw.tstreams.proto.protocol.{TransactionRequest, TransactionResponse}
 import org.scalatest.{FlatSpec, Matchers}
+import org.slf4j.LoggerFactory
 
 /**
   * Created by ivan on 19.04.17.
   */
 class UdpClientServerTest extends FlatSpec with Matchers {
+
+  val logger = LoggerFactory.getLogger(this.getClass)
+
   it should "operate" in {
 
     val g = new LocalTransactionGenerator()
@@ -55,9 +59,9 @@ class UdpClientServerTest extends FlatSpec with Matchers {
     lEnd.await()
     val etime = System.currentTimeMillis()
 
-    println(s"Request time: ${(etime - stime) * 1.0f / N / NT}")
-    println(s"Requests per second on client side: ${1000f / ((etime - stime) * 1.0f / N / NT)}")
-    println(s"Requests per ms: ${N * NT * 1.0f / (etime - stime)}")
+    logger.info(s"Request time: ${(etime - stime) * 1.0f / N / NT}")
+    logger.info(s"Requests per second on client side: ${1000f / ((etime - stime) * 1.0f / N / NT)}")
+    logger.info(s"Requests per ms: ${N * NT * 1.0f / (etime - stime)}")
 
     client.stop()
     server.stop()

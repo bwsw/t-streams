@@ -1,10 +1,8 @@
 package com.bwsw.tstreams.agents.integration
 
 import java.util.concurrent.atomic.AtomicBoolean
-import java.util.concurrent.{CountDownLatch, TimeUnit}
 
 import com.bwsw.tstreams.agents.consumer.Offset.Oldest
-import com.bwsw.tstreams.agents.consumer.{ConsumerTransaction, TransactionOperator}
 import com.bwsw.tstreams.agents.producer.NewTransactionProducerPolicy
 import com.bwsw.tstreams.env.ConfigurationOptions
 import com.bwsw.tstreams.testutils.{TestStorageServer, TestUtils}
@@ -58,7 +56,7 @@ class ProducersComeAndLeaveConsumerReadsTest extends FlatSpec with Matchers with
       Thread.sleep(100)
       val exitFlag = new AtomicBoolean(false)
       val consumerIterAcc = ListBuffer[Long]()
-      println(s"Loading up to ${lastProducerTransaction}")
+      logger.info(s"Loading up to ${lastProducerTransaction}")
       while(!exitFlag.get()) {
         val tOpt = consumer.getTransaction(0)
         tOpt.foreach(t => {
@@ -67,7 +65,7 @@ class ProducersComeAndLeaveConsumerReadsTest extends FlatSpec with Matchers with
             exitFlag.set(true)
         })
       }
-      println(s"Completed loading up to ${lastProducerTransaction}")
+      logger.info(s"Completed loading up to ${lastProducerTransaction}")
       producerIterAcc shouldBe consumerIterAcc
     })
     consumer.stop()
