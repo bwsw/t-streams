@@ -3,7 +3,7 @@ package com.bwsw.tstreams.agents.integration
 import java.util.concurrent.CountDownLatch
 
 import com.bwsw.tstreams.agents.consumer.ConsumerTransaction
-import com.bwsw.tstreams.agents.consumer.Offset.Oldest
+import com.bwsw.tstreams.agents.consumer.Offset.{Newest, Oldest}
 import com.bwsw.tstreams.agents.producer.NewTransactionProducerPolicy
 import com.bwsw.tstreams.env.ConfigurationOptions
 import com.bwsw.tstreams.testutils._
@@ -211,7 +211,32 @@ class ProducerAndConsumerSimpleTests extends FlatSpec with Matchers with BeforeA
     producerThread.isAlive shouldBe false
 
     (0 until consumer.stream.partitionsCount) foreach { _ => consumer.getTransaction(0).isEmpty shouldBe true }
+  }
 
+  "producer and consumer" should "work correctly for instant transactions" in {
+    val consumer = f.getConsumer(
+      name = "test_consumer",
+      partitions = Set(0),
+      offset = Newest,
+      useLastOffset = false)
+
+    val transactionID1 = producer.instantTransaction(0, Seq("test1".getBytes), isReliable = true)
+    val transactionID2 = producer.instantTransaction(0, Seq("test2".getBytes), isReliable = false)
+
+    consumer.start()
+    consumer.getTransactionById(0, transactionID1)
+      .foreach(transaction => {
+        transaction.getTransactionID() shouldBe transactionID1
+        new String(transaction.next()) shouldBe "test1"
+      })
+
+    consumer.getTransactionById(0, transactionID2)
+      .foreach(transaction =>  {
+        transaction.getTransactionID() shouldBe transactionID2
+        new String(transaction.next()) shouldBe "test2"
+      })
+
+    consumer.stop()
   }
 
   override def afterAll(): Unit = {

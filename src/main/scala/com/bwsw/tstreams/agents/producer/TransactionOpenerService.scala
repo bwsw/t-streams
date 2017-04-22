@@ -86,12 +86,16 @@ class TransactionOpenerService(curatorClient: CuratorFramework,
         return
 
       val req = reqAny.asInstanceOf[TransactionRequest]
-      val master = agent.isMasterOfPartition(req.partition)
+      val isMaster = agent.isMasterOfPartition(req.partition)
 
-      val newTransactionId = master match {
+      val newTransactionId = isMaster match {
         case true =>
           val newId = agent.getProducer.generateNewTransactionIDLocal()
-          agent.getProducer().openTransactionLocal(newId, req.partition)
+          (req.isInstant, req.isReliable) match {
+            case (false, _) => agent.getProducer().openTransactionLocal(newId, req.partition)
+            case (true, true) => agent.getProducer().openInstantTransactionLocal(req.partition, newId, req.data.map(_.toByteArray), true)
+            case (true, false) =>
+          }
           newId
         case _ => 0
       }
@@ -102,6 +106,9 @@ class TransactionOpenerService(curatorClient: CuratorFramework,
         .withTransaction(newTransactionId)
         .toByteArray
       socket.send(new DatagramPacket(response, response.size, client))
+
+      if(isMaster && req.isInstant && !req.isReliable)
+        agent.getProducer().openInstantTransactionLocal(req.partition, newTransactionId, req.data.map(_.toByteArray), false)
     }
   }
 
@@ -178,14 +185,14 @@ class TransactionOpenerService(curatorClient: CuratorFramework,
     * @param partition Transaction partition
     * @return TransactionID
     */
-  def generateNewTransaction(partition: Int): Long = this.synchronized {
+  def generateNewTransaction(partition: Int, isInstant: Boolean = false, isReliable: Boolean = true, data: Seq[Array[Byte]] = Seq()): Long = this.synchronized {
     val master = getPartitionMasterInetAddressLocal(partition)._1
     if (TransactionOpenerService.logger.isDebugEnabled) {
       TransactionOpenerService.logger.debug(s"[GET TRANSACTION] Start retrieve transaction for agent with address: {$myInetAddress}, stream: {$streamName}, partition: {$partition} from [MASTER: {$master}].")
     }
 
     val res =
-      producer.transactionRequest(master, partition) match {
+      producer.transactionRequest(master, partition, isInstant, isReliable, data) match {
         case None =>
           updatePartitionMasterInetAddress(partition)
           generateNewTransaction(partition)

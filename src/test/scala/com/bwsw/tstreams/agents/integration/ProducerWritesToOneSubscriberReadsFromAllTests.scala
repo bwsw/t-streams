@@ -55,7 +55,6 @@ class ProducerWritesToOneSubscriberReadsFromAllTests extends FlatSpec with Match
       transaction.checkpoint()
     }
     producer.stop()
-    logger.info(s"Counter is: ${producer.counter.get() * 1.0f / 1000000 / TOTAL}")
     l.await(1000, TimeUnit.MILLISECONDS)
     s.stop()
     subscriberTransactionsAmount shouldBe TOTAL

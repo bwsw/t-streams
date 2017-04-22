@@ -29,6 +29,7 @@ class TStreamsFactory() {
   val isLocked = new AtomicBoolean(false)
   val co = ConfigurationOptions
 
+  propertyMap ++= defaults.TStreamsFactoryCommonDefaults.get
   propertyMap ++= defaults.TStreamsFactoryStorageClientDefaults.get
   propertyMap ++= defaults.TStreamsFactoryStreamDefaults.get
   propertyMap ++= defaults.TStreamsFactoryCoordinationDefaults.get

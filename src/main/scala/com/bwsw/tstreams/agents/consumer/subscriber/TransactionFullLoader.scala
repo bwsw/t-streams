@@ -50,7 +50,7 @@ class TransactionFullLoader(partitions: Set[Int],
     var flag = true
     while (flag) {
       data ++= consumer.getTransactionsFromTo(last.partition, first, last.transactionID)
-      if (last.masterID > 0) {
+      if (last.masterID > 0 && !last.isNotReliable) {
         // we wait for certain item
         // to switch to fast load next
         if (data.nonEmpty) {

@@ -27,13 +27,17 @@ class UdpClient(waitTimeoutMs: Int) extends UdpProcessor {
         })
     })
   }
-
+  
   def sendAndWait(hostName: String, port: Int, req: TransactionRequest): Option[TransactionResponse] = {
     val msg = req.withId(Random.nextLong)
     val q = new ArrayBlockingQueue[TransactionResponse](1)
     packetMap.put(msg.id, q)
     val host = InetAddress.getByName(hostName)
     val arr = msg.toByteArray
+    if(arr.length > UdpProcessor.BUFFER_SIZE)
+      throw new IllegalArgumentException(s"TransactionRequest serialized size must be less than or equal to ${UdpProcessor.BUFFER_SIZE} to " +
+        "surpass currend UDP limitations. Increase UdpProcessor.BUFFER_SIZE parameter " +
+        "if your network supports jumbo frames.")
     val sendPacket = new java.net.DatagramPacket(arr, arr.length, host, port)
     var isSent = false
     while (!isSent) {

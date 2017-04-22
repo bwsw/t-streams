@@ -73,6 +73,24 @@ class ProducerTest extends FlatSpec with Matchers with BeforeAndAfterAll with Te
     checkVal shouldEqual true
   }
 
+  "BasicProducer.instantTransaction" should "work well for reliable delivery" in {
+    val data = Seq(new Array[Byte](128))
+    producer.instantTransaction(0, data, isReliable = true) > 0 shouldBe true
+  }
+
+  "BasicProducer.instantTransaction" should "work well for unreliable delivery" in {
+    val data = Seq(new Array[Byte](128))
+    producer.instantTransaction(0, data, isReliable = false) > 0 shouldBe true
+  }
+
+  "BasicProducer.instantTransaction" should "work and doesn't prevent from correct functioning of regular one" in {
+    val regularTransaction = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened, 0)
+    regularTransaction.send("test".getBytes)
+    val data = Seq(new Array[Byte](128))
+    producer.instantTransaction(0, data, isReliable = false) > 0 shouldBe true
+    regularTransaction.checkpoint()
+  }
+
   override def afterAll(): Unit = {
     producer.stop()
     TestStorageServer.dispose(srv)

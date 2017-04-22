@@ -6,7 +6,7 @@ import java.util.concurrent.CountDownLatch
 import org.slf4j.LoggerFactory
 
 object UdpProcessor {
-  var BUFFER_SIZE = 256
+  var BUFFER_SIZE = 508
 }
 
 abstract class UdpProcessor {
