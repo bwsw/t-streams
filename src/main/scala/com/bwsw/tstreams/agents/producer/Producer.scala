@@ -1,6 +1,6 @@
 package com.bwsw.tstreams.agents.producer
 
-import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.{AtomicLong, AtomicBoolean}
 import java.util.concurrent.locks.ReentrantLock
 import java.util.concurrent.{CountDownLatch, TimeUnit}
 
@@ -265,6 +265,8 @@ class Producer(var name: String,
   def generateNewTransactionIDLocal() =
     producerOptions.transactionGenerator.getTransaction()
 
+  val counter = new AtomicLong(0)
+
   /**
     * Method to implement for concrete producer PeerAgent method
     * Need only if this producer is master
@@ -276,7 +278,10 @@ class Producer(var name: String,
     val transactionRecord = new RPCProducerTransaction(stream.name, partition, transactionID, TransactionStates.Opened, -1, producerOptions.transactionTtlMs)
     val extTransportTimeOutMs = producerOptions.coordinationOptions.transportClientTimeoutMs
 
+    val c1 = System.nanoTime()
     stream.client.putTransactionSync(transactionRecord, extTransportTimeOutMs.milliseconds)
+    val c2 = System.nanoTime()
+    counter.addAndGet(c2 - c1)
 
     val msg = TransactionState(
       transactionID = transactionID,

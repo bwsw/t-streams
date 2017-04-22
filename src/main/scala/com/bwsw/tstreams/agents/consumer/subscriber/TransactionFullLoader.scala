@@ -49,7 +49,9 @@ class TransactionFullLoader(partitions: Set[Int],
     var data = ListBuffer[ConsumerTransaction]()
     var flag = true
     while (flag) {
+      ProcessingEngine.logger.warn(s"To Load full for ($first, [${last}])")
       data ++= consumer.getTransactionsFromTo(last.partition, first, last.transactionID)
+      ProcessingEngine.logger.warn(s"Done Load full for ($first, [${last}])")
       if (last.masterID > 0) {
         // we wait for certain item
         // to switch to fast load next

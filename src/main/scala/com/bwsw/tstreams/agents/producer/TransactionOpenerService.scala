@@ -80,6 +80,7 @@ class TransactionOpenerService(curatorClient: CuratorFramework,
 
   val agent = this
   private val openerServer = new RequestsServer(myInetAddress, myInetPort, threadPoolAmount) {
+
     override def handleRequest(client: SocketAddress, reqAny: AnyRef): Unit = {
       if (!isRunning.get())
         return

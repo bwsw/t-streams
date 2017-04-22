@@ -18,7 +18,7 @@ object TStreamsFactoryProducerDefaults {
     val transportTimeoutMs = IntMinMaxDefault(1000, 10000, 5000)
     val transportRetryDelayMs = IntMinMaxDefault(1000, 5000, 1000)
     val transportRetryCount = IntMinMaxDefault(3, 100, 3)
-    val threadPoolSize = IntMinMaxDefault(1, 64, 4)
+    val threadPoolSize = IntMinMaxDefault(1, 1000, Runtime.getRuntime().availableProcessors())
     val notifyThreadPoolSize = IntMinMaxDefault(1, 32, 1)
 
     object Transaction {

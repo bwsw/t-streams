@@ -11,7 +11,7 @@ object LocalTransactionGenerator {
   */
 class LocalTransactionGenerator() extends ITransactionGenerator {
 
-  var counter = new AtomicInteger(0)
+  var counter = new AtomicInteger(1)
   var currentMillis = new AtomicLong(0)
 
   /**
@@ -21,7 +21,7 @@ class LocalTransactionGenerator() extends ITransactionGenerator {
     val now = System.currentTimeMillis()
     if (now - currentMillis.get > 0) {
       currentMillis.set(now)
-      counter.set(0)
+      counter.set(1)
     }
     now * LocalTransactionGenerator.SCALE + counter.getAndIncrement()
   }

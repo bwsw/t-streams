@@ -97,7 +97,7 @@ class ProcessingEngine(consumer: TransactionOperator,
         }
         else {
           if (fullLoader.checkIfTransactionLoadingIsPossible(seq)) {
-            ProcessingEngine.logger.debug(s"PE $id - Load full occurred for seq $seq")
+            ProcessingEngine.logger.warn(s"PE $id - Load full occurred for seq $seq")
             if (fullLoader.load(seq, consumer, loadExecutor, callback) > 0)
               loadFullDataExist = true
           } else {
@@ -113,8 +113,7 @@ class ProcessingEngine(consumer: TransactionOperator,
       .foreach(p =>
         if (loadFullDataExist
           || isFirstTime
-          || (System.currentTimeMillis() - getLastPartitionActivity(p) > pollTimeMs && queue.getInFlight() == 0)
-        /*|| (System.currentTimeMillis() - getLastPartitionActivity(p) > pollTimeMs * ProcessingEngine.PROTECTION_INTERVAL)*/ ) {
+          || (System.currentTimeMillis() - getLastPartitionActivity(p) > pollTimeMs && queue.getInFlight() == 0)) {
           enqueueLastTransactionFromDB(p)
         })
 
