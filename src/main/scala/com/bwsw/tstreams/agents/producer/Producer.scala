@@ -11,6 +11,7 @@ import com.bwsw.tstreams.coordination.client.UdpEventsBroadcastClient
 import com.bwsw.tstreams.proto.protocol.{TransactionRequest, TransactionResponse, TransactionState}
 import com.bwsw.tstreams.streams.Stream
 import com.bwsw.tstreamstransactionserver.rpc.TransactionStates
+import com.google.protobuf.ByteString
 import org.apache.curator.framework.CuratorFrameworkFactory
 import org.apache.curator.retry.ExponentialBackoffRetry
 import org.apache.zookeeper.KeeperException
@@ -107,10 +108,11 @@ class Producer(var name: String,
     * @param partition
     * @return TransactionResponse or null
     */
-  def transactionRequest(to: String, partition: Int): Option[TransactionResponse] = {
+  def transactionRequest(to: String, partition: Int, isInstant: Boolean, isReliable: Boolean, data: Seq[Array[Byte]]): Option[TransactionResponse] = {
     val splits = to.split(":")
     val (host, port) = (splits(0), splits(1).toInt)
-    val r = TransactionRequest(partition = partition)
+    val r = TransactionRequest(partition = partition, isReliable = isReliable,
+      isInstant = isInstant, data = data.map(com.google.protobuf.ByteString.copyFrom(_)))
     openTransactionClient.sendAndWait(host, port, r)
   }
 
@@ -186,31 +188,58 @@ class Producer(var name: String,
     openTransactions.forallKeysDo((part: Int, transaction: IProducerTransaction) => transaction.updateTransactionKeepAliveState())
   }
 
+  /**
+    * instant transaction send out (kafka-like)
+    *
+    * @param partition
+    * @param data
+    * @param isReliable
+    * @return
+    */
+  def instantTransaction(partition: Int, data: Seq[Array[Byte]], isReliable: Boolean = true): Long = {
+    if (!producerOptions.writePolicy.getUsedPartitions().contains(partition))
+      throw new IllegalArgumentException(s"Producer $name - invalid partition ${partition}")
+
+    transactionOpenerService.generateNewTransaction(partition = partition,
+      isInstant = true, isReliable = isReliable, data = data)
+  }
+
+  def instantTransaction(data: Seq[Array[Byte]], isReliable: Boolean = true): Long =
+    instantTransaction(producerOptions.writePolicy.getNextPartition, data, isReliable)
+
+
+  /**
+    * regular long-living transaction creation
+    *
+    * @param policy
+    * @param partition
+    * @return
+    */
   def newTransaction(policy: ProducerPolicy = NewTransactionProducerPolicy.ErrorIfOpened, partition: Int = -1): ProducerTransaction = {
     if (isStop.get())
       throw new IllegalStateException(s"Producer ${this.name} is already stopped. Unable to get new transaction.")
 
-    val p = {
+    val evaluatedPartition = {
       if (partition == -1)
         producerOptions.writePolicy.getNextPartition
       else
         partition
     }
 
-    if (!(p >= 0 && p < stream.partitionsCount))
-      throw new IllegalArgumentException(s"Producer $name - invalid partition")
+    if (!producerOptions.writePolicy.getUsedPartitions().contains(evaluatedPartition))
+      throw new IllegalArgumentException(s"Producer $name - invalid partition ${evaluatedPartition}")
 
-    val previousTransactionAction = openTransactions.handlePreviousOpenTransaction(p, policy)
+    val previousTransactionAction = openTransactions.handlePreviousOpenTransaction(evaluatedPartition, policy)
     if (previousTransactionAction != null)
       previousTransactionAction()
 
-    val transactionID = transactionOpenerService.generateNewTransaction(p)
+    val transactionID = transactionOpenerService.generateNewTransaction(evaluatedPartition)
 
     if (Producer.logger.isDebugEnabled)
-      Producer.logger.debug(s"[NEW_TRANSACTION PARTITION_$p] ID=$transactionID")
+      Producer.logger.debug(s"[NEW_TRANSACTION PARTITION_$evaluatedPartition] ID=$transactionID")
 
-    val transaction = new ProducerTransaction(p, transactionID, this)
-    openTransactions.put(p, transaction)
+    val transaction = new ProducerTransaction(evaluatedPartition, transactionID, this)
+    openTransactions.put(evaluatedPartition, transaction)
 
     transaction
   }
@@ -265,8 +294,6 @@ class Producer(var name: String,
   def generateNewTransactionIDLocal() =
     producerOptions.transactionGenerator.getTransaction()
 
-  val counter = new AtomicLong(0)
-
   /**
     * Method to implement for concrete producer PeerAgent method
     * Need only if this producer is master
@@ -278,10 +305,7 @@ class Producer(var name: String,
     val transactionRecord = new RPCProducerTransaction(stream.name, partition, transactionID, TransactionStates.Opened, -1, producerOptions.transactionTtlMs)
     val extTransportTimeOutMs = producerOptions.coordinationOptions.transportClientTimeoutMs
 
-    val c1 = System.nanoTime()
     stream.client.putTransactionSync(transactionRecord, extTransportTimeOutMs.milliseconds)
-    val c2 = System.nanoTime()
-    counter.addAndGet(c2 - c1)
 
     val msg = TransactionState(
       transactionID = transactionID,
@@ -292,6 +316,38 @@ class Producer(var name: String,
       orderID = transactionOpenerService.getAndIncSequentialID(partition),
       count = 0)
     subscriberNotifier.publish(msg)
+  }
+
+  private[tstreams] def openInstantTransactionLocal(partition: Int, transactionID: Long, data: Seq[Array[Byte]], isReliable: Boolean) = {
+    if(isReliable)
+      stream.client.putInstantTransactionSync(stream.name, partition, transactionID, data)
+    else
+      stream.client.putInstantTransactionSync(stream.name, partition, transactionID, data)
+      //    stream.client.putInstantTransactionUnreliable(stream.name, partition, transactionID, data)
+      // todo: fixit
+
+
+    val msgOpened = TransactionState(
+      transactionID = transactionID,
+      ttlMs = producerOptions.transactionTtlMs,
+      status = TransactionState.Status.Opened,
+      partition = partition,
+      masterID = transactionOpenerService.getUniqueAgentID(),
+      orderID = transactionOpenerService.getAndIncSequentialID(partition),
+      count = 0,
+      isNotReliable = !isReliable)
+
+    val msgCheckpointed = TransactionState(
+      transactionID = transactionID,
+      ttlMs = producerOptions.transactionTtlMs,
+      status = TransactionState.Status.Checkpointed,
+      partition = partition,
+      masterID = -1,
+      orderID = -1,
+      count = data.size,
+      isNotReliable = !isReliable)
+
+    Seq(msgOpened, msgCheckpointed).foreach(subscriberNotifier.publish(_))
   }
 
 

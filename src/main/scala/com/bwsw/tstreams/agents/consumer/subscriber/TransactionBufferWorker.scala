@@ -19,9 +19,13 @@ class TransactionBufferWorker() {
   val isComplete = new AtomicBoolean(false)
 
   val signalThread = new Thread(() => {
-    while (!isComplete.get) {
-      signalTransactionStateSequences()
-      Thread.sleep(TransactionBuffer.MAX_POST_CHECKPOINT_WAIT * 2)
+    try {
+      while (!isComplete.get) {
+        signalTransactionStateSequences()
+        Thread.sleep(TransactionBuffer.MAX_POST_CHECKPOINT_WAIT * 2)
+      }
+    } catch {
+      case _: InterruptedException =>
     }
   })
 
