@@ -35,7 +35,8 @@ message TransactionState {
     int32 count         = 5;
     Status status       = 6;
     int64 ttlMs         = 7;
-    string authToken    = 8;
+    bool isNotReliable  = 8;
+    string authToken    = 9;
 }
 
 message TransactionStateList {

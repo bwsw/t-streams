@@ -11,6 +11,7 @@ import com.bwsw.tstreams.coordination.client.UdpEventsBroadcastClient
 import com.bwsw.tstreams.proto.protocol.{TransactionRequest, TransactionResponse, TransactionState}
 import com.bwsw.tstreams.streams.Stream
 import com.bwsw.tstreamstransactionserver.rpc.TransactionStates
+import com.google.protobuf.ByteString
 import org.apache.curator.framework.CuratorFrameworkFactory
 import org.apache.curator.retry.ExponentialBackoffRetry
 import org.apache.zookeeper.KeeperException
@@ -189,6 +190,7 @@ class Producer(var name: String,
 
   /**
     * instant transaction send out (kafka-like)
+    *
     * @param partition
     * @param data
     * @param isReliable
@@ -204,6 +206,7 @@ class Producer(var name: String,
 
   /**
     * regular long-living transaction creation
+    *
     * @param policy
     * @param partition
     * @return
@@ -287,8 +290,6 @@ class Producer(var name: String,
   def generateNewTransactionIDLocal() =
     producerOptions.transactionGenerator.getTransaction()
 
-  val counter = new AtomicLong(0)
-
   /**
     * Method to implement for concrete producer PeerAgent method
     * Need only if this producer is master
@@ -300,10 +301,7 @@ class Producer(var name: String,
     val transactionRecord = new RPCProducerTransaction(stream.name, partition, transactionID, TransactionStates.Opened, -1, producerOptions.transactionTtlMs)
     val extTransportTimeOutMs = producerOptions.coordinationOptions.transportClientTimeoutMs
 
-    val c1 = System.nanoTime()
     stream.client.putTransactionSync(transactionRecord, extTransportTimeOutMs.milliseconds)
-    val c2 = System.nanoTime()
-    counter.addAndGet(c2 - c1)
 
     val msg = TransactionState(
       transactionID = transactionID,
@@ -314,6 +312,35 @@ class Producer(var name: String,
       orderID = transactionOpenerService.getAndIncSequentialID(partition),
       count = 0)
     subscriberNotifier.publish(msg)
+  }
+
+  private[tstreams] def openInstantTransactionLocal(partition: Int, transactionID: Long, data: Seq[Array[Byte]], isReliable: Boolean) = {
+    if(isReliable)
+      stream.client.putInstantTransactionSync(stream.name, partition, transactionID, data)
+    else
+      stream.client.putInstantTransactionUnreliable(stream.name, partition, transactionID, data)
+
+    val msgOpened = TransactionState(
+      transactionID = transactionID,
+      ttlMs = producerOptions.transactionTtlMs,
+      status = TransactionState.Status.Opened,
+      partition = partition,
+      masterID = transactionOpenerService.getUniqueAgentID(),
+      orderID = transactionOpenerService.getAndIncSequentialID(partition),
+      count = 0,
+      isNotReliable = true)
+
+    val msgCheckpointed = TransactionState(
+      transactionID = transactionID,
+      ttlMs = producerOptions.transactionTtlMs,
+      status = TransactionState.Status.Checkpointed,
+      partition = partition,
+      masterID = -1,
+      orderID = -1,
+      count = data.size,
+      isNotReliable = true)
+
+    Seq(msgOpened, msgCheckpointed).foreach(subscriberNotifier.publish(_))
   }
 
 
