@@ -204,6 +204,10 @@ class Producer(var name: String,
       isInstant = true, isReliable = isReliable, data = data)
   }
 
+  def instantTransaction(data: Seq[Array[Byte]], isReliable: Boolean = true): Long =
+    instantTransaction(producerOptions.writePolicy.getNextPartition, data, isReliable)
+
+
   /**
     * regular long-living transaction creation
     *
