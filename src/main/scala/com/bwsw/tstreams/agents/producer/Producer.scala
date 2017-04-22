@@ -328,7 +328,7 @@ class Producer(var name: String,
       masterID = transactionOpenerService.getUniqueAgentID(),
       orderID = transactionOpenerService.getAndIncSequentialID(partition),
       count = 0,
-      isNotReliable = true)
+      isNotReliable = !isReliable)
 
     val msgCheckpointed = TransactionState(
       transactionID = transactionID,
@@ -338,7 +338,7 @@ class Producer(var name: String,
       masterID = -1,
       orderID = -1,
       count = data.size,
-      isNotReliable = true)
+      isNotReliable = !isReliable)
 
     Seq(msgOpened, msgCheckpointed).foreach(subscriberNotifier.publish(_))
   }
