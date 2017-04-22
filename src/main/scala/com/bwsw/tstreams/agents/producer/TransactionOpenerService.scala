@@ -178,14 +178,14 @@ class TransactionOpenerService(curatorClient: CuratorFramework,
     * @param partition Transaction partition
     * @return TransactionID
     */
-  def generateNewTransaction(partition: Int, isInstant: Boolean = false, data: Seq[Array[Byte]] = Seq()): Long = this.synchronized {
+  def generateNewTransaction(partition: Int, isInstant: Boolean = false, isReliable: Boolean = true, data: Seq[Array[Byte]] = Seq()): Long = this.synchronized {
     val master = getPartitionMasterInetAddressLocal(partition)._1
     if (TransactionOpenerService.logger.isDebugEnabled) {
       TransactionOpenerService.logger.debug(s"[GET TRANSACTION] Start retrieve transaction for agent with address: {$myInetAddress}, stream: {$streamName}, partition: {$partition} from [MASTER: {$master}].")
     }
 
     val res =
-      producer.transactionRequest(master, partition, isInstant, data) match {
+      producer.transactionRequest(master, partition, isInstant, isReliable, data) match {
         case None =>
           updatePartitionMasterInetAddress(partition)
           generateNewTransaction(partition)

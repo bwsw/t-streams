@@ -27,7 +27,7 @@ class UdpClient(waitTimeoutMs: Int) extends UdpProcessor {
         })
     })
   }
-
+  
   def sendAndWait(hostName: String, port: Int, req: TransactionRequest): Option[TransactionResponse] = {
     val msg = req.withId(Random.nextLong)
     val q = new ArrayBlockingQueue[TransactionResponse](1)
