@@ -6,8 +6,8 @@ import java.util.concurrent.locks.ReentrantLock
 
 import com.bwsw.tstreams.agents.group.ProducerCheckpointInfo
 import com.bwsw.tstreams.common.{LockUtil, ResettableCountDownLatch}
-import com.bwsw.tstreams.coordination.messages.state.{TransactionStateMessage, TransactionStatus}
 import com.bwsw.tstreams.debug.GlobalHooks
+import com.bwsw.tstreams.proto.protocol.TransactionState
 import com.bwsw.tstreamstransactionserver.rpc.TransactionStates
 import org.slf4j.LoggerFactory
 
@@ -158,9 +158,9 @@ class ProducerTransaction(partition: Int,
 
     producer.stream.client.putTransaction(transactionRecord, true)(rec => {})
 
-    val msg = TransactionStateMessage(transactionID = transactionID,
+    val msg = TransactionState(transactionID = transactionID,
       ttlMs = -1,
-      status = TransactionStatus.cancel,
+      status = TransactionState.Status.Cancelled,
       partition = partition,
       masterID = producer.getPartitionMasterIDLocalInfo(partition),
       orderID = -1,
@@ -187,10 +187,10 @@ class ProducerTransaction(partition: Int,
         return
     }
 
-    producer.publish(TransactionStateMessage(
+    producer.publish(TransactionState(
       transactionID = transactionID,
       ttlMs = -1,
-      status = TransactionStatus.checkpointed,
+      status = TransactionState.Status.Checkpointed,
       partition = partition,
       masterID = producer.getPartitionMasterIDLocalInfo(partition),
       orderID = -1,
@@ -235,10 +235,10 @@ class ProducerTransaction(partition: Int,
 
     }
     else {
-      producer.publish(TransactionStateMessage(
+      producer.publish(TransactionState(
         transactionID = transactionID,
         ttlMs = -1,
-        status = TransactionStatus.cancel,
+        status = TransactionState.Status.Cancelled,
         partition = partition,
         masterID = producer.getPartitionMasterIDLocalInfo(partition),
         orderID = -1, count = 0))
@@ -282,10 +282,10 @@ class ProducerTransaction(partition: Int,
           GlobalHooks.invoke(GlobalHooks.afterCommitFailure)
 
           producer.notifyService.submit(s"NotifyTask-Part[${partition}]-Txn[${transactionID}]", () =>
-            producer.publish(TransactionStateMessage(
+            producer.publish(TransactionState(
               transactionID = transactionID,
               ttlMs = -1,
-              status = TransactionStatus.checkpointed,
+              status = TransactionState.Status.Checkpointed,
               partition = partition,
               masterID = producer.getPartitionMasterIDLocalInfo(partition),
               orderID = -1,
@@ -297,10 +297,10 @@ class ProducerTransaction(partition: Int,
         }
         else {
           producer.notifyService.submit(s"NotifyTask-Part[${partition}]-Txn[${transactionID}]", () =>
-            producer.publish(TransactionStateMessage(
+            producer.publish(TransactionState(
               transactionID = transactionID,
               ttlMs = -1,
-              status = TransactionStatus.cancel,
+              status = TransactionState.Status.Cancelled,
               partition = partition,
               masterID = producer.getPartitionMasterIDLocalInfo(partition),
               orderID = -1,
@@ -317,17 +317,17 @@ class ProducerTransaction(partition: Int,
 
     setUpdateFinished
 
-    producer.publish(TransactionStateMessage(
+    producer.publish(TransactionState(
       transactionID = transactionID,
       ttlMs = producer.producerOptions.transactionTtlMs,
-      status = TransactionStatus.update,
+      status = TransactionState.Status.Updated,
       partition = partition,
       masterID = producer.transactionOpenerService.getUniqueAgentID(),
       orderID = -1,
       count = 0))
 
     if (ProducerTransaction.logger.isDebugEnabled) {
-      ProducerTransaction.logger.debug(s"[KEEP_ALIVE THREAD PARTITION_PARTITION_$partition] ts=${transactionID.toString} status=${TransactionStatus.update}")
+      ProducerTransaction.logger.debug(s"[KEEP_ALIVE THREAD PARTITION_PARTITION_$partition] ts=${transactionID.toString} status=Updated")
     }
   }
 
@@ -371,10 +371,10 @@ class ProducerTransaction(partition: Int,
 
   def getTransactionInfo(): ProducerCheckpointInfo = {
 
-    val checkpoint = TransactionStateMessage(
+    val checkpoint = TransactionState(
       transactionID = getTransactionID(),
       ttlMs = -1,
-      status = TransactionStatus.checkpointed,
+      status = TransactionState.Status.Checkpointed,
       partition = partition,
       masterID = producer.getPartitionMasterIDLocalInfo(partition),
       orderID = -1,

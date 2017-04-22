@@ -1,6 +1,6 @@
 name := "t-streams"
 
-val tstreamsVersion = "2.1.5-SNAPSHOT"
+val tstreamsVersion = "2.2.0-SNAPSHOT"
 
 version := tstreamsVersion
 organization := "com.bwsw"
@@ -46,21 +46,22 @@ publishTo := {
 
 publishArtifact in Test := false
 
+PB.targets in Compile := Seq(
+  scalapb.gen(singleLineToString = true) -> (sourceManaged in Compile).value
+)
+
 //COMMON
 libraryDependencies ++= Seq(
   "org.slf4j" % "slf4j-api" % "1.7.21",
   "org.slf4j" % "slf4j-simple" % "1.7.21",
   "org.scalatest" % "scalatest_2.12" % "3.0.1",
   "org.scalamock" % "scalamock-scalatest-support_2.12" % "3.5.0",
-  "io.netty" % "netty-all" % "4.1.7.Final",
-  "com.fasterxml.jackson.module" % "jackson-module-scala_2.12" % "2.8.6",
-  "net.openhft" % "chronicle-queue" % "4.2.6",
   "org.scala-lang" % "scala-reflect" % "2.12.1",
   "org.scala-lang.modules" % "scala-xml_2.12" % "1.0.6",
   "log4j" % "log4j" % "1.2.17",
   "org.apache.curator" % "curator-recipes" % "2.11.0",
-  "com.google.guava" % "guava" % "18.0",
-  "com.bwsw" % "tstreams-transaction-server_2.12" % "1.2.9-SNAPSHOT")
+  "com.bwsw" % "tstreams-transaction-server_2.12" % "1.3.0-SNAPSHOT",
+  "com.trueaccord.scalapb" %% "compilerplugin" % "0.6.0-pre3")
 
 //ASSEMBLY STRATEGY
 assemblyJarName in assembly := "t-streams-" + tstreamsVersion + ".jar"

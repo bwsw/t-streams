@@ -3,7 +3,7 @@ package com.bwsw.tstreams.agents.consumer.subscriber
 import com.bwsw.tstreams.agents.consumer.subscriber.QueueBuilder.QueueItemType
 import com.bwsw.tstreams.agents.consumer.{ConsumerTransaction, TransactionOperator}
 import com.bwsw.tstreams.common.FirstFailLockableTaskExecutor
-import com.bwsw.tstreams.coordination.messages.state.TransactionStatus
+import com.bwsw.tstreams.proto.protocol.TransactionState
 
 import scala.collection.mutable.ListBuffer
 
@@ -50,7 +50,7 @@ class TransactionFullLoader(partitions: Set[Int],
     var flag = true
     while (flag) {
       data ++= consumer.getTransactionsFromTo(last.partition, first, last.transactionID)
-      if (last.masterSessionID > 0) {
+      if (last.masterID > 0) {
         // we wait for certain item
         // to switch to fast load next
         if (data.nonEmpty) {
@@ -64,14 +64,18 @@ class TransactionFullLoader(partitions: Set[Int],
     }
 
     if (Subscriber.logger.isDebugEnabled())
-      Subscriber.logger.debug(s"Data:  $data")
+      Subscriber.logger.debug(s"Series received from the database:  $data")
 
     data.foreach(elt =>
       executor.submit(s"<CallbackTask#Full>", new ProcessingEngine.CallbackTask(consumer,
-        TransactionState(elt.getTransactionID(), last.partition, -1, -1, elt.getCount(), TransactionStatus.checkpointed, -1), callback)))
+        TransactionState(transactionID = elt.getTransactionID(),
+          partition = last.partition, masterID = -1, orderID = -1, count = elt.getCount(),
+          status = TransactionState.Status.Checkpointed, ttlMs = -1), callback)))
 
     if (data.nonEmpty)
-      lastTransactionsMap(last.partition) = TransactionState(data.last.getTransactionID(), last.partition, last.masterSessionID, last.queueOrderID, data.last.getCount(), TransactionStatus.checkpointed, -1)
+      lastTransactionsMap(last.partition) = TransactionState(transactionID = data.last.getTransactionID(),
+        partition = last.partition, masterID = last.masterID, orderID = last.orderID,
+        count = data.last.getCount(), status = TransactionState.Status.Checkpointed, ttlMs = -1)
 
     data.size
   }

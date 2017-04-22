@@ -1,7 +1,7 @@
 package com.bwsw.tstreams.agents.group
 
 import com.bwsw.tstreams.agents.producer.{ProducerTransaction, TransactionOpenerService}
-import com.bwsw.tstreams.coordination.messages.state.TransactionStateMessage
+import com.bwsw.tstreams.proto.protocol.TransactionState
 
 import scala.language.existentials
 
@@ -29,7 +29,7 @@ sealed trait CheckpointInfo
   */
 case class ProducerCheckpointInfo(transactionRef: ProducerTransaction,
                                   agent: TransactionOpenerService,
-                                  checkpointEvent: TransactionStateMessage,
+                                  checkpointEvent: TransactionState,
                                   streamName: String,
                                   partition: Int,
                                   transaction: Long,
