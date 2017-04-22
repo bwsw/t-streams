@@ -5,6 +5,10 @@ package com.bwsw.tstreams.env
   */
 object ConfigurationOptions {
 
+  object Common {
+    val authenticationToken = "common.authentication-token"
+  }
+
   /**
     * TSF_Dictionary storage scope
     */
