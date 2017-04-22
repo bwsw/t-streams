@@ -187,31 +187,52 @@ class Producer(var name: String,
     openTransactions.forallKeysDo((part: Int, transaction: IProducerTransaction) => transaction.updateTransactionKeepAliveState())
   }
 
+  /**
+    * instant transaction send out (kafka-like)
+    * @param partition
+    * @param data
+    * @param isReliable
+    * @return
+    */
+  def instantTransaction(partition: Int, data: Seq[Array[Byte]], isReliable: Boolean = true): Long = {
+    if (!producerOptions.writePolicy.getUsedPartitions().contains(partition))
+      throw new IllegalArgumentException(s"Producer $name - invalid partition ${partition}")
+
+    transactionOpenerService.generateNewTransaction(partition = partition,
+      isInstant = true, isReliable = isReliable, data = data)
+  }
+
+  /**
+    * regular long-living transaction creation
+    * @param policy
+    * @param partition
+    * @return
+    */
   def newTransaction(policy: ProducerPolicy = NewTransactionProducerPolicy.ErrorIfOpened, partition: Int = -1): ProducerTransaction = {
     if (isStop.get())
       throw new IllegalStateException(s"Producer ${this.name} is already stopped. Unable to get new transaction.")
 
-    val p = {
+    val evaluatedPartition = {
       if (partition == -1)
         producerOptions.writePolicy.getNextPartition
       else
         partition
     }
 
-    if (!(p >= 0 && p < stream.partitionsCount))
-      throw new IllegalArgumentException(s"Producer $name - invalid partition")
+    if (!producerOptions.writePolicy.getUsedPartitions().contains(evaluatedPartition))
+      throw new IllegalArgumentException(s"Producer $name - invalid partition ${evaluatedPartition}")
 
-    val previousTransactionAction = openTransactions.handlePreviousOpenTransaction(p, policy)
+    val previousTransactionAction = openTransactions.handlePreviousOpenTransaction(evaluatedPartition, policy)
     if (previousTransactionAction != null)
       previousTransactionAction()
 
-    val transactionID = transactionOpenerService.generateNewTransaction(p)
+    val transactionID = transactionOpenerService.generateNewTransaction(evaluatedPartition)
 
     if (Producer.logger.isDebugEnabled)
-      Producer.logger.debug(s"[NEW_TRANSACTION PARTITION_$p] ID=$transactionID")
+      Producer.logger.debug(s"[NEW_TRANSACTION PARTITION_$evaluatedPartition] ID=$transactionID")
 
-    val transaction = new ProducerTransaction(p, transactionID, this)
-    openTransactions.put(p, transaction)
+    val transaction = new ProducerTransaction(evaluatedPartition, transactionID, this)
+    openTransactions.put(evaluatedPartition, transaction)
 
     transaction
   }
