@@ -61,6 +61,7 @@ class TransactionBufferWorker() {
     */
   def stop() = {
     isComplete.set(true)
+    signalThread.interrupt()
     signalThread.join()
     updateExecutor.shutdownOrDie(Subscriber.SHUTDOWN_WAIT_MAX_SECONDS, TimeUnit.SECONDS)
     transactionBufferMap.foreach(kv => kv._2.counters.dump(kv._1))

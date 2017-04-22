@@ -28,7 +28,8 @@ class ProcessingEngine(consumer: TransactionOperator,
   private val isRunning = new AtomicBoolean(false)
 
   private val executor = new Thread(() => {
-    while (isRunning.get) handleQueue(pollingInterval)
+    while (isRunning.get)
+      handleQueue(pollingInterval)
   }, s"pe-$id-executor")
 
   private val loadExecutor = new FirstFailLockableTaskExecutor(s"pe-$id-loadExecutor")
@@ -114,7 +115,7 @@ class ProcessingEngine(consumer: TransactionOperator,
         if (loadFullDataExist
           || isFirstTime
           || (System.currentTimeMillis() - getLastPartitionActivity(p) > pollTimeMs && queue.getInFlight() == 0)) {
-          enqueueLastTransactionFromDB(p)
+          enqueueLastPossibleTransaction(p)
         })
 
     isFirstTime = false
@@ -124,7 +125,7 @@ class ProcessingEngine(consumer: TransactionOperator,
   /**
     * Enqueues in queue last transaction from database
     */
-  def enqueueLastTransactionFromDB(partition: Int): Unit = {
+  def enqueueLastPossibleTransaction(partition: Int): Unit = {
     //println(s"Partition is: ${partition} in ${partitions}")
 
     assert(partitions.contains(partition))
@@ -148,6 +149,7 @@ class ProcessingEngine(consumer: TransactionOperator,
 
   def stop() = {
     isRunning.set(false)
+    partitions.foreach(p => enqueueLastPossibleTransaction(p))
     executor.join(Subscriber.SHUTDOWN_WAIT_MAX_SECONDS * 1000)
   }
 }
