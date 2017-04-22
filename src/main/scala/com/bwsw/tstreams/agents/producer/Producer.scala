@@ -1,15 +1,14 @@
 package com.bwsw.tstreams.agents.producer
 
-import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.{AtomicBoolean, AtomicLong}
 import java.util.concurrent.locks.ReentrantLock
 import java.util.concurrent.{CountDownLatch, TimeUnit}
 
 import com.bwsw.tstreams.agents.group.{CheckpointInfo, GroupParticipant, SendingAgent}
 import com.bwsw.tstreams.agents.producer.NewTransactionProducerPolicy.ProducerPolicy
 import com.bwsw.tstreams.common._
-import com.bwsw.tstreams.coordination.client.{CommunicationClient, UdpEventsBroadcastClient}
-import com.bwsw.tstreams.coordination.messages.master.{IMessage, NewTransactionRequest}
-import com.bwsw.tstreams.coordination.messages.state.{TransactionStateMessage, TransactionStatus}
+import com.bwsw.tstreams.coordination.client.UdpEventsBroadcastClient
+import com.bwsw.tstreams.proto.protocol.{TransactionRequest, TransactionResponse, TransactionState}
 import com.bwsw.tstreams.streams.Stream
 import com.bwsw.tstreamstransactionserver.rpc.TransactionStates
 import org.apache.curator.framework.CuratorFrameworkFactory
@@ -96,9 +95,10 @@ class Producer(var name: String,
     * @param msg
     * @return
     */
-  def publish(msg: TransactionStateMessage) = subscriberNotifier.publish(msg)
+  def publish(msg: TransactionState) = subscriberNotifier.publish(msg)
 
-  private[tstreams] val openTransactionClient = new CommunicationClient(pcs.transportClientTimeoutMs, pcs.transportClientRetryCount, pcs.transportClientRetryDelayMs)
+  // pcs.transportClientRetryDelayMs
+  private[tstreams] val openTransactionClient = new UdpClient(pcs.transportClientTimeoutMs).start()
 
   /**
     * Request to get Transaction
@@ -107,10 +107,11 @@ class Producer(var name: String,
     * @param partition
     * @return TransactionResponse or null
     */
-  def transactionRequest(to: String, partition: Int): IMessage = {
-    val r = NewTransactionRequest(pcs.transaportServer.getInetAddress(), to, partition)
-    val response: IMessage = openTransactionClient.sendAndWaitResponse(r, isExceptionIfFails = false, () => null)
-    response
+  def transactionRequest(to: String, partition: Int): Option[TransactionResponse] = {
+    val splits = to.split(":")
+    val (host, port) = (splits(0), splits(1).toInt)
+    val r = TransactionRequest(partition = partition)
+    openTransactionClient.sendAndWait(host, port, r)
   }
 
 
@@ -123,7 +124,6 @@ class Producer(var name: String,
     peerKeepAliveTimeout = peerKeepAliveTimeout,
     producer = this,
     usedPartitions = producerOptions.writePolicy.getUsedPartitions(),
-    transport = pcs.transaportServer,
     threadPoolAmount = threadPoolSize)
 
 
@@ -265,6 +265,8 @@ class Producer(var name: String,
   def generateNewTransactionIDLocal() =
     producerOptions.transactionGenerator.getTransaction()
 
+  val counter = new AtomicLong(0)
+
   /**
     * Method to implement for concrete producer PeerAgent method
     * Need only if this producer is master
@@ -276,12 +278,15 @@ class Producer(var name: String,
     val transactionRecord = new RPCProducerTransaction(stream.name, partition, transactionID, TransactionStates.Opened, -1, producerOptions.transactionTtlMs)
     val extTransportTimeOutMs = producerOptions.coordinationOptions.transportClientTimeoutMs
 
+    val c1 = System.nanoTime()
     stream.client.putTransactionSync(transactionRecord, extTransportTimeOutMs.milliseconds)
+    val c2 = System.nanoTime()
+    counter.addAndGet(c2 - c1)
 
-    val msg = TransactionStateMessage(
+    val msg = TransactionState(
       transactionID = transactionID,
       ttlMs = producerOptions.transactionTtlMs,
-      status = TransactionStatus.opened,
+      status = TransactionState.Status.Opened,
       partition = partition,
       masterID = transactionOpenerService.getUniqueAgentID(),
       orderID = transactionOpenerService.getAndIncSequentialID(partition),
@@ -299,7 +304,7 @@ class Producer(var name: String,
     if (isStop.getAndSet(true))
       throw new IllegalStateException(s"Producer ${this.name} is already stopped. Duplicate action.")
 
-    openTransactionClient.close()
+    openTransactionClient.stop()
     // stop provide master features to public
     transactionOpenerService.stop()
 

@@ -4,12 +4,10 @@ import java.security.InvalidParameterException
 import java.util.concurrent.atomic.AtomicBoolean
 
 import com.bwsw.tstreams.agents.consumer.Offset.IOffset
-import com.bwsw.tstreams.agents.consumer.subscriber.QueueBuilder.Persistent
 import com.bwsw.tstreams.agents.consumer.subscriber.{QueueBuilder, Subscriber, SubscriberOptionsBuilder}
 import com.bwsw.tstreams.agents.consumer.{Consumer, ConsumerOptions}
 import com.bwsw.tstreams.agents.producer.{CoordinationOptions, Producer}
 import com.bwsw.tstreams.common.{RoundRobinPolicy, _}
-import com.bwsw.tstreams.coordination.client.TcpNewTransactionServer
 import com.bwsw.tstreams.env.defaults.TStreamsFactoryProducerDefaults.PortRange
 import com.bwsw.tstreams.generator.{ITransactionGenerator, LocalTransactionGenerator}
 import com.bwsw.tstreams.streams.Stream
@@ -260,16 +258,13 @@ class TStreamsFactory() {
     val batchSize = pAsInt(co.Producer.Transaction.batchSize, producerDefaults.Transaction.batchSize.default)
     producerDefaults.Transaction.batchSize.check(batchSize)
 
-    val transport = new TcpNewTransactionServer(
-      pAsString(co.Producer.bindHost) + ":" + port.toString)
-
-
     val cao = new CoordinationOptions(
       zkEndpoints = pAsString(co.Coordination.endpoints),
       zkPrefix = pAsString(co.Coordination.prefix),
       zkSessionTimeoutMs = sessionTimeoutMs,
       zkConnectionTimeoutMs = connectionTimeoutMs,
-      transaportServer = transport,
+      openerServerHost = pAsString(co.Producer.bindHost),
+      openerServerPort = port,
       threadPoolSize = threadPoolSize,
       notifyThreadPoolSize = notifyThreadPoolSize,
       transportClientTimeoutMs = transportClientTimeoutMs,
@@ -287,8 +282,6 @@ class TStreamsFactory() {
         "is supported currently in UniversalFactory.")
     }
 
-    println(transactionTtlMs)
-    println(transactionKeepAliveMs)
     assert(transactionTtlMs >= transactionKeepAliveMs * 3)
 
 
@@ -403,7 +396,7 @@ class TStreamsFactory() {
       processingEngineWorkersThreadSize = processingEnginesThreadPoolSize,
       pollingFrequencyDelayMs = pollingFrequencyDelayMs,
       transactionQueueMaxLengthThreshold = transactionQueueMaxLengthThreshold,
-      transactionsQueueBuilder = if (queue_path == null) new QueueBuilder.InMemory() else new Persistent(queue_path))
+      transactionsQueueBuilder = new QueueBuilder.InMemory())
 
     new Subscriber(name, stream, opts, callback)
   }

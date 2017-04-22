@@ -2,9 +2,8 @@ package com.bwsw.tstreams.agents.subscriber
 
 import java.util.concurrent.TimeUnit
 
-import com.bwsw.tstreams.agents.consumer.subscriber.TransactionState
 import com.bwsw.tstreams.common.InMemoryQueue
-import com.bwsw.tstreams.coordination.messages.state.TransactionStatus
+import com.bwsw.tstreams.proto.protocol.TransactionState
 import com.bwsw.tstreams.testutils.LocalGeneratorCreator
 import org.scalatest.{FlatSpec, Matchers}
 
@@ -19,7 +18,10 @@ class InMemoryQueueTests extends FlatSpec with Matchers {
 
   it should "allow to put/get list" in {
     val q = new InMemoryQueue[List[TransactionState]]()
-    val s = TransactionState(LocalGeneratorCreator.getTransaction(), 0, 1, 1, 1, TransactionStatus.opened, 1)
+    val s = TransactionState(transactionID = LocalGeneratorCreator.getTransaction(),
+      partition = 0, masterID = 1, orderID = 1,
+      count = 1, status = TransactionState.Status.Opened,
+      ttlMs = 1)
     q.put(List(s))
     val g: List[TransactionState] = q.get(1, TimeUnit.SECONDS)
     g.size shouldBe 1

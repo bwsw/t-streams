@@ -369,7 +369,6 @@ class Consumer(val name: String,
   }
 
   override def getTransactionsFromTo(partition: Int, from: Long, to: Long): ListBuffer[ConsumerTransaction] = {
-    var quantity = 0
     val (_, seq) = stream.client.scanTransactions(stream.name, partition, from + 1, to,
       new ScanCheckpointedPredicate(options.transactionsPreload))
 
