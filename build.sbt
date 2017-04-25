@@ -1,6 +1,6 @@
 name := "t-streams"
 
-val tstreamsVersion = "2.2.0-SNAPSHOT"
+val tstreamsVersion = "2.2.1-SNAPSHOT"
 
 version := tstreamsVersion
 organization := "com.bwsw"
@@ -64,7 +64,7 @@ libraryDependencies ++= Seq(
 
 // com.bwsw dependencies
 libraryDependencies ++= Seq(
-  "com.bwsw" % "tstreams-transaction-server_2.12" % "1.3.0-SNAPSHOT")
+  "com.bwsw" % "tstreams-transaction-server_2.12" % "1.3.1-SNAPSHOT")
 
 //ASSEMBLY STRATEGY
 assemblyJarName in assembly := "t-streams-" + tstreamsVersion + ".jar"
