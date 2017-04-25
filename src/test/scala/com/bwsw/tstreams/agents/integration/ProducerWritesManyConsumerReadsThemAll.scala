@@ -31,7 +31,7 @@ class ProducerWritesManyConsumerReadsThemAll extends FlatSpec with Matchers with
   storageClient.shutdown()
 
   it should "handle all transactions and do not loose them" in {
-    val TRANSACTIONS_PER_PRODUCER = 100000
+    val TRANSACTIONS_PER_PRODUCER = 10000
 
     val producer = f.getProducer(
       name = "test_producer",

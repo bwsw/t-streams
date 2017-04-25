@@ -31,8 +31,8 @@ class ProducersComeAndLeaveConsumerReadsTest extends FlatSpec with Matchers with
   storageClient.shutdown()
 
   it should "handle all transactions and do not loose them" in {
-    val TRANSACTIONS_PER_PRODUCER = 1000
-    val PRODUCERS = 1000
+    val TRANSACTIONS_PER_PRODUCER = 100
+    val PRODUCERS = 100
 
     val consumer = f.getConsumer(name = "sv2",
       partitions = Set(0),

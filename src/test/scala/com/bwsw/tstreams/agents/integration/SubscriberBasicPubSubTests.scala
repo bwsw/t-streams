@@ -31,7 +31,7 @@ class SubscriberBasicPubSubTests extends FlatSpec with Matchers with BeforeAndAf
   storageClient.shutdown()
 
   def testCase(isReliable: Boolean) {
-    val TOTAL = 10000
+    val TOTAL = 1000
     val latch = new CountDownLatch(TOTAL)
 
     val producer = f.getProducer(

@@ -52,13 +52,12 @@ PB.targets in Compile := Seq(
 
 // Common libraries
 libraryDependencies ++= Seq(
-  "org.slf4j" % "slf4j-api" % "1.7.21",
-  "org.slf4j" % "slf4j-simple" % "1.7.21",
+  "org.slf4j" % "slf4j-api" % "1.7.24",
+  "org.slf4j" % "slf4j-log4j12" % "1.7.24",
   "org.scalatest" % "scalatest_2.12" % "3.0.1",
   "org.scalamock" % "scalamock-scalatest-support_2.12" % "3.5.0",
   "org.scala-lang" % "scala-reflect" % "2.12.1",
   "org.scala-lang.modules" % "scala-xml_2.12" % "1.0.6",
-  "log4j" % "log4j" % "1.2.17",
   "org.apache.curator" % "curator-recipes" % "2.11.0",
   "com.trueaccord.scalapb" %% "compilerplugin" % "0.6.0-pre3")
 
@@ -75,7 +74,6 @@ assemblyMergeStrategy in assembly := {
   case PathList("io", "netty", xs@_*) => MergeStrategy.first
   case PathList("org", "slf4j", xs@_*) => MergeStrategy.first
   case PathList("org", "scalatest", xs@_*) => MergeStrategy.first
-  case PathList("com", "fasterxml", "jackson", "module", xs@_*) => MergeStrategy.first
   case PathList("net", "openhft", xs@_*) => MergeStrategy.first
   case x =>
       val oldStrategy = (assemblyMergeStrategy in assembly).value
