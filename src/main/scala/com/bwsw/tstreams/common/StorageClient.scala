@@ -7,7 +7,7 @@ import com.bwsw.tstreams.streams.Stream
 import com.bwsw.tstreamstransactionserver.options.ClientBuilder
 import com.bwsw.tstreamstransactionserver.options.ClientOptions.{AuthOptions, ConnectionOptions}
 import com.bwsw.tstreamstransactionserver.options.CommonOptions.ZookeeperOptions
-import com.bwsw.tstreamstransactionserver.rpc.{CommitLogInfo, ConsumerTransaction, ProducerTransaction}
+import com.bwsw.tstreamstransactionserver.rpc.{TransactionStates, CommitLogInfo, ConsumerTransaction, ProducerTransaction}
 import org.apache.zookeeper.KeeperException.BadArgumentsException
 import org.slf4j.LoggerFactory
 
@@ -198,8 +198,8 @@ class StorageClient(clientOptions: ConnectionOptions, authOptions: AuthOptions, 
     None
   }
 
-  def scanTransactions(streamName: String, partition: Integer, from: Long, to: Long, lambda: ProducerTransaction => Boolean = txn => true, timeout: Duration = 1.minute): (Long, Seq[ProducerTransaction]) = {
-    val txnInfo = Await.result(client.scanTransactions(streamName, partition, from, to, lambda), timeout)
+  def scanTransactions(streamName: String, partition: Integer, from: Long, to: Long, count: Int, states: Set[TransactionStates],  timeout: Duration = 1.minute): (Long, Seq[ProducerTransaction]) = {
+    val txnInfo = Await.result(client.scanTransactions(streamName, partition, from, to, count, states), timeout)
     (txnInfo.lastOpenedTransactionID, txnInfo.producerTransactions)
   }
 

@@ -17,25 +17,6 @@ object Consumer {
   val SYNC_SLEEP_MS = 100
 }
 
-private class ScanPredicate(preload: Int) extends Function[ProducerTransaction, Boolean] with Serializable {
-  var quantity = 0
-
-  override def apply(transaction: ProducerTransaction): Boolean = {
-    quantity = quantity + 1
-    quantity < preload
-  }
-}
-
-private class ScanCheckpointedPredicate(preload: Int) extends Function[ProducerTransaction, Boolean] with Serializable {
-  var quantity = 0
-
-  override def apply(transaction: ProducerTransaction): Boolean = {
-    quantity = quantity + 1
-    quantity < preload && TransactionStates.Opened != transaction.state
-
-  }
-}
-
 /**
   * Basic consumer class
   *
@@ -93,7 +74,7 @@ class Consumer(val name: String,
   private def loadNextTransactionsForPartition(partition: Int, currentOffset: Long): mutable.Queue[ConsumerTransaction] = {
 
     val (last, seq) = stream.client.scanTransactions(stream.name, partition, currentOffset + 1,
-      options.transactionGenerator.getTransaction(), new ScanPredicate(options.transactionsPreload))
+      options.transactionGenerator.getTransaction(), options.transactionsPreload, Set())
 
     val transactionsQueue = mutable.Queue[ConsumerTransaction]()
     seq.foreach(record => {
@@ -369,8 +350,8 @@ class Consumer(val name: String,
   }
 
   override def getTransactionsFromTo(partition: Int, from: Long, to: Long): ListBuffer[ConsumerTransaction] = {
-    val (_, seq) = stream.client.scanTransactions(stream.name, partition, from + 1, to,
-      new ScanCheckpointedPredicate(options.transactionsPreload))
+    val set = Set[TransactionStates](TransactionStates.Opened)
+    val (_, seq) = stream.client.scanTransactions(stream.name, partition, from + 1, to, options.transactionsPreload, set)
 
     val result = ListBuffer[ConsumerTransaction]()
     seq.foreach(rec => {
