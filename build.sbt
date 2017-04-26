@@ -82,3 +82,7 @@ assemblyMergeStrategy in assembly := {
 
 // Tests configuration
 parallelExecution in ThisBuild := false
+
+javaOptions += "-Dsun.net.maxDatagramSockets=1000"
+
+fork := true
