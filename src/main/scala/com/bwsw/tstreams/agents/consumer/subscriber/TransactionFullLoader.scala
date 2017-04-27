@@ -51,17 +51,18 @@ class TransactionFullLoader(partitions: Set[Int],
     var counter = 0
     while (flag) {
       counter += 1
-      if(counter > 100)
-        Subscriber.logger.warn(s"Load full begin (partition = ${last.partition}, first = $first, last = ${last.transactionID}, master = ${last.masterID})")
+      if(Subscriber.logger.isDebugEnabled())
+        Subscriber.logger.debug(s"Load full begin (partition = ${last.partition}, first = $first, last = ${last.transactionID}, master = ${last.masterID})")
       data ++= consumer.getTransactionsFromTo(last.partition, first, last.transactionID)
-      if(counter > 100)
-        Subscriber.logger.warn(s"Load full end   (partition = ${last.partition}, first = $first, last = ${last.transactionID}, master = ${last.masterID})")
+      if(Subscriber.logger.isDebugEnabled())
+        Subscriber.logger.debug(s"Load full end (partition = ${last.partition}, first = $first, last = ${last.transactionID}, master = ${last.masterID})")
       if (last.masterID > 0 && !last.isNotReliable) {
         // we wait for certain item
         // to switch to fast load next
         if (data.nonEmpty) {
           if (data.last.getTransactionID() == last.transactionID) {
-            Subscriber.logger.warn(s"Load full completed (partition = ${last.partition}, first = $first, last = ${last.transactionID}, master = ${last.masterID}  )")
+            if(Subscriber.logger.isDebugEnabled())
+              Subscriber.logger.debug(s"Load full completed (partition = ${last.partition}, first = $first, last = ${last.transactionID}, master = ${last.masterID}  )")
             flag = false
           }
           else

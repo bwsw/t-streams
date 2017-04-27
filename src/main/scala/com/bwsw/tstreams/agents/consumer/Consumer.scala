@@ -352,8 +352,8 @@ class Consumer(val name: String,
   override def getTransactionsFromTo(partition: Int, from: Long, to: Long): ListBuffer[ConsumerTransaction] = {
     val set = Set[TransactionStates](TransactionStates.Opened)
     val (_, seq) = stream.client.scanTransactions(stream.name, partition, from + 1, to, options.transactionsPreload, set)
-    Consumer.logger.info(s"$seq")
-
+    if(Consumer.logger.isDebugEnabled())
+      Consumer.logger.debug(s"scanTransactions(${stream.name}, ${partition}, ${from + 1}, $to, ${options.transactionsPreload}, ${set}) -> $seq")
     val result = ListBuffer[ConsumerTransaction]()
     seq.foreach(rec => {
       if (rec.quantity > 0 && rec.state != TransactionStates.Invalid) {
