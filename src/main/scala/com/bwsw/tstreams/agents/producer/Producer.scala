@@ -196,7 +196,7 @@ class Producer(var name: String,
     * @param isReliable
     * @return
     */
-  def instantTransaction(partition: Int, data: Seq[Array[Byte]], isReliable: Boolean = true): Long = {
+  def instantTransaction(partition: Int, data: Seq[Array[Byte]], isReliable: Boolean): Long = {
     if (!producerOptions.writePolicy.getUsedPartitions().contains(partition))
       throw new IllegalArgumentException(s"Producer $name - invalid partition ${partition}")
 
@@ -204,9 +204,8 @@ class Producer(var name: String,
       isInstant = true, isReliable = isReliable, data = data)
   }
 
-  def instantTransaction(data: Seq[Array[Byte]], isReliable: Boolean = true): Long =
+  def instantTransaction(data: Seq[Array[Byte]], isReliable: Boolean): Long =
     instantTransaction(producerOptions.writePolicy.getNextPartition, data, isReliable)
-
 
   /**
     * regular long-living transaction creation
@@ -326,30 +325,18 @@ class Producer(var name: String,
       //    stream.client.putInstantTransactionUnreliable(stream.name, partition, transactionID, data)
       // todo: fixit
 
-
-    val msgOpened = TransactionState(
+    val msgInstant = TransactionState(
       transactionID = transactionID,
-      ttlMs = producerOptions.transactionTtlMs,
-      status = TransactionState.Status.Opened,
+      ttlMs = Long.MaxValue,
+      status = TransactionState.Status.Instant,
       partition = partition,
       masterID = transactionOpenerService.getUniqueAgentID(),
       orderID = transactionOpenerService.getAndIncSequentialID(partition),
-      count = 0,
-      isNotReliable = !isReliable)
-
-    val msgCheckpointed = TransactionState(
-      transactionID = transactionID,
-      ttlMs = producerOptions.transactionTtlMs,
-      status = TransactionState.Status.Checkpointed,
-      partition = partition,
-      masterID = -1,
-      orderID = -1,
       count = data.size,
       isNotReliable = !isReliable)
 
-    Seq(msgOpened, msgCheckpointed).foreach(subscriberNotifier.publish(_))
+    subscriberNotifier.publish(msgInstant)
   }
-
 
   /**
     * Stop this agent

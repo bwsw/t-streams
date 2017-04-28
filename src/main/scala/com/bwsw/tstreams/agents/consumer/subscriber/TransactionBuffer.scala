@@ -43,39 +43,35 @@ class TransactionBuffer(queue: QueueBuilder.QueueType, transactionQueueMaxLength
   /**
     * This method updates buffer with new state
     *
-    * @param updateState
+    * @param update
     */
-  def update(updateState: TransactionState): Unit = this.synchronized {
+  def update(update: TransactionState): Unit = this.synchronized {
 
-    val update = updateState.copy()
+    // updateState: TransactionState
+    //val update = updateState.copy()
 
     update.status match {
       case TransactionState.Status.Opened => counters.openEvents.incrementAndGet()
       case TransactionState.Status.Cancelled => counters.cancelEvents.incrementAndGet()
       case TransactionState.Status.Updated => counters.updateEvents.incrementAndGet()
       case TransactionState.Status.Checkpointed => counters.checkpointEvents.incrementAndGet()
+      case TransactionState.Status.Instant => counters.instantEvents.incrementAndGet()
       case _ =>
     }
 
     // avoid transactions which are delayed
     if (update.status == TransactionState.Status.Opened) {
-      if (lastTransaction != 0L
-        && update.transactionID <= lastTransaction) {
+      if (lastTransaction != 0L && update.transactionID <= lastTransaction) {
         Subscriber.logger.warn(s"Unexpected transaction comparison result ${update.transactionID} vs $lastTransaction detected.")
         return
       }
       lastTransaction = update.transactionID
     }
 
-
     if (stateMap.contains(update.transactionID)) {
       val ts = stateMap(update.transactionID)
       val orderID = ts.orderID
 
-      // If master is changed and we the event has been received via another master then it's bad case.
-      // Set new master to avoid fast loading (additional protection is done through orderID.
-      //
-      //ts.masterID = update.masterID
       stateMap(update.transactionID) = ts.withMasterID(update.masterID)
 
       /*
@@ -88,20 +84,12 @@ class TransactionBuffer(queue: QueueBuilder.QueueType, transactionQueueMaxLength
             .withOrderID(orderID)
             .withStatus(TransactionState.Status.Opened)
             .withTtlMs(System.currentTimeMillis() + update.ttlMs)
-//            ts.orderID = orderID
-//          ts.status = TransactionState.Status.Opened
-//          ts.ttlMs = System.currentTimeMillis() + update.ttlMs
 
         case (TransactionState.Status.Opened, TransactionState.Status.Cancelled) =>
           stateMap(update.transactionID) = ts
             .withStatus(TransactionState.Status.Invalid)
             .withTtlMs(0L)
             .withOrderID(orderID)
-//          ts.status = TransactionState.Status.Invalid
-//          ts.ttlMs = 0L
-//          ts.orderID = orderID
-        // added
-        //stateMap.remove(update.transactionID)
 
         case (TransactionState.Status.Opened, TransactionState.Status.Checkpointed) =>
           stateMap(update.transactionID) = ts
@@ -110,21 +98,22 @@ class TransactionBuffer(queue: QueueBuilder.QueueType, transactionQueueMaxLength
             .withCount(update.count)
             .withTtlMs(Long.MaxValue)
 
-//          ts.orderID = orderID
-//          ts.status = TransactionState.Status.Checkpointed
-//          ts.count = update.count
-//          ts.ttlMs = Long.MaxValue
-
         case (_, _) =>
           Subscriber.logger.warn(s"Transaction update $update switched from ${ts.status} to ${update.status} which is incorrect. " +
             "It might be that we cleared StateList because it's size has became greater than ${subscriberOptions.transactionQueueMaxLengthThreshold}. Try to find clearing notification before.")
       }
 
     } else {
-      if (update.status == TransactionState.Status.Opened) {
-        val upd = update.withTtlMs(System.currentTimeMillis() + update.ttlMs)
-        stateMap(update.transactionID) = upd
-        stateList.append(upd.transactionID)
+       update.status match {
+         case TransactionState.Status.Opened =>
+          val upd = update.withTtlMs(System.currentTimeMillis() + update.ttlMs)
+          stateMap(update.transactionID) = upd
+          stateList.append(upd.transactionID)
+         case TransactionState.Status.Instant =>
+           val upd = update.withStatus(TransactionState.Status.Checkpointed).withTtlMs(Long.MaxValue)
+           stateMap(update.transactionID) = upd
+           stateList.append(upd.transactionID)
+         case _ =>
       }
     }
 

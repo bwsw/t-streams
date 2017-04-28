@@ -26,6 +26,7 @@ message TransactionState {
         Cancelled       = 2;
         Updated         = 3;
         Invalid         = 4;
+        Instant         = 5;
     }
 
     int64 transactionID = 1;
