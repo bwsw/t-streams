@@ -63,7 +63,7 @@ libraryDependencies ++= Seq(
 
 // com.bwsw dependencies
 libraryDependencies ++= Seq(
-  "com.bwsw" % "tstreams-transaction-server_2.12" % "1.3.3-SNAPSHOT")
+  "com.bwsw" % "tstreams-transaction-server_2.12" % "1.3.4-SNAPSHOT")
 
 //ASSEMBLY STRATEGY
 assemblyJarName in assembly := "t-streams-" + tstreamsVersion + ".jar"
