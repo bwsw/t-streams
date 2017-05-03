@@ -16,23 +16,26 @@ import scala.collection.mutable.ListBuffer
   */
 class TwoProducersAndSubscriberStartsBeforeWriteTests extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
 
-  f.setProperty(ConfigurationOptions.Stream.name, "test_stream").
-    setProperty(ConfigurationOptions.Stream.partitionsCount, 3).
-    setProperty(ConfigurationOptions.Stream.ttlSec, 60 * 10).
-    setProperty(ConfigurationOptions.Coordination.connectionTimeoutMs, 7000).
-    setProperty(ConfigurationOptions.Coordination.sessionTimeoutMs, 7000).
-    setProperty(ConfigurationOptions.Producer.transportTimeoutMs, 5000).
-    setProperty(ConfigurationOptions.Producer.Transaction.ttlMs, 6000).
-    setProperty(ConfigurationOptions.Producer.Transaction.keepAliveMs, 2000).
-    setProperty(ConfigurationOptions.Consumer.transactionPreload, 50).
-    setProperty(ConfigurationOptions.Consumer.dataPreload, 10)
-
-  val srv = TestStorageServer.get()
-  val storageClient = f.getStorageClient()
-  storageClient.createStream("test_stream", 3, 24 * 3600, "")
-  storageClient.shutdown()
-
+  lazy val srv = TestStorageServer.get()
+  lazy val storageClient = f.getStorageClient()
   val COUNT = 1000
+
+  override def beforeAll(): Unit = {
+    f.setProperty(ConfigurationOptions.Stream.name, "test_stream").
+      setProperty(ConfigurationOptions.Stream.partitionsCount, 3).
+      setProperty(ConfigurationOptions.Stream.ttlSec, 60 * 10).
+      setProperty(ConfigurationOptions.Coordination.connectionTimeoutMs, 7000).
+      setProperty(ConfigurationOptions.Coordination.sessionTimeoutMs, 7000).
+      setProperty(ConfigurationOptions.Producer.transportTimeoutMs, 5000).
+      setProperty(ConfigurationOptions.Producer.Transaction.ttlMs, 6000).
+      setProperty(ConfigurationOptions.Producer.Transaction.keepAliveMs, 2000).
+      setProperty(ConfigurationOptions.Consumer.transactionPreload, 50).
+      setProperty(ConfigurationOptions.Consumer.dataPreload, 10)
+
+    srv
+    storageClient.createStream("test_stream", 3, 24 * 3600, "")
+    storageClient.shutdown()
+  }
 
   it should s"Two producers send $COUNT transactions each, subscriber receives ${2 * COUNT} when started after." in {
 

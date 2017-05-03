@@ -7,35 +7,39 @@ import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 
 
 class ProducerTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
-
-  System.setProperty("DEBUG", "true")
-  System.setProperty("log4j.rootLogger", "DEBUG, STDOUT")
-  System.setProperty("log4j.appender.STDOUT", "org.apache.log4j.ConsoleAppender")
-  System.setProperty("log4j.appender.STDOUT.layout", "org.apache.log4j.PatternLayout")
-  System.setProperty("log4j.appender.STDOUT.layout.ConversionPattern", "%5p [%t] (%F:%L) – %m%n")
-
   // keep it greater than 3
   val ALL_PARTITIONS = 10
 
-  f.setProperty(ConfigurationOptions.Stream.name, "test_stream").
-    setProperty(ConfigurationOptions.Stream.partitionsCount, ALL_PARTITIONS).
-    setProperty(ConfigurationOptions.Stream.ttlSec, 60 * 10).
-    setProperty(ConfigurationOptions.Coordination.connectionTimeoutMs, 7000).
-    setProperty(ConfigurationOptions.Coordination.sessionTimeoutMs, 7000).
-    setProperty(ConfigurationOptions.Producer.transportTimeoutMs, 5000).
-    setProperty(ConfigurationOptions.Producer.Transaction.ttlMs, 6000).
-    setProperty(ConfigurationOptions.Producer.Transaction.keepAliveMs, 2000).
-    setProperty(ConfigurationOptions.Consumer.transactionPreload, 10).
-    setProperty(ConfigurationOptions.Consumer.dataPreload, 10)
+  lazy val srv = TestStorageServer.get()
+  lazy val storageClient = f.getStorageClient()
 
-  val srv = TestStorageServer.get()
-  val storageClient = f.getStorageClient()
-  storageClient.createStream("test_stream", 2, 24 * 3600, "")
-  storageClient.shutdown()
-
-  val producer = f.getProducer(
+  lazy val producer = f.getProducer(
     name = "test_producer",
     partitions = (0 until ALL_PARTITIONS).toSet)
+
+
+  override def beforeAll(): Unit = {
+    System.setProperty("DEBUG", "true")
+    System.setProperty("log4j.rootLogger", "DEBUG, STDOUT")
+    System.setProperty("log4j.appender.STDOUT", "org.apache.log4j.ConsoleAppender")
+    System.setProperty("log4j.appender.STDOUT.layout", "org.apache.log4j.PatternLayout")
+    System.setProperty("log4j.appender.STDOUT.layout.ConversionPattern", "%5p [%t] (%F:%L) – %m%n")
+
+    f.setProperty(ConfigurationOptions.Stream.name, "test_stream").
+      setProperty(ConfigurationOptions.Stream.partitionsCount, ALL_PARTITIONS).
+      setProperty(ConfigurationOptions.Stream.ttlSec, 60 * 10).
+      setProperty(ConfigurationOptions.Coordination.connectionTimeoutMs, 7000).
+      setProperty(ConfigurationOptions.Coordination.sessionTimeoutMs, 7000).
+      setProperty(ConfigurationOptions.Producer.transportTimeoutMs, 5000).
+      setProperty(ConfigurationOptions.Producer.Transaction.ttlMs, 6000).
+      setProperty(ConfigurationOptions.Producer.Transaction.keepAliveMs, 2000).
+      setProperty(ConfigurationOptions.Consumer.transactionPreload, 10).
+      setProperty(ConfigurationOptions.Consumer.dataPreload, 10)
+
+    srv
+    storageClient.createStream("test_stream", 2, 24 * 3600, "")
+    storageClient.shutdown()
+  }
 
   "Producer.isMeAMasterOfPartition" should "return true" in {
     (0 until ALL_PARTITIONS).foreach(p => producer.isMasterOfPartition(p) shouldBe true)

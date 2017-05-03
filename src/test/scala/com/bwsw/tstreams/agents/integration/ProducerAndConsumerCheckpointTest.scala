@@ -14,38 +14,42 @@ import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 
 class ProducerAndConsumerCheckpointTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
 
-  f.setProperty(ConfigurationOptions.Stream.name, "test_stream").
-    setProperty(ConfigurationOptions.Stream.partitionsCount, 3).
-    setProperty(ConfigurationOptions.Stream.ttlSec, 60 * 10).
-    setProperty(ConfigurationOptions.Coordination.connectionTimeoutMs, 7000).
-    setProperty(ConfigurationOptions.Coordination.sessionTimeoutMs, 7000).
-    setProperty(ConfigurationOptions.Producer.transportTimeoutMs, 5000).
-    setProperty(ConfigurationOptions.Producer.Transaction.ttlMs, 6000).
-    setProperty(ConfigurationOptions.Producer.Transaction.keepAliveMs, 2000).
-    setProperty(ConfigurationOptions.Consumer.transactionPreload, 10).
-    setProperty(ConfigurationOptions.Consumer.dataPreload, 10).
-    setProperty(ConfigurationOptions.Producer.Transaction.batchSize, 100)
+  lazy val srv = TestStorageServer.get()
+  lazy val storageClient = f.getStorageClient()
 
-  val srv = TestStorageServer.get()
-  val storageClient = f.getStorageClient()
-  storageClient.createStream("test_stream", 3, 24 * 3600, "")
-  storageClient.shutdown()
-
-  val producer = f.getProducer(
+  lazy val producer = f.getProducer(
     name = "test_producer",
     partitions = Set(0))
 
-  val consumer = f.getConsumer(
+  lazy val consumer = f.getConsumer(
     name = "test_consumer",
     partitions = Set(0),
     offset = Oldest,
     useLastOffset = true)
 
-  val consumer2 = f.getConsumer(
+  lazy val consumer2 = f.getConsumer(
     name = "test_consumer",
     partitions = Set(0),
     offset = Oldest,
     useLastOffset = true)
+
+  override def beforeAll(): Unit = {
+    f.setProperty(ConfigurationOptions.Stream.name, "test_stream").
+      setProperty(ConfigurationOptions.Stream.partitionsCount, 3).
+      setProperty(ConfigurationOptions.Stream.ttlSec, 60 * 10).
+      setProperty(ConfigurationOptions.Coordination.connectionTimeoutMs, 7000).
+      setProperty(ConfigurationOptions.Coordination.sessionTimeoutMs, 7000).
+      setProperty(ConfigurationOptions.Producer.transportTimeoutMs, 5000).
+      setProperty(ConfigurationOptions.Producer.Transaction.ttlMs, 6000).
+      setProperty(ConfigurationOptions.Producer.Transaction.keepAliveMs, 2000).
+      setProperty(ConfigurationOptions.Consumer.transactionPreload, 10).
+      setProperty(ConfigurationOptions.Consumer.dataPreload, 10).
+      setProperty(ConfigurationOptions.Producer.Transaction.batchSize, 100)
+
+    srv
+    storageClient.createStream("test_stream", 3, 24 * 3600, "")
+    storageClient.shutdown()
+  }
 
   "producer, consumer" should "producer - generate many transactions, consumer - retrieve all of them with reinitialization after some time" in {
     val TRANSACTIONS_COUNT = 10000

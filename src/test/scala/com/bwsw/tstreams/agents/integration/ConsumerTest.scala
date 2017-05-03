@@ -12,32 +12,38 @@ import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 
 
 class ConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
-  f.setProperty(ConfigurationOptions.Stream.name, "test_stream")
-    .setProperty(ConfigurationOptions.Stream.partitionsCount, 3)
-    .setProperty(ConfigurationOptions.Stream.ttlSec, 60 * 10)
-    .setProperty(ConfigurationOptions.Coordination.connectionTimeoutMs, 7)
-    .setProperty(ConfigurationOptions.Coordination.sessionTimeoutMs, 7)
-    .setProperty(ConfigurationOptions.Producer.transportTimeoutMs, 5)
-    .setProperty(ConfigurationOptions.Producer.Transaction.ttlMs, 6)
-    .setProperty(ConfigurationOptions.Producer.Transaction.keepAliveMs, 2)
-    .setProperty(ConfigurationOptions.Consumer.transactionPreload, 80)
-    .setProperty(ConfigurationOptions.Consumer.dataPreload, 10)
+  lazy val gen = LocalGeneratorCreator.getGen()
 
-  val gen = LocalGeneratorCreator.getGen()
+  lazy val srv = TestStorageServer.get()
+  lazy val storageClient = f.getStorageClient()
 
-  val srv = TestStorageServer.get()
-  val storageClient = f.getStorageClient()
-  storageClient.createStream("test_stream", 2, 24 * 3600, "")
 
-  val consumer = f.getConsumer(
+  lazy val consumer = f.getConsumer(
     name = "test_consumer",
     partitions = Set(0, 1, 2),
     offset = Oldest,
     useLastOffset = true)
 
-  consumer.start
 
-  val executor = new FirstFailLockableTaskExecutor("executor")
+//  lazy val executor = new FirstFailLockableTaskExecutor("executor")
+
+  override def beforeAll(): Unit = {
+    f.setProperty(ConfigurationOptions.Stream.name, "test_stream")
+      .setProperty(ConfigurationOptions.Stream.partitionsCount, 3)
+      .setProperty(ConfigurationOptions.Stream.ttlSec, 60 * 10)
+      .setProperty(ConfigurationOptions.Coordination.connectionTimeoutMs, 7)
+      .setProperty(ConfigurationOptions.Coordination.sessionTimeoutMs, 7)
+      .setProperty(ConfigurationOptions.Producer.transportTimeoutMs, 5)
+      .setProperty(ConfigurationOptions.Producer.Transaction.ttlMs, 6)
+      .setProperty(ConfigurationOptions.Producer.Transaction.keepAliveMs, 2)
+      .setProperty(ConfigurationOptions.Consumer.transactionPreload, 80)
+      .setProperty(ConfigurationOptions.Consumer.dataPreload, 10)
+
+    srv
+    storageClient.createStream("test_stream", 2, 24 * 3600, "")
+
+    consumer.start
+  }
 
   "consumer.getTransaction" should "return None if nothing was sent" in {
     val transaction = consumer.getTransaction(0)

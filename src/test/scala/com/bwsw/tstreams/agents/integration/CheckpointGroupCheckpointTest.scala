@@ -13,39 +13,44 @@ import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 
 class CheckpointGroupCheckpointTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
 
-  f.setProperty(ConfigurationOptions.Stream.name, "test_stream").
-    setProperty(ConfigurationOptions.Stream.partitionsCount, 3).
-    setProperty(ConfigurationOptions.Stream.ttlSec, 60 * 10).
-    setProperty(ConfigurationOptions.Coordination.connectionTimeoutMs, 7000).
-    setProperty(ConfigurationOptions.Coordination.sessionTimeoutMs, 7000).
-    setProperty(ConfigurationOptions.Producer.transportTimeoutMs, 5000).
-    setProperty(ConfigurationOptions.Producer.Transaction.ttlMs, 6000).
-    setProperty(ConfigurationOptions.Producer.Transaction.keepAliveMs, 2000).
-    setProperty(ConfigurationOptions.Consumer.transactionPreload, 10).
-    setProperty(ConfigurationOptions.Consumer.dataPreload, 10)
+  lazy val srv = TestStorageServer.get()
+  lazy val storageClient = f.getStorageClient()
 
-  val srv = TestStorageServer.get()
-  val storageClient = f.getStorageClient()
-  storageClient.createStream("test_stream", 2, 24 * 3600, "")
-  storageClient.shutdown()
-
-  val producer = f.getProducer(
+  lazy val producer = f.getProducer(
     name = "test_producer",
     partitions = Set(0, 1, 2))
 
-  val consumer = f.getConsumer(
+  lazy val consumer = f.getConsumer(
     name = "test_consumer",
     partitions = Set(0, 1, 2),
     offset = Oldest,
     useLastOffset = true)
 
-  val consumer2 = f.getConsumer(
+  lazy val consumer2 = f.getConsumer(
     name = "test_consumer",
     partitions = Set(0, 1, 2),
     offset = Oldest,
     useLastOffset = true)
 
-  consumer.start
+  override def beforeAll(): Unit = {
+    f.setProperty(ConfigurationOptions.Stream.name, "test_stream").
+      setProperty(ConfigurationOptions.Stream.partitionsCount, 3).
+      setProperty(ConfigurationOptions.Stream.ttlSec, 60 * 10).
+      setProperty(ConfigurationOptions.Coordination.connectionTimeoutMs, 7000).
+      setProperty(ConfigurationOptions.Coordination.sessionTimeoutMs, 7000).
+      setProperty(ConfigurationOptions.Producer.transportTimeoutMs, 5000).
+      setProperty(ConfigurationOptions.Producer.Transaction.ttlMs, 6000).
+      setProperty(ConfigurationOptions.Producer.Transaction.keepAliveMs, 2000).
+      setProperty(ConfigurationOptions.Consumer.transactionPreload, 10).
+      setProperty(ConfigurationOptions.Consumer.dataPreload, 10)
+
+    srv
+    storageClient.createStream("test_stream", 2, 24 * 3600, "")
+    storageClient.shutdown()
+
+    consumer.start
+  }
+
 
   "Group commit" should "checkpoint all AgentsGroup state" in {
     val group = new CheckpointGroup()
