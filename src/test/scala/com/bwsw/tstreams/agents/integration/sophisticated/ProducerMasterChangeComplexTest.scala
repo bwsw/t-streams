@@ -29,24 +29,27 @@ class ProducerMasterChangeComplexTest extends FlatSpec with Matchers with Before
   val onCompleteLatch = new CountDownLatch(PRODUCERS_AMOUNT)
   val waitCompleteLatch = new CountDownLatch(1)
 
-  f.setProperty(ConfigurationOptions.Stream.name, "test_stream").
-    setProperty(ConfigurationOptions.Stream.partitionsCount, PARTITIONS_COUNT).
-    setProperty(ConfigurationOptions.Stream.ttlSec, 60 * 10).
-    setProperty(ConfigurationOptions.Coordination.connectionTimeoutMs, 4000).
-    setProperty(ConfigurationOptions.Coordination.sessionTimeoutMs, 4000).
-    setProperty(ConfigurationOptions.Producer.transportTimeoutMs, 2000).
-    setProperty(ConfigurationOptions.Producer.Transaction.ttlMs, 500).
-    setProperty(ConfigurationOptions.Producer.Transaction.keepAliveMs, 100).
-    setProperty(ConfigurationOptions.Consumer.transactionPreload, 500).
-    setProperty(ConfigurationOptions.Consumer.dataPreload, 10)
+  lazy val srv = TestStorageServer.get()
+  lazy val storageClient = f.getStorageClient()
+  lazy val producerBuffer = PARTITIONS.toList.map(_ => ListBuffer[Long]()).toArray
+  lazy val subscriberBuffer = PARTITIONS.toList.map(_ => ListBuffer[Long]()).toArray
 
-  val srv = TestStorageServer.get()
-  val storageClient = f.getStorageClient()
-  storageClient.createStream("test_stream", PARTITIONS_COUNT, 24 * 3600, "")
-  storageClient.shutdown()
+  override def beforeAll(): Unit = {
+    f.setProperty(ConfigurationOptions.Stream.name, "test_stream").
+      setProperty(ConfigurationOptions.Stream.partitionsCount, PARTITIONS_COUNT).
+      setProperty(ConfigurationOptions.Stream.ttlSec, 60 * 10).
+      setProperty(ConfigurationOptions.Coordination.connectionTimeoutMs, 4000).
+      setProperty(ConfigurationOptions.Coordination.sessionTimeoutMs, 4000).
+      setProperty(ConfigurationOptions.Producer.transportTimeoutMs, 2000).
+      setProperty(ConfigurationOptions.Producer.Transaction.ttlMs, 500).
+      setProperty(ConfigurationOptions.Producer.Transaction.keepAliveMs, 100).
+      setProperty(ConfigurationOptions.Consumer.transactionPreload, 500).
+      setProperty(ConfigurationOptions.Consumer.dataPreload, 10)
 
-  val producerBuffer = PARTITIONS.toList.map(_ => ListBuffer[Long]()).toArray
-  val subscriberBuffer = PARTITIONS.toList.map(_ => ListBuffer[Long]()).toArray
+    srv
+    storageClient.createStream("test_stream", PARTITIONS_COUNT, 24 * 3600, "")
+    storageClient.shutdown()
+  }
 
   class ProducerWorker(val factory: TStreamsFactory, val onCompleteLatch: CountDownLatch, val amount: Int, val probability: Double) {
     var producer: Producer = null
@@ -86,7 +89,7 @@ class ProducerMasterChangeComplexTest extends FlatSpec with Matchers with Before
 
 
   var subscriberCounter = 0
-  val subscriber = f.getSubscriber(name = "s",
+  lazy val subscriber = f.getSubscriber(name = "s",
     partitions = PARTITIONS, // Set(0),
     offset = Newest,
     useLastOffset = false, // true

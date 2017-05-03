@@ -58,7 +58,7 @@ libraryDependencies ++= Seq(
   "org.scalamock" % "scalamock-scalatest-support_2.12" % "3.5.0",
   "org.scala-lang" % "scala-reflect" % "2.12.1",
   "org.scala-lang.modules" % "scala-xml_2.12" % "1.0.6",
-  "org.apache.curator" % "curator-recipes" % "2.11.0",
+  "org.apache.curator" % "curator-recipes" % "2.12.0",
   "com.trueaccord.scalapb" %% "compilerplugin" % "0.6.0-pre3")
 
 // com.bwsw dependencies
