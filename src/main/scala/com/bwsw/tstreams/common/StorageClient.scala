@@ -156,14 +156,12 @@ class StorageClient(clientOptions: ConnectionOptions, authOptions: AuthOptions, 
   }
 
   def putInstantTransactionSync(stream: String, partition: Int, transactionID: Long, data: Seq[Array[Byte]], timeout: Duration = 1.minute): Unit = {
-    val f = client.putSimpleTransactionAndData(stream, partition, transactionID, data, 0)
+    val f = client.putSimpleTransactionAndData(stream, partition, transactionID, data)
     Await.result(f, timeout)
   }
 
   def putInstantTransactionUnreliable(stream: String, partition: Int, transactionID: Long, data: Seq[Array[Byte]]): Unit = {
-    // todo: request method change
-    // todo: server doesn't return result, just fire and forget
-    client.putSimpleTransactionAndData(stream, partition, transactionID, data, 0)
+    client.putSimpleTransactionAndDataWithoutResponse(stream, partition, transactionID, data)
   }
 
   def putTransactionWithDataSync[T](transaction: ProducerTransaction, data: ListBuffer[Array[Byte]], lastOffset: Int, timeout: Duration = 1.minute) = {
