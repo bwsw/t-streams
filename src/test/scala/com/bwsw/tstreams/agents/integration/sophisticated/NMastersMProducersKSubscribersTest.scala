@@ -20,22 +20,26 @@ class NMastersMProducersKSubscribersTest extends FlatSpec with Matchers with Bef
   val SUBSCRIBER_COUNT = 4
   val TRANSACTION_COUNT = 10000
 
-  f.setProperty(ConfigurationOptions.Stream.name, "test_stream").
-    setProperty(ConfigurationOptions.Stream.partitionsCount, ALL_PARTITIONS).
-    setProperty(ConfigurationOptions.Stream.ttlSec, 60 * 10).
-    setProperty(ConfigurationOptions.Coordination.connectionTimeoutMs, 7000).
-    setProperty(ConfigurationOptions.Coordination.sessionTimeoutMs, 7000).
-    setProperty(ConfigurationOptions.Producer.transportTimeoutMs, 5000).
-    setProperty(ConfigurationOptions.Producer.Transaction.ttlMs, 500).
-    setProperty(ConfigurationOptions.Producer.Transaction.keepAliveMs, 100).
-    setProperty(ConfigurationOptions.Consumer.transactionPreload, 1000).
-    setProperty(ConfigurationOptions.Consumer.dataPreload, 10).
-    setProperty(ConfigurationOptions.Consumer.Subscriber.pollingFrequencyDelayMs, 1000)
+  lazy val srv = TestStorageServer.get()
+  lazy val storageClient = f.getStorageClient()
 
-  val srv = TestStorageServer.get()
-  val storageClient = f.getStorageClient()
-  storageClient.createStream("test_stream", ALL_PARTITIONS, 24 * 3600, "")
-  storageClient.shutdown()
+  override def beforeAll(): Unit = {
+    f.setProperty(ConfigurationOptions.Stream.name, "test_stream").
+      setProperty(ConfigurationOptions.Stream.partitionsCount, ALL_PARTITIONS).
+      setProperty(ConfigurationOptions.Stream.ttlSec, 60 * 10).
+      setProperty(ConfigurationOptions.Coordination.connectionTimeoutMs, 7000).
+      setProperty(ConfigurationOptions.Coordination.sessionTimeoutMs, 7000).
+      setProperty(ConfigurationOptions.Producer.transportTimeoutMs, 5000).
+      setProperty(ConfigurationOptions.Producer.Transaction.ttlMs, 500).
+      setProperty(ConfigurationOptions.Producer.Transaction.keepAliveMs, 100).
+      setProperty(ConfigurationOptions.Consumer.transactionPreload, 1000).
+      setProperty(ConfigurationOptions.Consumer.dataPreload, 10).
+      setProperty(ConfigurationOptions.Consumer.Subscriber.pollingFrequencyDelayMs, 1000)
+
+    srv
+    storageClient.createStream("test_stream", ALL_PARTITIONS, 24 * 3600, "")
+    storageClient.shutdown()
+  }
 
   it should s"Start ${ALL_PARTITIONS} masters (each for one partition), launch ${PRODUCER_COUNT} producers" +
     s"${SUBSCRIBER_COUNT} subscribers and deliver ${PRODUCER_COUNT * TRANSACTION_COUNT} transactions " +
