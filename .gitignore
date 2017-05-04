@@ -1,5 +1,7 @@
 .idea
 /target/*
+*.log
+*.log.*
 /project/project/*
 /project/target/*
 /path

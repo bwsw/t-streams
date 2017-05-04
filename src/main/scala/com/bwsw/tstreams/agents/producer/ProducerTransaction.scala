@@ -266,12 +266,11 @@ class ProducerTransaction(partition: Int,
             ProducerTransaction.logger.debug("[START PRE CHECKPOINT PARTITION_{}] ts={}", partition, transactionID.toString)
           }
 
-          //debug purposes only
+          //test purposes only
           GlobalHooks.invoke(GlobalHooks.preCommitFailure)
 
-          val transactionRecord = new RPCProducerTransaction(producer.stream.name,
-            partition, transactionID, TransactionStates.Checkpointed, getDataItemsCount(),
-            producer.stream.ttl)
+          val transactionRecord = new RPCProducerTransaction(producer.stream.name, partition, transactionID,
+            TransactionStates.Checkpointed, getDataItemsCount(), producer.stream.ttl)
 
           producer.stream.client.putTransactionWithDataSync(transactionRecord, data.items, data.lastOffset)
 

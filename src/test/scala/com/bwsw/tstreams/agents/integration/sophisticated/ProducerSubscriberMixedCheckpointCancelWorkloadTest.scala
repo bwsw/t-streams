@@ -18,17 +18,18 @@ class ProducerSubscriberMixedCheckpointCancelWorkloadTest extends FlatSpec with 
   val TRANSACTION_COUNT = 10000
   val CANCEL_PROBABILITY = 0.05
 
-  f.setProperty(ConfigurationOptions.Stream.name, "test_stream").
-    setProperty(ConfigurationOptions.Stream.partitionsCount, 3).
-    setProperty(ConfigurationOptions.Stream.ttlSec, 60 * 10).
-    setProperty(ConfigurationOptions.Coordination.connectionTimeoutMs, 7000).
-    setProperty(ConfigurationOptions.Coordination.sessionTimeoutMs, 7000).
-    setProperty(ConfigurationOptions.Producer.transportTimeoutMs, 5000).
-    setProperty(ConfigurationOptions.Producer.Transaction.ttlMs, 500).
-    setProperty(ConfigurationOptions.Producer.Transaction.keepAliveMs, 100).
-    setProperty(ConfigurationOptions.Consumer.transactionPreload, 500).
-    setProperty(ConfigurationOptions.Consumer.dataPreload, 10)
-
+  override def beforeAll(): Unit = {
+    f.setProperty(ConfigurationOptions.Stream.name, "test_stream").
+      setProperty(ConfigurationOptions.Stream.partitionsCount, 3).
+      setProperty(ConfigurationOptions.Stream.ttlSec, 60 * 10).
+      setProperty(ConfigurationOptions.Coordination.connectionTimeoutMs, 7000).
+      setProperty(ConfigurationOptions.Coordination.sessionTimeoutMs, 7000).
+      setProperty(ConfigurationOptions.Producer.transportTimeoutMs, 5000).
+      setProperty(ConfigurationOptions.Producer.Transaction.ttlMs, 500).
+      setProperty(ConfigurationOptions.Producer.Transaction.keepAliveMs, 100).
+      setProperty(ConfigurationOptions.Consumer.transactionPreload, 500).
+      setProperty(ConfigurationOptions.Consumer.dataPreload, 10)
+  }
 
   def test(startBeforeProducerSend: Boolean = false) = {
     val producerAccumulator = ListBuffer[Long]()

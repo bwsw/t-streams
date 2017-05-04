@@ -16,42 +16,46 @@ import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
   */
 class ProducerUpdateTaskTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
 
-  val blockCheckpoint1 = new ResettableCountDownLatch(1)
-  val blockCheckpoint2 = new ResettableCountDownLatch(1)
+  lazy val blockCheckpoint1 = new ResettableCountDownLatch(1)
+  lazy val blockCheckpoint2 = new ResettableCountDownLatch(1)
   var flag: Int = 0
 
   val TRANSACTION_TTL_MS = 2000
 
-  System.setProperty("DEBUG", "true")
-  GlobalHooks.addHook(GlobalHooks.transactionUpdateTaskBegin, () => {
-    flag = 2
-    blockCheckpoint1.countDown
-  })
+  lazy val srv = TestStorageServer.get()
+  lazy val storageClient = f.getStorageClient()
 
-  GlobalHooks.addHook(GlobalHooks.transactionUpdateTaskEnd, () => {
-    flag = 3
-    blockCheckpoint2.countDown
-  })
-
-  f.setProperty(ConfigurationOptions.Stream.name, "test_stream").
-    setProperty(ConfigurationOptions.Stream.partitionsCount, 3).
-    setProperty(ConfigurationOptions.Stream.ttlSec, 60 * 10).
-    setProperty(ConfigurationOptions.Coordination.connectionTimeoutMs, 7000).
-    setProperty(ConfigurationOptions.Coordination.sessionTimeoutMs, 7000).
-    setProperty(ConfigurationOptions.Producer.transportTimeoutMs, 5000).
-    setProperty(ConfigurationOptions.Producer.Transaction.ttlMs, TRANSACTION_TTL_MS).
-    setProperty(ConfigurationOptions.Producer.Transaction.keepAliveMs, TRANSACTION_TTL_MS / 4).
-    setProperty(ConfigurationOptions.Consumer.transactionPreload, 10).
-    setProperty(ConfigurationOptions.Consumer.dataPreload, 10)
-
-  val srv = TestStorageServer.get()
-  val storageClient = f.getStorageClient()
-  storageClient.createStream("test_stream", 2, 24 * 3600, "")
-  storageClient.shutdown()
-
-  val producer = f.getProducer(
+  lazy val producer = f.getProducer(
     name = "test_producer",
     partitions = Set(0, 1, 2))
+
+  override def beforeAll(): Unit = {
+    System.setProperty("DEBUG", "true")
+    GlobalHooks.addHook(GlobalHooks.transactionUpdateTaskBegin, () => {
+      flag = 2
+      blockCheckpoint1.countDown
+    })
+
+    GlobalHooks.addHook(GlobalHooks.transactionUpdateTaskEnd, () => {
+      flag = 3
+      blockCheckpoint2.countDown
+    })
+
+    f.setProperty(ConfigurationOptions.Stream.name, "test_stream").
+      setProperty(ConfigurationOptions.Stream.partitionsCount, 3).
+      setProperty(ConfigurationOptions.Stream.ttlSec, 60 * 10).
+      setProperty(ConfigurationOptions.Coordination.connectionTimeoutMs, 7000).
+      setProperty(ConfigurationOptions.Coordination.sessionTimeoutMs, 7000).
+      setProperty(ConfigurationOptions.Producer.transportTimeoutMs, 5000).
+      setProperty(ConfigurationOptions.Producer.Transaction.ttlMs, TRANSACTION_TTL_MS).
+      setProperty(ConfigurationOptions.Producer.Transaction.keepAliveMs, TRANSACTION_TTL_MS / 4).
+      setProperty(ConfigurationOptions.Consumer.transactionPreload, 10).
+      setProperty(ConfigurationOptions.Consumer.dataPreload, 10)
+
+    srv
+    storageClient.createStream("test_stream", 2, 24 * 3600, "")
+    storageClient.shutdown()
+  }
 
   "BasicProducer.checkpoint with delay in update (test latch in update)" should "complete in ordered way" in {
     blockCheckpoint1.setValue(1)

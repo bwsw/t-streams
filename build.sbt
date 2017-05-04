@@ -1,6 +1,6 @@
 name := "t-streams"
 
-val tstreamsVersion = "2.2.0-SNAPSHOT"
+val tstreamsVersion = "2.2.4-SNAPSHOT"
 
 version := tstreamsVersion
 organization := "com.bwsw"
@@ -52,31 +52,27 @@ PB.targets in Compile := Seq(
 
 // Common libraries
 libraryDependencies ++= Seq(
-  "org.slf4j" % "slf4j-api" % "1.7.21",
-  "org.slf4j" % "slf4j-simple" % "1.7.21",
+  "org.slf4j" % "slf4j-api" % "1.7.24",
+  "org.slf4j" % "slf4j-log4j12" % "1.7.24",
   "org.scalatest" % "scalatest_2.12" % "3.0.1",
   "org.scalamock" % "scalamock-scalatest-support_2.12" % "3.5.0",
-  "org.scala-lang" % "scala-reflect" % "2.12.1",
-  "org.scala-lang.modules" % "scala-xml_2.12" % "1.0.6",
-  "log4j" % "log4j" % "1.2.17",
-  "org.apache.curator" % "curator-recipes" % "2.11.0",
+  "org.apache.curator" % "curator-recipes" % "2.12.0",
   "com.trueaccord.scalapb" %% "compilerplugin" % "0.6.0-pre3")
 
 // com.bwsw dependencies
 libraryDependencies ++= Seq(
-  "com.bwsw" % "tstreams-transaction-server_2.12" % "1.3.0-SNAPSHOT")
+  "com.bwsw" % "tstreams-transaction-server_2.12" % "1.3.5-SNAPSHOT")
 
 //ASSEMBLY STRATEGY
 assemblyJarName in assembly := "t-streams-" + tstreamsVersion + ".jar"
 
 assemblyMergeStrategy in assembly := {
   case PathList("org", "slf4j", "impl", xs@_*) => MergeStrategy.discard
-  case PathList("org", "hamcrest", xs@_*) => MergeStrategy.discard
   case PathList("io", "netty", xs@_*) => MergeStrategy.first
   case PathList("org", "slf4j", xs@_*) => MergeStrategy.first
-  case PathList("org", "scalatest", xs@_*) => MergeStrategy.first
-  case PathList("com", "fasterxml", "jackson", "module", xs@_*) => MergeStrategy.first
-  case PathList("net", "openhft", xs@_*) => MergeStrategy.first
+  case PathList("org", "scalatest", xs@_*) => MergeStrategy.discard
+  case PathList("org", "scalamock", xs@_*) => MergeStrategy.discard
+  case "log4j.properties" => MergeStrategy.concat
   case x =>
       val oldStrategy = (assemblyMergeStrategy in assembly).value
       oldStrategy(x)
@@ -84,3 +80,7 @@ assemblyMergeStrategy in assembly := {
 
 // Tests configuration
 parallelExecution in ThisBuild := false
+
+javaOptions += "-Dsun.net.maxDatagramSockets=1000"
+
+fork := true
