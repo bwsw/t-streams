@@ -51,9 +51,12 @@ class ProducerMasterChangeComplexTest extends FlatSpec with Matchers with Before
     storageClient.shutdown()
   }
 
-  class ProducerWorker(val factory: TStreamsFactory, val onCompleteLatch: CountDownLatch, val amount: Int, val probability: Double) {
+  class ProducerWorker(val factory: TStreamsFactory, val onCompleteLatch: CountDownLatch, val amount: Int, val probability: Double, id: Int) {
     var producer: Producer = null
     var counter: Int = 0
+
+    val intFactory = factory.copy()
+    intFactory.setProperty(ConfigurationOptions.Producer.bindPort, 40000 + id)
 
     def loop(partitions: Set[Int], checkpointModeSync: Boolean = true) = {
       while (counter < amount) {
@@ -81,7 +84,7 @@ class ProducerMasterChangeComplexTest extends FlatSpec with Matchers with Before
 
     // private - will not be called outside
     private def makeNewProducer(partitions: Set[Int]) = {
-      factory.getProducer(
+      intFactory.getProducer(
         name = "test_producer1",
         partitions = partitions)
     }
@@ -105,7 +108,7 @@ class ProducerMasterChangeComplexTest extends FlatSpec with Matchers with Before
     subscriber.start()
 
     val producersThreads = (0 until PRODUCERS_AMOUNT)
-      .map(producer => new ProducerWorker(f, onCompleteLatch, TRANSACTIONS_AMOUNT_EACH, PROBABILITY).run(PARTITIONS))
+      .map(producer => new ProducerWorker(f, onCompleteLatch, TRANSACTIONS_AMOUNT_EACH, PROBABILITY, producer).run(PARTITIONS))
 
     onCompleteLatch.await()
     producersThreads.foreach(thread => thread.join())
