@@ -137,33 +137,26 @@ class StorageClient(clientOptions: ConnectionOptions, authOptions: AuthOptions, 
 
   def putTransactionSync(transaction: ProducerTransaction, timeout: Duration = 1.minute) = {
     val f = client.putProducerState(transaction)
-    Await.result(f, timeout)
-
     if(StorageClient.logger.isDebugEnabled)
       StorageClient.logger.debug(s"Placed $transaction [putTransactionSync]")
+    Await.result(f, timeout)
   }
 
   def putTransactionWithDataSync[T](transaction: ProducerTransaction, data: ListBuffer[Array[Byte]], lastOffset: Int, timeout: Duration = 1.minute) = {
     val f = client.putProducerStateWithData(transaction, data, lastOffset)
-    Await.result(f, timeout)
-
     if(StorageClient.logger.isDebugEnabled)
       StorageClient.logger.debug(s"Placed $transaction [putTransactionWithDataSync]")
+    Await.result(f, timeout)
   }
 
 
-  def putTransaction[T](transaction: ProducerTransaction, async: Boolean, timeout: Duration = 1.minute)(onComplete: ProducerTransaction => T) = {
+  def putTransaction[T](transaction: ProducerTransaction, timeout: Duration = 1.minute)(onComplete: ProducerTransaction => T) = {
     val f = client.putProducerState(transaction)
-    if (async) {
-      import ExecutionContext.Implicits.global
+    import ExecutionContext.Implicits.global
 
-      f onComplete {
-        case Success(res) => onComplete(transaction)
-        case Failure(reason) => throw reason
-      }
-    } else {
-      Await.result(f, timeout)
-      onComplete(transaction)
+    f onComplete {
+      case Success(res) => onComplete(transaction)
+      case Failure(reason) => throw reason
     }
   }
 
@@ -176,18 +169,12 @@ class StorageClient(clientOptions: ConnectionOptions, authOptions: AuthOptions, 
     client.putSimpleTransactionAndDataWithoutResponse(stream, partition, transactionID, data)
   }
 
-  def putTransactionWithData[T](transaction: ProducerTransaction, data: ListBuffer[Array[Byte]], lastOffset: Int, async: Boolean, timeout: Duration = 1.minute)(onComplete: ProducerTransaction => T) = {
+  def putTransactionWithData[T](transaction: ProducerTransaction, data: ListBuffer[Array[Byte]], lastOffset: Int, timeout: Duration = 1.minute)(onComplete: ProducerTransaction => T) = {
     val f = client.putProducerStateWithData(transaction, data, lastOffset)
-    if (async) {
-      import ExecutionContext.Implicits.global
-
-      f onComplete {
-        case Success(res) => onComplete(transaction)
-        case Failure(reason) => throw reason
-      }
-    } else {
-      Await.result(f, timeout)
-      onComplete(transaction)
+    import ExecutionContext.Implicits.global
+    f onComplete {
+      case Success(res) => onComplete(transaction)
+      case Failure(reason) => throw reason
     }
   }
 
