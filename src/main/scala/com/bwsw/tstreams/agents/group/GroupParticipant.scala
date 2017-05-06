@@ -2,7 +2,7 @@ package com.bwsw.tstreams.agents.group
 
 import java.util.concurrent.locks.ReentrantLock
 
-import com.bwsw.tstreams.common.StorageClient
+import com.bwsw.tstreams.storage.StorageClient
 
 /**
   * Trait which can be implemented by any producer/consumer to apply group checkpoint

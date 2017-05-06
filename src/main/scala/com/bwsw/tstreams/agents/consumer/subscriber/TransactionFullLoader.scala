@@ -56,6 +56,10 @@ class TransactionFullLoader(partitions: Set[Int],
       data ++= consumer.getTransactionsFromTo(last.partition, first, last.transactionID)
       if(Subscriber.logger.isDebugEnabled())
         Subscriber.logger.debug(s"Load full end (partition = ${last.partition}, first = $first, last = ${last.transactionID}, master = ${last.masterID})")
+
+      if(Subscriber.logger.isDebugEnabled && counter > 200)
+        Thread.sleep(1000)
+
       if (last.masterID > 0 && !last.isNotReliable) {
         // we wait for certain item
         // to switch to fast load next

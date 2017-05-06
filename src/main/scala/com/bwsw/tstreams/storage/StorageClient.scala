@@ -1,4 +1,4 @@
-package com.bwsw.tstreams.common
+package com.bwsw.tstreams.storage
 
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -7,7 +7,7 @@ import com.bwsw.tstreams.streams.Stream
 import com.bwsw.tstreamstransactionserver.options.ClientBuilder
 import com.bwsw.tstreamstransactionserver.options.ClientOptions.{AuthOptions, ConnectionOptions}
 import com.bwsw.tstreamstransactionserver.options.CommonOptions.ZookeeperOptions
-import com.bwsw.tstreamstransactionserver.rpc.{TransactionStates, CommitLogInfo, ConsumerTransaction, ProducerTransaction}
+import com.bwsw.tstreamstransactionserver.rpc.{CommitLogInfo, ConsumerTransaction, ProducerTransaction, TransactionStates}
 import org.apache.zookeeper.KeeperException.BadArgumentsException
 import org.slf4j.LoggerFactory
 
@@ -138,7 +138,19 @@ class StorageClient(clientOptions: ConnectionOptions, authOptions: AuthOptions, 
   def putTransactionSync(transaction: ProducerTransaction, timeout: Duration = 1.minute) = {
     val f = client.putProducerState(transaction)
     Await.result(f, timeout)
+
+    if(StorageClient.logger.isDebugEnabled)
+      StorageClient.logger.debug(s"Placed $transaction [putTransactionSync]")
   }
+
+  def putTransactionWithDataSync[T](transaction: ProducerTransaction, data: ListBuffer[Array[Byte]], lastOffset: Int, timeout: Duration = 1.minute) = {
+    val f = client.putProducerStateWithData(transaction, data, lastOffset)
+    Await.result(f, timeout)
+
+    if(StorageClient.logger.isDebugEnabled)
+      StorageClient.logger.debug(s"Placed $transaction [putTransactionWithDataSync]")
+  }
+
 
   def putTransaction[T](transaction: ProducerTransaction, async: Boolean, timeout: Duration = 1.minute)(onComplete: ProducerTransaction => T) = {
     val f = client.putProducerState(transaction)
@@ -162,11 +174,6 @@ class StorageClient(clientOptions: ConnectionOptions, authOptions: AuthOptions, 
 
   def putInstantTransactionUnreliable(stream: String, partition: Int, transactionID: Long, data: Seq[Array[Byte]]): Unit = {
     client.putSimpleTransactionAndDataWithoutResponse(stream, partition, transactionID, data)
-  }
-
-  def putTransactionWithDataSync[T](transaction: ProducerTransaction, data: ListBuffer[Array[Byte]], lastOffset: Int, timeout: Duration = 1.minute) = {
-    val f = client.putProducerStateWithData(transaction, data, lastOffset)
-    Await.result(f, timeout)
   }
 
   def putTransactionWithData[T](transaction: ProducerTransaction, data: ListBuffer[Array[Byte]], lastOffset: Int, async: Boolean, timeout: Duration = 1.minute)(onComplete: ProducerTransaction => T) = {

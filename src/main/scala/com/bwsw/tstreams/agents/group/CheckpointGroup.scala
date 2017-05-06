@@ -6,7 +6,8 @@ import java.util.concurrent.locks.ReentrantLock
 
 import com.bwsw.tstreams.agents.consumer.RPCConsumerTransaction
 import com.bwsw.tstreams.agents.producer.RPCProducerTransaction
-import com.bwsw.tstreams.common.{FirstFailLockableTaskExecutor, GeneralOptions, LockUtil, StorageClient}
+import com.bwsw.tstreams.common.{FirstFailLockableTaskExecutor, GeneralOptions, LockUtil}
+import com.bwsw.tstreams.storage.StorageClient
 import com.bwsw.tstreamstransactionserver.rpc.TransactionStates
 import org.slf4j.LoggerFactory
 

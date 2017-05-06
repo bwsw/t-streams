@@ -10,6 +10,7 @@ import com.bwsw.tstreams.agents.producer.{CoordinationOptions, Producer}
 import com.bwsw.tstreams.common.{RoundRobinPolicy, _}
 import com.bwsw.tstreams.env.defaults.TStreamsFactoryProducerDefaults.PortRange
 import com.bwsw.tstreams.generator.{ITransactionGenerator, LocalTransactionGenerator}
+import com.bwsw.tstreams.storage.StorageClient
 import com.bwsw.tstreams.streams.Stream
 import com.bwsw.tstreamstransactionserver.options.ClientOptions.{AuthOptions, ConnectionOptions}
 import com.bwsw.tstreamstransactionserver.options.CommonOptions.ZookeeperOptions

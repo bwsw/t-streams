@@ -4,8 +4,9 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.locks.ReentrantLock
 
 import com.bwsw.tstreams.agents.group.{CheckpointInfo, GroupParticipant}
-import com.bwsw.tstreams.common.{Functions, GeneralOptions, StorageClient}
+import com.bwsw.tstreams.common.{Functions, GeneralOptions}
 import com.bwsw.tstreams.coordination.server.StateUpdateServer
+import com.bwsw.tstreams.storage.StorageClient
 import com.bwsw.tstreams.streams.Stream
 import org.slf4j.LoggerFactory
 

@@ -1,7 +1,7 @@
 package com.bwsw.tstreams.streams
 
-import com.bwsw.tstreams.common.StorageClient
 import com.bwsw.tstreams.env.defaults.TStreamsFactoryStreamDefaults
+import com.bwsw.tstreams.storage.StorageClient
 
 /**
   * @param client          Client to storage
