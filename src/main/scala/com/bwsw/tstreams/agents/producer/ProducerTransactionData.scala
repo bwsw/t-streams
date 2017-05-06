@@ -1,6 +1,6 @@
 package com.bwsw.tstreams.agents.producer
 
-import com.bwsw.tstreams.common.StorageClient
+import com.bwsw.tstreams.storage.StorageClient
 
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.Await

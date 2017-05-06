@@ -54,8 +54,8 @@ class ConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll with Te
     val transactionID = LocalGeneratorCreator.getTransaction()
     val putCounter = new CountDownLatch(1)
     srv.notifyProducerTransactionCompleted(t => t.transactionID == transactionID && t.state == TransactionStates.Checkpointed, putCounter.countDown())
-    storageClient.putTransaction(new RPCProducerTransaction("test_stream", 1, transactionID, TransactionStates.Opened, -1, 120), true) { r => true }
-    storageClient.putTransaction(new RPCProducerTransaction("test_stream", 1, transactionID, TransactionStates.Checkpointed, 2, 120), true) { r => true }
+    storageClient.putTransactionSync(new RPCProducerTransaction("test_stream", 1, transactionID, TransactionStates.Opened, -1, 120))
+    storageClient.putTransactionSync(new RPCProducerTransaction("test_stream", 1, transactionID, TransactionStates.Checkpointed, 2, 120))
     putCounter.await()
 
     val consumedTransaction = consumer.getTransactionById(1, transactionID).get
@@ -74,11 +74,11 @@ class ConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll with Te
     val transaction = transactions.head
     srv.notifyProducerTransactionCompleted(t => t.transactionID == transactions.last, putCounter.countDown())
 
-    storageClient.putTransaction(new RPCProducerTransaction("test_stream", 1, transactions.head, TransactionStates.Opened, -1, 120), true) { r => true }
-    storageClient.putTransaction(new RPCProducerTransaction("test_stream", 1, transactions.head, TransactionStates.Checkpointed, 1, 120), true) { r => true }
+    storageClient.putTransactionSync(new RPCProducerTransaction("test_stream", 1, transactions.head, TransactionStates.Opened, -1, 120))
+    storageClient.putTransactionSync(new RPCProducerTransaction("test_stream", 1, transactions.head, TransactionStates.Checkpointed, 1, 120))
 
     transactions.drop(1) foreach { t =>
-      storageClient.putTransaction(new RPCProducerTransaction("test_stream", 1, t, TransactionStates.Opened, -1, 120), true) { r => true }
+      storageClient.putTransactionSync(new RPCProducerTransaction("test_stream", 1, t, TransactionStates.Opened, -1, 120))
     }
     putCounter.await()
 
@@ -95,8 +95,8 @@ class ConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll with Te
     srv.notifyProducerTransactionCompleted(t => t.transactionID == lastTransaction && t.state == TransactionStates.Checkpointed, putCounter.countDown())
 
     transactions foreach { t =>
-      storageClient.putTransaction(new RPCProducerTransaction("test_stream", 1, t, TransactionStates.Opened, -1, 120), true) { r => true }
-      storageClient.putTransaction(new RPCProducerTransaction("test_stream", 1, t, TransactionStates.Checkpointed, 1, 120), true) { r => true }
+      storageClient.putTransactionSync(new RPCProducerTransaction("test_stream", 1, t, TransactionStates.Opened, -1, 120))
+      storageClient.putTransactionSync(new RPCProducerTransaction("test_stream", 1, t, TransactionStates.Checkpointed, 1, 120))
     }
     putCounter.await()
 
@@ -111,17 +111,17 @@ class ConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll with Te
 
     val transactions1 = for (i <- 0 until FIRST) yield LocalGeneratorCreator.getTransaction()
     transactions1 foreach { t =>
-      storageClient.putTransaction(new RPCProducerTransaction("test_stream", 1, t, TransactionStates.Opened, -1, 120), true) { r => true }
-      storageClient.putTransaction(new RPCProducerTransaction("test_stream", 1, t, TransactionStates.Checkpointed, 1, 120), true) { r => true }
+      storageClient.putTransactionSync(new RPCProducerTransaction("test_stream", 1, t, TransactionStates.Opened, -1, 120))
+      storageClient.putTransactionSync(new RPCProducerTransaction("test_stream", 1, t, TransactionStates.Checkpointed, 1, 120))
     }
-    storageClient.putTransaction(new RPCProducerTransaction("test_stream", 1, LocalGeneratorCreator.getTransaction(), TransactionStates.Opened, -1, 120), true) { r => true }
+    storageClient.putTransactionSync(new RPCProducerTransaction("test_stream", 1, LocalGeneratorCreator.getTransaction(), TransactionStates.Opened, -1, 120))
     val transactions2 = for (i <- FIRST until LAST) yield LocalGeneratorCreator.getTransaction()
 
     srv.notifyProducerTransactionCompleted(t => t.transactionID == transactions2.last && t.state == TransactionStates.Checkpointed, putCounter.countDown())
 
     transactions2 foreach { t =>
-      storageClient.putTransaction(new RPCProducerTransaction("test_stream", 1, t, TransactionStates.Opened, -1, 120), true) { r => true }
-      storageClient.putTransaction(new RPCProducerTransaction("test_stream", 1, t, TransactionStates.Checkpointed, 1, 120), true) { r => true }
+      storageClient.putTransactionSync(new RPCProducerTransaction("test_stream", 1, t, TransactionStates.Opened, -1, 120))
+      storageClient.putTransactionSync(new RPCProducerTransaction("test_stream", 1, t, TransactionStates.Checkpointed, 1, 120))
     }
     putCounter.await()
 
@@ -149,7 +149,7 @@ class ConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll with Te
     val firstTransaction = transactions.head
     val lastTransaction = transactions.tail.tail.tail.head
     transactions foreach { t =>
-      storageClient.putTransaction(new RPCProducerTransaction("test_stream", 1, t, TransactionStates.Opened, 1, 120), true) { r => {
+      storageClient.putTransaction(new RPCProducerTransaction("test_stream", 1, t, TransactionStates.Opened, 1, 120)) { r => {
         putCounter.countDown()
       }
       }

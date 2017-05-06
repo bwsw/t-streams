@@ -7,6 +7,10 @@ import com.bwsw.tstreams.proto.protocol.TransactionState
 
 import scala.collection.mutable.ListBuffer
 
+object TransactionFullLoader {
+  val EXPECTED_BUT_EMPTY_RESPONSE_DELAY = 1000
+}
+
 /**
   * Created by Ivan Kudryavtsev on 22.08.16.
   * Loads transactions in full from database if fast loader is unable to load them
@@ -56,6 +60,7 @@ class TransactionFullLoader(partitions: Set[Int],
       data ++= consumer.getTransactionsFromTo(last.partition, first, last.transactionID)
       if(Subscriber.logger.isDebugEnabled())
         Subscriber.logger.debug(s"Load full end (partition = ${last.partition}, first = $first, last = ${last.transactionID}, master = ${last.masterID})")
+
       if (last.masterID > 0 && !last.isNotReliable) {
         // we wait for certain item
         // to switch to fast load next
@@ -67,6 +72,14 @@ class TransactionFullLoader(partitions: Set[Int],
           }
           else
             first = data.last.getTransactionID()
+        } else {
+          /*
+          to keep server ok from our activity add small delay
+          it happens very rare case - when load full occurred and no data available after response
+          so sleep a little bit to give data time to be gathered
+          in normal, stationary situation it must not happen.
+          */
+          Thread.sleep(TransactionFullLoader.EXPECTED_BUT_EMPTY_RESPONSE_DELAY)
         }
       } else
         flag = false

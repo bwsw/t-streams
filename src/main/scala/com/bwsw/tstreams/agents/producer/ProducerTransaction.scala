@@ -156,7 +156,7 @@ class ProducerTransaction(partition: Int,
     isTransactionClosed.set(true)
     val transactionRecord = new RPCProducerTransaction(producer.stream.name, partition, transactionID, TransactionStates.Cancel, 0, -1L)
 
-    producer.stream.client.putTransaction(transactionRecord, true)(rec => {})
+    producer.stream.client.putTransaction(transactionRecord)(rec => {})
 
     val msg = TransactionState(transactionID = transactionID,
       ttlMs = -1,
@@ -228,7 +228,7 @@ class ProducerTransaction(partition: Int,
       }
       val transactionRecord = new RPCProducerTransaction(producer.stream.name, partition, transactionID, TransactionStates.Checkpointed, getDataItemsCount(), producer.stream.ttl)
 
-      producer.stream.client.putTransactionWithData(transactionRecord, data.items, data.lastOffset, true)(record => {
+      producer.stream.client.putTransactionWithData(transactionRecord, data.items, data.lastOffset)(record => {
         checkpointPostEventPart()
       })
 
@@ -314,7 +314,7 @@ class ProducerTransaction(partition: Int,
       GlobalHooks.invoke(GlobalHooks.transactionUpdateTaskEnd)
     }
 
-    setUpdateFinished
+    setUpdateFinished()
 
     producer.publish(TransactionState(
       transactionID = transactionID,
@@ -354,9 +354,8 @@ class ProducerTransaction(partition: Int,
     }
     val transactionRecord = new RPCProducerTransaction(producer.stream.name, partition, transactionID, TransactionStates.Updated, -1, producer.producerOptions.transactionTtlMs)
 
-    producer.stream.client.putTransaction(transactionRecord, true)(record => {
-      doSendUpdateMessage()
-    })
+    producer.stream.client.putTransactionSync(transactionRecord)
+    doSendUpdateMessage()
 
   }
 
