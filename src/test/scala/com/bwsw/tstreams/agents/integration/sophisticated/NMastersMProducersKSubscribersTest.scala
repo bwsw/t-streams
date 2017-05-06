@@ -16,8 +16,8 @@ import scala.collection.mutable.ListBuffer
 class NMastersMProducersKSubscribersTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
 
   val ALL_PARTITIONS = 4
-  val PRODUCER_COUNT = 4
-  val SUBSCRIBER_COUNT = 4
+  val PRODUCER_COUNT = 2
+  val SUBSCRIBER_COUNT = 2
   val TRANSACTION_COUNT = 10000
 
   lazy val srv = TestStorageServer.get()
@@ -34,7 +34,7 @@ class NMastersMProducersKSubscribersTest extends FlatSpec with Matchers with Bef
       setProperty(ConfigurationOptions.Producer.Transaction.keepAliveMs, 100).
       setProperty(ConfigurationOptions.Consumer.transactionPreload, 1000).
       setProperty(ConfigurationOptions.Consumer.dataPreload, 10).
-      setProperty(ConfigurationOptions.Consumer.Subscriber.pollingFrequencyDelayMs, 1000)
+      setProperty(ConfigurationOptions.Consumer.Subscriber.pollingFrequencyDelayMs, 5000)
 
     srv
     storageClient.createStream("test_stream", ALL_PARTITIONS, 24 * 3600, "")

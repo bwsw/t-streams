@@ -112,7 +112,7 @@ class ProcessingEngine(consumer: TransactionOperator,
 
     partitions
       .foreach(p =>
-        if (loadFullDataExist
+        if ((loadFullDataExist && queue.getInFlight() == 0)
           || isFirstTime
           || (System.currentTimeMillis() - getLastPartitionActivity(p) > pollTimeMs && queue.getInFlight() == 0)) {
           enqueueLastPossibleTransaction(p)

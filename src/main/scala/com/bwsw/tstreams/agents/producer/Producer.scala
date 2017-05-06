@@ -9,6 +9,7 @@ import com.bwsw.tstreams.agents.producer.NewTransactionProducerPolicy.ProducerPo
 import com.bwsw.tstreams.common._
 import com.bwsw.tstreams.coordination.client.UdpEventsBroadcastClient
 import com.bwsw.tstreams.proto.protocol.{TransactionRequest, TransactionResponse, TransactionState}
+import com.bwsw.tstreams.storage.StorageClient
 import com.bwsw.tstreams.streams.Stream
 import com.bwsw.tstreamstransactionserver.rpc.TransactionStates
 import com.google.protobuf.ByteString
