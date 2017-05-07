@@ -93,8 +93,7 @@ class TransactionOpenerService(curatorClient: CuratorFramework,
           val newId = agent.getProducer.generateNewTransactionIDLocal()
           (req.isInstant, req.isReliable) match {
             case (false, _) => agent.getProducer().openTransactionLocal(newId, req.partition)
-            case (true, true) => agent.getProducer().openInstantTransactionLocal(req.partition, newId, req.data.map(_.toByteArray), true)
-            case (true, false) =>
+            case (true, _) => agent.getProducer().openInstantTransactionLocal(req.partition, newId, req.data.map(_.toByteArray), req.isReliable)
           }
           newId
         case _ => 0
