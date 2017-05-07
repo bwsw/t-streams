@@ -22,7 +22,7 @@ class ProducerTransactionData(transaction: ProducerTransaction, ttl: Long, stora
   }
 
   def save(): () => Unit = this.synchronized {
-    val job = storageClient.client.putTransactionData(streamName, transaction.getPartition, transaction.getTransactionID(), items, lastOffset)
+    val job = storageClient.putTransactionData(streamName, transaction.getPartition, transaction.getTransactionID(), items, lastOffset)
 
     if (Producer.logger.isDebugEnabled()) {
       Producer.logger.debug(s"putTransactionData($streamName, ${transaction.getPartition}, ${transaction.getTransactionID()}, $items, $lastOffset)")
