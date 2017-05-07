@@ -12,8 +12,6 @@ import com.bwsw.tstreamstransactionserver.rpc.TransactionStates
 import org.slf4j.LoggerFactory
 
 import scala.collection.mutable.ListBuffer
-import scala.concurrent.Await
-import scala.concurrent.duration._
 
 
 object CheckpointGroup {
@@ -107,7 +105,7 @@ class CheckpointGroup(val executors: Int = 1) {
         producerRequests.append(new RPCProducerTransaction(streamName, partition, transaction, TransactionStates.Checkpointed, totalCnt, ttl))
     }
 
-    Await.result(storageClient.client.putTransactions(producerRequests, consumerRequests), 1.minute)
+    storageClient.putTransactions(producerRequests, consumerRequests)
   }
 
   /**

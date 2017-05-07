@@ -1,8 +1,6 @@
 package com.bwsw.tstreams.agents.consumer
 
 import scala.collection.mutable
-import scala.concurrent.Await
-import scala.concurrent.duration._
 
 
 /**
@@ -65,8 +63,7 @@ class ConsumerTransaction(partition: Int,
     //try to update buffer
     if (buffer.isEmpty) {
       val newCount = (cnt + consumer.options.dataPreload).min(count - 1)
-      buffer ++= Await.result(consumer.stream.client.client.getTransactionData(consumer.stream.name,
-        partition, transactionID, cnt, newCount), 1.minute)
+      buffer ++= consumer.stream.client.getTransactionData(consumer.stream.name, partition, transactionID, cnt, newCount)
       cnt = newCount + 1
     }
 
@@ -96,7 +93,7 @@ class ConsumerTransaction(partition: Int,
   def getAll() = this.synchronized {
     if (consumer == null)
       throw new IllegalArgumentException("Transaction is not yet attached to consumer. Attach it first.")
-    val r = Await.result(consumer.stream.client.client.getTransactionData(consumer.stream.name, partition, transactionID, cnt, count), 1.minute)
+    val r = consumer.stream.client.getTransactionData(consumer.stream.name, partition, transactionID, cnt, count)
 
     if (Consumer.logger.isDebugEnabled()) {
       Consumer.logger.debug(s"ConsumerTransaction.getAll(${consumer.stream.name}, $partition, $transactionID, $cnt, ${count - 1})")
