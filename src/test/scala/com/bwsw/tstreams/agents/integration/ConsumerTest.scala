@@ -4,7 +4,6 @@ import java.util.concurrent.CountDownLatch
 
 import com.bwsw.tstreams.agents.consumer.Offset.Oldest
 import com.bwsw.tstreams.agents.producer.RPCProducerTransaction
-import com.bwsw.tstreams.common.FirstFailLockableTaskExecutor
 import com.bwsw.tstreams.env.ConfigurationOptions
 import com.bwsw.tstreams.testutils._
 import com.bwsw.tstreamstransactionserver.rpc.TransactionStates
@@ -144,17 +143,12 @@ class ConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll with Te
 
   "consumer.getTransactionsFromTo" should "return none if to < from" in {
     val ALL = 80
-    val putCounter = new CountDownLatch(ALL)
     val transactions = for (i <- 0 until ALL) yield LocalGeneratorCreator.getTransaction()
     val firstTransaction = transactions.head
     val lastTransaction = transactions.tail.tail.tail.head
     transactions foreach { t =>
-      storageClient.putTransaction(new RPCProducerTransaction("test_stream", 1, t, TransactionStates.Opened, 1, 120)) { r => {
-        putCounter.countDown()
-      }
-      }
+      storageClient.putTransactionSync(new RPCProducerTransaction("test_stream", 1, t, TransactionStates.Opened, 1, 120))
     }
-    putCounter.await()
     val res = consumer.getTransactionsFromTo(1, lastTransaction, firstTransaction)
     res.size shouldBe 0
   }
