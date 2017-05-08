@@ -169,24 +169,17 @@ class Producer(var name: String,
         while (true) {
           val value: Boolean = shutdownKeepAliveThread.wait(producerOptions.transactionKeepAliveMs)
           if (value) {
-            Producer.logger.info(s"Producer $name - object either checkpointed or cancelled. Exit KeepAliveThread.")
+            Producer.logger.info(s"Producer $name - object shutdown is requested. Exit KeepAliveThread.")
             break()
           }
-          asyncActivityService.submit("<UpdateOpenedTransactionsTask>", () => updateOpenedTransactions(), Option(threadLock))
-        }
+          Producer.logger.debug(s"Producer $name - update is started for long lasting transactions")
+          openTransactions.forallKeysDo((part: Int, transaction: IProducerTransaction) => transaction.updateTransactionKeepAliveState())        }
+        Producer.logger.debug(s"Producer $name - update is completed for long lasting transactions")
       }
     })
     transactionKeepAliveThread.start()
     latch.await()
     transactionKeepAliveThread
-  }
-
-  /**
-    * Used to send update event to all opened transactions
-    */
-  private def updateOpenedTransactions() = this.synchronized {
-    Producer.logger.debug(s"Producer $name - scheduled for long lasting transactions")
-    openTransactions.forallKeysDo((part: Int, transaction: IProducerTransaction) => transaction.updateTransactionKeepAliveState())
   }
 
   /**
