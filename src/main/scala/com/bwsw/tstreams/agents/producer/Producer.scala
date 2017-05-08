@@ -316,9 +316,7 @@ class Producer(var name: String,
     if(isReliable)
       stream.client.putInstantTransactionSync(stream.name, partition, transactionID, data)
     else
-      stream.client.putInstantTransactionSync(stream.name, partition, transactionID, data)
-      //    stream.client.putInstantTransactionUnreliable(stream.name, partition, transactionID, data)
-      // todo: fixit
+      stream.client.putInstantTransactionUnreliable(stream.name, partition, transactionID, data)
 
     val msgInstant = TransactionState(
       transactionID = transactionID,
