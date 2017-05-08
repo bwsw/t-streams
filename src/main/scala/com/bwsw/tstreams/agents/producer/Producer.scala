@@ -250,16 +250,17 @@ class Producer(var name: String,
   }
 
   /**
-    * Checkpoint all opened transactions (not atomic). For atomic use CheckpointGroup.
+    * Checkpoint all opened transactions (atomic).
     */
-  def checkpoint(isSynchronous: Boolean = true): Unit = {
-    cg.add(this)
+  val firstCheckpoint = new AtomicBoolean(true)
+  def checkpoint() = {
+    if(firstCheckpoint.getAndSet(false)) cg.add(this)
     cg.checkpoint()
   }
 
 
   /**
-    * Cancel all opened transactions (not atomic). For atomic use CheckpointGroup.
+    * Cancel all opened transactions (not atomic, probably atomic is not a case for a cancel).
     */
   def cancel(): Unit =
     openTransactions.forallKeysDo((k: Int, v: IProducerTransaction) => v.cancel())

@@ -139,10 +139,10 @@ class CheckpointGroup(val executors: Int = 1) {
     * Stop group when it's no longer required
     */
   def stop(): Unit = this.synchronized {
+    clear()
     if (isStopped.getAndSet(true))
       throw new IllegalStateException("Group is stopped. No longer operations are possible.")
     executorPool.shutdownOrDie(CheckpointGroup.SHUTDOWN_WAIT_MAX_SECONDS, TimeUnit.SECONDS)
-    clear()
   }
 
 }
