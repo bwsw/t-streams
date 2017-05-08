@@ -1,10 +1,10 @@
 package com.bwsw.tstreams.agents.producer
 
-import java.util.concurrent.atomic.{AtomicBoolean, AtomicLong}
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.locks.ReentrantLock
-import java.util.concurrent.{Executors, CountDownLatch, TimeUnit}
+import java.util.concurrent.{CountDownLatch, TimeUnit}
 
-import com.bwsw.tstreams.agents.group.{CheckpointInfo, GroupParticipant, SendingAgent}
+import com.bwsw.tstreams.agents.group.{CheckpointGroup, CheckpointInfo, GroupParticipant, SendingAgent}
 import com.bwsw.tstreams.agents.producer.NewTransactionProducerPolicy.ProducerPolicy
 import com.bwsw.tstreams.common._
 import com.bwsw.tstreams.coordination.client.UdpEventsBroadcastClient
@@ -12,7 +12,6 @@ import com.bwsw.tstreams.proto.protocol.{TransactionRequest, TransactionResponse
 import com.bwsw.tstreams.storage.StorageClient
 import com.bwsw.tstreams.streams.Stream
 import com.bwsw.tstreamstransactionserver.rpc.TransactionStates
-import com.google.protobuf.ByteString
 import org.apache.curator.framework.CuratorFrameworkFactory
 import org.apache.curator.retry.ExponentialBackoffRetry
 import org.apache.zookeeper.KeeperException
@@ -52,7 +51,7 @@ class Producer(var name: String,
   val pcs = producerOptions.coordinationOptions
   val isStop = new AtomicBoolean(false)
 
-  private val openTransactions = new OpenTransactionsKeeper()
+  private[tstreams] val openTransactions = new OpenTransactionsKeeper()
 
   // stores latches for materialization await (protects from materialization before main transaction response)
   private val threadLock = new ReentrantLock(true)
@@ -135,9 +134,9 @@ class Producer(var name: String,
     */
   private val shutdownKeepAliveThread = new ThreadSignalSleepVar[Boolean](1)
   private val transactionKeepAliveThread = getTransactionKeepAliveThread
-  val asyncActivityService = new FirstFailLockableTaskExecutor(s"Producer $name-AsyncWorker")
-  val notifyService = new FirstFailLockableTaskExecutor(s"NotifyService-$name", pcs.notifyThreadPoolSize)
-
+  private[tstreams] val asyncActivityService = new FirstFailLockableTaskExecutor(s"Producer $name-AsyncWorker")
+  private[tstreams] val notifyService = new FirstFailLockableTaskExecutor(s"NotifyService-$name", pcs.notifyThreadPoolSize)
+  private lazy val cg = new CheckpointGroup()
 
   /**
     * Allows to get if the producer is master for the partition.
@@ -253,8 +252,10 @@ class Producer(var name: String,
   /**
     * Checkpoint all opened transactions (not atomic). For atomic use CheckpointGroup.
     */
-  def checkpoint(isSynchronous: Boolean = true): Unit =
-    openTransactions.forallKeysDo((k: Int, v: IProducerTransaction) => v.checkpoint(isSynchronous))
+  def checkpoint(isSynchronous: Boolean = true): Unit = {
+    cg.add(this)
+    cg.checkpoint()
+  }
 
 
   /**
@@ -341,6 +342,7 @@ class Producer(var name: String,
     if (isStop.getAndSet(true))
       throw new IllegalStateException(s"Producer ${this.name} is already stopped. Duplicate action.")
 
+    cg.stop()
     openTransactionClient.stop()
     // stop provide master features to public
     transactionOpenerService.stop()

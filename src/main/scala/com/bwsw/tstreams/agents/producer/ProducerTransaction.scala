@@ -122,7 +122,7 @@ class ProducerTransaction(partition: Int,
   def cancel(): Unit = this.synchronized {
     if (isTransactionClosed.getAndSet(true))
       throw new IllegalStateException(s"Transaction $transactionID is closed. New data items are prohibited.")
-
+    producer.openTransactions.remove(partition, this)
     cancelTransaction()
   }
 
@@ -219,6 +219,8 @@ class ProducerTransaction(partition: Int,
   def checkpoint(isSynchronous: Boolean = true): Unit = this.synchronized {
     if (isTransactionClosed.getAndSet(true))
       throw new IllegalStateException(s"Transaction $transactionID is closed. New data items are prohibited.")
+
+    producer.openTransactions.remove(partition, this)
 
     if (!isSynchronous) {
       producer.asyncActivityService.submit("<CheckpointAsyncTask>", () => checkpointAsync(), None)

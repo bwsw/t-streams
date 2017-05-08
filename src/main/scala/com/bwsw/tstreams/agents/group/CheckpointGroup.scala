@@ -104,19 +104,26 @@ class CheckpointGroup(val executors: Int = 1) {
     if (isStopped.get)
       throw new IllegalStateException("Group is stopped. No longer operations are possible.")
 
+    CheckpointGroup.logger.debug("Complete send data to storage server for all participants")
     agents.foreach { case (name, agent) => if (agent.isInstanceOf[SendingAgent]) agent.asInstanceOf[SendingAgent].finalizeDataSend() }
 
+    CheckpointGroup.logger.debug("Gather checkpoint information from participants")
     // receive from all agents their checkpoint information
     val checkpointStateInfo: List[CheckpointInfo] = agents.map { case (name, agent) =>
       agent.getCheckpointInfoAndClear()
     }.reduceRight((l1, l2) => l1 ++ l2)
 
+    CheckpointGroup.logger.debug(s"CheckpointGroup Info ${checkpointStateInfo}")
+
+    CheckpointGroup.logger.debug("Do group checkpoint")
     //assume all agents use the same metadata entity
     doGroupCheckpoint(agents.head._2.getStorageClient, checkpointStateInfo)
 
+    CheckpointGroup.logger.debug("Do publish notifications")
     // do publish post events for all producers
     publishCheckpointEventForAllProducers(checkpointStateInfo)
 
+    CheckpointGroup.logger.debug("End checkpoint")
   }
 
 
