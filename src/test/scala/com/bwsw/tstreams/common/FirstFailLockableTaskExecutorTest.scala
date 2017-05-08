@@ -13,5 +13,6 @@ class FirstFailLockableTaskExecutorTest extends FlatSpec with Matchers  {
     val ex = new FirstFailLockableTaskExecutor("sample")
     val job = ex.submit("test task", () => cntr.incrementAndGet(), None, cntr)
     job.get() shouldBe cntr
+
   }
 }
