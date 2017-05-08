@@ -144,10 +144,10 @@ class Producer(var name: String,
     * @param partition
     * @return
     */
-  def isMasterOfPartition(partition: Int): Boolean =
+  private[tstreams] def isMasterOfPartition(partition: Int): Boolean =
     transactionOpenerService.isMasterOfPartition(partition)
 
-  def getPartitionMasterIDLocalInfo(partition: Int): Int =
+  private[tstreams] def getPartitionMasterIDLocalInfo(partition: Int): Int =
     transactionOpenerService.getPartitionMasterInetAddressLocal(partition)._2
 
   /**
@@ -158,7 +158,7 @@ class Producer(var name: String,
   /**
     *
     */
-  def getTransactionKeepAliveThread: Thread = {
+  private def getTransactionKeepAliveThread: Thread = {
     val latch = new CountDownLatch(1)
     val transactionKeepAliveThread = new Thread(() => {
       Thread.currentThread().setName(s"Producer-$name-KeepAlive")
@@ -243,7 +243,7 @@ class Producer(var name: String,
     * @param partition Partition from which transaction will be retrieved
     * @return Transaction reference if it exist and is opened
     */
-  def getOpenedTransactionForPartition(partition: Int): Option[IProducerTransaction] = {
+  private[tstreams] def getOpenedTransactionForPartition(partition: Int): Option[IProducerTransaction] = {
     if (!(partition >= 0 && partition < stream.partitionsCount))
       throw new IllegalArgumentException(s"Producer $name - invalid partition")
     openTransactions.getTransactionOption(partition)
@@ -268,7 +268,7 @@ class Producer(var name: String,
   /**
     * Finalize all opened transactions (not atomic). For atomic use CheckpointGroup.
     */
-  def finalizeDataSend(): Unit = {
+  override private[tstreams] def finalizeDataSend(): Unit = {
     openTransactions.forallKeysDo((k: Int, v: IProducerTransaction) => v.finalizeDataSend())
   }
 
@@ -285,7 +285,7 @@ class Producer(var name: String,
     *
     * @return
     */
-  def generateNewTransactionIDLocal() =
+  private[tstreams] def generateNewTransactionIDLocal() =
     producerOptions.transactionGenerator.getTransaction()
 
   /**
