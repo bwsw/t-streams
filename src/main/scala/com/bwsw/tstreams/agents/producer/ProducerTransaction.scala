@@ -204,9 +204,9 @@ class ProducerTransaction(partition: Int,
 
       val transactionRecord = new RPCProducerTransaction(producer.stream.name, partition, transactionID, TransactionStates.Checkpointed, getDataItemsCount(), producer.stream.ttl)
 
-      producer.stream.client.putTransactionWithData(transactionRecord, data.items, data.lastOffset)(record => {
-        checkpointPostEventPart()
-      })
+      producer.stream.client.putTransactionWithDataSync(transactionRecord, data.items, data.lastOffset)
+      checkpointPostEventPart()
+
     }
     else {
       cancelTransaction()
