@@ -281,18 +281,20 @@ class ProducerTransaction(partition: Int,
 
     GlobalHooks.invoke(GlobalHooks.transactionUpdateTaskEnd)
 
-    producer.publish(TransactionState(
-      transactionID = transactionID,
-      ttlMs = producer.producerOptions.transactionTtlMs,
-      status = TransactionState.Status.Updated,
-      partition = partition,
-      masterID = producer.transactionOpenerService.getUniqueAgentID(),
-      orderID = -1,
-      count = 0))
+    producer.notifyService.submit(s"NotifyTask-Part[${partition}]-Txn[${transactionID}]", () => {
+      producer.publish(TransactionState(
+        transactionID = transactionID,
+        ttlMs = producer.producerOptions.transactionTtlMs,
+        status = TransactionState.Status.Updated,
+        partition = partition,
+        masterID = producer.transactionOpenerService.getUniqueAgentID(),
+        orderID = -1,
+        count = 0))
 
-    if (ProducerTransaction.logger.isDebugEnabled) {
-      ProducerTransaction.logger.debug(s"[KEEP_ALIVE THREAD PARTITION_PARTITION_$partition] ts=${transactionID.toString} status=Updated")
-    }
+      if (ProducerTransaction.logger.isDebugEnabled) {
+        ProducerTransaction.logger.debug(s"[KEEP_ALIVE THREAD PARTITION_PARTITION_$partition] ts=${transactionID.toString} status=Updated")
+      }
+    })
   }
 
   def getTransactionInfo(): ProducerCheckpointInfo = {
