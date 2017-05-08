@@ -1,16 +1,16 @@
 package com.bwsw.tstreams.common
 
 import java.net.{DatagramPacket, DatagramSocket, InetAddress, SocketException}
+import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.{ArrayBlockingQueue, ConcurrentHashMap, Executors, TimeUnit}
 
 import com.bwsw.tstreams.proto.protocol.{TransactionRequest, TransactionResponse}
 import com.google.protobuf.InvalidProtocolBufferException
 
-import scala.util.Random
-
 class UdpClient(waitTimeoutMs: Int) extends UdpProcessor {
   val packetMap = new ConcurrentHashMap[Long, ArrayBlockingQueue[TransactionResponse]]()
   val executor = Executors.newSingleThreadExecutor()
+  val idGenerator = new AtomicLong(0)
 
 
   override def handleMessage(socket: DatagramSocket, packet: DatagramPacket): Unit = {
@@ -29,7 +29,7 @@ class UdpClient(waitTimeoutMs: Int) extends UdpProcessor {
   }
   
   def sendAndWait(hostName: String, port: Int, req: TransactionRequest): Option[TransactionResponse] = {
-    val msg = req.withId(Random.nextLong)
+    val msg = req.withId(idGenerator.incrementAndGet())
     val q = new ArrayBlockingQueue[TransactionResponse](1)
     packetMap.put(msg.id, q)
     val host = InetAddress.getByName(hostName)
