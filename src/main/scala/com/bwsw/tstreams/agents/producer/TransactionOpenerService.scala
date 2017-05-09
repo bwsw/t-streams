@@ -91,6 +91,10 @@ class TransactionOpenerService(curatorClient: CuratorFramework,
       val newTransactionId = isMaster match {
         case true =>
           val newId = agent.getProducer.generateNewTransactionIDLocal()
+
+          if(Producer.logger.isDebugEnabled())
+            Producer.logger.debug(s"New Transaction ID: $newId")
+
           (req.isInstant, req.isReliable) match {
             case (false, _) => agent.getProducer().openTransactionLocal(newId, req.partition)
             case (true, _) => agent.getProducer().openInstantTransactionLocal(req.partition, newId, req.data.map(_.toByteArray), req.isReliable)
@@ -105,9 +109,6 @@ class TransactionOpenerService(curatorClient: CuratorFramework,
         .withTransaction(newTransactionId)
         .toByteArray
       socket.send(new DatagramPacket(response, response.size, client))
-
-      if(isMaster && req.isInstant && !req.isReliable)
-        agent.getProducer().openInstantTransactionLocal(req.partition, newTransactionId, req.data.map(_.toByteArray), false)
     }
   }
 

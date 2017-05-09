@@ -25,4 +25,10 @@ object NewTransactionProducerPolicy extends Enumeration {
     * If previous transaction was opened exception will be thrown
     */
   val ErrorIfOpened = Value
+
+  /**
+    * If a transaction is opened, just append it to the end of the list
+    */
+  val EnqueueIfOpened = Value
+
 }

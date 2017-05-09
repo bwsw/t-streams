@@ -26,7 +26,7 @@ class OpenTransactionsKeeper {
     val res = ListBuffer[RV]()
     for (k <- keys) {
       val v = openTransactionsMap.getOrDefault(k, null)
-      if (v != null && !v._2.isClosed) {
+      if (v != null) {
         try {
           res.append(f(k, v._2))
         } catch {
@@ -106,6 +106,10 @@ class OpenTransactionsKeeper {
           "Unable to continue. Check all T-streams nodes have NTPD enabled and properly configured.")
     }
     openTransactionsMap.put(partition, (0, transaction))
+  }
+
+  def remove(partition: Int, transaction: IProducerTransaction) = openTransactionsMap.synchronized {
+    openTransactionsMap.remove(partition)
   }
 
   /**
