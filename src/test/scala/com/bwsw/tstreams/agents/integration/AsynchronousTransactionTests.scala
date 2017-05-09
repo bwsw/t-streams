@@ -3,7 +3,7 @@ package com.bwsw.tstreams.agents.integration
 import java.util.concurrent.CountDownLatch
 
 import com.bwsw.tstreams.agents.consumer.Offset.Oldest
-import com.bwsw.tstreams.agents.producer.NewTransactionProducerPolicy
+import com.bwsw.tstreams.agents.producer.NewProducerTransactionPolicy
 import com.bwsw.tstreams.debug.GlobalHooks
 import com.bwsw.tstreams.env.ConfigurationOptions
 import com.bwsw.tstreams.testutils.{TestStorageServer, TestUtils}
@@ -56,7 +56,7 @@ class AsynchronousTransactionTests extends FlatSpec with Matchers
       offset = Oldest,
       useLastOffset = true)
 
-    val pTransaction = producer.newTransaction(policy = NewTransactionProducerPolicy.ErrorIfOpened)
+    val pTransaction = producer.newTransaction(policy = NewProducerTransactionPolicy.ErrorIfOpened)
     val pl = new CountDownLatch(1)
     srv.notifyProducerTransactionCompleted(t => t.transactionID == pTransaction.getTransactionID() && t.state == TransactionStates.Checkpointed, pl.countDown())
     pTransaction.send("test".getBytes())
@@ -89,13 +89,13 @@ class AsynchronousTransactionTests extends FlatSpec with Matchers
       offset = Oldest,
       useLastOffset = true)
 
-    val pTransaction = producer.newTransaction(policy = NewTransactionProducerPolicy.ErrorIfOpened)
+    val pTransaction = producer.newTransaction(policy = NewProducerTransactionPolicy.ErrorIfOpened)
 
     pTransaction.send("test".getBytes())
     pTransaction.checkpoint(isSynchronous = false)
     l.await()
 
-    val pTransaction2 = producer.newTransaction(policy = NewTransactionProducerPolicy.ErrorIfOpened)
+    val pTransaction2 = producer.newTransaction(policy = NewProducerTransactionPolicy.ErrorIfOpened)
     val pl = new CountDownLatch(1)
     srv.notifyProducerTransactionCompleted(t => t.transactionID == pTransaction2.getTransactionID() && t.state == TransactionStates.Opened, pl.countDown())
 

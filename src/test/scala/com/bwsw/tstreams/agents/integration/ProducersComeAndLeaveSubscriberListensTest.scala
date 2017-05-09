@@ -4,7 +4,7 @@ import java.util.concurrent.{CountDownLatch, TimeUnit}
 
 import com.bwsw.tstreams.agents.consumer.Offset.Oldest
 import com.bwsw.tstreams.agents.consumer.{ConsumerTransaction, TransactionOperator}
-import com.bwsw.tstreams.agents.producer.NewTransactionProducerPolicy
+import com.bwsw.tstreams.agents.producer.NewProducerTransactionPolicy
 import com.bwsw.tstreams.env.ConfigurationOptions
 import com.bwsw.tstreams.testutils.{TestStorageServer, TestUtils}
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
@@ -64,7 +64,7 @@ class ProducersComeAndLeaveSubscriberListensTest extends FlatSpec with Matchers 
         name = "test_producer",
         partitions = Set(0))
       (0 until TRANSACTIONS_PER_PRODUCER).foreach(_ => {
-        val transaction = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
+        val transaction = producer.newTransaction(NewProducerTransactionPolicy.ErrorIfOpened)
         transaction.send("test")
         transaction.checkpoint()
         producerAccumulator.append(transaction.getTransactionID())

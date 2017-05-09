@@ -3,7 +3,7 @@ package com.bwsw.tstreams.agents.integration
 import java.util.concurrent.CountDownLatch
 
 import com.bwsw.tstreams.agents.consumer.Offset.Oldest
-import com.bwsw.tstreams.agents.producer.NewTransactionProducerPolicy
+import com.bwsw.tstreams.agents.producer.NewProducerTransactionPolicy
 import com.bwsw.tstreams.env.ConfigurationOptions
 import com.bwsw.tstreams.testutils._
 import com.bwsw.tstreamstransactionserver.rpc.TransactionStates
@@ -58,8 +58,8 @@ class ProducerAndConsumerLongLastingTransactionsTests extends FlatSpec with Matc
     val waitFirstAtProducer = new CountDownLatch(1)
     val waitSecondAtProducer = new CountDownLatch(1)
 
-    val transaction1 = producer1.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
-    val transaction2 = producer2.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
+    val transaction1 = producer1.newTransaction(NewProducerTransactionPolicy.ErrorIfOpened)
+    val transaction2 = producer2.newTransaction(NewProducerTransactionPolicy.ErrorIfOpened)
     srv.notifyProducerTransactionCompleted(t => t.transactionID == transaction1.getTransactionID() && t.state == TransactionStates.Checkpointed, waitFirstAtConsumer.countDown())
     srv.notifyProducerTransactionCompleted(t => t.transactionID == transaction2.getTransactionID() && t.state == TransactionStates.Checkpointed, waitSecondAtConsumer.countDown())
 

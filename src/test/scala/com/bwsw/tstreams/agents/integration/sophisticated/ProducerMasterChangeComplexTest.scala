@@ -8,7 +8,7 @@ import java.util.concurrent.{CountDownLatch, TimeUnit}
 
 import com.bwsw.tstreams.agents.consumer.Offset.Newest
 import com.bwsw.tstreams.agents.consumer.{ConsumerTransaction, TransactionOperator}
-import com.bwsw.tstreams.agents.producer.{NewTransactionProducerPolicy, Producer}
+import com.bwsw.tstreams.agents.producer.{NewProducerTransactionPolicy, Producer}
 import com.bwsw.tstreams.env.{ConfigurationOptions, TStreamsFactory}
 import com.bwsw.tstreams.testutils.{TestStorageServer, TestUtils}
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
@@ -63,7 +63,7 @@ class ProducerMasterChangeComplexTest extends FlatSpec with Matchers with Before
         producer = makeNewProducer(partitions)
 
         while (probability < Random.nextDouble() && counter < amount) {
-          val t = producer.newTransaction(policy = NewTransactionProducerPolicy.CheckpointIfOpened, -1)
+          val t = producer.newTransaction(policy = NewProducerTransactionPolicy.CheckpointIfOpened, -1)
           t.send("test".getBytes())
           t.checkpoint(checkpointModeSync)
           producerBuffer(t.getPartition()).synchronized {

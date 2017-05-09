@@ -5,7 +5,7 @@ import java.util.concurrent.locks.ReentrantLock
 import java.util.concurrent.{CountDownLatch, TimeUnit}
 
 import com.bwsw.tstreams.agents.group.{CheckpointGroup, CheckpointInfo, GroupParticipant, SendingAgent}
-import com.bwsw.tstreams.agents.producer.NewTransactionProducerPolicy.ProducerPolicy
+import com.bwsw.tstreams.agents.producer.NewProducerTransactionPolicy.ProducerPolicy
 import com.bwsw.tstreams.common._
 import com.bwsw.tstreams.coordination.client.UdpEventsBroadcastClient
 import com.bwsw.tstreams.proto.protocol.{TransactionRequest, TransactionResponse, TransactionState}
@@ -219,12 +219,12 @@ class Producer(var name: String,
     * exactly-once semantics.
     * The method is blocking.
     *
-    * @param policy the policy to use when open new transaction for the partition which already has opened transaction.
-    *               See [[NewTransactionProducerPolicy]] for details.
+    * @param policy    the policy to use when open new transaction for the partition which already has opened transaction.
+    *                  See [[NewProducerTransactionPolicy]] for details.
     * @param partition if -1 specified (default) then the method uses writePolicy (round robin)
     * @return new transaction object
     */
-  def newTransaction(policy: ProducerPolicy = NewTransactionProducerPolicy.ErrorIfOpened, partition: Int = -1): ProducerTransaction = {
+  def newTransaction(policy: ProducerPolicy = NewProducerTransactionPolicy.ErrorIfOpened, partition: Int = -1): ProducerTransaction = {
     if (isStop.get())
       throw new IllegalStateException(s"Producer ${this.name} is already stopped. Unable to get new transaction.")
 

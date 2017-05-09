@@ -3,7 +3,7 @@ package com.bwsw.tstreams.agents.integration
 import java.util.concurrent.atomic.{AtomicBoolean, AtomicInteger}
 
 import com.bwsw.tstreams.agents.consumer.Offset.Oldest
-import com.bwsw.tstreams.agents.producer.NewTransactionProducerPolicy
+import com.bwsw.tstreams.agents.producer.NewProducerTransactionPolicy
 import com.bwsw.tstreams.env.ConfigurationOptions
 import com.bwsw.tstreams.testutils.{TestStorageServer, TestUtils}
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
@@ -46,7 +46,7 @@ class ProducerWritesManyConsumerReadsThemAll extends FlatSpec with Matchers with
     val producerIterAcc = ListBuffer[Long]()
 
     (0 until TRANSACTIONS_PER_PRODUCER).foreach(_ => {
-      val transaction = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
+      val transaction = producer.newTransaction(NewProducerTransactionPolicy.ErrorIfOpened)
       transaction.send("test")
       transaction.checkpoint()
       producerIterAcc.append(transaction.getTransactionID())

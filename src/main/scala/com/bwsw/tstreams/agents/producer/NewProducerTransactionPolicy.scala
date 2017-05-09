@@ -3,7 +3,7 @@ package com.bwsw.tstreams.agents.producer
 /**
   * Producer policies for newTransaction method
   */
-object NewTransactionProducerPolicy extends Enumeration {
+object NewProducerTransactionPolicy extends Enumeration {
   type ProducerPolicy = Value
 
   /**

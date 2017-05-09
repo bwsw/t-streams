@@ -4,7 +4,7 @@ import java.util.concurrent.{CountDownLatch, TimeUnit}
 
 import com.bwsw.tstreams.agents.consumer.Offset.Newest
 import com.bwsw.tstreams.agents.consumer.{ConsumerTransaction, TransactionOperator}
-import com.bwsw.tstreams.agents.producer.NewTransactionProducerPolicy
+import com.bwsw.tstreams.agents.producer.NewProducerTransactionPolicy
 import com.bwsw.tstreams.env.ConfigurationOptions
 import com.bwsw.tstreams.testutils.{TestStorageServer, TestUtils}
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
@@ -68,7 +68,7 @@ class TwoProducersAndSubscriberStartsBeforeWriteTests extends FlatSpec with Matc
     val t1 = new Thread(() => {
       logger.info(s"Producer-1 is master of partition: ${producer1.isMasterOfPartition(0)}")
       for (i <- 0 until COUNT) {
-        val t = producer1.newTransaction(policy = NewTransactionProducerPolicy.CheckpointIfOpened)
+        val t = producer1.newTransaction(policy = NewProducerTransactionPolicy.CheckpointIfOpened)
         bp.append(t.getTransactionID())
         lp2.countDown()
         t.send("test")
@@ -79,7 +79,7 @@ class TwoProducersAndSubscriberStartsBeforeWriteTests extends FlatSpec with Matc
       logger.info(s"Producer-2 is master of partition: ${producer2.isMasterOfPartition(0)}")
       for (i <- 0 until COUNT) {
         lp2.await()
-        val t = producer2.newTransaction(policy = NewTransactionProducerPolicy.CheckpointIfOpened)
+        val t = producer2.newTransaction(policy = NewProducerTransactionPolicy.CheckpointIfOpened)
         bp.append(t.getTransactionID())
         t.send("test")
         t.checkpoint()
