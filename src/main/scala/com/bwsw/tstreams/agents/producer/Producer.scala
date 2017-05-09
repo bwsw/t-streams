@@ -1,10 +1,10 @@
 package com.bwsw.tstreams.agents.producer
 
-import java.util.concurrent.atomic.{AtomicBoolean, AtomicLong}
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.locks.ReentrantLock
 import java.util.concurrent.{CountDownLatch, TimeUnit}
 
-import com.bwsw.tstreams.agents.group.{CheckpointInfo, GroupParticipant, SendingAgent}
+import com.bwsw.tstreams.agents.group.{CheckpointGroup, CheckpointInfo, GroupParticipant, SendingAgent}
 import com.bwsw.tstreams.agents.producer.NewTransactionProducerPolicy.ProducerPolicy
 import com.bwsw.tstreams.common._
 import com.bwsw.tstreams.coordination.client.UdpEventsBroadcastClient
@@ -12,7 +12,6 @@ import com.bwsw.tstreams.proto.protocol.{TransactionRequest, TransactionResponse
 import com.bwsw.tstreams.storage.StorageClient
 import com.bwsw.tstreams.streams.Stream
 import com.bwsw.tstreamstransactionserver.rpc.TransactionStates
-import com.google.protobuf.ByteString
 import org.apache.curator.framework.CuratorFrameworkFactory
 import org.apache.curator.retry.ExponentialBackoffRetry
 import org.apache.zookeeper.KeeperException
@@ -52,7 +51,7 @@ class Producer(var name: String,
   val pcs = producerOptions.coordinationOptions
   val isStop = new AtomicBoolean(false)
 
-  private val openTransactions = new OpenTransactionsKeeper()
+  private[tstreams] val openTransactions = new OpenTransactionsKeeper()
 
   // stores latches for materialization await (protects from materialization before main transaction response)
   private val threadLock = new ReentrantLock(true)
@@ -135,9 +134,9 @@ class Producer(var name: String,
     */
   private val shutdownKeepAliveThread = new ThreadSignalSleepVar[Boolean](1)
   private val transactionKeepAliveThread = getTransactionKeepAliveThread
-  val asyncActivityService = new FirstFailLockableTaskExecutor(s"Producer $name-AsyncWorker")
-  val notifyService = new FirstFailLockableTaskExecutor(s"NotifyService-$name", pcs.notifyThreadPoolSize)
-
+  private[tstreams] val asyncActivityService = new FirstFailLockableTaskExecutor(s"Producer $name-AsyncWorker", producerOptions.asyncJobsThreadPoolSize)
+  private[tstreams] val notifyService = new FirstFailLockableTaskExecutor(s"NotifyService-$name", producerOptions.notifyJobsThreadPoolSize)
+  private lazy val cg = new CheckpointGroup()
 
   /**
     * Allows to get if the producer is master for the partition.
@@ -145,10 +144,10 @@ class Producer(var name: String,
     * @param partition
     * @return
     */
-  def isMasterOfPartition(partition: Int): Boolean =
+  private[tstreams] def isMasterOfPartition(partition: Int): Boolean =
     transactionOpenerService.isMasterOfPartition(partition)
 
-  def getPartitionMasterIDLocalInfo(partition: Int): Int =
+  private[tstreams] def getPartitionMasterIDLocalInfo(partition: Int): Int =
     transactionOpenerService.getPartitionMasterInetAddressLocal(partition)._2
 
   /**
@@ -159,7 +158,7 @@ class Producer(var name: String,
   /**
     *
     */
-  def getTransactionKeepAliveThread: Thread = {
+  private def getTransactionKeepAliveThread: Thread = {
     val latch = new CountDownLatch(1)
     val transactionKeepAliveThread = new Thread(() => {
       Thread.currentThread().setName(s"Producer-$name-KeepAlive")
@@ -169,11 +168,12 @@ class Producer(var name: String,
         while (true) {
           val value: Boolean = shutdownKeepAliveThread.wait(producerOptions.transactionKeepAliveMs)
           if (value) {
-            Producer.logger.info(s"Producer $name - object either checkpointed or cancelled. Exit KeepAliveThread.")
+            Producer.logger.info(s"Producer $name - object shutdown is requested. Exit KeepAliveThread.")
             break()
           }
-          asyncActivityService.submit("<UpdateOpenedTransactionsTask>", () => updateOpenedTransactions(), Option(threadLock))
-        }
+          Producer.logger.debug(s"Producer $name - update is started for long lasting transactions")
+          openTransactions.forallKeysDo((part: Int, transaction: IProducerTransaction) => transaction.updateTransactionKeepAliveState())        }
+        Producer.logger.debug(s"Producer $name - update is completed for long lasting transactions")
       }
     })
     transactionKeepAliveThread.start()
@@ -182,20 +182,19 @@ class Producer(var name: String,
   }
 
   /**
-    * Used to send update event to all opened transactions
-    */
-  private def updateOpenedTransactions() = this.synchronized {
-    Producer.logger.debug(s"Producer $name - scheduled for long lasting transactions")
-    openTransactions.forallKeysDo((part: Int, transaction: IProducerTransaction) => transaction.updateTransactionKeepAliveState())
-  }
-
-  /**
-    * instant transaction send out (kafka-like)
+    * Instant transaction send out (kafka-like)
+    * The method implements "at-least-once", which means that some packets might be sent more than once.
+    * If you want your data in storage for sure, then don't use with isReliable == false.
+    * Overall package size must not exceed UDP maximum payload size, which is specified in [[com.bwsw.tstreams.common.UdpProcessor]]
+    * in BUFFER_SIZE, which is 508 bytes by default but may be increased if your network supports it (ideally may be used with jumbo
+    * frames enabled).
+    * The method is blocking.
     *
-    * @param partition
+    * @param partition partition to write transaction and data
     * @param data
-    * @param isReliable
-    * @return
+    * @param isReliable either master waits for storage server reply or not
+    *                   (if is not reliable then it leads to at-least-once with possible losses)
+    * @return transaction ID
     */
   def instantTransaction(partition: Int, data: Seq[Array[Byte]], isReliable: Boolean): Long = {
     if (!producerOptions.writePolicy.getUsedPartitions().contains(partition))
@@ -205,15 +204,25 @@ class Producer(var name: String,
       isInstant = true, isReliable = isReliable, data = data)
   }
 
+  /**
+    * Wrapper method when the partition is automatically selected with writePolicy (round robin).
+    * The method is blocking.
+    * @param data
+    * @param isReliable
+    * @return
+    */
   def instantTransaction(data: Seq[Array[Byte]], isReliable: Boolean): Long =
     instantTransaction(producerOptions.writePolicy.getNextPartition, data, isReliable)
 
   /**
-    * regular long-living transaction creation
+    * Regular long-living transaction creation. The method allows doing reliable long-living transactions with
+    * exactly-once semantics.
+    * The method is blocking.
     *
-    * @param policy
-    * @param partition
-    * @return
+    * @param policy the policy to use when open new transaction for the partition which already has opened transaction.
+    *               See [[NewTransactionProducerPolicy]] for details.
+    * @param partition if -1 specified (default) then the method uses writePolicy (round robin)
+    * @return new transaction object
     */
   def newTransaction(policy: ProducerPolicy = NewTransactionProducerPolicy.ErrorIfOpened, partition: Int = -1): ProducerTransaction = {
     if (isStop.get())
@@ -251,21 +260,24 @@ class Producer(var name: String,
     * @param partition Partition from which transaction will be retrieved
     * @return Transaction reference if it exist and is opened
     */
-  def getOpenedTransactionForPartition(partition: Int): Option[IProducerTransaction] = {
+  private[tstreams] def getOpenedTransactionForPartition(partition: Int): Option[IProducerTransaction] = {
     if (!(partition >= 0 && partition < stream.partitionsCount))
       throw new IllegalArgumentException(s"Producer $name - invalid partition")
     openTransactions.getTransactionOption(partition)
   }
 
   /**
-    * Checkpoint all opened transactions (not atomic). For atomic use CheckpointGroup.
+    * Checkpoint all opened transactions (atomic).
     */
-  def checkpoint(isSynchronous: Boolean = true): Unit =
-    openTransactions.forallKeysDo((k: Int, v: IProducerTransaction) => v.checkpoint(isSynchronous))
+  val firstCheckpoint = new AtomicBoolean(true)
+  def checkpoint() = {
+    if(firstCheckpoint.getAndSet(false)) cg.add(this)
+    cg.checkpoint()
+  }
 
 
   /**
-    * Cancel all opened transactions (not atomic). For atomic use CheckpointGroup.
+    * Cancel all opened transactions (not atomic, probably atomic is not a case for a cancel).
     */
   def cancel(): Unit =
     openTransactions.forallKeysDo((k: Int, v: IProducerTransaction) => v.cancel())
@@ -274,7 +286,7 @@ class Producer(var name: String,
   /**
     * Finalize all opened transactions (not atomic). For atomic use CheckpointGroup.
     */
-  def finalizeDataSend(): Unit = {
+  override private[tstreams] def finalizeDataSend(): Unit = {
     openTransactions.forallKeysDo((k: Int, v: IProducerTransaction) => v.finalizeDataSend())
   }
 
@@ -291,8 +303,9 @@ class Producer(var name: String,
     *
     * @return
     */
-  def generateNewTransactionIDLocal() =
+  private[tstreams] def generateNewTransactionIDLocal() = this.synchronized {
     producerOptions.transactionGenerator.getTransaction()
+  }
 
   /**
     * Method to implement for concrete producer PeerAgent method
@@ -322,9 +335,7 @@ class Producer(var name: String,
     if(isReliable)
       stream.client.putInstantTransactionSync(stream.name, partition, transactionID, data)
     else
-      stream.client.putInstantTransactionSync(stream.name, partition, transactionID, data)
-      //    stream.client.putInstantTransactionUnreliable(stream.name, partition, transactionID, data)
-      // todo: fixit
+      stream.client.putInstantTransactionUnreliable(stream.name, partition, transactionID, data)
 
     val msgInstant = TransactionState(
       transactionID = transactionID,
@@ -335,6 +346,9 @@ class Producer(var name: String,
       orderID = transactionOpenerService.getAndIncSequentialID(partition),
       count = data.size,
       isNotReliable = !isReliable)
+
+    if(Producer.logger.isDebugEnabled())
+      Producer.logger.debug(s"Transaction Update Sent: ${msgInstant}")
 
     subscriberNotifier.publish(msgInstant)
   }
@@ -348,6 +362,7 @@ class Producer(var name: String,
     if (isStop.getAndSet(true))
       throw new IllegalStateException(s"Producer ${this.name} is already stopped. Duplicate action.")
 
+    cg.stop()
     openTransactionClient.stop()
     // stop provide master features to public
     transactionOpenerService.stop()

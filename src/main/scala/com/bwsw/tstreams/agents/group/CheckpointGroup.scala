@@ -2,11 +2,10 @@ package com.bwsw.tstreams.agents.group
 
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
-import java.util.concurrent.locks.ReentrantLock
 
 import com.bwsw.tstreams.agents.consumer.RPCConsumerTransaction
 import com.bwsw.tstreams.agents.producer.RPCProducerTransaction
-import com.bwsw.tstreams.common.{FirstFailLockableTaskExecutor, GeneralOptions, LockUtil}
+import com.bwsw.tstreams.common.{FirstFailLockableTaskExecutor, GeneralOptions}
 import com.bwsw.tstreams.storage.StorageClient
 import com.bwsw.tstreamstransactionserver.rpc.TransactionStates
 import org.slf4j.LoggerFactory
@@ -28,8 +27,6 @@ class CheckpointGroup(val executors: Int = 1) {
     * Group of agents (producers/consumer)
     */
   private var agents = scala.collection.mutable.Map[String, GroupParticipant]()
-  private val lockTimeout = (CheckpointGroup.LOCK_TIMEOUT_SECONDS, TimeUnit.SECONDS)
-  private val lock = new ReentrantLock()
   private val executorPool = new FirstFailLockableTaskExecutor("CheckpointGroup-Workers", executors)
   private val isStopped = new AtomicBoolean(false)
 
@@ -38,26 +35,22 @@ class CheckpointGroup(val executors: Int = 1) {
     *
     * @param agent Agent ref
     */
-  def add(agent: GroupParticipant): Unit = {
-    LockUtil.withLockOrDieDo[Unit](lock, lockTimeout, Some(CheckpointGroup.logger), () => {
-      if (isStopped.get)
-        throw new IllegalStateException("Group is stopped. No longer operations are possible.")
-      if (agents.contains(agent.getAgentName)) {
-        throw new IllegalArgumentException(s"Agent with specified name ${agent.getAgentName} is already in the group. Names of added agents must be unique.")
-      }
-      agents += ((agent.getAgentName, agent))
-    })
+  def add(agent: GroupParticipant): Unit = this.synchronized {
+    if (isStopped.get)
+      throw new IllegalStateException("Group is stopped. No longer operations are possible.")
+    if (agents.contains(agent.getAgentName)) {
+      throw new IllegalArgumentException(s"Agent with specified name ${agent.getAgentName} is already in the group. Names of added agents must be unique.")
+    }
+    agents += ((agent.getAgentName, agent))
   }
 
   /**
     * clears group
     */
-  def clear(): Unit = {
-    LockUtil.withLockOrDieDo[Unit](lock, lockTimeout, Some(CheckpointGroup.logger), () => {
-      if (isStopped.get)
-        throw new IllegalStateException("Group is stopped. No longer operations are possible.")
-      agents.clear()
-    })
+  def clear(): Unit = this.synchronized {
+    if (isStopped.get)
+      throw new IllegalStateException("Group is stopped. No longer operations are possible.")
+    agents.clear()
   }
 
   /**
@@ -65,26 +58,22 @@ class CheckpointGroup(val executors: Int = 1) {
     *
     * @param name Agent name
     */
-  def remove(name: String): Unit = {
-    LockUtil.withLockOrDieDo[Unit](lock, lockTimeout, Some(CheckpointGroup.logger), () => {
-      if (isStopped.get)
-        throw new IllegalStateException("Group is stopped. No longer operations are possible.")
-      if (!agents.contains(name)) {
-        throw new IllegalArgumentException(s"Agent with specified name $name is not in the group.")
-      }
-      agents.remove(name)
-    })
+  def remove(name: String): Unit = this.synchronized {
+    if (isStopped.get)
+      throw new IllegalStateException("Group is stopped. No longer operations are possible.")
+    if (!agents.contains(name)) {
+      throw new IllegalArgumentException(s"Agent with specified name $name is not in the group.")
+    }
+    agents.remove(name)
   }
 
   /**
     * Checks if an agent with the name is already inside
     */
-  def exists(name: String): Boolean = {
-    LockUtil.withLockOrDieDo[Boolean](lock, lockTimeout, Some(CheckpointGroup.logger), () => {
-      if (isStopped.get)
-        throw new IllegalStateException("Group is stopped. No longer operations are possible.")
-      agents.contains(name)
-    })
+  def exists(name: String): Boolean = this.synchronized {
+    if (isStopped.get)
+      throw new IllegalStateException("Group is stopped. No longer operations are possible.")
+    agents.contains(name)
   }
 
   /**
@@ -111,43 +100,30 @@ class CheckpointGroup(val executors: Int = 1) {
   /**
     * Commit all agents state
     */
-  def checkpoint(): Unit = {
+  def checkpoint(): Unit = this.synchronized {
     if (isStopped.get)
       throw new IllegalStateException("Group is stopped. No longer operations are possible.")
 
-    LockUtil.lockOrDie(lock, lockTimeout, Some(CheckpointGroup.logger))
-
-    agents.foreach { case (name, agent) =>
-      if (agent.getThreadLock() != null)
-        LockUtil.lockOrDie(agent.getThreadLock(), lockTimeout, Some(CheckpointGroup.logger))
-    }
-
+    CheckpointGroup.logger.debug("Complete send data to storage server for all participants")
     agents.foreach { case (name, agent) => if (agent.isInstanceOf[SendingAgent]) agent.asInstanceOf[SendingAgent].finalizeDataSend() }
 
-    try {
+    CheckpointGroup.logger.debug("Gather checkpoint information from participants")
+    // receive from all agents their checkpoint information
+    val checkpointStateInfo: List[CheckpointInfo] = agents.map { case (name, agent) =>
+      agent.getCheckpointInfoAndClear()
+    }.reduceRight((l1, l2) => l1 ++ l2)
 
-      // receive from all agents their checkpoint information
-      val checkpointStateInfo: List[CheckpointInfo] = agents.map { case (name, agent) =>
-        agent.getCheckpointInfoAndClear()
-      }.reduceRight((l1, l2) => l1 ++ l2)
+    CheckpointGroup.logger.debug(s"CheckpointGroup Info ${checkpointStateInfo}")
 
-      //assume all agents use the same metadata entity
-      doGroupCheckpoint(agents.head._2.getStorageClient, checkpointStateInfo)
+    CheckpointGroup.logger.debug("Do group checkpoint")
+    //assume all agents use the same metadata entity
+    doGroupCheckpoint(agents.head._2.getStorageClient, checkpointStateInfo)
 
-      // do publish post events for all producers
-      publishCheckpointEventForAllProducers(checkpointStateInfo)
+    CheckpointGroup.logger.debug("Do publish notifications")
+    // do publish post events for all producers
+    publishCheckpointEventForAllProducers(checkpointStateInfo)
 
-    }
-    finally {
-      // unlock all agents
-      agents.foreach { case (name, agent) =>
-        if (agent.getThreadLock() != null)
-          agent.getThreadLock().unlock()
-      }
-
-      lock.unlock()
-    }
-
+    CheckpointGroup.logger.debug("End checkpoint")
   }
 
 
@@ -162,11 +138,11 @@ class CheckpointGroup(val executors: Int = 1) {
   /**
     * Stop group when it's no longer required
     */
-  def stop(): Unit = {
+  def stop(): Unit = this.synchronized {
+    clear()
     if (isStopped.getAndSet(true))
       throw new IllegalStateException("Group is stopped. No longer operations are possible.")
     executorPool.shutdownOrDie(CheckpointGroup.SHUTDOWN_WAIT_MAX_SECONDS, TimeUnit.SECONDS)
-    clear()
   }
 
 }

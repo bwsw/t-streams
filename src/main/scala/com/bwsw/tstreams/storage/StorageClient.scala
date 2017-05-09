@@ -13,8 +13,7 @@ import org.slf4j.LoggerFactory
 
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.duration._
-import scala.concurrent.{Await, ExecutionContext, Future}
-import scala.util.{Failure, Success}
+import scala.concurrent.{Await, Future}
 
 
 object StorageClient {
@@ -160,17 +159,6 @@ class StorageClient(clientOptions: ConnectionOptions, authOptions: AuthOptions, 
     Await.result(f, timeout)
   }
 
-
-  def putTransaction[T](transaction: ProducerTransaction, timeout: Duration = StorageClient.maxAwaiTimeout)(onComplete: ProducerTransaction => T) = {
-    val f = client.putProducerState(transaction)
-    import ExecutionContext.Implicits.global
-
-    f onComplete {
-      case Success(res) => onComplete(transaction)
-      case Failure(reason) => throw reason
-    }
-  }
-
   def putInstantTransactionSync(stream: String, partition: Int, transactionID: Long, data: Seq[Array[Byte]],
                                 timeout: Duration = StorageClient.maxAwaiTimeout): Unit = {
     val f = client.putSimpleTransactionAndData(stream, partition, transactionID, data)
@@ -179,16 +167,6 @@ class StorageClient(clientOptions: ConnectionOptions, authOptions: AuthOptions, 
 
   def putInstantTransactionUnreliable(stream: String, partition: Int, transactionID: Long, data: Seq[Array[Byte]]): Unit = {
     client.putSimpleTransactionAndDataWithoutResponse(stream, partition, transactionID, data)
-  }
-
-  def putTransactionWithData[T](transaction: ProducerTransaction, data: ListBuffer[Array[Byte]], lastOffset: Int,
-                                timeout: Duration = StorageClient.maxAwaiTimeout)(onComplete: ProducerTransaction => T) = {
-    val f = client.putProducerStateWithData(transaction, data, lastOffset)
-    import ExecutionContext.Implicits.global
-    f onComplete {
-      case Success(res) => onComplete(transaction)
-      case Failure(reason) => throw reason
-    }
   }
 
   def getTransaction(streamName: String, partition: Integer, transactionID: Long,
