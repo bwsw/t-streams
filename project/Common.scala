@@ -5,7 +5,7 @@ import sbtassembly.PathList
 import sbtprotoc.ProtocPlugin.autoImport.PB
 import Publish._
 
-object Common extends AutoPlugin {
+object Common {
 
   val assemblyStrategySettings = Seq(assemblyMergeStrategy in assembly := {
     case PathList("org", "slf4j", "impl", xs@_*) => MergeStrategy.discard
@@ -19,7 +19,7 @@ object Common extends AutoPlugin {
       oldStrategy(x)
   })
 
-  override lazy val projectSettings =
+  val projectSettings =
     Dependencies.Common ++
     Dependencies.`BW-SW` ++ Seq(
       scalacOptions ++= Seq(
