@@ -286,8 +286,9 @@ class Producer(var name: String,
     *
     * @return
     */
-  private[tstreams] def generateNewTransactionIDLocal() =
+  private[tstreams] def generateNewTransactionIDLocal() = this.synchronized {
     producerOptions.transactionGenerator.getTransaction()
+  }
 
   /**
     * Method to implement for concrete producer PeerAgent method
@@ -328,6 +329,9 @@ class Producer(var name: String,
       orderID = transactionOpenerService.getAndIncSequentialID(partition),
       count = data.size,
       isNotReliable = !isReliable)
+
+    if(Producer.logger.isDebugEnabled())
+      Producer.logger.debug(s"Transaction Update Sent: ${msgInstant}")
 
     subscriberNotifier.publish(msgInstant)
   }

@@ -100,7 +100,7 @@ class TransactionBuffer(queue: QueueBuilder.QueueType, transactionQueueMaxLength
 
         case (_, _) =>
           Subscriber.logger.warn(s"Transaction update $update switched from ${ts.status} to ${update.status} which is incorrect. " +
-            "It might be that we cleared StateList because it's size has became greater than ${subscriberOptions.transactionQueueMaxLengthThreshold}. Try to find clearing notification before.")
+            s"It might be that we cleared StateList because it's size has became greater than ${transactionQueueMaxLengthThreshold}. Try to find clearing notification before.")
       }
 
     } else {
