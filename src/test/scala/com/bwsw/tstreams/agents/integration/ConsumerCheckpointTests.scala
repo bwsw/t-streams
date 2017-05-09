@@ -3,7 +3,7 @@ package com.bwsw.tstreams.agents.integration
 import java.util.concurrent.CountDownLatch
 
 import com.bwsw.tstreams.agents.consumer.Offset.Oldest
-import com.bwsw.tstreams.agents.producer.NewTransactionProducerPolicy
+import com.bwsw.tstreams.agents.producer.NewProducerTransactionPolicy
 import com.bwsw.tstreams.env.ConfigurationOptions
 import com.bwsw.tstreams.testutils.{TestStorageServer, TestUtils}
 import com.bwsw.tstreamstransactionserver.rpc.TransactionStates
@@ -55,11 +55,11 @@ class ConsumerCheckpointTests extends FlatSpec with Matchers with BeforeAndAfter
       offset = Oldest,
       useLastOffset = true)
 
-    val t1 = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened, 0)
+    val t1 = producer.newTransaction(NewProducerTransactionPolicy.ErrorIfOpened, 0)
     t1.send("data".getBytes())
     producer.checkpoint()
 
-    val t2 = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened, 0)
+    val t2 = producer.newTransaction(NewProducerTransactionPolicy.ErrorIfOpened, 0)
     val l2 = new CountDownLatch(1)
     srv.notifyProducerTransactionCompleted(t => t.transactionID == t2.getTransactionID() && t.state == TransactionStates.Checkpointed, l2.countDown())
     t2.send("data".getBytes())

@@ -5,7 +5,7 @@ import java.util.concurrent.{CountDownLatch, TimeUnit}
 import com.bwsw.tstreams.agents.consumer.Offset.Newest
 import com.bwsw.tstreams.agents.consumer.{ConsumerTransaction, TransactionOperator}
 import com.bwsw.tstreams.agents.group.CheckpointGroup
-import com.bwsw.tstreams.agents.producer.NewTransactionProducerPolicy
+import com.bwsw.tstreams.agents.producer.NewProducerTransactionPolicy
 import com.bwsw.tstreams.env.ConfigurationOptions
 import com.bwsw.tstreams.testutils.{TestStorageServer, TestUtils}
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
@@ -60,10 +60,10 @@ class CheckpointGroupAndSubscriberEventsTests extends FlatSpec with Matchers wit
         }
       })
     subscriber.start()
-    val txn1 = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened, 0)
+    val txn1 = producer.newTransaction(NewProducerTransactionPolicy.ErrorIfOpened, 0)
     txn1.send("test".getBytes())
     group.checkpoint()
-    val txn2 = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened, 0)
+    val txn2 = producer.newTransaction(NewProducerTransactionPolicy.ErrorIfOpened, 0)
     txn2.send("test".getBytes())
     group.checkpoint()
     l.await(5, TimeUnit.SECONDS) shouldBe true

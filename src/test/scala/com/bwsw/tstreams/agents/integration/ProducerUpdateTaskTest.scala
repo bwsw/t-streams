@@ -3,7 +3,7 @@ package com.bwsw.tstreams.agents.integration
 import java.util.concurrent.CountDownLatch
 
 import com.bwsw.tstreams.agents.consumer.Offset.Oldest
-import com.bwsw.tstreams.agents.producer.NewTransactionProducerPolicy
+import com.bwsw.tstreams.agents.producer.NewProducerTransactionPolicy
 import com.bwsw.tstreams.common.ResettableCountDownLatch
 import com.bwsw.tstreams.env.ConfigurationOptions
 import com.bwsw.tstreams.testutils.{TestStorageServer, TestUtils}
@@ -56,7 +56,7 @@ class ProducerUpdateTaskTest extends FlatSpec with Matchers with BeforeAndAfterA
       useLastOffset = true)
     consumer.start()
 
-    val t = producer.newTransaction(policy = NewTransactionProducerPolicy.CheckpointIfOpened, 0)
+    val t = producer.newTransaction(policy = NewProducerTransactionPolicy.CheckpointIfOpened, 0)
     val transactionID = t.getTransactionID()
     srv.notifyProducerTransactionCompleted(t => t.transactionID == transactionID && t.state == TransactionStates.Checkpointed, l.countDown())
     t.send("data".getBytes())

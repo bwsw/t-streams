@@ -8,7 +8,7 @@ import java.util.concurrent.{CountDownLatch, TimeUnit}
 
 import com.bwsw.tstreams.agents.consumer.Offset.Newest
 import com.bwsw.tstreams.agents.consumer.{ConsumerTransaction, TransactionOperator}
-import com.bwsw.tstreams.agents.producer.NewTransactionProducerPolicy
+import com.bwsw.tstreams.agents.producer.NewProducerTransactionPolicy
 import com.bwsw.tstreams.env.ConfigurationOptions
 import com.bwsw.tstreams.testutils.{TestStorageServer, TestUtils}
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
@@ -70,7 +70,7 @@ class SubscriberWithTwoProducersFirstCancelSecondCheckpointTest extends FlatSpec
 
 
     val t1 = new Thread(() => {
-      val transaction = producer1.newTransaction(policy = NewTransactionProducerPolicy.CheckpointIfOpened)
+      val transaction = producer1.newTransaction(policy = NewProducerTransactionPolicy.CheckpointIfOpened)
       lp2.countDown()
       bp1.append(transaction.getTransactionID())
       transaction.send("test")
@@ -79,7 +79,7 @@ class SubscriberWithTwoProducersFirstCancelSecondCheckpointTest extends FlatSpec
 
     val t2 = new Thread(() => {
       lp2.await()
-      val transaction = producer2.newTransaction(policy = NewTransactionProducerPolicy.CheckpointIfOpened)
+      val transaction = producer2.newTransaction(policy = NewProducerTransactionPolicy.CheckpointIfOpened)
       bp2.append(transaction.getTransactionID())
       transaction.send("test")
       transaction.checkpoint()

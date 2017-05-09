@@ -2,9 +2,9 @@ package com.bwsw.tstreams.agents.integration
 
 import java.util.concurrent.{CountDownLatch, TimeUnit}
 
-import com.bwsw.tstreams.agents.consumer.Offset.{Newest, Oldest}
+import com.bwsw.tstreams.agents.consumer.Offset.Newest
 import com.bwsw.tstreams.agents.consumer.{ConsumerTransaction, TransactionOperator}
-import com.bwsw.tstreams.agents.producer.NewTransactionProducerPolicy
+import com.bwsw.tstreams.agents.producer.NewProducerTransactionPolicy
 import com.bwsw.tstreams.env.ConfigurationOptions
 import com.bwsw.tstreams.testutils.{TestStorageServer, TestUtils}
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
@@ -88,7 +88,7 @@ class SubscriberBasicPubSubTests extends FlatSpec with Matchers with BeforeAndAf
       })
     s.start()
     for (it <- 0 until TOTAL) {
-      val transaction = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
+      val transaction = producer.newTransaction(NewProducerTransactionPolicy.ErrorIfOpened)
       transaction.send("test")
       transaction.checkpoint()
     }
@@ -119,7 +119,7 @@ class SubscriberBasicPubSubTests extends FlatSpec with Matchers with BeforeAndAf
       })
     s.start()
     for (it <- 0 until TOTAL) {
-      val transaction = producer1.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
+      val transaction = producer1.newTransaction(NewProducerTransactionPolicy.ErrorIfOpened)
       transaction.send("test")
       transaction.checkpoint()
     }
@@ -129,7 +129,7 @@ class SubscriberBasicPubSubTests extends FlatSpec with Matchers with BeforeAndAf
       partitions = Set(0, 1, 2))
 
     for (it <- 0 until TOTAL) {
-      val transaction = producer2.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
+      val transaction = producer2.newTransaction(NewProducerTransactionPolicy.ErrorIfOpened)
       transaction.send("test")
       transaction.checkpoint()
     }

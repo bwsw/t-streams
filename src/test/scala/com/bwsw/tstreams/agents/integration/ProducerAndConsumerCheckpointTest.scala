@@ -4,7 +4,7 @@ import java.util.concurrent.CountDownLatch
 
 import com.bwsw.tstreams.agents.consumer.ConsumerTransaction
 import com.bwsw.tstreams.agents.consumer.Offset.Oldest
-import com.bwsw.tstreams.agents.producer.NewTransactionProducerPolicy
+import com.bwsw.tstreams.agents.producer.NewProducerTransactionPolicy
 import com.bwsw.tstreams.common.TimeTracker
 import com.bwsw.tstreams.env.ConfigurationOptions
 import com.bwsw.tstreams.testutils._
@@ -62,7 +62,7 @@ class ProducerAndConsumerCheckpointTest extends FlatSpec with Matchers with Befo
     (0 until TRANSACTIONS_COUNT) foreach { _ =>
       TimeTracker.update_start("Overall")
       TimeTracker.update_start("newTransaction")
-      val transaction = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
+      val transaction = producer.newTransaction(NewProducerTransactionPolicy.ErrorIfOpened)
 
       counter += 1
       if (counter == TRANSACTIONS_COUNT)

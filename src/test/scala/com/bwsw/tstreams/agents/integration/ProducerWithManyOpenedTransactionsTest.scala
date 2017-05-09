@@ -51,9 +51,9 @@ class ProducerWithManyOpenedTransactionsTest extends FlatSpec with Matchers with
     val data3 = (for (i <- 0 until 10) yield randomKeyspace).sorted
 
 
-    val transaction1: ProducerTransaction = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
-    val transaction2: ProducerTransaction = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
-    val transaction3: ProducerTransaction = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
+    val transaction1: ProducerTransaction = producer.newTransaction(NewProducerTransactionPolicy.ErrorIfOpened)
+    val transaction2: ProducerTransaction = producer.newTransaction(NewProducerTransactionPolicy.ErrorIfOpened)
+    val transaction3: ProducerTransaction = producer.newTransaction(NewProducerTransactionPolicy.ErrorIfOpened)
 
     val l = new CountDownLatch(1)
     srv.notifyProducerTransactionCompleted(t => t.transactionID == transaction1.getTransactionID() && t.state == TransactionStates.Checkpointed, l.countDown())
@@ -76,12 +76,12 @@ class ProducerWithManyOpenedTransactionsTest extends FlatSpec with Matchers with
   }
 
   "BasicProducer.newTransaction()" should "return error if try to open more than 3 transactions for 3 partitions if ProducerPolicies.errorIfOpened" in {
-    producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
-    producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
-    producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
+    producer.newTransaction(NewProducerTransactionPolicy.ErrorIfOpened)
+    producer.newTransaction(NewProducerTransactionPolicy.ErrorIfOpened)
+    producer.newTransaction(NewProducerTransactionPolicy.ErrorIfOpened)
 
     val r: Boolean = try {
-      producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
+      producer.newTransaction(NewProducerTransactionPolicy.ErrorIfOpened)
       false
     } catch {
       case e: IllegalStateException => true
@@ -91,12 +91,12 @@ class ProducerWithManyOpenedTransactionsTest extends FlatSpec with Matchers with
   }
 
   "BasicProducer.newTransaction()" should "return ok if try to open more than 3 transactions for 3 partitions if ProducerPolicies.checkpointIfOpened" in {
-    producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
-    producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
-    producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
+    producer.newTransaction(NewProducerTransactionPolicy.ErrorIfOpened)
+    producer.newTransaction(NewProducerTransactionPolicy.ErrorIfOpened)
+    producer.newTransaction(NewProducerTransactionPolicy.ErrorIfOpened)
 
     val r: Boolean = try {
-      producer.newTransaction(NewTransactionProducerPolicy.CheckpointIfOpened)
+      producer.newTransaction(NewProducerTransactionPolicy.CheckpointIfOpened)
       true
     } catch {
       case e: IllegalStateException => false
@@ -106,12 +106,12 @@ class ProducerWithManyOpenedTransactionsTest extends FlatSpec with Matchers with
   }
 
   "BasicProducer.newTransaction()" should "return ok if try to open more than 3 transactions for 3 partitions if ProducerPolicies.cancelIfOpened" in {
-    producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
-    producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
-    producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
+    producer.newTransaction(NewProducerTransactionPolicy.ErrorIfOpened)
+    producer.newTransaction(NewProducerTransactionPolicy.ErrorIfOpened)
+    producer.newTransaction(NewProducerTransactionPolicy.ErrorIfOpened)
 
     val r: Boolean = try {
-      producer.newTransaction(NewTransactionProducerPolicy.CancelIfOpened)
+      producer.newTransaction(NewProducerTransactionPolicy.CancelIfOpened)
       true
     } catch {
       case e: IllegalStateException => false

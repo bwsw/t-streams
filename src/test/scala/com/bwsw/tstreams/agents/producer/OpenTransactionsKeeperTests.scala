@@ -55,12 +55,12 @@ class OpenTransactionsKeeperTests extends FlatSpec with Matchers {
     val keeper = new OpenTransactionsKeeper()
     val t = new TransactionStub
     keeper.put(0, t)
-    keeper.handlePreviousOpenTransaction(0, NewTransactionProducerPolicy.CheckpointIfOpened)()
+    keeper.handlePreviousOpenTransaction(0, NewProducerTransactionPolicy.CheckpointIfOpened)()
     t.lastMethod shouldBe "checkpoint"
-    keeper.handlePreviousOpenTransaction(0, NewTransactionProducerPolicy.CancelIfOpened)()
+    keeper.handlePreviousOpenTransaction(0, NewProducerTransactionPolicy.CancelIfOpened)()
     t.lastMethod shouldBe "cancel"
     (try {
-      keeper.handlePreviousOpenTransaction(0, NewTransactionProducerPolicy.ErrorIfOpened)()
+      keeper.handlePreviousOpenTransaction(0, NewProducerTransactionPolicy.ErrorIfOpened)()
       false
     } catch {
       case e: IllegalStateException =>

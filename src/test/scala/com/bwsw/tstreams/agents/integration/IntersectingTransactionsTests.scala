@@ -4,7 +4,7 @@ import java.util.concurrent.CountDownLatch
 
 import com.bwsw.tstreams.agents.consumer.Offset.Newest
 import com.bwsw.tstreams.agents.consumer.{ConsumerTransaction, TransactionOperator}
-import com.bwsw.tstreams.agents.producer.NewTransactionProducerPolicy
+import com.bwsw.tstreams.agents.producer.NewProducerTransactionPolicy
 import com.bwsw.tstreams.env.ConfigurationOptions
 import com.bwsw.tstreams.testutils.{TestStorageServer, TestUtils}
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
@@ -63,7 +63,7 @@ class IntersectingTransactionsTests extends FlatSpec with Matchers with BeforeAn
       })
 
     val t1 = new Thread(() => {
-      val t = producer1.newTransaction(policy = NewTransactionProducerPolicy.CheckpointIfOpened)
+      val t = producer1.newTransaction(policy = NewProducerTransactionPolicy.CheckpointIfOpened)
       bp.append(t.getTransactionID())
       lp2.countDown()
       lp1.await()
@@ -73,7 +73,7 @@ class IntersectingTransactionsTests extends FlatSpec with Matchers with BeforeAn
 
     val t2 = new Thread(() => {
       lp2.await()
-      val t = producer2.newTransaction(policy = NewTransactionProducerPolicy.CheckpointIfOpened)
+      val t = producer2.newTransaction(policy = NewProducerTransactionPolicy.CheckpointIfOpened)
       bp.append(t.getTransactionID())
       t.send("test".getBytes())
       t.checkpoint()
