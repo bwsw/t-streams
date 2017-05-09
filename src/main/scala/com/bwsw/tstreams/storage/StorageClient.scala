@@ -28,7 +28,6 @@ object StorageClient {
   * @param zookeeperOptions
   */
 class StorageClient(clientOptions: ConnectionOptions, authOptions: AuthOptions, zookeeperOptions: ZookeeperOptions) {
-  private val map = scala.collection.mutable.Map[String, String]()
   private val clientBuilder = new ClientBuilder()
 
   private val client = clientBuilder.withConnectionOptions(clientOptions).withAuthOptions(authOptions).withZookeeperOptions(zookeeperOptions).build()
