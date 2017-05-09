@@ -12,7 +12,7 @@ import scala.collection.mutable.ListBuffer
   * Created by Ivan Kudryavtsev on 28.08.16.
   */
 class OpenTransactionsKeeper {
-  private val openTransactionsMap = new ConcurrentHashMap[Int, IProducerTransaction]()
+  private val openTransactionsMap = new ConcurrentHashMap[Int, (Long, IProducerTransaction)]()
 
   /**
     * Allows to do something with all not closed transactions.
@@ -26,9 +26,9 @@ class OpenTransactionsKeeper {
     val res = ListBuffer[RV]()
     for (k <- keys) {
       val v = openTransactionsMap.getOrDefault(k, null)
-      if (v != null && !v.isClosed) {
+      if (v != null) {
         try {
-          res.append(f(k, v))
+          res.append(f(k, v._2))
         } catch {
           case e: IllegalStateException =>
           // since forall is not atomic specific transactions can be switched to another state.
@@ -55,7 +55,7 @@ class OpenTransactionsKeeper {
     */
   def getTransactionOption(partition: Int) = {
     val transactionOpt = getTransactionOptionNaive(partition)
-    transactionOpt.flatMap(transaction => if (!transaction.isClosed()) Some(transaction) else None)
+    transactionOpt.flatMap(transaction => if (!transaction._2.isClosed()) Some(transaction._2) else None)
   }
 
   /**
@@ -96,8 +96,20 @@ class OpenTransactionsKeeper {
     * @param transaction
     * @return
     */
-  def put(partition: Int, transaction: IProducerTransaction) = {
-    openTransactionsMap.put(partition, transaction)
+  def put(partition: Int, transaction: IProducerTransaction) = openTransactionsMap.synchronized {
+    if (openTransactionsMap.containsKey(partition)) {
+      val lastTransactionID = openTransactionsMap.get(partition)._1
+      val nextTransactionID = transaction.getTransactionID()
+      if(lastTransactionID >= nextTransactionID)
+        throw new MasterInconsistencyException(s"Inconsistent master found. It returned ID ${nextTransactionID} " +
+          s"which is less or equal then ${lastTransactionID}. It means overall time synchronization inconsistency. " +
+          "Unable to continue. Check all T-streams nodes have NTPD enabled and properly configured.")
+    }
+    openTransactionsMap.put(partition, (0, transaction))
+  }
+
+  def remove(partition: Int, transaction: IProducerTransaction) = openTransactionsMap.synchronized {
+    openTransactionsMap.remove(partition)
   }
 
   /**

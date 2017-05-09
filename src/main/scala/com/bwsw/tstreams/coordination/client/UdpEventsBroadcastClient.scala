@@ -57,6 +57,10 @@ class UdpEventsBroadcastClient(curatorClient: CuratorFramework, partitions: Set[
   private def broadcast(set: Set[String], msg: TransactionState): Unit = {
     if(!set.isEmpty) {
       val bytes = msg.toByteArray
+
+      if (UdpEventsBroadcastClient.logger.isDebugEnabled())
+        UdpEventsBroadcastClient.logger.debug(s"Producer Broadcast Set Is: ${set}")
+
       set.foreach(address => {
         val splits = address.split(":")
         val host = InetAddress.getByName(splits(0))

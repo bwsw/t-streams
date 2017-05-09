@@ -20,6 +20,10 @@ class StateUpdateServer(host: String, port: Int, threads: Int, transactionsBuffe
 
   override def handleRequest(client: SocketAddress, reqAny: AnyRef): Unit = {
     val req = reqAny.asInstanceOf[TransactionState]
+
+    if(Subscriber.logger.isDebugEnabled())
+      Subscriber.logger.debug(s"Transaction State Update: ${req}")
+
     if (partitionCache.contains(req.partition))
       partitionCache(req.partition).update(req)
     else

@@ -30,7 +30,4 @@ object GlobalHooks {
 
   def afterCommitFailure = "AfterCommitFailure"
 
-  def transactionUpdateTaskBegin = "TransactionUpdateTaskBegin"
-
-  def transactionUpdateTaskEnd = "TransactionUpdateTaskEnd"
 }

@@ -40,6 +40,10 @@ class OpenTransactionsKeeperTests extends FlatSpec with Matchers {
     override def send(obj: Array[Byte]): Unit = {}
   }
 
+  class TransactionStubBadTransactionID extends TransactionStub {
+    override def getTransactionID(): Long = 0
+  }
+
   it should "allow add and get transactions to it" in {
     val keeper = new OpenTransactionsKeeper()
     keeper.put(0, new TransactionStub)
@@ -71,6 +75,14 @@ class OpenTransactionsKeeperTests extends FlatSpec with Matchers {
     keeper.put(2, new TransactionStub)
     keeper.forallKeysDo[Unit]((p: Int, t: IProducerTransaction) => t.updateTransactionKeepAliveState())
     ctr shouldBe 3
+  }
+
+  it should "correctly raise an exception if master returned a transaction with ID which is less than the last one" in {
+    val keeper = new OpenTransactionsKeeper()
+    keeper.put(0, new TransactionStub)
+    intercept[MasterInconsistencyException] {
+      keeper.put(0, new TransactionStubBadTransactionID)
+    }
   }
 
 }

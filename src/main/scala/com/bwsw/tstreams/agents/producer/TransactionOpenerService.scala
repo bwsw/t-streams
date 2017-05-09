@@ -91,6 +91,10 @@ class TransactionOpenerService(curatorClient: CuratorFramework,
       val newTransactionId = isMaster match {
         case true =>
           val newId = agent.getProducer.generateNewTransactionIDLocal()
+
+          if(Producer.logger.isDebugEnabled())
+            Producer.logger.debug(s"New Transaction ID: $newId")
+
           (req.isInstant, req.isReliable) match {
             case (false, _) => agent.getProducer().openTransactionLocal(newId, req.partition)
             case (true, _) => agent.getProducer().openInstantTransactionLocal(req.partition, newId, req.data.map(_.toByteArray), req.isReliable)
@@ -105,9 +109,6 @@ class TransactionOpenerService(curatorClient: CuratorFramework,
         .withTransaction(newTransactionId)
         .toByteArray
       socket.send(new DatagramPacket(response, response.size, client))
-
-      if(isMaster && req.isInstant && !req.isReliable)
-        agent.getProducer().openInstantTransactionLocal(req.partition, newTransactionId, req.data.map(_.toByteArray), false)
     }
   }
 
@@ -184,7 +185,7 @@ class TransactionOpenerService(curatorClient: CuratorFramework,
     * @param partition Transaction partition
     * @return TransactionID
     */
-  def generateNewTransaction(partition: Int, isInstant: Boolean = false, isReliable: Boolean = true, data: Seq[Array[Byte]] = Seq()): Long = this.synchronized {
+  def generateNewTransaction(partition: Int, isInstant: Boolean = false, isReliable: Boolean = true, data: Seq[Array[Byte]] = Seq()): Long = {
     val master = getPartitionMasterInetAddressLocal(partition)._1
     if (TransactionOpenerService.logger.isDebugEnabled) {
       TransactionOpenerService.logger.debug(s"[GET TRANSACTION] Start retrieve transaction for agent with address: {$myInetAddress}, stream: {$streamName}, partition: {$partition} from [MASTER: {$master}].")
