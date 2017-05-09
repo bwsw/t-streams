@@ -182,12 +182,19 @@ class Producer(var name: String,
   }
 
   /**
-    * instant transaction send out (kafka-like)
+    * Instant transaction send out (kafka-like)
+    * The method implements "at-least-once", which means that some packets might be sent more than once.
+    * If you want your data in storage for sure, then don't use with isReliable == false.
+    * Overall package size must not exceed UDP maximum payload size, which is specified in [[com.bwsw.tstreams.common.UdpProcessor]]
+    * in BUFFER_SIZE, which is 508 bytes by default but may be increased if your network supports it (ideally may be used with jumbo
+    * frames enabled).
+    * The method is blocking.
     *
-    * @param partition
+    * @param partition partition to write transaction and data
     * @param data
-    * @param isReliable
-    * @return
+    * @param isReliable either master waits for storage server reply or not
+    *                   (if is not reliable then it leads to at-least-once with possible losses)
+    * @return transaction ID
     */
   def instantTransaction(partition: Int, data: Seq[Array[Byte]], isReliable: Boolean): Long = {
     if (!producerOptions.writePolicy.getUsedPartitions().contains(partition))
@@ -197,15 +204,25 @@ class Producer(var name: String,
       isInstant = true, isReliable = isReliable, data = data)
   }
 
+  /**
+    * Wrapper method when the partition is automatically selected with writePolicy (round robin).
+    * The method is blocking.
+    * @param data
+    * @param isReliable
+    * @return
+    */
   def instantTransaction(data: Seq[Array[Byte]], isReliable: Boolean): Long =
     instantTransaction(producerOptions.writePolicy.getNextPartition, data, isReliable)
 
   /**
-    * regular long-living transaction creation
+    * Regular long-living transaction creation. The method allows doing reliable long-living transactions with
+    * exactly-once semantics.
+    * The method is blocking.
     *
-    * @param policy
-    * @param partition
-    * @return
+    * @param policy the policy to use when open new transaction for the partition which already has opened transaction.
+    *               See [[NewTransactionProducerPolicy]] for details.
+    * @param partition if -1 specified (default) then the method uses writePolicy (round robin)
+    * @return new transaction object
     */
   def newTransaction(policy: ProducerPolicy = NewTransactionProducerPolicy.ErrorIfOpened, partition: Int = -1): ProducerTransaction = {
     if (isStop.get())

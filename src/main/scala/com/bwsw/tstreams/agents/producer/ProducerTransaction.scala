@@ -272,16 +272,12 @@ class ProducerTransaction(partition: Int,
     // atomically check state and launch update process
     if(isClosed()) return
 
-    GlobalHooks.invoke(GlobalHooks.transactionUpdateTaskBegin)
-
     if (ProducerTransaction.logger.isDebugEnabled) {
       ProducerTransaction.logger.debug("Update event for Transaction {}, partition: {}", transactionID, partition)
     }
 
     val transactionRecord = new RPCProducerTransaction(producer.stream.name, partition, transactionID, TransactionStates.Updated, -1, producer.producerOptions.transactionTtlMs)
     producer.stream.client.putTransactionSync(transactionRecord)
-
-    GlobalHooks.invoke(GlobalHooks.transactionUpdateTaskEnd)
 
     producer.notifyService.submit(s"NotifyTask-Part[${partition}]-Txn[${transactionID}]", () => {
       producer.publish(TransactionState(
