@@ -4,7 +4,7 @@ import java.util.concurrent.{CountDownLatch, TimeUnit}
 
 import com.bwsw.tstreams.agents.consumer.Offset.Newest
 import com.bwsw.tstreams.agents.consumer.{ConsumerTransaction, TransactionOperator}
-import com.bwsw.tstreams.agents.producer.NewTransactionProducerPolicy
+import com.bwsw.tstreams.agents.producer.NewProducerTransactionPolicy
 import com.bwsw.tstreams.env.ConfigurationOptions
 import com.bwsw.tstreams.testutils.{TestStorageServer, TestUtils}
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
@@ -77,7 +77,7 @@ class SubscriberWithManyProcessingEnginesThreadsTest extends FlatSpec with Match
 
       (0 until TOTAL_TRANSACTIONS).foreach(
         i => {
-          val t = producer.newTransaction(policy = NewTransactionProducerPolicy.CheckpointIfOpened) // create new transaction
+          val t = producer.newTransaction(policy = NewProducerTransactionPolicy.CheckpointIfOpened) // create new transaction
           (0 until TOTAL_ITEMS).foreach(j => {
             val v = Random.nextInt()
             t.send(s"$v")

@@ -4,7 +4,7 @@ import java.util.concurrent.{CountDownLatch, TimeUnit}
 
 import com.bwsw.tstreams.agents.consumer.Offset.Oldest
 import com.bwsw.tstreams.agents.consumer.{ConsumerTransaction, TransactionOperator}
-import com.bwsw.tstreams.agents.producer.NewTransactionProducerPolicy
+import com.bwsw.tstreams.agents.producer.NewProducerTransactionPolicy
 import com.bwsw.tstreams.env.ConfigurationOptions
 import com.bwsw.tstreams.testutils.{TestStorageServer, TestUtils}
 import com.bwsw.tstreamstransactionserver.rpc.TransactionStates
@@ -109,7 +109,7 @@ class SubscriberBasicFunctionsTests extends FlatSpec with Matchers with BeforeAn
     var id: Long = 0
     val ps = mutable.ListBuffer[Long]()
     for (it <- 0 until TOTAL) {
-      val transaction = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
+      val transaction = producer.newTransaction(NewProducerTransactionPolicy.ErrorIfOpened)
       transaction.send("test")
       transaction.checkpoint()
       id = transaction.getTransactionID()

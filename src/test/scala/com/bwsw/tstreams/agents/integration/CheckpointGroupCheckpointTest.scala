@@ -4,7 +4,7 @@ import java.util.concurrent.CountDownLatch
 
 import com.bwsw.tstreams.agents.consumer.Offset.Oldest
 import com.bwsw.tstreams.agents.group.CheckpointGroup
-import com.bwsw.tstreams.agents.producer.NewTransactionProducerPolicy
+import com.bwsw.tstreams.agents.producer.NewProducerTransactionPolicy
 import com.bwsw.tstreams.env.ConfigurationOptions
 import com.bwsw.tstreams.testutils._
 import com.bwsw.tstreamstransactionserver.rpc.TransactionStates
@@ -60,7 +60,7 @@ class CheckpointGroupCheckpointTest extends FlatSpec with Matchers with BeforeAn
     val l1 = new CountDownLatch(1)
     val l2 = new CountDownLatch(1)
 
-    val transaction1 = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
+    val transaction1 = producer.newTransaction(NewProducerTransactionPolicy.ErrorIfOpened)
 
     srv.notifyProducerTransactionCompleted(t =>
       transaction1.getTransactionID() == t.transactionID && t.state == TransactionStates.Checkpointed, l1.countDown())
@@ -75,7 +75,7 @@ class CheckpointGroupCheckpointTest extends FlatSpec with Matchers with BeforeAn
     consumer.getTransaction(0).get
 
     //open transaction without close
-    val transaction2 = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened, 1)
+    val transaction2 = producer.newTransaction(NewProducerTransactionPolicy.ErrorIfOpened, 1)
 
     srv.notifyProducerTransactionCompleted(t =>
       transaction2.getTransactionID() == t.transactionID && t.state == TransactionStates.Checkpointed, l2.countDown())

@@ -2,7 +2,7 @@ package com.bwsw.tstreams.agents.producer
 
 import java.util.concurrent.ConcurrentHashMap
 
-import com.bwsw.tstreams.agents.producer.NewTransactionProducerPolicy.ProducerPolicy
+import com.bwsw.tstreams.agents.producer.NewProducerTransactionPolicy.ProducerPolicy
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
@@ -72,16 +72,16 @@ class OpenTransactionsKeeper {
     if (partOpt.isDefined) {
       if (!partOpt.get.isClosed) {
         policy match {
-          case NewTransactionProducerPolicy.CheckpointIfOpened =>
+          case NewProducerTransactionPolicy.CheckpointIfOpened =>
             action = () => partOpt.get.checkpoint()
 
-          case NewTransactionProducerPolicy.CancelIfOpened =>
+          case NewProducerTransactionPolicy.CancelIfOpened =>
             action = () => partOpt.get.cancel()
 
-          case NewTransactionProducerPolicy.CheckpointAsyncIfOpened =>
+          case NewProducerTransactionPolicy.CheckpointAsyncIfOpened =>
             action = () => partOpt.get.checkpoint(isSynchronous = false)
 
-          case NewTransactionProducerPolicy.ErrorIfOpened =>
+          case NewProducerTransactionPolicy.ErrorIfOpened =>
             throw new IllegalStateException(s"Previous transaction was not closed")
         }
       }

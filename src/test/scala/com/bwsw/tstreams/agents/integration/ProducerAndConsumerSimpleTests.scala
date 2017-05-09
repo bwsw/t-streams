@@ -4,7 +4,7 @@ import java.util.concurrent.CountDownLatch
 
 import com.bwsw.tstreams.agents.consumer.ConsumerTransaction
 import com.bwsw.tstreams.agents.consumer.Offset.{Newest, Oldest}
-import com.bwsw.tstreams.agents.producer.NewTransactionProducerPolicy
+import com.bwsw.tstreams.agents.producer.NewProducerTransactionPolicy
 import com.bwsw.tstreams.env.ConfigurationOptions
 import com.bwsw.tstreams.testutils._
 import com.bwsw.tstreamstransactionserver.rpc.TransactionStates
@@ -54,7 +54,7 @@ class ProducerAndConsumerSimpleTests extends FlatSpec with Matchers with BeforeA
   "producer, consumer" should "producer - generate one transaction, consumer - retrieve it with getAll method" in {
     val DATA_IN_TRANSACTION = 10
 
-    val producerTransaction = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
+    val producerTransaction = producer.newTransaction(NewProducerTransactionPolicy.ErrorIfOpened)
     val l = new CountDownLatch(1)
     srv.notifyProducerTransactionCompleted(t => t.transactionID == producerTransaction.getTransactionID() && t.state == TransactionStates.Checkpointed, l.countDown())
     val sendData = (for (part <- 0 until DATA_IN_TRANSACTION) yield "data_part_" + randomKeyspace).sorted
@@ -78,7 +78,7 @@ class ProducerAndConsumerSimpleTests extends FlatSpec with Matchers with BeforeA
     val DATA_IN_TRANSACTION = 10
     val sendData = (for (part <- 0 until DATA_IN_TRANSACTION) yield "data_part_" + randomKeyspace).sorted
 
-    val producerTransaction = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
+    val producerTransaction = producer.newTransaction(NewProducerTransactionPolicy.ErrorIfOpened)
     val l = new CountDownLatch(1)
     srv.notifyProducerTransactionCompleted(t => t.transactionID == producerTransaction.getTransactionID() && t.state == TransactionStates.Checkpointed, l.countDown())
 
@@ -116,7 +116,7 @@ class ProducerAndConsumerSimpleTests extends FlatSpec with Matchers with BeforeA
     var counter = 0
 
     (0 until TRANSACTIONS_COUNT).foreach { _ =>
-      val producerTransaction = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
+      val producerTransaction = producer.newTransaction(NewProducerTransactionPolicy.ErrorIfOpened)
 
       counter += 1
       if (counter == TRANSACTIONS_COUNT)
@@ -153,11 +153,11 @@ class ProducerAndConsumerSimpleTests extends FlatSpec with Matchers with BeforeA
 
     var counter = 0
 
-    val producerTransaction = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
+    val producerTransaction = producer.newTransaction(NewProducerTransactionPolicy.ErrorIfOpened)
     producerTransaction.cancel()
 
     (0 until TRANSACTIONS_COUNT).foreach { _ =>
-      val producerTransaction = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
+      val producerTransaction = producer.newTransaction(NewProducerTransactionPolicy.ErrorIfOpened)
 
       pl.append(producerTransaction.getTransactionID())
 
@@ -187,7 +187,7 @@ class ProducerAndConsumerSimpleTests extends FlatSpec with Matchers with BeforeA
     val sendData = (for (part <- 0 until DATA_IN_TRANSACTION) yield "data_part_" + part).sorted
 
     val producerThread = new Thread(() => {
-      val transaction = producer.newTransaction(NewTransactionProducerPolicy.ErrorIfOpened)
+      val transaction = producer.newTransaction(NewProducerTransactionPolicy.ErrorIfOpened)
       Thread.sleep(100)
       sendData.foreach { x =>
         transaction.send(x.getBytes())
