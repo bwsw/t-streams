@@ -19,7 +19,8 @@ object TStreamsFactoryProducerDefaults {
     val transportRetryDelayMs = IntMinMaxDefault(1000, 5000, 1000)
     val transportRetryCount = IntMinMaxDefault(3, 100, 3)
     val threadPoolSize = IntMinMaxDefault(1, 1000, Runtime.getRuntime().availableProcessors())
-    val notifyThreadPoolSize = IntMinMaxDefault(1, 32, 1)
+    val notifyJobsThreadPoolSize = IntMinMaxDefault(1, 32, 1)
+    val asyncJobsThreadPoolSize = IntMinMaxDefault(1, 32, 1)
 
     object Transaction {
       val ttlMs = IntMinMaxDefault(500, 120000, 500)
@@ -41,7 +42,8 @@ object TStreamsFactoryProducerDefaults {
     m(co.transportRetryCount) = Producer.transportRetryCount.default
     m(co.transportRetryDelayMs) = Producer.transportRetryDelayMs.default
     m(co.threadPoolSize) = Producer.threadPoolSize.default
-    m(co.notifyThreadPoolSize) = Producer.notifyThreadPoolSize.default
+    m(co.notifyJobsThreadPoolSize) = Producer.notifyJobsThreadPoolSize.default
+    m(co.asyncJobsThreadPoolSize) = Producer.asyncJobsThreadPoolSize.default
     m(co.Transaction.ttlMs) = Producer.Transaction.ttlMs.default
     m(co.Transaction.openMaxWaitMs) = Producer.Transaction.openMaxWaitMs.default
     m(co.Transaction.keepAliveMs) = Producer.Transaction.keepAliveMs.default

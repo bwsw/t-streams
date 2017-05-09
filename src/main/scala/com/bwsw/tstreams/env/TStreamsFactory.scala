@@ -6,7 +6,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 import com.bwsw.tstreams.agents.consumer.Offset.IOffset
 import com.bwsw.tstreams.agents.consumer.subscriber.{QueueBuilder, Subscriber, SubscriberOptionsBuilder}
 import com.bwsw.tstreams.agents.consumer.{Consumer, ConsumerOptions}
-import com.bwsw.tstreams.agents.producer.{CoordinationOptions, Producer}
+import com.bwsw.tstreams.agents.producer.{CoordinationOptions, Producer, ProducerOptions}
 import com.bwsw.tstreams.common.{RoundRobinPolicy, _}
 import com.bwsw.tstreams.env.defaults.TStreamsFactoryProducerDefaults.PortRange
 import com.bwsw.tstreams.generator.{ITransactionGenerator, LocalTransactionGenerator}
@@ -248,8 +248,11 @@ class TStreamsFactory() {
     val threadPoolSize = pAsInt(co.Producer.threadPoolSize, producerDefaults.threadPoolSize.default)
     producerDefaults.threadPoolSize.check(threadPoolSize)
 
-    val notifyThreadPoolSize = pAsInt(co.Producer.notifyThreadPoolSize, producerDefaults.notifyThreadPoolSize.default)
-    producerDefaults.notifyThreadPoolSize.check(notifyThreadPoolSize)
+    val notifyJobsThreadPoolSize = pAsInt(co.Producer.notifyJobsThreadPoolSize, producerDefaults.notifyJobsThreadPoolSize.default)
+    producerDefaults.notifyJobsThreadPoolSize.check(notifyJobsThreadPoolSize)
+
+    val asyncJobsThreadPoolSize = pAsInt(co.Producer.asyncJobsThreadPoolSize, producerDefaults.asyncJobsThreadPoolSize.default)
+    producerDefaults.asyncJobsThreadPoolSize.check(asyncJobsThreadPoolSize)
 
     val transactionTtlMs = pAsInt(co.Producer.Transaction.ttlMs, producerDefaults.Transaction.ttlMs.default)
     producerDefaults.Transaction.ttlMs.check(transactionTtlMs)
@@ -268,7 +271,6 @@ class TStreamsFactory() {
       openerServerHost = pAsString(co.Producer.bindHost),
       openerServerPort = port,
       threadPoolSize = threadPoolSize,
-      notifyThreadPoolSize = notifyThreadPoolSize,
       transportClientTimeoutMs = transportClientTimeoutMs,
       transportClientRetryCount = transportClientRetryCount,
       transportClientRetryDelayMs = transportClientRetryDelayMs)
@@ -287,11 +289,13 @@ class TStreamsFactory() {
     assert(transactionTtlMs >= transactionKeepAliveMs * 3)
 
 
-    val po = new com.bwsw.tstreams.agents.producer.ProducerOptions(
+    val po = new ProducerOptions(
       transactionTtlMs = transactionTtlMs,
       transactionKeepAliveMs = transactionKeepAliveMs,
       writePolicy = writePolicy,
       batchSize = batchSize,
+      notifyJobsThreadPoolSize = notifyJobsThreadPoolSize,
+      asyncJobsThreadPoolSize = asyncJobsThreadPoolSize,
       transactionGenerator = new LocalTransactionGenerator,
       coordinationOptions = cao)
 

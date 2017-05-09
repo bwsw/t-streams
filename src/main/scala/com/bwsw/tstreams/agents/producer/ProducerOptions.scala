@@ -6,42 +6,38 @@ import com.bwsw.tstreams.generator.ITransactionGenerator
 import scala.language.existentials
 
 /**
-  * @param transactionTtlMs       Single transaction live time
-  * @param transactionKeepAliveMs Update transaction interval which is used to keep alive transaction in time when it is opened
-  * @param writePolicy            Strategy for selecting next partition
-  * @param batchSize              Insertion Type (only BatchInsert and SingleElementInsert are allowed now)
-  * @param transactionGenerator   Generator for generating IDs
+  *
+  * @param transactionTtlMs
+  * @param transactionKeepAliveMs
+  * @param writePolicy
+  * @param batchSize
+  * @param transactionGenerator
+  * @param asyncJobsThreadPoolSize
+  * @param notifyJobsThreadPoolSize
+  * @param coordinationOptions
   */
 class ProducerOptions(val transactionTtlMs: Long,
                       val transactionKeepAliveMs: Int,
                       val writePolicy: AbstractPolicy,
                       val batchSize: Int,
                       val transactionGenerator: ITransactionGenerator,
-                      val coordinationOptions: CoordinationOptions) {
+                      val asyncJobsThreadPoolSize: Int,
+                      val notifyJobsThreadPoolSize: Int,
+                      val coordinationOptions: CoordinationOptions)
 
-  /**
-    * Transaction minimum ttl time
-    */
-  private val minTransactionTTL = 3
-
-  /**
-    * Options validating
-    */
-  if (transactionTtlMs < minTransactionTTL)
-    throw new IllegalArgumentException(s"Option transactionTTL must be greater or equal than $minTransactionTTL")
-
-  if (transactionKeepAliveMs < 1)
-    throw new IllegalArgumentException(s"Option transactionKeepAliveInterval must be greater or equal than 1")
-
-  if (transactionKeepAliveMs.toDouble > transactionTtlMs.toDouble / 3.0)
-    throw new IllegalArgumentException("Option transactionTTL must be at least three times greater or equal than transaction")
-
-  if (batchSize <= 0)
-    throw new IllegalArgumentException("Batch size must be greater or equal 1")
-
-}
-
-
+/**
+  *
+  * @param zkEndpoints
+  * @param zkPrefix
+  * @param zkSessionTimeoutMs
+  * @param zkConnectionTimeoutMs
+  * @param openerServerHost
+  * @param openerServerPort
+  * @param threadPoolSize
+  * @param transportClientTimeoutMs
+  * @param transportClientRetryCount
+  * @param transportClientRetryDelayMs
+  */
 class CoordinationOptions(val zkEndpoints: String,
                           val zkPrefix: String,
                           val zkSessionTimeoutMs: Int,
@@ -49,7 +45,6 @@ class CoordinationOptions(val zkEndpoints: String,
                           val openerServerHost: String,
                           val openerServerPort: Int,
                           val threadPoolSize: Int,
-                          val notifyThreadPoolSize: Int,
                           val transportClientTimeoutMs: Int,
                           val transportClientRetryCount: Int,
                           val transportClientRetryDelayMs: Int)

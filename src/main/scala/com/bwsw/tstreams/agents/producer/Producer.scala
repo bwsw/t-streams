@@ -134,8 +134,8 @@ class Producer(var name: String,
     */
   private val shutdownKeepAliveThread = new ThreadSignalSleepVar[Boolean](1)
   private val transactionKeepAliveThread = getTransactionKeepAliveThread
-  private[tstreams] val asyncActivityService = new FirstFailLockableTaskExecutor(s"Producer $name-AsyncWorker")
-  private[tstreams] val notifyService = new FirstFailLockableTaskExecutor(s"NotifyService-$name", pcs.notifyThreadPoolSize)
+  private[tstreams] val asyncActivityService = new FirstFailLockableTaskExecutor(s"Producer $name-AsyncWorker", producerOptions.asyncJobsThreadPoolSize)
+  private[tstreams] val notifyService = new FirstFailLockableTaskExecutor(s"NotifyService-$name", producerOptions.notifyJobsThreadPoolSize)
   private lazy val cg = new CheckpointGroup()
 
   /**

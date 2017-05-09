@@ -83,7 +83,12 @@ object ConfigurationOptions {
     /**
       * amount of publisher threads in a thread pool (default 1)
       */
-    val notifyThreadPoolSize = "producer.thread-pool.publisher-threads-amount"
+    val notifyJobsThreadPoolSize = "producer.thread-pool.notify-jobs-thread-pool-size"
+
+    /**
+      * amount of publisher threads in a thread pool (default 1)
+      */
+    val asyncJobsThreadPoolSize = "producer.thread-pool.async-jobs-thread-pool-size"
 
     /**
       * hostname or ip of producer master listener
