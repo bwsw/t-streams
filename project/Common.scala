@@ -35,7 +35,6 @@ object Common {
         "Twitter Repo" at "https://maven.twttr.com",
         "Oracle Maven2 Repo" at "http://download.oracle.com/maven"),
 
-      //TODO probably can be moved out of here
       PB.targets in Compile := Seq(
         scalapb.gen(singleLineToString = true) -> (sourceManaged in Compile).value
       ),
