@@ -260,10 +260,10 @@ class Producer(var name: String,
     * @param partition Partition from which transaction will be retrieved
     * @return Transaction reference if it exist and is opened
     */
-  private[tstreams] def getOpenedTransactionForPartition(partition: Int): Option[IProducerTransaction] = {
+  private[tstreams] def getOpenedTransactionsForPartition(partition: Int): Option[scala.collection.mutable.Set[IProducerTransaction]] = {
     if (!(partition >= 0 && partition < stream.partitionsCount))
       throw new IllegalArgumentException(s"Producer $name - invalid partition")
-    openTransactions.getTransactionOption(partition)
+    openTransactions.getTransactionSetOption(partition).map(v => v._2.filter(!_.isClosed()))
   }
 
   /**
@@ -378,6 +378,9 @@ class Producer(var name: String,
     // stop function which works with subscribers
     subscriberNotifier.stop()
     curatorClient.close()
+
+    openTransactions.clear()
+
     stream.client.shutdown()
   }
 

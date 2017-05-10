@@ -55,7 +55,7 @@ class ProducerTest extends FlatSpec with Matchers with BeforeAndAfterAll with Te
     transaction.isInstanceOf[ProducerTransaction] shouldEqual true
   }
 
-  "BasicProducer.newTransaction(ProducerPolicies.errorIfOpen)" should "throw exception if previous transaction was not closed" in {
+  "BasicProducer.newTransaction(ProducerPolicies.ErrorIfOpened)" should "throw exception if previous transaction was not closed" in {
     val transaction1 = producer.newTransaction(NewProducerTransactionPolicy.CheckpointIfOpened, 2)
     intercept[IllegalStateException] {
       producer.newTransaction(NewProducerTransactionPolicy.ErrorIfOpened, 2)
@@ -63,7 +63,24 @@ class ProducerTest extends FlatSpec with Matchers with BeforeAndAfterAll with Te
     transaction1.checkpoint()
   }
 
-  "BasicProducer.newTransaction(checkpointIfOpen)" should "not throw exception if previous transaction was not closed" in {
+  "BasicProducer.newTransaction(ProducerPolicies.EnqueueIfOpened)" should "not throw exception if previous transaction was not closed" in {
+    val transaction1 = producer.newTransaction(NewProducerTransactionPolicy.EnqueueIfOpened, 3)
+    val transaction2 = producer.newTransaction(NewProducerTransactionPolicy.EnqueueIfOpened, 3)
+    transaction1.checkpoint()
+    producer.getOpenedTransactionsForPartition(3).get.size shouldBe 1
+    transaction2.checkpoint()
+    producer.getOpenedTransactionsForPartition(3).get.size shouldBe 0
+  }
+
+  "BasicProducer.newTransaction(ProducerPolicies.EnqueueIfOpened) and checlpoint" should "not throw exception if previous transaction was not closed" in {
+    val transaction1 = producer.newTransaction(NewProducerTransactionPolicy.EnqueueIfOpened, 3)
+    val transaction2 = producer.newTransaction(NewProducerTransactionPolicy.EnqueueIfOpened, 3)
+    producer.checkpoint()
+    transaction1.isClosed() shouldBe true
+    transaction2.isClosed() shouldBe true
+  }
+
+  "BasicProducer.newTransaction(CheckpointIfOpen)" should "not throw exception if previous transaction was not closed" in {
     producer.newTransaction(NewProducerTransactionPolicy.CheckpointIfOpened, 2)
     val transaction2 = producer.newTransaction(NewProducerTransactionPolicy.CheckpointIfOpened, 2)
     transaction2.checkpoint()
@@ -71,10 +88,9 @@ class ProducerTest extends FlatSpec with Matchers with BeforeAndAfterAll with Te
 
   "BasicProducer.getTransaction()" should "return transaction reference if it was created or None" in {
     val transaction = producer.newTransaction(NewProducerTransactionPolicy.CheckpointIfOpened, 1)
-    val transactionRef = producer.getOpenedTransactionForPartition(1)
+    val transactionRef = producer.getOpenedTransactionsForPartition(1)
     transaction.checkpoint()
-    val checkVal = transactionRef.get == transaction
-    checkVal shouldEqual true
+    transactionRef.get.contains(transaction) shouldBe true
   }
 
   "BasicProducer.instantTransaction" should "work well for reliable delivery" in {
