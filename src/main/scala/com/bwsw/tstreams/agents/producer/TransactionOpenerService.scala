@@ -197,11 +197,11 @@ class TransactionOpenerService(curatorClient: CuratorFramework,
           updatePartitionMasterInetAddress(partition)
           generateNewTransaction(partition)
 
-        case Some(TransactionResponse(_, p, transactionID)) if transactionID <= 0 =>
+        case Some(TransactionResponse(_, p, transactionID, masterID)) if transactionID <= 0 =>
           updatePartitionMasterInetAddress(partition)
           generateNewTransaction(partition)
 
-        case Some(TransactionResponse(_, p, transactionID)) if transactionID > 0 =>
+        case Some(TransactionResponse(_, p, transactionID, masterID)) if transactionID > 0 =>
           if (TransactionOpenerService.logger.isDebugEnabled) {
             TransactionOpenerService.logger.debug(s"[GET TRANSACTION] Finish retrieve transaction for agent with address: $myInetAddress, stream: $streamName, partition: $partition with ID: $transactionID from [MASTER: $master]s")
           }
