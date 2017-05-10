@@ -2,7 +2,7 @@ import Common._
 
 val baseSettings = Seq(
   name := "t-streams",
-  version := "2.2.5.1-SNAPSHOT",
+  version := "2.2.6-SNAPSHOT",
   scalaVersion := "2.12.1",
   organization := "com.bwsw",
   organizationName := "Bitworks Software, Ltd.",
