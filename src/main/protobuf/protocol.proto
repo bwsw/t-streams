@@ -17,6 +17,7 @@ message TransactionResponse {
     int64 id            = 1;
     int32 partition     = 2;
     int64 transaction   = 3;
+    int32 master        = 4;
 }
 
 message TransactionState {
