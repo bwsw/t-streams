@@ -21,27 +21,29 @@ class UdpClient(waitTimeoutMs: Int) extends UdpProcessor {
         case ex: InvalidProtocolBufferException => None
       }
       rOpt.foreach(response =>
-        if(response.transaction >= 0) {
+        if (response.transaction >= 0) {
           val qOpt = Option(packetMap.getOrDefault(response.id, null))
           qOpt.foreach(q => q.put(response))
         })
     })
   }
-  
+
   def sendAndWait(hostName: String, port: Int, req: TransactionRequest): Option[TransactionResponse] = {
     val msg = req.withId(idGenerator.incrementAndGet())
     val q = new ArrayBlockingQueue[TransactionResponse](1)
     packetMap.put(msg.id, q)
     val host = InetAddress.getByName(hostName)
     val arr = msg.toByteArray
-    if(arr.length > UdpProcessor.BUFFER_SIZE)
+    if (arr.length > UdpProcessor.BUFFER_SIZE)
       throw new IllegalArgumentException(s"TransactionRequest serialized size must be less than or equal to ${UdpProcessor.BUFFER_SIZE} to " +
-        "surpass currend UDP limitations. Increase UdpProcessor.BUFFER_SIZE parameter " +
+        "surpass current UDP limitations. Increase UdpProcessor.BUFFER_SIZE parameter " +
         "if your network supports jumbo frames.")
     val sendPacket = new java.net.DatagramPacket(arr, arr.length, host, port)
     var isSent = false
     while (!isSent) {
       try {
+        if (logger.isDebugEnabled())
+          logger.debug(s"Try to send a message with id: ${msg.id}")
         socket.send(sendPacket)
         isSent = true
       } catch {
@@ -55,6 +57,10 @@ class UdpClient(waitTimeoutMs: Int) extends UdpProcessor {
     }
     val mOpt = Option(q.poll(waitTimeoutMs, TimeUnit.MILLISECONDS))
     packetMap.remove(msg.id)
+
+    if (logger.isDebugEnabled())
+      logger.debug(s"Get a response: $mOpt from master on the request with id: ${msg.id}")
+
     mOpt
   }
 
