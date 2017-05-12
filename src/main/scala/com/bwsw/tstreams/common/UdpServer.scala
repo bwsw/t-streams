@@ -8,7 +8,6 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder
 import com.google.protobuf.InvalidProtocolBufferException
 
 import scala.collection.JavaConverters._
-import scala.collection.mutable.ArrayBuffer
 
 /**
   * Created by Ivan Kudryavtsev on 20.04.17.
@@ -21,7 +20,6 @@ abstract class UdpServer(host: String, port: Int, threads: Int) extends UdpProce
   private val keyCounterMap = new ConcurrentHashMap[Int /* key */ , AtomicLong /* counter */ ]()
   private val executorCounterMap = new ConcurrentHashMap[Int /* execNo */ , AtomicLong /* counter */ ]()
   private val executorTaskTimeMap = new ConcurrentHashMap[Int /* execNo */ , AtomicLong /* counter */ ]()
-  private val test = ArrayBuffer[(Int,Int)]()//todo
 
   protected def assignPartitionExecutor(partition: Int): Int = {
     partitionCounter.getAndIncrement() % threads
