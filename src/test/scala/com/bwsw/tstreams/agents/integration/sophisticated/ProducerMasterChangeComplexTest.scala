@@ -14,7 +14,7 @@ import com.bwsw.tstreams.testutils.{TestStorageServer, TestUtils}
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 
 import scala.collection.mutable.ListBuffer
-import scala.util.Random
+import scala.util.{Failure, Random, Success, Try}
 
 class ProducerMasterChangeComplexTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
 
@@ -52,7 +52,7 @@ class ProducerMasterChangeComplexTest extends FlatSpec with Matchers with Before
   }
 
   class ProducerWorker(val factory: TStreamsFactory, val onCompleteLatch: CountDownLatch, val amount: Int, val probability: Double, id: Int) {
-    var producer: Producer = null
+    var producer: Producer = _
     var counter: Int = 0
 
     val intFactory = factory.copy()
@@ -60,7 +60,7 @@ class ProducerMasterChangeComplexTest extends FlatSpec with Matchers with Before
 
     def loop(partitions: Set[Int], checkpointModeSync: Boolean = true) = {
       while (counter < amount) {
-        producer = makeNewProducer(partitions)
+        producer = makeNewProducer(partitions, id)
 
         while (probability < Random.nextDouble() && counter < amount) {
           val t = producer.newTransaction(policy = NewProducerTransactionPolicy.CheckpointIfOpened, -1)
@@ -83,10 +83,21 @@ class ProducerMasterChangeComplexTest extends FlatSpec with Matchers with Before
     }
 
     // private - will not be called outside
-    private def makeNewProducer(partitions: Set[Int]) = {
-      intFactory.getProducer(
-        name = "test_producer1",
-        partitions = partitions)
+    @scala.annotation.tailrec
+    private def makeNewProducer(partitions: Set[Int], id: Int): Producer = {
+      val tryProducer = Try(intFactory.getProducer(
+        name = s"test_producer-$id",
+        partitions = partitions))
+
+      tryProducer match {
+        case Success(_producer) =>
+          _producer
+
+        case Failure(exception) =>
+          println(s"Make a new producer because of: $exception")
+          exception.printStackTrace()
+          makeNewProducer(partitions, id)
+      }
     }
   }
 
@@ -103,13 +114,12 @@ class ProducerMasterChangeComplexTest extends FlatSpec with Matchers with Before
         waitCompleteLatch.countDown()
     })
 
-  //todo: fix ignored test
-  ignore should "handle multiple master change correctly" in {
+  it should "handle multiple master change correctly" in {
 
     subscriber.start()
 
     val producersThreads = (0 until PRODUCERS_AMOUNT)
-      .map(producer => new ProducerWorker(f, onCompleteLatch, TRANSACTIONS_AMOUNT_EACH, PROBABILITY, producer).run(PARTITIONS))
+      .map(id => new ProducerWorker(f, onCompleteLatch, TRANSACTIONS_AMOUNT_EACH, PROBABILITY, id).run(PARTITIONS))
 
     onCompleteLatch.await()
     producersThreads.foreach(thread => thread.join())

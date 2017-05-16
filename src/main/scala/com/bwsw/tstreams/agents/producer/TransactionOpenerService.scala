@@ -80,27 +80,30 @@ class TransactionOpenerService(curatorClient: CuratorFramework,
 
   val agent = this
   private val openerServer = new RequestsServer(myInetAddress, myInetPort, threadPoolAmount) {
-
     override def handleRequest(client: SocketAddress, reqAny: AnyRef): Unit = {
-      if (!isRunning.get())
+      if (!isRunning.get()) {
+        if (Producer.logger.isDebugEnabled())
+          Producer.logger.debug(s"[handleRequest $uniqueAgentId] Agent with address: {$myInetAddress}, stream: {$streamName} is not running")
         return
+      }
 
       val req = reqAny.asInstanceOf[TransactionRequest]
       val isMaster = agent.isMasterOfPartition(req.partition)
 
-      val newTransactionId = isMaster match {
-        case true =>
-          val newId = agent.getProducer.generateNewTransactionIDLocal()
+      val newTransactionId = if (isMaster) {
+        val newId = agent.getProducer.generateNewTransactionIDLocal()
 
-          if(Producer.logger.isDebugEnabled())
-            Producer.logger.debug(s"New Transaction ID: $newId")
+        if (Producer.logger.isDebugEnabled())
+          Producer.logger.debug(s"[$uniqueAgentId] New Transaction ID: $newId (partition ${req.partition})")
 
-          (req.isInstant, req.isReliable) match {
-            case (false, _) => agent.getProducer().openTransactionLocal(newId, req.partition)
-            case (true, _) => agent.getProducer().openInstantTransactionLocal(req.partition, newId, req.data.map(_.toByteArray), req.isReliable)
-          }
-          newId
-        case _ => 0
+        (req.isInstant, req.isReliable) match {
+          case (false, _) => agent.getProducer().openTransactionLocal(newId, req.partition)
+          case (true, _) => agent.getProducer().openInstantTransactionLocal(req.partition, newId, req.data.map(_.toByteArray), req.isReliable)
+        }
+
+        newId
+      } else {
+        0
       }
 
       val response = TransactionResponse()
@@ -109,6 +112,9 @@ class TransactionOpenerService(curatorClient: CuratorFramework,
         .withTransaction(newTransactionId)
         .toByteArray
       socket.send(new DatagramPacket(response, response.size, client))
+
+      if (Producer.logger.isDebugEnabled())
+        Producer.logger.debug(s"Send a response from master to client that a new transaction: $newTransactionId has been opened")
     }
   }
 
@@ -120,17 +126,30 @@ class TransactionOpenerService(curatorClient: CuratorFramework,
   @tailrec
   private def getLeaderId(partition: Int): String = {
     try {
-      leaderMap(partition).getLeader().getId
+      if (Producer.logger.isDebugEnabled())
+        Producer.logger.debug(s"[$uniqueAgentId] Try getting a leader id for partition: $partition")
+      val leader = leaderMap(partition).getLeader()
+      if (Producer.logger.isDebugEnabled())
+        Producer.logger.debug(s"[$uniqueAgentId] Get a leader for partition: $partition: ${leader.isLeader} (is leader)")
+
+      leader.getId
     } catch {
       case e: KeeperException =>
+        if (Producer.logger.isDebugEnabled())
+          Producer.logger.debug(s"[$uniqueAgentId] Catch the exception while getting a leader id for partition: $partition. Exception: $e")
         Thread.sleep(50)
         getLeaderId(partition)
     }
   }
 
-  private def updatePartitionMasterInetAddress(partition: Int): Unit = leaderMap.synchronized {
-    if (!usedPartitions.contains(partition))
+  private def updatePartitionMasterInetAddress(partition: Int): Unit = this.synchronized {
+    if (Producer.logger.isDebugEnabled)
+      Producer.logger.debug(s"[PARTITION_$partition $uniqueAgentId] update a partition master address")
+    if (!usedPartitions.contains(partition)) {
+      if (Producer.logger.isDebugEnabled)
+        Producer.logger.debug(s"[PARTITION_$partition $uniqueAgentId] is not included to range of used partitions (${usedPartitions.mkString(",")})")
       return
+    }
 
     if (!leaderMap.contains(partition)) {
       try {
@@ -141,34 +160,49 @@ class TransactionOpenerService(curatorClient: CuratorFramework,
             throw e
       }
 
-      val leader = new LeaderLatch(curatorClient, s"/master-$partition", s"${myInetAddress}:${myInetPort}#$uniqueAgentId")
+      val leader = new LeaderLatch(curatorClient, s"/master-$partition", s"$myInetAddress:$myInetPort#$uniqueAgentId")
+      if (Producer.logger.isDebugEnabled)
+        Producer.logger.debug(s"[PARTITION_$partition $uniqueAgentId] Create a new leader latch with ID: $myInetAddress:$myInetPort#$uniqueAgentId")
       leaderMap(partition) = leader
+      if (Producer.logger.isDebugEnabled)
+        Producer.logger.debug(s"[PARTITION_$partition $uniqueAgentId] Start the leader latch")
       leader.start()
+      if (Producer.logger.isDebugEnabled)
+        Producer.logger.debug(s"[PARTITION_$partition $uniqueAgentId] Set the leader for partition: $myInetAddress:$myInetPort#$uniqueAgentId (is leader: ${leader.hasLeadership})")
     }
 
     var leaderInfo = getLeaderId(partition)
     while (leaderInfo == "") {
+      if (Producer.logger.isDebugEnabled())
+        Producer.logger.debug(s"[PARTITION_$partition $uniqueAgentId] LeaderInfo has been empty so try to get it again")
       leaderInfo = getLeaderId(partition)
       Thread.sleep(50)
     }
+    if (Producer.logger.isDebugEnabled())
+      Producer.logger.debug(s"[PARTITION_$partition $uniqueAgentId] Get a leader id: [LEADER_ID=$leaderInfo]")
     val parts = leaderInfo.split('#')
     val leaderAddress = parts.head
     val leaderId = Integer.parseInt(parts.tail.head)
 
-    localLeaderMap.synchronized {
-      localLeaderMap(partition) = (leaderAddress, leaderId)
-    }
+    localLeaderMap(partition) = (leaderAddress, leaderId)
+    if (Producer.logger.isDebugEnabled)
+      Producer.logger.debug(s"[PARTITION_$partition $uniqueAgentId] Set the leader for partition: ADDRESS=$leaderAddress, ID=$leaderId." +
+        s"Actually leader info is ${localLeaderMap(partition)}")
+
   }
 
 
-  def getPartitionMasterInetAddressLocal(partition: Int): (String, Int) = localLeaderMap.synchronized {
+  def getPartitionMasterInetAddressLocal(partition: Int): (String, Int) = this.synchronized {
+    if (Producer.logger.isDebugEnabled)
+      Producer.logger.debug(s"[PARTITION_$partition $uniqueAgentId] get an address of partition master")
     if (!localLeaderMap.contains(partition)) {
       updatePartitionMasterInetAddress(partition)
     }
+
     localLeaderMap(partition)
   }
 
-  def isMasterOfPartition(partition: Int): Boolean = leaderMap.synchronized {
+  def isMasterOfPartition(partition: Int): Boolean = this.synchronized {
     if (!usedPartitions.contains(partition))
       return false
 
@@ -188,22 +222,28 @@ class TransactionOpenerService(curatorClient: CuratorFramework,
   def generateNewTransaction(partition: Int, isInstant: Boolean = false, isReliable: Boolean = true, data: Seq[Array[Byte]] = Seq()): Long = {
     val master = getPartitionMasterInetAddressLocal(partition)._1
     if (TransactionOpenerService.logger.isDebugEnabled) {
-      TransactionOpenerService.logger.debug(s"[GET TRANSACTION] Start retrieve transaction for agent with address: {$myInetAddress}, stream: {$streamName}, partition: {$partition} from [MASTER: {$master}].")
+      TransactionOpenerService.logger.debug(s"[GET TRANSACTION $uniqueAgentId] Start retrieve transaction for agent with address: {$myInetAddress:$myInetPort}, stream: {$streamName}, partition: {$partition} from [MASTER: {$master}].")
     }
 
     val res =
       producer.transactionRequest(master, partition, isInstant, isReliable, data) match {
         case None =>
+          if (TransactionOpenerService.logger.isDebugEnabled) {
+            TransactionOpenerService.logger.debug(s"[GET TRANSACTION $uniqueAgentId] Get NONE for agent with address: $myInetAddress:$myInetPort, stream: $streamName, partition: $partition from [MASTER: $master]s")
+          }
           updatePartitionMasterInetAddress(partition)
           generateNewTransaction(partition)
 
         case Some(TransactionResponse(_, p, transactionID, masterID)) if transactionID <= 0 =>
+          if (TransactionOpenerService.logger.isDebugEnabled) {
+            TransactionOpenerService.logger.debug(s"[GET TRANSACTION $uniqueAgentId] Get an invalid transaction id ($transactionID) for agent with address: $myInetAddress:$myInetPort, stream: $streamName, partition: $partition from [MASTER: $master]s")
+          }
           updatePartitionMasterInetAddress(partition)
           generateNewTransaction(partition)
 
         case Some(TransactionResponse(_, p, transactionID, masterID)) if transactionID > 0 =>
           if (TransactionOpenerService.logger.isDebugEnabled) {
-            TransactionOpenerService.logger.debug(s"[GET TRANSACTION] Finish retrieve transaction for agent with address: $myInetAddress, stream: $streamName, partition: $partition with ID: $transactionID from [MASTER: $master]s")
+            TransactionOpenerService.logger.debug(s"[GET TRANSACTION $uniqueAgentId] Finish retrieve transaction for agent with address: $myInetAddress:$myInetPort, stream: $streamName, partition: $partition with ID: $transactionID from [MASTER: $master]s")
           }
           transactionID
       }
