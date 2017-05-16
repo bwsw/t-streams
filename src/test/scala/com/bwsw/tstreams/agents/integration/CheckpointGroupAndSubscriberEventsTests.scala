@@ -35,6 +35,10 @@ class CheckpointGroupAndSubscriberEventsTests extends FlatSpec with Matchers wit
       setProperty(ConfigurationOptions.Consumer.dataPreload, 10)
 
     srv
+
+    if(storageClient.checkStreamExists("test_stream"))
+      storageClient.deleteStream("test_stream")
+
     storageClient.createStream("test_stream", 3, 24 * 3600, "")
     storageClient.shutdown()
   }

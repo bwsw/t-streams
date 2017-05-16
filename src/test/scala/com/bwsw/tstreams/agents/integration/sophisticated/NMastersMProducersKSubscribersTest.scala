@@ -37,6 +37,10 @@ class NMastersMProducersKSubscribersTest extends FlatSpec with Matchers with Bef
       setProperty(ConfigurationOptions.Consumer.Subscriber.pollingFrequencyDelayMs, 5000)
 
     srv
+
+    if(storageClient.checkStreamExists("test_stream"))
+      storageClient.deleteStream("test_stream")
+
     storageClient.createStream("test_stream", ALL_PARTITIONS, 24 * 3600, "")
     storageClient.shutdown()
   }

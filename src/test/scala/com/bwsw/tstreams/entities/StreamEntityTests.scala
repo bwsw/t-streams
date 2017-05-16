@@ -8,6 +8,7 @@ import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 
 class StreamEntityTests extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
 
+
   val srv = TestStorageServer.get()
   val storageClient = f.getStorageClient()
 
@@ -77,6 +78,7 @@ class StreamEntityTests extends FlatSpec with Matchers with BeforeAndAfterAll wi
       description = "some_description")
 
     val stream: Stream = storageClient.loadStream(name)
+    stream.partitionsCount shouldBe 3
     val checkVal = stream.isInstanceOf[Stream]
     checkVal shouldBe true
   }
@@ -100,7 +102,7 @@ class StreamEntityTests extends FlatSpec with Matchers with BeforeAndAfterAll wi
   "BasicStreamService.loadStream()" should "throw exception if stream not exist" in {
     val name = getRandomString
 
-    intercept[StreamDoesNotExist] {
+    intercept[NoSuchElementException] {
       storageClient.loadStream(name)
     }
   }
@@ -116,7 +118,7 @@ class StreamEntityTests extends FlatSpec with Matchers with BeforeAndAfterAll wi
 
     storageClient.deleteStream(name)
 
-    intercept[StreamDoesNotExist] {
+    intercept[NoSuchElementException] {
       storageClient.loadStream(name)
     }
   }

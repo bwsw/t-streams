@@ -21,7 +21,7 @@ object TStreamsFactoryStorageClientDefaults {
 
     object Zookeeper {
       val endpoints = "127.0.0.1:2181"
-      val prefix = "/tts"
+      val prefix = "/tts/master"
       val connectionTimeoutMs = IntMinMaxDefault(1000, 100000, 5000)
       val sessionTimeoutMs = IntMinMaxDefault(1000, 100000, 5000)
       val retryDelayMs = IntMinMaxDefault(50, 1000, 500)

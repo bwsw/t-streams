@@ -127,7 +127,7 @@ class ProducerTransaction(partition: Int,
   }
 
   private def cancelTransaction() = {
-    val transactionRecord = new RPCProducerTransaction(producer.stream.name, partition, transactionID,
+    val transactionRecord = new RPCProducerTransaction(producer.stream.id, partition, transactionID,
       TransactionStates.Cancel, 0, -1L)
     producer.stream.client.putTransactionSync(transactionRecord)
 
@@ -202,7 +202,7 @@ class ProducerTransaction(partition: Int,
         }
       }
 
-      val transactionRecord = new RPCProducerTransaction(producer.stream.name, partition, transactionID, TransactionStates.Checkpointed, getDataItemsCount(), producer.stream.ttl)
+      val transactionRecord = new RPCProducerTransaction(producer.stream.id, partition, transactionID, TransactionStates.Checkpointed, getDataItemsCount(), producer.stream.ttl)
 
       producer.stream.client.putTransactionWithDataSync(transactionRecord, data.items, data.lastOffset)
       checkpointPostEventPart()
@@ -236,7 +236,7 @@ class ProducerTransaction(partition: Int,
         //test purposes only
         GlobalHooks.invoke(GlobalHooks.preCommitFailure)
 
-        val transactionRecord = new RPCProducerTransaction(producer.stream.name, partition, transactionID,
+        val transactionRecord = new RPCProducerTransaction(producer.stream.id, partition, transactionID,
           TransactionStates.Checkpointed, getDataItemsCount(), producer.stream.ttl)
 
         producer.stream.client.putTransactionWithDataSync(transactionRecord, data.items, data.lastOffset)
@@ -276,7 +276,7 @@ class ProducerTransaction(partition: Int,
       ProducerTransaction.logger.debug("Update event for Transaction {}, partition: {}", transactionID, partition)
     }
 
-    val transactionRecord = new RPCProducerTransaction(producer.stream.name, partition, transactionID, TransactionStates.Updated, -1, producer.producerOptions.transactionTtlMs)
+    val transactionRecord = new RPCProducerTransaction(producer.stream.id, partition, transactionID, TransactionStates.Updated, -1, producer.producerOptions.transactionTtlMs)
     producer.stream.client.putTransactionSync(transactionRecord)
 
     producer.notifyService.submit(s"NotifyTask-Part[${partition}]-Txn[${transactionID}]", () => {
@@ -309,7 +309,7 @@ class ProducerTransaction(partition: Int,
     ProducerCheckpointInfo(transactionRef = this,
       agent = producer.transactionOpenerService,
       checkpointEvent = checkpoint,
-      streamName = producer.stream.name,
+      streamID = producer.stream.id,
       partition = partition,
       transaction = getTransactionID(),
       totalCnt = getDataItemsCount(),

@@ -5,8 +5,8 @@ import com.bwsw.tstreamstransactionserver.rpc.TransactionStates
 /**
   * Created by Ivan Kudryavtsev on 28.03.17.
   */
-class RPCProducerTransaction(s: String, part: Int, tid: Long, st: TransactionStates, qty: Int, t: Long) extends com.bwsw.tstreamstransactionserver.rpc.ProducerTransaction {
-  override def stream: String = s
+class RPCProducerTransaction(s: Int, part: Int, tid: Long, st: TransactionStates, qty: Int, t: Long) extends com.bwsw.tstreamstransactionserver.rpc.ProducerTransaction {
+  override def stream: Int = s
 
   override def transactionID: Long = tid
 

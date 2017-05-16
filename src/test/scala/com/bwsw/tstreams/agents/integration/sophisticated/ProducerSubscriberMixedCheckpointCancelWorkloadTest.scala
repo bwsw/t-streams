@@ -38,6 +38,10 @@ class ProducerSubscriberMixedCheckpointCancelWorkloadTest extends FlatSpec with 
 
     val srv = TestStorageServer.get()
     val storageClient = f.getStorageClient()
+
+    if(storageClient.checkStreamExists("test_stream"))
+      storageClient.deleteStream("test_stream")
+
     storageClient.createStream("test_stream", 1, 24 * 3600, "")
     storageClient.shutdown()
 
