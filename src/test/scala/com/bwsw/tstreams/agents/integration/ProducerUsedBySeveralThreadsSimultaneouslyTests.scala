@@ -65,7 +65,7 @@ class ProducerUsedBySeveralThreadsSimultaneouslyTests extends FlatSpec with Matc
     threads.foreach(_.start())
     l.await()
     val end = System.currentTimeMillis()
-    println(end - start)
+    //println(end - start)
     threads.foreach(_.join())
     producerAccumulator.size shouldBe COUNT * THREADS
 
@@ -92,7 +92,7 @@ class ProducerUsedBySeveralThreadsSimultaneouslyTests extends FlatSpec with Matc
     threads.foreach(_.start())
     l.await()
     val end = System.currentTimeMillis()
-    println(end - start)
+    //println(end - start)
     threads.foreach(_.join())
     producerAccumulator.size shouldBe COUNT * ALL_PARTITIONS
   }

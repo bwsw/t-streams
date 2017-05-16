@@ -44,6 +44,10 @@ class SubscriberWithManyProcessingEnginesThreadsTest extends FlatSpec with Match
       setProperty(ConfigurationOptions.Stream.partitionsCount, TOTAL_PARTITIONS)
 
     srv
+
+    if(storageClient.checkStreamExists("test_stream"))
+      storageClient.deleteStream("test_stream")
+
     storageClient.createStream("test_stream", TOTAL_PARTITIONS, 24 * 3600, "")
     storageClient.shutdown()
   }
