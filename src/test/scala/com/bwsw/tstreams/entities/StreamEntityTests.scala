@@ -8,6 +8,7 @@ import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 
 class StreamEntityTests extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
 
+
   val srv = TestStorageServer.get()
   val storageClient = f.getStorageClient()
 
