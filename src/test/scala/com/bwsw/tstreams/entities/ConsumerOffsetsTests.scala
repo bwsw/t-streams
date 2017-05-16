@@ -29,8 +29,7 @@ class ConsumerOffsetsTests extends FlatSpec with Matchers with BeforeAndAfterAll
   "ConsumerEntity.exist()" should "return false if consumer not exist" in {
     val consumer = getRandomString
     val stream = getRandomString
-    storageClient.createStream(stream, 1, 24 * 3600, "")
-    val s = storageClient.createStream(stream, 1, 24 * 3600, "")
+    val s = storageClient.createStream(stream, 1, 24 * 3600, "test")
     val partition = 1
     storageClient.checkConsumerOffsetExists(consumer, s.id, partition) shouldEqual false
   }
@@ -38,7 +37,6 @@ class ConsumerOffsetsTests extends FlatSpec with Matchers with BeforeAndAfterAll
   "ConsumerEntity.getOffset()" should "return -1 if consumer offset does not exist" in {
     val consumer = getRandomString
     val stream = getRandomString
-    storageClient.createStream(stream, 1, 24 * 3600, "")
     val s = storageClient.createStream(stream, 1, 24 * 3600, "")
     val partition = 1
     storageClient.getLastSavedConsumerOffset(consumer, s.id, partition) shouldBe -1
@@ -48,7 +46,6 @@ class ConsumerOffsetsTests extends FlatSpec with Matchers with BeforeAndAfterAll
     "then validate this consumer offsets" in {
     val consumer = getRandomString
     val stream = getRandomString
-    storageClient.createStream(stream, 1, 24 * 3600, "")
     val s = storageClient.createStream(stream, 1, 24 * 3600, "")
 
     val offsets = scala.collection.mutable.Map[Int, Long]()

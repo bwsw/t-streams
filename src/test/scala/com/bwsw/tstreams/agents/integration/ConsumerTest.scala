@@ -41,7 +41,7 @@ class ConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll with Te
       .setProperty(ConfigurationOptions.Consumer.dataPreload, 10)
 
     srv
-    s = storageClient.createStream("test_stream", 2, 24 * 3600, "")
+    s = storageClient.createStream("test_stream", 3, 24 * 3600, "")
 
     consumer.start
   }
