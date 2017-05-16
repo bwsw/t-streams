@@ -23,11 +23,11 @@ class OpenTransactionsKeeperTests extends FlatSpec with Matchers {
 
     override def isClosed(): Boolean = false
 
-    override def checkpoint(isSynchronous: Boolean): Unit = {
+    override def checkpoint(): Unit = {
       lastMethod = "checkpoint"
     }
 
-    override def updateTransactionKeepAliveState(): Unit = {
+    override def notifyUpdate(): Unit = {
       ctr += 1
     }
 
@@ -38,6 +38,8 @@ class OpenTransactionsKeeperTests extends FlatSpec with Matchers {
     override def markAsClosed(): Unit = {}
 
     override def send(obj: Array[Byte]): Unit = {}
+
+    override private[tstreams] def getUpdateInfo(): Option[RPCProducerTransaction] = None
   }
 
   class TransactionStubBadTransactionID extends TransactionStub {
@@ -73,7 +75,7 @@ class OpenTransactionsKeeperTests extends FlatSpec with Matchers {
     keeper.put(0, new TransactionStub)
     keeper.put(1, new TransactionStub)
     keeper.put(2, new TransactionStub)
-    keeper.forallKeysDo[Unit]((p: Int, t: IProducerTransaction) => t.updateTransactionKeepAliveState())
+    keeper.forallKeysDo[Unit]((p: Int, t: IProducerTransaction) => t.notifyUpdate())
     ctr shouldBe 3
   }
 

@@ -1,7 +1,6 @@
 package com.bwsw.tstreams.agents.consumer.subscriber
 
 import java.util.concurrent.atomic.AtomicBoolean
-import java.util.concurrent.locks.ReentrantLock
 
 import com.bwsw.tstreams.agents.group.{CheckpointInfo, GroupParticipant}
 import com.bwsw.tstreams.common.{Functions, GeneralOptions}
@@ -232,9 +231,5 @@ class Subscriber(val name: String,
 
   override private[tstreams] def getStorageClient(): StorageClient = consumer.getStorageClient()
 
-  /**
-    * Agent lock on any actions which has to do with checkpoint
-    */
-  override private[tstreams] def getThreadLock(): ReentrantLock = consumer.getThreadLock()
 }
 

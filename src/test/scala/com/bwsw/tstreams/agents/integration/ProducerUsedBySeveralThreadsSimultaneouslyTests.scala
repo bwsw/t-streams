@@ -78,7 +78,7 @@ class ProducerUsedBySeveralThreadsSimultaneouslyTests extends FlatSpec with Matc
     val threads = (0 until ALL_PARTITIONS).map(partition => new Thread(() => {
       (0 until COUNT)
         .foreach(i => {
-          val t = producer.newTransaction(NewProducerTransactionPolicy.CheckpointAsyncIfOpened, partition)
+          val t = producer.newTransaction(NewProducerTransactionPolicy.CheckpointIfOpened, partition)
           t.send("data")
           t.checkpoint()
           producerAccumulator.synchronized {

@@ -12,11 +12,6 @@ object NewProducerTransactionPolicy extends Enumeration {
   val CheckpointIfOpened = Value
 
   /**
-    * If previous transaction was opened it will be checkpointed asynchronously
-    */
-  val CheckpointAsyncIfOpened = Value
-
-  /**
     * If previous transaction was opened it will be canceled synchronously
     */
   val CancelIfOpened = Value

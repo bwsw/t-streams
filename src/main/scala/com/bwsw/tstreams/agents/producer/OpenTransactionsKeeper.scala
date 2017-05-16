@@ -24,7 +24,7 @@ class OpenTransactionsKeeper {
     openTransactionsMap.keys.foreach(partition =>
       openTransactionsMap.get(partition)
         .foreach(txnSetValue => {
-          res.appendAll(txnSetValue._2.map(txn => f(partition, txn)))
+          res ++= txnSetValue._2.map(txn => f(partition, txn))
         }))
     res
   }
@@ -58,9 +58,6 @@ class OpenTransactionsKeeper {
         case NewProducerTransactionPolicy.CancelIfOpened =>
           () => transactionSetOption.get._2.foreach(txn => if (!txn.isClosed()) txn.cancel())
 
-        case NewProducerTransactionPolicy.CheckpointAsyncIfOpened =>
-          () => transactionSetOption.get._2.foreach(txn => if (!txn.isClosed()) txn.checkpoint(isSynchronous = false))
-
         case NewProducerTransactionPolicy.EnqueueIfOpened => () => Unit
 
         case NewProducerTransactionPolicy.ErrorIfOpened =>
@@ -83,12 +80,7 @@ class OpenTransactionsKeeper {
     if (transactionSetValueOpt.isEmpty) {
       openTransactionsMap.put(partition, (0, mutable.Set[IProducerTransaction](transaction)))
     } else {
-      val lastTransactionID = transactionSetValueOpt.get._1
       val nextTransactionID = transaction.getTransactionID()
-//      if (lastTransactionID >= nextTransactionID)
-//        throw new MasterInconsistencyException(s"Inconsistent master found. It returned ID ${nextTransactionID} " +
-//          s"which is less or equal then ${lastTransactionID}. It means overall time synchronization inconsistency. " +
-//          "Unable to continue. Check all T-streams nodes have NTPD enabled and properly configured.")
       openTransactionsMap
         .put(partition, (nextTransactionID,
           openTransactionsMap.get(partition).get._2 + transaction))

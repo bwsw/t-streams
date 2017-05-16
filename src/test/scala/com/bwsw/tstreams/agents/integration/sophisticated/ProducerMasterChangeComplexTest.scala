@@ -62,14 +62,14 @@ class ProducerMasterChangeComplexTest extends FlatSpec with Matchers with Before
     val intFactory = factory.copy()
     intFactory.setProperty(ConfigurationOptions.Producer.bindPort, 40000 + id)
 
-    def loop(partitions: Set[Int], checkpointModeSync: Boolean = true) = {
+    def loop(partitions: Set[Int]) = {
       while (counter < amount) {
         producer = makeNewProducer(partitions, id)
 
         while (probability < Random.nextDouble() && counter < amount) {
           val t = producer.newTransaction(policy = NewProducerTransactionPolicy.CheckpointIfOpened, -1)
           t.send("test".getBytes())
-          t.checkpoint(checkpointModeSync)
+          t.checkpoint()
           producerBuffer(t.getPartition()).synchronized {
             producerBuffer(t.getPartition()).append(t.getTransactionID())
           }
@@ -80,8 +80,8 @@ class ProducerMasterChangeComplexTest extends FlatSpec with Matchers with Before
       onCompleteLatch.countDown()
     }
 
-    def run(partitions: Set[Int], checkpointModeSync: Boolean = true): Thread = {
-      val thread = new Thread(() => loop(partitions, checkpointModeSync))
+    def run(partitions: Set[Int]): Thread = {
+      val thread = new Thread(() => loop(partitions))
       thread.start()
       thread
     }

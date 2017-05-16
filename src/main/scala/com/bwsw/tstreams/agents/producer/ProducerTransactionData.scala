@@ -14,7 +14,7 @@ class ProducerTransactionData(transaction: ProducerTransaction, ttl: Long, stora
   private[tstreams] var items = ListBuffer[Array[Byte]]()
   private[tstreams] var lastOffset: Int = 0
 
-  private val streamID = transaction.getTransactionOwner().stream.id
+  private val streamID = transaction.getProducer().stream.id
 
   def put(elt: Array[Byte]): Int = this.synchronized {
     items += elt

@@ -13,11 +13,13 @@ trait IProducerTransaction {
 
   def cancel(): Unit
 
-  def checkpoint(isSynchronous: Boolean = true): Unit
+  def checkpoint(): Unit
 
   def getTransactionInfo(): ProducerCheckpointInfo
 
-  def updateTransactionKeepAliveState(): Unit
+  private[tstreams] def getUpdateInfo(): Option[RPCProducerTransaction]
+
+  private[tstreams] def notifyUpdate(): Unit
 
   def isClosed(): Boolean
 

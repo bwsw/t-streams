@@ -1,12 +1,11 @@
 package com.bwsw.tstreams.agents.consumer
 
 import java.util.concurrent.atomic.AtomicBoolean
-import java.util.concurrent.locks.ReentrantLock
 
 import com.bwsw.tstreams.agents.group.{CheckpointInfo, ConsumerCheckpointInfo, GroupParticipant}
 import com.bwsw.tstreams.storage.StorageClient
 import com.bwsw.tstreams.streams.Stream
-import com.bwsw.tstreamstransactionserver.rpc.{ProducerTransaction, TransactionStates}
+import com.bwsw.tstreamstransactionserver.rpc.TransactionStates
 import org.slf4j.LoggerFactory
 
 import scala.collection.mutable
@@ -315,11 +314,6 @@ class Consumer(val name: String,
     checkpointOffsets.clear()
     checkpointData
   }
-
-  /**
-    * Agent lock on any actions which has to do with checkpoint
-    */
-  override def getThreadLock(): ReentrantLock = null
 
   def stop() = {
 

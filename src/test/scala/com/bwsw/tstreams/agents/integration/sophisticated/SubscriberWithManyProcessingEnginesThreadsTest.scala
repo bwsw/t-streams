@@ -86,7 +86,7 @@ class SubscriberWithManyProcessingEnginesThreadsTest extends FlatSpec with Match
             val v = Random.nextInt()
             t.send(s"$v")
           })
-          t.checkpoint(false) // checkpoint the transaction
+          t.checkpoint() // checkpoint the transaction
           if (i % 1000 == 0) {
             logger.info(s"I have wrote $i transactions up to now.")
           }
