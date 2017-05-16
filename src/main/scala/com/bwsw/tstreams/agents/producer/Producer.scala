@@ -84,7 +84,6 @@ class Producer(var name: String,
       pcs.threadPoolSize
   }
 
-  Producer.logger.info(s"Start new Basic producer with name : $name, streamName : ${stream.name}, streamPartitions : ${stream.partitionsCount}")
 
   // this client is used to find new subscribers
   private[tstreams] val subscriberNotifier = new UdpEventsBroadcastClient(curatorClient, partitions = producerOptions.writePolicy.getUsedPartitions())
@@ -128,6 +127,7 @@ class Producer(var name: String,
     usedPartitions = producerOptions.writePolicy.getUsedPartitions(),
     threadPoolAmount = threadPoolSize)
 
+  Producer.logger.info(s"Start new Basic producer with id: ${transactionOpenerService.getUniqueAgentID()}, name : $name, streamName : ${stream.name}, streamPartitions : ${stream.partitionsCount}")
 
   /**
     * Queue to figure out moment when transaction is going to close
@@ -172,7 +172,8 @@ class Producer(var name: String,
             break()
           }
           Producer.logger.debug(s"Producer $name - update is started for long lasting transactions")
-          openTransactions.forallKeysDo((part: Int, transaction: IProducerTransaction) => transaction.updateTransactionKeepAliveState())        }
+          openTransactions.forallKeysDo((part: Int, transaction: IProducerTransaction) => transaction.updateTransactionKeepAliveState())
+        }
         Producer.logger.debug(s"Producer $name - update is completed for long lasting transactions")
       }
     })
@@ -190,7 +191,7 @@ class Producer(var name: String,
     * frames enabled).
     * The method is blocking.
     *
-    * @param partition partition to write transaction and data
+    * @param partition  partition to write transaction and data
     * @param data
     * @param isReliable either master waits for storage server reply or not
     *                   (if is not reliable then it leads to at-least-once with possible losses)
@@ -207,6 +208,7 @@ class Producer(var name: String,
   /**
     * Wrapper method when the partition is automatically selected with writePolicy (round robin).
     * The method is blocking.
+    *
     * @param data
     * @param isReliable
     * @return
@@ -235,14 +237,25 @@ class Producer(var name: String,
         partition
     }
 
+    if (Producer.logger.isDebugEnabled)
+      Producer.logger.debug(s"Evaluate a partition for new transaction [PARTITION_$evaluatedPartition]")
+
     if (!producerOptions.writePolicy.getUsedPartitions().contains(evaluatedPartition))
-      throw new IllegalArgumentException(s"Producer $name - invalid partition ${evaluatedPartition}")
+      throw new IllegalArgumentException(s"Producer $name - invalid partition $evaluatedPartition")
 
+    if (Producer.logger.isDebugEnabled)
+      Producer.logger.debug(s"[PARTITION_$evaluatedPartition] Handle the previous opened transaction if it exists")
     val previousTransactionAction = openTransactions.handlePreviousOpenTransaction(evaluatedPartition, policy)
-    if (previousTransactionAction != null)
+    if (previousTransactionAction != null) {
+      if (Producer.logger.isDebugEnabled)
+        Producer.logger.debug(s"[PARTITION_$evaluatedPartition] The previous opened transaction exists so do an action")
       previousTransactionAction()
+    }
 
+    if (Producer.logger.isDebugEnabled)
+      Producer.logger.debug(s"[PARTITION_$evaluatedPartition] Start generating a new transaction id")
     val transactionID = transactionOpenerService.generateNewTransaction(evaluatedPartition)
+
 
     if (Producer.logger.isDebugEnabled)
       Producer.logger.debug(s"[NEW_TRANSACTION PARTITION_$evaluatedPartition] ID=$transactionID")
@@ -270,8 +283,9 @@ class Producer(var name: String,
     * Checkpoint all opened transactions (atomic).
     */
   val firstCheckpoint = new AtomicBoolean(true)
+
   def checkpoint() = {
-    if(firstCheckpoint.getAndSet(false)) cg.add(this)
+    if (firstCheckpoint.getAndSet(false)) cg.add(this)
     cg.checkpoint()
   }
 
@@ -332,7 +346,7 @@ class Producer(var name: String,
   }
 
   private[tstreams] def openInstantTransactionLocal(partition: Int, transactionID: Long, data: Seq[Array[Byte]], isReliable: Boolean) = {
-    if(isReliable)
+    if (isReliable)
       stream.client.putInstantTransactionSync(stream.name, partition, transactionID, data)
     else
       stream.client.putInstantTransactionUnreliable(stream.name, partition, transactionID, data)
@@ -347,7 +361,7 @@ class Producer(var name: String,
       count = data.size,
       isNotReliable = !isReliable)
 
-    if(Producer.logger.isDebugEnabled())
+    if (Producer.logger.isDebugEnabled())
       Producer.logger.debug(s"Transaction Update Sent: ${msgInstant}")
 
     subscriberNotifier.publish(msgInstant)
@@ -357,7 +371,7 @@ class Producer(var name: String,
     * Stop this agent
     */
   def stop() = {
-    Producer.logger.info(s"Producer $name is shutting down.")
+    Producer.logger.info(s"Producer $name (id = ${transactionOpenerService.getUniqueAgentID()}) is shutting down.")
 
     if (isStop.getAndSet(true))
       throw new IllegalStateException(s"Producer ${this.name} is already stopped. Duplicate action.")
