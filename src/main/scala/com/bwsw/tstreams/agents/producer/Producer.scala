@@ -329,7 +329,7 @@ class Producer(var name: String,
     */
   override private[tstreams] def openTransactionLocal(transactionID: Long, partition: Int): Unit = {
 
-    val transactionRecord = new RPCProducerTransaction(stream.name, partition, transactionID, TransactionStates.Opened, -1, producerOptions.transactionTtlMs)
+    val transactionRecord = new RPCProducerTransaction(stream.id, partition, transactionID, TransactionStates.Opened, -1, producerOptions.transactionTtlMs)
     val extTransportTimeOutMs = producerOptions.coordinationOptions.transportClientTimeoutMs
 
     stream.client.putTransactionSync(transactionRecord, extTransportTimeOutMs.milliseconds)
@@ -347,9 +347,9 @@ class Producer(var name: String,
 
   private[tstreams] def openInstantTransactionLocal(partition: Int, transactionID: Long, data: Seq[Array[Byte]], isReliable: Boolean) = {
     if (isReliable)
-      stream.client.putInstantTransactionSync(stream.name, partition, transactionID, data)
+      stream.client.putInstantTransactionSync(stream.id, partition, transactionID, data)
     else
-      stream.client.putInstantTransactionUnreliable(stream.name, partition, transactionID, data)
+      stream.client.putInstantTransactionUnreliable(stream.id, partition, transactionID, data)
 
     val msgInstant = TransactionState(
       transactionID = transactionID,

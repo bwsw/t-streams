@@ -160,17 +160,7 @@ class TStreamsFactory() {
     streamDefaults.Stream.partitionsCount.check(pAsInt(co.Stream.partitionsCount, streamDefaults.Stream.partitionsCount.default))
     streamDefaults.Stream.ttlSec.check(pAsInt(co.Stream.ttlSec, streamDefaults.Stream.ttlSec.default))
 
-
-
-    // construct stream
-    val stream = new Stream(
-      client = getStorageClient(),
-      name = pAsString(co.Stream.name),
-      partitionsCount = pAsInt(co.Stream.partitionsCount, streamDefaults.Stream.partitionsCount.default),
-      ttl = pAsLong(co.Stream.ttlSec, streamDefaults.Stream.ttlSec.default),
-      description = pAsString(co.Stream.description, ""))
-
-    stream
+    getStorageClient().loadStream(pAsString(co.Stream.name))
   }
 
   /**

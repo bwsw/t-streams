@@ -14,7 +14,7 @@ class ProducerTransactionData(transaction: ProducerTransaction, ttl: Long, stora
   private[tstreams] var items = ListBuffer[Array[Byte]]()
   private[tstreams] var lastOffset: Int = 0
 
-  private val streamName = transaction.getTransactionOwner().stream.name
+  private val streamID = transaction.getTransactionOwner().stream.id
 
   def put(elt: Array[Byte]): Int = this.synchronized {
     items += elt
@@ -22,10 +22,10 @@ class ProducerTransactionData(transaction: ProducerTransaction, ttl: Long, stora
   }
 
   def save(): () => Unit = this.synchronized {
-    val job = storageClient.putTransactionData(streamName, transaction.getPartition, transaction.getTransactionID(), items, lastOffset)
+    val job = storageClient.putTransactionData(streamID, transaction.getPartition, transaction.getTransactionID(), items, lastOffset)
 
     if (Producer.logger.isDebugEnabled()) {
-      Producer.logger.debug(s"putTransactionData($streamName, ${transaction.getPartition}, ${transaction.getTransactionID()}, $items, $lastOffset)")
+      Producer.logger.debug(s"putTransactionData($streamID, ${transaction.getPartition}, ${transaction.getTransactionID()}, $items, $lastOffset)")
     }
 
     lastOffset += items.size

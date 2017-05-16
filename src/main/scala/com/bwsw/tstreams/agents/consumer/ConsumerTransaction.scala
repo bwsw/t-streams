@@ -63,7 +63,7 @@ class ConsumerTransaction(partition: Int,
     //try to update buffer
     if (buffer.isEmpty) {
       val newCount = (cnt + consumer.options.dataPreload).min(count - 1)
-      buffer ++= consumer.stream.client.getTransactionData(consumer.stream.name, partition, transactionID, cnt, newCount)
+      buffer ++= consumer.stream.client.getTransactionData(consumer.stream.id, partition, transactionID, cnt, newCount)
       cnt = newCount + 1
     }
 
@@ -93,7 +93,7 @@ class ConsumerTransaction(partition: Int,
   def getAll() = this.synchronized {
     if (consumer == null)
       throw new IllegalArgumentException("Transaction is not yet attached to consumer. Attach it first.")
-    val r = consumer.stream.client.getTransactionData(consumer.stream.name, partition, transactionID, cnt, count)
+    val r = consumer.stream.client.getTransactionData(consumer.stream.id, partition, transactionID, cnt, count)
 
     if (Consumer.logger.isDebugEnabled()) {
       Consumer.logger.debug(s"ConsumerTransaction.getAll(${consumer.stream.name}, $partition, $transactionID, $cnt, ${count - 1})")
