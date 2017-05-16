@@ -36,6 +36,10 @@ class ProducerUsedBySeveralThreadsSimultaneouslyTests extends FlatSpec with Matc
       setProperty(ConfigurationOptions.Consumer.dataPreload, 10)
 
     srv
+
+    if(storageClient.checkStreamExists("test_stream"))
+      storageClient.deleteStream("test_stream")
+
     storageClient.createStream("test_stream", ALL_PARTITIONS, 24 * 3600, "")
     storageClient.shutdown()
   }
@@ -61,7 +65,7 @@ class ProducerUsedBySeveralThreadsSimultaneouslyTests extends FlatSpec with Matc
     threads.foreach(_.start())
     l.await()
     val end = System.currentTimeMillis()
-    // println(end - start)
+    println(end - start)
     threads.foreach(_.join())
     producerAccumulator.size shouldBe COUNT * THREADS
 
@@ -88,7 +92,7 @@ class ProducerUsedBySeveralThreadsSimultaneouslyTests extends FlatSpec with Matc
     threads.foreach(_.start())
     l.await()
     val end = System.currentTimeMillis()
-    // println(end - start)
+    println(end - start)
     threads.foreach(_.join())
     producerAccumulator.size shouldBe COUNT * ALL_PARTITIONS
   }

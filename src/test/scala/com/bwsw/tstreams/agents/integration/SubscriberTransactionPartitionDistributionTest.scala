@@ -33,8 +33,11 @@ class SubscriberTransactionPartitionDistributionTest extends FlatSpec with Match
       setProperty(ConfigurationOptions.Consumer.transactionPreload, 10).
       setProperty(ConfigurationOptions.Consumer.dataPreload, 10)
 
-
     srv
+
+    if(storageClient.checkStreamExists("test_stream"))
+      storageClient.deleteStream("test_stream")
+
     storageClient.createStream("test_stream", ALL_PARTITIONS, 24 * 3600, "")
     storageClient.shutdown()
   }

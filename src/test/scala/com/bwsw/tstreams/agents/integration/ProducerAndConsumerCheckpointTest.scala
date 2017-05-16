@@ -47,6 +47,10 @@ class ProducerAndConsumerCheckpointTest extends FlatSpec with Matchers with Befo
       setProperty(ConfigurationOptions.Producer.Transaction.batchSize, 100)
 
     srv
+
+    if(storageClient.checkStreamExists("test_stream"))
+      storageClient.deleteStream("test_stream")
+
     storageClient.createStream("test_stream", 3, 24 * 3600, "")
     storageClient.shutdown()
   }

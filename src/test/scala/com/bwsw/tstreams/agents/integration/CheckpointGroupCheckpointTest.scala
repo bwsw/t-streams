@@ -45,7 +45,11 @@ class CheckpointGroupCheckpointTest extends FlatSpec with Matchers with BeforeAn
       setProperty(ConfigurationOptions.Consumer.dataPreload, 10)
 
     srv
-    storageClient.createStream("test_stream", 2, 24 * 3600, "")
+
+    if(storageClient.checkStreamExists("test_stream"))
+      storageClient.deleteStream("test_stream")
+
+    storageClient.createStream("test_stream", 3, 24 * 3600, "")
     storageClient.shutdown()
 
     consumer.start
