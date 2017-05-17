@@ -1,5 +1,7 @@
 package com.bwsw.tstreams.agents.consumer
 
+import com.bwsw.tstreamstransactionserver.rpc.TransactionStates
+
 import scala.collection.mutable.ListBuffer
 
 /**
@@ -11,7 +13,7 @@ trait TransactionOperator {
 
   def getTransactionById(partition: Int, transactionID: Long): Option[ConsumerTransaction]
 
-  def buildTransactionObject(partition: Int, transactionID: Long, count: Int): Option[ConsumerTransaction]
+  def buildTransactionObject(partition: Int, transactionID: Long, state: TransactionStates, count: Int): Option[ConsumerTransaction]
 
   def setStreamPartitionOffset(partition: Int, transactionID: Long): Unit
 

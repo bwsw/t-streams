@@ -77,7 +77,7 @@ class Consumer(val name: String,
 
     val transactionsQueue = mutable.Queue[ConsumerTransaction]()
     seq.foreach(record => {
-      val consumerTransaction = new ConsumerTransaction(partition, record.transactionID, record.quantity, record.ttl)
+      val consumerTransaction = new ConsumerTransaction(partition, record.transactionID, record.quantity, record.state, record.ttl)
       transactionsQueue.enqueue(consumerTransaction)
     })
     transactionsQueue
@@ -177,14 +177,14 @@ class Consumer(val name: String,
     val transaction = transactionBuffer(partition).head
 
     // We found invalid transaction, so just skip it and move forward
-    if (transaction.getCount() == 0) {
+    if (transaction.getState() == TransactionStates.Invalid) {
       transactionBuffer(partition).dequeue()
       updateOffsets(partition, transaction.getTransactionID())
       return getTransaction(partition)
     }
 
     // we found valid transaction transaction
-    if (transaction.getCount() != -1) {
+    if (transaction.getState() != TransactionStates.Opened) {
       updateOffsets(partition, transaction.getTransactionID())
       transactionBuffer(partition).dequeue()
       transaction.attach(this)
@@ -220,7 +220,7 @@ class Consumer(val name: String,
     val transactionId = stream.client.getLastTransactionId(stream.id, partition)
     if (transactionId > 0) {
       val txn = stream.client.getTransaction(stream.id, partition, transactionId)
-      txn.map(t => new ConsumerTransaction(partition = partition, transactionID = t.transactionID, count = t.quantity, ttl = t.ttl))
+      txn.map(t => new ConsumerTransaction(partition = partition, transactionID = t.transactionID, count = t.quantity, state = t.state, ttl = t.ttl))
     } else
       None
   }
@@ -281,7 +281,7 @@ class Consumer(val name: String,
       throw new IllegalStateException("Consumer is not started. Start consumer first.")
 
     stream.client.getTransaction(stream.id, partition, transactionID)
-      .map(rec => new ConsumerTransaction(partition, transactionID, rec.quantity, rec.ttl))
+      .map(rec => new ConsumerTransaction(partition, transactionID, rec.quantity, rec.state, rec.ttl))
   }
 
   /**
@@ -337,8 +337,8 @@ class Consumer(val name: String,
     * @param count
     * @return
     */
-  def buildTransactionObject(partition: Int, transactionID: Long, count: Int): Option[ConsumerTransaction] = {
-    val transaction = new ConsumerTransaction(partition, transactionID, count, -1)
+  def buildTransactionObject(partition: Int, transactionID: Long, state: TransactionStates, count: Int): Option[ConsumerTransaction] = {
+    val transaction = new ConsumerTransaction(partition, transactionID, count, state, -1)
     transaction.attach(this)
     Some(transaction)
   }
@@ -350,11 +350,9 @@ class Consumer(val name: String,
       Consumer.logger.debug(s"scanTransactions(${stream.name}, ${partition}, ${from + 1}, $to, ${options.transactionsPreload}, ${set}) -> $seq")
     val result = ListBuffer[ConsumerTransaction]()
     seq.foreach(rec => {
-      if (rec.quantity > 0 && rec.state != TransactionStates.Invalid) {
-        val t = new ConsumerTransaction(partition = partition, transactionID = rec.transactionID, count = rec.quantity, ttl = rec.ttl)
-        t.attach(this)
-        result.append(t)
-      }
+      val t = new ConsumerTransaction(partition = partition, transactionID = rec.transactionID, count = rec.quantity, state = rec.state, ttl = rec.ttl)
+      t.attach(this)
+      result.append(t)
     })
     result
   }

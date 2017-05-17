@@ -122,25 +122,7 @@ class ProducerTransaction(partition: Int,
     if (job != null) jobs += job
   }
 
-
-  /**
-    * Canceling current transaction
-    */
-  def cancel(): Unit = this.synchronized {
-    producer.checkStopped()
-    producer.checkUpdateFailure()
-
-    if (isTransactionClosed.getAndSet(true))
-      throw new IllegalStateException(s"Transaction $transactionID is closed. New data items are prohibited.")
-    producer.openTransactions.remove(partition, this)
-    cancelTransaction()
-  }
-
-  private def cancelTransaction() = {
-    val transactionRecord = new RPCProducerTransaction(producer.stream.id, partition, transactionID,
-      TransactionStates.Cancel, 0, -1L)
-    producer.stream.client.putTransactionSync(transactionRecord)
-
+  private[tstreams] def notifyCancelEvent() = {
     val msg = TransactionState(transactionID = transactionID,
       ttlMs = -1,
       status = TransactionState.Status.Cancelled,
@@ -151,6 +133,22 @@ class ProducerTransaction(partition: Int,
     producer.publish(msg)
   }
 
+  private def cancelTransaction() = {
+    producer.stream.client.putTransactionSync(getCancelInfoAndClose().get)
+    notifyCancelEvent()
+  }
+
+
+  /**
+    * Canceling current transaction
+    */
+  def cancel(): Unit = this.synchronized {
+    producer.checkStopped()
+    producer.checkUpdateFailure()
+    producer.openTransactions.remove(partition, this)
+    cancelTransaction()
+  }
+
   /**
     * Submit transaction(transaction will be available by consumer only after closing)
     */
@@ -158,7 +156,7 @@ class ProducerTransaction(partition: Int,
     producer.checkStopped()
     producer.checkUpdateFailure()
 
-    if (isTransactionClosed.getAndSet(true))
+    if (isTransactionClosed.get())
       throw new IllegalStateException(s"Transaction $transactionID is closed. New data items are prohibited.")
 
     producer.openTransactions.remove(partition, this)
@@ -208,11 +206,34 @@ class ProducerTransaction(partition: Int,
     else {
       cancelTransaction()
     }
+
+    isTransactionClosed.set(true)
   }
 
+  /**
+    *
+    * @return
+    */
+  private[tstreams] def getCancelInfoAndClose(): Option[RPCProducerTransaction] = this.synchronized {
+    if (ProducerTransaction.logger.isDebugEnabled) {
+      ProducerTransaction.logger.debug("Cancel info request for Transaction {}, partition: {}", transactionID, partition)
+    }
+    val res = if(isClosed()) {
+      None
+    } else {
+      Some(new RPCProducerTransaction(producer.stream.id, partition, transactionID, TransactionStates.Cancel, 0, -1L))
+    }
+    isTransactionClosed.set(true)
+    res
+  }
+
+  /**
+    *
+    * @return
+    */
   private[tstreams] def getUpdateInfo(): Option[RPCProducerTransaction] = {
     if (ProducerTransaction.logger.isDebugEnabled) {
-      ProducerTransaction.logger.debug("Update event for Transaction {}, partition: {}", transactionID, partition)
+      ProducerTransaction.logger.debug("Update info request for Transaction {}, partition: {}", transactionID, partition)
     }
     if(isClosed()) {
       None
@@ -236,7 +257,7 @@ class ProducerTransaction(partition: Int,
     }
   }
 
-  def getTransactionInfo(): ProducerCheckpointInfo = {
+  def getCheckpointInfo(): ProducerCheckpointInfo = {
 
     val checkpoint = TransactionState(
       transactionID = getTransactionID(),

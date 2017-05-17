@@ -6,8 +6,11 @@ import com.bwsw.tstreams.agents.consumer.Offset.Newest
 import com.bwsw.tstreams.agents.consumer.{ConsumerTransaction, TransactionOperator}
 import com.bwsw.tstreams.agents.producer.NewProducerTransactionPolicy
 import com.bwsw.tstreams.env.ConfigurationOptions
+import com.bwsw.tstreams.env.defaults.TStreamsFactoryProducerDefaults
 import com.bwsw.tstreams.testutils.{TestStorageServer, TestUtils}
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
+
+import scala.collection.mutable.ListBuffer
 
 /**
   * Created by ivan on 16.05.17.
@@ -23,8 +26,8 @@ class ProducerQueuedTransactionsTests  extends FlatSpec with Matchers with Befor
       setProperty(ConfigurationOptions.Coordination.connectionTimeoutMs, 7000).
       setProperty(ConfigurationOptions.Coordination.sessionTimeoutMs, 7000).
       setProperty(ConfigurationOptions.Producer.transportTimeoutMs, 5000).
-      setProperty(ConfigurationOptions.Producer.Transaction.ttlMs, 500).
-      setProperty(ConfigurationOptions.Producer.Transaction.keepAliveMs, 100).
+      setProperty(ConfigurationOptions.Producer.Transaction.ttlMs, 5000).
+      setProperty(ConfigurationOptions.Producer.Transaction.keepAliveMs, 1000).
       setProperty(ConfigurationOptions.Consumer.transactionPreload, 500).
       setProperty(ConfigurationOptions.Consumer.dataPreload, 10)
 
@@ -50,7 +53,7 @@ class ProducerQueuedTransactionsTests  extends FlatSpec with Matchers with Befor
       name = "test_producer",
       partitions = Set(0))
 
-    val s = f.getSubscriber(name = "sv2_instant",
+    val s = f.getSubscriber(name = "subscriber",
       partitions = Set(0),
       offset = Newest,
       useLastOffset = false,
@@ -78,7 +81,7 @@ class ProducerQueuedTransactionsTests  extends FlatSpec with Matchers with Befor
       name = "test_producer",
       partitions = Set(0))
 
-    val s = f.getSubscriber(name = "sv2_instant",
+    val s = f.getSubscriber(name = "subscriber",
       partitions = Set(0),
       offset = Newest,
       useLastOffset = false,
@@ -90,12 +93,56 @@ class ProducerQueuedTransactionsTests  extends FlatSpec with Matchers with Befor
       transaction.send("test")
     }
 
-    Thread.sleep(f.getProperty(ConfigurationOptions.Producer.Transaction.ttlMs).asInstanceOf[Int] * 10)
+    Thread.sleep(f.getProperty(ConfigurationOptions.Producer.Transaction.ttlMs).asInstanceOf[Int] * 3)
 
     producer.checkpoint()
     producer.stop()
 
     latch.await(60, TimeUnit.SECONDS) shouldBe true
+
+    s.stop()
+  }
+
+  it should "create queued transactions, cancel them, create and get correctly with big TTL" in {
+    val TOTAL = 1000
+    val latch = new CountDownLatch(TOTAL)
+    val producerAcc = ListBuffer[Long]()
+    val subscriberAcc = ListBuffer[Long]()
+    val nf = f.copy()
+    nf.setProperty(ConfigurationOptions.Producer.Transaction.ttlMs, TStreamsFactoryProducerDefaults.Producer.Transaction.ttlMs.max)
+
+    val producer = nf.getProducer(
+      name = "test_producer",
+      partitions = Set(0))
+
+    val s = nf.getSubscriber(name = "subscriber",
+      partitions = Set(0),
+      offset = Newest,
+      useLastOffset = false,
+      callback = (consumer: TransactionOperator, transaction: ConsumerTransaction) => this.synchronized {
+        subscriberAcc.append(transaction.getTransactionID())
+        latch.countDown()
+      })
+    s.start()
+
+    for (it <- 0 until TOTAL) {
+      val transaction = producer.newTransaction(NewProducerTransactionPolicy.EnqueueIfOpened)
+      transaction.send("test")
+    }
+
+    producer.cancel()
+
+    for (it <- 0 until TOTAL) {
+      val transaction = producer.newTransaction(NewProducerTransactionPolicy.EnqueueIfOpened)
+      transaction.send("test")
+      producerAcc.append(transaction.getTransactionID())
+    }
+    producer.checkpoint()
+
+    producer.stop()
+
+    latch.await(60, TimeUnit.SECONDS) shouldBe true
+    producerAcc shouldBe subscriberAcc
 
     s.stop()
   }

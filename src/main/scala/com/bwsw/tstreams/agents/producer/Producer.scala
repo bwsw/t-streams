@@ -317,13 +317,20 @@ class Producer(var name: String,
   }
 
 
+  private def cancelPendingTransactions() = this.synchronized {
+    val transactionStates = openTransactions.forallKeysDo((part: Int, transaction: IProducerTransaction) => transaction.getCancelInfoAndClose())
+    stream.client.putTransactions(transactionStates.flatten.toSeq, Seq())
+    openTransactions.forallKeysDo((k: Int, v: IProducerTransaction) => v.notifyCancelEvent())
+    openTransactions.clear()
+  }
+
   /**
     * Cancel all opened transactions (not atomic, probably atomic is not a case for a cancel).
     */
   def cancel(): Unit = {
     checkStopped()
     checkUpdateFailure()
-    openTransactions.forallKeysDo((k: Int, v: IProducerTransaction) => v.cancel())
+    cancelPendingTransactions()
   }
 
 
@@ -342,7 +349,7 @@ class Producer(var name: String,
   override private[tstreams] def getCheckpointInfoAndClear(): List[CheckpointInfo] = {
     checkStopped()
     checkUpdateFailure()
-    val checkpointInfo = openTransactions.forallKeysDo((k: Int, v: IProducerTransaction) => v.getTransactionInfo()).toList
+    val checkpointInfo = openTransactions.forallKeysDo((k: Int, v: IProducerTransaction) => v.getCheckpointInfo()).toList
     openTransactions.clear()
     checkpointInfo
   }
@@ -404,9 +411,8 @@ class Producer(var name: String,
     */
   def stop() = {
     Producer.logger.info(s"Producer $name[${transactionOpenerService.getUniqueAgentID()}] is shutting down.")
-
+    cancel()
     checkStopped(true)
-
     cg.stop()
     openTransactionClient.stop()
     // stop provide master features to public

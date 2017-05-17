@@ -31,7 +31,7 @@ class OpenTransactionsKeeperTests extends FlatSpec with Matchers {
       ctr += 1
     }
 
-    override def getTransactionInfo(): ProducerCheckpointInfo = null
+    override def getCheckpointInfo(): ProducerCheckpointInfo = null
 
     override def getTransactionID(): Long = LocalGeneratorCreator.getTransaction()
 
@@ -40,6 +40,10 @@ class OpenTransactionsKeeperTests extends FlatSpec with Matchers {
     override def send(obj: Array[Byte]): Unit = {}
 
     override private[tstreams] def getUpdateInfo(): Option[RPCProducerTransaction] = None
+
+    override private[tstreams] def getCancelInfoAndClose(): Option[RPCProducerTransaction] = None
+
+    override private[tstreams] def notifyCancelEvent(): Unit = {}
   }
 
   class TransactionStubBadTransactionID extends TransactionStub {

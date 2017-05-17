@@ -207,7 +207,12 @@ class StorageClient(clientOptions: ConnectionOptions, authOptions: AuthOptions, 
   def putTransactions(producerTransactions: Seq[com.bwsw.tstreamstransactionserver.rpc.ProducerTransaction],
                       consumerTransactions: Seq[com.bwsw.tstreamstransactionserver.rpc.ConsumerTransaction],
                       timeout: Duration = StorageClient.maxAwaiTimeout): Boolean = {
-    Await.result(client.putTransactions(producerTransactions, consumerTransactions), timeout)
+    val res = Await.result(client.putTransactions(producerTransactions, consumerTransactions), timeout)
+    if(StorageClient.logger.isDebugEnabled) {
+      StorageClient.logger.debug(s"Placed ProducerTransactions $producerTransactions  [putTransactions]")
+      StorageClient.logger.debug(s"Placed ConsumerStates $consumerTransactions  [putTransactions]")
+    }
+    res
   }
 
   def putTransactionData(streamID: Int, partition: Int, transaction: Long, data: Seq[Array[Byte]], from: Int): Future[Boolean] = {

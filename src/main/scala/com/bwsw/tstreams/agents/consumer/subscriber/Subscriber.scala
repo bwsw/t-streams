@@ -182,12 +182,13 @@ class Subscriber(val name: String,
     if (!isStarted.getAndSet(false))
       throw new IllegalStateException(s"Subscriber $name is not started yet. Stop is impossible.")
 
+    stateUpdateServer.stop()
+
     processingEngines.foreach(kv => kv._2.stop())
     processingEngines.clear()
     transactionsBufferWorkers.foreach(kv => kv._2.stop())
     transactionsBufferWorkers.clear()
 
-    stateUpdateServer.stop()
     coordinator.shutdown()
     consumer.stop()
   }

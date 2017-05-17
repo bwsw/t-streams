@@ -1,5 +1,7 @@
 package com.bwsw.tstreams.agents.consumer
 
+import com.bwsw.tstreamstransactionserver.rpc.TransactionStates
+
 import scala.collection.mutable
 
 
@@ -8,11 +10,13 @@ import scala.collection.mutable
   * @param partition
   * @param transactionID
   * @param count
+  * @param state
   * @param ttl
   */
 class ConsumerTransaction(partition: Int,
                           transactionID: Long,
                           count: Int,
+                          state: TransactionStates,
                           ttl: Long) {
 
   override def toString(): String = {
@@ -38,6 +42,8 @@ class ConsumerTransaction(partition: Int,
   def getCount() = count
 
   def getTTL() = ttl
+
+  def getState() = state
 
   /**
     * Transaction data pointer
