@@ -119,6 +119,9 @@ class CheckpointGroup(val executors: Int = 1) {
     //assume all agents use the same metadata entity
     doGroupCheckpoint(agents.head._2.getStorageClient, checkpointStateInfo)
 
+    //check producers update timeout
+    checkUpdateFailure(checkpointStateInfo)
+
     CheckpointGroup.logger.debug("Do publish notifications")
     // do publish post events for all producers
     publishCheckpointEventForAllProducers(checkpointStateInfo)
@@ -126,6 +129,12 @@ class CheckpointGroup(val executors: Int = 1) {
     CheckpointGroup.logger.debug("End checkpoint")
   }
 
+  private def checkUpdateFailure(producers: List[CheckpointInfo]) = {
+    producers foreach {
+      case ProducerCheckpointInfo(_, agent, _, _, _, _, _, _) => agent.getProducer().checkUpdateFailure()
+      case _ =>
+    }
+  }
 
   private def publishCheckpointEventForAllProducers(producers: List[CheckpointInfo]) = {
     producers foreach {

@@ -54,11 +54,12 @@ class TransactionFullLoader(partitions: Set[Int],
     var transactions = ListBuffer[ConsumerTransaction]()
     var flag = true
     var counter = 0
+    var newTransactions = ListBuffer[ConsumerTransaction]()
     while (flag) {
       counter += 1
       if(Subscriber.logger.isDebugEnabled())
         Subscriber.logger.debug(s"Load full begin (partition = ${last.partition}, first = $first, last = ${last.transactionID}, master = ${last.masterID})")
-      val newTransactions = consumer.getTransactionsFromTo(last.partition, first, last.transactionID)
+      newTransactions = consumer.getTransactionsFromTo(last.partition, first, last.transactionID)
       transactions ++= newTransactions.filter(transaction => transaction.getState != TransactionStates.Invalid)
 
       if(Subscriber.logger.isDebugEnabled())
@@ -84,8 +85,9 @@ class TransactionFullLoader(partitions: Set[Int],
           */
           Thread.sleep(TransactionFullLoader.EXPECTED_BUT_EMPTY_RESPONSE_DELAY)
         }
-      } else
+      } else {
         flag = false
+      }
     }
 
     if (Subscriber.logger.isDebugEnabled())
@@ -97,10 +99,10 @@ class TransactionFullLoader(partitions: Set[Int],
           partition = last.partition, masterID = -1, orderID = -1, count = elt.getCount,
           status = TransactionState.Status.Checkpointed, ttlMs = -1), callback)))
 
-    if (transactions.nonEmpty)
-      lastTransactionsMap(last.partition) = TransactionState(transactionID = transactions.last.getTransactionID,
+    if (newTransactions.nonEmpty)
+      lastTransactionsMap(last.partition) = TransactionState(transactionID = newTransactions.last.getTransactionID,
         partition = last.partition, masterID = last.masterID, orderID = last.orderID,
-        count = transactions.last.getCount, status = TransactionState.Status.Checkpointed, ttlMs = -1)
+        count = newTransactions.last.getCount, status = TransactionState.Status.Checkpointed, ttlMs = -1)
 
     transactions.size
   }
