@@ -4,7 +4,6 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.locks.ReentrantLock
 
 import com.bwsw.tstreams.agents.group.ProducerCheckpointInfo
-import com.bwsw.tstreams.debug.GlobalHooks
 import com.bwsw.tstreams.proto.protocol.TransactionState
 import com.bwsw.tstreamstransactionserver.rpc.TransactionStates
 import org.slf4j.LoggerFactory
@@ -165,13 +164,12 @@ class ProducerTransaction(partition: Int,
         ProducerTransaction.logger.debug("[START PRE CHECKPOINT PARTITION_{}] ts={}", partition, transactionID.toString)
       }
 
-      //test purposes only
-      GlobalHooks.invoke(GlobalHooks.preCommitFailure)
-
       val transactionRecord = new RPCProducerTransaction(producer.stream.id, partition, transactionID,
         TransactionStates.Checkpointed, getDataItemsCount, producer.stream.ttl)
 
+      producer.checkUpdateFailure()
       producer.stream.client.putTransactionWithDataSync(transactionRecord, data.items, data.lastOffset)
+
       Try(producer.checkUpdateFailure()) match {
         case Success(_) =>
         case Failure(exception) =>
@@ -183,8 +181,6 @@ class ProducerTransaction(partition: Int,
       if (ProducerTransaction.logger.isDebugEnabled) {
         ProducerTransaction.logger.debug("[COMMIT PARTITION_{}] ts={}", partition, transactionID.toString)
       }
-      //debug purposes only
-      GlobalHooks.invoke(GlobalHooks.afterCommitFailure)
 
       producer.notifyService.submit(s"NotifyTask-Part[$partition]-Txn[$transactionID]", () =>
         producer.publish(TransactionState(

@@ -1,6 +1,6 @@
 val baseSettings = Seq(
   name := "t-streams",
-  version := "2.2.7-SNAPSHOT",
+  version := "2.3.1-SNAPSHOT",
   scalaVersion := "2.12.1",
   organization := "com.bwsw",
   organizationName := "Bitworks Software, Ltd.",

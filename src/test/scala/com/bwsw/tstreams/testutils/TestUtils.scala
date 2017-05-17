@@ -4,7 +4,6 @@ import java.io.File
 import java.lang.management.ManagementFactory
 import java.util.concurrent.atomic.AtomicInteger
 
-import com.bwsw.tstreams.debug.GlobalHooks
 import com.bwsw.tstreams.env.{ConfigurationOptions, TStreamsFactory}
 import com.google.common.io.Files
 import org.apache.curator.framework.CuratorFrameworkFactory
@@ -103,8 +102,6 @@ trait TestUtils {
 
   def onAfterAll() = {
     System.setProperty("DEBUG", "false")
-    GlobalHooks.addHook(GlobalHooks.preCommitFailure, () => ())
-    GlobalHooks.addHook(GlobalHooks.afterCommitFailure, () => ())
     removeZkMetadata(f.getProperty(ConfigurationOptions.Coordination.prefix).toString)
     removeZkMetadata("/unit")
     curatorClient.close()
