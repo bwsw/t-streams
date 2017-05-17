@@ -57,8 +57,8 @@ class ProducerToSubscriberStartsAfterWriteWithCheckpointGroupTests extends FlatS
       offset = Oldest,
       useLastOffset = true,
       callback = (consumer: TransactionOperator, transaction: ConsumerTransaction) => this.synchronized {
-        bs.append(transaction.getTransactionID())
-        consumer.setStreamPartitionOffset(transaction.getPartition(), transaction.getTransactionID())
+        bs.append(transaction.getTransactionID)
+        consumer.setStreamPartitionOffset(transaction.getPartition, transaction.getTransactionID)
         if (bs.size == COUNT) {
           subscriber1Latch.countDown()
         }
@@ -68,7 +68,7 @@ class ProducerToSubscriberStartsAfterWriteWithCheckpointGroupTests extends FlatS
       val t: ProducerTransaction = producer.newTransaction(policy = NewProducerTransactionPolicy.CheckpointIfOpened)
       t.send("test")
       t.checkpoint()
-      bp.append(t.getTransactionID())
+      bp.append(t.getTransactionID)
     }
 
     producer.stop()

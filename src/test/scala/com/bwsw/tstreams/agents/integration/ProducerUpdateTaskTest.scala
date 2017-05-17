@@ -61,17 +61,17 @@ class ProducerUpdateTaskTest extends FlatSpec with Matchers with BeforeAndAfterA
     consumer.start()
 
     val t = producer.newTransaction(policy = NewProducerTransactionPolicy.CheckpointIfOpened, 0)
-    val transactionID = t.getTransactionID()
+    val transactionID = t.getTransactionID
     srv.notifyProducerTransactionCompleted(t => t.transactionID == transactionID && t.state == TransactionStates.Checkpointed, l.countDown())
     t.send("data".getBytes())
     Thread.sleep(TRANSACTION_TTL_MS * 3)
     t.checkpoint()
     l.await()
 
-    val consumerTransactionOpt = consumer.getTransactionById(0, t.getTransactionID())
+    val consumerTransactionOpt = consumer.getTransactionById(0, t.getTransactionID)
     consumerTransactionOpt.isDefined shouldBe true
-    consumerTransactionOpt.get.getTransactionID() shouldBe t.getTransactionID()
-    consumerTransactionOpt.get.getCount() shouldBe 1
+    consumerTransactionOpt.get.getTransactionID shouldBe t.getTransactionID
+    consumerTransactionOpt.get.getCount shouldBe 1
     consumer.stop()
   }
 

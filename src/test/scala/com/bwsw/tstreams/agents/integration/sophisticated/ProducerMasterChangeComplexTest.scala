@@ -62,16 +62,16 @@ class ProducerMasterChangeComplexTest extends FlatSpec with Matchers with Before
     val intFactory = factory.copy()
     intFactory.setProperty(ConfigurationOptions.Producer.bindPort, 40000 + id)
 
-    def loop(partitions: Set[Int], checkpointModeSync: Boolean = true) = {
+    def loop(partitions: Set[Int]) = {
       while (counter < amount) {
         producer = makeNewProducer(partitions, id)
 
         while (probability < Random.nextDouble() && counter < amount) {
           val t = producer.newTransaction(policy = NewProducerTransactionPolicy.CheckpointIfOpened, -1)
           t.send("test".getBytes())
-          t.checkpoint(checkpointModeSync)
-          producerBuffer(t.getPartition()).synchronized {
-            producerBuffer(t.getPartition()).append(t.getTransactionID())
+          t.checkpoint()
+          producerBuffer(t.getPartition).synchronized {
+            producerBuffer(t.getPartition).append(t.getTransactionID)
           }
           counter += 1
         }
@@ -80,8 +80,8 @@ class ProducerMasterChangeComplexTest extends FlatSpec with Matchers with Before
       onCompleteLatch.countDown()
     }
 
-    def run(partitions: Set[Int], checkpointModeSync: Boolean = true): Thread = {
-      val thread = new Thread(() => loop(partitions, checkpointModeSync))
+    def run(partitions: Set[Int]): Thread = {
+      val thread = new Thread(() => loop(partitions))
       thread.start()
       thread
     }
@@ -113,7 +113,7 @@ class ProducerMasterChangeComplexTest extends FlatSpec with Matchers with Before
     useLastOffset = false, // true
     callback = (consumer: TransactionOperator, transaction: ConsumerTransaction) => this.synchronized {
       subscriberCounter += 1
-      subscriberBuffer(transaction.getPartition()).append(transaction.getTransactionID())
+      subscriberBuffer(transaction.getPartition).append(transaction.getTransactionID)
       if (subscriberCounter == PRODUCERS_AMOUNT * TRANSACTIONS_AMOUNT_EACH)
         waitCompleteLatch.countDown()
     })

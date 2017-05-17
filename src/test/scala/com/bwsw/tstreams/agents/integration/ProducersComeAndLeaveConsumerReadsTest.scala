@@ -57,7 +57,7 @@ class ProducersComeAndLeaveConsumerReadsTest extends FlatSpec with Matchers with
         val transaction = producer.newTransaction(NewProducerTransactionPolicy.ErrorIfOpened)
         transaction.send("test")
         transaction.checkpoint()
-        producerIterAcc.append(transaction.getTransactionID())
+        producerIterAcc.append(transaction.getTransactionID)
       })
       producer.stop()
       val lastProducerTransaction = producerIterAcc.last
@@ -68,8 +68,8 @@ class ProducersComeAndLeaveConsumerReadsTest extends FlatSpec with Matchers with
       while(!exitFlag.get()) {
         val tOpt = consumer.getTransaction(0)
         tOpt.foreach(t => {
-          consumerIterAcc.append(t.getTransactionID())
-          if(t.getTransactionID() == lastProducerTransaction)
+          consumerIterAcc.append(t.getTransactionID)
+          if(t.getTransactionID == lastProducerTransaction)
             exitFlag.set(true)
         })
       }

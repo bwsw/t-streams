@@ -51,7 +51,7 @@ class ProducerAndConsumerLongLastingTransactionsTests extends FlatSpec with Matc
     consumer.start()
   }
 
-  "two producers, consumer" should "first producer - generate transactions lazily, second producer - generate transactions faster" +
+  it should "first producer - generate transactions lazily, second producer - generate transactions faster" +
     " than the first one but with pause at the very beginning, consumer - retrieve all transactions which was sent" in {
     val totalElementsInTransaction = 10
     val dataToSend1: List[String] = (for (part <- 0 until totalElementsInTransaction) yield "data_to_send_pr1_" + randomKeyspace).toList.sorted
@@ -64,8 +64,8 @@ class ProducerAndConsumerLongLastingTransactionsTests extends FlatSpec with Matc
 
     val transaction1 = producer1.newTransaction(NewProducerTransactionPolicy.ErrorIfOpened)
     val transaction2 = producer2.newTransaction(NewProducerTransactionPolicy.ErrorIfOpened)
-    srv.notifyProducerTransactionCompleted(t => t.transactionID == transaction1.getTransactionID() && t.state == TransactionStates.Checkpointed, waitFirstAtConsumer.countDown())
-    srv.notifyProducerTransactionCompleted(t => t.transactionID == transaction2.getTransactionID() && t.state == TransactionStates.Checkpointed, waitSecondAtConsumer.countDown())
+    srv.notifyProducerTransactionCompleted(t => t.transactionID == transaction1.getTransactionID && t.state == TransactionStates.Checkpointed, waitFirstAtConsumer.countDown())
+    srv.notifyProducerTransactionCompleted(t => t.transactionID == transaction2.getTransactionID && t.state == TransactionStates.Checkpointed, waitSecondAtConsumer.countDown())
 
     val producer1Thread = new Thread(() => {
       waitFirstAtProducer.countDown()
@@ -85,14 +85,14 @@ class ProducerAndConsumerLongLastingTransactionsTests extends FlatSpec with Matc
 
     waitFirstAtConsumer.await()
     val transaction1Opt = consumer.getTransaction(0)
-    transaction1Opt.get.getTransactionID() shouldBe transaction1.getTransactionID()
-    val data1 = transaction1Opt.get.getAll().map(i => new String(i)).toList.sorted
+    transaction1Opt.get.getTransactionID shouldBe transaction1.getTransactionID
+    val data1 = transaction1Opt.get.getAll.map(i => new String(i)).toList.sorted
     data1 shouldBe dataToSend1
 
     waitSecondAtConsumer.await()
     val transaction2Opt = consumer.getTransaction(0)
-    transaction2Opt.get.getTransactionID() shouldBe transaction2.getTransactionID()
-    val data2 = transaction2Opt.get.getAll().map(i => new String(i)).toList.sorted
+    transaction2Opt.get.getTransactionID shouldBe transaction2.getTransactionID
+    val data2 = transaction2Opt.get.getAll.map(i => new String(i)).toList.sorted
     data2 shouldBe dataToSend2
 
     producer1Thread.join()

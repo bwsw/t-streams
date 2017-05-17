@@ -57,7 +57,7 @@ class ProducersComeAndLeaveSubscriberListensTest extends FlatSpec with Matchers 
       offset = Oldest,
       useLastOffset = false,
       callback = (consumer: TransactionOperator, transaction: ConsumerTransaction) => this.synchronized {
-        subscriberAccumulator.append(transaction.getTransactionID())
+        subscriberAccumulator.append(transaction.getTransactionID)
         latch.countDown()
       })
 
@@ -71,7 +71,7 @@ class ProducersComeAndLeaveSubscriberListensTest extends FlatSpec with Matchers 
         val transaction = producer.newTransaction(NewProducerTransactionPolicy.ErrorIfOpened)
         transaction.send("test")
         transaction.checkpoint()
-        producerAccumulator.append(transaction.getTransactionID())
+        producerAccumulator.append(transaction.getTransactionID)
       })
       producer.stop()
       Thread.sleep(100)

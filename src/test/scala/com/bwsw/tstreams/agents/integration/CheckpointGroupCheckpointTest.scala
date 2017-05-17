@@ -67,7 +67,7 @@ class CheckpointGroupCheckpointTest extends FlatSpec with Matchers with BeforeAn
     val transaction1 = producer.newTransaction(NewProducerTransactionPolicy.ErrorIfOpened)
 
     srv.notifyProducerTransactionCompleted(t =>
-      transaction1.getTransactionID() == t.transactionID && t.state == TransactionStates.Checkpointed, l1.countDown())
+      transaction1.getTransactionID == t.transactionID && t.state == TransactionStates.Checkpointed, l1.countDown())
 
     logger.info("Transaction 1 is " + transaction1.getTransactionID.toString)
     transaction1.send("info1".getBytes())
@@ -82,7 +82,7 @@ class CheckpointGroupCheckpointTest extends FlatSpec with Matchers with BeforeAn
     val transaction2 = producer.newTransaction(NewProducerTransactionPolicy.ErrorIfOpened, 1)
 
     srv.notifyProducerTransactionCompleted(t =>
-      transaction2.getTransactionID() == t.transactionID && t.state == TransactionStates.Checkpointed, l2.countDown())
+      transaction2.getTransactionID == t.transactionID && t.state == TransactionStates.Checkpointed, l2.countDown())
 
     logger.info("Transaction 2 is " + transaction2.getTransactionID.toString)
     transaction2.send("info2".getBytes())
@@ -93,7 +93,7 @@ class CheckpointGroupCheckpointTest extends FlatSpec with Matchers with BeforeAn
 
     consumer2.start()
     //assert that the second transaction was closed and consumer offsets was moved
-    consumer2.getTransaction(1).get.getAll().head shouldBe "info2".getBytes()
+    consumer2.getTransaction(1).get.getAll.head shouldBe "info2".getBytes()
   }
 
   override def afterAll(): Unit = {

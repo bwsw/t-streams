@@ -63,7 +63,7 @@ class TwoProducersAndSubscriberStartsBeforeWriteTests extends FlatSpec with Matc
       offset = Newest,
       useLastOffset = true,
       callback = (consumer: TransactionOperator, transaction: ConsumerTransaction) => this.synchronized {
-        bs.append(transaction.getTransactionID())
+        bs.append(transaction.getTransactionID)
         if (bs.size == 2 * COUNT) {
           ls.countDown()
         }
@@ -73,7 +73,7 @@ class TwoProducersAndSubscriberStartsBeforeWriteTests extends FlatSpec with Matc
       logger.info(s"Producer-1 is master of partition: ${producer1.isMasterOfPartition(0)}")
       for (i <- 0 until COUNT) {
         val t = producer1.newTransaction(policy = NewProducerTransactionPolicy.CheckpointIfOpened)
-        bp.append(t.getTransactionID())
+        bp.append(t.getTransactionID)
         lp2.countDown()
         t.send("test")
         t.checkpoint()
@@ -84,7 +84,7 @@ class TwoProducersAndSubscriberStartsBeforeWriteTests extends FlatSpec with Matc
       for (i <- 0 until COUNT) {
         lp2.await()
         val t = producer2.newTransaction(policy = NewProducerTransactionPolicy.CheckpointIfOpened)
-        bp.append(t.getTransactionID())
+        bp.append(t.getTransactionID)
         t.send("test")
         t.checkpoint()
       }

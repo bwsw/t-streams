@@ -18,3 +18,4 @@ object Dependencies {
       "com.bwsw" % "tstreams-transaction-server_2.12" % "1.3.7.2-SNAPSHOT"
     ))
 }
+

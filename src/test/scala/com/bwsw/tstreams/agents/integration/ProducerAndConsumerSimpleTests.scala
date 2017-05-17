@@ -60,7 +60,7 @@ class ProducerAndConsumerSimpleTests extends FlatSpec with Matchers with BeforeA
 
     val producerTransaction = producer.newTransaction(NewProducerTransactionPolicy.ErrorIfOpened)
     val l = new CountDownLatch(1)
-    srv.notifyProducerTransactionCompleted(t => t.transactionID == producerTransaction.getTransactionID() && t.state == TransactionStates.Checkpointed, l.countDown())
+    srv.notifyProducerTransactionCompleted(t => t.transactionID == producerTransaction.getTransactionID && t.state == TransactionStates.Checkpointed, l.countDown())
     val sendData = (for (part <- 0 until DATA_IN_TRANSACTION) yield "data_part_" + randomKeyspace).sorted
     sendData.foreach { x =>
       producerTransaction.send(x.getBytes())
@@ -70,7 +70,7 @@ class ProducerAndConsumerSimpleTests extends FlatSpec with Matchers with BeforeA
 
     val transaction = consumer.getTransaction(0).get
 
-    transaction.getAll().map(i => new String(i)).sorted shouldBe sendData
+    transaction.getAll.map(i => new String(i)).sorted shouldBe sendData
 
     //assert that is nothing to read
     (0 until consumer.stream.partitionsCount) foreach { _ =>
@@ -84,7 +84,7 @@ class ProducerAndConsumerSimpleTests extends FlatSpec with Matchers with BeforeA
 
     val producerTransaction = producer.newTransaction(NewProducerTransactionPolicy.ErrorIfOpened)
     val l = new CountDownLatch(1)
-    srv.notifyProducerTransactionCompleted(t => t.transactionID == producerTransaction.getTransactionID() && t.state == TransactionStates.Checkpointed, l.countDown())
+    srv.notifyProducerTransactionCompleted(t => t.transactionID == producerTransaction.getTransactionID && t.state == TransactionStates.Checkpointed, l.countDown())
 
     sendData.foreach { x => producerTransaction.send(x.getBytes()) }
     producerTransaction.checkpoint()
@@ -97,7 +97,7 @@ class ProducerAndConsumerSimpleTests extends FlatSpec with Matchers with BeforeA
 
     var readData = ListBuffer[String]()
 
-    while (transaction.hasNext()) {
+    while (transaction.hasNext) {
       val s = new String(transaction.next())
       readData += s
     }
@@ -124,7 +124,7 @@ class ProducerAndConsumerSimpleTests extends FlatSpec with Matchers with BeforeA
 
       counter += 1
       if (counter == TRANSACTIONS_COUNT)
-        srv.notifyProducerTransactionCompleted(t => t.transactionID == producerTransaction.getTransactionID() && t.state == TransactionStates.Checkpointed, l.countDown())
+        srv.notifyProducerTransactionCompleted(t => t.transactionID == producerTransaction.getTransactionID && t.state == TransactionStates.Checkpointed, l.countDown())
 
       sendData.foreach { x => producerTransaction.send(x.getBytes()) }
       producerTransaction.checkpoint()
@@ -135,7 +135,7 @@ class ProducerAndConsumerSimpleTests extends FlatSpec with Matchers with BeforeA
     (0 until TRANSACTIONS_COUNT).foreach { _ =>
       val transaction = consumer.getTransaction(0)
       transaction.nonEmpty shouldBe true
-      transaction.get.getAll().map(i => new String(i)).sorted == sendData
+      transaction.get.getAll.map(i => new String(i)).sorted == sendData
     }
 
     //assert that is nothing to read
@@ -163,11 +163,11 @@ class ProducerAndConsumerSimpleTests extends FlatSpec with Matchers with BeforeA
     (0 until TRANSACTIONS_COUNT).foreach { _ =>
       val producerTransaction = producer.newTransaction(NewProducerTransactionPolicy.ErrorIfOpened)
 
-      pl.append(producerTransaction.getTransactionID())
+      pl.append(producerTransaction.getTransactionID)
 
       counter += 1
       if (counter == TRANSACTIONS_COUNT)
-        srv.notifyProducerTransactionCompleted(t => t.transactionID == producerTransaction.getTransactionID() && t.state == TransactionStates.Checkpointed, l.countDown())
+        srv.notifyProducerTransactionCompleted(t => t.transactionID == producerTransaction.getTransactionID && t.state == TransactionStates.Checkpointed, l.countDown())
 
       sendData.foreach { x => producerTransaction.send(x.getBytes()) }
       producerTransaction.checkpoint()
@@ -177,7 +177,7 @@ class ProducerAndConsumerSimpleTests extends FlatSpec with Matchers with BeforeA
     (0 until TRANSACTIONS_COUNT).foreach { i =>
       val transactionOpt = consumer.getTransaction(0)
       transactionOpt.nonEmpty shouldBe true
-      cl.append(transactionOpt.get.getTransactionID())
+      cl.append(transactionOpt.get.getTransactionID)
     }
 
     cl shouldBe pl
@@ -204,7 +204,7 @@ class ProducerAndConsumerSimpleTests extends FlatSpec with Matchers with BeforeA
         while (true) {
           val consumedTransaction: Option[ConsumerTransaction] = consumer.getTransaction(0)
           if (consumedTransaction.isDefined) {
-            consumedTransaction.get.getAll().map(i => new String(i)).sorted shouldBe sendData
+            consumedTransaction.get.getAll.map(i => new String(i)).sorted shouldBe sendData
             break()
           }
           Thread.sleep(100)
@@ -236,13 +236,13 @@ class ProducerAndConsumerSimpleTests extends FlatSpec with Matchers with BeforeA
     consumer.start()
     consumer.getTransactionById(0, transactionID1)
       .foreach(transaction => {
-        transaction.getTransactionID() shouldBe transactionID1
+        transaction.getTransactionID shouldBe transactionID1
         new String(transaction.next()) shouldBe "test1"
       })
 
     consumer.getTransactionById(0, transactionID2)
       .foreach(transaction =>  {
-        transaction.getTransactionID() shouldBe transactionID2
+        transaction.getTransactionID shouldBe transactionID2
         new String(transaction.next()) shouldBe "test2"
       })
 

@@ -241,9 +241,6 @@ class TStreamsFactory() {
     val notifyJobsThreadPoolSize = pAsInt(co.Producer.notifyJobsThreadPoolSize, producerDefaults.notifyJobsThreadPoolSize.default)
     producerDefaults.notifyJobsThreadPoolSize.check(notifyJobsThreadPoolSize)
 
-    val asyncJobsThreadPoolSize = pAsInt(co.Producer.asyncJobsThreadPoolSize, producerDefaults.asyncJobsThreadPoolSize.default)
-    producerDefaults.asyncJobsThreadPoolSize.check(asyncJobsThreadPoolSize)
-
     val transactionTtlMs = pAsInt(co.Producer.Transaction.ttlMs, producerDefaults.Transaction.ttlMs.default)
     producerDefaults.Transaction.ttlMs.check(transactionTtlMs)
 
@@ -285,7 +282,6 @@ class TStreamsFactory() {
       writePolicy = writePolicy,
       batchSize = batchSize,
       notifyJobsThreadPoolSize = notifyJobsThreadPoolSize,
-      asyncJobsThreadPoolSize = asyncJobsThreadPoolSize,
       transactionGenerator = new LocalTransactionGenerator,
       coordinationOptions = cao)
 

@@ -1,7 +1,5 @@
 package com.bwsw.tstreams.agents.group
 
-import java.util.concurrent.locks.ReentrantLock
-
 import com.bwsw.tstreams.storage.StorageClient
 
 /**
@@ -10,11 +8,6 @@ import com.bwsw.tstreams.storage.StorageClient
 trait GroupParticipant {
 
   private[tstreams] def getAgentName(): String
-
-  /**
-    * Agent lock on any actions which has to do with checkpoint
-    */
-  private[tstreams] def getThreadLock(): ReentrantLock
 
   /**
     * Info to commit

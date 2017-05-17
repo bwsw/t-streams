@@ -55,7 +55,7 @@ class ProducerUsedBySeveralThreadsSimultaneouslyTests extends FlatSpec with Matc
             t.send("data")
             t.checkpoint()
             producerAccumulator.synchronized {
-              producerAccumulator.append(t.getTransactionID())
+              producerAccumulator.append(t.getTransactionID)
             }
           })
         l.countDown()
@@ -65,7 +65,7 @@ class ProducerUsedBySeveralThreadsSimultaneouslyTests extends FlatSpec with Matc
     threads.foreach(_.start())
     l.await()
     val end = System.currentTimeMillis()
-    //println(end - start)
+    println(end - start)
     threads.foreach(_.join())
     producerAccumulator.size shouldBe COUNT * THREADS
 
@@ -78,11 +78,11 @@ class ProducerUsedBySeveralThreadsSimultaneouslyTests extends FlatSpec with Matc
     val threads = (0 until ALL_PARTITIONS).map(partition => new Thread(() => {
       (0 until COUNT)
         .foreach(i => {
-          val t = producer.newTransaction(NewProducerTransactionPolicy.CheckpointAsyncIfOpened, partition)
+          val t = producer.newTransaction(NewProducerTransactionPolicy.CheckpointIfOpened, partition)
           t.send("data")
           t.checkpoint()
           producerAccumulator.synchronized {
-            producerAccumulator.append(t.getTransactionID())
+            producerAccumulator.append(t.getTransactionID)
           }
         })
       l.countDown()
@@ -92,7 +92,7 @@ class ProducerUsedBySeveralThreadsSimultaneouslyTests extends FlatSpec with Matc
     threads.foreach(_.start())
     l.await()
     val end = System.currentTimeMillis()
-    //println(end - start)
+    println(end - start)
     threads.foreach(_.join())
     producerAccumulator.size shouldBe COUNT * ALL_PARTITIONS
   }

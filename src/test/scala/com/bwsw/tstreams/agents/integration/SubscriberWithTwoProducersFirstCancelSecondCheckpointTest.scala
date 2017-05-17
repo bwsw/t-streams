@@ -56,7 +56,7 @@ class SubscriberWithTwoProducersFirstCancelSecondCheckpointTest extends FlatSpec
       offset = Newest,
       useLastOffset = true,
       callback = (consumer: TransactionOperator, transaction: ConsumerTransaction) => this.synchronized {
-        bs.append(transaction.getTransactionID())
+        bs.append(transaction.getTransactionID)
         ls.countDown()
       })
 
@@ -75,7 +75,7 @@ class SubscriberWithTwoProducersFirstCancelSecondCheckpointTest extends FlatSpec
     val t1 = new Thread(() => {
       val transaction = producer1.newTransaction(policy = NewProducerTransactionPolicy.CheckpointIfOpened)
       lp2.countDown()
-      bp1.append(transaction.getTransactionID())
+      bp1.append(transaction.getTransactionID)
       transaction.send("test")
       transaction.cancel()
     })
@@ -83,7 +83,7 @@ class SubscriberWithTwoProducersFirstCancelSecondCheckpointTest extends FlatSpec
     val t2 = new Thread(() => {
       lp2.await()
       val transaction = producer2.newTransaction(policy = NewProducerTransactionPolicy.CheckpointIfOpened)
-      bp2.append(transaction.getTransactionID())
+      bp2.append(transaction.getTransactionID)
       transaction.send("test")
       transaction.checkpoint()
     })
