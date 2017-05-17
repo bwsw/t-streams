@@ -67,7 +67,7 @@ class StorageClient(clientOptions: ConnectionOptions, authOptions: AuthOptions, 
     if (0 > streamID)
       throw new IllegalArgumentException(s"Stream $streamName already exists.")
 
-    StorageClient.logger.warn(s"Created stream '${streamName}' with ${partitionsCount} partitions and TTL: ${ttl} seconds.")
+    StorageClient.logger.warn(s"Created stream '$streamName' with $partitionsCount partitions and TTL: $ttl seconds.")
 
     new Stream(this, streamID, streamName, partitionsCount, ttl, description)
   }

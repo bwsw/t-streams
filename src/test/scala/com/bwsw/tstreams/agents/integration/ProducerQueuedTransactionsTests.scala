@@ -120,7 +120,7 @@ class ProducerQueuedTransactionsTests  extends FlatSpec with Matchers with Befor
       offset = Newest,
       useLastOffset = false,
       callback = (consumer: TransactionOperator, transaction: ConsumerTransaction) => this.synchronized {
-        subscriberAcc.append(transaction.getTransactionID())
+        subscriberAcc.append(transaction.getTransactionID)
         latch.countDown()
       })
     s.start()
@@ -135,7 +135,7 @@ class ProducerQueuedTransactionsTests  extends FlatSpec with Matchers with Befor
     for (it <- 0 until TOTAL) {
       val transaction = producer.newTransaction(NewProducerTransactionPolicy.EnqueueIfOpened)
       transaction.send("test")
-      producerAcc.append(transaction.getTransactionID())
+      producerAcc.append(transaction.getTransactionID)
     }
     producer.checkpoint()
 

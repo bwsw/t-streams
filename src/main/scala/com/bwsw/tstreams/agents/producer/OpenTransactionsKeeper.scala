@@ -49,14 +49,14 @@ class OpenTransactionsKeeper {
   def handlePreviousOpenTransaction(partition: Int, policy: ProducerPolicy): () => Unit = openTransactionsMap.synchronized {
     val transactionSetOption = getTransactionSetOption(partition)
 
-    val allClosed = transactionSetOption.forall(transactionSet => transactionSet._2.forall(_.isClosed()))
+    val allClosed = transactionSetOption.forall(transactionSet => transactionSet._2.forall(_.isClosed))
     if (!allClosed) {
       policy match {
         case NewProducerTransactionPolicy.CheckpointIfOpened =>
-          () => transactionSetOption.get._2.foreach(txn => if (!txn.isClosed()) txn.checkpoint())
+          () => transactionSetOption.get._2.foreach(txn => if (!txn.isClosed) txn.checkpoint())
 
         case NewProducerTransactionPolicy.CancelIfOpened =>
-          () => transactionSetOption.get._2.foreach(txn => if (!txn.isClosed()) txn.cancel())
+          () => transactionSetOption.get._2.foreach(txn => if (!txn.isClosed) txn.cancel())
 
         case NewProducerTransactionPolicy.EnqueueIfOpened => () => Unit
 
@@ -80,7 +80,7 @@ class OpenTransactionsKeeper {
     if (transactionSetValueOpt.isEmpty) {
       openTransactionsMap.put(partition, (0, mutable.Set[IProducerTransaction](transaction)))
     } else {
-      val nextTransactionID = transaction.getTransactionID()
+      val nextTransactionID = transaction.getTransactionID
       openTransactionsMap
         .put(partition, (nextTransactionID,
           openTransactionsMap.get(partition).get._2 + transaction))

@@ -19,7 +19,7 @@ class ConsumerTransaction(partition: Int,
                           state: TransactionStates,
                           ttl: Long) {
 
-  override def toString(): String = {
+  override def toString: String = {
     s"consumer.Transaction(id=$transactionID,partition=$partition, count=$count, ttl=$ttl)"
   }
 
@@ -35,15 +35,15 @@ class ConsumerTransaction(partition: Int,
       throw new IllegalStateException("The transaction is already attached to consumer")
   }
 
-  def getTransactionID() = transactionID
+  def getTransactionID = transactionID
 
-  def getPartition() = partition
+  def getPartition = partition
 
-  def getCount() = count
+  def getCount = count
 
-  def getTTL() = ttl
+  def getTTL = ttl
 
-  def getState() = state
+  def getState = state
 
   /**
     * Transaction data pointer
@@ -63,7 +63,7 @@ class ConsumerTransaction(partition: Int,
     if (consumer == null)
       throw new IllegalArgumentException("Transaction is not yet attached to consumer. Attach it first.")
 
-    if (!hasNext())
+    if (!hasNext)
       throw new IllegalStateException("There is no data to receive from data storage")
 
     //try to update buffer
@@ -81,7 +81,7 @@ class ConsumerTransaction(partition: Int,
     *
     * @return
     */
-  def hasNext(): Boolean = this.synchronized {
+  def hasNext: Boolean = this.synchronized {
     cnt < count || buffer.nonEmpty
   }
 
@@ -96,7 +96,7 @@ class ConsumerTransaction(partition: Int,
   /**
     * @return All consumed transaction
     */
-  def getAll() = this.synchronized {
+  def getAll = this.synchronized {
     if (consumer == null)
       throw new IllegalArgumentException("Transaction is not yet attached to consumer. Attach it first.")
     val r = consumer.stream.client.getTransactionData(consumer.stream.id, partition, transactionID, cnt, count)

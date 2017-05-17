@@ -67,7 +67,7 @@ class ConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll with Te
     val consumedTransaction = consumer.getTransactionById(1, transactionID).get
     consumedTransaction.getPartition shouldBe 1
     consumedTransaction.getTransactionID shouldBe transactionID
-    consumedTransaction.getCount() shouldBe 2
+    consumedTransaction.getCount shouldBe 2
 
     val transaction = consumer.getTransaction(1)
     transaction.isDefined shouldEqual true

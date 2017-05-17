@@ -57,7 +57,7 @@ class Consumer(val name: String,
   /**
     * returns partitions
     */
-  def getPartitions(): Set[Int] = options.readPolicy.getUsedPartitions().toSet
+  def getPartitions: Set[Int] = options.readPolicy.getUsedPartitions
 
 
   /**
@@ -113,7 +113,7 @@ class Consumer(val name: String,
       }
     }
 
-    for (partition <- options.readPolicy.getUsedPartitions()) {
+    for (partition <- options.readPolicy.getUsedPartitions) {
       val bootstrapOffset =
         if (stream.client.checkConsumerOffsetExists(name, stream.id, partition) && options.useLastOffset) {
           val off = stream.client.getLastSavedConsumerOffset(name, stream.id, partition)
@@ -163,7 +163,7 @@ class Consumer(val name: String,
     if (!isStarted.get())
       throw new IllegalStateException(s"Consumer $name is not started. Start it first.")
 
-    if (!getPartitions().contains(partition))
+    if (!getPartitions.contains(partition))
       throw new IllegalStateException(s"Consumer doesn't work on partition=$partition.")
 
     if (transactionBuffer(partition).isEmpty) {
@@ -177,24 +177,24 @@ class Consumer(val name: String,
     val transaction = transactionBuffer(partition).head
 
     // We found invalid transaction, so just skip it and move forward
-    if (transaction.getState() == TransactionStates.Invalid) {
+    if (transaction.getState == TransactionStates.Invalid) {
       transactionBuffer(partition).dequeue()
-      updateOffsets(partition, transaction.getTransactionID())
+      updateOffsets(partition, transaction.getTransactionID)
       return getTransaction(partition)
     }
 
     // we found valid transaction transaction
-    if (transaction.getState() != TransactionStates.Opened) {
-      updateOffsets(partition, transaction.getTransactionID())
+    if (transaction.getState != TransactionStates.Opened) {
+      updateOffsets(partition, transaction.getTransactionID)
       transactionBuffer(partition).dequeue()
       transaction.attach(this)
       return Some(transaction)
     }
 
     // we found open one, try to update it.
-    val transactionUpdatedOpt = getTransactionById(partition, transaction.getTransactionID())
+    val transactionUpdatedOpt = getTransactionById(partition, transaction.getTransactionID)
     if (transactionUpdatedOpt.isDefined) {
-      updateOffsets(partition, transactionUpdatedOpt.get.getTransactionID())
+      updateOffsets(partition, transactionUpdatedOpt.get.getTransactionID)
       transactionBuffer(partition).dequeue()
       return transactionUpdatedOpt
     }
@@ -245,7 +245,7 @@ class Consumer(val name: String,
     val transactionOpt = loadTransactionFromDB(partition, transactionID)
     if (transactionOpt.isDefined) {
       val transaction = transactionOpt.get
-      if (transaction.getCount() != -1) {
+      if (transaction.getCount != -1) {
         transactionOpt.get.attach(this)
         transactionOpt
       }
@@ -347,7 +347,7 @@ class Consumer(val name: String,
     val set = Set[TransactionStates](TransactionStates.Opened)
     val (_, seq) = stream.client.scanTransactions(stream.id, partition, from + 1, to, options.transactionsPreload, set)
     if(Consumer.logger.isDebugEnabled())
-      Consumer.logger.debug(s"scanTransactions(${stream.name}, ${partition}, ${from + 1}, $to, ${options.transactionsPreload}, ${set}) -> $seq")
+      Consumer.logger.debug(s"scanTransactions(${stream.name}, $partition, ${from + 1}, $to, ${options.transactionsPreload}, $set) -> $seq")
     val result = ListBuffer[ConsumerTransaction]()
     seq.foreach(rec => {
       val t = new ConsumerTransaction(partition = partition, transactionID = rec.transactionID, count = rec.quantity, state = rec.state, ttl = rec.ttl)
@@ -357,7 +357,7 @@ class Consumer(val name: String,
     result
   }
 
-  override def getProposedTransactionId(): Long = options.transactionGenerator.getTransaction()
+  override def getProposedTransactionId: Long = options.transactionGenerator.getTransaction()
 
   override def getStorageClient(): StorageClient = stream.client
 }

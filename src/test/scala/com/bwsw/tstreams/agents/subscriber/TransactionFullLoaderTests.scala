@@ -99,7 +99,7 @@ class TransactionFullLoaderTests extends FlatSpec with Matchers {
       lastTransactionsMap(0) = TransactionState(LocalGeneratorCreator.getTransaction(), partition, masterID, orderID, 1, TransactionState.Status.Checkpointed, -1)
       val fullLoader2 = new TransactionFullLoader(partitions(), lastTransactionsMap)
       val consumerOuter = new FullLoaderOperatorTestImpl()
-      val nextTransactionState = List(TransactionState(consumerOuter.transactions.last.getTransactionID(), partition, masterID, orderID + 1, 1, TransactionState.Status.Checkpointed, -1))
+      val nextTransactionState = List(TransactionState(consumerOuter.transactions.last.getTransactionID, partition, masterID, orderID + 1, 1, TransactionState.Status.Checkpointed, -1))
 
       override def test(): Unit = {
         var ctr: Int = 0
@@ -128,7 +128,7 @@ class TransactionFullLoaderTests extends FlatSpec with Matchers {
       lastTransactionsMap(0) = TransactionState(LocalGeneratorCreator.getTransaction(), partition, masterID, orderID, 1, TransactionState.Status.Checkpointed, -1)
       val fullLoader2 = new TransactionFullLoader(partitions(), lastTransactionsMap)
       val consumerOuter = new FullLoaderOperatorTestImpl()
-      val nextTransactionState = List(TransactionState(consumerOuter.transactions.last.getTransactionID(), partition, masterID, orderID + 1, 1, TransactionState.Status.Checkpointed, -1))
+      val nextTransactionState = List(TransactionState(consumerOuter.transactions.last.getTransactionID, partition, masterID, orderID + 1, 1, TransactionState.Status.Checkpointed, -1))
 
       override def test(): Unit = {
         var ctr: Int = 0
@@ -143,7 +143,7 @@ class TransactionFullLoaderTests extends FlatSpec with Matchers {
           })
         l.await(1, TimeUnit.SECONDS)
         ctr shouldBe consumerOuter.TOTAL
-        lastTransactionsMap(0).transactionID shouldBe consumerOuter.transactions.last.getTransactionID()
+        lastTransactionsMap(0).transactionID shouldBe consumerOuter.transactions.last.getTransactionID
       }
     }
 

@@ -116,7 +116,7 @@ class SubscriberBasicFunctionsTests extends FlatSpec with Matchers with BeforeAn
       val transaction = producer.newTransaction(NewProducerTransactionPolicy.ErrorIfOpened)
       transaction.send("test")
       transaction.checkpoint()
-      id = transaction.getTransactionID()
+      id = transaction.getTransactionID
       ps.append(id)
     }
     srv.notifyProducerTransactionCompleted(t => t.transactionID == id && t.state == TransactionStates.Checkpointed, pl.countDown())
@@ -130,7 +130,7 @@ class SubscriberBasicFunctionsTests extends FlatSpec with Matchers with BeforeAn
       offset = Oldest,
       useLastOffset = true,
       callback = (consumer: TransactionOperator, transaction: ConsumerTransaction) => this.synchronized {
-        ss.append(transaction.getTransactionID())
+        ss.append(transaction.getTransactionID)
         i += 1
         if (i == TOTAL)
           l.countDown()

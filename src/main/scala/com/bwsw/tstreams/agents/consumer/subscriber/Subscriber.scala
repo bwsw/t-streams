@@ -72,7 +72,7 @@ class Subscriber(val name: String,
     */
   def start() = {
 
-    val usedPartitionsSet = options.readPolicy.getUsedPartitions()
+    val usedPartitionsSet = options.readPolicy.getUsedPartitions
 
     Subscriber.logger.info(s"[INIT] Subscriber $name: BEGIN INIT.")
     Subscriber.logger.info(s"[INIT] Subscriber $name: Address ${options.agentAddress}")
@@ -116,7 +116,7 @@ class Subscriber(val name: String,
 
     Subscriber.logger.info(s"[INIT] Subscriber $name: Is about to create Transaction Buffers.")
 
-    options.readPolicy.getUsedPartitions() foreach (part =>
+    options.readPolicy.getUsedPartitions foreach (part =>
       for (thID <- 0 until peWorkerThreads) {
         if (part % peWorkerThreads == thID) {
           transactionsBuffers(part) = new TransactionBuffer(processingEngines(thID).getQueue(), options.transactionQueueMaxLengthThreshold)
@@ -130,7 +130,7 @@ class Subscriber(val name: String,
     for (thID <- 0 until bufferWorkerThreads) {
       val worker = new TransactionBufferWorker()
 
-      options.readPolicy.getUsedPartitions() foreach (part =>
+      options.readPolicy.getUsedPartitions foreach (part =>
         if (part % bufferWorkerThreads == thID) {
           worker.assign(part, transactionsBuffers(part))
           Subscriber.logger.info(s"[INIT] Subscriber $name: TransactionBufferWorker $thID is bound to TransactionBuffer $part.")
@@ -145,7 +145,7 @@ class Subscriber(val name: String,
     coordinator.bootstrap(
       agentAddress = options.agentAddress,
       stream = stream.name,
-      partitions = Set[Int]().empty ++ options.readPolicy.getUsedPartitions(),
+      partitions = Set[Int]().empty ++ options.readPolicy.getUsedPartitions,
       zkRootPath = options.zkRootPath,
       zkHosts = options.zkHosts,
       zkConnectionTimeout = options.zkConnectionTimeoutMs,
@@ -154,7 +154,7 @@ class Subscriber(val name: String,
     Subscriber.logger.info(s"[INIT] Subscriber $name: has launched the coordinator.")
     Subscriber.logger.info(s"[INIT] Subscriber $name: is about to launch the UDP server.")
 
-    stateUpdateServer = new StateUpdateServer(host, Integer.parseInt(port), Runtime.getRuntime().availableProcessors(), transactionsBufferWorkers)
+    stateUpdateServer = new StateUpdateServer(host, Integer.parseInt(port), Runtime.getRuntime.availableProcessors(), transactionsBufferWorkers)
     stateUpdateServer.start()
 
     Subscriber.logger.info(s"[INIT] Subscriber $name: has launched the UDP server.")
@@ -199,7 +199,7 @@ class Subscriber(val name: String,
     * @return
     */
   private def calculateBufferWorkersThreadAmount(): Int = {
-    val maxThreads = options.readPolicy.getUsedPartitions().size
+    val maxThreads = options.readPolicy.getUsedPartitions.size
     val minThreads = options.transactionBufferWorkersThreadPoolAmount
     Functions.calculateThreadAmount(minThreads, maxThreads)
   }
@@ -210,7 +210,7 @@ class Subscriber(val name: String,
     * @return
     */
   def calculateProcessingEngineWorkersThreadAmount(): Int = {
-    val maxThreads = options.readPolicy.getUsedPartitions().size
+    val maxThreads = options.readPolicy.getUsedPartitions.size
     val minThreads = options.processingEngineWorkersThreadAmount
     Functions.calculateThreadAmount(minThreads, maxThreads)
   }
@@ -221,7 +221,7 @@ class Subscriber(val name: String,
     *
     * @return
     */
-  def getConsumer() = consumer
+  def getConsumer = consumer
 
   override private[tstreams] def getAgentName(): String = consumer.getAgentName()
 

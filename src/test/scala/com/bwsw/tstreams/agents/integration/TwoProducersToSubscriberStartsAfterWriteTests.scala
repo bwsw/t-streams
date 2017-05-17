@@ -64,7 +64,7 @@ class TwoProducersToSubscriberStartsAfterWriteTests extends FlatSpec with Matche
       offset = Oldest,
       useLastOffset = true,
       callback = (consumer: TransactionOperator, transaction: ConsumerTransaction) => this.synchronized {
-        bs.append(transaction.getTransactionID())
+        bs.append(transaction.getTransactionID)
         if (bs.size == 2 * COUNT) {
           ls.countDown()
         }
@@ -79,7 +79,7 @@ class TwoProducersToSubscriberStartsAfterWriteTests extends FlatSpec with Matche
         t.checkpoint()
 
         bp.synchronized {
-          bp.append(t.getTransactionID())
+          bp.append(t.getTransactionID)
         }
       }
     })
@@ -92,7 +92,7 @@ class TwoProducersToSubscriberStartsAfterWriteTests extends FlatSpec with Matche
         t.checkpoint()
 
         bp.synchronized {
-          bp.append(t.getTransactionID())
+          bp.append(t.getTransactionID)
         }
       }
     })

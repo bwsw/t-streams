@@ -55,8 +55,8 @@ class ProducerAndConsumerCheckpointTest extends FlatSpec with Matchers with Befo
     storageClient.shutdown()
   }
 
-  "producer, consumer" should "producer - generate many transactions, consumer - retrieve all of them with reinitialization after some time" in {
-    val TRANSACTIONS_COUNT = 10000
+  it should "producer - generate many transactions, consumer - retrieve all of them with reinitialization after some time" in {
+    val TRANSACTIONS_COUNT = 1000
     val dataToSend = (for (i <- 0 until 1) yield randomKeyspace).sorted
 
     var counter = 0
@@ -70,7 +70,7 @@ class ProducerAndConsumerCheckpointTest extends FlatSpec with Matchers with Befo
 
       counter += 1
       if (counter == TRANSACTIONS_COUNT)
-        srv.notifyProducerTransactionCompleted(t => t.transactionID == transaction.getTransactionID() && t.state == TransactionStates.Checkpointed, l.countDown())
+        srv.notifyProducerTransactionCompleted(t => t.transactionID == transaction.getTransactionID && t.state == TransactionStates.Checkpointed, l.countDown())
 
       TimeTracker.update_end("newTransaction")
 
@@ -96,9 +96,9 @@ class ProducerAndConsumerCheckpointTest extends FlatSpec with Matchers with Befo
       val transaction: ConsumerTransaction = consumer.getTransaction(0).get
 
       if (counter == firstPart - 1)
-        srv.notifyConsumerTransactionCompleted(ct => transaction.getTransactionID() == ct.transactionID, l1.countDown())
+        srv.notifyConsumerTransactionCompleted(ct => transaction.getTransactionID == ct.transactionID, l1.countDown())
 
-      transaction.getAll().map(i => new String(i)).sorted shouldBe dataToSend
+      transaction.getAll.map(i => new String(i)).sorted shouldBe dataToSend
       consumer.checkpoint()
     }
 
@@ -107,7 +107,7 @@ class ProducerAndConsumerCheckpointTest extends FlatSpec with Matchers with Befo
     consumer2.start
     (0 until secondPart) foreach { _ =>
       val transaction: ConsumerTransaction = consumer2.getTransaction(0).get
-      transaction.getAll().map(i => new String(i)).sorted shouldBe dataToSend
+      transaction.getAll.map(i => new String(i)).sorted shouldBe dataToSend
     }
 
     //assert that is nothing to read

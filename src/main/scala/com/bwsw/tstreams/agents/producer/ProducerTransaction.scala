@@ -38,7 +38,7 @@ class ProducerTransaction(partition: Int,
     *
     * @return Closed transaction or not
     */
-  def isClosed() = isTransactionClosed.get
+  def isClosed = isTransactionClosed.get
 
   /**
     * BasicProducerTransaction logger for logging
@@ -53,25 +53,25 @@ class ProducerTransaction(partition: Int,
   /**
     * Return transaction partition
     */
-  def getPartition(): Int = partition
+  def getPartition: Int = partition
 
 
-  override def toString(): String = s"producer.Transaction(ID=$transactionID, partition=$partition, count=${getDataItemsCount()})"
+  override def toString: String = s"producer.Transaction(ID=$transactionID, partition=$partition, count=$getDataItemsCount)"
 
   /**
     * Return transaction ID
     */
-  def getTransactionID(): Long = transactionID
+  def getTransactionID: Long = transactionID
 
   /**
     * Return current transaction amount of data
     */
-  def getDataItemsCount() = data.lastOffset + data.items.size
+  def getDataItemsCount = data.lastOffset + data.items.size
 
   /**
     * Returns Transaction owner
     */
-  def getProducer() = producer
+  def getProducer = producer
 
   /**
     * All inserts (can be async) in storage (must be waited before closing this transaction)
@@ -95,7 +95,7 @@ class ProducerTransaction(partition: Int,
     val job = {
       if (number % producer.producerOptions.batchSize == 0) {
         if (ProducerTransaction.logger.isDebugEnabled) {
-          ProducerTransaction.logger.debug(s"call data save ${number} / ${producer.producerOptions.batchSize}")
+          ProducerTransaction.logger.debug(s"call data save $number / ${producer.producerOptions.batchSize}")
         }
         data.save()
       }
@@ -134,7 +134,7 @@ class ProducerTransaction(partition: Int,
   }
 
   private def cancelTransaction() = {
-    producer.stream.client.putTransactionSync(getCancelInfoAndClose().get)
+    producer.stream.client.putTransactionSync(getCancelInfoAndClose.get)
     notifyCancelEvent()
   }
 
@@ -161,7 +161,7 @@ class ProducerTransaction(partition: Int,
 
     producer.openTransactions.remove(partition, this)
 
-    if (getDataItemsCount() > 0) {
+    if (getDataItemsCount > 0) {
       jobs.foreach(x => x())
 
       if (ProducerTransaction.logger.isDebugEnabled) {
@@ -172,7 +172,7 @@ class ProducerTransaction(partition: Int,
       GlobalHooks.invoke(GlobalHooks.preCommitFailure)
 
       val transactionRecord = new RPCProducerTransaction(producer.stream.id, partition, transactionID,
-        TransactionStates.Checkpointed, getDataItemsCount(), producer.stream.ttl)
+        TransactionStates.Checkpointed, getDataItemsCount, producer.stream.ttl)
 
       producer.stream.client.putTransactionWithDataSync(transactionRecord, data.items, data.lastOffset)
       Try(producer.checkUpdateFailure()) match {
@@ -189,7 +189,7 @@ class ProducerTransaction(partition: Int,
       //debug purposes only
       GlobalHooks.invoke(GlobalHooks.afterCommitFailure)
 
-      producer.notifyService.submit(s"NotifyTask-Part[${partition}]-Txn[${transactionID}]", () =>
+      producer.notifyService.submit(s"NotifyTask-Part[$partition]-Txn[$transactionID]", () =>
         producer.publish(TransactionState(
           transactionID = transactionID,
           ttlMs = -1,
@@ -197,7 +197,7 @@ class ProducerTransaction(partition: Int,
           partition = partition,
           masterID = producer.getPartitionMasterIDLocalInfo(partition),
           orderID = -1,
-          count = getDataItemsCount())))
+          count = getDataItemsCount)))
 
       if (ProducerTransaction.logger.isDebugEnabled) {
         ProducerTransaction.logger.debug("[FINAL CHECKPOINT PARTITION_{}] ts={}", partition, transactionID.toString)
@@ -214,11 +214,11 @@ class ProducerTransaction(partition: Int,
     *
     * @return
     */
-  private[tstreams] def getCancelInfoAndClose(): Option[RPCProducerTransaction] = this.synchronized {
+  private[tstreams] def getCancelInfoAndClose: Option[RPCProducerTransaction] = this.synchronized {
     if (ProducerTransaction.logger.isDebugEnabled) {
       ProducerTransaction.logger.debug("Cancel info request for Transaction {}, partition: {}", transactionID, partition)
     }
-    val res = if(isClosed()) {
+    val res = if(isClosed) {
       None
     } else {
       Some(new RPCProducerTransaction(producer.stream.id, partition, transactionID, TransactionStates.Cancel, 0, -1L))
@@ -231,11 +231,11 @@ class ProducerTransaction(partition: Int,
     *
     * @return
     */
-  private[tstreams] def getUpdateInfo(): Option[RPCProducerTransaction] = {
+  private[tstreams] def getUpdateInfo: Option[RPCProducerTransaction] = {
     if (ProducerTransaction.logger.isDebugEnabled) {
       ProducerTransaction.logger.debug("Update info request for Transaction {}, partition: {}", transactionID, partition)
     }
-    if(isClosed()) {
+    if(isClosed) {
       None
     } else {
       Some(new RPCProducerTransaction(producer.stream.id, partition, transactionID, TransactionStates.Updated, -1, producer.producerOptions.transactionTtlMs))
@@ -244,8 +244,8 @@ class ProducerTransaction(partition: Int,
 
   private[tstreams] def notifyUpdate() = {
     // atomically check state and launch update process
-    if(!isClosed()) {
-      producer.notifyService.submit(s"NotifyTask-Part[${partition}]-Txn[${transactionID}]", () =>
+    if(!isClosed) {
+      producer.notifyService.submit(s"NotifyTask-Part[$partition]-Txn[$transactionID]", () =>
         producer.publish(TransactionState(
           transactionID = transactionID,
           ttlMs = producer.producerOptions.transactionTtlMs,
@@ -257,24 +257,24 @@ class ProducerTransaction(partition: Int,
     }
   }
 
-  def getCheckpointInfo(): ProducerCheckpointInfo = {
+  def getCheckpointInfo: ProducerCheckpointInfo = {
 
     val checkpoint = TransactionState(
-      transactionID = getTransactionID(),
+      transactionID = getTransactionID,
       ttlMs = -1,
       status = TransactionState.Status.Checkpointed,
       partition = partition,
       masterID = producer.getPartitionMasterIDLocalInfo(partition),
       orderID = -1,
-      count = getDataItemsCount())
+      count = getDataItemsCount)
 
     ProducerCheckpointInfo(transactionRef = this,
       agent = producer.transactionOpenerService,
       checkpointEvent = checkpoint,
       streamID = producer.stream.id,
       partition = partition,
-      transaction = getTransactionID(),
-      totalCnt = getDataItemsCount(),
+      transaction = getTransactionID,
+      totalCnt = getDataItemsCount,
       ttl = producer.stream.ttl)
   }
 }

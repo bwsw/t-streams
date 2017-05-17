@@ -63,7 +63,7 @@ class NMastersMProducersKSubscribersTest extends FlatSpec with Matchers with Bef
           (0 until TRANSACTION_COUNT).foreach(_ => {
             val t = p.newTransaction()
             producerTransactions.synchronized {
-              producerTransactions.append(t.getTransactionID())
+              producerTransactions.append(t.getTransactionID)
             }
             t.send("test".getBytes())
             t.checkpoint()
@@ -82,7 +82,7 @@ class NMastersMProducersKSubscribersTest extends FlatSpec with Matchers with Bef
         offset = Newest,
         useLastOffset = false,
         callback = (consumer: TransactionOperator, transaction: ConsumerTransaction) => this.synchronized {
-          subscriberAccumulators(id).append(transaction.getTransactionID())
+          subscriberAccumulators(id).append(transaction.getTransactionID)
           if (subscriberAccumulators(id).size == PRODUCER_COUNT * TRANSACTION_COUNT)
             subscribersLatch.countDown()
         })

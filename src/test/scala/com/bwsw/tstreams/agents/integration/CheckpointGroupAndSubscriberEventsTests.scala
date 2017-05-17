@@ -43,7 +43,7 @@ class CheckpointGroupAndSubscriberEventsTests extends FlatSpec with Matchers wit
     storageClient.shutdown()
   }
 
-  "Group commit" should "checkpoint all AgentsGroup state" in {
+  it should "checkpoint all transactions with CG" in {
     val l = new CountDownLatch(1)
     var transactionsCounter: Int = 0
 
@@ -57,7 +57,7 @@ class CheckpointGroupAndSubscriberEventsTests extends FlatSpec with Matchers wit
       useLastOffset = true,
       callback = (consumer: TransactionOperator, transaction: ConsumerTransaction) => this.synchronized {
         transactionsCounter += 1
-        val data = new String(transaction.getAll().head)
+        val data = new String(transaction.getAll.head)
         data shouldBe "test"
         if (transactionsCounter == 2) {
           l.countDown()

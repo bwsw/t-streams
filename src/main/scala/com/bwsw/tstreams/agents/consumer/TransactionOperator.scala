@@ -23,9 +23,9 @@ trait TransactionOperator {
 
   def checkpoint(): Unit
 
-  def getPartitions(): Set[Int]
+  def getPartitions: Set[Int]
 
   def getCurrentOffset(partition: Int): Long
 
-  def getProposedTransactionId(): Long
+  def getProposedTransactionId: Long
 }

@@ -59,7 +59,7 @@ class TransactionFullLoader(partitions: Set[Int],
       if(Subscriber.logger.isDebugEnabled())
         Subscriber.logger.debug(s"Load full begin (partition = ${last.partition}, first = $first, last = ${last.transactionID}, master = ${last.masterID})")
       val newTransactions = consumer.getTransactionsFromTo(last.partition, first, last.transactionID)
-      transactions ++= newTransactions.filter(transaction => transaction.getState() != TransactionStates.Invalid)
+      transactions ++= newTransactions.filter(transaction => transaction.getState != TransactionStates.Invalid)
 
       if(Subscriber.logger.isDebugEnabled())
         Subscriber.logger.debug(s"Load full end (partition = ${last.partition}, first = $first, last = ${last.transactionID}, master = ${last.masterID})")
@@ -68,13 +68,13 @@ class TransactionFullLoader(partitions: Set[Int],
         // we wait for certain item
         // to switch to fast load next
         if (newTransactions.nonEmpty) {
-          if (newTransactions.last.getTransactionID() == last.transactionID) {
+          if (newTransactions.last.getTransactionID == last.transactionID) {
             if(Subscriber.logger.isDebugEnabled())
               Subscriber.logger.debug(s"Load full completed (partition = ${last.partition}, first = $first, last = ${last.transactionID}, master = ${last.masterID}  )")
             flag = false
           }
           else
-            first = newTransactions.last.getTransactionID()
+            first = newTransactions.last.getTransactionID
         } else {
           /*
           to keep server ok from our activity add small delay
@@ -93,14 +93,14 @@ class TransactionFullLoader(partitions: Set[Int],
 
     transactions.foreach(elt =>
       executor.submit(s"<CallbackTask#Full>", new ProcessingEngine.CallbackTask(consumer,
-        TransactionState(transactionID = elt.getTransactionID(),
-          partition = last.partition, masterID = -1, orderID = -1, count = elt.getCount(),
+        TransactionState(transactionID = elt.getTransactionID,
+          partition = last.partition, masterID = -1, orderID = -1, count = elt.getCount,
           status = TransactionState.Status.Checkpointed, ttlMs = -1), callback)))
 
     if (transactions.nonEmpty)
-      lastTransactionsMap(last.partition) = TransactionState(transactionID = transactions.last.getTransactionID(),
+      lastTransactionsMap(last.partition) = TransactionState(transactionID = transactions.last.getTransactionID,
         partition = last.partition, masterID = last.masterID, orderID = last.orderID,
-        count = transactions.last.getCount(), status = TransactionState.Status.Checkpointed, ttlMs = -1)
+        count = transactions.last.getCount, status = TransactionState.Status.Checkpointed, ttlMs = -1)
 
     transactions.size
   }

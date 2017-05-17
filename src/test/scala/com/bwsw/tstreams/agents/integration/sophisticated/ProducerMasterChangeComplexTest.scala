@@ -70,8 +70,8 @@ class ProducerMasterChangeComplexTest extends FlatSpec with Matchers with Before
           val t = producer.newTransaction(policy = NewProducerTransactionPolicy.CheckpointIfOpened, -1)
           t.send("test".getBytes())
           t.checkpoint()
-          producerBuffer(t.getPartition()).synchronized {
-            producerBuffer(t.getPartition()).append(t.getTransactionID())
+          producerBuffer(t.getPartition).synchronized {
+            producerBuffer(t.getPartition).append(t.getTransactionID)
           }
           counter += 1
         }
@@ -113,7 +113,7 @@ class ProducerMasterChangeComplexTest extends FlatSpec with Matchers with Before
     useLastOffset = false, // true
     callback = (consumer: TransactionOperator, transaction: ConsumerTransaction) => this.synchronized {
       subscriberCounter += 1
-      subscriberBuffer(transaction.getPartition()).append(transaction.getTransactionID())
+      subscriberBuffer(transaction.getPartition).append(transaction.getTransactionID)
       if (subscriberCounter == PRODUCERS_AMOUNT * TRANSACTIONS_AMOUNT_EACH)
         waitCompleteLatch.countDown()
     })
