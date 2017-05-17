@@ -24,8 +24,8 @@ class ProducersComeAndLeaveConsumerReadsTest extends FlatSpec with Matchers with
       setProperty(ConfigurationOptions.Coordination.connectionTimeoutMs, 7000).
       setProperty(ConfigurationOptions.Coordination.sessionTimeoutMs, 7000).
       setProperty(ConfigurationOptions.Producer.transportTimeoutMs, 5000).
-      setProperty(ConfigurationOptions.Producer.Transaction.ttlMs, 500).
-      setProperty(ConfigurationOptions.Producer.Transaction.keepAliveMs, 100).
+      setProperty(ConfigurationOptions.Producer.Transaction.ttlMs, 5000).
+      setProperty(ConfigurationOptions.Producer.Transaction.keepAliveMs, 1000).
       setProperty(ConfigurationOptions.Consumer.transactionPreload, 500).
       setProperty(ConfigurationOptions.Consumer.dataPreload, 10)
 
@@ -40,7 +40,7 @@ class ProducersComeAndLeaveConsumerReadsTest extends FlatSpec with Matchers with
 
   it should "handle all transactions and do not loose them" in {
     val TRANSACTIONS_PER_PRODUCER = 100
-    val PRODUCERS = 100
+    val PRODUCERS = 10
 
     val consumer = f.getConsumer(name = "sv2",
       partitions = Set(0),

@@ -25,8 +25,8 @@ class ProducersComeAndLeaveSubscriberListensTest extends FlatSpec with Matchers 
       setProperty(ConfigurationOptions.Coordination.connectionTimeoutMs, 7000).
       setProperty(ConfigurationOptions.Coordination.sessionTimeoutMs, 7000).
       setProperty(ConfigurationOptions.Producer.transportTimeoutMs, 5000).
-      setProperty(ConfigurationOptions.Producer.Transaction.ttlMs, 500).
-      setProperty(ConfigurationOptions.Producer.Transaction.keepAliveMs, 100).
+      setProperty(ConfigurationOptions.Producer.Transaction.ttlMs, 5000).
+      setProperty(ConfigurationOptions.Producer.Transaction.keepAliveMs, 1000).
       setProperty(ConfigurationOptions.Consumer.transactionPreload, 500).
       setProperty(ConfigurationOptions.Consumer.dataPreload, 10)
 
@@ -41,7 +41,7 @@ class ProducersComeAndLeaveSubscriberListensTest extends FlatSpec with Matchers 
 
   it should "handle all transactions and do not loose them" in {
     val TRANSACTIONS_PER_PRODUCER = 100
-    val PRODUCERS = 100
+    val PRODUCERS = 10
     val TXNS_PER_SEC = 100 // don't change it
     val producerAccumulator = ListBuffer[Long]()
     val subscriberAccumulator = ListBuffer[Long]()

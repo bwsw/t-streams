@@ -41,8 +41,8 @@ class ProducerMasterChangeComplexTest extends FlatSpec with Matchers with Before
       setProperty(ConfigurationOptions.Coordination.connectionTimeoutMs, 4000).
       setProperty(ConfigurationOptions.Coordination.sessionTimeoutMs, 4000).
       setProperty(ConfigurationOptions.Producer.transportTimeoutMs, 2000).
-      setProperty(ConfigurationOptions.Producer.Transaction.ttlMs, 500).
-      setProperty(ConfigurationOptions.Producer.Transaction.keepAliveMs, 100).
+      setProperty(ConfigurationOptions.Producer.Transaction.ttlMs, 5000).
+      setProperty(ConfigurationOptions.Producer.Transaction.keepAliveMs, 200).
       setProperty(ConfigurationOptions.Consumer.transactionPreload, 500).
       setProperty(ConfigurationOptions.Consumer.dataPreload, 10)
 

@@ -115,9 +115,18 @@ class TStreamsFactory() {
   }
 
   def getStorageClient() = this.synchronized {
-    val clientOptions = new ConnectionOptions(connectionTimeoutMs = pAsInt(co.StorageClient.connectionTimeoutMs),
+
+    val stableCondition = ((pAsInt(co.StorageClient.requestTimeoutMs) + pAsInt(co.StorageClient.retryDelayMs)) * pAsInt(co.StorageClient.requestTimeoutRetryCount) < pAsInt(co.Producer.Transaction.ttlMs) - pAsInt(co.Producer.Transaction.keepAliveMs))
+    if(!stableCondition){
+      throw new IllegalStateException("Next relation must be fulfilled for stable function of the system: (ConfigurationOptions.StorageClient.requestTimeoutMs + ConfigurationOptions.StorageClient.retryDelayMs) * ConfigurationOptions.StorageClient.requestTimeoutRetryCount < ConfigurationOptions.Producer.Transaction.ttlMs - ConfigurationOptions.Producer.Transaction.keepAliveMs")
+    }
+
+    val clientOptions = new ConnectionOptions(
+      connectionTimeoutMs = pAsInt(co.StorageClient.connectionTimeoutMs),
       retryDelayMs = pAsInt(co.StorageClient.retryDelayMs),
-      threadPool = pAsInt(co.StorageClient.threadPool))
+      threadPool = pAsInt(co.StorageClient.threadPool),
+      requestTimeoutMs = pAsInt(co.StorageClient.requestTimeoutMs),
+      requestTimeoutRetryCount = pAsInt(co.StorageClient.requestTimeoutRetryCount))
 
     val authOptions = new AuthOptions(key = pAsString(co.StorageClient.Auth.key))
 

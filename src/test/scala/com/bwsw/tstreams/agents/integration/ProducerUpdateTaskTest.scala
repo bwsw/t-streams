@@ -19,8 +19,6 @@ class ProducerUpdateTaskTest extends FlatSpec with Matchers with BeforeAndAfterA
   lazy val blockCheckpoint2 = new ResettableCountDownLatch(1)
   var flag: Int = 0
 
-  val TRANSACTION_TTL_MS = 2000
-
   lazy val srv = TestStorageServer.get()
   lazy val storageClient = f.getStorageClient()
 
@@ -29,16 +27,8 @@ class ProducerUpdateTaskTest extends FlatSpec with Matchers with BeforeAndAfterA
     partitions = Set(0, 1, 2))
 
   override def beforeAll(): Unit = {
-    f.setProperty(ConfigurationOptions.Stream.name, "test_stream").
-      setProperty(ConfigurationOptions.Stream.partitionsCount, 3).
-      setProperty(ConfigurationOptions.Stream.ttlSec, 60 * 10).
-      setProperty(ConfigurationOptions.Coordination.connectionTimeoutMs, 7000).
-      setProperty(ConfigurationOptions.Coordination.sessionTimeoutMs, 7000).
-      setProperty(ConfigurationOptions.Producer.transportTimeoutMs, 5000).
-      setProperty(ConfigurationOptions.Producer.Transaction.ttlMs, TRANSACTION_TTL_MS).
-      setProperty(ConfigurationOptions.Producer.Transaction.keepAliveMs, TRANSACTION_TTL_MS / 4).
-      setProperty(ConfigurationOptions.Consumer.transactionPreload, 10).
-      setProperty(ConfigurationOptions.Consumer.dataPreload, 10)
+    f.setProperty(ConfigurationOptions.Stream.name, "test_stream")
+      .setProperty(ConfigurationOptions.Stream.partitionsCount, 3)
 
     srv
 
@@ -64,7 +54,7 @@ class ProducerUpdateTaskTest extends FlatSpec with Matchers with BeforeAndAfterA
     val transactionID = t.getTransactionID
     srv.notifyProducerTransactionCompleted(t => t.transactionID == transactionID && t.state == TransactionStates.Checkpointed, l.countDown())
     t.send("data".getBytes())
-    Thread.sleep(TRANSACTION_TTL_MS * 3)
+    Thread.sleep(f.getProperty(ConfigurationOptions.Producer.Transaction.ttlMs).asInstanceOf[Int] + 1000)
     t.checkpoint()
     l.await()
 

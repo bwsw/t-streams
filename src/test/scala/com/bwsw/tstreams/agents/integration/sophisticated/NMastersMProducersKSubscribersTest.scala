@@ -30,11 +30,11 @@ class NMastersMProducersKSubscribersTest extends FlatSpec with Matchers with Bef
       setProperty(ConfigurationOptions.Coordination.connectionTimeoutMs, 7000).
       setProperty(ConfigurationOptions.Coordination.sessionTimeoutMs, 7000).
       setProperty(ConfigurationOptions.Producer.transportTimeoutMs, 5000).
-      setProperty(ConfigurationOptions.Producer.Transaction.ttlMs, 500).
+      setProperty(ConfigurationOptions.Producer.Transaction.ttlMs, 5000).
       setProperty(ConfigurationOptions.Producer.Transaction.keepAliveMs, 100).
       setProperty(ConfigurationOptions.Consumer.transactionPreload, 1000).
       setProperty(ConfigurationOptions.Consumer.dataPreload, 10).
-      setProperty(ConfigurationOptions.Consumer.Subscriber.pollingFrequencyDelayMs, 5000)
+      setProperty(ConfigurationOptions.Consumer.Subscriber.pollingFrequencyDelayMs, 1000)
 
     srv
 

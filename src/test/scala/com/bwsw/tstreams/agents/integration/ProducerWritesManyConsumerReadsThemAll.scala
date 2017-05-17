@@ -18,17 +18,9 @@ class ProducerWritesManyConsumerReadsThemAll extends FlatSpec with Matchers with
   lazy val storageClient = f.getStorageClient()
 
   override def beforeAll(): Unit = {
-    f.setProperty(ConfigurationOptions.Stream.name, "test_stream").
-      setProperty(ConfigurationOptions.Stream.partitionsCount, 3).
-      setProperty(ConfigurationOptions.Stream.ttlSec, 60 * 10).
-      setProperty(ConfigurationOptions.Coordination.connectionTimeoutMs, 7000).
-      setProperty(ConfigurationOptions.Coordination.sessionTimeoutMs, 7000).
-      setProperty(ConfigurationOptions.Producer.transportTimeoutMs, 5000).
-      setProperty(ConfigurationOptions.Producer.Transaction.ttlMs, 500).
-      setProperty(ConfigurationOptions.Producer.Transaction.keepAliveMs, 100).
-      setProperty(ConfigurationOptions.Consumer.transactionPreload, 500).
-      setProperty(ConfigurationOptions.Consumer.dataPreload, 10)
-
+    f.setProperty(ConfigurationOptions.Stream.name, "test_stream")
+      .setProperty(ConfigurationOptions.Stream.partitionsCount, 3)
+      .setProperty(ConfigurationOptions.Stream.ttlSec, 60 * 10)
 
     srv
 
