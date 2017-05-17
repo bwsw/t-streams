@@ -112,9 +112,6 @@ class ProducerTransaction(partition: Int,
     * Does actual send of the data that is not sent yet
     */
   def finalizeDataSend(): Unit = {
-    producer.checkStopped()
-    producer.checkUpdateFailure()
-
     if (isTransactionClosed.getAndSet(true))
       throw new IllegalStateException(s"Transaction $transactionID is already closed. Further operations are denied.")
 
