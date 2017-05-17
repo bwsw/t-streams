@@ -160,17 +160,7 @@ class TStreamsFactory() {
     streamDefaults.Stream.partitionsCount.check(pAsInt(co.Stream.partitionsCount, streamDefaults.Stream.partitionsCount.default))
     streamDefaults.Stream.ttlSec.check(pAsInt(co.Stream.ttlSec, streamDefaults.Stream.ttlSec.default))
 
-
-
-    // construct stream
-    val stream = new Stream(
-      client = getStorageClient(),
-      name = pAsString(co.Stream.name),
-      partitionsCount = pAsInt(co.Stream.partitionsCount, streamDefaults.Stream.partitionsCount.default),
-      ttl = pAsLong(co.Stream.ttlSec, streamDefaults.Stream.ttlSec.default),
-      description = pAsString(co.Stream.description, ""))
-
-    stream
+    getStorageClient().loadStream(pAsString(co.Stream.name))
   }
 
   /**
@@ -251,9 +241,6 @@ class TStreamsFactory() {
     val notifyJobsThreadPoolSize = pAsInt(co.Producer.notifyJobsThreadPoolSize, producerDefaults.notifyJobsThreadPoolSize.default)
     producerDefaults.notifyJobsThreadPoolSize.check(notifyJobsThreadPoolSize)
 
-    val asyncJobsThreadPoolSize = pAsInt(co.Producer.asyncJobsThreadPoolSize, producerDefaults.asyncJobsThreadPoolSize.default)
-    producerDefaults.asyncJobsThreadPoolSize.check(asyncJobsThreadPoolSize)
-
     val transactionTtlMs = pAsInt(co.Producer.Transaction.ttlMs, producerDefaults.Transaction.ttlMs.default)
     producerDefaults.Transaction.ttlMs.check(transactionTtlMs)
 
@@ -295,7 +282,6 @@ class TStreamsFactory() {
       writePolicy = writePolicy,
       batchSize = batchSize,
       notifyJobsThreadPoolSize = notifyJobsThreadPoolSize,
-      asyncJobsThreadPoolSize = asyncJobsThreadPoolSize,
       transactionGenerator = new LocalTransactionGenerator,
       coordinationOptions = cao)
 

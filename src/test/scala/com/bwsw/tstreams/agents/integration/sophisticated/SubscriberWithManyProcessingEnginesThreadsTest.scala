@@ -44,6 +44,10 @@ class SubscriberWithManyProcessingEnginesThreadsTest extends FlatSpec with Match
       setProperty(ConfigurationOptions.Stream.partitionsCount, TOTAL_PARTITIONS)
 
     srv
+
+    if(storageClient.checkStreamExists("test_stream"))
+      storageClient.deleteStream("test_stream")
+
     storageClient.createStream("test_stream", TOTAL_PARTITIONS, 24 * 3600, "")
     storageClient.shutdown()
   }
@@ -82,7 +86,7 @@ class SubscriberWithManyProcessingEnginesThreadsTest extends FlatSpec with Match
             val v = Random.nextInt()
             t.send(s"$v")
           })
-          t.checkpoint(false) // checkpoint the transaction
+          t.checkpoint() // checkpoint the transaction
           if (i % 1000 == 0) {
             logger.info(s"I have wrote $i transactions up to now.")
           }

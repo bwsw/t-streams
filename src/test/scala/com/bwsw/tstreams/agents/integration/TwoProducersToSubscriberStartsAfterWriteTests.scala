@@ -34,6 +34,10 @@ class TwoProducersToSubscriberStartsAfterWriteTests extends FlatSpec with Matche
       setProperty(ConfigurationOptions.Consumer.dataPreload, 50)
 
     srv
+
+    if(storageClient.checkStreamExists("test_stream"))
+      storageClient.deleteStream("test_stream")
+
     storageClient.createStream("test_stream", 3, 24 * 3600, "")
     storageClient.shutdown()
   }
@@ -60,7 +64,7 @@ class TwoProducersToSubscriberStartsAfterWriteTests extends FlatSpec with Matche
       offset = Oldest,
       useLastOffset = true,
       callback = (consumer: TransactionOperator, transaction: ConsumerTransaction) => this.synchronized {
-        bs.append(transaction.getTransactionID())
+        bs.append(transaction.getTransactionID)
         if (bs.size == 2 * COUNT) {
           ls.countDown()
         }
@@ -75,7 +79,7 @@ class TwoProducersToSubscriberStartsAfterWriteTests extends FlatSpec with Matche
         t.checkpoint()
 
         bp.synchronized {
-          bp.append(t.getTransactionID())
+          bp.append(t.getTransactionID)
         }
       }
     })
@@ -88,7 +92,7 @@ class TwoProducersToSubscriberStartsAfterWriteTests extends FlatSpec with Matche
         t.checkpoint()
 
         bp.synchronized {
-          bp.append(t.getTransactionID())
+          bp.append(t.getTransactionID)
         }
       }
     })

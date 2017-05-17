@@ -31,6 +31,10 @@ class ProducerToSubscriberStartsAfterWriteWithCheckpointGroupTests extends FlatS
       setProperty(ConfigurationOptions.Consumer.dataPreload, 50)
 
     srv
+
+    if(storageClient.checkStreamExists("test_stream"))
+      storageClient.deleteStream("test_stream")
+
     storageClient.createStream("test_stream", 3, 24 * 3600, "")
     storageClient.shutdown()
   }
@@ -53,8 +57,8 @@ class ProducerToSubscriberStartsAfterWriteWithCheckpointGroupTests extends FlatS
       offset = Oldest,
       useLastOffset = true,
       callback = (consumer: TransactionOperator, transaction: ConsumerTransaction) => this.synchronized {
-        bs.append(transaction.getTransactionID())
-        consumer.setStreamPartitionOffset(transaction.getPartition(), transaction.getTransactionID())
+        bs.append(transaction.getTransactionID)
+        consumer.setStreamPartitionOffset(transaction.getPartition, transaction.getTransactionID)
         if (bs.size == COUNT) {
           subscriber1Latch.countDown()
         }
@@ -64,7 +68,7 @@ class ProducerToSubscriberStartsAfterWriteWithCheckpointGroupTests extends FlatS
       val t: ProducerTransaction = producer.newTransaction(policy = NewProducerTransactionPolicy.CheckpointIfOpened)
       t.send("test")
       t.checkpoint()
-      bp.append(t.getTransactionID())
+      bp.append(t.getTransactionID)
     }
 
     producer.stop()

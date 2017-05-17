@@ -33,8 +33,11 @@ class SubscriberTransactionPartitionDistributionTest extends FlatSpec with Match
       setProperty(ConfigurationOptions.Consumer.transactionPreload, 10).
       setProperty(ConfigurationOptions.Consumer.dataPreload, 10)
 
-
     srv
+
+    if(storageClient.checkStreamExists("test_stream"))
+      storageClient.deleteStream("test_stream")
+
     storageClient.createStream("test_stream", ALL_PARTITIONS, 24 * 3600, "")
     storageClient.shutdown()
   }
@@ -55,7 +58,7 @@ class SubscriberTransactionPartitionDistributionTest extends FlatSpec with Match
       offset = Newest,
       useLastOffset = false,
       callback = (consumer: TransactionOperator, transaction: ConsumerTransaction) => this.synchronized {
-        subscriberTransactionsAccumulator(transaction.getPartition()).append(transaction.getTransactionID())
+        subscriberTransactionsAccumulator(transaction.getPartition).append(transaction.getTransactionID)
         counter += 1
         if (counter == TRANSACTION_COUNT)
           subscriberLatch.countDown()
@@ -65,7 +68,7 @@ class SubscriberTransactionPartitionDistributionTest extends FlatSpec with Match
       val t = producer.newTransaction()
       t.send("test".getBytes())
       t.checkpoint()
-      producerTransactionsAccumulator(t.getPartition()).append(t.getTransactionID())
+      producerTransactionsAccumulator(t.getPartition).append(t.getTransactionID)
     })
 
     subscriberLatch.await(30, TimeUnit.SECONDS) shouldBe true

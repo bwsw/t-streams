@@ -4,6 +4,7 @@ import com.bwsw.tstreams.agents.consumer.subscriber.QueueBuilder.QueueItemType
 import com.bwsw.tstreams.agents.consumer.{ConsumerTransaction, TransactionOperator}
 import com.bwsw.tstreams.common.FirstFailLockableTaskExecutor
 import com.bwsw.tstreams.proto.protocol.TransactionState
+import com.bwsw.tstreamstransactionserver.rpc.TransactionStates
 
 import scala.collection.mutable.ListBuffer
 
@@ -50,28 +51,31 @@ class TransactionFullLoader(partitions: Set[Int],
     var first = lastTransactionsMap(last.partition).transactionID
     if (Subscriber.logger.isDebugEnabled())
       Subscriber.logger.debug(s"TransactionFullLoader.load: First: $first, last: ${last.transactionID}, ${last.transactionID - first}")
-    var data = ListBuffer[ConsumerTransaction]()
+    var transactions = ListBuffer[ConsumerTransaction]()
     var flag = true
     var counter = 0
+    var newTransactions = ListBuffer[ConsumerTransaction]()
     while (flag) {
       counter += 1
       if(Subscriber.logger.isDebugEnabled())
         Subscriber.logger.debug(s"Load full begin (partition = ${last.partition}, first = $first, last = ${last.transactionID}, master = ${last.masterID})")
-      data ++= consumer.getTransactionsFromTo(last.partition, first, last.transactionID)
+      newTransactions = consumer.getTransactionsFromTo(last.partition, first, last.transactionID)
+      transactions ++= newTransactions.filter(transaction => transaction.getState != TransactionStates.Invalid)
+
       if(Subscriber.logger.isDebugEnabled())
         Subscriber.logger.debug(s"Load full end (partition = ${last.partition}, first = $first, last = ${last.transactionID}, master = ${last.masterID})")
 
       if (last.masterID > 0 && !last.isNotReliable) {
         // we wait for certain item
         // to switch to fast load next
-        if (data.nonEmpty) {
-          if (data.last.getTransactionID() == last.transactionID) {
+        if (newTransactions.nonEmpty) {
+          if (newTransactions.last.getTransactionID == last.transactionID) {
             if(Subscriber.logger.isDebugEnabled())
               Subscriber.logger.debug(s"Load full completed (partition = ${last.partition}, first = $first, last = ${last.transactionID}, master = ${last.masterID}  )")
             flag = false
           }
           else
-            first = data.last.getTransactionID()
+            first = newTransactions.last.getTransactionID
         } else {
           /*
           to keep server ok from our activity add small delay
@@ -81,25 +85,26 @@ class TransactionFullLoader(partitions: Set[Int],
           */
           Thread.sleep(TransactionFullLoader.EXPECTED_BUT_EMPTY_RESPONSE_DELAY)
         }
-      } else
+      } else {
         flag = false
+      }
     }
 
     if (Subscriber.logger.isDebugEnabled())
-      Subscriber.logger.debug(s"Series received from the database:  $data")
+      Subscriber.logger.debug(s"Series received from the database:  $transactions")
 
-    data.foreach(elt =>
+    transactions.foreach(elt =>
       executor.submit(s"<CallbackTask#Full>", new ProcessingEngine.CallbackTask(consumer,
-        TransactionState(transactionID = elt.getTransactionID(),
-          partition = last.partition, masterID = -1, orderID = -1, count = elt.getCount(),
+        TransactionState(transactionID = elt.getTransactionID,
+          partition = last.partition, masterID = -1, orderID = -1, count = elt.getCount,
           status = TransactionState.Status.Checkpointed, ttlMs = -1), callback)))
 
-    if (data.nonEmpty)
-      lastTransactionsMap(last.partition) = TransactionState(transactionID = data.last.getTransactionID(),
+    if (newTransactions.nonEmpty)
+      lastTransactionsMap(last.partition) = TransactionState(transactionID = newTransactions.last.getTransactionID,
         partition = last.partition, masterID = last.masterID, orderID = last.orderID,
-        count = data.last.getCount(), status = TransactionState.Status.Checkpointed, ttlMs = -1)
+        count = newTransactions.last.getCount, status = TransactionState.Status.Checkpointed, ttlMs = -1)
 
-    data.size
+    transactions.size
   }
 
 }

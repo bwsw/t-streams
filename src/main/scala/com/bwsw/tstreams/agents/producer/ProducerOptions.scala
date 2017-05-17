@@ -12,7 +12,6 @@ import scala.language.existentials
   * @param writePolicy
   * @param batchSize
   * @param transactionGenerator
-  * @param asyncJobsThreadPoolSize
   * @param notifyJobsThreadPoolSize
   * @param coordinationOptions
   */
@@ -21,7 +20,6 @@ class ProducerOptions(val transactionTtlMs: Long,
                       val writePolicy: AbstractPolicy,
                       val batchSize: Int,
                       val transactionGenerator: ITransactionGenerator,
-                      val asyncJobsThreadPoolSize: Int,
                       val notifyJobsThreadPoolSize: Int,
                       val coordinationOptions: CoordinationOptions)
 

@@ -30,6 +30,10 @@ class ConsumerCheckpointTests extends FlatSpec with Matchers with BeforeAndAfter
       setProperty(ConfigurationOptions.Consumer.dataPreload, 10)
 
     srv
+
+    if(storageClient.checkStreamExists("test_stream"))
+      storageClient.deleteStream("test_stream")
+
     storageClient.createStream("test_stream", 2, 24 * 3600, "")
     storageClient.shutdown()
   }
@@ -61,19 +65,19 @@ class ConsumerCheckpointTests extends FlatSpec with Matchers with BeforeAndAfter
 
     val t2 = producer.newTransaction(NewProducerTransactionPolicy.ErrorIfOpened, 0)
     val l2 = new CountDownLatch(1)
-    srv.notifyProducerTransactionCompleted(t => t.transactionID == t2.getTransactionID() && t.state == TransactionStates.Checkpointed, l2.countDown())
+    srv.notifyProducerTransactionCompleted(t => t.transactionID == t2.getTransactionID && t.state == TransactionStates.Checkpointed, l2.countDown())
     t2.send("data".getBytes())
     producer.checkpoint()
     l2.await()
 
     c1.start()
-    c1.getTransactionById(0, t1.getTransactionID()).isDefined shouldBe true
-    c1.getTransactionById(0, t2.getTransactionID()).isDefined shouldBe true
+    c1.getTransactionById(0, t1.getTransactionID).isDefined shouldBe true
+    c1.getTransactionById(0, t2.getTransactionID).isDefined shouldBe true
 
     val l = new CountDownLatch(1)
-    srv.notifyConsumerTransactionCompleted(ct => t1.getTransactionID() == ct.transactionID, l.countDown())
+    srv.notifyConsumerTransactionCompleted(ct => t1.getTransactionID == ct.transactionID, l.countDown())
 
-    c1.getTransaction(0).get.getTransactionID() shouldBe t1.getTransactionID()
+    c1.getTransaction(0).get.getTransactionID shouldBe t1.getTransactionID
     c1.checkpoint()
     c1.stop()
 
@@ -81,7 +85,7 @@ class ConsumerCheckpointTests extends FlatSpec with Matchers with BeforeAndAfter
     l.await()
 
     c2.start()
-    c2.getTransaction(0).get.getTransactionID() shouldBe t2.getTransactionID()
+    c2.getTransaction(0).get.getTransactionID shouldBe t2.getTransactionID
     c2.checkpoint()
     c2.getTransaction(0).isDefined shouldBe false
     c2.stop()

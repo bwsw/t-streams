@@ -32,6 +32,10 @@ class IntersectingTransactionsTests extends FlatSpec with Matchers with BeforeAn
       setProperty(ConfigurationOptions.Consumer.dataPreload, 10)
 
     srv
+
+    if(storageClient.checkStreamExists("test_stream"))
+      storageClient.deleteStream("test_stream")
+
     storageClient.createStream("test_stream", 3, 24 * 3600, "")
     storageClient.shutdown()
   }
@@ -56,7 +60,7 @@ class IntersectingTransactionsTests extends FlatSpec with Matchers with BeforeAn
       offset = Newest,
       useLastOffset = true,
       callback = (consumer: TransactionOperator, transaction: ConsumerTransaction) => this.synchronized {
-        bs.append(transaction.getTransactionID())
+        bs.append(transaction.getTransactionID)
         if (bs.size == 2) {
           ls.countDown()
         }
@@ -64,7 +68,7 @@ class IntersectingTransactionsTests extends FlatSpec with Matchers with BeforeAn
 
     val t1 = new Thread(() => {
       val t = producer1.newTransaction(policy = NewProducerTransactionPolicy.CheckpointIfOpened)
-      bp.append(t.getTransactionID())
+      bp.append(t.getTransactionID)
       lp2.countDown()
       lp1.await()
       t.send("test".getBytes())
@@ -74,7 +78,7 @@ class IntersectingTransactionsTests extends FlatSpec with Matchers with BeforeAn
     val t2 = new Thread(() => {
       lp2.await()
       val t = producer2.newTransaction(policy = NewProducerTransactionPolicy.CheckpointIfOpened)
-      bp.append(t.getTransactionID())
+      bp.append(t.getTransactionID)
       t.send("test".getBytes())
       t.checkpoint()
       lp1.countDown()

@@ -46,9 +46,9 @@ class StorageClient(clientOptions: ConnectionOptions, authOptions: AuthOptions, 
     * @return Stream instance
     */
   def loadStream(streamName: String, timeout: Duration = StorageClient.maxAwaiTimeout): Stream = {
-    val rpcStream = Await.result(client.getStream(streamName), timeout)
+    val rpcStream = Await.result(client.getStream(streamName), timeout).get
 
-    new Stream(client = this, name = rpcStream.name, partitionsCount = rpcStream.partitions,
+    new Stream(client = this, id = rpcStream.id, name = rpcStream.name, partitionsCount = rpcStream.partitions,
       ttl = rpcStream.ttl, description = rpcStream.description.fold("")(x => x))
   }
 
@@ -62,10 +62,14 @@ class StorageClient(clientOptions: ConnectionOptions, authOptions: AuthOptions, 
     */
   def createStream(streamName: String, partitionsCount: Int, ttl: Long, description: String,
                    timeout: Duration = StorageClient.maxAwaiTimeout): Stream = {
-    if (!Await.result(client.putStream(streamName, partitionsCount, Some(description), ttl), timeout))
+
+    val streamID = Await.result(client.putStream(streamName, partitionsCount, Some(description), ttl), timeout)
+    if (0 > streamID)
       throw new IllegalArgumentException(s"Stream $streamName already exists.")
 
-    new Stream(this, streamName, partitionsCount, ttl, description)
+    StorageClient.logger.warn(s"Created stream '$streamName' with $partitionsCount partitions and TTL: $ttl seconds.")
+
+    new Stream(this, streamID, streamName, partitionsCount, ttl, description)
   }
 
 
@@ -95,23 +99,23 @@ class StorageClient(clientOptions: ConnectionOptions, authOptions: AuthOptions, 
     * @param consumerName Name of the consumer
     * @return Exist or not concrete consumer
     */
-  def checkConsumerOffsetExists(consumerName: String, stream: String, partition: Int,
+  def checkConsumerOffsetExists(consumerName: String, streamID: Int, partition: Int,
                                 timeout: Duration = StorageClient.maxAwaiTimeout) = {
-    Await.result(client.getConsumerState(name = consumerName, stream = stream, partition = partition), timeout) > 0
+    Await.result(client.getConsumerState(name = consumerName, streamID = streamID, partition = partition), timeout) > 0
   }
 
   /**
     * Saving offset batch
     *
     * @param consumerName                Name of the consumer
-    * @param stream                      Name of the specific stream
+    * @param streamID                      Name of the specific stream
     * @param partitionAndLastTransaction Set of partition and last transaction pairs to save
     */
-  def saveConsumerOffsetBatch(consumerName: String, stream: String, partitionAndLastTransaction: scala.collection.mutable.Map[Int, Long],
+  def saveConsumerOffsetBatch(consumerName: String, streamID: Int, partitionAndLastTransaction: scala.collection.mutable.Map[Int, Long],
                               timeout: Duration = StorageClient.maxAwaiTimeout) = {
     val batch = ListBuffer[ConsumerTransaction]()
     batch.appendAll(partitionAndLastTransaction.map { case (partition, offset) =>
-      new RPCConsumerTransaction(consumerName, stream, partition, offset)
+      new RPCConsumerTransaction(consumerName, streamID, partition, offset)
     })
 
     Await.result(client.putTransactions(Nil, batch), timeout)
@@ -121,26 +125,26 @@ class StorageClient(clientOptions: ConnectionOptions, authOptions: AuthOptions, 
     * Saving single offset
     *
     * @param consumerName Name of the specific consumer
-    * @param stream       Name of the specific stream
+    * @param streamID       Name of the specific stream
     * @param partition    Name of the specific partition
     * @param offset       Offset to save
     */
-  def saveConsumerOffset(consumerName: String, stream: String, partition: Int, offset: Long,
+  def saveConsumerOffset(consumerName: String, streamID: Int, partition: Int, offset: Long,
                          timeout: Duration = StorageClient.maxAwaiTimeout): Unit = {
-    Await.result(client.putTransaction(new RPCConsumerTransaction(consumerName, stream, partition, offset)), timeout)
+    Await.result(client.putTransaction(new RPCConsumerTransaction(consumerName, streamID, partition, offset)), timeout)
   }
 
   /**
     * Retrieving specific offset for particular consumer
     *
     * @param consumerName Name of the specific consumer
-    * @param stream       Name of the specific stream
+    * @param streamID       Name of the specific stream
     * @param partition    Name of the specific partition
     * @return Offset
     */
-  def getLastSavedConsumerOffset(consumerName: String, stream: String, partition: Int,
+  def getLastSavedConsumerOffset(consumerName: String, streamID: Int, partition: Int,
                                  timeout: Duration = StorageClient.maxAwaiTimeout): Long = {
-    Await.result(client.getConsumerState(name = consumerName, stream = stream, partition = partition), timeout)
+    Await.result(client.getConsumerState(name = consumerName, streamID = streamID, partition = partition), timeout)
   }
 
   def putTransactionSync(transaction: ProducerTransaction, timeout: Duration = StorageClient.maxAwaiTimeout) = {
@@ -158,20 +162,20 @@ class StorageClient(clientOptions: ConnectionOptions, authOptions: AuthOptions, 
     Await.result(f, timeout)
   }
 
-  def putInstantTransactionSync(stream: String, partition: Int, transactionID: Long, data: Seq[Array[Byte]],
+  def putInstantTransactionSync(streamID: Int, partition: Int, transactionID: Long, data: Seq[Array[Byte]],
                                 timeout: Duration = StorageClient.maxAwaiTimeout): Unit = {
-    val f = client.putSimpleTransactionAndData(stream, partition, transactionID, data)
+    val f = client.putSimpleTransactionAndData(streamID, partition, transactionID, data)
     Await.result(f, timeout)
   }
 
-  def putInstantTransactionUnreliable(stream: String, partition: Int, transactionID: Long, data: Seq[Array[Byte]]): Unit = {
-    client.putSimpleTransactionAndDataWithoutResponse(stream, partition, transactionID, data)
+  def putInstantTransactionUnreliable(streamID: Int, partition: Int, transactionID: Long, data: Seq[Array[Byte]]): Unit = {
+    client.putSimpleTransactionAndDataWithoutResponse(streamID, partition, transactionID, data)
   }
 
-  def getTransaction(streamName: String, partition: Integer, transactionID: Long,
+  def getTransaction(streamID: Int, partition: Integer, transactionID: Long,
                      timeout: Duration = StorageClient.maxAwaiTimeout): Option[ProducerTransaction] = {
     while (true) {
-      val txnInfo = Await.result(client.getTransaction(streamName, partition, transactionID), timeout)
+      val txnInfo = Await.result(client.getTransaction(streamID, partition, transactionID), timeout)
       (txnInfo.exists, txnInfo.transaction) match {
         case (true, t: Option[ProducerTransaction]) => return t
         case (false, _) =>
@@ -181,33 +185,38 @@ class StorageClient(clientOptions: ConnectionOptions, authOptions: AuthOptions, 
     None
   }
 
-  def scanTransactions(streamName: String, partition: Integer, from: Long, to: Long, count: Int, states: Set[TransactionStates],
+  def scanTransactions(streamID: Int, partition: Integer, from: Long, to: Long, count: Int, states: Set[TransactionStates],
                        timeout: Duration = StorageClient.maxAwaiTimeout): (Long, Seq[ProducerTransaction]) = {
-    val txnInfo = Await.result(client.scanTransactions(streamName, partition, from, to, count, states), timeout)
+    val txnInfo = Await.result(client.scanTransactions(streamID, partition, from, to, count, states), timeout)
     (txnInfo.lastOpenedTransactionID, txnInfo.producerTransactions)
   }
 
-  def getLastTransactionId(streamName: String, partition: Integer, timeout: Duration = StorageClient.maxAwaiTimeout): Long = {
-    Await.result(client.getLastCheckpointedTransaction(streamName, partition), timeout)
+  def getLastTransactionId(streamID: Int, partition: Integer, timeout: Duration = StorageClient.maxAwaiTimeout): Long = {
+    Await.result(client.getLastCheckpointedTransaction(streamID, partition), timeout)
   }
 
   def getCommitLogOffsets(timeout: Duration = StorageClient.maxAwaiTimeout): CommitLogInfo = {
     Await.result(client.getCommitLogOffsets(), timeout)
   }
 
-  def getTransactionData(stream: String, partition: Int, transaction: Long, from: Int, to: Int,
+  def getTransactionData(streamID: Int, partition: Int, transaction: Long, from: Int, to: Int,
                          timeout: Duration = StorageClient.maxAwaiTimeout): Seq[Array[Byte]] = {
-    Await.result(client.getTransactionData(stream, partition, transaction, from, to), timeout)
+    Await.result(client.getTransactionData(streamID, partition, transaction, from, to), timeout)
   }
 
   def putTransactions(producerTransactions: Seq[com.bwsw.tstreamstransactionserver.rpc.ProducerTransaction],
                       consumerTransactions: Seq[com.bwsw.tstreamstransactionserver.rpc.ConsumerTransaction],
                       timeout: Duration = StorageClient.maxAwaiTimeout): Boolean = {
-    Await.result(client.putTransactions(producerTransactions, consumerTransactions), timeout)
+    val res = Await.result(client.putTransactions(producerTransactions, consumerTransactions), timeout)
+    if(StorageClient.logger.isDebugEnabled) {
+      StorageClient.logger.debug(s"Placed ProducerTransactions $producerTransactions  [putTransactions]")
+      StorageClient.logger.debug(s"Placed ConsumerStates $consumerTransactions  [putTransactions]")
+    }
+    res
   }
 
-  def putTransactionData(stream: String, partition: Int, transaction: Long, data: Seq[Array[Byte]], from: Int): Future[Boolean] = {
-    client.putTransactionData(stream, partition, transaction, data, from)
+  def putTransactionData(streamID: Int, partition: Int, transaction: Long, data: Seq[Array[Byte]], from: Int): Future[Boolean] = {
+    client.putTransactionData(streamID, partition, transaction, data, from)
   }
 
 }

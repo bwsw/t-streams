@@ -1,12 +1,11 @@
 package com.bwsw.tstreams.agents.consumer
 
 import java.util.concurrent.atomic.AtomicBoolean
-import java.util.concurrent.locks.ReentrantLock
 
 import com.bwsw.tstreams.agents.group.{CheckpointInfo, ConsumerCheckpointInfo, GroupParticipant}
 import com.bwsw.tstreams.storage.StorageClient
 import com.bwsw.tstreams.streams.Stream
-import com.bwsw.tstreamstransactionserver.rpc.{ProducerTransaction, TransactionStates}
+import com.bwsw.tstreamstransactionserver.rpc.TransactionStates
 import org.slf4j.LoggerFactory
 
 import scala.collection.mutable
@@ -58,7 +57,7 @@ class Consumer(val name: String,
   /**
     * returns partitions
     */
-  def getPartitions(): Set[Int] = options.readPolicy.getUsedPartitions().toSet
+  def getPartitions: Set[Int] = options.readPolicy.getUsedPartitions
 
 
   /**
@@ -73,12 +72,12 @@ class Consumer(val name: String,
 
   private def loadNextTransactionsForPartition(partition: Int, currentOffset: Long): mutable.Queue[ConsumerTransaction] = {
 
-    val (last, seq) = stream.client.scanTransactions(stream.name, partition, currentOffset + 1,
+    val (last, seq) = stream.client.scanTransactions(stream.id, partition, currentOffset + 1,
       options.transactionGenerator.getTransaction(), options.transactionsPreload, Set())
 
     val transactionsQueue = mutable.Queue[ConsumerTransaction]()
     seq.foreach(record => {
-      val consumerTransaction = new ConsumerTransaction(partition, record.transactionID, record.quantity, record.ttl)
+      val consumerTransaction = new ConsumerTransaction(partition, record.transactionID, record.quantity, record.state, record.ttl)
       transactionsQueue.enqueue(consumerTransaction)
     })
     transactionsQueue
@@ -114,10 +113,10 @@ class Consumer(val name: String,
       }
     }
 
-    for (partition <- options.readPolicy.getUsedPartitions()) {
+    for (partition <- options.readPolicy.getUsedPartitions) {
       val bootstrapOffset =
-        if (stream.client.checkConsumerOffsetExists(name, stream.name, partition) && options.useLastOffset) {
-          val off = stream.client.getLastSavedConsumerOffset(name, stream.name, partition)
+        if (stream.client.checkConsumerOffsetExists(name, stream.id, partition) && options.useLastOffset) {
+          val off = stream.client.getLastSavedConsumerOffset(name, stream.id, partition)
 
           if (Consumer.logger.isDebugEnabled())
             Consumer.logger.debug(s"Bootstrap offset load: $off")
@@ -164,7 +163,7 @@ class Consumer(val name: String,
     if (!isStarted.get())
       throw new IllegalStateException(s"Consumer $name is not started. Start it first.")
 
-    if (!getPartitions().contains(partition))
+    if (!getPartitions.contains(partition))
       throw new IllegalStateException(s"Consumer doesn't work on partition=$partition.")
 
     if (transactionBuffer(partition).isEmpty) {
@@ -178,24 +177,24 @@ class Consumer(val name: String,
     val transaction = transactionBuffer(partition).head
 
     // We found invalid transaction, so just skip it and move forward
-    if (transaction.getCount() == 0) {
+    if (transaction.getState == TransactionStates.Invalid) {
       transactionBuffer(partition).dequeue()
-      updateOffsets(partition, transaction.getTransactionID())
+      updateOffsets(partition, transaction.getTransactionID)
       return getTransaction(partition)
     }
 
     // we found valid transaction transaction
-    if (transaction.getCount() != -1) {
-      updateOffsets(partition, transaction.getTransactionID())
+    if (transaction.getState != TransactionStates.Opened) {
+      updateOffsets(partition, transaction.getTransactionID)
       transactionBuffer(partition).dequeue()
       transaction.attach(this)
       return Some(transaction)
     }
 
     // we found open one, try to update it.
-    val transactionUpdatedOpt = getTransactionById(partition, transaction.getTransactionID())
+    val transactionUpdatedOpt = getTransactionById(partition, transaction.getTransactionID)
     if (transactionUpdatedOpt.isDefined) {
-      updateOffsets(partition, transactionUpdatedOpt.get.getTransactionID())
+      updateOffsets(partition, transactionUpdatedOpt.get.getTransactionID)
       transactionBuffer(partition).dequeue()
       return transactionUpdatedOpt
     }
@@ -218,10 +217,10 @@ class Consumer(val name: String,
     if (!isStarted.get())
       throw new IllegalStateException(s"Consumer $name is not started. Start it first.")
 
-    val transactionId = stream.client.getLastTransactionId(stream.name, partition)
+    val transactionId = stream.client.getLastTransactionId(stream.id, partition)
     if (transactionId > 0) {
-      val txn = stream.client.getTransaction(stream.name, partition, transactionId)
-      txn.map(t => new ConsumerTransaction(partition = partition, transactionID = t.transactionID, count = t.quantity, ttl = t.ttl))
+      val txn = stream.client.getTransaction(stream.id, partition, transactionId)
+      txn.map(t => new ConsumerTransaction(partition = partition, transactionID = t.transactionID, count = t.quantity, state = t.state, ttl = t.ttl))
     } else
       None
   }
@@ -246,7 +245,7 @@ class Consumer(val name: String,
     val transactionOpt = loadTransactionFromDB(partition, transactionID)
     if (transactionOpt.isDefined) {
       val transaction = transactionOpt.get
-      if (transaction.getCount() != -1) {
+      if (transaction.getCount != -1) {
         transactionOpt.get.attach(this)
         transactionOpt
       }
@@ -281,8 +280,8 @@ class Consumer(val name: String,
     if (!isStarted.get())
       throw new IllegalStateException("Consumer is not started. Start consumer first.")
 
-    stream.client.getTransaction(stream.name, partition, transactionID)
-      .map(rec => new ConsumerTransaction(partition, transactionID, rec.quantity, rec.ttl))
+    stream.client.getTransaction(stream.id, partition, transactionID)
+      .map(rec => new ConsumerTransaction(partition, transactionID, rec.quantity, rec.state, rec.ttl))
   }
 
   /**
@@ -297,7 +296,7 @@ class Consumer(val name: String,
       Consumer.logger.debug(s"Start saving checkpoints for " +
         s"consumer with name : $name, streamName : ${stream.name}, streamPartitions : ${stream.partitionsCount}")
     }
-    stream.client.saveConsumerOffsetBatch(name, stream.name, checkpointOffsets)
+    stream.client.saveConsumerOffsetBatch(name, stream.id, checkpointOffsets)
     checkpointOffsets.clear()
   }
 
@@ -310,16 +309,11 @@ class Consumer(val name: String,
       throw new IllegalStateException("Consumer is not started. Start consumer first.")
 
     val checkpointData = checkpointOffsets.map { case (partition, lastTransaction) =>
-      ConsumerCheckpointInfo(name, stream.name, partition, lastTransaction)
+      ConsumerCheckpointInfo(name, stream.id, partition, lastTransaction)
     }.toList
     checkpointOffsets.clear()
     checkpointData
   }
-
-  /**
-    * Agent lock on any actions which has to do with checkpoint
-    */
-  override def getThreadLock(): ReentrantLock = null
 
   def stop() = {
 
@@ -343,29 +337,27 @@ class Consumer(val name: String,
     * @param count
     * @return
     */
-  def buildTransactionObject(partition: Int, transactionID: Long, count: Int): Option[ConsumerTransaction] = {
-    val transaction = new ConsumerTransaction(partition, transactionID, count, -1)
+  def buildTransactionObject(partition: Int, transactionID: Long, state: TransactionStates, count: Int): Option[ConsumerTransaction] = {
+    val transaction = new ConsumerTransaction(partition, transactionID, count, state, -1)
     transaction.attach(this)
     Some(transaction)
   }
 
   override def getTransactionsFromTo(partition: Int, from: Long, to: Long): ListBuffer[ConsumerTransaction] = {
     val set = Set[TransactionStates](TransactionStates.Opened)
-    val (_, seq) = stream.client.scanTransactions(stream.name, partition, from + 1, to, options.transactionsPreload, set)
+    val (_, seq) = stream.client.scanTransactions(stream.id, partition, from + 1, to, options.transactionsPreload, set)
     if(Consumer.logger.isDebugEnabled())
-      Consumer.logger.debug(s"scanTransactions(${stream.name}, ${partition}, ${from + 1}, $to, ${options.transactionsPreload}, ${set}) -> $seq")
+      Consumer.logger.debug(s"scanTransactions(${stream.name}, $partition, ${from + 1}, $to, ${options.transactionsPreload}, $set) -> $seq")
     val result = ListBuffer[ConsumerTransaction]()
     seq.foreach(rec => {
-      if (rec.quantity > 0 && rec.state != TransactionStates.Invalid) {
-        val t = new ConsumerTransaction(partition = partition, transactionID = rec.transactionID, count = rec.quantity, ttl = rec.ttl)
-        t.attach(this)
-        result.append(t)
-      }
+      val t = new ConsumerTransaction(partition = partition, transactionID = rec.transactionID, count = rec.quantity, state = rec.state, ttl = rec.ttl)
+      t.attach(this)
+      result.append(t)
     })
     result
   }
 
-  override def getProposedTransactionId(): Long = options.transactionGenerator.getTransaction()
+  override def getProposedTransactionId: Long = options.transactionGenerator.getTransaction()
 
   override def getStorageClient(): StorageClient = stream.client
 }

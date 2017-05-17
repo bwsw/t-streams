@@ -1,6 +1,7 @@
 package com.bwsw.tstreams.agents.consumer.subscriber
 
 import com.bwsw.tstreams.agents.consumer.{ConsumerTransaction, TransactionOperator}
+import com.bwsw.tstreamstransactionserver.rpc.TransactionStates
 
 /**
   * Trait to implement to handle incoming messages
@@ -27,7 +28,7 @@ trait Callback {
                         transactionID: Long,
                         count: Int) = {
     consumer.setStreamPartitionOffset(partition, transactionID)
-    consumer.buildTransactionObject(partition, transactionID, count)
+    consumer.buildTransactionObject(partition, transactionID, TransactionStates.Checkpointed, count)
       .foreach(transaction => onTransaction(consumer, transaction = transaction))
   }
 }

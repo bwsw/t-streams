@@ -37,7 +37,11 @@ class ProducerTest extends FlatSpec with Matchers with BeforeAndAfterAll with Te
       setProperty(ConfigurationOptions.Consumer.dataPreload, 10)
 
     srv
-    storageClient.createStream("test_stream", 2, 24 * 3600, "")
+
+    if(storageClient.checkStreamExists("test_stream"))
+      storageClient.deleteStream("test_stream")
+
+    storageClient.createStream("test_stream", ALL_PARTITIONS, 24 * 3600, "")
     storageClient.shutdown()
   }
 
@@ -76,8 +80,8 @@ class ProducerTest extends FlatSpec with Matchers with BeforeAndAfterAll with Te
     val transaction1 = producer.newTransaction(NewProducerTransactionPolicy.EnqueueIfOpened, 3)
     val transaction2 = producer.newTransaction(NewProducerTransactionPolicy.EnqueueIfOpened, 3)
     producer.checkpoint()
-    transaction1.isClosed() shouldBe true
-    transaction2.isClosed() shouldBe true
+    transaction1.isClosed shouldBe true
+    transaction2.isClosed shouldBe true
   }
 
   "BasicProducer.newTransaction(CheckpointIfOpen)" should "not throw exception if previous transaction was not closed" in {

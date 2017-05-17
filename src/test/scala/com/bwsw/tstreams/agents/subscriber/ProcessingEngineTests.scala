@@ -3,6 +3,7 @@ package com.bwsw.tstreams.agents.subscriber
 import com.bwsw.tstreams.agents.consumer.subscriber.{Callback, ProcessingEngine, QueueBuilder}
 import com.bwsw.tstreams.agents.consumer.{ConsumerTransaction, TransactionOperator}
 import com.bwsw.tstreams.testutils.LocalGeneratorCreator
+import com.bwsw.tstreamstransactionserver.rpc.TransactionStates
 import org.scalatest.{FlatSpec, Matchers}
 
 import scala.collection.mutable.ListBuffer
@@ -12,7 +13,7 @@ class ProcessingEngineOperatorTestImpl extends TransactionOperator {
   val TOTAL = 10
   val transactions = new ListBuffer[ConsumerTransaction]()
   for (i <- 0 until TOTAL)
-    transactions += new ConsumerTransaction(0, LocalGeneratorCreator.getTransaction(), 1, -1)
+    transactions += new ConsumerTransaction(0, LocalGeneratorCreator.getTransaction(), 1, TransactionStates.Checkpointed, -1)
 
   var lastTransaction: Option[ConsumerTransaction] = None
 
@@ -30,7 +31,7 @@ class ProcessingEngineOperatorTestImpl extends TransactionOperator {
 
   override def getCurrentOffset(partition: Int): Long = LocalGeneratorCreator.getTransaction()
 
-  override def buildTransactionObject(partition: Int, id: Long, count: Int): Option[ConsumerTransaction] = None
+  override def buildTransactionObject(partition: Int, id: Long, state: TransactionStates, count: Int): Option[ConsumerTransaction] = None
 
   override def getTransactionsFromTo(partition: Int, from: Long, to: Long): ListBuffer[ConsumerTransaction] = transactions
 
@@ -66,7 +67,7 @@ class ProcessingEngineTests extends FlatSpec with Matchers {
   "handleQueue" should "do fast/full load if there is seq in queue" in {
     val c = new ProcessingEngineOperatorTestImpl()
     val pe = new ProcessingEngine(c, Set[Int](0), qb, cb, 100)
-    c.lastTransaction = Option[ConsumerTransaction](new ConsumerTransaction(0, LocalGeneratorCreator.getTransaction(), 1, -1))
+    c.lastTransaction = Option[ConsumerTransaction](new ConsumerTransaction(0, LocalGeneratorCreator.getTransaction(), 1, TransactionStates.Checkpointed, -1))
     pe.enqueueLastPossibleTransaction(0)
     val act1 = pe.getLastPartitionActivity(0)
     Thread.sleep(10)

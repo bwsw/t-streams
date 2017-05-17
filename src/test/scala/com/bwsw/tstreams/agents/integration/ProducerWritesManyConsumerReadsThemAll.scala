@@ -31,6 +31,10 @@ class ProducerWritesManyConsumerReadsThemAll extends FlatSpec with Matchers with
 
 
     srv
+
+    if(storageClient.checkStreamExists("test_stream"))
+      storageClient.deleteStream("test_stream")
+
     storageClient.createStream("test_stream", 3, 24 * 3600, "")
     storageClient.shutdown()
   }
@@ -49,7 +53,7 @@ class ProducerWritesManyConsumerReadsThemAll extends FlatSpec with Matchers with
       val transaction = producer.newTransaction(NewProducerTransactionPolicy.ErrorIfOpened)
       transaction.send("test")
       transaction.checkpoint()
-      producerIterAcc.append(transaction.getTransactionID())
+      producerIterAcc.append(transaction.getTransactionID)
     })
     producer.stop()
 
@@ -69,8 +73,8 @@ class ProducerWritesManyConsumerReadsThemAll extends FlatSpec with Matchers with
     producerIterAcc.foreach(tp => {
       val tOpt = consumer.getTransaction(0)
       tOpt.foreach(t => {
-        consumerIterAcc.append(t.getTransactionID())
-        t.getTransactionID() shouldBe tp
+        consumerIterAcc.append(t.getTransactionID)
+        t.getTransactionID shouldBe tp
       })
       if(counter.incrementAndGet() % 100 == 0)
         logger.info(s"${counter.get()} received")

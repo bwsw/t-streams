@@ -14,7 +14,7 @@ import com.bwsw.tstreams.testutils.{TestStorageServer, TestUtils}
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 
 import scala.collection.mutable.ListBuffer
-import scala.util.Random
+import scala.util.{Failure, Random, Success, Try}
 
 class ProducerMasterChangeComplexTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
 
@@ -47,27 +47,31 @@ class ProducerMasterChangeComplexTest extends FlatSpec with Matchers with Before
       setProperty(ConfigurationOptions.Consumer.dataPreload, 10)
 
     srv
+
+    if(storageClient.checkStreamExists("test_stream"))
+      storageClient.deleteStream("test_stream")
+
     storageClient.createStream("test_stream", PARTITIONS_COUNT, 24 * 3600, "")
     storageClient.shutdown()
   }
 
   class ProducerWorker(val factory: TStreamsFactory, val onCompleteLatch: CountDownLatch, val amount: Int, val probability: Double, id: Int) {
-    var producer: Producer = null
+    var producer: Producer = _
     var counter: Int = 0
 
     val intFactory = factory.copy()
     intFactory.setProperty(ConfigurationOptions.Producer.bindPort, 40000 + id)
 
-    def loop(partitions: Set[Int], checkpointModeSync: Boolean = true) = {
+    def loop(partitions: Set[Int]) = {
       while (counter < amount) {
-        producer = makeNewProducer(partitions)
+        producer = makeNewProducer(partitions, id)
 
         while (probability < Random.nextDouble() && counter < amount) {
           val t = producer.newTransaction(policy = NewProducerTransactionPolicy.CheckpointIfOpened, -1)
           t.send("test".getBytes())
-          t.checkpoint(checkpointModeSync)
-          producerBuffer(t.getPartition()).synchronized {
-            producerBuffer(t.getPartition()).append(t.getTransactionID())
+          t.checkpoint()
+          producerBuffer(t.getPartition).synchronized {
+            producerBuffer(t.getPartition).append(t.getTransactionID)
           }
           counter += 1
         }
@@ -76,17 +80,28 @@ class ProducerMasterChangeComplexTest extends FlatSpec with Matchers with Before
       onCompleteLatch.countDown()
     }
 
-    def run(partitions: Set[Int], checkpointModeSync: Boolean = true): Thread = {
-      val thread = new Thread(() => loop(partitions, checkpointModeSync))
+    def run(partitions: Set[Int]): Thread = {
+      val thread = new Thread(() => loop(partitions))
       thread.start()
       thread
     }
 
     // private - will not be called outside
-    private def makeNewProducer(partitions: Set[Int]) = {
-      intFactory.getProducer(
-        name = "test_producer1",
-        partitions = partitions)
+    @scala.annotation.tailrec
+    private def makeNewProducer(partitions: Set[Int], id: Int): Producer = {
+      val tryProducer = Try(intFactory.getProducer(
+        name = s"test_producer-$id",
+        partitions = partitions))
+
+      tryProducer match {
+        case Success(_producer) =>
+          _producer
+
+        case Failure(exception) =>
+          println(s"Make a new producer because of: $exception")
+          exception.printStackTrace()
+          makeNewProducer(partitions, id)
+      }
     }
   }
 
@@ -98,18 +113,17 @@ class ProducerMasterChangeComplexTest extends FlatSpec with Matchers with Before
     useLastOffset = false, // true
     callback = (consumer: TransactionOperator, transaction: ConsumerTransaction) => this.synchronized {
       subscriberCounter += 1
-      subscriberBuffer(transaction.getPartition()).append(transaction.getTransactionID())
+      subscriberBuffer(transaction.getPartition).append(transaction.getTransactionID)
       if (subscriberCounter == PRODUCERS_AMOUNT * TRANSACTIONS_AMOUNT_EACH)
         waitCompleteLatch.countDown()
     })
 
-  //todo: fix ignored test
-  ignore should "handle multiple master change correctly" in {
+  it should "handle multiple master change correctly" in {
 
     subscriber.start()
 
     val producersThreads = (0 until PRODUCERS_AMOUNT)
-      .map(producer => new ProducerWorker(f, onCompleteLatch, TRANSACTIONS_AMOUNT_EACH, PROBABILITY, producer).run(PARTITIONS))
+      .map(id => new ProducerWorker(f, onCompleteLatch, TRANSACTIONS_AMOUNT_EACH, PROBABILITY, id).run(PARTITIONS))
 
     onCompleteLatch.await()
     producersThreads.foreach(thread => thread.join())

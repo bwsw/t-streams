@@ -30,6 +30,10 @@ class SubscriberBasicPubSubTests extends FlatSpec with Matchers with BeforeAndAf
 
 
     srv
+
+    if(storageClient.checkStreamExists("test_stream"))
+      storageClient.deleteStream("test_stream")
+
     storageClient.createStream("test_stream", 3, 24 * 3600, "")
     storageClient.shutdown()
   }
@@ -82,7 +86,7 @@ class SubscriberBasicPubSubTests extends FlatSpec with Matchers with BeforeAndAf
       useLastOffset = false,
       callback = (consumer: TransactionOperator, transaction: ConsumerTransaction) => this.synchronized {
         subscriberTransactionsAmount += 1
-        transaction.getAll()
+        transaction.getAll
         if (subscriberTransactionsAmount == TOTAL)
           latch.countDown()
       })

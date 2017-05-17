@@ -38,6 +38,10 @@ class ProducerWithManyOpenedTransactionsTest extends FlatSpec with Matchers with
 
 
     srv
+
+    if(storageClient.checkStreamExists("test_stream"))
+      storageClient.deleteStream("test_stream")
+
     storageClient.createStream("test_stream", 3, 24 * 3600, "")
     storageClient.shutdown()
 
@@ -56,7 +60,7 @@ class ProducerWithManyOpenedTransactionsTest extends FlatSpec with Matchers with
     val transaction3: ProducerTransaction = producer.newTransaction(NewProducerTransactionPolicy.ErrorIfOpened)
 
     val l = new CountDownLatch(1)
-    srv.notifyProducerTransactionCompleted(t => t.transactionID == transaction1.getTransactionID() && t.state == TransactionStates.Checkpointed, l.countDown())
+    srv.notifyProducerTransactionCompleted(t => t.transactionID == transaction1.getTransactionID && t.state == TransactionStates.Checkpointed, l.countDown())
 
     data1.foreach(x => transaction1.send(x))
     data2.foreach(x => transaction2.send(x))
@@ -68,9 +72,9 @@ class ProducerWithManyOpenedTransactionsTest extends FlatSpec with Matchers with
 
     l.await()
 
-    consumer.getTransaction(0).get.getAll().map(i => new String(i)).sorted shouldBe data1
-    consumer.getTransaction(1).get.getAll().map(i => new String(i)).sorted shouldBe data2
-    consumer.getTransaction(2).get.getAll().map(i => new String(i)).sorted shouldBe data3
+    consumer.getTransaction(0).get.getAll.map(i => new String(i)).sorted shouldBe data1
+    consumer.getTransaction(1).get.getAll.map(i => new String(i)).sorted shouldBe data2
+    consumer.getTransaction(2).get.getAll.map(i => new String(i)).sorted shouldBe data3
 
     (0 to 2).foreach(p => consumer.getTransaction(p).isEmpty shouldBe true)
   }

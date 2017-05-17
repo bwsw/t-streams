@@ -38,6 +38,10 @@ class ProducerSubscriberMixedCheckpointCancelWorkloadTest extends FlatSpec with 
 
     val srv = TestStorageServer.get()
     val storageClient = f.getStorageClient()
+
+    if(storageClient.checkStreamExists("test_stream"))
+      storageClient.deleteStream("test_stream")
+
     storageClient.createStream("test_stream", 1, 24 * 3600, "")
     storageClient.shutdown()
 
@@ -46,7 +50,7 @@ class ProducerSubscriberMixedCheckpointCancelWorkloadTest extends FlatSpec with 
       offset = Oldest,
       useLastOffset = false,
       callback = (consumer: TransactionOperator, transaction: ConsumerTransaction) => this.synchronized {
-        subscriberAccumulator.append(transaction.getTransactionID())
+        subscriberAccumulator.append(transaction.getTransactionID)
         if (producerAccumulator.size == subscriberAccumulator.size)
           subscriberLatch.countDown()
       })
@@ -63,7 +67,7 @@ class ProducerSubscriberMixedCheckpointCancelWorkloadTest extends FlatSpec with 
       if (CANCEL_PROBABILITY < Random.nextDouble()) {
         txn.send("test".getBytes())
         txn.checkpoint()
-        producerAccumulator.append(txn.getTransactionID())
+        producerAccumulator.append(txn.getTransactionID)
       } else {
         txn.cancel()
       }

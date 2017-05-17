@@ -35,11 +35,15 @@ class CheckpointGroupAndSubscriberEventsTests extends FlatSpec with Matchers wit
       setProperty(ConfigurationOptions.Consumer.dataPreload, 10)
 
     srv
+
+    if(storageClient.checkStreamExists("test_stream"))
+      storageClient.deleteStream("test_stream")
+
     storageClient.createStream("test_stream", 3, 24 * 3600, "")
     storageClient.shutdown()
   }
 
-  "Group commit" should "checkpoint all AgentsGroup state" in {
+  it should "checkpoint all transactions with CG" in {
     val l = new CountDownLatch(1)
     var transactionsCounter: Int = 0
 
@@ -53,7 +57,7 @@ class CheckpointGroupAndSubscriberEventsTests extends FlatSpec with Matchers wit
       useLastOffset = true,
       callback = (consumer: TransactionOperator, transaction: ConsumerTransaction) => this.synchronized {
         transactionsCounter += 1
-        val data = new String(transaction.getAll().head)
+        val data = new String(transaction.getAll.head)
         data shouldBe "test"
         if (transactionsCounter == 2) {
           l.countDown()

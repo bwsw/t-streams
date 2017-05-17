@@ -56,7 +56,7 @@ class ProcessingEngine(consumer: TransactionOperator,
   val fastLoader = new TransactionFastLoader(partitions, lastTransactionsMap)
   val fullLoader = new TransactionFullLoader(partitions, lastTransactionsMap)
 
-  val consumerPartitions = consumer.getPartitions()
+  val consumerPartitions = consumer.getPartitions
 
   if (!partitions.subsetOf(consumerPartitions))
     throw new IllegalArgumentException("PE ${id} - Partition set which is used in ProcessingEngine is not subset of Consumer's partitions.")
@@ -130,7 +130,7 @@ class ProcessingEngine(consumer: TransactionOperator,
 
     assert(partitions.contains(partition))
 
-    val proposedTransactionId = consumer.getProposedTransactionId()
+    val proposedTransactionId = consumer.getProposedTransactionId
 
     val transactionStateList = List(TransactionState(
       transactionID = proposedTransactionId, partition = partition, masterID = 0, orderID = 0,

@@ -34,12 +34,12 @@ abstract class AbstractPolicy(stream: Stream, usedPartitions: Set[Int]) {
   /**
     * @return Next partition (start from the first partition of usedPartitions)
     */
-  def getNextPartition(): Int
+  def getNextPartition: Int
 
   /**
     * @return Current partition
     */
-  def getCurrentPartition(): Int = this.synchronized {
+  def getCurrentPartition: Int = this.synchronized {
     usedPartitionsList(currentPos)
   }
 
@@ -55,7 +55,7 @@ abstract class AbstractPolicy(stream: Stream, usedPartitions: Set[Int]) {
     *
     * @return Finished round or not
     */
-  def isRoundFinished(): Boolean = this.synchronized {
+  def isRoundFinished: Boolean = this.synchronized {
     roundPos >= usedPartitionsList.size
   }
 
@@ -64,7 +64,7 @@ abstract class AbstractPolicy(stream: Stream, usedPartitions: Set[Int]) {
     *
     * @return Used partitions
     */
-  def getUsedPartitions(): Set[Int] = this.synchronized {
+  def getUsedPartitions: Set[Int] = this.synchronized {
     usedPartitionsList.toSet
   }
 }

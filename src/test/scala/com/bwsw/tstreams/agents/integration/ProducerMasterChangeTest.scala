@@ -34,6 +34,10 @@ class ProducerMasterChangeTest extends FlatSpec with Matchers with BeforeAndAfte
       setProperty(ConfigurationOptions.Consumer.dataPreload, 10)
 
     srv
+
+    if(storageClient.checkStreamExists("test_stream"))
+      storageClient.deleteStream("test_stream")
+
     storageClient.createStream("test_stream", 3, 24 * 3600, "")
     storageClient.shutdown()
   }
@@ -60,7 +64,7 @@ class ProducerMasterChangeTest extends FlatSpec with Matchers with BeforeAndAfte
       offset = Newest,
       useLastOffset = false,
       callback = (consumer: TransactionOperator, transaction: ConsumerTransaction) => this.synchronized {
-        bs.append(transaction.getTransactionID())
+        bs.append(transaction.getTransactionID)
         if (bs.size == 1100) {
           ls.countDown()
         }
@@ -70,7 +74,7 @@ class ProducerMasterChangeTest extends FlatSpec with Matchers with BeforeAndAfte
       for (i <- 0 until 100) {
         val t = producer1.newTransaction(policy = NewProducerTransactionPolicy.CheckpointIfOpened)
         bp.synchronized {
-          bp.append(t.getTransactionID())
+          bp.append(t.getTransactionID)
         }
         lp2.countDown()
         t.send("test".getBytes())
@@ -84,7 +88,7 @@ class ProducerMasterChangeTest extends FlatSpec with Matchers with BeforeAndAfte
         lp2.await()
         val t = producer2.newTransaction(policy = NewProducerTransactionPolicy.CheckpointIfOpened)
         bp.synchronized {
-          bp.append(t.getTransactionID())
+          bp.append(t.getTransactionID)
         }
         t.send("test".getBytes())
         t.checkpoint()

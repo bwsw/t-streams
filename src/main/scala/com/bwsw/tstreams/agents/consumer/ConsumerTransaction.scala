@@ -1,5 +1,7 @@
 package com.bwsw.tstreams.agents.consumer
 
+import com.bwsw.tstreamstransactionserver.rpc.TransactionStates
+
 import scala.collection.mutable
 
 
@@ -8,14 +10,16 @@ import scala.collection.mutable
   * @param partition
   * @param transactionID
   * @param count
+  * @param state
   * @param ttl
   */
 class ConsumerTransaction(partition: Int,
                           transactionID: Long,
                           count: Int,
+                          state: TransactionStates,
                           ttl: Long) {
 
-  override def toString(): String = {
+  override def toString: String = {
     s"consumer.Transaction(id=$transactionID,partition=$partition, count=$count, ttl=$ttl)"
   }
 
@@ -31,13 +35,15 @@ class ConsumerTransaction(partition: Int,
       throw new IllegalStateException("The transaction is already attached to consumer")
   }
 
-  def getTransactionID() = transactionID
+  def getTransactionID = transactionID
 
-  def getPartition() = partition
+  def getPartition = partition
 
-  def getCount() = count
+  def getCount = count
 
-  def getTTL() = ttl
+  def getTTL = ttl
+
+  def getState = state
 
   /**
     * Transaction data pointer
@@ -57,13 +63,13 @@ class ConsumerTransaction(partition: Int,
     if (consumer == null)
       throw new IllegalArgumentException("Transaction is not yet attached to consumer. Attach it first.")
 
-    if (!hasNext())
+    if (!hasNext)
       throw new IllegalStateException("There is no data to receive from data storage")
 
     //try to update buffer
     if (buffer.isEmpty) {
       val newCount = (cnt + consumer.options.dataPreload).min(count - 1)
-      buffer ++= consumer.stream.client.getTransactionData(consumer.stream.name, partition, transactionID, cnt, newCount)
+      buffer ++= consumer.stream.client.getTransactionData(consumer.stream.id, partition, transactionID, cnt, newCount)
       cnt = newCount + 1
     }
 
@@ -75,7 +81,7 @@ class ConsumerTransaction(partition: Int,
     *
     * @return
     */
-  def hasNext(): Boolean = this.synchronized {
+  def hasNext: Boolean = this.synchronized {
     cnt < count || buffer.nonEmpty
   }
 
@@ -90,10 +96,10 @@ class ConsumerTransaction(partition: Int,
   /**
     * @return All consumed transaction
     */
-  def getAll() = this.synchronized {
+  def getAll = this.synchronized {
     if (consumer == null)
       throw new IllegalArgumentException("Transaction is not yet attached to consumer. Attach it first.")
-    val r = consumer.stream.client.getTransactionData(consumer.stream.name, partition, transactionID, cnt, count)
+    val r = consumer.stream.client.getTransactionData(consumer.stream.id, partition, transactionID, cnt, count)
 
     if (Consumer.logger.isDebugEnabled()) {
       Consumer.logger.debug(s"ConsumerTransaction.getAll(${consumer.stream.name}, $partition, $transactionID, $cnt, ${count - 1})")
