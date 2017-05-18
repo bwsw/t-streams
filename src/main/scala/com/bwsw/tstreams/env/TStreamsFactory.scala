@@ -130,11 +130,12 @@ class TStreamsFactory() {
 
     val authOptions = new AuthOptions(key = pAsString(co.StorageClient.Auth.key))
 
-    val zookeeperOptions = new ZookeeperOptions(endpoints = pAsString(co.StorageClient.Zookeeper.endpoints),
+    val zookeeperOptions = new ZookeeperOptions(
+      endpoints = pAsString(co.Coordination.endpoints),
       prefix = pAsString(co.StorageClient.Zookeeper.prefix),
-      sessionTimeoutMs = pAsInt(co.StorageClient.Zookeeper.sessionTimeoutMs),
-      connectionTimeoutMs = pAsInt(co.StorageClient.Zookeeper.connectionTimeoutMs),
-      retryDelayMs = pAsInt(co.StorageClient.Zookeeper.retryDelayMs))
+      sessionTimeoutMs = pAsInt(co.Coordination.sessionTimeoutMs),
+      connectionTimeoutMs = pAsInt(co.Coordination.connectionTimeoutMs),
+      retryDelayMs = pAsInt(co.Coordination.retryDelayMs))
 
     val client = new StorageClient(clientOptions = clientOptions, authOptions = authOptions, zookeeperOptions = zookeeperOptions)
 
@@ -229,20 +230,14 @@ class TStreamsFactory() {
     val coordinationDefaults = defaults.TStreamsFactoryCoordinationDefaults.Coordination
     val producerDefaults = defaults.TStreamsFactoryProducerDefaults.Producer
 
-    val sessionTimeoutMs = pAsInt(co.Coordination.sessionTimeoutMs, coordinationDefaults.sessionTimeoutMs.default)
-    coordinationDefaults.sessionTimeoutMs.check(sessionTimeoutMs)
+    val zkSessionTimeoutMs = pAsInt(co.Coordination.sessionTimeoutMs, coordinationDefaults.sessionTimeoutMs.default)
+    coordinationDefaults.sessionTimeoutMs.check(zkSessionTimeoutMs)
 
-    val connectionTimeoutMs = pAsInt(co.Coordination.connectionTimeoutMs, coordinationDefaults.connectionTimeoutMs.default)
-    coordinationDefaults.connectionTimeoutMs.check(connectionTimeoutMs)
+    val zkConnectionTimeoutMs = pAsInt(co.Coordination.connectionTimeoutMs, coordinationDefaults.connectionTimeoutMs.default)
+    coordinationDefaults.connectionTimeoutMs.check(zkConnectionTimeoutMs)
 
-    val transportClientTimeoutMs = pAsInt(co.Producer.transportTimeoutMs, producerDefaults.transportTimeoutMs.default)
-    producerDefaults.transportTimeoutMs.check(transportClientTimeoutMs)
-
-    val transportClientRetryDelayMs = pAsInt(co.Producer.transportRetryDelayMs, producerDefaults.transportRetryDelayMs.default)
-    producerDefaults.transportRetryDelayMs.check(transportClientRetryDelayMs)
-
-    val transportClientRetryCount = pAsInt(co.Producer.transportRetryCount, producerDefaults.transportRetryCount.default)
-    producerDefaults.transportRetryCount.check(transportClientRetryCount)
+    val transportClientTimeoutMs = pAsInt(co.Producer.openTimeoutMs, producerDefaults.openTimeoutMs.default)
+    producerDefaults.openTimeoutMs.check(transportClientTimeoutMs)
 
     val threadPoolSize = pAsInt(co.Producer.threadPoolSize, producerDefaults.threadPoolSize.default)
     producerDefaults.threadPoolSize.check(threadPoolSize)
@@ -262,14 +257,14 @@ class TStreamsFactory() {
     val cao = new CoordinationOptions(
       zkEndpoints = pAsString(co.Coordination.endpoints),
       zkPrefix = pAsString(co.Coordination.prefix),
-      zkSessionTimeoutMs = sessionTimeoutMs,
-      zkConnectionTimeoutMs = connectionTimeoutMs,
+      zkSessionTimeoutMs = zkSessionTimeoutMs,
+      zkConnectionTimeoutMs = zkConnectionTimeoutMs,
+      zkRetryDelayMs = pAsInt(co.Coordination.retryDelayMs),
+      zkRetryCount = pAsInt(co.Coordination.retryCount),
       openerServerHost = pAsString(co.Producer.bindHost),
       openerServerPort = port,
       threadPoolSize = threadPoolSize,
-      transportClientTimeoutMs = transportClientTimeoutMs,
-      transportClientRetryCount = transportClientRetryCount,
-      transportClientRetryDelayMs = transportClientRetryDelayMs)
+      transportClientTimeoutMs = transportClientTimeoutMs)
 
     var writePolicy: AbstractPolicy = null
 
@@ -393,6 +388,8 @@ class TStreamsFactory() {
       zkEndpoints = endpoints,
       zkSessionTimeoutMs = sessionTimeoutMs,
       zkConnectionTimeoutMs = connectionTimeoutMs,
+      zkRetryDelayMs = pAsInt(co.Coordination.retryDelayMs),
+      zkRetryCount = pAsInt(co.Coordination.retryCount),
       transactionsBufferWorkersThreadPoolSize = transactionBufferThreadPoolSize,
       processingEngineWorkersThreadSize = processingEnginesThreadPoolSize,
       pollingFrequencyDelayMs = pollingFrequencyDelayMs,

@@ -148,8 +148,10 @@ class Subscriber(val name: String,
       partitions = Set[Int]().empty ++ options.readPolicy.getUsedPartitions,
       zkRootPath = options.zkRootPath,
       zkHosts = options.zkHosts,
-      zkConnectionTimeout = options.zkConnectionTimeoutMs,
-      zkSessionTimeout = options.zkSessionTimeoutMs)
+      zkConnectionTimeoutMs = options.zkConnectionTimeoutMs,
+      zkSessionTimeoutMs = options.zkSessionTimeoutMs,
+      zkRetryDelayMs = options.zkRetryDelayMs,
+      zkRetryCount = options.zkRetryCount)
 
     Subscriber.logger.info(s"[INIT] Subscriber $name: has launched the coordinator.")
     Subscriber.logger.info(s"[INIT] Subscriber $name: is about to launch the UDP server.")

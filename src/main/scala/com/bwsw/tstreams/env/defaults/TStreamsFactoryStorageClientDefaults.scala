@@ -22,12 +22,7 @@ object TStreamsFactoryStorageClientDefaults {
     }
 
     object Zookeeper {
-      val endpoints = "127.0.0.1:2181"
       val prefix = "/tts/master"
-      val connectionTimeoutMs = IntMinMaxDefault(1000, 100000, 5000)
-      val sessionTimeoutMs = IntMinMaxDefault(1000, 100000, 5000)
-      val retryDelayMs = IntMinMaxDefault(50, 1000, 500)
-      val retryCount = IntMinMaxDefault(3, 100, 10)
     }
 
   }
@@ -41,14 +36,8 @@ object TStreamsFactoryStorageClientDefaults {
     m(co.requestTimeoutMs) = StorageClient.requestTimeoutMs.default
     m(co.requestTimeoutRetryCount) = StorageClient.requestTimeoutRetryCount.default
     m(co.retryDelayMs) = StorageClient.retryDelayMs.default
-
     m(co.Auth.key) = StorageClient.Auth.key
-
-    m(co.Zookeeper.endpoints) = StorageClient.Zookeeper.endpoints
     m(co.Zookeeper.prefix) = StorageClient.Zookeeper.prefix
-    m(co.Zookeeper.connectionTimeoutMs) = StorageClient.Zookeeper.connectionTimeoutMs.default
-    m(co.Zookeeper.sessionTimeoutMs) = StorageClient.Zookeeper.sessionTimeoutMs.default
-    m(co.Zookeeper.retryDelayMs) = StorageClient.Zookeeper.retryDelayMs.default
 
     m
   }
