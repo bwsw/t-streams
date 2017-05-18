@@ -26,34 +26,17 @@ class ProducerMasterChangeComplexTest extends FlatSpec with Matchers with Before
   val PARTITIONS = (0 until PARTITIONS_COUNT).toSet
   val MAX_WAIT_AFTER_ALL_PRODUCERS = 5
 
-  val onCompleteLatch = new CountDownLatch(PRODUCERS_AMOUNT)
-  val waitCompleteLatch = new CountDownLatch(1)
-
   lazy val srv = TestStorageServer.get()
-  lazy val storageClient = f.getStorageClient()
-  lazy val producerBuffer = PARTITIONS.toList.map(_ => ListBuffer[Long]()).toArray
-  lazy val subscriberBuffer = PARTITIONS.toList.map(_ => ListBuffer[Long]()).toArray
 
   override def beforeAll(): Unit = {
-    f.setProperty(ConfigurationOptions.Stream.name, "test_stream").
-      setProperty(ConfigurationOptions.Stream.partitionsCount, PARTITIONS_COUNT).
-      setProperty(ConfigurationOptions.Stream.ttlSec, 60 * 10).
-      setProperty(ConfigurationOptions.Coordination.connectionTimeoutMs, 4000).
-      setProperty(ConfigurationOptions.Coordination.sessionTimeoutMs, 4000).
-      setProperty(ConfigurationOptions.Producer.transportTimeoutMs, 2000).
-      setProperty(ConfigurationOptions.Producer.Transaction.ttlMs, 5000).
-      setProperty(ConfigurationOptions.Producer.Transaction.keepAliveMs, 200).
-      setProperty(ConfigurationOptions.Consumer.transactionPreload, 500).
-      setProperty(ConfigurationOptions.Consumer.dataPreload, 10)
-
     srv
-
-    if(storageClient.checkStreamExists("test_stream"))
-      storageClient.deleteStream("test_stream")
-
-    storageClient.createStream("test_stream", PARTITIONS_COUNT, 24 * 3600, "")
-    storageClient.shutdown()
+    createNewStream(partitions = PARTITIONS_COUNT)
   }
+
+  val onCompleteLatch = new CountDownLatch(PRODUCERS_AMOUNT)
+  val waitCompleteLatch = new CountDownLatch(1)
+  val producerBuffer = PARTITIONS.toList.map(_ => ListBuffer[Long]()).toArray
+  val subscriberBuffer = PARTITIONS.toList.map(_ => ListBuffer[Long]()).toArray
 
   class ProducerWorker(val factory: TStreamsFactory, val onCompleteLatch: CountDownLatch, val amount: Int, val probability: Double, id: Int) {
     var producer: Producer = _
@@ -129,12 +112,6 @@ class ProducerMasterChangeComplexTest extends FlatSpec with Matchers with Before
     producersThreads.foreach(thread => thread.join())
     waitCompleteLatch.await(MAX_WAIT_AFTER_ALL_PRODUCERS, TimeUnit.SECONDS)
     subscriber.stop()
-
-    //val consumer = f.getConsumer("cons", partitions = PARTITIONS, offset = Oldest, useLastOffset = false)
-
-    //PARTITIONS.map(p => {
-    //
-    //})
 
     subscriberCounter shouldBe TRANSACTIONS_AMOUNT_EACH * PRODUCERS_AMOUNT
 

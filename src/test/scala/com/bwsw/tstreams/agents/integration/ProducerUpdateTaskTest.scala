@@ -20,23 +20,14 @@ class ProducerUpdateTaskTest extends FlatSpec with Matchers with BeforeAndAfterA
   var flag: Int = 0
 
   lazy val srv = TestStorageServer.get()
-  lazy val storageClient = f.getStorageClient()
 
   lazy val producer = f.getProducer(
     name = "test_producer",
     partitions = Set(0, 1, 2))
 
   override def beforeAll(): Unit = {
-    f.setProperty(ConfigurationOptions.Stream.name, "test_stream")
-      .setProperty(ConfigurationOptions.Stream.partitionsCount, 3)
-
     srv
-
-    if(storageClient.checkStreamExists("test_stream"))
-      storageClient.deleteStream("test_stream")
-
-    storageClient.createStream("test_stream", 3, 24 * 3600, "")
-    storageClient.shutdown()
+    createNewStream()
   }
 
   it should "complete in ordered way with delay" in {

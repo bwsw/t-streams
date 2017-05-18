@@ -4,7 +4,6 @@ import java.util.concurrent.atomic.{AtomicBoolean, AtomicInteger}
 
 import com.bwsw.tstreams.agents.consumer.Offset.Oldest
 import com.bwsw.tstreams.agents.producer.NewProducerTransactionPolicy
-import com.bwsw.tstreams.env.ConfigurationOptions
 import com.bwsw.tstreams.testutils.{TestStorageServer, TestUtils}
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 
@@ -15,20 +14,10 @@ import scala.collection.mutable.ListBuffer
   */
 class ProducerWritesManyConsumerReadsThemAll extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
   lazy val srv = TestStorageServer.get()
-  lazy val storageClient = f.getStorageClient()
 
   override def beforeAll(): Unit = {
-    f.setProperty(ConfigurationOptions.Stream.name, "test_stream")
-      .setProperty(ConfigurationOptions.Stream.partitionsCount, 3)
-      .setProperty(ConfigurationOptions.Stream.ttlSec, 60 * 10)
-
     srv
-
-    if(storageClient.checkStreamExists("test_stream"))
-      storageClient.deleteStream("test_stream")
-
-    storageClient.createStream("test_stream", 3, 24 * 3600, "")
-    storageClient.shutdown()
+    createNewStream()
   }
 
 
@@ -68,7 +57,7 @@ class ProducerWritesManyConsumerReadsThemAll extends FlatSpec with Matchers with
         consumerIterAcc.append(t.getTransactionID)
         t.getTransactionID shouldBe tp
       })
-      if(counter.incrementAndGet() % 100 == 0)
+      if (counter.incrementAndGet() % 100 == 0)
         logger.info(s"${counter.get()} received")
     })
 

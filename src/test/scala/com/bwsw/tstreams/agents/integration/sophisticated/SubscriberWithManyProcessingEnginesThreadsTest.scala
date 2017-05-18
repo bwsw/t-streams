@@ -26,30 +26,14 @@ class SubscriberWithManyProcessingEnginesThreadsTest extends FlatSpec with Match
   val POLLING_FREQUENCY_DELAY_MS = 5000
 
   lazy val srv = TestStorageServer.get()
-  lazy val storageClient = f.getStorageClient()
 
   override def beforeAll(): Unit = {
-    f.setProperty(ConfigurationOptions.Stream.ttlSec, 60 * 10).
-      setProperty(ConfigurationOptions.Coordination.connectionTimeoutMs, 7000).
-      setProperty(ConfigurationOptions.Coordination.sessionTimeoutMs, 7000).
-      setProperty(ConfigurationOptions.Producer.transportTimeoutMs, 5000).
-      setProperty(ConfigurationOptions.Producer.Transaction.ttlMs, 6000).
-      setProperty(ConfigurationOptions.Producer.Transaction.keepAliveMs, 2000).
-      setProperty(ConfigurationOptions.Consumer.transactionPreload, 500).
-      setProperty(ConfigurationOptions.Consumer.dataPreload, 10).
-      setProperty(ConfigurationOptions.Stream.name, "test_stream").
-      setProperty(ConfigurationOptions.Consumer.Subscriber.pollingFrequencyDelayMs, POLLING_FREQUENCY_DELAY_MS).
-      setProperty(ConfigurationOptions.Consumer.Subscriber.processingEnginesThreadPoolSize, PROCESSING_ENGINES_THREAD_POOL).
-      setProperty(ConfigurationOptions.Consumer.Subscriber.transactionBufferThreadPoolSize, TRANSACTION_BUFFER_THREAD_POOL).
-      setProperty(ConfigurationOptions.Stream.partitionsCount, TOTAL_PARTITIONS)
+    f.setProperty(ConfigurationOptions.Consumer.Subscriber.pollingFrequencyDelayMs, POLLING_FREQUENCY_DELAY_MS)
+      .setProperty(ConfigurationOptions.Consumer.Subscriber.processingEnginesThreadPoolSize, PROCESSING_ENGINES_THREAD_POOL)
+      .setProperty(ConfigurationOptions.Consumer.Subscriber.transactionBufferThreadPoolSize, TRANSACTION_BUFFER_THREAD_POOL)
 
     srv
-
-    if(storageClient.checkStreamExists("test_stream"))
-      storageClient.deleteStream("test_stream")
-
-    storageClient.createStream("test_stream", TOTAL_PARTITIONS, 24 * 3600, "")
-    storageClient.shutdown()
+    createNewStream(partitions = TOTAL_PARTITIONS)
   }
 
   it should s"Start and work correctly with PROCESSING_ENGINES_THREAD_POOL=$PROCESSING_ENGINES_THREAD_POOL" in {

@@ -4,7 +4,6 @@ import java.util.concurrent.{CountDownLatch, TimeUnit}
 
 import com.bwsw.tstreams.agents.consumer.Offset.Newest
 import com.bwsw.tstreams.agents.consumer.{ConsumerTransaction, TransactionOperator}
-import com.bwsw.tstreams.env.ConfigurationOptions
 import com.bwsw.tstreams.testutils.{TestStorageServer, TestUtils}
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 
@@ -14,35 +13,16 @@ import scala.collection.mutable.ListBuffer
   * Created by Ivan Kudryavtsev on 14.04.17.
   */
 class NMastersMProducersKSubscribersTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
-
   val ALL_PARTITIONS = 4
   val PRODUCER_COUNT = 2
   val SUBSCRIBER_COUNT = 2
   val TRANSACTION_COUNT = 10000
 
   lazy val srv = TestStorageServer.get()
-  lazy val storageClient = f.getStorageClient()
 
   override def beforeAll(): Unit = {
-    f.setProperty(ConfigurationOptions.Stream.name, "test_stream").
-      setProperty(ConfigurationOptions.Stream.partitionsCount, ALL_PARTITIONS).
-      setProperty(ConfigurationOptions.Stream.ttlSec, 60 * 10).
-      setProperty(ConfigurationOptions.Coordination.connectionTimeoutMs, 7000).
-      setProperty(ConfigurationOptions.Coordination.sessionTimeoutMs, 7000).
-      setProperty(ConfigurationOptions.Producer.transportTimeoutMs, 5000).
-      setProperty(ConfigurationOptions.Producer.Transaction.ttlMs, 5000).
-      setProperty(ConfigurationOptions.Producer.Transaction.keepAliveMs, 100).
-      setProperty(ConfigurationOptions.Consumer.transactionPreload, 1000).
-      setProperty(ConfigurationOptions.Consumer.dataPreload, 10).
-      setProperty(ConfigurationOptions.Consumer.Subscriber.pollingFrequencyDelayMs, 1000)
-
     srv
-
-    if(storageClient.checkStreamExists("test_stream"))
-      storageClient.deleteStream("test_stream")
-
-    storageClient.createStream("test_stream", ALL_PARTITIONS, 24 * 3600, "")
-    storageClient.shutdown()
+    createNewStream(partitions = ALL_PARTITIONS)
   }
 
   it should s"Start ${ALL_PARTITIONS} masters (each for one partition), launch ${PRODUCER_COUNT} producers" +
