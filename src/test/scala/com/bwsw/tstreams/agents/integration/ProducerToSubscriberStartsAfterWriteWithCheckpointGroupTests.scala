@@ -21,7 +21,7 @@ class ProducerToSubscriberStartsAfterWriteWithCheckpointGroupTests extends FlatS
     createNewStream()
   }
 
-  it should s"The producer sends $COUNT transactions, subscriber receives $COUNT when started after." +
+  it should s"The producer sends $COUNT transactions, subscriber receives $COUNT of them when started after." +
     s"Then do group checkpoint and start new Subscriber from checkpointed place" in {
     val group = new CheckpointGroup()
 
