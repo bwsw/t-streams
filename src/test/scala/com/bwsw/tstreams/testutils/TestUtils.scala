@@ -43,7 +43,6 @@ trait TestUtils {
   val f = new TStreamsFactory()
   f.setProperty(ConfigurationOptions.Coordination.prefix, coordinationRoot)
     .setProperty(ConfigurationOptions.Coordination.endpoints, s"localhost:$zookeeperPort")
-    .setProperty(ConfigurationOptions.StorageClient.Zookeeper.endpoints, s"localhost:$zookeeperPort")
     .setProperty(ConfigurationOptions.Stream.name, DEFAULT_STREAM_NAME)
     .setProperty(ConfigurationOptions.Stream.partitionsCount, 3)
 

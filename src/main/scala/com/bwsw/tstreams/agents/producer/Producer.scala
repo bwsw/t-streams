@@ -55,7 +55,7 @@ class Producer(var name: String,
     .namespace(fullPrefix)
     .connectionTimeoutMs(pcs.zkConnectionTimeoutMs)
     .sessionTimeoutMs(pcs.zkSessionTimeoutMs)
-    .retryPolicy(new ExponentialBackoffRetry(1000, 3))
+    .retryPolicy(new ExponentialBackoffRetry(pcs.zkRetryDelayMs, pcs.zkRetryCount))
     .connectString(pcs.zkEndpoints).build()
 
   curatorClient.start()
