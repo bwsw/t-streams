@@ -38,12 +38,14 @@ trait TestUtils {
   logger.info("Test Suite uptime is " + ((System.currentTimeMillis - uptime) / 1000L).toString + " seconds")
   logger.info("-------------------------------------------------------")
 
+  val DEFAULT_STREAM_NAME = "test_stream"
 
   val f = new TStreamsFactory()
   f.setProperty(ConfigurationOptions.Coordination.prefix, coordinationRoot)
     .setProperty(ConfigurationOptions.Coordination.endpoints, s"localhost:$zookeeperPort")
     .setProperty(ConfigurationOptions.StorageClient.Zookeeper.endpoints, s"localhost:$zookeeperPort")
-    .setProperty(ConfigurationOptions.Stream.name, "test-stream")
+    .setProperty(ConfigurationOptions.Stream.name, DEFAULT_STREAM_NAME)
+    .setProperty(ConfigurationOptions.Stream.partitionsCount, 3)
 
   val curatorClient = CuratorFrameworkFactory.builder()
     .namespace("")
@@ -106,6 +108,15 @@ trait TestUtils {
     removeZkMetadata("/unit")
     curatorClient.close()
     f.dumpStorageClients()
+  }
+
+  def createNewStream(partitions: Int = 3, name: String = DEFAULT_STREAM_NAME) = {
+    val storageClient = f.getStorageClient()
+    if(storageClient.checkStreamExists(name))
+      storageClient.deleteStream(name)
+
+    storageClient.createStream(name, partitions, 24 * 3600, "")
+    storageClient.shutdown()
   }
 }
 

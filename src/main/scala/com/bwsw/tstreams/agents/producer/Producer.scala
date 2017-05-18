@@ -409,7 +409,7 @@ class Producer(var name: String,
   /**
     * Stop this agent
     */
-  def stop() = {
+  def stop() = this.synchronized {
     Producer.logger.info(s"Producer $name[${transactionOpenerService.getUniqueAgentID()}] is shutting down.")
     cancel()
     checkStopped(true)

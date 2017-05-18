@@ -4,7 +4,6 @@ import java.util.concurrent.{CountDownLatch, TimeUnit}
 
 import com.bwsw.tstreams.agents.consumer.Offset.Newest
 import com.bwsw.tstreams.agents.consumer.{ConsumerTransaction, TransactionOperator}
-import com.bwsw.tstreams.env.ConfigurationOptions
 import com.bwsw.tstreams.testutils.{TestStorageServer, TestUtils}
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 
@@ -14,36 +13,19 @@ import scala.collection.mutable.ListBuffer
   * Created by Ivan Kudryavtsev on 14.04.17.
   */
 class SubscriberTransactionPartitionDistributionTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
-
-  val ALL_PARTITIONS = 4
-  val TRANSACTION_COUNT = 1000
+  val PARTITIONS_COUNT = 4
 
   lazy val srv = TestStorageServer.get()
-  lazy val storageClient = f.getStorageClient()
 
   override def beforeAll(): Unit = {
-    f.setProperty(ConfigurationOptions.Stream.name, "test_stream").
-      setProperty(ConfigurationOptions.Stream.partitionsCount, ALL_PARTITIONS).
-      setProperty(ConfigurationOptions.Stream.ttlSec, 60 * 10).
-      setProperty(ConfigurationOptions.Coordination.connectionTimeoutMs, 7000).
-      setProperty(ConfigurationOptions.Coordination.sessionTimeoutMs, 7000).
-      setProperty(ConfigurationOptions.Producer.transportTimeoutMs, 5000).
-      setProperty(ConfigurationOptions.Producer.Transaction.ttlMs, 6000).
-      setProperty(ConfigurationOptions.Producer.Transaction.keepAliveMs, 2000).
-      setProperty(ConfigurationOptions.Consumer.transactionPreload, 10).
-      setProperty(ConfigurationOptions.Consumer.dataPreload, 10)
-
     srv
-
-    if(storageClient.checkStreamExists("test_stream"))
-      storageClient.deleteStream("test_stream")
-
-    storageClient.createStream("test_stream", ALL_PARTITIONS, 24 * 3600, "")
-    storageClient.shutdown()
+    createNewStream(partitions = PARTITIONS_COUNT)
   }
 
   it should "ensure that transactions are distributed to the same partitions on producer and subscriber" in {
-    val accumulatorBuilder = () => (0 until ALL_PARTITIONS).map(_ => ListBuffer[Long]()).toArray
+    val TRANSACTION_COUNT = 1000
+
+    val accumulatorBuilder = () => (0 until PARTITIONS_COUNT).map(_ => ListBuffer[Long]()).toArray
     val producerTransactionsAccumulator = accumulatorBuilder()
     val subscriberTransactionsAccumulator = accumulatorBuilder()
     var counter = 0
@@ -51,10 +33,10 @@ class SubscriberTransactionPartitionDistributionTest extends FlatSpec with Match
 
     val producer = f.getProducer(
       name = "test_producer",
-      partitions = (0 until ALL_PARTITIONS).toSet)
+      partitions = (0 until PARTITIONS_COUNT).toSet)
 
     val subscriber = f.getSubscriber(name = "sv2",
-      partitions = (0 until ALL_PARTITIONS).toSet,
+      partitions = (0 until PARTITIONS_COUNT).toSet,
       offset = Newest,
       useLastOffset = false,
       callback = (consumer: TransactionOperator, transaction: ConsumerTransaction) => this.synchronized {
@@ -72,7 +54,7 @@ class SubscriberTransactionPartitionDistributionTest extends FlatSpec with Match
     })
 
     subscriberLatch.await(30, TimeUnit.SECONDS) shouldBe true
-    (0 until ALL_PARTITIONS).foreach(partition =>
+    (0 until PARTITIONS_COUNT).foreach(partition =>
       subscriberTransactionsAccumulator(partition) shouldBe producerTransactionsAccumulator(partition))
 
     subscriber.stop()

@@ -13,6 +13,8 @@ object TStreamsFactoryStorageClientDefaults {
   object StorageClient {
     val threadPool = IntMinMaxDefault(1, 4, 4)
     val connectionTimeoutMs = IntMinMaxDefault(1000, 10000, 5000)
+    val requestTimeoutMs = IntMinMaxDefault(100, 5000, 500)
+    val requestTimeoutRetryCount = IntMinMaxDefault(1, 10, 5)
     val retryDelayMs = IntMinMaxDefault(50, 500, 200)
 
     object Auth {
@@ -36,6 +38,8 @@ object TStreamsFactoryStorageClientDefaults {
 
     m(co.threadPool) = StorageClient.threadPool.default
     m(co.connectionTimeoutMs) = StorageClient.connectionTimeoutMs.default
+    m(co.requestTimeoutMs) = StorageClient.requestTimeoutMs.default
+    m(co.requestTimeoutRetryCount) = StorageClient.requestTimeoutRetryCount.default
     m(co.retryDelayMs) = StorageClient.retryDelayMs.default
 
     m(co.Auth.key) = StorageClient.Auth.key

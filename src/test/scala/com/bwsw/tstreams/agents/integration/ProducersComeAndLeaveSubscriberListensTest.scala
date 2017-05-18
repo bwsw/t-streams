@@ -5,7 +5,6 @@ import java.util.concurrent.{CountDownLatch, TimeUnit}
 import com.bwsw.tstreams.agents.consumer.Offset.Oldest
 import com.bwsw.tstreams.agents.consumer.{ConsumerTransaction, TransactionOperator}
 import com.bwsw.tstreams.agents.producer.NewProducerTransactionPolicy
-import com.bwsw.tstreams.env.ConfigurationOptions
 import com.bwsw.tstreams.testutils.{TestStorageServer, TestUtils}
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 
@@ -16,33 +15,16 @@ import scala.collection.mutable.ListBuffer
   */
 class ProducersComeAndLeaveSubscriberListensTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
   lazy val srv = TestStorageServer.get()
-  lazy val storageClient = f.getStorageClient()
 
   override def beforeAll(): Unit = {
-    f.setProperty(ConfigurationOptions.Stream.name, "test_stream").
-      setProperty(ConfigurationOptions.Stream.partitionsCount, 3).
-      setProperty(ConfigurationOptions.Stream.ttlSec, 60 * 10).
-      setProperty(ConfigurationOptions.Coordination.connectionTimeoutMs, 7000).
-      setProperty(ConfigurationOptions.Coordination.sessionTimeoutMs, 7000).
-      setProperty(ConfigurationOptions.Producer.transportTimeoutMs, 5000).
-      setProperty(ConfigurationOptions.Producer.Transaction.ttlMs, 500).
-      setProperty(ConfigurationOptions.Producer.Transaction.keepAliveMs, 100).
-      setProperty(ConfigurationOptions.Consumer.transactionPreload, 500).
-      setProperty(ConfigurationOptions.Consumer.dataPreload, 10)
-
     srv
-
-    if(storageClient.checkStreamExists("test_stream"))
-      storageClient.deleteStream("test_stream")
-
-    storageClient.createStream("test_stream", 3, 24 * 3600, "")
-    storageClient.shutdown()
+    createNewStream()
   }
 
   it should "handle all transactions and do not loose them" in {
     val TRANSACTIONS_PER_PRODUCER = 100
-    val PRODUCERS = 100
-    val TXNS_PER_SEC = 100 // don't change it
+    val PRODUCERS = 10
+    val TRANSACTIONS_PER_SEC = 100 // don't change it
     val producerAccumulator = ListBuffer[Long]()
     val subscriberAccumulator = ListBuffer[Long]()
 
@@ -80,7 +62,7 @@ class ProducersComeAndLeaveSubscriberListensTest extends FlatSpec with Matchers 
       logger.info(s"Last: $lastID, New: $newID, Counter: $counter")
       lastID = newID
     })
-    latch.await(100 + TRANSACTIONS_PER_PRODUCER * PRODUCERS / TXNS_PER_SEC, TimeUnit.SECONDS) shouldBe true
+    latch.await(100 + TRANSACTIONS_PER_PRODUCER * PRODUCERS / TRANSACTIONS_PER_SEC, TimeUnit.SECONDS) shouldBe true
     producerAccumulator shouldBe subscriberAccumulator
 
     subscriber.stop()
