@@ -12,8 +12,8 @@ import scala.collection.mutable
 object TStreamsFactoryConsumerDefaults {
 
   object Consumer {
-    val transactionPreload = IntMinMaxDefault(1, 10000, 1000)
-    val dataPreload = IntMinMaxDefault(10, 200, 100)
+    val transactionPreload = IntMinMaxDefault(100, 10000, 1000)
+    val dataPreload = IntMinMaxDefault(10, 10000, 1000)
 
     object Subscriber {
       val bindHost = "localhost"
@@ -22,7 +22,7 @@ object TStreamsFactoryConsumerDefaults {
       val transactionBufferThreadPoolSize = IntMinMaxDefault(1, 64, 4)
       val processingEnginesThreadPoolSize = IntMinMaxDefault(1, 64, 1)
       val pollingFrequencyDelayMs = IntMinMaxDefault(10, 100000, 1000)
-      val transactionQueueMaxLengthThreshold = IntMinMaxDefault(100, 1000000, 10000)
+      val transactionQueueMaxLengthThreshold = IntMinMaxDefault(100, 10000000, 100000)
     }
 
   }

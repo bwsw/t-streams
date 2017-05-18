@@ -13,10 +13,10 @@ object TStreamsFactoryCoordinationDefaults {
   object Coordination {
     val endpoints = "localhost:2181"
     val prefix = "/t-streams"
-    val sessionTimeoutMs = IntMinMaxDefault(1000, 10000, 2000)
-    val connectionTimeoutMs = IntMinMaxDefault(1000, 10000, 2000)
-    val retryDelayMs = IntMinMaxDefault(50, 1000, 500)
-    val retryCount = IntMinMaxDefault(1, 29, 5)
+    val sessionTimeoutMs = IntMinMaxDefault(1000, 10000, 5000)
+    val connectionTimeoutMs = IntMinMaxDefault(1000, 10000, 5000)
+    val retryDelayMs = IntMinMaxDefault(50, 2000, 1000)
+    val retryCount = IntMinMaxDefault(1, 29, 10)
   }
 
   def get = {

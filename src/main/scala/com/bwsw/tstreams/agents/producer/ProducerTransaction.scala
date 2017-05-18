@@ -1,7 +1,6 @@
 package com.bwsw.tstreams.agents.producer
 
 import java.util.concurrent.atomic.AtomicBoolean
-import java.util.concurrent.locks.ReentrantLock
 
 import com.bwsw.tstreams.agents.group.ProducerCheckpointInfo
 import com.bwsw.tstreams.proto.protocol.TransactionState
@@ -26,10 +25,7 @@ class ProducerTransaction(partition: Int,
                           transactionID: Long,
                           producer: Producer) extends IProducerTransaction {
 
-  private val transactionLock = new ReentrantLock()
-
   private val data = new ProducerTransactionData(this, producer.stream.ttl, producer.stream.client)
-
   private val isTransactionClosed = new AtomicBoolean(false)
 
   /**
@@ -167,8 +163,8 @@ class ProducerTransaction(partition: Int,
       val transactionRecord = new RPCProducerTransaction(producer.stream.id, partition, transactionID,
         TransactionStates.Checkpointed, getDataItemsCount, producer.stream.ttl)
 
-      producer.checkUpdateFailure()
-      producer.stream.client.putTransactionWithDataSync(transactionRecord, data.items, data.lastOffset)
+      val availTime = producer.checkUpdateFailure()
+      producer.stream.client.putTransactionWithDataSync(transactionRecord, data.items, data.lastOffset, availTime)
 
       Try(producer.checkUpdateFailure()) match {
         case Success(_) =>

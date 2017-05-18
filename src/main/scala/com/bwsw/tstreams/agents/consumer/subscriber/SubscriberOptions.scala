@@ -25,7 +25,7 @@ import com.bwsw.tstreams.generator.ITransactionGenerator
   * @param transactionBufferWorkersThreadPoolAmount
   * @param useLastOffset
   */
-case class SubscriberOptions(val transactionsPreload: Int,
+class SubscriberOptions(val transactionsPreload: Int,
                              val dataPreload: Int,
                              val readPolicy: AbstractPolicy,
                              val offset: IOffset,

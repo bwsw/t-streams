@@ -14,14 +14,14 @@ object TStreamsFactoryProducerDefaults {
 
   object Producer {
     val bindHost = "localhost"
-    val bindPort = PortRange(40000, 50000)
+    val bindPort = PortRange(20000, 60000)
     val openTimeoutMs = IntMinMaxDefault(1000, 10000, 5000)
     val threadPoolSize = IntMinMaxDefault(1, 1000, Runtime.getRuntime().availableProcessors())
     val notifyJobsThreadPoolSize = IntMinMaxDefault(1, 32, 1)
 
     object Transaction {
-      val ttlMs = IntMinMaxDefault(500, 120000, 30000)
-      val keepAliveMs = IntMinMaxDefault(100, 2000, 1000)
+      val ttlMs = IntMinMaxDefault(500, 300000, 60000)
+      val keepAliveMs = IntMinMaxDefault(100, 2000, 2000)
       val batchSize = IntMinMaxDefault(1, 1000, 100)
       val distributionPolicy = ConfigurationOptions.Producer.Transaction.Consts.DISTRIBUTION_POLICY_RR
     }

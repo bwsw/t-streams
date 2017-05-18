@@ -154,6 +154,8 @@ class Producer(var name: String,
       isMissedUpdate.set(true)
       throw new MissedUpdateException(message)
     }
+    val avail = producerOptions.transactionTtlMs - (currentTime - lastUpdateEndTime) - 1
+    avail.milliseconds
   }
 
   private[tstreams] def checkStopped(setState: Boolean = false) = {
@@ -311,7 +313,6 @@ class Producer(var name: String,
 
   def checkpoint() = {
     checkStopped()
-    checkUpdateFailure()
     if (firstCheckpoint.getAndSet(false)) cg.add(this)
     cg.checkpoint()
   }
@@ -431,7 +432,7 @@ class Producer(var name: String,
 
     openTransactions.clear()
 
-    stream.client.shutdown()
+    stream.shutdown()
   }
 
 

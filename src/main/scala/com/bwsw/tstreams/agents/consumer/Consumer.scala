@@ -326,7 +326,7 @@ class Consumer(val name: String,
     checkpointOffsets.clear()
     currentOffsets.clear()
     transactionBuffer.clear()
-    stream.client.shutdown()
+    stream.shutdown()
   }
 
   /**

@@ -25,9 +25,9 @@ class NMastersMProducersKSubscribersTest extends FlatSpec with Matchers with Bef
     createNewStream(partitions = ALL_PARTITIONS)
   }
 
-  it should s"Start ${ALL_PARTITIONS} masters (each for one partition), launch ${PRODUCER_COUNT} producers" +
+  it should s"Start ${ALL_PARTITIONS} masters (each for one partition), launch ${PRODUCER_COUNT} producers " +
     s"${SUBSCRIBER_COUNT} subscribers and deliver ${PRODUCER_COUNT * TRANSACTION_COUNT} transactions " +
-    " to every subscriber" in {
+    "to every subscriber" in {
 
     // start masters
     val masters = (0 until ALL_PARTITIONS)

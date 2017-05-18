@@ -29,7 +29,6 @@ object StorageClient {
   */
 class StorageClient(clientOptions: ConnectionOptions, authOptions: AuthOptions, zookeeperOptions: ZookeeperOptions) {
   private val clientBuilder = new ClientBuilder()
-
   private val client = clientBuilder.withConnectionOptions(clientOptions).withAuthOptions(authOptions).withZookeeperOptions(zookeeperOptions).build()
 
   val isShutdown = new AtomicBoolean(false)
