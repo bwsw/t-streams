@@ -147,12 +147,12 @@ class Producer(var name: String,
       s"Last was $lastUpdateEndTime, now is $currentTime. It's critical situation, it is marked as non functional, only stop is allowed."
 
     if(isMissedUpdate.get())
-      throw new IllegalStateException(message)
+      throw new MissedUpdateException(message)
 
     if(currentTime - lastUpdateEndTime > producerOptions.transactionTtlMs) {
       Producer.logger.error(message)
       isMissedUpdate.set(true)
-      throw new IllegalStateException(message)
+      throw new MissedUpdateException(message)
     }
   }
 
