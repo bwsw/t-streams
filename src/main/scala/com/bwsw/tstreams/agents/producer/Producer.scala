@@ -431,7 +431,7 @@ class Producer(var name: String,
 
     openTransactions.clear()
 
-    stream.client.shutdown()
+    stream.shutdown()
   }
 
 

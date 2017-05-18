@@ -116,11 +116,6 @@ class TStreamsFactory() {
 
   def getStorageClient() = this.synchronized {
 
-    val stableCondition = ((pAsInt(co.StorageClient.requestTimeoutMs) + pAsInt(co.StorageClient.retryDelayMs)) * pAsInt(co.StorageClient.requestTimeoutRetryCount) < pAsInt(co.Producer.Transaction.ttlMs) - pAsInt(co.Producer.Transaction.keepAliveMs))
-    if(!stableCondition){
-      throw new IllegalStateException("Next relation must be fulfilled for stable function of the system: (ConfigurationOptions.StorageClient.requestTimeoutMs + ConfigurationOptions.StorageClient.retryDelayMs) * ConfigurationOptions.StorageClient.requestTimeoutRetryCount < ConfigurationOptions.Producer.Transaction.ttlMs - ConfigurationOptions.Producer.Transaction.keepAliveMs")
-    }
-
     val clientOptions = new ConnectionOptions(
       connectionTimeoutMs = pAsInt(co.StorageClient.connectionTimeoutMs),
       retryDelayMs = pAsInt(co.StorageClient.retryDelayMs),
@@ -379,8 +374,6 @@ class TStreamsFactory() {
 
     val transactionQueueMaxLengthThreshold = pAsInt(co.Consumer.Subscriber.transactionQueueMaxLengthThreshold, consumerDefaults.Consumer.Subscriber.transactionQueueMaxLengthThreshold.default)
     consumerDefaults.Consumer.Subscriber.transactionQueueMaxLengthThreshold.check(transactionQueueMaxLengthThreshold)
-
-    val queue_path = pAsString(co.Consumer.Subscriber.persistentQueuePath)
 
     val opts = SubscriberOptionsBuilder.fromConsumerOptions(consumerOptions,
       agentAddress = bind_host + ":" + bind_port,

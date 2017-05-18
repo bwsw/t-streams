@@ -190,7 +190,6 @@ class Subscriber(val name: String,
     processingEngines.clear()
     transactionsBufferWorkers.foreach(kv => kv._2.stop())
     transactionsBufferWorkers.clear()
-
     coordinator.shutdown()
     consumer.stop()
   }
