@@ -19,6 +19,7 @@ import org.apache.curator.retry.ExponentialBackoffRetry
 import org.slf4j.LoggerFactory
 
 import scala.collection.mutable
+import scala.util.{Failure, Success, Try}
 
 /**
   * Created by Ivan Kudryavtsev on 21.07.16.
@@ -284,7 +285,12 @@ class TStreamsFactory() {
       transactionGenerator = new LocalTransactionGenerator,
       coordinationOptions = cao)
 
-    new Producer(name = name, stream = stream, producerOptions = po)
+    Try(new Producer(name = name, stream = stream, producerOptions = po)) match {
+      case Success(producer) => producer
+      case Failure(exception) =>
+        stream.shutdown()
+        throw exception
+    }
   }
 
   /**
@@ -310,7 +316,12 @@ class TStreamsFactory() {
       offset = offset, checkpointAtStart = checkpointAtStart,
       useLastOffset = useLastOffset)
 
-    new Consumer(name, stream, consumerOptions)
+    Try(new Consumer(name, stream, consumerOptions)) match {
+      case Success(consumer) => consumer
+      case Failure(exception) =>
+        stream.shutdown()
+        throw exception
+    }
   }
 
 
@@ -384,7 +395,13 @@ class TStreamsFactory() {
       transactionQueueMaxLengthThreshold = transactionQueueMaxLengthThreshold,
       transactionsQueueBuilder = new QueueBuilder.InMemory())
 
-    new Subscriber(name, stream, opts, callback)
+
+    Try(new Subscriber(name, stream, opts, callback)) match {
+      case Success(subscriber) => subscriber
+      case Failure(exception) =>
+        stream.shutdown()
+        throw exception
+    }
   }
 
   /**

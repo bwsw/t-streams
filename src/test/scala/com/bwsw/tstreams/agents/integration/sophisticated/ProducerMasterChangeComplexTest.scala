@@ -81,7 +81,7 @@ class ProducerMasterChangeComplexTest extends FlatSpec with Matchers with Before
           _producer
 
         case Failure(exception) =>
-          println(s"Make a new producer because of: $exception")
+          println(s"Make a new producer with $id because of: $exception")
           exception.printStackTrace()
           makeNewProducer(partitions, id)
       }
