@@ -15,7 +15,7 @@ import scala.collection.mutable.ListBuffer
   */
 class TwoProducersAndSubscriberStartsBeforeWriteTests extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
 
-  lazy val srv = TestStorageServer.get()
+  lazy val srv = TestStorageServer.getNewClean()
   val COUNT = 1000
 
   override def beforeAll(): Unit = {

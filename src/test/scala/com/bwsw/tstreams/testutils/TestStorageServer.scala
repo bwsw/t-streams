@@ -15,9 +15,16 @@ object TestStorageServer {
   private val serverBuilder = new ServerBuilder()
     .withZookeeperOptions(new ZookeeperOptions(endpoints = s"127.0.0.1:${TestUtils.ZOOKEEPER_PORT}"))
 
+  private var tempDir: String = TestUtils.getTmpDir()
+
+  def getNewClean(): Server = {
+    tempDir = TestUtils.getTmpDir()
+    get()
+  }
+
   def get(): Server = {
     val transactionServer = serverBuilder
-      .withServerStorageOptions(new StorageOptions(path = TestUtils.getTmpDir()))
+      .withServerStorageOptions(new StorageOptions(path = tempDir))
       .withCommitLogOptions(new CommitLogOptions(commitLogCloseDelayMs = 100))
       .build()
     val l = new CountDownLatch(1)

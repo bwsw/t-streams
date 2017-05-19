@@ -33,7 +33,7 @@ abstract class UdpServer(host: String, port: Int, threads: Int) extends UdpProce
 
   override def socketInitializer() = new DatagramSocket(null)
 
-  override def bind(s: DatagramSocket): Unit = {
+  override def bind(): Unit = {
     socket.bind(new InetSocketAddress(InetAddress.getByName(host), port))
   }
 

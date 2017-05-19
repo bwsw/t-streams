@@ -12,7 +12,7 @@ import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
   * Created by Ivan Kudryavtsev on 26.08.16.
   */
 class SubscriberBasicPubSubTests extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
-  lazy val srv = TestStorageServer.get()
+  lazy val srv = TestStorageServer.getNewClean()
 
   override def beforeAll(): Unit = {
     srv

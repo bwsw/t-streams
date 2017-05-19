@@ -5,8 +5,12 @@ import java.util.concurrent.CountDownLatch
 
 import org.slf4j.LoggerFactory
 
+import scala.util.{Failure, Success, Try}
+
 object UdpProcessor {
   var BUFFER_SIZE = 508
+  var BIND_TRIES = 10
+  var BIND_FAIL_RETRY_DELAY = 500
 }
 
 abstract class UdpProcessor {
@@ -16,9 +20,21 @@ abstract class UdpProcessor {
 
   def socketInitializer() = new DatagramSocket()
 
-  def bind(s: DatagramSocket)
+  def bind()
 
-  def bootstrapOperation() = { bind(socket) }
+  def bootstrapOperation(): Unit = {
+    for(trial <- (0 until UdpProcessor.BIND_TRIES + 1)) {
+      Try(bind()) match {
+        case Success(_) => return
+        case Failure(exception) =>
+          if(trial == UdpProcessor.BIND_TRIES)
+            throw exception
+
+          logger.warn(s"Socket bind error. Exception is: $exception, this is $trial try, " +
+            s" total ${UdpProcessor.BIND_TRIES} tries. Next is after: ${UdpProcessor.BIND_FAIL_RETRY_DELAY} ms.")
+      }
+    }
+  }
 
   def handleMessage(socket: DatagramSocket, packet: DatagramPacket): Unit
 

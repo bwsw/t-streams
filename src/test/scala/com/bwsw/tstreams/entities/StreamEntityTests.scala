@@ -2,14 +2,13 @@ package com.bwsw.tstreams.entities
 
 import com.bwsw.tstreams.streams.Stream
 import com.bwsw.tstreams.testutils.{TestStorageServer, TestUtils}
-import com.bwsw.tstreamstransactionserver.exception.Throwable.StreamDoesNotExist
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 
 
 class StreamEntityTests extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
 
 
-  val srv = TestStorageServer.get()
+  val srv = TestStorageServer.getNewClean()
   val storageClient = f.getStorageClient()
 
   it should "check correctly dummy absent streams" in {

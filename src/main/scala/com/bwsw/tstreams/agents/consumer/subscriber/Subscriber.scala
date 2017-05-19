@@ -23,7 +23,7 @@ object Subscriber {
 class Subscriber(val name: String,
                  val stream: Stream,
                  val options: SubscriberOptions,
-                 val callback: Callback) extends GroupParticipant {
+                 val callback: Callback) extends GroupParticipant with AutoCloseable {
 
   private val transactionsBufferWorkers = mutable.Map[Int, TransactionBufferWorker]()
   private val processingEngines = mutable.Map[Int, ProcessingEngine]()
@@ -167,6 +167,7 @@ class Subscriber(val name: String,
 
     isStarted.set(true)
 
+    this
   }
 
   /**
@@ -230,5 +231,6 @@ class Subscriber(val name: String,
 
   override private[tstreams] def getStorageClient(): StorageClient = consumer.getStorageClient()
 
+  override def close(): Unit = if(!isStopped.get() && isStarted.get()) stop()
 }
 

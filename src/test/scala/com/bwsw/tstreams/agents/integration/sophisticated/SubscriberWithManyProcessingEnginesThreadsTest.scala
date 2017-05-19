@@ -25,7 +25,7 @@ class SubscriberWithManyProcessingEnginesThreadsTest extends FlatSpec with Match
 
   val POLLING_FREQUENCY_DELAY_MS = 5000
 
-  lazy val srv = TestStorageServer.get()
+  lazy val srv = TestStorageServer.getNewClean()
 
   override def beforeAll(): Unit = {
     f.setProperty(ConfigurationOptions.Consumer.Subscriber.pollingFrequencyDelayMs, POLLING_FREQUENCY_DELAY_MS)

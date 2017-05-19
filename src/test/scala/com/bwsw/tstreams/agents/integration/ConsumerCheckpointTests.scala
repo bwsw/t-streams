@@ -12,7 +12,7 @@ import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
   * Created by Ivan Kudryavtsev on 09.09.16.
   */
 class ConsumerCheckpointTests extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
-  lazy val srv = TestStorageServer.get()
+  lazy val srv = TestStorageServer.getNewClean()
   override def beforeAll(): Unit = {
     srv
     createNewStream()

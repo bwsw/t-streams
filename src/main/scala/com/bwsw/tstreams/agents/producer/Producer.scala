@@ -32,23 +32,38 @@ object Producer {
 class Producer(var name: String,
                val stream: Stream,
                val producerOptions: ProducerOptions)
-  extends GroupParticipant with SendingAgent with Interaction {
-
-  /**
-    * agent name
-    */
-  override private[tstreams] def getAgentName() = name
+  extends GroupParticipant with SendingAgent with Interaction with AutoCloseable {
 
   // short key
   val pcs = producerOptions.coordinationOptions
   val isStopped = new AtomicBoolean(false)
   val isMissedUpdate = new AtomicBoolean(false)
-
-  private[tstreams] val openTransactions = new OpenTransactionsKeeper()
-
   val fullPrefix = java.nio.file.Paths.get(pcs.zkPrefix, stream.name).toString
 
-  val curatorClient = stream.client.curatorClient
+  /**
+    * Queue to figure out moment when transaction is going to close
+    */
+  private val shutdownKeepAliveThread = new ThreadSignalSleepVar[Boolean](1)
+  private lazy val transactionKeepAliveThread = getTransactionKeepAliveThread
+  private val threadPoolSize: Int = calculateThreadPoolSize
+
+  private[tstreams] val openTransactions = new OpenTransactionsKeeper()
+  private[tstreams] val notifyService = new FirstFailLockableTaskExecutor(s"NotifyService-$name", producerOptions.notifyJobsThreadPoolSize)
+  private[tstreams] val curatorClient = stream.client.curatorClient
+  private[tstreams] val subscriberNotifier = new UdpEventsBroadcastClient(curatorClient, prefix = fullPrefix, partitions = producerOptions.writePolicy.getUsedPartitions)
+  private[tstreams] var lastUpdateEndTime = System.currentTimeMillis()
+  private[tstreams] val openTransactionClient = new UdpClient(pcs.transportClientTimeoutMs).start()
+
+  private[tstreams] val transactionOpenerService = new TransactionOpenerService(
+    curatorClient = curatorClient,
+    prefix = fullPrefix,
+    producer = this,
+    usedPartitions = producerOptions.writePolicy.getUsedPartitions,
+    threadPoolAmount = threadPoolSize)
+
+  Producer.logger.info(s"Start new Basic producer with id: ${transactionOpenerService.getUniqueAgentID()}, name : $name, streamName : ${stream.name}, streamPartitions : ${stream.partitionsCount}")
+
+  private lazy val cg = new CheckpointGroup()
 
   try {
     curatorClient.create().creatingParentContainersIfNeeded().forPath(s"$fullPrefix/subscribers")
@@ -58,18 +73,20 @@ class Producer(var name: String,
         throw e
   }
 
-  // amount of threads which will handle partitions in masters, etc
-  val threadPoolSize: Int = {
+  subscriberNotifier.init()
+  transactionKeepAliveThread
+
+  private def calculateThreadPoolSize: Int = {
     if (pcs.threadPoolSize == -1)
       producerOptions.writePolicy.getUsedPartitions.size
     else
       pcs.threadPoolSize
   }
 
-
-  // this client is used to find new subscribers
-  private[tstreams] val subscriberNotifier = new UdpEventsBroadcastClient(curatorClient, prefix = fullPrefix, partitions = producerOptions.writePolicy.getUsedPartitions)
-  subscriberNotifier.init()
+  /**
+    * agent name
+    */
+  override private[tstreams] def getAgentName() = name
 
   /**
     * Allows to publish update/pre/post/cancel messages.
@@ -78,9 +95,6 @@ class Producer(var name: String,
     * @return
     */
   def publish(msg: TransactionState) = subscriberNotifier.publish(msg)
-
-  // pcs.transportClientRetryDelayMs
-  private[tstreams] val openTransactionClient = new UdpClient(pcs.transportClientTimeoutMs).start()
 
   /**
     * Request to get Transaction
@@ -96,28 +110,6 @@ class Producer(var name: String,
       isInstant = isInstant, data = data.map(com.google.protobuf.ByteString.copyFrom))
     openTransactionClient.sendAndWait(host, port, r)
   }
-
-
-  /**
-    * P2P Agent for producers interaction
-    * (getNewTransaction id; publish openTransaction event; publish closeTransaction event)
-    */
-  override private[tstreams] val transactionOpenerService: TransactionOpenerService = new TransactionOpenerService(
-    curatorClient = curatorClient,
-    prefix = fullPrefix,
-    producer = this,
-    usedPartitions = producerOptions.writePolicy.getUsedPartitions,
-    threadPoolAmount = threadPoolSize)
-
-  Producer.logger.info(s"Start new Basic producer with id: ${transactionOpenerService.getUniqueAgentID()}, name : $name, streamName : ${stream.name}, streamPartitions : ${stream.partitionsCount}")
-
-  /**
-    * Queue to figure out moment when transaction is going to close
-    */
-  private val shutdownKeepAliveThread = new ThreadSignalSleepVar[Boolean](1)
-  private val transactionKeepAliveThread = getTransactionKeepAliveThread
-  private[tstreams] val notifyService = new FirstFailLockableTaskExecutor(s"NotifyService-$name", producerOptions.notifyJobsThreadPoolSize)
-  private lazy val cg = new CheckpointGroup()
 
   /**
     * Allows to get if the producer is master for the partition.
@@ -156,7 +148,6 @@ class Producer(var name: String,
   /**
     *
     */
-  private [tstreams] var lastUpdateEndTime = System.currentTimeMillis()
   private def getTransactionKeepAliveThread: Thread = {
     val latch = new CountDownLatch(1)
     val transactionKeepAliveThread = new Thread(() => {
@@ -424,6 +415,7 @@ class Producer(var name: String,
     stream.shutdown()
   }
 
-
   override private[tstreams] def getStorageClient(): StorageClient = stream.client
+
+  override def close(): Unit = if(!isStopped.get()) stop()
 }
