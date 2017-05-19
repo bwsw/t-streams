@@ -19,7 +19,7 @@ class ProducerUpdateTaskTest extends FlatSpec with Matchers with BeforeAndAfterA
   lazy val blockCheckpoint2 = new ResettableCountDownLatch(1)
   var flag: Int = 0
 
-  lazy val srv = TestStorageServer.get()
+  lazy val srv = TestStorageServer.getNewClean()
 
   lazy val producer = f.getProducer(
     name = "test_producer",

@@ -9,7 +9,7 @@ import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 class ProducerTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
   val PARTITIONS_COUNT = 10
 
-  lazy val srv = TestStorageServer.get()
+  lazy val srv = TestStorageServer.getNewClean()
 
   lazy val producer = f.getProducer(
     name = "test_producer",

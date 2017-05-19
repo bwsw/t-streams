@@ -15,7 +15,7 @@ class ProducerUsedBySeveralThreadsSimultaneouslyTests extends FlatSpec with Matc
   val COUNT = 10000
   val THREADS = 8
 
-  lazy val srv = TestStorageServer.get()
+  lazy val srv = TestStorageServer.getNewClean()
   lazy val storageClient = f.getStorageClient()
 
   lazy val producer = f.getProducer(

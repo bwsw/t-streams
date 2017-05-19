@@ -13,7 +13,7 @@ import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 class ConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
   lazy val gen = LocalGeneratorCreator.getGen()
 
-  lazy val srv = TestStorageServer.get()
+  lazy val srv = TestStorageServer.getNewClean()
   lazy val storageClient = f.getStorageClient()
 
   val TRANSACTION_TTL = 12000

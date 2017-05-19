@@ -32,7 +32,7 @@ object Producer {
 class Producer(var name: String,
                val stream: Stream,
                val producerOptions: ProducerOptions)
-  extends GroupParticipant with SendingAgent with Interaction {
+  extends GroupParticipant with SendingAgent with Interaction with AutoCloseable {
 
   /**
     * agent name
@@ -424,6 +424,7 @@ class Producer(var name: String,
     stream.shutdown()
   }
 
-
   override private[tstreams] def getStorageClient(): StorageClient = stream.client
+
+  override def close(): Unit = if(!isStopped.get()) stop()
 }
