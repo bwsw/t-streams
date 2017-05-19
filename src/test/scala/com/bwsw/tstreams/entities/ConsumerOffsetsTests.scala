@@ -6,7 +6,7 @@ import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 
 class ConsumerOffsetsTests extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
 
-  val srv = TestStorageServer.get()
+  val srv = TestStorageServer.getNewClean()
   val storageClient = f.getStorageClient()
 
   "ConsumerEntity.saveSingleOffset() ConsumerEntity.exist() ConsumerEntity.getOffset()" should "create new consumer with particular offset," +

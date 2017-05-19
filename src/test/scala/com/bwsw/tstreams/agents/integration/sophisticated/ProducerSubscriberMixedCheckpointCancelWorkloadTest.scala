@@ -25,7 +25,7 @@ class ProducerSubscriberMixedCheckpointCancelWorkloadTest extends FlatSpec with 
     val subscriberAccumulator = ListBuffer[Long]()
     val subscriberLatch = new CountDownLatch(1)
 
-    val srv = TestStorageServer.get()
+    val srv = TestStorageServer.getNewClean()
     createNewStream()
 
     val subscriber = f.getSubscriber(name = "sv2",

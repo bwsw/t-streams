@@ -64,7 +64,7 @@ class UdpClient(waitTimeoutMs: Int) extends UdpProcessor {
     mOpt
   }
 
-  override def bind(s: DatagramSocket): Unit = {}
+  override def bind(): Unit = {}
 
   override def start() = super.start().asInstanceOf[UdpClient]
 }

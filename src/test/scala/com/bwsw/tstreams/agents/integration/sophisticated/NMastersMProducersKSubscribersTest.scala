@@ -18,7 +18,7 @@ class NMastersMProducersKSubscribersTest extends FlatSpec with Matchers with Bef
   val SUBSCRIBER_COUNT = 2
   val TRANSACTION_COUNT = 10000
 
-  lazy val srv = TestStorageServer.get()
+  lazy val srv = TestStorageServer.getNewClean()
 
   override def beforeAll(): Unit = {
     srv

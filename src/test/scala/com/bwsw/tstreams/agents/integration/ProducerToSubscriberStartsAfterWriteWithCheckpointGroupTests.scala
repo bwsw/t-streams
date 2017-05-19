@@ -14,7 +14,7 @@ import scala.collection.mutable.ListBuffer
 class ProducerToSubscriberStartsAfterWriteWithCheckpointGroupTests extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
   val COUNT = 10
 
-  lazy val srv = TestStorageServer.get()
+  lazy val srv = TestStorageServer.getNewClean()
 
   override def beforeAll(): Unit = {
     srv

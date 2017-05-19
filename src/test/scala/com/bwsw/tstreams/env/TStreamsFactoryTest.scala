@@ -14,7 +14,7 @@ import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 class TStreamsFactoryTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
   f.setProperty(ConfigurationOptions.Stream.ttlSec, 60 * 10)
 
-  val srv = TestStorageServer.get()
+  val srv = TestStorageServer.getNewClean()
   val storageClient = f.getStorageClient()
   storageClient.createStream("test-stream", 2, 24 * 3600, "")
 

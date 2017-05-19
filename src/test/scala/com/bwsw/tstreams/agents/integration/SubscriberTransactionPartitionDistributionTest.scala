@@ -15,7 +15,7 @@ import scala.collection.mutable.ListBuffer
 class SubscriberTransactionPartitionDistributionTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
   val PARTITIONS_COUNT = 4
 
-  lazy val srv = TestStorageServer.get()
+  lazy val srv = TestStorageServer.getNewClean()
 
   override def beforeAll(): Unit = {
     srv

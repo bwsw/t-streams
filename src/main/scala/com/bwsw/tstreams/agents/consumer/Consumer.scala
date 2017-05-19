@@ -26,7 +26,7 @@ object Consumer {
 class Consumer(val name: String,
                val stream: Stream,
                val options: ConsumerOptions)
-  extends GroupParticipant with TransactionOperator {
+  extends GroupParticipant with TransactionOperator with AutoCloseable {
 
   /**
     * Temporary checkpoints (will be cleared after every checkpoint() invokes)
@@ -360,4 +360,6 @@ class Consumer(val name: String,
   override def getProposedTransactionId: Long = options.transactionGenerator.getTransaction()
 
   override def getStorageClient(): StorageClient = stream.client
+
+  override def close(): Unit = if(!isStopped.get() && isStarted.get()) stop()
 }

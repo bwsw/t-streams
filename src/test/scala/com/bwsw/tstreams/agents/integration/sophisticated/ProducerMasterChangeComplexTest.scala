@@ -24,9 +24,9 @@ class ProducerMasterChangeComplexTest extends FlatSpec with Matchers with Before
   val PROBABILITY = 0.01
   val PARTITIONS_COUNT = 10
   val PARTITIONS = (0 until PARTITIONS_COUNT).toSet
-  val MAX_WAIT_AFTER_ALL_PRODUCERS = 5
+  val MAX_WAIT_AFTER_ALL_PRODUCERS = 1
 
-  lazy val srv = TestStorageServer.get()
+  lazy val srv = TestStorageServer.getNewClean()
 
   override def beforeAll(): Unit = {
     srv
@@ -81,7 +81,7 @@ class ProducerMasterChangeComplexTest extends FlatSpec with Matchers with Before
           _producer
 
         case Failure(exception) =>
-          println(s"Make a new producer because of: $exception")
+          println(s"Make a new producer with $id because of: $exception")
           exception.printStackTrace()
           makeNewProducer(partitions, id)
       }
@@ -110,7 +110,7 @@ class ProducerMasterChangeComplexTest extends FlatSpec with Matchers with Before
 
     onCompleteLatch.await()
     producersThreads.foreach(thread => thread.join())
-    waitCompleteLatch.await(MAX_WAIT_AFTER_ALL_PRODUCERS, TimeUnit.SECONDS)
+    waitCompleteLatch.await(MAX_WAIT_AFTER_ALL_PRODUCERS, TimeUnit.MINUTES)
     subscriber.stop()
 
     subscriberCounter shouldBe TRANSACTIONS_AMOUNT_EACH * PRODUCERS_AMOUNT
