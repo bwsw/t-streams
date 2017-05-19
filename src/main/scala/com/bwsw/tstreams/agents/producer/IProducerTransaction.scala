@@ -7,7 +7,7 @@ import com.bwsw.tstreams.agents.group.ProducerCheckpointInfo
   */
 trait IProducerTransaction {
 
-  def send(obj: Array[Byte]): Unit
+  def send(obj: Array[Byte]): IProducerTransaction
 
   def finalizeDataSend(): Unit
 

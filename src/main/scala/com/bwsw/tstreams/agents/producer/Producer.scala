@@ -11,8 +11,6 @@ import com.bwsw.tstreams.proto.protocol.{TransactionRequest, TransactionResponse
 import com.bwsw.tstreams.storage.StorageClient
 import com.bwsw.tstreams.streams.Stream
 import com.bwsw.tstreamstransactionserver.rpc.TransactionStates
-import org.apache.curator.framework.CuratorFrameworkFactory
-import org.apache.curator.retry.ExponentialBackoffRetry
 import org.apache.zookeeper.KeeperException
 import org.slf4j.LoggerFactory
 
@@ -48,20 +46,12 @@ class Producer(var name: String,
 
   private[tstreams] val openTransactions = new OpenTransactionsKeeper()
 
-  private val peerKeepAliveTimeout = pcs.zkSessionTimeoutMs * 2
+  val fullPrefix = java.nio.file.Paths.get(pcs.zkPrefix, stream.name).toString
 
-  val fullPrefix = java.nio.file.Paths.get(pcs.zkPrefix, stream.name).toString.substring(1)
-  private val curatorClient = CuratorFrameworkFactory.builder()
-    .namespace(fullPrefix)
-    .connectionTimeoutMs(pcs.zkConnectionTimeoutMs)
-    .sessionTimeoutMs(pcs.zkSessionTimeoutMs)
-    .retryPolicy(new ExponentialBackoffRetry(pcs.zkRetryDelayMs, pcs.zkRetryCount))
-    .connectString(pcs.zkEndpoints).build()
-
-  curatorClient.start()
+  val curatorClient = stream.client.curatorClient
 
   try {
-    curatorClient.create().creatingParentContainersIfNeeded().forPath("/subscribers")
+    curatorClient.create().creatingParentContainersIfNeeded().forPath(s"$fullPrefix/subscribers")
   } catch {
     case e: KeeperException =>
       if (e.code() != KeeperException.Code.NODEEXISTS)
@@ -78,7 +68,7 @@ class Producer(var name: String,
 
 
   // this client is used to find new subscribers
-  private[tstreams] val subscriberNotifier = new UdpEventsBroadcastClient(curatorClient, partitions = producerOptions.writePolicy.getUsedPartitions)
+  private[tstreams] val subscriberNotifier = new UdpEventsBroadcastClient(curatorClient, prefix = fullPrefix, partitions = producerOptions.writePolicy.getUsedPartitions)
   subscriberNotifier.init()
 
   /**
@@ -114,7 +104,7 @@ class Producer(var name: String,
     */
   override private[tstreams] val transactionOpenerService: TransactionOpenerService = new TransactionOpenerService(
     curatorClient = curatorClient,
-    peerKeepAliveTimeout = peerKeepAliveTimeout,
+    prefix = fullPrefix,
     producer = this,
     usedPartitions = producerOptions.writePolicy.getUsedPartitions,
     threadPoolAmount = threadPoolSize)
@@ -428,7 +418,6 @@ class Producer(var name: String,
 
     // stop function which works with subscribers
     subscriberNotifier.stop()
-    curatorClient.close()
 
     openTransactions.clear()
 

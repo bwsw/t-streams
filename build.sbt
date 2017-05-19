@@ -10,3 +10,4 @@ val baseSettings = Seq(
 lazy val root = project
   .in(file("."))
   .settings(baseSettings ++ Common.projectSettings:_*)
+
