@@ -79,7 +79,7 @@ class ProducerTransaction(partition: Int,
     *
     * @param obj some user object
     */
-  def send(obj: Array[Byte]): Unit = this.synchronized {
+  def send(obj: Array[Byte]): IProducerTransaction = this.synchronized {
     producer.checkStopped()
     producer.checkUpdateFailure()
 
@@ -99,9 +99,10 @@ class ProducerTransaction(partition: Int,
       }
     }
     if (job != null) jobs += job
+    this
   }
 
-  def send(string: String): Unit = send(string.getBytes())
+  def send(string: String): IProducerTransaction = send(string.getBytes())
 
   /**
     * Does actual send of the data that is not sent yet

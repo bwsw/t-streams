@@ -11,16 +11,11 @@ class ProducerOptions(val transactionTtlMs: Long,
                       val batchSize: Int,
                       val transactionGenerator: ITransactionGenerator,
                       val notifyJobsThreadPoolSize: Int,
-                      val coordinationOptions: CoordinationOptions)
+                      val coordinationOptions: OpenerOptions)
 
 
-class CoordinationOptions(val zkEndpoints: String,
-                          val zkPrefix: String,
-                          val zkSessionTimeoutMs: Int,
-                          val zkConnectionTimeoutMs: Int,
-                          val zkRetryDelayMs: Int,
-                          val zkRetryCount: Int,
-                          val openerServerHost: String,
-                          val openerServerPort: Int,
-                          val threadPoolSize: Int,
-                          val transportClientTimeoutMs: Int)
+class OpenerOptions(val zkPrefix: String,
+                    val openerServerHost: String,
+                    val openerServerPort: Int,
+                    val threadPoolSize: Int,
+                    val transportClientTimeoutMs: Int)

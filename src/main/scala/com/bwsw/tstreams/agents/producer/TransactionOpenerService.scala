@@ -34,12 +34,12 @@ object TransactionOpenerService {
   * Agent for providing peer to peer interaction between Producers
   *
   * @param curatorClient
-  * @param peerKeepAliveTimeout
+  * @param prefix
   * @param producer       Producer reference
   * @param usedPartitions List of used producer partitions
   */
 class TransactionOpenerService(curatorClient: CuratorFramework,
-                               peerKeepAliveTimeout: Int,
+                               prefix: String,
                                producer: Producer,
                                usedPartitions: Set[Int],
                                threadPoolAmount: Int) {
@@ -153,14 +153,14 @@ class TransactionOpenerService(curatorClient: CuratorFramework,
 
     if (!leaderMap.contains(partition)) {
       try {
-        curatorClient.create.forPath(s"/master-$partition")
+        curatorClient.create.forPath(s"$prefix/master-$partition")
       } catch {
         case e: KeeperException =>
           if (e.code() != KeeperException.Code.NODEEXISTS)
             throw e
       }
 
-      val leader = new LeaderLatch(curatorClient, s"/master-$partition", s"$myInetAddress:$myInetPort#$uniqueAgentId")
+      val leader = new LeaderLatch(curatorClient, s"$prefix/master-$partition", s"$myInetAddress:$myInetPort#$uniqueAgentId")
       if (Producer.logger.isDebugEnabled)
         Producer.logger.debug(s"[PARTITION_$partition $uniqueAgentId] Create a new leader latch with ID: $myInetAddress:$myInetPort#$uniqueAgentId")
       leaderMap(partition) = leader

@@ -21,10 +21,7 @@ object TestStorageServer {
       .withCommitLogOptions(new CommitLogOptions(commitLogCloseDelayMs = 100))
       .build()
     val l = new CountDownLatch(1)
-    new Thread(() => {
-      l.countDown()
-      transactionServer.start()
-    }).start()
+    new Thread(() => transactionServer.start(l.countDown())).start()
     l.await()
     transactionServer
   }

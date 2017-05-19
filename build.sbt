@@ -1,6 +1,6 @@
 val baseSettings = Seq(
   name := "t-streams",
-  version := "2.3.2-SNAPSHOT",
+  version := "2.4.2-SNAPSHOT",
   scalaVersion := "2.12.1",
   organization := "com.bwsw",
   organizationName := "Bitworks Software, Ltd.",
@@ -10,3 +10,4 @@ val baseSettings = Seq(
 lazy val root = project
   .in(file("."))
   .settings(baseSettings ++ Common.projectSettings:_*)
+

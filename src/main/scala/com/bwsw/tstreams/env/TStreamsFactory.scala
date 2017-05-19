@@ -6,7 +6,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 import com.bwsw.tstreams.agents.consumer.Offset.IOffset
 import com.bwsw.tstreams.agents.consumer.subscriber.{QueueBuilder, Subscriber, SubscriberOptionsBuilder}
 import com.bwsw.tstreams.agents.consumer.{Consumer, ConsumerOptions}
-import com.bwsw.tstreams.agents.producer.{CoordinationOptions, Producer, ProducerOptions}
+import com.bwsw.tstreams.agents.producer.{OpenerOptions, Producer, ProducerOptions}
 import com.bwsw.tstreams.common.{RoundRobinPolicy, _}
 import com.bwsw.tstreams.env.defaults.TStreamsFactoryProducerDefaults.PortRange
 import com.bwsw.tstreams.generator.{ITransactionGenerator, LocalTransactionGenerator}
@@ -14,6 +14,8 @@ import com.bwsw.tstreams.storage.StorageClient
 import com.bwsw.tstreams.streams.Stream
 import com.bwsw.tstreamstransactionserver.options.ClientOptions.{AuthOptions, ConnectionOptions}
 import com.bwsw.tstreamstransactionserver.options.CommonOptions.ZookeeperOptions
+import org.apache.curator.framework.CuratorFrameworkFactory
+import org.apache.curator.retry.ExponentialBackoffRetry
 import org.slf4j.LoggerFactory
 
 import scala.collection.mutable
@@ -97,9 +99,6 @@ class TStreamsFactory() {
     */
   private def pAsInt(key: String, default: Int = 0): Int = if (null == getProperty(key)) default else getProperty(key).toString.toInt
 
-  private def pAsLong(key: String, default: Long = 0L): Long = if (null == getProperty(key)) default else getProperty(key).toString.toLong
-
-
   /**
     * variant method to get option as string with default value if null
     *
@@ -125,14 +124,20 @@ class TStreamsFactory() {
 
     val authOptions = new AuthOptions(key = pAsString(co.StorageClient.Auth.key))
 
-    val zookeeperOptions = new ZookeeperOptions(
-      endpoints = pAsString(co.Coordination.endpoints),
-      prefix = pAsString(co.StorageClient.Zookeeper.prefix),
-      sessionTimeoutMs = pAsInt(co.Coordination.sessionTimeoutMs),
-      connectionTimeoutMs = pAsInt(co.Coordination.connectionTimeoutMs),
-      retryDelayMs = pAsInt(co.Coordination.retryDelayMs))
+    val zookeeperOptions = new ZookeeperOptions(prefix = pAsString(co.StorageClient.Zookeeper.prefix))
 
-    val client = new StorageClient(clientOptions = clientOptions, authOptions = authOptions, zookeeperOptions = zookeeperOptions)
+    val curator = CuratorFrameworkFactory.builder()
+      .connectionTimeoutMs(pAsInt(co.Coordination.connectionTimeoutMs))
+      .sessionTimeoutMs(pAsInt(co.Coordination.sessionTimeoutMs))
+      .retryPolicy(new ExponentialBackoffRetry(pAsInt(co.Coordination.retryDelayMs),
+        pAsInt(co.Coordination.retryCount)))
+      .connectString(pAsString(co.Coordination.endpoints)).build()
+
+    curator.start()
+
+    val client = new StorageClient(clientOptions = clientOptions,
+      authOptions = authOptions,zookeeperOptions = zookeeperOptions,
+      curator = curator)
 
     if (logger.isDebugEnabled)
       storageClientList.append(client)
@@ -249,13 +254,8 @@ class TStreamsFactory() {
     val batchSize = pAsInt(co.Producer.Transaction.batchSize, producerDefaults.Transaction.batchSize.default)
     producerDefaults.Transaction.batchSize.check(batchSize)
 
-    val cao = new CoordinationOptions(
-      zkEndpoints = pAsString(co.Coordination.endpoints),
+    val cao = new OpenerOptions(
       zkPrefix = pAsString(co.Coordination.prefix),
-      zkSessionTimeoutMs = zkSessionTimeoutMs,
-      zkConnectionTimeoutMs = zkConnectionTimeoutMs,
-      zkRetryDelayMs = pAsInt(co.Coordination.retryDelayMs),
-      zkRetryCount = pAsInt(co.Coordination.retryCount),
       openerServerHost = pAsString(co.Producer.bindHost),
       openerServerPort = port,
       threadPoolSize = threadPoolSize,
@@ -378,11 +378,6 @@ class TStreamsFactory() {
     val opts = SubscriberOptionsBuilder.fromConsumerOptions(consumerOptions,
       agentAddress = bind_host + ":" + bind_port,
       zkPrefixPath = root,
-      zkEndpoints = endpoints,
-      zkSessionTimeoutMs = sessionTimeoutMs,
-      zkConnectionTimeoutMs = connectionTimeoutMs,
-      zkRetryDelayMs = pAsInt(co.Coordination.retryDelayMs),
-      zkRetryCount = pAsInt(co.Coordination.retryCount),
       transactionsBufferWorkersThreadPoolSize = transactionBufferThreadPoolSize,
       processingEngineWorkersThreadSize = processingEnginesThreadPoolSize,
       pollingFrequencyDelayMs = pollingFrequencyDelayMs,
