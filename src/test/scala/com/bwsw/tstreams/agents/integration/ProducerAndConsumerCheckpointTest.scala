@@ -15,7 +15,6 @@ import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 class ProducerAndConsumerCheckpointTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
 
   lazy val srv = TestStorageServer.get()
-  lazy val storageClient = f.getStorageClient()
 
   lazy val producer = f.getProducer(
     name = "test_producer",
@@ -34,25 +33,9 @@ class ProducerAndConsumerCheckpointTest extends FlatSpec with Matchers with Befo
     useLastOffset = true)
 
   override def beforeAll(): Unit = {
-    f.setProperty(ConfigurationOptions.Stream.name, "test_stream").
-      setProperty(ConfigurationOptions.Stream.partitionsCount, 3).
-      setProperty(ConfigurationOptions.Stream.ttlSec, 60 * 10).
-      setProperty(ConfigurationOptions.Coordination.connectionTimeoutMs, 7000).
-      setProperty(ConfigurationOptions.Coordination.sessionTimeoutMs, 7000).
-      setProperty(ConfigurationOptions.Producer.transportTimeoutMs, 5000).
-      setProperty(ConfigurationOptions.Producer.Transaction.ttlMs, 6000).
-      setProperty(ConfigurationOptions.Producer.Transaction.keepAliveMs, 2000).
-      setProperty(ConfigurationOptions.Consumer.transactionPreload, 10).
-      setProperty(ConfigurationOptions.Consumer.dataPreload, 10).
-      setProperty(ConfigurationOptions.Producer.Transaction.batchSize, 100)
-
     srv
 
-    if(storageClient.checkStreamExists("test_stream"))
-      storageClient.deleteStream("test_stream")
-
-    storageClient.createStream("test_stream", 3, 24 * 3600, "")
-    storageClient.shutdown()
+    createNewStream()
   }
 
   it should "producer - generate many transactions, consumer - retrieve all of them with reinitialization after some time" in {

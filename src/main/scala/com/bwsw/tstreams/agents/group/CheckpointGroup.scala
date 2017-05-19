@@ -11,11 +11,11 @@ import com.bwsw.tstreamstransactionserver.rpc.TransactionStates
 import org.slf4j.LoggerFactory
 
 import scala.collection.mutable.ListBuffer
+import scala.concurrent.duration._
 
 
 object CheckpointGroup {
   var SHUTDOWN_WAIT_MAX_SECONDS = GeneralOptions.SHUTDOWN_WAIT_MAX_SECONDS
-  var LOCK_TIMEOUT_SECONDS = 20
   val logger = LoggerFactory.getLogger(this.getClass)
 }
 
@@ -76,6 +76,14 @@ class CheckpointGroup(val executors: Int = 1) {
     agents.contains(name)
   }
 
+  private def checkUpdateFailure(producers: List[CheckpointInfo]) = {
+    val availList = producers.map {
+      case ProducerCheckpointInfo(_, agent, _, _, _, _, _, _) => agent.getProducer().checkUpdateFailure()
+      case _ => 1.minute
+    }
+    availList.sorted.head
+  }
+
   /**
     * Group agents commit
     *
@@ -94,7 +102,9 @@ class CheckpointGroup(val executors: Int = 1) {
         producerRequests.append(new RPCProducerTransaction(streamName, partition, transaction, TransactionStates.Checkpointed, totalCnt, ttl))
     }
 
-    storageClient.putTransactions(producerRequests, consumerRequests)
+    //check producers update timeout
+    val availTime = checkUpdateFailure(checkpointRequests)
+    storageClient.putTransactions(producerRequests, consumerRequests, availTime)
   }
 
   /**
@@ -119,9 +129,6 @@ class CheckpointGroup(val executors: Int = 1) {
     //assume all agents use the same metadata entity
     doGroupCheckpoint(agents.head._2.getStorageClient, checkpointStateInfo)
 
-    //check producers update timeout
-    checkUpdateFailure(checkpointStateInfo)
-
     CheckpointGroup.logger.debug("Do publish notifications")
     // do publish post events for all producers
     publishCheckpointEventForAllProducers(checkpointStateInfo)
@@ -129,12 +136,7 @@ class CheckpointGroup(val executors: Int = 1) {
     CheckpointGroup.logger.debug("End checkpoint")
   }
 
-  private def checkUpdateFailure(producers: List[CheckpointInfo]) = {
-    producers foreach {
-      case ProducerCheckpointInfo(_, agent, _, _, _, _, _, _) => agent.getProducer().checkUpdateFailure()
-      case _ =>
-    }
-  }
+
 
   private def publishCheckpointEventForAllProducers(producers: List[CheckpointInfo]) = {
     producers foreach {

@@ -143,13 +143,11 @@ class Subscriber(val name: String,
     Subscriber.logger.info(s"[INIT] Subscriber $name: is about to launch the coordinator.")
 
     coordinator.bootstrap(
+      curatorClient = stream.client.curatorClient,
       agentAddress = options.agentAddress,
       stream = stream.name,
       partitions = Set[Int]().empty ++ options.readPolicy.getUsedPartitions,
-      zkRootPath = options.zkRootPath,
-      zkHosts = options.zkHosts,
-      zkConnectionTimeout = options.zkConnectionTimeoutMs,
-      zkSessionTimeout = options.zkSessionTimeoutMs)
+      zkRootPath = options.zkPrefixPath)
 
     Subscriber.logger.info(s"[INIT] Subscriber $name: has launched the coordinator.")
     Subscriber.logger.info(s"[INIT] Subscriber $name: is about to launch the UDP server.")
@@ -188,9 +186,9 @@ class Subscriber(val name: String,
     processingEngines.clear()
     transactionsBufferWorkers.foreach(kv => kv._2.stop())
     transactionsBufferWorkers.clear()
-
     coordinator.shutdown()
     consumer.stop()
+    stream.shutdown()
   }
 
   /**

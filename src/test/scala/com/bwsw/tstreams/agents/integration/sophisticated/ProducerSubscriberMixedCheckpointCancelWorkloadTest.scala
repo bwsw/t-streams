@@ -4,7 +4,6 @@ import java.util.concurrent.{CountDownLatch, TimeUnit}
 
 import com.bwsw.tstreams.agents.consumer.Offset.Oldest
 import com.bwsw.tstreams.agents.consumer.{ConsumerTransaction, TransactionOperator}
-import com.bwsw.tstreams.env.ConfigurationOptions
 import com.bwsw.tstreams.testutils.{TestStorageServer, TestUtils}
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 
@@ -19,16 +18,6 @@ class ProducerSubscriberMixedCheckpointCancelWorkloadTest extends FlatSpec with 
   val CANCEL_PROBABILITY = 0.05
 
   override def beforeAll(): Unit = {
-    f.setProperty(ConfigurationOptions.Stream.name, "test_stream").
-      setProperty(ConfigurationOptions.Stream.partitionsCount, 3).
-      setProperty(ConfigurationOptions.Stream.ttlSec, 60 * 10).
-      setProperty(ConfigurationOptions.Coordination.connectionTimeoutMs, 7000).
-      setProperty(ConfigurationOptions.Coordination.sessionTimeoutMs, 7000).
-      setProperty(ConfigurationOptions.Producer.transportTimeoutMs, 5000).
-      setProperty(ConfigurationOptions.Producer.Transaction.ttlMs, 500).
-      setProperty(ConfigurationOptions.Producer.Transaction.keepAliveMs, 100).
-      setProperty(ConfigurationOptions.Consumer.transactionPreload, 500).
-      setProperty(ConfigurationOptions.Consumer.dataPreload, 10)
   }
 
   def test(startBeforeProducerSend: Boolean = false) = {
@@ -37,13 +26,7 @@ class ProducerSubscriberMixedCheckpointCancelWorkloadTest extends FlatSpec with 
     val subscriberLatch = new CountDownLatch(1)
 
     val srv = TestStorageServer.get()
-    val storageClient = f.getStorageClient()
-
-    if(storageClient.checkStreamExists("test_stream"))
-      storageClient.deleteStream("test_stream")
-
-    storageClient.createStream("test_stream", 1, 24 * 3600, "")
-    storageClient.shutdown()
+    createNewStream()
 
     val subscriber = f.getSubscriber(name = "sv2",
       partitions = Set(0),

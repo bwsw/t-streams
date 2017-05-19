@@ -8,6 +8,7 @@ import com.bwsw.tstreamstransactionserver.options.ClientBuilder
 import com.bwsw.tstreamstransactionserver.options.ClientOptions.{AuthOptions, ConnectionOptions}
 import com.bwsw.tstreamstransactionserver.options.CommonOptions.ZookeeperOptions
 import com.bwsw.tstreamstransactionserver.rpc.{CommitLogInfo, ConsumerTransaction, ProducerTransaction, TransactionStates}
+import org.apache.curator.framework.CuratorFramework
 import org.apache.zookeeper.KeeperException.BadArgumentsException
 import org.slf4j.LoggerFactory
 
@@ -27,16 +28,27 @@ object StorageClient {
   * @param authOptions
   * @param zookeeperOptions
   */
-class StorageClient(clientOptions: ConnectionOptions, authOptions: AuthOptions, zookeeperOptions: ZookeeperOptions) {
+class StorageClient(clientOptions: ConnectionOptions,
+                    authOptions: AuthOptions,
+                    zookeeperOptions: ZookeeperOptions,
+                    curator: CuratorFramework) {
   private val clientBuilder = new ClientBuilder()
 
-  private val client = clientBuilder.withConnectionOptions(clientOptions).withAuthOptions(authOptions).withZookeeperOptions(zookeeperOptions).build()
+  private val client = clientBuilder
+    .withConnectionOptions(clientOptions)
+    .withAuthOptions(authOptions)
+    .withZookeeperOptions(zookeeperOptions)
+    .withCuratorConnection(curatorClient)
+    .build()
 
   val isShutdown = new AtomicBoolean(false)
+
+  def curatorClient = curator
 
   def shutdown() = {
     isShutdown.set(true)
     client.shutdown()
+    curator.close()
   }
 
   /**
@@ -48,7 +60,7 @@ class StorageClient(clientOptions: ConnectionOptions, authOptions: AuthOptions, 
   def loadStream(streamName: String, timeout: Duration = StorageClient.maxAwaiTimeout): Stream = {
     val rpcStream = Await.result(client.getStream(streamName), timeout).get
 
-    new Stream(client = this, id = rpcStream.id, name = rpcStream.name, partitionsCount = rpcStream.partitions,
+    new Stream(curator = curator, client = this, id = rpcStream.id, name = rpcStream.name, partitionsCount = rpcStream.partitions,
       ttl = rpcStream.ttl, description = rpcStream.description.fold("")(x => x))
   }
 
@@ -69,7 +81,7 @@ class StorageClient(clientOptions: ConnectionOptions, authOptions: AuthOptions, 
 
     StorageClient.logger.warn(s"Created stream '$streamName' with $partitionsCount partitions and TTL: $ttl seconds.")
 
-    new Stream(this, streamID, streamName, partitionsCount, ttl, description)
+    loadStream(streamName)
   }
 
 

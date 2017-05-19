@@ -19,7 +19,7 @@ object UdpEventsBroadcastClient {
   * @param curatorClient
   * @param partitions
   */
-class UdpEventsBroadcastClient(curatorClient: CuratorFramework, partitions: Set[Int]) {
+class UdpEventsBroadcastClient(curatorClient: CuratorFramework, prefix: String, partitions: Set[Int]) {
 
   private val UPDATE_PERIOD_MS = 1000
 
@@ -96,8 +96,8 @@ class UdpEventsBroadcastClient(curatorClient: CuratorFramework, partitions: Set[
     * Update subscribers on specific partition
     */
   private def updateSubscribers(partition: Int) = {
-    if (curatorClient.checkExists.forPath(s"/subscribers/$partition") != null) {
-      val newPeers = curatorClient.getChildren.forPath(s"/subscribers/$partition").asScala.toSet
+    if (curatorClient.checkExists.forPath(s"$prefix/subscribers/$partition") != null) {
+      val newPeers = curatorClient.getChildren.forPath(s"$prefix/subscribers/$partition").asScala.toSet
       partitionSubscribers.put(partition, newPeers)
     }
   }

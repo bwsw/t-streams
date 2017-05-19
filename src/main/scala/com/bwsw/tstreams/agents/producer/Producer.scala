@@ -11,8 +11,6 @@ import com.bwsw.tstreams.proto.protocol.{TransactionRequest, TransactionResponse
 import com.bwsw.tstreams.storage.StorageClient
 import com.bwsw.tstreams.streams.Stream
 import com.bwsw.tstreamstransactionserver.rpc.TransactionStates
-import org.apache.curator.framework.CuratorFrameworkFactory
-import org.apache.curator.retry.ExponentialBackoffRetry
 import org.apache.zookeeper.KeeperException
 import org.slf4j.LoggerFactory
 
@@ -48,20 +46,12 @@ class Producer(var name: String,
 
   private[tstreams] val openTransactions = new OpenTransactionsKeeper()
 
-  private val peerKeepAliveTimeout = pcs.zkSessionTimeoutMs * 2
+  val fullPrefix = java.nio.file.Paths.get(pcs.zkPrefix, stream.name).toString
 
-  val fullPrefix = java.nio.file.Paths.get(pcs.zkPrefix, stream.name).toString.substring(1)
-  private val curatorClient = CuratorFrameworkFactory.builder()
-    .namespace(fullPrefix)
-    .connectionTimeoutMs(pcs.zkConnectionTimeoutMs)
-    .sessionTimeoutMs(pcs.zkSessionTimeoutMs)
-    .retryPolicy(new ExponentialBackoffRetry(1000, 3))
-    .connectString(pcs.zkEndpoints).build()
-
-  curatorClient.start()
+  val curatorClient = stream.client.curatorClient
 
   try {
-    curatorClient.create().creatingParentContainersIfNeeded().forPath("/subscribers")
+    curatorClient.create().creatingParentContainersIfNeeded().forPath(s"$fullPrefix/subscribers")
   } catch {
     case e: KeeperException =>
       if (e.code() != KeeperException.Code.NODEEXISTS)
@@ -78,7 +68,7 @@ class Producer(var name: String,
 
 
   // this client is used to find new subscribers
-  private[tstreams] val subscriberNotifier = new UdpEventsBroadcastClient(curatorClient, partitions = producerOptions.writePolicy.getUsedPartitions)
+  private[tstreams] val subscriberNotifier = new UdpEventsBroadcastClient(curatorClient, prefix = fullPrefix, partitions = producerOptions.writePolicy.getUsedPartitions)
   subscriberNotifier.init()
 
   /**
@@ -114,7 +104,7 @@ class Producer(var name: String,
     */
   override private[tstreams] val transactionOpenerService: TransactionOpenerService = new TransactionOpenerService(
     curatorClient = curatorClient,
-    peerKeepAliveTimeout = peerKeepAliveTimeout,
+    prefix = fullPrefix,
     producer = this,
     usedPartitions = producerOptions.writePolicy.getUsedPartitions,
     threadPoolAmount = threadPoolSize)
@@ -147,13 +137,15 @@ class Producer(var name: String,
       s"Last was $lastUpdateEndTime, now is $currentTime. It's critical situation, it is marked as non functional, only stop is allowed."
 
     if(isMissedUpdate.get())
-      throw new IllegalStateException(message)
+      throw new MissedUpdateException(message)
 
     if(currentTime - lastUpdateEndTime > producerOptions.transactionTtlMs) {
       Producer.logger.error(message)
       isMissedUpdate.set(true)
-      throw new IllegalStateException(message)
+      throw new MissedUpdateException(message)
     }
+    val avail = producerOptions.transactionTtlMs - (currentTime - lastUpdateEndTime) - 1
+    avail.milliseconds
   }
 
   private[tstreams] def checkStopped(setState: Boolean = false) = {
@@ -311,7 +303,6 @@ class Producer(var name: String,
 
   def checkpoint() = {
     checkStopped()
-    checkUpdateFailure()
     if (firstCheckpoint.getAndSet(false)) cg.add(this)
     cg.checkpoint()
   }
@@ -409,7 +400,7 @@ class Producer(var name: String,
   /**
     * Stop this agent
     */
-  def stop() = {
+  def stop() = this.synchronized {
     Producer.logger.info(s"Producer $name[${transactionOpenerService.getUniqueAgentID()}] is shutting down.")
     cancel()
     checkStopped(true)
@@ -427,11 +418,10 @@ class Producer(var name: String,
 
     // stop function which works with subscribers
     subscriberNotifier.stop()
-    curatorClient.close()
 
     openTransactions.clear()
 
-    stream.client.shutdown()
+    stream.shutdown()
   }
 
 

@@ -1,7 +1,6 @@
 package com.bwsw.tstreams.agents.producer
 
 import java.util.concurrent.atomic.AtomicBoolean
-import java.util.concurrent.locks.ReentrantLock
 
 import com.bwsw.tstreams.agents.group.ProducerCheckpointInfo
 import com.bwsw.tstreams.proto.protocol.TransactionState
@@ -26,10 +25,7 @@ class ProducerTransaction(partition: Int,
                           transactionID: Long,
                           producer: Producer) extends IProducerTransaction {
 
-  private val transactionLock = new ReentrantLock()
-
   private val data = new ProducerTransactionData(this, producer.stream.ttl, producer.stream.client)
-
   private val isTransactionClosed = new AtomicBoolean(false)
 
   /**
@@ -83,7 +79,7 @@ class ProducerTransaction(partition: Int,
     *
     * @param obj some user object
     */
-  def send(obj: Array[Byte]): Unit = this.synchronized {
+  def send(obj: Array[Byte]): IProducerTransaction = this.synchronized {
     producer.checkStopped()
     producer.checkUpdateFailure()
 
@@ -103,9 +99,10 @@ class ProducerTransaction(partition: Int,
       }
     }
     if (job != null) jobs += job
+    this
   }
 
-  def send(string: String): Unit = send(string.getBytes())
+  def send(string: String): IProducerTransaction = send(string.getBytes())
 
   /**
     * Does actual send of the data that is not sent yet
@@ -167,8 +164,8 @@ class ProducerTransaction(partition: Int,
       val transactionRecord = new RPCProducerTransaction(producer.stream.id, partition, transactionID,
         TransactionStates.Checkpointed, getDataItemsCount, producer.stream.ttl)
 
-      producer.checkUpdateFailure()
-      producer.stream.client.putTransactionWithDataSync(transactionRecord, data.items, data.lastOffset)
+      val availTime = producer.checkUpdateFailure()
+      producer.stream.client.putTransactionWithDataSync(transactionRecord, data.items, data.lastOffset, availTime)
 
       Try(producer.checkUpdateFailure()) match {
         case Success(_) =>

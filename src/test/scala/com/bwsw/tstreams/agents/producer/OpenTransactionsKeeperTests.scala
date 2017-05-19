@@ -37,7 +37,7 @@ class OpenTransactionsKeeperTests extends FlatSpec with Matchers {
 
     override def markAsClosed(): Unit = {}
 
-    override def send(obj: Array[Byte]): Unit = {}
+    override def send(obj: Array[Byte]): IProducerTransaction = null
 
     override private[tstreams] def getUpdateInfo(): Option[RPCProducerTransaction] = None
 

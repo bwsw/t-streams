@@ -2,8 +2,7 @@ package com.bwsw.tstreams.agents.consumer.subscriber
 
 import java.util.concurrent.atomic.AtomicBoolean
 
-import org.apache.curator.framework.{CuratorFramework, CuratorFrameworkFactory}
-import org.apache.curator.retry.ExponentialBackoffRetry
+import org.apache.curator.framework.CuratorFramework
 import org.apache.zookeeper.CreateMode
 
 /**
@@ -15,17 +14,15 @@ class Coordinator() {
   var stream: String = null
   var curatorClient: CuratorFramework = null
   var partitions: Set[Int] = null
+  var namespace: String = null
 
 
   val isInitialized = new AtomicBoolean(false)
 
-  def bootstrap(agentAddress: String,
+  def bootstrap(curatorClient: CuratorFramework, agentAddress: String,
                 stream: String,
                 partitions: Set[Int],
-                zkRootPath: String,
-                zkHosts: String,
-                zkSessionTimeout: Int,
-                zkConnectionTimeout: Int) = this.synchronized {
+                zkRootPath: String) = this.synchronized {
 
     if (isInitialized.getAndSet(true))
       throw new IllegalStateException("Failed to initialize object as it's already initialized.")
@@ -33,17 +30,8 @@ class Coordinator() {
     this.agentAddress = agentAddress
     this.stream = stream
     this.partitions = partitions
-
-    val namespace = java.nio.file.Paths.get(zkRootPath, stream).toString.substring(1)
-    curatorClient = CuratorFrameworkFactory.builder()
-      .namespace(namespace)
-      .connectionTimeoutMs(zkConnectionTimeout * 1000)
-      .sessionTimeoutMs(zkSessionTimeout * 1000)
-      .retryPolicy(new ExponentialBackoffRetry(1000, 3))
-      .connectString(zkHosts).build()
-
-    curatorClient.start()
-
+    this.namespace = java.nio.file.Paths.get(zkRootPath, stream).toString
+    this.curatorClient = curatorClient
     initializeState()
   }
 
@@ -55,9 +43,7 @@ class Coordinator() {
       throw new IllegalStateException("Failed to stop object as it's already stopped.")
 
     partitions.foreach(p =>
-      curatorClient.delete().forPath(s"/subscribers/$p/$agentAddress"))
-
-    curatorClient.close()
+      curatorClient.delete().forPath(s"$namespace/subscribers/$p/$agentAddress"))
   }
 
   /**
@@ -66,7 +52,7 @@ class Coordinator() {
     */
   private def initializeState(): Unit = {
     partitions.foreach(p =>
-      curatorClient.create().creatingParentsIfNeeded().withMode(CreateMode.EPHEMERAL).forPath(s"/subscribers/$p/$agentAddress"))
+      curatorClient.create().creatingParentsIfNeeded().withMode(CreateMode.EPHEMERAL).forPath(s"$namespace/subscribers/$p/$agentAddress"))
   }
 
 }

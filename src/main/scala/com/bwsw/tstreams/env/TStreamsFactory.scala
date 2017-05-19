@@ -6,7 +6,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 import com.bwsw.tstreams.agents.consumer.Offset.IOffset
 import com.bwsw.tstreams.agents.consumer.subscriber.{QueueBuilder, Subscriber, SubscriberOptionsBuilder}
 import com.bwsw.tstreams.agents.consumer.{Consumer, ConsumerOptions}
-import com.bwsw.tstreams.agents.producer.{CoordinationOptions, Producer, ProducerOptions}
+import com.bwsw.tstreams.agents.producer.{OpenerOptions, Producer, ProducerOptions}
 import com.bwsw.tstreams.common.{RoundRobinPolicy, _}
 import com.bwsw.tstreams.env.defaults.TStreamsFactoryProducerDefaults.PortRange
 import com.bwsw.tstreams.generator.{ITransactionGenerator, LocalTransactionGenerator}
@@ -14,6 +14,8 @@ import com.bwsw.tstreams.storage.StorageClient
 import com.bwsw.tstreams.streams.Stream
 import com.bwsw.tstreamstransactionserver.options.ClientOptions.{AuthOptions, ConnectionOptions}
 import com.bwsw.tstreamstransactionserver.options.CommonOptions.ZookeeperOptions
+import org.apache.curator.framework.CuratorFrameworkFactory
+import org.apache.curator.retry.ExponentialBackoffRetry
 import org.slf4j.LoggerFactory
 
 import scala.collection.mutable
@@ -97,9 +99,6 @@ class TStreamsFactory() {
     */
   private def pAsInt(key: String, default: Int = 0): Int = if (null == getProperty(key)) default else getProperty(key).toString.toInt
 
-  private def pAsLong(key: String, default: Long = 0L): Long = if (null == getProperty(key)) default else getProperty(key).toString.toLong
-
-
   /**
     * variant method to get option as string with default value if null
     *
@@ -115,19 +114,30 @@ class TStreamsFactory() {
   }
 
   def getStorageClient() = this.synchronized {
-    val clientOptions = new ConnectionOptions(connectionTimeoutMs = pAsInt(co.StorageClient.connectionTimeoutMs),
+
+    val clientOptions = new ConnectionOptions(
+      connectionTimeoutMs = pAsInt(co.StorageClient.connectionTimeoutMs),
       retryDelayMs = pAsInt(co.StorageClient.retryDelayMs),
-      threadPool = pAsInt(co.StorageClient.threadPool))
+      threadPool = pAsInt(co.StorageClient.threadPool),
+      requestTimeoutMs = pAsInt(co.StorageClient.requestTimeoutMs),
+      requestTimeoutRetryCount = pAsInt(co.StorageClient.requestTimeoutRetryCount))
 
     val authOptions = new AuthOptions(key = pAsString(co.StorageClient.Auth.key))
 
-    val zookeeperOptions = new ZookeeperOptions(endpoints = pAsString(co.StorageClient.Zookeeper.endpoints),
-      prefix = pAsString(co.StorageClient.Zookeeper.prefix),
-      sessionTimeoutMs = pAsInt(co.StorageClient.Zookeeper.sessionTimeoutMs),
-      connectionTimeoutMs = pAsInt(co.StorageClient.Zookeeper.connectionTimeoutMs),
-      retryDelayMs = pAsInt(co.StorageClient.Zookeeper.retryDelayMs))
+    val zookeeperOptions = new ZookeeperOptions(prefix = pAsString(co.StorageClient.Zookeeper.prefix))
 
-    val client = new StorageClient(clientOptions = clientOptions, authOptions = authOptions, zookeeperOptions = zookeeperOptions)
+    val curator = CuratorFrameworkFactory.builder()
+      .connectionTimeoutMs(pAsInt(co.Coordination.connectionTimeoutMs))
+      .sessionTimeoutMs(pAsInt(co.Coordination.sessionTimeoutMs))
+      .retryPolicy(new ExponentialBackoffRetry(pAsInt(co.Coordination.retryDelayMs),
+        pAsInt(co.Coordination.retryCount)))
+      .connectString(pAsString(co.Coordination.endpoints)).build()
+
+    curator.start()
+
+    val client = new StorageClient(clientOptions = clientOptions,
+      authOptions = authOptions,zookeeperOptions = zookeeperOptions,
+      curator = curator)
 
     if (logger.isDebugEnabled)
       storageClientList.append(client)
@@ -220,20 +230,14 @@ class TStreamsFactory() {
     val coordinationDefaults = defaults.TStreamsFactoryCoordinationDefaults.Coordination
     val producerDefaults = defaults.TStreamsFactoryProducerDefaults.Producer
 
-    val sessionTimeoutMs = pAsInt(co.Coordination.sessionTimeoutMs, coordinationDefaults.sessionTimeoutMs.default)
-    coordinationDefaults.sessionTimeoutMs.check(sessionTimeoutMs)
+    val zkSessionTimeoutMs = pAsInt(co.Coordination.sessionTimeoutMs, coordinationDefaults.sessionTimeoutMs.default)
+    coordinationDefaults.sessionTimeoutMs.check(zkSessionTimeoutMs)
 
-    val connectionTimeoutMs = pAsInt(co.Coordination.connectionTimeoutMs, coordinationDefaults.connectionTimeoutMs.default)
-    coordinationDefaults.connectionTimeoutMs.check(connectionTimeoutMs)
+    val zkConnectionTimeoutMs = pAsInt(co.Coordination.connectionTimeoutMs, coordinationDefaults.connectionTimeoutMs.default)
+    coordinationDefaults.connectionTimeoutMs.check(zkConnectionTimeoutMs)
 
-    val transportClientTimeoutMs = pAsInt(co.Producer.transportTimeoutMs, producerDefaults.transportTimeoutMs.default)
-    producerDefaults.transportTimeoutMs.check(transportClientTimeoutMs)
-
-    val transportClientRetryDelayMs = pAsInt(co.Producer.transportRetryDelayMs, producerDefaults.transportRetryDelayMs.default)
-    producerDefaults.transportRetryDelayMs.check(transportClientRetryDelayMs)
-
-    val transportClientRetryCount = pAsInt(co.Producer.transportRetryCount, producerDefaults.transportRetryCount.default)
-    producerDefaults.transportRetryCount.check(transportClientRetryCount)
+    val transportClientTimeoutMs = pAsInt(co.Producer.openTimeoutMs, producerDefaults.openTimeoutMs.default)
+    producerDefaults.openTimeoutMs.check(transportClientTimeoutMs)
 
     val threadPoolSize = pAsInt(co.Producer.threadPoolSize, producerDefaults.threadPoolSize.default)
     producerDefaults.threadPoolSize.check(threadPoolSize)
@@ -250,17 +254,12 @@ class TStreamsFactory() {
     val batchSize = pAsInt(co.Producer.Transaction.batchSize, producerDefaults.Transaction.batchSize.default)
     producerDefaults.Transaction.batchSize.check(batchSize)
 
-    val cao = new CoordinationOptions(
-      zkEndpoints = pAsString(co.Coordination.endpoints),
+    val cao = new OpenerOptions(
       zkPrefix = pAsString(co.Coordination.prefix),
-      zkSessionTimeoutMs = sessionTimeoutMs,
-      zkConnectionTimeoutMs = connectionTimeoutMs,
       openerServerHost = pAsString(co.Producer.bindHost),
       openerServerPort = port,
       threadPoolSize = threadPoolSize,
-      transportClientTimeoutMs = transportClientTimeoutMs,
-      transportClientRetryCount = transportClientRetryCount,
-      transportClientRetryDelayMs = transportClientRetryDelayMs)
+      transportClientTimeoutMs = transportClientTimeoutMs)
 
     var writePolicy: AbstractPolicy = null
 
@@ -376,14 +375,9 @@ class TStreamsFactory() {
     val transactionQueueMaxLengthThreshold = pAsInt(co.Consumer.Subscriber.transactionQueueMaxLengthThreshold, consumerDefaults.Consumer.Subscriber.transactionQueueMaxLengthThreshold.default)
     consumerDefaults.Consumer.Subscriber.transactionQueueMaxLengthThreshold.check(transactionQueueMaxLengthThreshold)
 
-    val queue_path = pAsString(co.Consumer.Subscriber.persistentQueuePath)
-
     val opts = SubscriberOptionsBuilder.fromConsumerOptions(consumerOptions,
       agentAddress = bind_host + ":" + bind_port,
       zkPrefixPath = root,
-      zkEndpoints = endpoints,
-      zkSessionTimeoutMs = sessionTimeoutMs,
-      zkConnectionTimeoutMs = connectionTimeoutMs,
       transactionsBufferWorkersThreadPoolSize = transactionBufferThreadPoolSize,
       processingEngineWorkersThreadSize = processingEnginesThreadPoolSize,
       pollingFrequencyDelayMs = pollingFrequencyDelayMs,

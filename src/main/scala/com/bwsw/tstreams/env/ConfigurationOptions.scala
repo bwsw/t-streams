@@ -15,22 +15,16 @@ object ConfigurationOptions {
   object StorageClient {
 
     object Zookeeper {
-      val endpoints = "storage-client.zk.endpoints"
       val prefix = "storage-client.zk.prefix"
-      val sessionTimeoutMs = "storage-client.zk.session-timeout-ms"
-      val connectionTimeoutMs = "storage-client.zk.connection-timeout-ms"
-      val retryDelayMs = "storage-client.zk.retry-delay-ms"
     }
 
     object Auth {
       val key = "storage-client.auth.key"
-      val connectionTimeoutMs = "storage-client.auth.connection-timeout-ms"
-      val retryDelayMs = "storage-client.auth.retry-delay-ms"
-      val tokenConnectionTimeoutMs = "storage-client.auth.token-connection-timeout-ms"
-      val tokenRetryDelayMs = "storage-client.auth.token-retry-delay-ms"
     }
 
     val connectionTimeoutMs = "storage-client.connection-timeout-ms"
+    val requestTimeoutMs = "storage-client.request-timeout-ms"
+    val requestTimeoutRetryCount = "storage-client.request-timeout-retry-count"
     val retryDelayMs = "storage-client.retry-delay-ms"
     val threadPool = "storage-client.thread-pool"
   }
@@ -60,13 +54,22 @@ object ConfigurationOptions {
     /**
       * ZK ttl for coordination
       */
-    val sessionTimeoutMs = "coordination.ttl"
+    val sessionTimeoutMs = "coordination.ttl-ms"
 
     /**
       * ZK connection timeout
       */
     val connectionTimeoutMs = "coordination.connection-timeout"
 
+    /**
+      *
+      */
+    val retryDelayMs = "coordination.zk.retry-delay-ms"
+
+    /**
+      *
+      */
+    val retryCount = "coordination.zk.retry-count"
   }
 
 
@@ -96,17 +99,7 @@ object ConfigurationOptions {
     /**
       * Transport timeout is maximum time to wait for master to respond
       */
-    val transportTimeoutMs = "producer.transport-timeout"
-
-    /**
-      * Retry count for transport failures
-      */
-    val transportRetryCount = "producer.transport-retry-count"
-
-    /**
-      * Retry delay for transport failures
-      */
-    val transportRetryDelayMs = "producer.transport-retry-delay"
+    val openTimeoutMs = "producer.open-timeout-ms"
 
 
     object Transaction {
@@ -114,10 +107,7 @@ object ConfigurationOptions {
         * TTL of transaction to wait until determine it's broken
         */
       val ttlMs = "producer.transaction.ttl"
-      /**
-        * Time to wait for successful end of opening operation on master for transaction
-        */
-      val openMaxWaitMs = "producer.transaction.open-maxwait"
+
       /**
         * Time to update transaction state (keep it alive for long transactions)
         */
