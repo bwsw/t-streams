@@ -26,8 +26,8 @@ class CheckpointGroup(val executors: Int = 1) {
   /**
     * Group of agents (producers/consumer)
     */
-  private var agents = scala.collection.mutable.Map[String, GroupParticipant]()
-  private val executorPool = new FirstFailLockableTaskExecutor("CheckpointGroup-Workers", executors)
+  private val agents = scala.collection.mutable.Map[String, GroupParticipant]()
+  private lazy val executorPool = new FirstFailLockableTaskExecutor("CheckpointGroup-Workers", executors)
   private val isStopped = new AtomicBoolean(false)
 
   /**
@@ -114,26 +114,33 @@ class CheckpointGroup(val executors: Int = 1) {
     if (isStopped.get)
       throw new IllegalStateException("Group is stopped. No longer operations are possible.")
 
-    CheckpointGroup.logger.debug("Complete send data to storage server for all participants")
+    val log = CheckpointGroup.logger
+
+    if(log.isDebugEnabled())
+      log.debug("Complete send data to storage server for all participants")
+
     agents.foreach { case (name, agent) => if (agent.isInstanceOf[SendingAgent]) agent.asInstanceOf[SendingAgent].finalizeDataSend() }
 
-    CheckpointGroup.logger.debug("Gather checkpoint information from participants")
+    if(log.isDebugEnabled())
+      log.debug("Gather checkpoint information from participants")
+
     // receive from all agents their checkpoint information
     val checkpointStateInfo: List[CheckpointInfo] = agents.map { case (name, agent) =>
       agent.getCheckpointInfoAndClear()
     }.reduceRight((l1, l2) => l1 ++ l2)
 
-    CheckpointGroup.logger.debug(s"CheckpointGroup Info ${checkpointStateInfo}")
-
-    CheckpointGroup.logger.debug("Do group checkpoint")
+    if(log.isDebugEnabled()) {
+      log.debug(s"CheckpointGroup Info ${checkpointStateInfo}")
+      log.debug("Do group checkpoint")
+    }
     //assume all agents use the same metadata entity
     doGroupCheckpoint(agents.head._2.getStorageClient, checkpointStateInfo)
 
-    CheckpointGroup.logger.debug("Do publish notifications")
-    // do publish post events for all producers
+    if(log.isDebugEnabled()) log.debug("Do publish notifications")
+
     publishCheckpointEventForAllProducers(checkpointStateInfo)
 
-    CheckpointGroup.logger.debug("End checkpoint")
+    if(log.isDebugEnabled()) log.debug("End checkpoint")
   }
 
 
