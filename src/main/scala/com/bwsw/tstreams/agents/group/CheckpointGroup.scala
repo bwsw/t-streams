@@ -24,7 +24,7 @@ object CheckpointGroup {
   */
 class CheckpointGroup(val executors: Int = 1) {
   /**
-    * Group of agents (producers/consumer)
+    * Group of agents (checkpointInfo/consumer)
     */
   private val agents = scala.collection.mutable.Map[String, GroupParticipant]()
   private lazy val executorPool = new FirstFailLockableTaskExecutor("CheckpointGroup-Workers", executors)
@@ -88,7 +88,7 @@ class CheckpointGroup(val executors: Int = 1) {
     * Group agents commit
     *
     * @param checkpointRequests Info to commit
-    *                           (used only for consumers now; producers is not atomic)
+    *                           (used only for consumers now; checkpointInfo is not atomic)
     */
   private def doGroupCheckpoint(storageClient: StorageClient, checkpointRequests: List[CheckpointInfo]): Unit = {
     val producerRequests = ListBuffer[RPCProducerTransaction]()
@@ -102,7 +102,7 @@ class CheckpointGroup(val executors: Int = 1) {
         producerRequests.append(new RPCProducerTransaction(streamName, partition, transaction, TransactionStates.Checkpointed, totalCnt, ttl))
     }
 
-    //check producers update timeout
+    //check checkpointInfo update timeout
     val availTime = checkUpdateFailure(checkpointRequests)
     storageClient.putTransactions(producerRequests, consumerRequests, availTime)
   }
@@ -145,8 +145,8 @@ class CheckpointGroup(val executors: Int = 1) {
 
 
 
-  private def publishCheckpointEventForAllProducers(producers: List[CheckpointInfo]) = {
-    producers foreach {
+  private def publishCheckpointEventForAllProducers(checkpointInfo: List[CheckpointInfo]) = {
+    checkpointInfo foreach {
       case ProducerCheckpointInfo(_, agent, checkpointEvent, _, _, _, _, _) =>
         executorPool.submit("<CheckpointEvent>", () => agent.getSubscriberNotifier().publish(checkpointEvent), None)
       case _ =>

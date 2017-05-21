@@ -3,7 +3,7 @@ package com.bwsw.tstreams.agents.producer
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.{CountDownLatch, TimeUnit}
 
-import com.bwsw.tstreams.agents.group.{CheckpointGroup, CheckpointInfo, GroupParticipant, SendingAgent}
+import com.bwsw.tstreams.agents.group._
 import com.bwsw.tstreams.agents.producer.NewProducerTransactionPolicy.ProducerPolicy
 import com.bwsw.tstreams.common._
 import com.bwsw.tstreams.coordination.client.UdpEventsBroadcastClient
@@ -47,7 +47,6 @@ class Producer(var name: String,
   private lazy val transactionKeepAliveThread = getTransactionKeepAliveThread
   private val threadPoolSize = calculateThreadPoolSize
   private val log = Producer.logger
-  private val firstCheckpoint = new AtomicBoolean(true)
 
   private[tstreams] val openTransactions = new OpenTransactionsKeeper()
   private[tstreams] val notifyService = new FirstFailLockableTaskExecutor(s"NotifyService-$name", producerOptions.notifyJobsThreadPoolSize)
@@ -64,8 +63,6 @@ class Producer(var name: String,
     threadPoolAmount = threadPoolSize)
 
   log.info(s"Start new Basic producer with id: ${transactionOpenerService.getUniqueAgentID()}, name : $name, streamName : ${stream.name}, streamPartitions : ${stream.partitionsCount}")
-
-  private lazy val cg = new CheckpointGroup()
 
   try {
     curatorClient.create().creatingParentContainersIfNeeded().forPath(s"$fullPrefix/subscribers")
@@ -166,7 +163,7 @@ class Producer(var name: String,
           if(log.isDebugEnabled())
             log.debug(s"Producer $name[${transactionOpenerService.getUniqueAgentID()}] - update is started for long lasting transactions")
 
-          val transactionStates = openTransactions.forallKeysDo((part: Int, transaction: IProducerTransaction) => transaction.getUpdateInfo)
+          val transactionStates = openTransactions.forallTransactionsDo((part: Int, transaction: IProducerTransaction) => transaction.getUpdateInfo)
           stream.client.putTransactions(transactionStates.flatten.toSeq, Seq())
 
           if(log.isDebugEnabled())
@@ -182,7 +179,7 @@ class Producer(var name: String,
                 s"Last was $lastUpdateEndTime, now is $currentUpdateEndTime. " +
                 "It's critical situation, it is marked as non functional, only stop is allowed.")
           }
-          openTransactions.forallKeysDo((part: Int, transaction: IProducerTransaction) => transaction.notifyUpdate())
+          openTransactions.forallTransactionsDo((part: Int, transaction: IProducerTransaction) => transaction.notifyUpdate())
           lastUpdateEndTime = currentUpdateEndTime
         }
       }
@@ -295,49 +292,94 @@ class Producer(var name: String,
     openTransactions.getTransactionSetOption(partition).map(v => v._2.filter(!_.isClosed))
   }
 
-
-  def checkpoint() = {
-    checkStopped()
-    if (firstCheckpoint.getAndSet(false)) cg.add(this)
-    cg.checkpoint()
+  private def doCheckpoint(checkpointRequests: Seq[CheckpointInfo]) = {
+    val producerRequests = checkpointRequests.map {
+      case ProducerCheckpointInfo(_, _, _, streamName, partition, transaction, totalCnt, ttl) =>
+        new RPCProducerTransaction(streamName, partition, transaction, TransactionStates.Checkpointed, totalCnt, ttl)
+      case _ => throw new IllegalStateException("Only ProducerCheckpointInfo allowed here.")
+    }
+    val availTime = checkUpdateFailure()
+    stream.client.putTransactions(producerRequests, Seq(), availTime)
   }
 
+  private def notifyCheckpoint(checkpointInfo: Seq[CheckpointInfo]) = {
+    checkpointInfo foreach {
+      case ProducerCheckpointInfo(_, agent, checkpointEvent, _, _, _, _, _) =>
+        notifyService.submit("<CheckpointEvent>", () => agent.getSubscriberNotifier().publish(checkpointEvent), None)
+      case _ =>
+    }
+  }
+
+  def checkpoint(): Producer = this.synchronized {
+    checkStopped()
+    checkUpdateFailure()
+    finalizeDataSend()
+    val checkpointRequests = getCheckpointInfoAndClear()
+    doCheckpoint(checkpointRequests)
+    notifyCheckpoint(checkpointRequests)
+    this
+  }
+
+  def checkpoint(partition: Int): Producer = this.synchronized {
+    checkStopped()
+    checkUpdateFailure()
+    finalizePartitionDataSend(partition)
+    val checkpointRequests = getPartitionCheckpointInfoAndClear(partition)
+    doCheckpoint(checkpointRequests)
+    notifyCheckpoint(checkpointRequests)
+    this
+  }
 
   private def cancelPendingTransactions() = this.synchronized {
-    val transactionStates = openTransactions.forallKeysDo((part: Int, transaction: IProducerTransaction) => transaction.getCancelInfoAndClose)
+    val transactionStates = openTransactions.forallTransactionsDo((part: Int, transaction: IProducerTransaction) => transaction.getCancelInfoAndClose)
     stream.client.putTransactions(transactionStates.flatten.toSeq, Seq())
-    openTransactions.forallKeysDo((k: Int, v: IProducerTransaction) => v.notifyCancelEvent())
+    openTransactions.forallTransactionsDo((k: Int, v: IProducerTransaction) => v.notifyCancelEvent())
     openTransactions.clear()
   }
 
   /**
     * Cancel all opened transactions (not atomic, probably atomic is not a case for a cancel).
     */
-  def cancel(): Unit = {
+  def cancel(): Producer = {
     checkStopped()
     checkUpdateFailure()
     cancelPendingTransactions()
+    this
   }
 
 
   /**
     * Finalize all opened transactions (not atomic). For atomic use CheckpointGroup.
     */
-  override private[tstreams] def finalizeDataSend(): Unit = {
+  override private[tstreams] def finalizeDataSend(): Unit = this.synchronized {
     checkStopped()
     checkUpdateFailure()
-    openTransactions.forallKeysDo((k: Int, v: IProducerTransaction) => v.finalizeDataSend())
+    openTransactions.forallTransactionsDo((k: Int, t: IProducerTransaction) => t.finalizeDataSend())
+  }
+
+  private def finalizePartitionDataSend(partition: Int): Unit = this.synchronized {
+    checkStopped()
+    checkUpdateFailure()
+    openTransactions.forPartitionTransactionsDo(partition, (t: IProducerTransaction) => t.finalizeDataSend())
   }
 
   /**
     * Info to commit
     */
-  override private[tstreams] def getCheckpointInfoAndClear(): List[CheckpointInfo] = {
+  override private[tstreams] def getCheckpointInfoAndClear(): List[CheckpointInfo] = this.synchronized {
     checkStopped()
     checkUpdateFailure()
-    val checkpointInfo = openTransactions.forallKeysDo((k: Int, v: IProducerTransaction) => v.getCheckpointInfo).toList
+    val checkpointInfo = openTransactions.forallTransactionsDo((k: Int, v: IProducerTransaction) => v.getCheckpointInfo).toList
     openTransactions.clear()
     checkpointInfo
+  }
+
+  private def getPartitionCheckpointInfoAndClear(partition: Int): Seq[CheckpointInfo] = this.synchronized {
+    checkStopped()
+    checkUpdateFailure()
+    val res = openTransactions.getTransactionSetOption(partition).map(partData => partData._2.map(txn => txn.getCheckpointInfo))
+    openTransactions.clear(partition)
+    res.fold(Seq[CheckpointInfo]())(resInt => resInt.toSeq)
   }
 
   /**
@@ -400,7 +442,6 @@ class Producer(var name: String,
       log.info(s"Producer $name[${transactionOpenerService.getUniqueAgentID()}] is shutting down.")
       cancel()
       checkStopped(true)
-      cg.stop()
       openTransactionClient.stop()
       // stop provide master features to public
       transactionOpenerService.stop()

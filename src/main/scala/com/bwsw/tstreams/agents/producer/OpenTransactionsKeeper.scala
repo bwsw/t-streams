@@ -19,7 +19,7 @@ class OpenTransactionsKeeper {
     * @tparam RV
     * @return
     */
-  def forallKeysDo[RV](f: (Int, IProducerTransaction) => RV): Iterable[RV] = openTransactionsMap.synchronized {
+  def forallTransactionsDo[RV](f: (Int, IProducerTransaction) => RV): Iterable[RV] = openTransactionsMap.synchronized {
     val res = ListBuffer[RV]()
     openTransactionsMap.keys.foreach(partition =>
       openTransactionsMap.get(partition)
@@ -29,6 +29,14 @@ class OpenTransactionsKeeper {
     res
   }
 
+  def forPartitionTransactionsDo[RV](partition: Int, f: (IProducerTransaction) => RV): Iterable[RV] = openTransactionsMap.synchronized {
+    val res = ListBuffer[RV]()
+    openTransactionsMap.get(partition)
+      .foreach(txnSetValue => {
+        res ++= txnSetValue._2.map(txn => f(txn))
+      })
+    res
+  }
   /**
     * Returns if transaction is in map without checking if it's not closed
     *
@@ -96,6 +104,10 @@ class OpenTransactionsKeeper {
     */
   def clear() = openTransactionsMap.synchronized {
     openTransactionsMap.clear()
+  }
+
+  def clear(partition: Int) = openTransactionsMap.synchronized {
+    openTransactionsMap.remove(partition)
   }
 
 }
