@@ -310,22 +310,24 @@ class Producer(var name: String,
     }
   }
 
-  def checkpoint() = this.synchronized {
+  def checkpoint(): Producer = this.synchronized {
     checkStopped()
     checkUpdateFailure()
     finalizeDataSend()
     val checkpointRequests = getCheckpointInfoAndClear()
     doCheckpoint(checkpointRequests)
     notifyCheckpoint(checkpointRequests)
+    this
   }
 
-  def checkpoint(partition: Int) = this.synchronized {
+  def checkpoint(partition: Int): Producer = this.synchronized {
     checkStopped()
     checkUpdateFailure()
     finalizePartitionDataSend(partition)
     val checkpointRequests = getPartitionCheckpointInfoAndClear(partition)
     doCheckpoint(checkpointRequests)
     notifyCheckpoint(checkpointRequests)
+    this
   }
 
   private def cancelPendingTransactions() = this.synchronized {
@@ -338,10 +340,11 @@ class Producer(var name: String,
   /**
     * Cancel all opened transactions (not atomic, probably atomic is not a case for a cancel).
     */
-  def cancel(): Unit = {
+  def cancel(): Producer = {
     checkStopped()
     checkUpdateFailure()
     cancelPendingTransactions()
+    this
   }
 
 
@@ -374,7 +377,7 @@ class Producer(var name: String,
   private def getPartitionCheckpointInfoAndClear(partition: Int): Seq[CheckpointInfo] = this.synchronized {
     checkStopped()
     checkUpdateFailure()
-    val res = getOpenedTransactionsForPartition(partition).map(data => data.map(txn => txn.getCheckpointInfo))
+    val res = openTransactions.getTransactionSetOption(partition).map(partData => partData._2.map(txn => txn.getCheckpointInfo))
     openTransactions.clear(partition)
     res.fold(Seq[CheckpointInfo]())(resInt => resInt.toSeq)
   }
