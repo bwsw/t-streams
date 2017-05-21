@@ -316,17 +316,19 @@ class Consumer(val name: String,
   }
 
   def stop() = {
+    try {
+      if (isStopped.getAndSet(true))
+        throw new IllegalStateException(s"Consumer $name is stopped already. Unable to stop it again.")
 
-    if (isStopped.getAndSet(true))
-      throw new IllegalStateException(s"Consumer $name is stopped already. Unable to stop it again.")
+      if (!isStarted.getAndSet(false))
+        throw new IllegalStateException(s"Consumer $name is not started. Start consumer first.")
 
-    if (!isStarted.getAndSet(false))
-      throw new IllegalStateException(s"Consumer $name is not started. Start consumer first.")
-
-    checkpointOffsets.clear()
-    currentOffsets.clear()
-    transactionBuffer.clear()
-    stream.shutdown()
+      checkpointOffsets.clear()
+      currentOffsets.clear()
+      transactionBuffer.clear()
+    } finally {
+      stream.shutdown()
+    }
   }
 
   /**

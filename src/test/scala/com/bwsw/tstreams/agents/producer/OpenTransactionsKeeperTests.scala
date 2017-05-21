@@ -79,7 +79,7 @@ class OpenTransactionsKeeperTests extends FlatSpec with Matchers {
     keeper.put(0, new TransactionStub)
     keeper.put(1, new TransactionStub)
     keeper.put(2, new TransactionStub)
-    keeper.forallKeysDo[Unit]((p: Int, t: IProducerTransaction) => t.notifyUpdate())
+    keeper.forallTransactionsDo[Unit]((p: Int, t: IProducerTransaction) => t.notifyUpdate())
     ctr shouldBe 3
   }
 

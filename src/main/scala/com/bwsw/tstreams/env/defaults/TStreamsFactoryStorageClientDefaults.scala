@@ -11,7 +11,7 @@ import scala.collection.mutable
 object TStreamsFactoryStorageClientDefaults {
 
   object StorageClient {
-    val threadPool = IntMinMaxDefault(1, 4, 4)
+    val threadPool = IntMinMaxDefault(1, 32, 4)
     val connectionTimeoutMs = IntMinMaxDefault(1000, 10000, 5000)
     val requestTimeoutMs = IntMinMaxDefault(100, 5000, 5000)
     val requestTimeoutRetryCount = IntMinMaxDefault(1, 20, 5)
