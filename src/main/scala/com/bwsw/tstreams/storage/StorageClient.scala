@@ -46,9 +46,10 @@ class StorageClient(clientOptions: ConnectionOptions,
   def curatorClient = curator
 
   def shutdown() = {
-    isShutdown.set(true)
-    client.shutdown()
-    curator.close()
+    if(!isShutdown.getAndSet(true)) {
+      client.shutdown()
+      curator.close()
+    }
   }
 
   /**

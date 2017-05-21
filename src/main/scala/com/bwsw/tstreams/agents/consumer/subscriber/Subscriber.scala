@@ -35,10 +35,7 @@ class Subscriber(val name: String,
   val host = l.head
   val port = l.tail.head
   private var stateUpdateServer: StateUpdateServer = null
-  private val consumer = new com.bwsw.tstreams.agents.consumer.Consumer(
-    name,
-    stream,
-    options.getConsumerOptions())
+  private val consumer = new com.bwsw.tstreams.agents.consumer.Consumer(name, stream, options.getConsumerOptions())
 
   private val isStarted = new AtomicBoolean(false)
   private val isStopped = new AtomicBoolean(false)
@@ -174,22 +171,24 @@ class Subscriber(val name: String,
     *
     */
   def stop() = {
+    try {
+      if (isStopped.getAndSet(true))
+        throw new IllegalStateException(s"Subscriber $name is stopped already. Double stop is impossible.")
 
-    if (isStopped.getAndSet(true))
-      throw new IllegalStateException(s"Subscriber $name is stopped already. Double stop is impossible.")
+      if (!isStarted.getAndSet(false))
+        throw new IllegalStateException(s"Subscriber $name is not started yet. Stop is impossible.")
 
-    if (!isStarted.getAndSet(false))
-      throw new IllegalStateException(s"Subscriber $name is not started yet. Stop is impossible.")
+      stateUpdateServer.stop()
 
-    stateUpdateServer.stop()
-
-    processingEngines.foreach(kv => kv._2.stop())
-    processingEngines.clear()
-    transactionsBufferWorkers.foreach(kv => kv._2.stop())
-    transactionsBufferWorkers.clear()
-    coordinator.shutdown()
-    consumer.stop()
-    stream.shutdown()
+      processingEngines.foreach(kv => kv._2.stop())
+      processingEngines.clear()
+      transactionsBufferWorkers.foreach(kv => kv._2.stop())
+      transactionsBufferWorkers.clear()
+      coordinator.shutdown()
+      consumer.stop()
+    } finally {
+      stream.shutdown()
+    }
   }
 
   /**
