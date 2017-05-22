@@ -88,8 +88,12 @@ class TransactionOpenerService(curatorClient: CuratorFramework,
       }
 
       val req = reqAny.asInstanceOf[TransactionRequest]
-      val isMaster = agent.isMasterOfPartition(req.partition)
+      if(req.authKey != producer.stream.client.authenticationKey) {
+        Producer.logger.warn(s"Authentication Key ${req.authKey} received, but expected is ${producer.stream.client.authenticationKey}, message has been ignored.")
+        return
+      }
 
+      val isMaster = agent.isMasterOfPartition(req.partition)
       val newTransactionId = if (isMaster) {
         val newId = agent.getProducer.generateNewTransactionIDLocal()
 
@@ -110,6 +114,7 @@ class TransactionOpenerService(curatorClient: CuratorFramework,
         .withId(req.id)
         .withPartition(req.partition)
         .withTransaction(newTransactionId)
+        .withAuthKey(req.authKey)
         .toByteArray
       socket.send(new DatagramPacket(response, response.size, client))
 
@@ -234,18 +239,21 @@ class TransactionOpenerService(curatorClient: CuratorFramework,
           updatePartitionMasterInetAddress(partition)
           generateNewTransaction(partition)
 
-        case Some(TransactionResponse(_, p, transactionID, masterID)) if transactionID <= 0 =>
+        case Some(TransactionResponse(_, p, transactionID, masterID, authKey)) if transactionID <= 0 && authKey == producer.stream.client.authenticationKey =>
           if (TransactionOpenerService.logger.isDebugEnabled) {
             TransactionOpenerService.logger.debug(s"[GET TRANSACTION $uniqueAgentId] Get an invalid transaction id ($transactionID) for agent with address: $myInetAddress:$myInetPort, stream: $streamName, partition: $partition from [MASTER: $master]s")
           }
           updatePartitionMasterInetAddress(partition)
           generateNewTransaction(partition)
 
-        case Some(TransactionResponse(_, p, transactionID, masterID)) if transactionID > 0 =>
+        case Some(TransactionResponse(_, p, transactionID, masterID, authKey)) if transactionID > 0 && authKey == producer.stream.client.authenticationKey =>
           if (TransactionOpenerService.logger.isDebugEnabled) {
             TransactionOpenerService.logger.debug(s"[GET TRANSACTION $uniqueAgentId] Finish retrieve transaction for agent with address: $myInetAddress:$myInetPort, stream: $streamName, partition: $partition with ID: $transactionID from [MASTER: $master]s")
           }
           transactionID
+
+        case Some(TransactionResponse(_, _, _, _, authKey)) =>
+          throw new IllegalStateException(s"Authentication Key ${authKey} received, but expected is ${producer.stream.client.authenticationKey}, message has been ignore.")
       }
     res
   }

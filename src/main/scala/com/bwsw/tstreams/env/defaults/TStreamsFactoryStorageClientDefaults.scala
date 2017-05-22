@@ -17,10 +17,6 @@ object TStreamsFactoryStorageClientDefaults {
     val requestTimeoutRetryCount = IntMinMaxDefault(1, 20, 5)
     val retryDelayMs = IntMinMaxDefault(50, 5000, 1000)
 
-    object Auth {
-      val key = ""
-    }
-
     object Zookeeper {
       val prefix = "/tts/master"
     }
@@ -36,7 +32,6 @@ object TStreamsFactoryStorageClientDefaults {
     m(co.requestTimeoutMs) = StorageClient.requestTimeoutMs.default
     m(co.requestTimeoutRetryCount) = StorageClient.requestTimeoutRetryCount.default
     m(co.retryDelayMs) = StorageClient.retryDelayMs.default
-    m(co.Auth.key) = StorageClient.Auth.key
     m(co.Zookeeper.prefix) = StorageClient.Zookeeper.prefix
 
     m

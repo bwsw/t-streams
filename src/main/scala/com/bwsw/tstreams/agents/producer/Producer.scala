@@ -93,7 +93,7 @@ class Producer(var name: String,
     * @param msg
     * @return
     */
-  def publish(msg: TransactionState) = subscriberNotifier.publish(msg)
+  def publish(msg: TransactionState, authKey: String) = subscriberNotifier.publish(msg.withAuthKey(authKey))
 
   /**
     * Request to get Transaction
@@ -106,7 +106,8 @@ class Producer(var name: String,
     val splits = to.split(":")
     val (host, port) = (splits(0), splits(1).toInt)
     val r = TransactionRequest(partition = partition, isReliable = isReliable,
-      isInstant = isInstant, data = data.map(com.google.protobuf.ByteString.copyFrom))
+      isInstant = isInstant, data = data.map(com.google.protobuf.ByteString.copyFrom),
+      authKey = stream.client.authenticationKey)
     openTransactionClient.sendAndWait(host, port, r)
   }
 

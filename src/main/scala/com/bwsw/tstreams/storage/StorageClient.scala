@@ -45,6 +45,8 @@ class StorageClient(clientOptions: ConnectionOptions,
 
   def curatorClient = curator
 
+  def authenticationKey = authOptions.key
+
   def shutdown() = {
     if(!isShutdown.getAndSet(true)) {
       client.shutdown()
