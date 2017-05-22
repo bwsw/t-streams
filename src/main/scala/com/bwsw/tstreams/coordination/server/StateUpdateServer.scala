@@ -32,7 +32,7 @@ class StateUpdateServer(host: String, port: Int, threads: Int,
       else
         Subscriber.logger.warn(s"Unknown partition ${req.partition} found in Message: $req.")
     } else {
-      Subscriber.logger.warn(s"Authentication Key ${req.authKey} received, but expected is $authenticationKey, message has been ignore.")
+      Subscriber.logger.warn(s"Update req ($req) was received, but expected is $authenticationKey, message has been ignore.")
     }
   }
 

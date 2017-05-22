@@ -48,8 +48,6 @@ class TransactionOpenerService(curatorClient: CuratorFramework,
   val myInetAddress = producer.producerOptions.coordinationOptions.openerServerHost
   val myInetPort = producer.producerOptions.coordinationOptions.openerServerPort
 
-  def getSubscriberNotifier() = producer.subscriberNotifier
-
   private val streamName = producer.stream.name
   private val isRunning = new AtomicBoolean(true)
 
@@ -58,11 +56,11 @@ class TransactionOpenerService(curatorClient: CuratorFramework,
     */
   private val uniqueAgentId = Math.abs(Random.nextInt() + 1)
 
-  def getAgentAddress() = myInetAddress
+  def getAgentAddress = myInetAddress
 
-  def getProducer() = producer
+  def getProducer = producer
 
-  def getUniqueAgentID() = uniqueAgentId
+  def getUniqueAgentID = uniqueAgentId
 
   def getAndIncSequentialID(partition: Int): Long = sequentialIds(partition).getAndIncrement()
 
@@ -101,8 +99,8 @@ class TransactionOpenerService(curatorClient: CuratorFramework,
           Producer.logger.debug(s"[$uniqueAgentId] New Transaction ID: $newId (partition ${req.partition})")
 
         (req.isInstant, req.isReliable) match {
-          case (false, _) => agent.getProducer().openTransactionLocal(newId, req.partition)
-          case (true, _) => agent.getProducer().openInstantTransactionLocal(req.partition, newId, req.data.map(_.toByteArray), req.isReliable)
+          case (false, _) => agent.getProducer.openTransactionLocal(newId, req.partition)
+          case (true, _) => agent.getProducer.openInstantTransactionLocal(req.partition, newId, req.data.map(_.toByteArray), req.isReliable)
         }
 
         newId

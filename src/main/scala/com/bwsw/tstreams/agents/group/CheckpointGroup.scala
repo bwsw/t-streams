@@ -78,7 +78,7 @@ class CheckpointGroup(val executors: Int = 1) {
 
   private def checkUpdateFailure(producers: List[CheckpointInfo]) = {
     val availList = producers.map {
-      case ProducerCheckpointInfo(_, agent, _, _, _, _, _, _) => agent.getProducer().checkUpdateFailure()
+      case ProducerCheckpointInfo(_, agent, _, _, _, _, _, _) => agent.getProducer.checkUpdateFailure()
       case _ => 1.minute
     }
     availList.sorted.head
@@ -148,7 +148,7 @@ class CheckpointGroup(val executors: Int = 1) {
   private def publishCheckpointEventForAllProducers(checkpointInfo: List[CheckpointInfo]) = {
     checkpointInfo foreach {
       case ProducerCheckpointInfo(_, agent, checkpointEvent, _, _, _, _, _) =>
-        executorPool.submit("<CheckpointEvent>", () => agent.getSubscriberNotifier().publish(checkpointEvent), None)
+        executorPool.submit("<CheckpointEvent>", () => agent.getProducer.publish(checkpointEvent, agent.getProducer.stream.client.authenticationKey), None)
       case _ =>
     }
   }

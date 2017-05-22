@@ -238,10 +238,11 @@ class ProducerTransaction(partition: Int,
       producer.notifyService.submit(s"NotifyTask-Part[$partition]-Txn[$transactionID]", () =>
         producer.publish(TransactionState(
           transactionID = transactionID,
+          authKey = producer.stream.client.authenticationKey,
           ttlMs = producer.producerOptions.transactionTtlMs,
           status = TransactionState.Status.Updated,
           partition = partition,
-          masterID = producer.transactionOpenerService.getUniqueAgentID(),
+          masterID = producer.transactionOpenerService.getUniqueAgentID,
           orderID = -1,
           count = 0), producer.stream.client.authenticationKey))
     }
@@ -251,6 +252,7 @@ class ProducerTransaction(partition: Int,
 
     val checkpoint = TransactionState(
       transactionID = getTransactionID,
+      authKey = producer.stream.client.authenticationKey,
       ttlMs = -1,
       status = TransactionState.Status.Checkpointed,
       partition = partition,

@@ -45,6 +45,7 @@ trait TestUtils {
     .setProperty(ConfigurationOptions.Coordination.endpoints, s"localhost:$zookeeperPort")
     .setProperty(ConfigurationOptions.Stream.name, DEFAULT_STREAM_NAME)
     .setProperty(ConfigurationOptions.Stream.partitionsCount, 3)
+    .setProperty(ConfigurationOptions.Common.authenticationKey, TestUtils.AUTH_KEY)
 
   val curatorClient = CuratorFrameworkFactory.builder()
     .namespace("")
@@ -135,6 +136,8 @@ object TestUtils {
   def getTmpDir(): String = Files.createTempDir().toString
 
   private val zk = new ZookeeperTestServer(ZOOKEEPER_PORT, Files.createTempDir().toString)
+
+  val AUTH_KEY = "test"
 
 }
 
