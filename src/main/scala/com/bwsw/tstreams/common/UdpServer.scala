@@ -43,6 +43,10 @@ abstract class UdpServer(host: String, port: Int, threads: Int) extends UdpProce
 
   def getKey(objAny: AnyRef): Int
 
+  def respond(client: SocketAddress, response: Array[Byte]) = {
+    socket.send(new DatagramPacket(response, response.size, client))
+  }
+
   override def handleMessage(socket: DatagramSocket, packet: DatagramPacket): Unit = {
 
     val objOpt = try {

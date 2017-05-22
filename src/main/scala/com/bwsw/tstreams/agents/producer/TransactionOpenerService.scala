@@ -1,6 +1,6 @@
 package com.bwsw.tstreams.agents.producer
 
-import java.net.{DatagramPacket, SocketAddress}
+import java.net.SocketAddress
 import java.util.concurrent.atomic.{AtomicBoolean, AtomicLong}
 
 import com.bwsw.tstreams.coordination.server.RequestsServer
@@ -114,7 +114,8 @@ class TransactionOpenerService(curatorClient: CuratorFramework,
         .withTransaction(newTransactionId)
         .withAuthKey(req.authKey)
         .toByteArray
-      socket.send(new DatagramPacket(response, response.size, client))
+
+      respond(client, response)
 
       if (Producer.logger.isDebugEnabled())
         Producer.logger.debug(s"Send a response from master to client that a new transaction: $newTransactionId has been opened")
