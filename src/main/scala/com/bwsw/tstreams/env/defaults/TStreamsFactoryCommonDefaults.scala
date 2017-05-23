@@ -10,13 +10,13 @@ import scala.collection.mutable
 object TStreamsFactoryCommonDefaults {
 
   object Common {
-    val authenticationToken = ""
+    val authenticationKey = ""
   }
 
   def get = {
     val m = mutable.HashMap[String, Any]()
     val co = ConfigurationOptions.Common
-    m(co.authenticationToken) = Common.authenticationToken
+    m(co.authenticationKey) = Common.authenticationKey
     m
   }
 }

@@ -149,7 +149,8 @@ class Subscriber(val name: String,
     Subscriber.logger.info(s"[INIT] Subscriber $name: has launched the coordinator.")
     Subscriber.logger.info(s"[INIT] Subscriber $name: is about to launch the UDP server.")
 
-    stateUpdateServer = new StateUpdateServer(host, Integer.parseInt(port), Runtime.getRuntime.availableProcessors(), transactionsBufferWorkers)
+    stateUpdateServer = new StateUpdateServer(host, Integer.parseInt(port),
+      Runtime.getRuntime.availableProcessors(), transactionsBufferWorkers, stream.client.authenticationKey)
     stateUpdateServer.start()
 
     Subscriber.logger.info(s"[INIT] Subscriber $name: has launched the UDP server.")

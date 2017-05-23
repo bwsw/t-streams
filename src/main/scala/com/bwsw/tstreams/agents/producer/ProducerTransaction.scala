@@ -123,7 +123,7 @@ class ProducerTransaction(partition: Int,
       masterID = producer.getPartitionMasterIDLocalInfo(partition),
       orderID = -1,
       count = 0)
-    producer.publish(msg)
+    producer.publish(msg, producer.stream.client.authenticationKey)
   }
 
   private def cancelTransaction() = {
@@ -187,7 +187,7 @@ class ProducerTransaction(partition: Int,
           partition = partition,
           masterID = producer.getPartitionMasterIDLocalInfo(partition),
           orderID = -1,
-          count = getDataItemsCount)))
+          count = getDataItemsCount), producer.stream.client.authenticationKey))
 
       if (ProducerTransaction.logger.isDebugEnabled) {
         ProducerTransaction.logger.debug("[FINAL CHECKPOINT PARTITION_{}] ts={}", partition, transactionID.toString)
@@ -238,12 +238,13 @@ class ProducerTransaction(partition: Int,
       producer.notifyService.submit(s"NotifyTask-Part[$partition]-Txn[$transactionID]", () =>
         producer.publish(TransactionState(
           transactionID = transactionID,
+          authKey = producer.stream.client.authenticationKey,
           ttlMs = producer.producerOptions.transactionTtlMs,
           status = TransactionState.Status.Updated,
           partition = partition,
-          masterID = producer.transactionOpenerService.getUniqueAgentID(),
+          masterID = producer.transactionOpenerService.getUniqueAgentID,
           orderID = -1,
-          count = 0)))
+          count = 0), producer.stream.client.authenticationKey))
     }
   }
 
@@ -251,6 +252,7 @@ class ProducerTransaction(partition: Int,
 
     val checkpoint = TransactionState(
       transactionID = getTransactionID,
+      authKey = producer.stream.client.authenticationKey,
       ttlMs = -1,
       status = TransactionState.Status.Checkpointed,
       partition = partition,

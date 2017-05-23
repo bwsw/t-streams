@@ -6,7 +6,7 @@ package com.bwsw.tstreams.env
 object ConfigurationOptions {
 
   object Common {
-    val authenticationToken = "common.authentication-token"
+    val authenticationKey = "common.authentication-key"
   }
 
   /**
@@ -16,10 +16,6 @@ object ConfigurationOptions {
 
     object Zookeeper {
       val prefix = "storage-client.zk.prefix"
-    }
-
-    object Auth {
-      val key = "storage-client.auth.key"
     }
 
     val connectionTimeoutMs = "storage-client.connection-timeout-ms"
