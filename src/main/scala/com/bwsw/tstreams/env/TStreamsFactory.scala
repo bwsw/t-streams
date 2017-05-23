@@ -123,7 +123,7 @@ class TStreamsFactory() {
       requestTimeoutMs = pAsInt(co.StorageClient.requestTimeoutMs),
       requestTimeoutRetryCount = pAsInt(co.StorageClient.requestTimeoutRetryCount))
 
-    val authOptions = new AuthOptions(key = pAsString(co.StorageClient.Auth.key))
+    val authOptions = new AuthOptions(key = pAsString(co.Common.authenticationKey))
 
     val zookeeperOptions = new ZookeeperOptions(prefix = pAsString(co.StorageClient.Zookeeper.prefix))
 

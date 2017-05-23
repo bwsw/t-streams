@@ -11,7 +11,9 @@ import scala.collection.mutable
 /**
   * Created by Ivan Kudryavtsev on 21.04.17.
   */
-class StateUpdateServer(host: String, port: Int, threads: Int, transactionsBufferWorkers: mutable.Map[Int, TransactionBufferWorker]) extends UdpServer(host, port, threads) {
+class StateUpdateServer(host: String, port: Int, threads: Int,
+                        transactionsBufferWorkers: mutable.Map[Int, TransactionBufferWorker],
+                        authenticationKey: String) extends UdpServer(host, port, threads) {
 
   private val partitionCache = mutable.Map[Int, TransactionBufferWorker]()
 
@@ -24,10 +26,14 @@ class StateUpdateServer(host: String, port: Int, threads: Int, transactionsBuffe
     if(Subscriber.logger.isDebugEnabled())
       Subscriber.logger.debug(s"Transaction State Update: ${req}")
 
-    if (partitionCache.contains(req.partition))
-      partitionCache(req.partition).update(req)
-    else
-      Subscriber.logger.warn(s"Unknown partition ${req.partition} found in Message: $req.")
+    if(req.authKey == authenticationKey) {
+      if (partitionCache.contains(req.partition))
+        partitionCache(req.partition).update(req)
+      else
+        Subscriber.logger.warn(s"Unknown partition ${req.partition} found in Message: $req.")
+    } else {
+      Subscriber.logger.warn(s"Update req ($req) was received, but expected is $authenticationKey, message has been ignore.")
+    }
   }
 
   override def getObjectFromDatagramPacket(packet: DatagramPacket): Option[AnyRef] =
