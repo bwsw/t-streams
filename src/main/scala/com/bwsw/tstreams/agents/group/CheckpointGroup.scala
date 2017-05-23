@@ -35,22 +35,24 @@ class CheckpointGroup(val executors: Int = 1) {
     *
     * @param agent Agent ref
     */
-  def add(agent: GroupParticipant): Unit = this.synchronized {
+  def add(agent: GroupParticipant): CheckpointGroup = this.synchronized {
     if (isStopped.get)
       throw new IllegalStateException("Group is stopped. No longer operations are possible.")
     if (agents.contains(agent.getAgentName)) {
       throw new IllegalArgumentException(s"Agent with specified name ${agent.getAgentName} is already in the group. Names of added agents must be unique.")
     }
     agents += ((agent.getAgentName, agent))
+    this
   }
 
   /**
     * clears group
     */
-  def clear(): Unit = this.synchronized {
+  def clear(): CheckpointGroup = this.synchronized {
     if (isStopped.get)
       throw new IllegalStateException("Group is stopped. No longer operations are possible.")
     agents.clear()
+    this
   }
 
   /**
@@ -58,13 +60,14 @@ class CheckpointGroup(val executors: Int = 1) {
     *
     * @param name Agent name
     */
-  def remove(name: String): Unit = this.synchronized {
+  def remove(name: String): CheckpointGroup = this.synchronized {
     if (isStopped.get)
       throw new IllegalStateException("Group is stopped. No longer operations are possible.")
     if (!agents.contains(name)) {
       throw new IllegalArgumentException(s"Agent with specified name $name is not in the group.")
     }
     agents.remove(name)
+    this
   }
 
   /**
