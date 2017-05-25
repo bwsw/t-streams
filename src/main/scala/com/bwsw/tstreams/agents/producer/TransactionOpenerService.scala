@@ -119,7 +119,7 @@ class TransactionOpenerService(curatorClient: CuratorFramework,
 
       if (Producer.logger.isDebugEnabled())
         Producer.logger.debug(s"Send a response from master to client that a new transaction: $newTransactionId has been opened")
-    }
+     }
   }
 
   openerServer.start()

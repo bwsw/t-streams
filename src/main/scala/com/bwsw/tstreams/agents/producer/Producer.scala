@@ -348,6 +348,12 @@ class Producer(var name: String,
     this
   }
 
+  def cancel(partition: Int) = {
+    val transactionStatesOpt = openTransactions.getTransactionSetOption(partition).map(partData => partData._2.map(txn => txn.getCancelInfoAndClose))
+    transactionStatesOpt.map(transactionStates => stream.client.putTransactions(transactionStates.flatten.toSeq, Seq()))
+    openTransactions.forPartitionTransactionsDo(partition, _.notifyCancelEvent())
+    openTransactions.clear(partition)
+  }
 
   /**
     * Finalize all opened transactions (not atomic). For atomic use CheckpointGroup.
