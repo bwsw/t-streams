@@ -4,33 +4,53 @@ T-streams library implements transactional persistent queues for exactly-once, b
 
 ## Introduction
 
-T-streams is an embeddable library for JVM environment designed for atomic messaging between network agents via transactions in PUB-SUB mode. The library is purposed for reliable message delivery with queue persistence and replay support. It has unique features as compared to the Kafka broker and may be used to replace it in message processing pipelines where exactly-once processing is required. 
+T-streams (transactional streams) is a Scala library and infrastructure components which implement transactional messaging, important for many practical applications including CEP (complex event processing), financial and business-critical systems that must handle an event exactly-once and sometimes at-least-once or at-most-once.
 
-T-streams is the transport core of another product of ours, SJ-Platform.
+Basically, T-streams is designed for exacly-once processing (so it includes idempotent producer, consumer and subscriber). T-streams conceptual design is inspired by Apache Kafka.
 
-For messaging we (at Bitworks Software) often use such messaging systems as Kafka, 0MQ, RabbitMQ and others, depending on the objectives to be solved. When it comes to processing data streams for BigData, Kafka is the default industry standard supported by many processing systems, such as Apache Spark, Flink, Samza. Kafka is an excellent product that we widely use where it provides sufficient functionality. However, various problems exist that Kafka (unfortunately) cannot tackle. The main one (in our opinion) is the inability to implement exactly-once processing with Kafka, if events are fed from multiple Kafka topics and then transformed and relayed to other Kafka topics.
+T-streams library uses robust data management systems for operation:
 
-The inability to do this transaction-wise has led us to the idea and motivated to create a solution that would provide for the solution to the problem. This is how the T-streams library appeared. T-streams is implemented on Scala v2.12 and has only one external dependency Apache Zookeeper which is used to maintain the discovery. It is available under Apache License v2. You can learn more about T-streams on the product web site.
+* Apache Zookeeper – distributed coordination
+* Apache BookKeeper – eventually consisted replicated commit log system
+* RocksDB – operational storage
 
-T-streams implements messaging for Producers and Consumers which is critical for CEP (complex event processing) systems. When creating T-streams, we were inspired by Apache Kafka and shares similar concepts.  T-streams library is suited to store millions and billions of queues. It allows developers to do exactly-once and at-least-once processing when T-streams is both the queue's source and its destination. The library fits great for batch processing where each batch includes multiple items (messages, events, etc.). 
+It’s implemented with Scala 2.12, Apache Curator, Google Netty, Google Guava and other standard sound components purposed for the development of reliable distributed applications.
 
 Web-site: http://t-streams.com/
 
-## T-streams library fits good if…
+## Short About
 
-T-streams library is designed to solve the problems, mentioned before and provides following features:
+In a nutshel T-streams infrastructure functions as and can be described as:
 
- * exactly-once and at-least-once processing models when source and destination queues are T-streams;
- * gives developers the way to implement exactly-once and at-least-once processing models when source is T-streams and destination is any key-value store (or full-featured DBMS, e.g. Oracle, MySQL, Postgres, Elasticsearch);
- * is designed for batch processing where batch includes some items (events, messages, etc.);
- * scales perfectly horizontally;
- * scales perfectly in direction of amount of queues (supports millions of queues without problems);
- * allows consumers to read from most recent offset, arbitrary date-time offset, most ancient offset.
- * provides Kafka-like features:
-    * Reading data by multiple consumers from one queue;
-    * Writing data by multiple producers t one queue;
-    * Use of the streams with one partition or many partitions.
-    * Stores data until expiration date-time set by stream configuration.
+1. a distributed, replicated message broker and clients library for JRE (like a Kafka, RabbitMQ, etc.)
+2. is designed for reliable intranet (not public Internet), so network failures can lead to overall performance (but not reliability) degradation because of UDP usage for PUB-SUB and other operations
+3. implements basic token based authentication
+4. events are handled as atomic transactions
+5. transactions are
+    1. long-living or short living
+    2. stored in streams and their partitions
+    3. are strictly ordered inside a partition according to the transaction open time (who opens first will be processed first)
+    4. persistent, stored in the replicated datastore and evicted after specified period of time, e.g. week or month.
+    5. persisted with checkpoint operation
+    6. cancelled with cancel operation
+    7. designed to build idempotent producers
+    8. processed by 
+        1. idempotent consumers which implement polling processing
+        2. subscribers which implement pub-sub processing
+6. consumers and subscribers
+    1. poll or pub-sub transactions from
+        1. most recent offset
+        2. arbitrary date-time offset
+        3. most ancient offset
+        4. last fixed offset
+    2. can read transaction by certain transaction ID
+    3. can read transactions in the range
+    4. fix their current state with checkpoint operation
+7. Checkpoint operation is atomic for
+    1. a single transaction when is called for a transaction object
+    2. for all opened transaction of a producer when is called for a producer object
+    3. for all opened transaction for certain partition of a producer when is called for a producer object
+    4. for all producers, consumers and subscribers which are participants of a CheckpointGroup when is called for CheckpointGroup object
 
 ## License
 
