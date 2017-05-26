@@ -12,7 +12,7 @@ trait GroupParticipant {
   /**
     * Info to commit
     */
-  private[tstreams] def getCheckpointInfoAndClear(): List[CheckpointInfo]
+  private[tstreams] def getCheckpointInfoAndClear(): List[StateInfo]
 
   private[tstreams] def getStorageClient(): StorageClient
 

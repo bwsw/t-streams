@@ -13,9 +13,9 @@ import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import scala.collection.mutable.ListBuffer
 
 /**
-  * Created by ivan on 16.05.17.
+  * Created by Ivan Kudryavtsev on 16.05.17.
   */
-class ProducerQueuedTransactionsTests  extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
+class ProducerQueuedTransactionsTests extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
   lazy val srv = TestStorageServer.getNewClean()
 
   override def beforeAll(): Unit = {
@@ -64,12 +64,12 @@ class ProducerQueuedTransactionsTests  extends FlatSpec with Matchers with Befor
       name = "test_producer",
       partitions = Set(0))
 
-    val s = f.getSubscriber(name = "subscriber",
+    val subscriber = f.getSubscriber(name = "subscriber",
       partitions = Set(0),
       offset = Newest,
       useLastOffset = false,
       callback = (consumer: TransactionOperator, transaction: ConsumerTransaction) => latch.countDown())
-    s.start()
+    subscriber.start()
 
     for (it <- 0 until TOTAL) {
       val transaction = producer.newTransaction(NewProducerTransactionPolicy.EnqueueIfOpened)
@@ -83,7 +83,7 @@ class ProducerQueuedTransactionsTests  extends FlatSpec with Matchers with Befor
 
     latch.await(60, TimeUnit.SECONDS) shouldBe true
 
-    s.stop()
+    subscriber.stop()
   }
 
   it should "create queued transactions, cancel them, create and get correctly with big TTL" in {

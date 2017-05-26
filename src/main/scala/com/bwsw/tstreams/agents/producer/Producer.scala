@@ -293,9 +293,9 @@ class Producer(var name: String,
     openTransactions.getTransactionSetOption(partition).map(v => v._2.filter(!_.isClosed))
   }
 
-  private def doCheckpoint(checkpointRequests: Seq[CheckpointInfo]) = {
+  private def doCheckpoint(checkpointRequests: Seq[StateInfo]) = {
     val producerRequests = checkpointRequests.map {
-      case ProducerCheckpointInfo(_, _, _, streamName, partition, transaction, totalCnt, ttl) =>
+      case ProducerTransactionStateInfo(_, _, _, streamName, partition, transaction, totalCnt, ttl) =>
         new RPCProducerTransaction(streamName, partition, transaction, TransactionStates.Checkpointed, totalCnt, ttl)
       case _ => throw new IllegalStateException("Only ProducerCheckpointInfo allowed here.")
     }
@@ -303,9 +303,9 @@ class Producer(var name: String,
     stream.client.putTransactions(producerRequests, Seq(), availTime)
   }
 
-  private def notifyCheckpoint(checkpointInfo: Seq[CheckpointInfo]) = {
+  private def notifyCheckpoint(checkpointInfo: Seq[StateInfo]) = {
     checkpointInfo foreach {
-      case ProducerCheckpointInfo(_, agent, checkpointEvent, _, _, _, _, _) =>
+      case ProducerTransactionStateInfo(_, agent, checkpointEvent, _, _, _, _, _) =>
         notifyService.submit("<CheckpointEvent>", () => agent.getProducer.publish(checkpointEvent, agent.getProducer.stream.client.authenticationKey), None)
       case _ =>
     }
@@ -348,6 +348,12 @@ class Producer(var name: String,
     this
   }
 
+  def cancel(partition: Int) = {
+    val transactionStatesOpt = openTransactions.getTransactionSetOption(partition).map(partData => partData._2.map(txn => txn.getCancelInfoAndClose))
+    transactionStatesOpt.map(transactionStates => stream.client.putTransactions(transactionStates.flatten.toSeq, Seq()))
+    openTransactions.forPartitionTransactionsDo(partition, _.notifyCancelEvent())
+    openTransactions.clear(partition)
+  }
 
   /**
     * Finalize all opened transactions (not atomic). For atomic use CheckpointGroup.
@@ -367,20 +373,28 @@ class Producer(var name: String,
   /**
     * Info to commit
     */
-  override private[tstreams] def getCheckpointInfoAndClear(): List[CheckpointInfo] = this.synchronized {
-    checkStopped()
-    checkUpdateFailure()
-    val checkpointInfo = openTransactions.forallTransactionsDo((k: Int, v: IProducerTransaction) => v.getCheckpointInfo).toList
-    openTransactions.clear()
-    checkpointInfo
+  override private[tstreams] def getCheckpointInfoAndClear(): List[StateInfo] =  {
+    getInfoAndClear(TransactionState.Status.Checkpointed)
   }
 
-  private def getPartitionCheckpointInfoAndClear(partition: Int): Seq[CheckpointInfo] = this.synchronized {
+  private[tstreams] def getCancelInfoAndClear(): List[StateInfo] = {
+    getInfoAndClear(TransactionState.Status.Cancelled)
+  }
+
+  private def getInfoAndClear(status: TransactionState.Status) = this.synchronized {
     checkStopped()
     checkUpdateFailure()
-    val res = openTransactions.getTransactionSetOption(partition).map(partData => partData._2.map(txn => txn.getCheckpointInfo))
+    val stateInfo = openTransactions.forallTransactionsDo((k: Int, v: IProducerTransaction) => v.getStateInfo(status)).toList
+    openTransactions.clear()
+    stateInfo
+  }
+
+  private def getPartitionCheckpointInfoAndClear(partition: Int): Seq[StateInfo] = this.synchronized {
+    checkStopped()
+    checkUpdateFailure()
+    val res = openTransactions.getTransactionSetOption(partition).map(partData => partData._2.map(txn => txn.getStateInfo(TransactionState.Status.Checkpointed)))
     openTransactions.clear(partition)
-    res.fold(Seq[CheckpointInfo]())(resInt => resInt.toSeq)
+    res.fold(Seq[StateInfo]())(resInt => resInt.toSeq)
   }
 
   /**

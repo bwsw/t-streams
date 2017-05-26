@@ -2,7 +2,7 @@ package com.bwsw.tstreams.agents.producer
 
 import java.util.concurrent.atomic.AtomicBoolean
 
-import com.bwsw.tstreams.agents.group.ProducerCheckpointInfo
+import com.bwsw.tstreams.agents.group.ProducerTransactionStateInfo
 import com.bwsw.tstreams.proto.protocol.TransactionState
 import com.bwsw.tstreamstransactionserver.rpc.TransactionStates
 import org.slf4j.LoggerFactory
@@ -248,25 +248,26 @@ class ProducerTransaction(partition: Int,
     }
   }
 
-  def getCheckpointInfo: ProducerCheckpointInfo = {
+  def getStateInfo(status: TransactionState.Status): ProducerTransactionStateInfo = {
 
-    val checkpoint = TransactionState(
+    val event = TransactionState(
       transactionID = getTransactionID,
       authKey = producer.stream.client.authenticationKey,
       ttlMs = -1,
-      status = TransactionState.Status.Checkpointed,
+      status = status,
       partition = partition,
       masterID = producer.getPartitionMasterIDLocalInfo(partition),
       orderID = -1,
       count = getDataItemsCount)
 
-    ProducerCheckpointInfo(transactionRef = this,
+    ProducerTransactionStateInfo(transactionRef = this,
       agent = producer.transactionOpenerService,
-      checkpointEvent = checkpoint,
+      event = event,
       streamID = producer.stream.id,
       partition = partition,
       transaction = getTransactionID,
       totalCnt = getDataItemsCount,
       ttl = producer.stream.ttl)
   }
+
 }

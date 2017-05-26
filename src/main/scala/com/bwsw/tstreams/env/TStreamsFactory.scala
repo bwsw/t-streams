@@ -6,6 +6,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 import com.bwsw.tstreams.agents.consumer.Offset.IOffset
 import com.bwsw.tstreams.agents.consumer.subscriber.{QueueBuilder, Subscriber, SubscriberOptionsBuilder}
 import com.bwsw.tstreams.agents.consumer.{Consumer, ConsumerOptions}
+import com.bwsw.tstreams.agents.group.CheckpointGroup
 import com.bwsw.tstreams.agents.producer.{OpenerOptions, Producer, ProducerOptions}
 import com.bwsw.tstreams.common.{RoundRobinPolicy, _}
 import com.bwsw.tstreams.env.defaults.TStreamsFactoryProducerDefaults.PortRange
@@ -145,6 +146,8 @@ class TStreamsFactory() {
 
     client
   }
+
+  def getCheckpointGroup(executors: Int  = 1) = new CheckpointGroup(executors)
 
   /**
     * Special debugging method to find leaks in factory. Used only in tests.
