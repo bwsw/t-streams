@@ -146,8 +146,7 @@ class CheckpointGroup(val executors: Int = 1) {
       .reduceRight((l1, l2) => l1 ++ l2)
 
     if(log.isDebugEnabled()) {
-      log.debug(s"CheckpointGroup Info ${checkpointStateInfo}")
-      log.debug("Do group checkpoint")
+      log.debug(s"CheckpointGroup Info ${checkpointStateInfo}\n" + "Do group checkpoint")
     }
     //assume all agents use the same metadata entity
     doGroupCheckpoint(agents.head._2.getStorageClient, checkpointStateInfo)
@@ -160,7 +159,7 @@ class CheckpointGroup(val executors: Int = 1) {
   }
 
 
-  def cancel(): Unit = {
+  def cancel(): Unit = this.synchronized {
     if (isStopped.get)
       throw new IllegalStateException("Group is stopped. No longer operations are possible.")
 
@@ -171,8 +170,7 @@ class CheckpointGroup(val executors: Int = 1) {
       .reduceRight((l1, l2) => l1 ++ l2)
 
     if(log.isDebugEnabled()) {
-      log.debug(s"CheckpointGroup Info ${cancelStateInfo}")
-      log.debug("Do group cancel")
+      log.debug(s"CheckpointGroup Info ${cancelStateInfo}\n" + "Do group cancel")
     }
 
     //assume all agents use the same metadata entity
