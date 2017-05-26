@@ -9,7 +9,7 @@ import scala.language.existentials
 /**
   * Basic commit trait
   */
-sealed trait CheckpointInfo
+sealed trait StateInfo
 
 /**
   * BasicProducer commit information
@@ -20,21 +20,21 @@ sealed trait CheckpointInfo
   *                       first - do pre checkpoint event for all subscribers
   *                       second - commit transaction metadata in database
   *                       third - do final checkpoint event for all subscribers
-  * @param checkpointEvent
+  * @param event
   * @param streamID     Stream name
   * @param partition      Partition number
   * @param transaction    Transaction to commit
   * @param totalCnt       Total info in transaction
   * @param ttl            Transaction time to live in seconds
   */
-case class ProducerCheckpointInfo(transactionRef: ProducerTransaction,
-                                  agent: TransactionOpenerService,
-                                  checkpointEvent: TransactionState,
-                                  streamID: Int,
-                                  partition: Int,
-                                  transaction: Long,
-                                  totalCnt: Int,
-                                  ttl: Long) extends CheckpointInfo
+case class ProducerTransactionStateInfo(transactionRef: ProducerTransaction,
+                                        agent: TransactionOpenerService,
+                                        event: TransactionState,
+                                        streamID: Int,
+                                        partition: Int,
+                                        transaction: Long,
+                                        totalCnt: Int,
+                                        ttl: Long) extends StateInfo
 
 /**
   * BasicConsumer commit information
@@ -44,7 +44,7 @@ case class ProducerCheckpointInfo(transactionRef: ProducerTransaction,
   * @param partition Partition number
   * @param offset    Offset to commit
   */
-case class ConsumerCheckpointInfo(name: String,
-                                  streamID: Int,
-                                  partition: Int,
-                                  offset: Long) extends CheckpointInfo
+case class ConsumerStateInfo(name: String,
+                             streamID: Int,
+                             partition: Int,
+                             offset: Long) extends StateInfo

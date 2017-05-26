@@ -4,14 +4,14 @@ import java.util.concurrent.{CountDownLatch, TimeUnit}
 
 import com.bwsw.tstreams.agents.consumer.Offset.Newest
 import com.bwsw.tstreams.agents.consumer.{ConsumerTransaction, TransactionOperator}
-import com.bwsw.tstreams.agents.producer.NewProducerTransactionPolicy
+import com.bwsw.tstreams.env.ConfigurationOptions
 import com.bwsw.tstreams.testutils.{TestStorageServer, TestUtils}
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 
 /**
-  * Created by ivan on 13.09.16.
+  * Created by Ivan Kudryavtsev on 26.05.17.
   */
-class CheckpointGroupAndSubscriberEventsTests extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
+class CheckpointGroupQueuedTransactionsCheckpointCancelTests extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils  {
   lazy val srv = TestStorageServer.getNewClean()
 
   override def beforeAll(): Unit = {
@@ -24,10 +24,10 @@ class CheckpointGroupAndSubscriberEventsTests extends FlatSpec with Matchers wit
     onAfterAll()
   }
 
-  it should "checkpoint all transactions with CG" in {
-    val l = new CountDownLatch(1)
-    var transactionsCounter: Int = 0
-
+  it should "cancel queued producer events properly" in {
+    val TOTAL_CANCEL = 100
+    val TOTAL_CHECKPOINT = 100
+    val latch = new CountDownLatch(TOTAL_CHECKPOINT)
     val group = f.getCheckpointGroup()
 
     val producer = f.getProducer(
@@ -40,25 +40,21 @@ class CheckpointGroupAndSubscriberEventsTests extends FlatSpec with Matchers wit
       partitions = Set(0),
       offset = Newest,
       useLastOffset = true,
-      callback = (consumer: TransactionOperator, transaction: ConsumerTransaction) => this.synchronized {
-        transactionsCounter += 1
-        val data = new String(transaction.getAll.head)
-        data shouldBe "test"
-        if (transactionsCounter == 2) {
-          l.countDown()
-        }
-      })
+      callback = (consumer: TransactionOperator, transaction: ConsumerTransaction) => latch.countDown())
     subscriber.start()
-    val txn1 = producer.newTransaction(NewProducerTransactionPolicy.ErrorIfOpened, 0)
-    txn1.send("test".getBytes())
+
+    group.cancel()
     group.checkpoint()
-    val txn2 = producer.newTransaction(NewProducerTransactionPolicy.ErrorIfOpened, 0)
-    txn2.send("test".getBytes())
+
+    (0 until TOTAL_CANCEL).foreach(t => producer.newTransaction())
+    group.cancel()
+
+    (0 until TOTAL_CHECKPOINT).foreach(t => producer.newTransaction().send("test"))
     group.checkpoint()
-    l.await(5, TimeUnit.SECONDS) shouldBe true
-    transactionsCounter shouldBe 2
+
+    latch.await(f.getProperty(ConfigurationOptions.Producer.Transaction.ttlMs).asInstanceOf[Int] / 2, TimeUnit.MILLISECONDS) shouldBe true
+
     subscriber.stop()
     producer.stop()
   }
-
 }

@@ -4,7 +4,6 @@ import java.util.concurrent.{CountDownLatch, TimeUnit}
 
 import com.bwsw.tstreams.agents.consumer.Offset.Oldest
 import com.bwsw.tstreams.agents.consumer.{ConsumerTransaction, TransactionOperator}
-import com.bwsw.tstreams.agents.group.CheckpointGroup
 import com.bwsw.tstreams.agents.producer.{NewProducerTransactionPolicy, ProducerTransaction}
 import com.bwsw.tstreams.testutils.{TestStorageServer, TestUtils}
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
@@ -23,7 +22,7 @@ class ProducerToSubscriberStartsAfterWriteWithCheckpointGroupTests extends FlatS
 
   it should s"The producer sends $COUNT transactions, subscriber receives $COUNT of them when started after." +
     s"Then do group checkpoint and start new Subscriber from checkpointed place" in {
-    val group = new CheckpointGroup()
+    val group = f.getCheckpointGroup()
 
     val bp = ListBuffer[Long]()
     val bs = ListBuffer[Long]()
