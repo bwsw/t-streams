@@ -1,6 +1,7 @@
 package com.bwsw.tstreams.agents.producer
 
-import com.bwsw.tstreams.agents.group.ProducerCheckpointInfo
+import com.bwsw.tstreams.agents.group.ProducerTransactionStateInfo
+import com.bwsw.tstreams.proto.protocol.TransactionState
 
 /**
   * Created by Ivan Kudryavtsev on 29.08.16.
@@ -15,7 +16,7 @@ trait IProducerTransaction {
 
   def checkpoint(): Unit
 
-  def getCheckpointInfo: ProducerCheckpointInfo
+  def getStateInfo(status: TransactionState.Status): ProducerTransactionStateInfo
 
   private[tstreams] def getUpdateInfo: Option[RPCProducerTransaction]
 

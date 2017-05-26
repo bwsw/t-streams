@@ -4,7 +4,7 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 
 import com.bwsw.tstreams.agents.consumer.RPCConsumerTransaction
-import com.bwsw.tstreams.agents.producer.RPCProducerTransaction
+import com.bwsw.tstreams.agents.producer.{Producer, RPCProducerTransaction}
 import com.bwsw.tstreams.common.{FirstFailLockableTaskExecutor, GeneralOptions}
 import com.bwsw.tstreams.storage.StorageClient
 import com.bwsw.tstreamstransactionserver.rpc.TransactionStates
@@ -24,11 +24,13 @@ object CheckpointGroup {
   */
 class CheckpointGroup(val executors: Int = 1) {
   /**
-    * Group of agents (checkpointInfo/consumer)
+    * Group of agents (stateInfoList/consumer)
     */
   private val agents = scala.collection.mutable.Map[String, GroupParticipant]()
   private lazy val executorPool = new FirstFailLockableTaskExecutor("CheckpointGroup-Workers", executors)
   private val isStopped = new AtomicBoolean(false)
+  private val log = CheckpointGroup.logger
+
 
   /**
     * Add new agent in group
@@ -79,9 +81,9 @@ class CheckpointGroup(val executors: Int = 1) {
     agents.contains(name)
   }
 
-  private def checkUpdateFailure(producers: List[CheckpointInfo]) = {
+  private def checkUpdateFailure(producers: List[StateInfo]) = {
     val availList = producers.map {
-      case ProducerCheckpointInfo(_, agent, _, _, _, _, _, _) => agent.getProducer.checkUpdateFailure()
+      case ProducerTransactionStateInfo(_, agent, _, _, _, _, _, _) => agent.getProducer.checkUpdateFailure()
       case _ => 1.minute
     }
     availList.sorted.head
@@ -91,23 +93,36 @@ class CheckpointGroup(val executors: Int = 1) {
     * Group agents commit
     *
     * @param checkpointRequests Info to commit
-    *                           (used only for consumers now; checkpointInfo is not atomic)
+    *                           (used only for consumers now; stateInfoList is not atomic)
     */
-  private def doGroupCheckpoint(storageClient: StorageClient, checkpointRequests: List[CheckpointInfo]): Unit = {
+  private def doGroupCheckpoint(storageClient: StorageClient, checkpointRequests: List[StateInfo]): Unit = {
     val producerRequests = ListBuffer[RPCProducerTransaction]()
     val consumerRequests = ListBuffer[RPCConsumerTransaction]()
 
     checkpointRequests foreach {
-      case ConsumerCheckpointInfo(consumerName, streamName, partition, offset) =>
+      case ConsumerStateInfo(consumerName, streamName, partition, offset) =>
         consumerRequests.append(new RPCConsumerTransaction(consumerName, streamName, partition, offset))
 
-      case ProducerCheckpointInfo(_, _, _, streamName, partition, transaction, totalCnt, ttl) =>
+      case ProducerTransactionStateInfo(_, _, _, streamName, partition, transaction, totalCnt, ttl) =>
         producerRequests.append(new RPCProducerTransaction(streamName, partition, transaction, TransactionStates.Checkpointed, totalCnt, ttl))
     }
 
-    //check checkpointInfo update timeout
+    //check stateInfoList update timeout
     val availTime = checkUpdateFailure(checkpointRequests)
     storageClient.putTransactions(producerRequests, consumerRequests, availTime)
+  }
+
+  private def doGroupCancel(storageClient: StorageClient, checkpointRequests: List[StateInfo]): Unit = {
+    val producerRequests = ListBuffer[RPCProducerTransaction]()
+    checkpointRequests foreach {
+      case ConsumerStateInfo(consumerName, streamName, partition, offset) =>
+      case ProducerTransactionStateInfo(_, _, _, streamName, partition, transaction, totalCnt, ttl) =>
+        producerRequests.append(new RPCProducerTransaction(streamName, partition, transaction, TransactionStates.Cancel, totalCnt, ttl))
+    }
+
+    //check stateInfoList update timeout
+    val availTime = checkUpdateFailure(checkpointRequests)
+    storageClient.putTransactions(producerRequests, Nil, availTime)
   }
 
   /**
@@ -116,8 +131,6 @@ class CheckpointGroup(val executors: Int = 1) {
   def checkpoint(): Unit = this.synchronized {
     if (isStopped.get)
       throw new IllegalStateException("Group is stopped. No longer operations are possible.")
-
-    val log = CheckpointGroup.logger
 
     if(log.isDebugEnabled())
       log.debug("Complete send data to storage server for all participants")
@@ -128,9 +141,9 @@ class CheckpointGroup(val executors: Int = 1) {
       log.debug("Gather checkpoint information from participants")
 
     // receive from all agents their checkpoint information
-    val checkpointStateInfo: List[CheckpointInfo] = agents.map { case (name, agent) =>
-      agent.getCheckpointInfoAndClear()
-    }.reduceRight((l1, l2) => l1 ++ l2)
+    val checkpointStateInfo: List[StateInfo] = agents
+      .map { case (name, agent) => agent.getCheckpointInfoAndClear() }
+      .reduceRight((l1, l2) => l1 ++ l2)
 
     if(log.isDebugEnabled()) {
       log.debug(s"CheckpointGroup Info ${checkpointStateInfo}")
@@ -141,17 +154,43 @@ class CheckpointGroup(val executors: Int = 1) {
 
     if(log.isDebugEnabled()) log.debug("Do publish notifications")
 
-    publishCheckpointEventForAllProducers(checkpointStateInfo)
+    publishEventForAllProducers(checkpointStateInfo)
 
     if(log.isDebugEnabled()) log.debug("End checkpoint")
   }
 
 
+  def cancel(): Unit = {
+    if (isStopped.get)
+      throw new IllegalStateException("Group is stopped. No longer operations are possible.")
 
-  private def publishCheckpointEventForAllProducers(checkpointInfo: List[CheckpointInfo]) = {
-    checkpointInfo foreach {
-      case ProducerCheckpointInfo(_, agent, checkpointEvent, _, _, _, _, _) =>
-        executorPool.submit("<CheckpointEvent>", () => agent.getProducer.publish(checkpointEvent, agent.getProducer.stream.client.authenticationKey), None)
+    // receive from all agents their checkpoint information
+    val cancelStateInfo: List[StateInfo] = agents
+      .filter { case (name, agent) => agent.isInstanceOf[Producer] }
+      .map { case (name, agent) => agent.asInstanceOf[Producer].getCancelInfoAndClear() }
+      .reduceRight((l1, l2) => l1 ++ l2)
+
+    if(log.isDebugEnabled()) {
+      log.debug(s"CheckpointGroup Info ${cancelStateInfo}")
+      log.debug("Do group cancel")
+    }
+
+    //assume all agents use the same metadata entity
+    doGroupCancel(agents.head._2.getStorageClient, cancelStateInfo)
+
+    if(log.isDebugEnabled()) log.debug("Do publish notifications")
+
+    publishEventForAllProducers(cancelStateInfo)
+
+    if(log.isDebugEnabled()) log.debug("End checkpoint")
+
+  }
+
+
+  private def publishEventForAllProducers(stateInfoList: List[StateInfo]) = {
+    stateInfoList foreach {
+      case ProducerTransactionStateInfo(_, agent, stateEvent, _, _, _, _, _) =>
+        executorPool.submit("<CheckpointEvent>", () => agent.getProducer.publish(stateEvent, agent.getProducer.stream.client.authenticationKey), None)
       case _ =>
     }
   }

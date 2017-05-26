@@ -40,6 +40,8 @@ class ProducerCancelPartitionTest  extends FlatSpec with Matchers with BeforeAnd
       callback = (consumer: TransactionOperator, transaction: ConsumerTransaction) => latch.countDown())
     subscriber.start()
 
+    producer.cancel(0) // cancel empty one
+
     (0 until TOTAL_CANCEL).foreach(t => producer.newTransaction())
     producer.cancel(0)
 
