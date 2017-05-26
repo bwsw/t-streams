@@ -22,7 +22,7 @@ object CheckpointGroup {
 /**
   * Base class to creating agent group
   */
-class CheckpointGroup(val executors: Int = 1) {
+class CheckpointGroup private[tstreams] (val executors: Int = 1) {
   /**
     * Group of agents (stateInfoList/consumer)
     */
@@ -132,6 +132,9 @@ class CheckpointGroup(val executors: Int = 1) {
     if (isStopped.get)
       throw new IllegalStateException("Group is stopped. No longer operations are possible.")
 
+    if(agents.isEmpty)
+      return
+
     if(log.isDebugEnabled())
       log.debug("Complete send data to storage server for all participants")
 
@@ -145,8 +148,11 @@ class CheckpointGroup(val executors: Int = 1) {
       .map { case (name, agent) => agent.getCheckpointInfoAndClear() }
       .reduceRight((l1, l2) => l1 ++ l2)
 
+    if(checkpointStateInfo.isEmpty)
+      return
+
     if(log.isDebugEnabled()) {
-      log.debug(s"CheckpointGroup Info ${checkpointStateInfo}\n" + "Do group checkpoint")
+      log.debug(s"CheckpointGroup Info ${checkpointStateInfo}\n" + "Do group checkpoint.")
     }
     //assume all agents use the same metadata entity
     doGroupCheckpoint(agents.head._2.getStorageClient, checkpointStateInfo)
@@ -163,14 +169,20 @@ class CheckpointGroup(val executors: Int = 1) {
     if (isStopped.get)
       throw new IllegalStateException("Group is stopped. No longer operations are possible.")
 
+    if(agents.isEmpty)
+      return
+
     // receive from all agents their checkpoint information
     val cancelStateInfo: List[StateInfo] = agents
       .filter { case (name, agent) => agent.isInstanceOf[Producer] }
       .map { case (name, agent) => agent.asInstanceOf[Producer].getCancelInfoAndClear() }
       .reduceRight((l1, l2) => l1 ++ l2)
 
+    if(cancelStateInfo.isEmpty)
+      return
+
     if(log.isDebugEnabled()) {
-      log.debug(s"CheckpointGroup Info ${cancelStateInfo}\n" + "Do group cancel")
+      log.debug(s"CheckpointGroup Info ${cancelStateInfo}\n" + "Do group cancel.")
     }
 
     //assume all agents use the same metadata entity
@@ -188,7 +200,7 @@ class CheckpointGroup(val executors: Int = 1) {
   private def publishEventForAllProducers(stateInfoList: List[StateInfo]) = {
     stateInfoList foreach {
       case ProducerTransactionStateInfo(_, agent, stateEvent, _, _, _, _, _) =>
-        executorPool.submit("<CheckpointEvent>", () => agent.getProducer.publish(stateEvent, agent.getProducer.stream.client.authenticationKey), None)
+        executorPool.submit("<Event>", () => agent.getProducer.publish(stateEvent, agent.getProducer.stream.client.authenticationKey), None)
       case _ =>
     }
   }

@@ -3,7 +3,6 @@ package com.bwsw.tstreams.agents.integration
 import java.util.concurrent.CountDownLatch
 
 import com.bwsw.tstreams.agents.consumer.Offset.Oldest
-import com.bwsw.tstreams.agents.group.CheckpointGroup
 import com.bwsw.tstreams.agents.producer.NewProducerTransactionPolicy
 import com.bwsw.tstreams.testutils._
 import com.bwsw.tstreamstransactionserver.rpc.TransactionStates
@@ -38,7 +37,7 @@ class CheckpointGroupCheckpointTest extends FlatSpec with Matchers with BeforeAn
 
 
   "Group commit" should "checkpoint all AgentsGroup state" in {
-    val group = new CheckpointGroup()
+    val group = f.getCheckpointGroup()
     group.add(producer)
     group.add(consumer)
 

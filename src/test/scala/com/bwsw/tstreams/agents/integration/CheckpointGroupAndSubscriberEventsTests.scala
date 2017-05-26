@@ -4,7 +4,6 @@ import java.util.concurrent.{CountDownLatch, TimeUnit}
 
 import com.bwsw.tstreams.agents.consumer.Offset.Newest
 import com.bwsw.tstreams.agents.consumer.{ConsumerTransaction, TransactionOperator}
-import com.bwsw.tstreams.agents.group.CheckpointGroup
 import com.bwsw.tstreams.agents.producer.NewProducerTransactionPolicy
 import com.bwsw.tstreams.testutils.{TestStorageServer, TestUtils}
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
@@ -14,21 +13,26 @@ import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
   */
 class CheckpointGroupAndSubscriberEventsTests extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
   lazy val srv = TestStorageServer.getNewClean()
-  lazy val producer = f.getProducer(
-    name = "test_producer",
-    partitions = Set(0))
-
 
   override def beforeAll(): Unit = {
     srv
     createNewStream()
   }
 
+  override def afterAll(): Unit = {
+    TestStorageServer.dispose(srv)
+    onAfterAll()
+  }
+
   it should "checkpoint all transactions with CG" in {
     val l = new CountDownLatch(1)
     var transactionsCounter: Int = 0
 
-    val group = new CheckpointGroup()
+    val group = f.getCheckpointGroup()
+
+    val producer = f.getProducer(
+      name = "test_producer",
+      partitions = Set(0))
 
     group.add(producer)
 
@@ -54,11 +58,7 @@ class CheckpointGroupAndSubscriberEventsTests extends FlatSpec with Matchers wit
     l.await(5, TimeUnit.SECONDS) shouldBe true
     transactionsCounter shouldBe 2
     subscriber.stop()
+    producer.stop()
   }
 
-  override def afterAll(): Unit = {
-    producer.stop()
-    TestStorageServer.dispose(srv)
-    onAfterAll()
-  }
 }
