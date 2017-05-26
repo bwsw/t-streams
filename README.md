@@ -48,9 +48,10 @@ In a nutshel T-streams infrastructure functions as and can be described as:
     4. fix their current state with checkpoint operation
 7. Checkpoint operation is atomic for
     1. a single transaction when is called for a transaction object
-    2. for all opened transaction of a producer when is called for a producer object
-    3. for all opened transaction for certain partition of a producer when is called for a producer object
-    4. for all producers, consumers and subscribers which are participants of a CheckpointGroup when is called for CheckpointGroup object
+    2. for all opened transactions of a producer when is called for a producer object
+    3. for all opened transactions for certain partition of a producer when is called for a producer object
+    4. for a state of a consumer or a subscriber when is called for a consumer or a subscriber object
+    4. for all transactions and states of producers, consumers and subscribers which are participants of a CheckpointGroup when is called for CheckpointGroup object
 
 ## License
 
