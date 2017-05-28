@@ -38,7 +38,7 @@ class Producer(var name: String,
   val pcs = producerOptions.coordinationOptions
   val isStopped = new AtomicBoolean(false)
   val isMissedUpdate = new AtomicBoolean(false)
-  val fullPrefix = java.nio.file.Paths.get(pcs.zkPrefix, stream.name).toString
+  val fullPrefix = stream.path
 
   /**
     * Queue to figure out moment when transaction is going to close

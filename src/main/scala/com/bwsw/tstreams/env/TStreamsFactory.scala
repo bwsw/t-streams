@@ -126,7 +126,7 @@ class TStreamsFactory() {
 
     val authOptions = new AuthOptions(key = pAsString(co.Common.authenticationKey))
 
-    val zookeeperOptions = new ZookeeperOptions(prefix = pAsString(co.StorageClient.Zookeeper.prefix))
+    val zookeeperOptions = new ZookeeperOptions(prefix = pAsString(co.Coordination.path))
 
     val curator = CuratorFrameworkFactory.builder()
       .connectionTimeoutMs(pAsInt(co.Coordination.connectionTimeoutMs))
@@ -224,7 +224,6 @@ class TStreamsFactory() {
     assert(pAsString(co.Producer.bindPort) != null)
     assert(pAsString(co.Producer.bindHost) != null)
     assert(pAsString(co.Coordination.endpoints) != null)
-    assert(pAsString(co.Coordination.prefix) != null)
 
     val port = getProperty(co.Producer.bindPort) match {
       case (p: Int) => p
@@ -259,7 +258,6 @@ class TStreamsFactory() {
     producerDefaults.Transaction.batchSize.check(batchSize)
 
     val cao = new OpenerOptions(
-      zkPrefix = pAsString(co.Coordination.prefix),
       openerServerHost = pAsString(co.Producer.bindHost),
       openerServerPort = port,
       threadPoolSize = threadPoolSize,
@@ -368,7 +366,7 @@ class TStreamsFactory() {
     val endpoints = pAsString(co.Coordination.endpoints)
     assert(endpoints != null)
 
-    val root = pAsString(co.Coordination.prefix)
+    val root = pAsString(co.Coordination.path)
     assert(root != null)
 
     val sessionTimeoutMs = pAsInt(co.Coordination.sessionTimeoutMs, coordinationDefaults.sessionTimeoutMs.default)

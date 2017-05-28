@@ -13,11 +13,6 @@ object ConfigurationOptions {
     * TSF_Dictionary storage scope
     */
   object StorageClient {
-
-    object Zookeeper {
-      val prefix = "storage-client.zk.prefix"
-    }
-
     val connectionTimeoutMs = "storage-client.connection-timeout-ms"
     val requestTimeoutMs = "storage-client.request-timeout-ms"
     val requestTimeoutRetryCount = "storage-client.request-timeout-retry-count"
@@ -46,16 +41,16 @@ object ConfigurationOptions {
     /**
       * ZK root node which holds coordination tree
       */
-    val prefix = "coordination.root"
+    val path = "coordination.root"
     /**
       * ZK ttl for coordination
       */
-    val sessionTimeoutMs = "coordination.ttl-ms"
+    val sessionTimeoutMs = "coordination.session-timeout-ms"
 
     /**
       * ZK connection timeout
       */
-    val connectionTimeoutMs = "coordination.connection-timeout"
+    val connectionTimeoutMs = "coordination.connection-timeout-ms"
 
     /**
       *

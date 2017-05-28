@@ -20,7 +20,6 @@ class StreamEntityTests extends FlatSpec with Matchers with BeforeAndAfterAll wi
     storageClient.createStream(name, 1, 24 * 3600, "sample-desc")
 
     val s: Stream = storageClient.loadStream(name)
-
     s.name shouldBe name
     s.description shouldBe "sample-desc"
     s.ttl shouldBe 24 * 3600
