@@ -25,7 +25,6 @@ trait TestUtils {
     */
   val id = TestUtils.moveId()
   val randomKeyspace = TestUtils.getKeyspace(id)
-  val coordinationRoot = s"/$randomKeyspace"
 
   val zookeeperPort = TestUtils.ZOOKEEPER_PORT
 
@@ -41,8 +40,7 @@ trait TestUtils {
   val DEFAULT_STREAM_NAME = "test_stream"
 
   val f = new TStreamsFactory()
-  f.setProperty(ConfigurationOptions.Coordination.prefix, coordinationRoot)
-    .setProperty(ConfigurationOptions.Coordination.endpoints, s"localhost:$zookeeperPort")
+  f.setProperty(ConfigurationOptions.Coordination.endpoints, s"localhost:$zookeeperPort")
     .setProperty(ConfigurationOptions.Stream.name, DEFAULT_STREAM_NAME)
     .setProperty(ConfigurationOptions.Stream.partitionsCount, 3)
     .setProperty(ConfigurationOptions.Common.authenticationKey, TestUtils.AUTH_KEY)
@@ -58,7 +56,7 @@ trait TestUtils {
   if (curatorClient.checkExists().forPath("/tts") == null)
     curatorClient.create().forPath("/tts")
 
-  removeZkMetadata(f.getProperty(ConfigurationOptions.Coordination.prefix).toString)
+  removeZkMetadata(f.getProperty(ConfigurationOptions.Coordination.path).toString)
 
   def getRandomString: String = RandomStringCreator.randomAlphaString(10)
 
@@ -104,7 +102,7 @@ trait TestUtils {
 
   def onAfterAll() = {
     System.setProperty("DEBUG", "false")
-    removeZkMetadata(f.getProperty(ConfigurationOptions.Coordination.prefix).toString)
+    removeZkMetadata(f.getProperty(ConfigurationOptions.Coordination.path).toString)
     removeZkMetadata("/unit")
     curatorClient.close()
     f.dumpStorageClients()

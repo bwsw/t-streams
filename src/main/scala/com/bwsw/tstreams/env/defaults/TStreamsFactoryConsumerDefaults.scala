@@ -18,7 +18,6 @@ object TStreamsFactoryConsumerDefaults {
     object Subscriber {
       val bindHost = "localhost"
       val bindPort = PortRange(40000, 50000)
-      val persistentQueuePath = null
       val transactionBufferThreadPoolSize = IntMinMaxDefault(1, 64, 4)
       val processingEnginesThreadPoolSize = IntMinMaxDefault(1, 64, 1)
       val pollingFrequencyDelayMs = IntMinMaxDefault(10, 100000, 1000)
@@ -34,7 +33,6 @@ object TStreamsFactoryConsumerDefaults {
     m(co.dataPreload) = Consumer.dataPreload.default
     m(co.Subscriber.bindHost) = Consumer.Subscriber.bindHost
     m(co.Subscriber.bindPort) = Consumer.Subscriber.bindPort
-    m(co.Subscriber.persistentQueuePath) = Consumer.Subscriber.persistentQueuePath
     m(co.Subscriber.transactionBufferThreadPoolSize) = Consumer.Subscriber.transactionBufferThreadPoolSize.default
     m(co.Subscriber.processingEnginesThreadPoolSize) = Consumer.Subscriber.processingEnginesThreadPoolSize.default
     m(co.Subscriber.pollingFrequencyDelayMs) = Consumer.Subscriber.pollingFrequencyDelayMs.default
