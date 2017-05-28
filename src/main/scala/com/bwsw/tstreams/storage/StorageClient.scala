@@ -64,7 +64,7 @@ class StorageClient(clientOptions: ConnectionOptions,
     val rpcStream = Await.result(client.getStream(streamName), timeout).get
 
     new Stream(curator = curator, client = this, id = rpcStream.id, name = rpcStream.name, partitionsCount = rpcStream.partitions,
-      ttl = rpcStream.ttl, description = rpcStream.description.fold("")(x => x))
+      ttl = rpcStream.ttl, description = rpcStream.description.fold("")(x => x), path = rpcStream.zkPath)
   }
 
   /**

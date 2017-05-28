@@ -10,6 +10,7 @@ import org.apache.curator.framework.CuratorFramework
   * @param name            Name of the stream
   * @param partitionsCount Number of stream partitions
   * @param ttl             Time of transaction time expiration in seconds
+  * @param path            Zk path of the stream
   * @param description     Some additional info about stream
   */
 class Stream(val client: StorageClient,
@@ -18,6 +19,7 @@ class Stream(val client: StorageClient,
              val name: String,
              val partitionsCount: Int,
              val ttl: Long,
+             val path: String,
              val description: String) {
   if (ttl < TStreamsFactoryStreamDefaults.Stream.ttlSec.min)
     throw new IllegalArgumentException(s"The TTL must be greater or equal than ${TStreamsFactoryStreamDefaults.Stream.ttlSec.min} seconds.")

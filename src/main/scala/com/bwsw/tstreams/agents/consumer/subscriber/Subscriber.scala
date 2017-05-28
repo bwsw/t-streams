@@ -139,12 +139,9 @@ class Subscriber(val name: String,
     Subscriber.logger.info(s"[INIT] Subscriber $name: has created TransactionBufferWorkers.")
     Subscriber.logger.info(s"[INIT] Subscriber $name: is about to launch the coordinator.")
 
-    coordinator.bootstrap(
-      curatorClient = stream.client.curatorClient,
+    coordinator.bootstrap(stream = stream,
       agentAddress = options.agentAddress,
-      stream = stream.name,
-      partitions = Set[Int]().empty ++ options.readPolicy.getUsedPartitions,
-      zkRootPath = options.zkPrefixPath)
+      partitions = Set[Int]().empty ++ options.readPolicy.getUsedPartitions)
 
     Subscriber.logger.info(s"[INIT] Subscriber $name: has launched the coordinator.")
     Subscriber.logger.info(s"[INIT] Subscriber $name: is about to launch the UDP server.")

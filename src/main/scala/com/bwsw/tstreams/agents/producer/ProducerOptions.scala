@@ -14,8 +14,7 @@ class ProducerOptions(val transactionTtlMs: Long,
                       val coordinationOptions: OpenerOptions)
 
 
-class OpenerOptions(val zkPrefix: String,
-                    val openerServerHost: String,
+class OpenerOptions(val openerServerHost: String,
                     val openerServerPort: Int,
                     val threadPoolSize: Int,
                     val transportClientTimeoutMs: Int)
