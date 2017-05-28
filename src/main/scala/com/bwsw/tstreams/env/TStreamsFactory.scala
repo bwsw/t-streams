@@ -266,7 +266,7 @@ class TStreamsFactory() {
     var writePolicy: AbstractPolicy = null
 
     if (pAsString(co.Producer.Transaction.distributionPolicy) ==
-      co.Producer.Transaction.Consts.DISTRIBUTION_POLICY_RR) {
+      co.Producer.Transaction.Constants.DISTRIBUTION_POLICY_RR) {
       writePolicy = new RoundRobinPolicy(stream, partitions)
     }
     else {

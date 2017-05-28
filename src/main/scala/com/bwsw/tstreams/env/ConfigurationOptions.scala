@@ -72,7 +72,7 @@ object ConfigurationOptions {
     /**
       * amount of threads which handles works with transactions on master
       */
-    val threadPoolSize = "producer.thread-pool"
+    val threadPoolSize = "producer.thread-pool-size"
 
     /**
       * amount of publisher threads in a thread pool (default 1)
@@ -97,12 +97,12 @@ object ConfigurationOptions {
       /**
         * TTL of transaction to wait until determine it's broken
         */
-      val ttlMs = "producer.transaction.ttl"
+      val ttlMs = "producer.transaction.ttl-ms"
 
       /**
         * Time to update transaction state (keep it alive for long transactions)
         */
-      val keepAliveMs = "producer.transaction.keep-alive"
+      val keepAliveMs = "producer.transaction.keep-alive-ms"
       /**
         * amount of data items to batch when write data into transaction
         */
@@ -115,7 +115,7 @@ object ConfigurationOptions {
       /**
         * TSF_Dictionary.Producer.Transaction consts scope
         */
-      object Consts {
+      object Constants {
         /**
           * defines standard round-robin policy
           */
@@ -152,26 +152,20 @@ object ConfigurationOptions {
         * port to bind
         */
       val bindPort = "consumer.subscriber.bind-port"
-
-      /**
-        * persistent queue path (fast disk where to store burst data
-        */
-      val persistentQueuePath = "consumer.subscriber.persistent-queue.path"
-
       /**
         * thread pool size
         */
-      val transactionBufferThreadPoolSize = "consumer.subscriber.transaction-buffer-thread-pool"
+      val transactionBufferThreadPoolSize = "consumer.subscriber.transaction-buffer-thread-pool-size"
 
       /**
         * processing engines pool
         */
-      val processingEnginesThreadPoolSize = "consumer.subscriber.processing-engines-thread-pool"
+      val processingEnginesThreadPoolSize = "consumer.subscriber.processing-engines-thread-pool-size"
 
       /**
         * thread pool size
         */
-      val pollingFrequencyDelayMs = "consumer.subscriber.polling-frequency-delay"
+      val pollingFrequencyDelayMs = "consumer.subscriber.polling-frequency-delay-ms"
 
       /**
         * maximum amount of transactions in-flight in a map

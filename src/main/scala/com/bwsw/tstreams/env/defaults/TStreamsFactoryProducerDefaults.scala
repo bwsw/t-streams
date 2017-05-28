@@ -23,7 +23,7 @@ object TStreamsFactoryProducerDefaults {
       val ttlMs = IntMinMaxDefault(500, 300000, 60000)
       val keepAliveMs = IntMinMaxDefault(100, 60000, 6000)
       val batchSize = IntMinMaxDefault(1, 1000, 100)
-      val distributionPolicy = ConfigurationOptions.Producer.Transaction.Consts.DISTRIBUTION_POLICY_RR
+      val distributionPolicy = ConfigurationOptions.Producer.Transaction.Constants.DISTRIBUTION_POLICY_RR
     }
 
   }
