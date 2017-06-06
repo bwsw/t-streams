@@ -1,7 +1,7 @@
 package com.bwsw.tstreams.agents.group
 
-import com.bwsw.tstreams.agents.producer.{ProducerTransaction, TransactionOpenerService}
-import com.bwsw.tstreams.proto.protocol.TransactionState
+import com.bwsw.tstreams.agents.producer.{Producer, ProducerTransaction}
+import com.bwsw.tstreamstransactionserver.protocol.TransactionState
 
 import scala.language.existentials
 
@@ -28,7 +28,7 @@ sealed trait StateInfo
   * @param ttl            Transaction time to live in seconds
   */
 case class ProducerTransactionStateInfo(transactionRef: ProducerTransaction,
-                                        agent: TransactionOpenerService,
+                                        agent: Producer,
                                         event: TransactionState,
                                         streamID: Int,
                                         partition: Int,

@@ -5,8 +5,7 @@ import java.util.concurrent.CountDownLatch
 
 import com.bwsw.tstreams.common.UdpClient
 import com.bwsw.tstreams.coordination.server.RequestsServer
-import com.bwsw.tstreams.generator.LocalTransactionGenerator
-import com.bwsw.tstreams.proto.protocol.{TransactionRequest, TransactionResponse}
+import com.bwsw.tstreams.generator.TransactionGenerator
 import org.scalatest.{FlatSpec, Matchers}
 import org.slf4j.LoggerFactory
 
@@ -19,7 +18,7 @@ class UdpClientServerTest extends FlatSpec with Matchers {
 
   it should "operate" in {
 
-    val g = new LocalTransactionGenerator()
+    val g = new TransactionGenerator()
 
     val server = new RequestsServer("127.0.0.1", 8123, 8) {
       override def handleRequest(client: SocketAddress, reqAny: AnyRef): Unit = {

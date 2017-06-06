@@ -13,10 +13,6 @@ object TStreamsFactoryProducerDefaults {
   case class PortRange(from: Int, to: Int)
 
   object Producer {
-    val bindHost = "localhost"
-    val bindPort = PortRange(20000, 60000)
-    val openTimeoutMs = IntMinMaxDefault(1000, 10000, 5000)
-    val threadPoolSize = IntMinMaxDefault(1, 1000, Runtime.getRuntime().availableProcessors())
     val notifyJobsThreadPoolSize = IntMinMaxDefault(1, 32, 1)
 
     object Transaction {
@@ -32,10 +28,6 @@ object TStreamsFactoryProducerDefaults {
     val m = mutable.HashMap[String, Any]()
     val co = ConfigurationOptions.Producer
 
-    m(co.bindHost) = Producer.bindHost
-    m(co.bindPort) = Producer.bindPort
-    m(co.openTimeoutMs) = Producer.openTimeoutMs.default
-    m(co.threadPoolSize) = Producer.threadPoolSize.default
     m(co.notifyJobsThreadPoolSize) = Producer.notifyJobsThreadPoolSize.default
     m(co.Transaction.ttlMs) = Producer.Transaction.ttlMs.default
     m(co.Transaction.keepAliveMs) = Producer.Transaction.keepAliveMs.default

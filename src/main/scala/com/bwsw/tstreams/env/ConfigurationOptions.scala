@@ -70,28 +70,9 @@ object ConfigurationOptions {
   object Producer {
 
     /**
-      * amount of threads which handles works with transactions on master
-      */
-    val threadPoolSize = "producer.thread-pool-size"
-
-    /**
       * amount of publisher threads in a thread pool (default 1)
       */
     val notifyJobsThreadPoolSize = "producer.thread-pool.notify-jobs-thread-pool-size"
-
-    /**
-      * hostname or ip of producer master listener
-      */
-    val bindHost = "producer.bind-host"
-    /**
-      * port of producer master listener
-      */
-    val bindPort = "producer.bind-port"
-    /**
-      * Transport timeout is maximum time to wait for master to respond
-      */
-    val openTimeoutMs = "producer.open-timeout-ms"
-
 
     object Transaction {
       /**
