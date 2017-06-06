@@ -1,7 +1,7 @@
 package com.bwsw.tstreams.agents.consumer.subscriber
 
 
-import com.bwsw.tstreams.proto.protocol.TransactionState
+import com.bwsw.tstreamstransactionserver.protocol.TransactionState
 
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer

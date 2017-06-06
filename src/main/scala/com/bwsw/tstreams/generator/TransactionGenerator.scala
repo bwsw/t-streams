@@ -15,6 +15,6 @@ class TransactionGenerator(storageClient: StorageClient) {
   /**
     * @return time based on transaction
     */
-  def getTransaction(timestamp: Long) = storageClient.generateTransaction(timestamp)
+  def getTransaction(timestamp: Long) = storageClient.generateTransactionForTimestamp(timestamp)
 
 }

@@ -83,7 +83,7 @@ class CheckpointGroup private[tstreams] (val executors: Int = 1) {
 
   private def checkUpdateFailure(producers: List[StateInfo]) = {
     val availList = producers.map {
-      case ProducerTransactionStateInfo(_, agent, _, _, _, _, _, _) => agent.getProducer.checkUpdateFailure()
+      case ProducerTransactionStateInfo(_, agent, _, _, _, _, _, _) => agent.checkUpdateFailure()
       case _ => 1.minute
     }
     availList.sorted.head
@@ -200,7 +200,7 @@ class CheckpointGroup private[tstreams] (val executors: Int = 1) {
   private def publishEventForAllProducers(stateInfoList: List[StateInfo]) = {
     stateInfoList foreach {
       case ProducerTransactionStateInfo(_, agent, stateEvent, _, _, _, _, _) =>
-        executorPool.submit("<Event>", () => agent.getProducer.publish(stateEvent, agent.getProducer.stream.client.authenticationKey), None)
+        executorPool.submit("<Event>", () => agent.publish(stateEvent, agent.stream.client.authenticationKey), None)
       case _ =>
     }
   }

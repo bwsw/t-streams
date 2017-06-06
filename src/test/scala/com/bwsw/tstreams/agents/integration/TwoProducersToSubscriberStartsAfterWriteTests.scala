@@ -52,7 +52,6 @@ class TwoProducersToSubscriberStartsAfterWriteTests extends FlatSpec with Matche
       })
 
     val t1 = new Thread(() => {
-      logger.info(s"Producer-1 is master of partition: ${producer1.isMasterOfPartition(0)}")
       lp2.countDown()
       for (i <- 0 until TRANSACTIONS_COUNT) {
         val t = producer1.newTransaction(policy = NewProducerTransactionPolicy.CheckpointIfOpened)
@@ -65,7 +64,6 @@ class TwoProducersToSubscriberStartsAfterWriteTests extends FlatSpec with Matche
       }
     })
     val t2 = new Thread(() => {
-      logger.info(s"Producer-2 is master of partition: ${producer2.isMasterOfPartition(0)}")
       lp2.await()
       for (i <- 0 until TRANSACTIONS_COUNT) {
         val t = producer2.newTransaction(policy = NewProducerTransactionPolicy.CheckpointIfOpened)

@@ -11,7 +11,6 @@ import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 
 
 class ConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
-  lazy val gen = LocalGeneratorCreator.getGen()
 
   lazy val srv = TestStorageServer.getNewClean()
   lazy val storageClient = f.getStorageClient()
@@ -40,7 +39,7 @@ class ConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll with Te
   }
 
   "consumer.getTransactionById" should "return sent transaction" in {
-    val transactionID = LocalGeneratorCreator.getTransaction()
+    val transactionID = consumer.transactionGenerator.getTransaction()
     val putCounter = new CountDownLatch(1)
     srv.notifyProducerTransactionCompleted(t => t.transactionID == transactionID && t.state == TransactionStates.Checkpointed, putCounter.countDown())
     storageClient.putTransactionSync(new RPCProducerTransaction(s.id, 1, transactionID, TransactionStates.Opened, -1, TRANSACTION_TTL))
@@ -59,7 +58,7 @@ class ConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll with Te
   "consumer.getLastTransaction" should "return last checkpointed transaction" in {
     val ALL = 100
     val putCounter = new CountDownLatch(1)
-    val transactions = for (i <- 0 until ALL) yield LocalGeneratorCreator.getTransaction()
+    val transactions = for (i <- 0 until ALL) yield consumer.transactionGenerator.getTransaction()
     val transaction = transactions.head
     srv.notifyProducerTransactionCompleted(t => t.transactionID == transactions.last, putCounter.countDown())
 
@@ -78,7 +77,7 @@ class ConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll with Te
   "consumer.getTransactionsFromTo" should "return all transactions if no incomplete" in {
     val ALL = 80
     val putCounter = new CountDownLatch(1)
-    val transactions = for (i <- 0 until ALL) yield LocalGeneratorCreator.getTransaction()
+    val transactions = for (i <- 0 until ALL) yield consumer.transactionGenerator.getTransaction()
     val firstTransaction = transactions.head
     val lastTransaction = transactions.last
     srv.notifyProducerTransactionCompleted(t => t.transactionID == lastTransaction && t.state == TransactionStates.Checkpointed, putCounter.countDown())
@@ -98,13 +97,13 @@ class ConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll with Te
     val LAST = 100
     val putCounter = new CountDownLatch(1)
 
-    val transactions1 = for (i <- 0 until FIRST) yield LocalGeneratorCreator.getTransaction()
+    val transactions1 = for (i <- 0 until FIRST) yield consumer.transactionGenerator.getTransaction()
     transactions1 foreach { t =>
       storageClient.putTransactionSync(new RPCProducerTransaction(s.id, 1, t, TransactionStates.Opened, -1, TRANSACTION_TTL))
       storageClient.putTransactionSync(new RPCProducerTransaction(s.id, 1, t, TransactionStates.Checkpointed, 1, TRANSACTION_TTL))
     }
-    storageClient.putTransactionSync(new RPCProducerTransaction(s.id, 1, LocalGeneratorCreator.getTransaction(), TransactionStates.Opened, -1, TRANSACTION_TTL))
-    val transactions2 = for (i <- FIRST until LAST) yield LocalGeneratorCreator.getTransaction()
+    storageClient.putTransactionSync(new RPCProducerTransaction(s.id, 1, consumer.transactionGenerator.getTransaction(), TransactionStates.Opened, -1, TRANSACTION_TTL))
+    val transactions2 = for (i <- FIRST until LAST) yield consumer.transactionGenerator.getTransaction()
 
     srv.notifyProducerTransactionCompleted(t => t.transactionID == transactions2.last && t.state == TransactionStates.Checkpointed, putCounter.countDown())
 
@@ -124,7 +123,7 @@ class ConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll with Te
 
   "consumer.getTransactionsFromTo" should "return none if empty" in {
     val ALL = 100
-    val transactions = for (i <- 0 until ALL) yield LocalGeneratorCreator.getTransaction()
+    val transactions = for (i <- 0 until ALL) yield consumer.transactionGenerator.getTransaction()
     val firstTransaction = transactions.head
     val lastTransaction = transactions.last
     val res = consumer.getTransactionsFromTo(1, firstTransaction, lastTransaction)
@@ -133,7 +132,7 @@ class ConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll with Te
 
   "consumer.getTransactionsFromTo" should "return none if to < from" in {
     val ALL = 80
-    val transactions = for (i <- 0 until ALL) yield LocalGeneratorCreator.getTransaction()
+    val transactions = for (i <- 0 until ALL) yield consumer.transactionGenerator.getTransaction()
     val firstTransaction = transactions.head
     val lastTransaction = transactions.tail.tail.tail.head
     transactions foreach { t =>

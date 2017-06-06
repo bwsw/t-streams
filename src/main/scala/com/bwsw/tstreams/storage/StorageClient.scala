@@ -243,7 +243,7 @@ class StorageClient(clientOptions: ConnectionOptions,
     Await.result(client.getTransaction(), timeout)
   }
 
-  def generateTransaction(time: Long, timeout: Duration = StorageClient.maxAwaiTimeout): Long = {
+  def generateTransactionForTimestamp(time: Long, timeout: Duration = StorageClient.maxAwaiTimeout): Long = {
     Await.result(client.getTransaction(time), timeout)
   }
 

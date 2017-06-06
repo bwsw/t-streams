@@ -22,13 +22,6 @@ class ProducerTest extends FlatSpec with Matchers with BeforeAndAfterAll with Te
     createNewStream(partitions = PARTITIONS_COUNT)
   }
 
-  "Producer.isMeAMasterOfPartition" should "return true" in {
-    (0 until PARTITIONS_COUNT).foreach(p => producer.isMasterOfPartition(p) shouldBe true)
-  }
-
-  "Producer.isMeAMasterOfPartition" should "return false" in {
-    (PARTITIONS_COUNT until PARTITIONS_COUNT + 1).foreach(p => producer.isMasterOfPartition(p) shouldBe false)
-  }
 
   "BasicProducer.newTransaction()" should "return BasicProducerTransaction instance" in {
     val transaction = producer.newTransaction(NewProducerTransactionPolicy.ErrorIfOpened)

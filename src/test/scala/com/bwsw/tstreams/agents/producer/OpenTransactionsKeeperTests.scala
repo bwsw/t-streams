@@ -2,8 +2,7 @@ package com.bwsw.tstreams.agents.producer
 
 
 import com.bwsw.tstreams.agents.group.ProducerTransactionStateInfo
-import com.bwsw.tstreams.proto.protocol.TransactionState
-import com.bwsw.tstreams.testutils.LocalGeneratorCreator
+import com.bwsw.tstreamstransactionserver.protocol.TransactionState
 import org.scalatest.{FlatSpec, Matchers}
 
 /**
@@ -34,7 +33,7 @@ class OpenTransactionsKeeperTests extends FlatSpec with Matchers {
 
     override def getStateInfo(status: TransactionState.Status): ProducerTransactionStateInfo = null
 
-    override def getTransactionID(): Long = LocalGeneratorCreator.getTransaction()
+    override def getTransactionID(): Long = System.currentTimeMillis()
 
     override def markAsClosed(): Unit = {}
 
@@ -84,12 +83,5 @@ class OpenTransactionsKeeperTests extends FlatSpec with Matchers {
     ctr shouldBe 3
   }
 
-  ignore should "correctly raise an exception if master returned a transaction with ID which is less than the last one" in {
-    val keeper = new OpenTransactionsKeeper()
-    keeper.put(0, new TransactionStub)
-    intercept[MasterInconsistencyException] {
-      keeper.put(0, new TransactionStubBadTransactionID)
-    }
-  }
 
 }

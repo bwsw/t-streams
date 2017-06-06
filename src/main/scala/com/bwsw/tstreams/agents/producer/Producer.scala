@@ -7,6 +7,7 @@ import com.bwsw.tstreams.agents.group._
 import com.bwsw.tstreams.agents.producer.NewProducerTransactionPolicy.ProducerPolicy
 import com.bwsw.tstreams.common._
 import com.bwsw.tstreams.coordination.client.UdpEventsBroadcastClient
+import com.bwsw.tstreams.generator.TransactionGenerator
 import com.bwsw.tstreams.storage.StorageClient
 import com.bwsw.tstreams.streams.Stream
 import com.bwsw.tstreamstransactionserver.protocol.TransactionState
@@ -52,6 +53,7 @@ class Producer(var name: String,
   private[tstreams] val subscriberNotifier = new UdpEventsBroadcastClient(curatorClient, prefix = fullPrefix, partitions = producerOptions.writePolicy.getUsedPartitions)
   private[tstreams] var lastUpdateEndTime = System.currentTimeMillis()
   private[tstreams] val getUniqueAgentID = Random.nextLong()
+  private[tstreams] val transactionGenerator = new TransactionGenerator(stream.client)
 
 
   log.info(s"Start new Basic producer with id: ${getUniqueAgentID}, name : $name, streamName : ${stream.name}, streamPartitions : ${stream.partitionsCount}")

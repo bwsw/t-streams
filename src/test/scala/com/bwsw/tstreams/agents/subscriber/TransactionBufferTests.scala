@@ -5,7 +5,7 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicLong
 
 import com.bwsw.tstreams.agents.consumer.subscriber.{QueueBuilder, TransactionBuffer}
-import com.bwsw.tstreams.proto.protocol.TransactionState
+import com.bwsw.tstreamstransactionserver.protocol.TransactionState
 import org.scalatest.{FlatSpec, Matchers}
 
 object TransactionBufferTests {

@@ -3,7 +3,7 @@ package com.bwsw.tstreams.agents.producer
 import java.util.concurrent.atomic.AtomicBoolean
 
 import com.bwsw.tstreams.agents.group.ProducerTransactionStateInfo
-import com.bwsw.tstreams.proto.protocol.TransactionState
+import com.bwsw.tstreamstransactionserver.protocol.TransactionState
 import com.bwsw.tstreamstransactionserver.rpc.TransactionStates
 import org.slf4j.LoggerFactory
 
@@ -120,7 +120,7 @@ class ProducerTransaction(partition: Int,
       ttlMs = -1,
       status = TransactionState.Status.Cancelled,
       partition = partition,
-      masterID = producer.getPartitionMasterIDLocalInfo(partition),
+      masterID = 0,
       orderID = -1,
       count = 0)
     producer.publish(msg, producer.stream.client.authenticationKey)
@@ -185,7 +185,7 @@ class ProducerTransaction(partition: Int,
           ttlMs = -1,
           status = TransactionState.Status.Checkpointed,
           partition = partition,
-          masterID = producer.getPartitionMasterIDLocalInfo(partition),
+          masterID = 0,
           orderID = -1,
           count = getDataItemsCount), producer.stream.client.authenticationKey))
 
@@ -242,7 +242,7 @@ class ProducerTransaction(partition: Int,
           ttlMs = producer.producerOptions.transactionTtlMs,
           status = TransactionState.Status.Updated,
           partition = partition,
-          masterID = producer.transactionOpenerService.getUniqueAgentID,
+          masterID = 0,
           orderID = -1,
           count = 0), producer.stream.client.authenticationKey))
     }
@@ -256,12 +256,12 @@ class ProducerTransaction(partition: Int,
       ttlMs = -1,
       status = status,
       partition = partition,
-      masterID = producer.getPartitionMasterIDLocalInfo(partition),
+      masterID = 0,
       orderID = -1,
       count = getDataItemsCount)
 
     ProducerTransactionStateInfo(transactionRef = this,
-      agent = producer.transactionOpenerService,
+      agent = producer,
       event = event,
       streamID = producer.stream.id,
       partition = partition,
