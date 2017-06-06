@@ -46,7 +46,7 @@ class ProducerTest extends FlatSpec with Matchers with BeforeAndAfterAll with Te
     producer.getOpenedTransactionsForPartition(3).get.size shouldBe 0
   }
 
-  "BasicProducer.newTransaction(ProducerPolicies.EnqueueIfOpened) and checlpoint" should "not throw exception if previous transaction was not closed" in {
+  "BasicProducer.newTransaction(ProducerPolicies.EnqueueIfOpened) and checkpoint" should "not throw exception if previous transaction was not closed" in {
     val transaction1 = producer.newTransaction(NewProducerTransactionPolicy.EnqueueIfOpened, 3)
     val transaction2 = producer.newTransaction(NewProducerTransactionPolicy.EnqueueIfOpened, 3)
     producer.checkpoint()
@@ -74,14 +74,14 @@ class ProducerTest extends FlatSpec with Matchers with BeforeAndAfterAll with Te
 
   "BasicProducer.instantTransaction" should "work well for unreliable delivery" in {
     val data = Seq(new Array[Byte](128))
-    producer.instantTransaction(0, data, isReliable = false) > 0 shouldBe true
+    producer.instantTransaction(0, data, isReliable = false) == 0 shouldBe true
   }
 
   "BasicProducer.instantTransaction" should "work and doesn't prevent from correct functioning of regular one" in {
     val regularTransaction = producer.newTransaction(NewProducerTransactionPolicy.ErrorIfOpened, 0)
     regularTransaction.send("test".getBytes)
     val data = Seq(new Array[Byte](128))
-    producer.instantTransaction(0, data, isReliable = false) > 0 shouldBe true
+    producer.instantTransaction(0, data, isReliable = false) == 0 shouldBe true
     regularTransaction.checkpoint()
   }
 
