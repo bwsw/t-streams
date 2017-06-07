@@ -196,7 +196,7 @@ class Consumer(val name: String,
 
     // we found open one, try to update it.
     val transactionUpdatedOpt = getTransactionById(partition, transaction.getTransactionID)
-    if (transactionUpdatedOpt.isDefined) {
+    if (transactionUpdatedOpt.isDefined && transactionUpdatedOpt.get.getState == TransactionStates.Checkpointed) {
       updateOffsets(partition, transactionUpdatedOpt.get.getTransactionID)
       transactionBuffer(partition).dequeue()
       return transactionUpdatedOpt
