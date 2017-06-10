@@ -2,7 +2,6 @@ package com.bwsw.tstreams.agents.integration
 
 import java.util.concurrent.CountDownLatch
 
-import com.bwsw.tstreams.agents.consumer.ConsumerTransaction
 import com.bwsw.tstreams.agents.consumer.Offset.{Newest, Oldest}
 import com.bwsw.tstreams.agents.producer.NewProducerTransactionPolicy
 import com.bwsw.tstreams.testutils._
@@ -183,9 +182,9 @@ class ProducerAndConsumerSimpleTests extends FlatSpec with Matchers with BeforeA
     val consumerThread = new Thread(() => {
       breakable {
         while (true) {
-          val consumedTransaction: Option[ConsumerTransaction] = consumer.getTransaction(0)
-          if (consumedTransaction.isDefined) {
-            consumedTransaction.get.getAll.map(i => new String(i)).sorted shouldBe sendData
+          val transactionOpt = consumer.getTransaction(0)
+          if (transactionOpt.isDefined) {
+            transactionOpt.get.getAll.map(i => new String(i)).sorted shouldBe sendData
             break()
           }
           Thread.sleep(100)

@@ -4,7 +4,7 @@ import java.net.{DatagramSocket, InetAddress}
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.atomic.AtomicBoolean
 
-import com.bwsw.tstreams.proto.protocol.TransactionState
+import com.bwsw.tstreamstransactionserver.protocol.TransactionState
 import org.apache.curator.framework.CuratorFramework
 import org.slf4j.LoggerFactory
 

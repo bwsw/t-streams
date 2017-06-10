@@ -31,9 +31,9 @@ class Subscriber(val name: String,
   private val bufferWorkerThreads = calculateBufferWorkersThreadAmount()
   private val peWorkerThreads = calculateProcessingEngineWorkersThreadAmount()
 
-  val l = options.agentAddress.split(":")
-  val host = l.head
-  val port = l.tail.head
+  private val l = options.agentAddress.split(":")
+  private val host = l.head
+  private val port = l.tail.head
   private var stateUpdateServer: StateUpdateServer = null
   private val consumer = new com.bwsw.tstreams.agents.consumer.Consumer(name, stream, options.getConsumerOptions())
 
@@ -42,6 +42,7 @@ class Subscriber(val name: String,
 
   private val coordinator = new Coordinator()
 
+  private[tstreams] val transactionGenerator = consumer.transactionGenerator
   /**
     * Erathosphene's grating algorithm
     *

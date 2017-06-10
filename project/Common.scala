@@ -1,9 +1,8 @@
+import Publish._
+import sbt.Keys._
 import sbt._
-import Keys._
 import sbtassembly.AssemblyPlugin.autoImport._
 import sbtassembly.PathList
-import sbtprotoc.ProtocPlugin.autoImport.PB
-import Publish._
 
 object Common {
 
@@ -34,10 +33,6 @@ object Common {
         "Sonatype OSS snapshots" at "https://oss.sonatype.org/content/repositories/snapshots",
         "Twitter Repo" at "https://maven.twttr.com",
         "Oracle Maven2 Repo" at "http://download.oracle.com/maven"),
-
-      PB.targets in Compile := Seq(
-        scalapb.gen(singleLineToString = true) -> (sourceManaged in Compile).value
-      ),
 
       parallelExecution in ThisBuild := false, //tests property
       fork := true

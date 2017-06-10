@@ -9,6 +9,7 @@ import com.bwsw.tstreams.env.ConfigurationOptions
 import com.bwsw.tstreams.testutils.{TestStorageServer, TestUtils}
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 
+import scala.collection.mutable.ListBuffer
 import scala.util.Random
 
 /**
@@ -39,6 +40,8 @@ class SubscriberWithManyProcessingEnginesThreadsTest extends FlatSpec with Match
   it should s"Start and work correctly with PROCESSING_ENGINES_THREAD_POOL=$PROCESSING_ENGINES_THREAD_POOL" in {
     val awaitTransactionsLatch = new CountDownLatch(1)
     var transactionsCounter = 0
+    val producerTransactions = new ListBuffer[(Int, Long)]()
+    val subscriberTransactions = new ListBuffer[(Int, Long)]()
 
     val subscriber = f.getSubscriber(
       name = "test_subscriber", // name of the subscribing consumer
@@ -46,6 +49,7 @@ class SubscriberWithManyProcessingEnginesThreadsTest extends FlatSpec with Match
       offset = Newest, // it will start from newest available partitions
       useLastOffset = false, // will ignore history
       callback = (op: TransactionOperator, transaction: ConsumerTransaction) => this.synchronized {
+        subscriberTransactions.append((transaction.getPartition, transaction.getTransactionID))
         transactionsCounter += 1
         if (transactionsCounter % 1000 == 0) {
           logger.info(s"I have read $transactionsCounter transactions up to now.")
@@ -70,19 +74,23 @@ class SubscriberWithManyProcessingEnginesThreadsTest extends FlatSpec with Match
             val v = Random.nextInt()
             t.send(s"$v")
           })
+          producerTransactions.append((t.getPartition, t.getTransactionID))
           t.checkpoint() // checkpoint the transaction
-          if (i % 1000 == 0) {
-            logger.info(s"I have wrote $i transactions up to now.")
+          if ((i+1) % 1000 == 0) {
+            logger.info(s"I have wrote ${i+1} transactions up to now.")
           }
         })
       producer.stop() // stop operation
     })
 
+    val start = System.currentTimeMillis()
     producerThread.start()
     producerThread.join()
+    val end = System.currentTimeMillis()
+    println(end - start)
     awaitTransactionsLatch.await(POLLING_FREQUENCY_DELAY_MS + 1000, TimeUnit.MILLISECONDS)
     subscriber.stop() // stop operation
-    transactionsCounter shouldBe TOTAL_TRANSACTIONS
+    (producerTransactions.toSet -- subscriberTransactions.toSet).isEmpty shouldBe true
   }
 
   override def afterAll(): Unit = {

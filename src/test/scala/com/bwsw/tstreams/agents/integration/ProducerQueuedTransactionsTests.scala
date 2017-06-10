@@ -28,13 +28,41 @@ class ProducerQueuedTransactionsTests extends FlatSpec with Matchers with Before
     onAfterAll()
   }
 
+  it should "create queued transactions, checkpoint them in arbitrary order and subscriber must be able to read them" in {
+    val latch = new CountDownLatch(3)
+    val subscriberAccumulator = new ListBuffer[Long]()
+
+    val producer = f.getProducer(name = "test_producer", partitions = Set(0))
+
+    val s = f.getSubscriber(name = "subscriber",
+      partitions = Set(0),
+      offset = Newest,
+      useLastOffset = false,
+      callback = (consumer: TransactionOperator, transaction: ConsumerTransaction) => this.synchronized {
+        subscriberAccumulator.append(transaction.getTransactionID)
+        latch.countDown()
+      }).start()
+
+    val transaction1 = producer.newTransaction(NewProducerTransactionPolicy.EnqueueIfOpened).send("test-t1")
+    val transaction2 = producer.newTransaction(NewProducerTransactionPolicy.EnqueueIfOpened).send("test-t2")
+    val transaction3 = producer.newTransaction(NewProducerTransactionPolicy.EnqueueIfOpened).send("test-t3")
+
+    Seq(transaction3, transaction1, transaction2).foreach(_.checkpoint())
+
+    producer.checkpoint()
+    producer.stop()
+
+    latch.await(10, TimeUnit.SECONDS) shouldBe true
+    subscriberAccumulator.toSeq shouldBe Seq(transaction1, transaction2, transaction3).map(_.getTransactionID)
+    s.stop()
+  }
+
+
   it should "create queued transactions, write them and subscriber must be able to read them" in {
     val TOTAL = 1000
     val latch = new CountDownLatch(TOTAL)
 
-    val producer = f.getProducer(
-      name = "test_producer",
-      partitions = Set(0))
+    val producer = f.getProducer(name = "test_producer", partitions = Set(0))
 
     val s = f.getSubscriber(name = "subscriber",
       partitions = Set(0),

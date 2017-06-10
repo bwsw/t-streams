@@ -4,7 +4,6 @@ import com.bwsw.tstreams.agents.consumer
 import com.bwsw.tstreams.agents.consumer.Offset.IOffset
 import com.bwsw.tstreams.agents.consumer.subscriber.QueueBuilder.InMemory
 import com.bwsw.tstreams.common.AbstractPolicy
-import com.bwsw.tstreams.generator.ITransactionGenerator
 
 /**
   * Created by Ivan Kudryavtsev on 19.08.16.
@@ -16,7 +15,6 @@ import com.bwsw.tstreams.generator.ITransactionGenerator
   * @param dataPreload
   * @param readPolicy
   * @param offset
-  * @param transactionGenerator
   * @param agentAddress
   * @param zkPrefixPath
   * @param transactionBufferWorkersThreadPoolAmount
@@ -26,7 +24,6 @@ class SubscriberOptions(val transactionsPreload: Int,
                         val dataPreload: Int,
                         val readPolicy: AbstractPolicy,
                         val offset: IOffset,
-                        val transactionGenerator: ITransactionGenerator,
                         val useLastOffset: Boolean,
                         val rememberFirstStartOffset: Boolean = true,
                         val agentAddress: String,
@@ -43,7 +40,6 @@ class SubscriberOptions(val transactionsPreload: Int,
     dataPreload = dataPreload,
     readPolicy = readPolicy,
     offset = offset,
-    transactionGenerator = transactionGenerator,
     checkpointAtStart = rememberFirstStartOffset,
     useLastOffset = useLastOffset)
 

@@ -7,10 +7,9 @@ import com.bwsw.tstreams.agents.consumer.Offset.IOffset
 import com.bwsw.tstreams.agents.consumer.subscriber.{QueueBuilder, Subscriber, SubscriberOptionsBuilder}
 import com.bwsw.tstreams.agents.consumer.{Consumer, ConsumerOptions}
 import com.bwsw.tstreams.agents.group.CheckpointGroup
-import com.bwsw.tstreams.agents.producer.{OpenerOptions, Producer, ProducerOptions}
+import com.bwsw.tstreams.agents.producer.{Producer, ProducerOptions}
 import com.bwsw.tstreams.common.{RoundRobinPolicy, _}
 import com.bwsw.tstreams.env.defaults.TStreamsFactoryProducerDefaults.PortRange
-import com.bwsw.tstreams.generator.{ITransactionGenerator, LocalTransactionGenerator}
 import com.bwsw.tstreams.storage.StorageClient
 import com.bwsw.tstreams.streams.Stream
 import com.bwsw.tstreamstransactionserver.options.ClientOptions.{AuthOptions, ConnectionOptions}
@@ -182,7 +181,6 @@ class TStreamsFactory() {
     */
   private def getBasicConsumerOptions(stream: Stream,
                                       partitions: Set[Int],
-                                      transactionGenerator: ITransactionGenerator,
                                       offset: IOffset,
                                       checkpointAtStart: Boolean = false,
                                       useLastOffset: Boolean = true) = this.synchronized {
@@ -198,7 +196,7 @@ class TStreamsFactory() {
     val consumerOptions = new ConsumerOptions(transactionsPreload = consumerTransactionsPreload,
       dataPreload = consumerDataPreload,
       readPolicy = new RoundRobinPolicy(stream, partitions), offset = offset,
-      transactionGenerator = transactionGenerator, useLastOffset = useLastOffset,
+      useLastOffset = useLastOffset,
       checkpointAtStart = checkpointAtStart)
 
     consumerOptions
@@ -221,15 +219,6 @@ class TStreamsFactory() {
 
     val stream = getStream()
 
-    assert(pAsString(co.Producer.bindPort) != null)
-    assert(pAsString(co.Producer.bindHost) != null)
-    assert(pAsString(co.Coordination.endpoints) != null)
-
-    val port = getProperty(co.Producer.bindPort) match {
-      case (p: Int) => p
-      case PortRange(pFrom: Int, pTo: Int) => SpareServerSocketLookupUtility.findSparePort(pAsString(co.Producer.bindHost), pFrom, pTo).get
-    }
-
     val coordinationDefaults = defaults.TStreamsFactoryCoordinationDefaults.Coordination
     val producerDefaults = defaults.TStreamsFactoryProducerDefaults.Producer
 
@@ -238,12 +227,6 @@ class TStreamsFactory() {
 
     val zkConnectionTimeoutMs = pAsInt(co.Coordination.connectionTimeoutMs, coordinationDefaults.connectionTimeoutMs.default)
     coordinationDefaults.connectionTimeoutMs.check(zkConnectionTimeoutMs)
-
-    val transportClientTimeoutMs = pAsInt(co.Producer.openTimeoutMs, producerDefaults.openTimeoutMs.default)
-    producerDefaults.openTimeoutMs.check(transportClientTimeoutMs)
-
-    val threadPoolSize = pAsInt(co.Producer.threadPoolSize, producerDefaults.threadPoolSize.default)
-    producerDefaults.threadPoolSize.check(threadPoolSize)
 
     val notifyJobsThreadPoolSize = pAsInt(co.Producer.notifyJobsThreadPoolSize, producerDefaults.notifyJobsThreadPoolSize.default)
     producerDefaults.notifyJobsThreadPoolSize.check(notifyJobsThreadPoolSize)
@@ -256,12 +239,6 @@ class TStreamsFactory() {
 
     val batchSize = pAsInt(co.Producer.Transaction.batchSize, producerDefaults.Transaction.batchSize.default)
     producerDefaults.Transaction.batchSize.check(batchSize)
-
-    val cao = new OpenerOptions(
-      openerServerHost = pAsString(co.Producer.bindHost),
-      openerServerPort = port,
-      threadPoolSize = threadPoolSize,
-      transportClientTimeoutMs = transportClientTimeoutMs)
 
     var writePolicy: AbstractPolicy = null
 
@@ -282,9 +259,7 @@ class TStreamsFactory() {
       transactionKeepAliveMs = transactionKeepAliveMs,
       writePolicy = writePolicy,
       batchSize = batchSize,
-      notifyJobsThreadPoolSize = notifyJobsThreadPoolSize,
-      transactionGenerator = new LocalTransactionGenerator,
-      coordinationOptions = cao)
+      notifyJobsThreadPoolSize = notifyJobsThreadPoolSize)
 
     Try(new Producer(name = name, stream = stream, producerOptions = po)) match {
       case Success(producer) => producer
@@ -312,7 +287,7 @@ class TStreamsFactory() {
 
 
     val stream = getStream()
-    val consumerOptions = getBasicConsumerOptions(transactionGenerator = new LocalTransactionGenerator,
+    val consumerOptions = getBasicConsumerOptions(
       stream = stream, partitions = partitions,
       offset = offset, checkpointAtStart = checkpointAtStart,
       useLastOffset = useLastOffset)
@@ -347,7 +322,7 @@ class TStreamsFactory() {
 
     val stream = getStream()
 
-    val consumerOptions = getBasicConsumerOptions(transactionGenerator = new LocalTransactionGenerator,
+    val consumerOptions = getBasicConsumerOptions(
       stream = stream,
       partitions = partitions,
       checkpointAtStart = checkpointAtStart,
@@ -360,7 +335,7 @@ class TStreamsFactory() {
 
     val bind_port = getProperty(co.Consumer.Subscriber.bindPort) match {
       case (p: Int) => p
-      case PortRange(pFrom: Int, pTo: Int) => SpareServerSocketLookupUtility.findSparePort(pAsString(co.Producer.bindHost), pFrom, pTo).get
+      case PortRange(pFrom: Int, pTo: Int) => SpareServerSocketLookupUtility.findSparePort(bind_host, pFrom, pTo).get
     }
 
     val endpoints = pAsString(co.Coordination.endpoints)

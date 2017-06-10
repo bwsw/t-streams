@@ -17,7 +17,6 @@ object SubscriberOptionsBuilder {
       dataPreload = consumerOpts.dataPreload,
       readPolicy = consumerOpts.readPolicy,
       offset = consumerOpts.offset,
-      transactionGenerator = consumerOpts.transactionGenerator,
       useLastOffset = consumerOpts.useLastOffset,
       agentAddress = agentAddress,
       zkPrefixPath = zkPrefixPath,

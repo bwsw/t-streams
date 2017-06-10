@@ -1,6 +1,6 @@
 package com.bwsw.tstreams.entities
 
-import com.bwsw.tstreams.testutils.{LocalGeneratorCreator, TestStorageServer, TestUtils}
+import com.bwsw.tstreams.testutils.{IncreasingGenerator, TestStorageServer, TestUtils}
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 
 
@@ -15,7 +15,7 @@ class ConsumerOffsetsTests extends FlatSpec with Matchers with BeforeAndAfterAll
     val stream = getRandomString
     val s = storageClient.createStream(stream, 1, 24 * 3600, "")
     val partition = 1
-    val offset: Long = LocalGeneratorCreator.getTransaction()
+    val offset: Long = IncreasingGenerator.get
     storageClient.saveConsumerOffset(consumer, s.id, partition, offset)
 
     Thread.sleep(500) // wait while server handle it.
@@ -50,7 +50,7 @@ class ConsumerOffsetsTests extends FlatSpec with Matchers with BeforeAndAfterAll
 
     val offsets = scala.collection.mutable.Map[Int, Long]()
     for (i <- 0 to 100)
-      offsets(i) = LocalGeneratorCreator.getTransaction()
+      offsets(i) = IncreasingGenerator.get
 
     storageClient.saveConsumerOffsetBatch(consumer, s.id, offsets)
 
