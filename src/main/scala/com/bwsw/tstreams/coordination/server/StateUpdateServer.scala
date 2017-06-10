@@ -4,7 +4,7 @@ import java.net.{DatagramPacket, SocketAddress}
 
 import com.bwsw.tstreams.agents.consumer.subscriber.{Subscriber, TransactionBufferWorker}
 import com.bwsw.tstreams.common.UdpServer
-import com.bwsw.tstreams.proto.protocol.TransactionState
+import com.bwsw.tstreamstransactionserver.protocol.TransactionState
 
 import scala.collection.mutable
 

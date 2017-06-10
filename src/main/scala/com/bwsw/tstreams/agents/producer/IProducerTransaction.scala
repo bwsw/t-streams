@@ -1,7 +1,7 @@
 package com.bwsw.tstreams.agents.producer
 
 import com.bwsw.tstreams.agents.group.ProducerTransactionStateInfo
-import com.bwsw.tstreams.proto.protocol.TransactionState
+import com.bwsw.tstreamstransactionserver.protocol.TransactionState
 
 /**
   * Created by Ivan Kudryavtsev on 29.08.16.

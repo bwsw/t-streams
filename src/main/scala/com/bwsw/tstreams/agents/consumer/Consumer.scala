@@ -3,6 +3,7 @@ package com.bwsw.tstreams.agents.consumer
 import java.util.concurrent.atomic.AtomicBoolean
 
 import com.bwsw.tstreams.agents.group.{ConsumerStateInfo, GroupParticipant, StateInfo}
+import com.bwsw.tstreams.generator.TransactionGenerator
 import com.bwsw.tstreams.storage.StorageClient
 import com.bwsw.tstreams.streams.Stream
 import com.bwsw.tstreamstransactionserver.rpc.TransactionStates
@@ -43,11 +44,13 @@ class Consumer(val name: String,
     */
   private val transactionBuffer = scala.collection.mutable.Map[Int, scala.collection.mutable.Queue[ConsumerTransaction]]()
 
+  private[tstreams] val transactionGenerator = new TransactionGenerator(stream.client)
+
   /**
     * Flag which defines either object is running or not
     */
-  val isStarted = new AtomicBoolean(false)
-  val isStopped = new AtomicBoolean(false)
+  private val isStarted = new AtomicBoolean(false)
+  private val isStopped = new AtomicBoolean(false)
 
   /**
     * agent name
@@ -73,7 +76,7 @@ class Consumer(val name: String,
   private def loadNextTransactionsForPartition(partition: Int, currentOffset: Long): mutable.Queue[ConsumerTransaction] = {
 
     val (last, seq) = stream.client.scanTransactions(stream.id, partition, currentOffset + 1,
-      options.transactionGenerator.getTransaction(), options.transactionsPreload, Set())
+      transactionGenerator.getTransaction(), options.transactionsPreload, Set())
 
     val transactionsQueue = mutable.Queue[ConsumerTransaction]()
     seq.foreach(record => {
@@ -125,11 +128,11 @@ class Consumer(val name: String,
         } else {
           val off = options.offset match {
             case Offset.Oldest =>
-              options.transactionGenerator.getTransaction(System.currentTimeMillis() - (stream.ttl + 1) * 1000)
+              transactionGenerator.getTransaction(System.currentTimeMillis() - (stream.ttl + 1) * 1000)
             case Offset.Newest =>
-              options.transactionGenerator.getTransaction()
+              transactionGenerator.getTransaction()
             case dateTime: Offset.DateTime =>
-              options.transactionGenerator.getTransaction(dateTime.startTime.getTime)
+              transactionGenerator.getTransaction(dateTime.startTime.getTime)
             case offset: Offset.ID =>
               offset.startID
             case _ =>
@@ -193,7 +196,7 @@ class Consumer(val name: String,
 
     // we found open one, try to update it.
     val transactionUpdatedOpt = getTransactionById(partition, transaction.getTransactionID)
-    if (transactionUpdatedOpt.isDefined) {
+    if (transactionUpdatedOpt.isDefined && transactionUpdatedOpt.get.getState == TransactionStates.Checkpointed) {
       updateOffsets(partition, transactionUpdatedOpt.get.getTransactionID)
       transactionBuffer(partition).dequeue()
       return transactionUpdatedOpt
@@ -359,7 +362,7 @@ class Consumer(val name: String,
     result
   }
 
-  override def getProposedTransactionId: Long = options.transactionGenerator.getTransaction()
+  override def getProposedTransactionId: Long = transactionGenerator.getTransaction()
 
   override def getStorageClient(): StorageClient = stream.client
 

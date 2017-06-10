@@ -3,7 +3,7 @@ package com.bwsw.tstreams.agents.consumer.subscriber
 import com.bwsw.tstreams.agents.consumer.subscriber.QueueBuilder.QueueItemType
 import com.bwsw.tstreams.agents.consumer.{ConsumerTransaction, TransactionOperator}
 import com.bwsw.tstreams.common.FirstFailLockableTaskExecutor
-import com.bwsw.tstreams.proto.protocol.TransactionState
+import com.bwsw.tstreamstransactionserver.protocol.TransactionState
 import com.bwsw.tstreamstransactionserver.rpc.TransactionStates
 
 import scala.collection.mutable.ListBuffer

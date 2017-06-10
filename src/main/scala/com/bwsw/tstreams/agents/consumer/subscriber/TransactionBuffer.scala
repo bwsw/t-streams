@@ -1,7 +1,7 @@
 package com.bwsw.tstreams.agents.consumer.subscriber
 
 
-import com.bwsw.tstreams.proto.protocol.TransactionState
+import com.bwsw.tstreamstransactionserver.protocol.TransactionState
 
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
@@ -47,10 +47,12 @@ class TransactionBuffer(queue: QueueBuilder.QueueType, transactionQueueMaxLength
     */
   def update(update: TransactionState): Unit = this.synchronized {
 
-    // updateState: TransactionState
-    //val update = updateState.copy()
+    val updateNormalized = update.withMasterID(Math.abs(update.masterID))
 
-    update.status match {
+    // updateState: TransactionState
+    //val updateNormalized = updateState.copy()
+
+    updateNormalized.status match {
       case TransactionState.Status.Opened => counters.openEvents.incrementAndGet()
       case TransactionState.Status.Cancelled => counters.cancelEvents.incrementAndGet()
       case TransactionState.Status.Updated => counters.updateEvents.incrementAndGet()
@@ -60,58 +62,58 @@ class TransactionBuffer(queue: QueueBuilder.QueueType, transactionQueueMaxLength
     }
 
     // avoid transactions which are delayed
-    if (update.status == TransactionState.Status.Opened) {
-      if (lastTransaction != 0L && update.transactionID <= lastTransaction) {
-        Subscriber.logger.warn(s"Unexpected transaction comparison result ${update.transactionID} vs $lastTransaction detected.")
+    if (updateNormalized.status == TransactionState.Status.Opened) {
+      if (lastTransaction != 0L && updateNormalized.transactionID <= lastTransaction) {
+        Subscriber.logger.warn(s"Unexpected transaction comparison result ${updateNormalized.transactionID} vs $lastTransaction detected.")
         return
       }
-      lastTransaction = update.transactionID
+      lastTransaction = updateNormalized.transactionID
     }
 
-    if (stateMap.contains(update.transactionID)) {
-      val ts = stateMap(update.transactionID)
+    if (stateMap.contains(updateNormalized.transactionID)) {
+      val ts = stateMap(updateNormalized.transactionID)
       val orderID = ts.orderID
 
-      stateMap(update.transactionID) = ts.withMasterID(update.masterID)
+      stateMap(updateNormalized.transactionID) = ts.withMasterID(updateNormalized.masterID)
 
       /*
       * state switching system (almost finite automate)
       * */
-      (ts.status, update.status) match {
+      (ts.status, updateNormalized.status) match {
 
         case (TransactionState.Status.Opened, TransactionState.Status.Updated) =>
-          stateMap(update.transactionID) = ts
+          stateMap(updateNormalized.transactionID) = ts
             .withOrderID(orderID)
             .withStatus(TransactionState.Status.Opened)
-            .withTtlMs(System.currentTimeMillis() + update.ttlMs)
+            .withTtlMs(System.currentTimeMillis() + updateNormalized.ttlMs)
 
         case (TransactionState.Status.Opened, TransactionState.Status.Cancelled) =>
-          stateMap(update.transactionID) = ts
+          stateMap(updateNormalized.transactionID) = ts
             .withStatus(TransactionState.Status.Invalid)
             .withTtlMs(0L)
             .withOrderID(orderID)
 
         case (TransactionState.Status.Opened, TransactionState.Status.Checkpointed) =>
-          stateMap(update.transactionID) = ts
+          stateMap(updateNormalized.transactionID) = ts
             .withOrderID(orderID)
             .withStatus(TransactionState.Status.Checkpointed)
-            .withCount(update.count)
+            .withCount(updateNormalized.count)
             .withTtlMs(Long.MaxValue)
 
         case (_, _) =>
-          Subscriber.logger.warn(s"Transaction update $update switched from ${ts.status} to ${update.status} which is incorrect. " +
+          Subscriber.logger.warn(s"Transaction updateNormalized $updateNormalized switched from ${ts.status} to ${updateNormalized.status} which is incorrect. " +
             s"It might be that we cleared StateList because it's size has became greater than ${transactionQueueMaxLengthThreshold}. Try to find clearing notification before.")
       }
 
     } else {
-       update.status match {
+       updateNormalized.status match {
          case TransactionState.Status.Opened =>
-          val upd = update.withTtlMs(System.currentTimeMillis() + update.ttlMs)
-          stateMap(update.transactionID) = upd
+          val upd = updateNormalized.withTtlMs(System.currentTimeMillis() + updateNormalized.ttlMs)
+          stateMap(updateNormalized.transactionID) = upd
           stateList.append(upd.transactionID)
          case TransactionState.Status.Instant =>
-           val upd = update.withStatus(TransactionState.Status.Checkpointed).withTtlMs(Long.MaxValue)
-           stateMap(update.transactionID) = upd
+           val upd = updateNormalized.withStatus(TransactionState.Status.Checkpointed).withTtlMs(Long.MaxValue)
+           stateMap(updateNormalized.transactionID) = upd
            stateList.append(upd.transactionID)
          case _ =>
       }

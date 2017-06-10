@@ -177,14 +177,19 @@ class StorageClient(clientOptions: ConnectionOptions,
     Await.result(f, timeout)
   }
 
-  def putInstantTransactionSync(streamID: Int, partition: Int, transactionID: Long, data: Seq[Array[Byte]],
-                                timeout: Duration = StorageClient.maxAwaiTimeout): Unit = {
-    val f = client.putSimpleTransactionAndData(streamID, partition, transactionID, data)
+  def openTransactionSync(streamID: Int, partition: Int, transactionTtlMs: Long, timeout: Duration = StorageClient.maxAwaiTimeout): Long = {
+    val f = client.openTransaction(streamID, partition, transactionTtlMs)
     Await.result(f, timeout)
   }
 
-  def putInstantTransactionUnreliable(streamID: Int, partition: Int, transactionID: Long, data: Seq[Array[Byte]]): Unit = {
-    client.putSimpleTransactionAndDataWithoutResponse(streamID, partition, transactionID, data)
+  def putInstantTransactionSync(streamID: Int, partition: Int, data: Seq[Array[Byte]],
+                                timeout: Duration = StorageClient.maxAwaiTimeout): Long = {
+    val f = client.putSimpleTransactionAndData(streamID, partition, data)
+    Await.result(f, timeout)
+  }
+
+  def putInstantTransactionUnreliable(streamID: Int, partition: Int, data: Seq[Array[Byte]]): Unit = {
+    client.putSimpleTransactionAndDataWithoutResponse(streamID, partition, data)
   }
 
   def getTransaction(streamID: Int, partition: Integer, transactionID: Long,
@@ -232,6 +237,14 @@ class StorageClient(clientOptions: ConnectionOptions,
 
   def putTransactionData(streamID: Int, partition: Int, transaction: Long, data: Seq[Array[Byte]], from: Int): Future[Boolean] = {
     client.putTransactionData(streamID, partition, transaction, data, from)
+  }
+
+  def generateTransaction(timeout: Duration = StorageClient.maxAwaiTimeout): Long = {
+    Await.result(client.getTransaction(), timeout)
+  }
+
+  def generateTransactionForTimestamp(time: Long, timeout: Duration = StorageClient.maxAwaiTimeout): Long = {
+    Await.result(client.getTransaction(time), timeout)
   }
 
 }

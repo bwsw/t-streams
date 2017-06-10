@@ -4,7 +4,6 @@ import java.net.InetSocketAddress
 
 import com.bwsw.tstreams.agents.consumer.Offset.IOffset
 import com.bwsw.tstreams.common.AbstractPolicy
-import com.bwsw.tstreams.generator.ITransactionGenerator
 
 /**
   * @param offset               Offset from which start to read
@@ -13,13 +12,11 @@ import com.bwsw.tstreams.generator.ITransactionGenerator
   * @param transactionsPreload  Buffer size of preloaded transactions
   * @param dataPreload          Buffer size of preloaded data for each consumed transaction
   * @param readPolicy           Strategy how to read from concrete stream
-  * @param transactionGenerator Generator for generating IDs
   */
 case class ConsumerOptions(transactionsPreload: Int,
                            dataPreload: Int,
                            readPolicy: AbstractPolicy,
                            offset: IOffset,
-                           transactionGenerator: ITransactionGenerator,
                            useLastOffset: Boolean,
                            checkpointAtStart: Boolean) {
   if (transactionsPreload < 1)

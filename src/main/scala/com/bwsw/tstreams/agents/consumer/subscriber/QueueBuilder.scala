@@ -1,7 +1,7 @@
 package com.bwsw.tstreams.agents.consumer.subscriber
 
 import com.bwsw.tstreams.common.{AbstractQueue, InMemoryQueue}
-import com.bwsw.tstreams.proto.protocol.TransactionState
+import com.bwsw.tstreamstransactionserver.protocol.TransactionState
 
 /**
   * Represents factory which generates queues
