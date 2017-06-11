@@ -1,13 +1,13 @@
 package com.bwsw.tstreams.common
 
 /**
-  * Round robin policy impl of [[AbstractPartitionIterationPolicy]]]
+  * Round robin policy impl of [[PartitionIterationPolicy]]]
   *
   * @param usedPartitions Partitions from which agent will interact
   */
 
 class RoundRobinPartitionIterationPolicy(partitionsCount: Int, usedPartitions: Set[Int])
-  extends AbstractPartitionIterationPolicy(partitionsCount, usedPartitions = usedPartitions) {
+  extends PartitionIterationPolicy(partitionsCount, usedPartitions = usedPartitions) {
 
   /**
     * Get next partition to interact and update round value

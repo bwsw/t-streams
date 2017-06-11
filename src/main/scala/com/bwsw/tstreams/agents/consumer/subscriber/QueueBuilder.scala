@@ -1,6 +1,6 @@
 package com.bwsw.tstreams.agents.consumer.subscriber
 
-import com.bwsw.tstreams.common.{AbstractQueue, InMemoryQueue}
+import com.bwsw.tstreams.common.{InMemoryQueue, Queue}
 import com.bwsw.tstreamstransactionserver.protocol.TransactionState
 
 /**
@@ -9,7 +9,7 @@ import com.bwsw.tstreamstransactionserver.protocol.TransactionState
 object QueueBuilder {
 
   type QueueItemType = List[TransactionState]
-  type QueueType = AbstractQueue[QueueItemType]
+  type QueueType = Queue[QueueItemType]
 
   /**
     * Abstract factory

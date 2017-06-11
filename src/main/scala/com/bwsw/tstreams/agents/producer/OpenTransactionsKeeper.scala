@@ -10,7 +10,7 @@ import scala.collection.mutable.ListBuffer
   * Created by Ivan Kudryavtsev on 28.08.16.
   */
 class OpenTransactionsKeeper {
-  private val openTransactionsMap = mutable.Map[Int, (Long, mutable.Set[IProducerTransaction])]()
+  private val openTransactionsMap = mutable.Map[Int, (Long, mutable.Set[ProducerTransaction])]()
 
   /**
     * Allows to do something with all not closed transactions.
@@ -19,7 +19,7 @@ class OpenTransactionsKeeper {
     * @tparam RV
     * @return
     */
-  def forallTransactionsDo[RV](f: (Int, IProducerTransaction) => RV): Iterable[RV] = openTransactionsMap.synchronized {
+  def forallTransactionsDo[RV](f: (Int, ProducerTransaction) => RV): Iterable[RV] = openTransactionsMap.synchronized {
     val res = ListBuffer[RV]()
     openTransactionsMap.keys.foreach(partition =>
       openTransactionsMap.get(partition)
@@ -29,7 +29,7 @@ class OpenTransactionsKeeper {
     res
   }
 
-  def forPartitionTransactionsDo[RV](partition: Int, f: (IProducerTransaction) => RV): Iterable[RV] = openTransactionsMap.synchronized {
+  def forPartitionTransactionsDo[RV](partition: Int, f: (ProducerTransaction) => RV): Iterable[RV] = openTransactionsMap.synchronized {
     val res = ListBuffer[RV]()
     openTransactionsMap.get(partition)
       .foreach(txnSetValue => {
@@ -83,10 +83,10 @@ class OpenTransactionsKeeper {
     * @param transaction
     * @return
     */
-  def put(partition: Int, transaction: IProducerTransaction) = openTransactionsMap.synchronized {
+  def put(partition: Int, transaction: ProducerTransaction) = openTransactionsMap.synchronized {
     val transactionSetValueOpt = openTransactionsMap.get(partition)
     if (transactionSetValueOpt.isEmpty) {
-      openTransactionsMap.put(partition, (0, mutable.Set[IProducerTransaction](transaction)))
+      openTransactionsMap.put(partition, (0, mutable.Set[ProducerTransaction](transaction)))
     } else {
       val nextTransactionID = transaction.getTransactionID
       openTransactionsMap
@@ -95,7 +95,7 @@ class OpenTransactionsKeeper {
     }
   }
 
-  def remove(partition: Int, transaction: IProducerTransaction) = openTransactionsMap.synchronized {
+  def remove(partition: Int, transaction: ProducerTransaction) = openTransactionsMap.synchronized {
     openTransactionsMap.get(partition).map(transactionSetValue => transactionSetValue._2.remove(transaction))
   }
 

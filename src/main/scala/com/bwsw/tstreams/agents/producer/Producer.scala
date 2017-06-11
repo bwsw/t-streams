@@ -123,7 +123,7 @@ class Producer(var name: String,
           if(log.isDebugEnabled())
             log.debug(s"Producer $name[${getUniqueAgentID}] - update is started for long lasting transactions")
 
-          val transactionStates = openTransactions.forallTransactionsDo((part: Int, transaction: IProducerTransaction) => transaction.getUpdateInfo)
+          val transactionStates = openTransactions.forallTransactionsDo((part: Int, transaction: ProducerTransaction) => transaction.getUpdateInfo)
           stream.client.putTransactions(transactionStates.flatten.toSeq, Seq())
 
           if(log.isDebugEnabled())
@@ -139,7 +139,7 @@ class Producer(var name: String,
                 s"Last was $lastUpdateEndTime, now is $currentUpdateEndTime. " +
                 "It's critical situation, it is marked as non functional, only stop is allowed.")
           }
-          openTransactions.forallTransactionsDo((part: Int, transaction: IProducerTransaction) => transaction.notifyUpdate())
+          openTransactions.forallTransactionsDo((part: Int, transaction: ProducerTransaction) => transaction.notifyUpdate())
           lastUpdateEndTime = currentUpdateEndTime
         }
       }
@@ -206,7 +206,7 @@ class Producer(var name: String,
     * @param partition if -1 specified (default) then the method uses writePolicy (round robin)
     * @return new transaction object
     */
-  def newTransaction(policy: ProducerPolicy = NewProducerTransactionPolicy.EnqueueIfOpened, partition: Int = -1): ProducerTransaction = {
+  def newTransaction(policy: ProducerPolicy = NewProducerTransactionPolicy.EnqueueIfOpened, partition: Int = -1): ProducerTransactionImpl = {
     checkStopped()
     checkUpdateFailure()
 
@@ -243,7 +243,7 @@ class Producer(var name: String,
     if (log.isDebugEnabled)
       log.debug(s"Producer $name[${getUniqueAgentID}] [NEW_TRANSACTION PARTITION_$evaluatedPartition] ID=$transactionID")
 
-    val transaction = new ProducerTransaction(evaluatedPartition, transactionID, this)
+    val transaction = new ProducerTransactionImpl(evaluatedPartition, transactionID, this)
     openTransactions.put(evaluatedPartition, transaction)
 
     transaction
@@ -256,7 +256,7 @@ class Producer(var name: String,
     * @param partition Partition from which transaction will be retrieved
     * @return Transaction reference if it exist and is opened
     */
-  private[tstreams] def getOpenedTransactionsForPartition(partition: Int): Option[scala.collection.mutable.Set[IProducerTransaction]] = {
+  private[tstreams] def getOpenedTransactionsForPartition(partition: Int): Option[scala.collection.mutable.Set[ProducerTransaction]] = {
     if (!(partition >= 0 && partition < stream.partitionsCount))
       throw new IllegalArgumentException(s"Producer $name[${getUniqueAgentID}] - invalid partition")
     openTransactions.getTransactionSetOption(partition).map(v => v._2.filter(!_.isClosed))
@@ -301,9 +301,9 @@ class Producer(var name: String,
   }
 
   private def cancelPendingTransactions() = this.synchronized {
-    val transactionStates = openTransactions.forallTransactionsDo((part: Int, transaction: IProducerTransaction) => transaction.getCancelInfoAndClose)
+    val transactionStates = openTransactions.forallTransactionsDo((part: Int, transaction: ProducerTransaction) => transaction.getCancelInfoAndClose)
     stream.client.putTransactions(transactionStates.flatten.toSeq, Seq())
-    openTransactions.forallTransactionsDo((k: Int, v: IProducerTransaction) => v.notifyCancelEvent())
+    openTransactions.forallTransactionsDo((k: Int, v: ProducerTransaction) => v.notifyCancelEvent())
     openTransactions.clear()
   }
 
@@ -330,13 +330,13 @@ class Producer(var name: String,
   override private[tstreams] def finalizeDataSend(): Unit = this.synchronized {
     checkStopped()
     checkUpdateFailure()
-    openTransactions.forallTransactionsDo((k: Int, t: IProducerTransaction) => t.finalizeDataSend())
+    openTransactions.forallTransactionsDo((k: Int, t: ProducerTransaction) => t.finalizeDataSend())
   }
 
   private def finalizePartitionDataSend(partition: Int): Unit = this.synchronized {
     checkStopped()
     checkUpdateFailure()
-    openTransactions.forPartitionTransactionsDo(partition, (t: IProducerTransaction) => t.finalizeDataSend())
+    openTransactions.forPartitionTransactionsDo(partition, (t: ProducerTransaction) => t.finalizeDataSend())
   }
 
   /**
@@ -353,7 +353,7 @@ class Producer(var name: String,
   private def getInfoAndClear(status: TransactionState.Status) = this.synchronized {
     checkStopped()
     checkUpdateFailure()
-    val stateInfo = openTransactions.forallTransactionsDo((k: Int, v: IProducerTransaction) => v.getStateInfo(status)).toList
+    val stateInfo = openTransactions.forallTransactionsDo((k: Int, v: ProducerTransaction) => v.getStateInfo(status)).toList
     openTransactions.clear()
     stateInfo
   }

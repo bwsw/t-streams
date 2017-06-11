@@ -240,7 +240,7 @@ class TStreamsFactory() {
     val batchSize = pAsInt(co.Producer.Transaction.batchSize, producerDefaults.Transaction.batchSize.default)
     producerDefaults.Transaction.batchSize.check(batchSize)
 
-    var writePolicy: AbstractPartitionIterationPolicy = null
+    var writePolicy: PartitionIterationPolicy = null
 
     if (pAsString(co.Producer.Transaction.distributionPolicy) ==
       co.Producer.Transaction.Constants.DISTRIBUTION_POLICY_RR) {

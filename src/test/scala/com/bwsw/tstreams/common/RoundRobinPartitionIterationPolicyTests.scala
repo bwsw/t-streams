@@ -5,7 +5,7 @@ import org.scalatest.{FlatSpec, Matchers}
 /**
   * Created by Ivan Kudryavtsev on 11.06.17.
   */
-class RoundRobinPolicyTests extends FlatSpec with Matchers {
+class RoundRobinPartitionIterationPolicyTests extends FlatSpec with Matchers {
   val PARTITIONS_COUNT = 3
   it should "operate correctly over partitions" in {
     val partitions = Set(0,1,2)

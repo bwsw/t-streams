@@ -6,7 +6,7 @@ import java.util.concurrent.atomic.AtomicInteger
 /**
   * Created by Ivan Kudryavtsev on 19.08.16.
   */
-trait AbstractQueue[T] {
+trait Queue[T] {
 
   protected val inFlight = new AtomicInteger(0)
 

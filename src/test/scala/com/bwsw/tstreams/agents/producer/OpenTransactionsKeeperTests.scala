@@ -13,7 +13,7 @@ class OpenTransactionsKeeperTests extends FlatSpec with Matchers {
 
   var ctr: Int = 0
 
-  class TransactionStub extends IProducerTransaction {
+  class TransactionStub extends ProducerTransaction {
     var lastMethod: String = null
 
     override def finalizeDataSend(): Unit = {}
@@ -38,7 +38,7 @@ class OpenTransactionsKeeperTests extends FlatSpec with Matchers {
 
     override def markAsClosed(): Unit = {}
 
-    override def send(obj: Array[Byte]): IProducerTransaction = null
+    override def send(obj: Array[Byte]): ProducerTransaction = null
 
     override private[tstreams] def getUpdateInfo(): Option[RPCProducerTransaction] = None
 
@@ -80,7 +80,7 @@ class OpenTransactionsKeeperTests extends FlatSpec with Matchers {
     keeper.put(0, new TransactionStub)
     keeper.put(1, new TransactionStub)
     keeper.put(2, new TransactionStub)
-    keeper.forallTransactionsDo[Unit]((p: Int, t: IProducerTransaction) => t.notifyUpdate())
+    keeper.forallTransactionsDo[Unit]((p: Int, t: ProducerTransaction) => t.notifyUpdate())
     ctr shouldBe 3
   }
 

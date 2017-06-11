@@ -3,7 +3,7 @@ package com.bwsw.tstreams.common
 /**
   * Basic interface for policies
   */
-abstract class AbstractPartitionIterationPolicy(partitionsCount: Int, usedPartitions: Set[Int]) {
+abstract class PartitionIterationPolicy(partitionsCount: Int, usedPartitions: Set[Int]) {
 
   protected val usedPartitionsList = usedPartitions.toList
   @volatile protected var currentPos = 0

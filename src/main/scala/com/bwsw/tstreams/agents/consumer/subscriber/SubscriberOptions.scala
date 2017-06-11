@@ -3,7 +3,7 @@ package com.bwsw.tstreams.agents.consumer.subscriber
 import com.bwsw.tstreams.agents.consumer
 import com.bwsw.tstreams.agents.consumer.Offset.IOffset
 import com.bwsw.tstreams.agents.consumer.subscriber.QueueBuilder.InMemory
-import com.bwsw.tstreams.common.AbstractPartitionIterationPolicy
+import com.bwsw.tstreams.common.PartitionIterationPolicy
 
 /**
   * Created by Ivan Kudryavtsev on 19.08.16.
@@ -22,7 +22,7 @@ import com.bwsw.tstreams.common.AbstractPartitionIterationPolicy
   */
 class SubscriberOptions(val transactionsPreload: Int,
                         val dataPreload: Int,
-                        val readPolicy: AbstractPartitionIterationPolicy,
+                        val readPolicy: PartitionIterationPolicy,
                         val offset: IOffset,
                         val useLastOffset: Boolean,
                         val rememberFirstStartOffset: Boolean = true,

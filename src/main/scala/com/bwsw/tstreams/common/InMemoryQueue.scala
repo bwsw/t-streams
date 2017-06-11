@@ -5,7 +5,7 @@ import java.util.concurrent.{LinkedBlockingQueue, TimeUnit}
 /**
   * Created by Ivan Kudryavtsev on 19.08.16.
   */
-class InMemoryQueue[T] extends AbstractQueue[T] {
+class InMemoryQueue[T] extends Queue[T] {
   /**
     * Queue blocking stuff
     */
