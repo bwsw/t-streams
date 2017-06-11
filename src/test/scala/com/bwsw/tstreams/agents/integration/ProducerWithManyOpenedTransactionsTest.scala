@@ -35,9 +35,9 @@ class ProducerWithManyOpenedTransactionsTest extends FlatSpec with Matchers with
     val data3 = (for (i <- 0 until 10) yield randomKeyspace).sorted
 
 
-    val transaction1: ProducerTransaction = producer.newTransaction(NewProducerTransactionPolicy.ErrorIfOpened)
-    val transaction2: ProducerTransaction = producer.newTransaction(NewProducerTransactionPolicy.ErrorIfOpened)
-    val transaction3: ProducerTransaction = producer.newTransaction(NewProducerTransactionPolicy.ErrorIfOpened)
+    val transaction1: ProducerTransactionImpl = producer.newTransaction(NewProducerTransactionPolicy.ErrorIfOpened)
+    val transaction2: ProducerTransactionImpl = producer.newTransaction(NewProducerTransactionPolicy.ErrorIfOpened)
+    val transaction3: ProducerTransactionImpl = producer.newTransaction(NewProducerTransactionPolicy.ErrorIfOpened)
 
     val l = new CountDownLatch(1)
     srv.notifyProducerTransactionCompleted(t => t.transactionID == transaction1.getTransactionID && t.state == TransactionStates.Checkpointed, l.countDown())

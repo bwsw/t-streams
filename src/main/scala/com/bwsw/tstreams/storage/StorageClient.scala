@@ -22,12 +22,6 @@ object StorageClient {
   var maxAwaiTimeout = 1.minute
 }
 
-/**
-  *
-  * @param clientOptions
-  * @param authOptions
-  * @param zookeeperOptions
-  */
 class StorageClient(clientOptions: ConnectionOptions,
                     authOptions: AuthOptions,
                     zookeeperOptions: ZookeeperOptions,

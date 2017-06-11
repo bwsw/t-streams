@@ -1,15 +1,12 @@
 package com.bwsw.tstreams.agents.group
 
-import com.bwsw.tstreams.agents.producer.{Producer, ProducerTransaction}
+import com.bwsw.tstreams.agents.producer.{Producer, ProducerTransactionImpl}
 import com.bwsw.tstreamstransactionserver.protocol.TransactionState
-
-import scala.language.existentials
-
 
 /**
   * Basic commit trait
   */
-sealed trait StateInfo
+sealed trait State
 
 /**
   * BasicProducer commit information
@@ -27,14 +24,14 @@ sealed trait StateInfo
   * @param totalCnt       Total info in transaction
   * @param ttl            Transaction time to live in seconds
   */
-case class ProducerTransactionStateInfo(transactionRef: ProducerTransaction,
-                                        agent: Producer,
-                                        event: TransactionState,
-                                        streamID: Int,
-                                        partition: Int,
-                                        transaction: Long,
-                                        totalCnt: Int,
-                                        ttl: Long) extends StateInfo
+case class ProducerTransactionState(transactionRef: ProducerTransactionImpl,
+                                    agent: Producer,
+                                    event: TransactionState,
+                                    streamID: Int,
+                                    partition: Int,
+                                    transaction: Long,
+                                    totalCnt: Int,
+                                    ttl: Long) extends State
 
 /**
   * BasicConsumer commit information
@@ -44,7 +41,7 @@ case class ProducerTransactionStateInfo(transactionRef: ProducerTransaction,
   * @param partition Partition number
   * @param offset    Offset to commit
   */
-case class ConsumerStateInfo(name: String,
-                             streamID: Int,
-                             partition: Int,
-                             offset: Long) extends StateInfo
+case class ConsumerState(name: String,
+                         streamID: Int,
+                         partition: Int,
+                         offset: Long) extends State

@@ -6,7 +6,7 @@ import java.util.concurrent.atomic.AtomicInteger
 /**
   * Created by Ivan Kudryavtsev on 19.08.16.
   */
-trait AbstractQueue[T] {
+trait Queue[T] {
 
   protected val inFlight = new AtomicInteger(0)
 
@@ -14,5 +14,5 @@ trait AbstractQueue[T] {
 
   def get(delay: Long, units: TimeUnit): T
 
-  def getInFlight(): Int = inFlight.get()
+  def getInFlight = inFlight.get()
 }

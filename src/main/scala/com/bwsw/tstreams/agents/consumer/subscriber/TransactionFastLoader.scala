@@ -10,7 +10,7 @@ import com.bwsw.tstreamstransactionserver.protocol.TransactionState
 /**
   * Created by Ivan Kudryavtsev on 21.08.16.
   */
-class TransactionFastLoader(partitions: Set[Int],
+private[tstreams] class TransactionFastLoader(partitions: Set[Int],
                             lastTransactionsMap: ProcessingEngine.LastTransactionStateMapType) extends AbstractTransactionLoader {
 
   /**

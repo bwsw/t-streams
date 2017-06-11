@@ -5,7 +5,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 
 import com.bwsw.tstreams.agents.consumer.RPCConsumerTransaction
 import com.bwsw.tstreams.agents.producer.{Producer, RPCProducerTransaction}
-import com.bwsw.tstreams.common.{FirstFailLockableTaskExecutor, GeneralOptions}
+import com.bwsw.tstreams.common.{CommonConstants, FirstFailLockableTaskExecutor}
 import com.bwsw.tstreams.storage.StorageClient
 import com.bwsw.tstreamstransactionserver.rpc.TransactionStates
 import org.slf4j.LoggerFactory
@@ -15,7 +15,7 @@ import scala.concurrent.duration._
 
 
 object CheckpointGroup {
-  var SHUTDOWN_WAIT_MAX_SECONDS = GeneralOptions.SHUTDOWN_WAIT_MAX_SECONDS
+  var SHUTDOWN_WAIT_MAX_SECONDS = CommonConstants.SHUTDOWN_WAIT_MAX_SECONDS
   val logger = LoggerFactory.getLogger(this.getClass)
 }
 
@@ -81,9 +81,9 @@ class CheckpointGroup private[tstreams] (val executors: Int = 1) {
     agents.contains(name)
   }
 
-  private def checkUpdateFailure(producers: List[StateInfo]) = {
+  private def checkUpdateFailure(producers: List[State]) = {
     val availList = producers.map {
-      case ProducerTransactionStateInfo(_, agent, _, _, _, _, _, _) => agent.checkUpdateFailure()
+      case ProducerTransactionState(_, agent, _, _, _, _, _, _) => agent.checkUpdateFailure()
       case _ => 1.minute
     }
     availList.sorted.head
@@ -95,15 +95,15 @@ class CheckpointGroup private[tstreams] (val executors: Int = 1) {
     * @param checkpointRequests Info to commit
     *                           (used only for consumers now; stateInfoList is not atomic)
     */
-  private def doGroupCheckpoint(storageClient: StorageClient, checkpointRequests: List[StateInfo]): Unit = {
+  private def doGroupCheckpoint(storageClient: StorageClient, checkpointRequests: List[State]): Unit = {
     val producerRequests = ListBuffer[RPCProducerTransaction]()
     val consumerRequests = ListBuffer[RPCConsumerTransaction]()
 
     checkpointRequests foreach {
-      case ConsumerStateInfo(consumerName, streamName, partition, offset) =>
+      case ConsumerState(consumerName, streamName, partition, offset) =>
         consumerRequests.append(new RPCConsumerTransaction(consumerName, streamName, partition, offset))
 
-      case ProducerTransactionStateInfo(_, _, _, streamName, partition, transaction, totalCnt, ttl) =>
+      case ProducerTransactionState(_, _, _, streamName, partition, transaction, totalCnt, ttl) =>
         producerRequests.append(new RPCProducerTransaction(streamName, partition, transaction, TransactionStates.Checkpointed, totalCnt, ttl))
     }
 
@@ -112,11 +112,11 @@ class CheckpointGroup private[tstreams] (val executors: Int = 1) {
     storageClient.putTransactions(producerRequests, consumerRequests, availTime)
   }
 
-  private def doGroupCancel(storageClient: StorageClient, checkpointRequests: List[StateInfo]): Unit = {
+  private def doGroupCancel(storageClient: StorageClient, checkpointRequests: List[State]): Unit = {
     val producerRequests = ListBuffer[RPCProducerTransaction]()
     checkpointRequests foreach {
-      case ConsumerStateInfo(consumerName, streamName, partition, offset) =>
-      case ProducerTransactionStateInfo(_, _, _, streamName, partition, transaction, totalCnt, ttl) =>
+      case ConsumerState(consumerName, streamName, partition, offset) =>
+      case ProducerTransactionState(_, _, _, streamName, partition, transaction, totalCnt, ttl) =>
         producerRequests.append(new RPCProducerTransaction(streamName, partition, transaction, TransactionStates.Cancel, totalCnt, ttl))
     }
 
@@ -144,7 +144,7 @@ class CheckpointGroup private[tstreams] (val executors: Int = 1) {
       log.debug("Gather checkpoint information from participants")
 
     // receive from all agents their checkpoint information
-    val checkpointStateInfo: List[StateInfo] = agents
+    val checkpointStateInfo: List[State] = agents
       .map { case (name, agent) => agent.getCheckpointInfoAndClear() }
       .reduceRight((l1, l2) => l1 ++ l2)
 
@@ -173,7 +173,7 @@ class CheckpointGroup private[tstreams] (val executors: Int = 1) {
       return
 
     // receive from all agents their checkpoint information
-    val cancelStateInfo: List[StateInfo] = agents
+    val cancelStateInfo: List[State] = agents
       .filter { case (name, agent) => agent.isInstanceOf[Producer] }
       .map { case (name, agent) => agent.asInstanceOf[Producer].getCancelInfoAndClear() }
       .reduceRight((l1, l2) => l1 ++ l2)
@@ -197,9 +197,9 @@ class CheckpointGroup private[tstreams] (val executors: Int = 1) {
   }
 
 
-  private def publishEventForAllProducers(stateInfoList: List[StateInfo]) = {
+  private def publishEventForAllProducers(stateInfoList: List[State]) = {
     stateInfoList foreach {
-      case ProducerTransactionStateInfo(_, agent, stateEvent, _, _, _, _, _) =>
+      case ProducerTransactionState(_, agent, stateEvent, _, _, _, _, _) =>
         executorPool.submit("<Event>", () => agent.publish(stateEvent, agent.stream.client.authenticationKey), None)
       case _ =>
     }

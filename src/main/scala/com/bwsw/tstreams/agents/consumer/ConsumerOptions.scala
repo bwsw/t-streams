@@ -3,7 +3,7 @@ package com.bwsw.tstreams.agents.consumer
 import java.net.InetSocketAddress
 
 import com.bwsw.tstreams.agents.consumer.Offset.IOffset
-import com.bwsw.tstreams.common.AbstractPolicy
+import com.bwsw.tstreams.common.PartitionIterationPolicy
 
 /**
   * @param offset               Offset from which start to read
@@ -15,7 +15,7 @@ import com.bwsw.tstreams.common.AbstractPolicy
   */
 case class ConsumerOptions(transactionsPreload: Int,
                            dataPreload: Int,
-                           readPolicy: AbstractPolicy,
+                           readPolicy: PartitionIterationPolicy,
                            offset: IOffset,
                            useLastOffset: Boolean,
                            checkpointAtStart: Boolean) {

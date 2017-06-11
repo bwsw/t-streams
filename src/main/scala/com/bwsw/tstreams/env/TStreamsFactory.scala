@@ -8,7 +8,7 @@ import com.bwsw.tstreams.agents.consumer.subscriber.{QueueBuilder, Subscriber, S
 import com.bwsw.tstreams.agents.consumer.{Consumer, ConsumerOptions}
 import com.bwsw.tstreams.agents.group.CheckpointGroup
 import com.bwsw.tstreams.agents.producer.{Producer, ProducerOptions}
-import com.bwsw.tstreams.common.{RoundRobinPolicy, _}
+import com.bwsw.tstreams.common.{RoundRobinPartitionIterationPolicy, _}
 import com.bwsw.tstreams.env.defaults.TStreamsFactoryProducerDefaults.PortRange
 import com.bwsw.tstreams.storage.StorageClient
 import com.bwsw.tstreams.streams.Stream
@@ -195,7 +195,7 @@ class TStreamsFactory() {
 
     val consumerOptions = new ConsumerOptions(transactionsPreload = consumerTransactionsPreload,
       dataPreload = consumerDataPreload,
-      readPolicy = new RoundRobinPolicy(stream, partitions), offset = offset,
+      readPolicy = new RoundRobinPartitionIterationPolicy(stream.partitionsCount, partitions), offset = offset,
       useLastOffset = useLastOffset,
       checkpointAtStart = checkpointAtStart)
 
@@ -240,11 +240,11 @@ class TStreamsFactory() {
     val batchSize = pAsInt(co.Producer.Transaction.batchSize, producerDefaults.Transaction.batchSize.default)
     producerDefaults.Transaction.batchSize.check(batchSize)
 
-    var writePolicy: AbstractPolicy = null
+    var writePolicy: PartitionIterationPolicy = null
 
     if (pAsString(co.Producer.Transaction.distributionPolicy) ==
       co.Producer.Transaction.Constants.DISTRIBUTION_POLICY_RR) {
-      writePolicy = new RoundRobinPolicy(stream, partitions)
+      writePolicy = new RoundRobinPartitionIterationPolicy(stream.partitionsCount, partitions)
     }
     else {
       throw new InvalidParameterException("Only TSF_Dictionary.Producer.Transaction.Consts.DISTRIBUTION_POLICY_RR policy " +

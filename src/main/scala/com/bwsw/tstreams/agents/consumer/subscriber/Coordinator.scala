@@ -10,7 +10,7 @@ import org.apache.zookeeper.CreateMode
 /**
   * Created by Ivan Kudryavtsev on 23.08.16.
   */
-class Coordinator() {
+private[tstreams] class Coordinator() {
 
   var agentAddress: String = null
   var curatorClient: CuratorFramework = null
