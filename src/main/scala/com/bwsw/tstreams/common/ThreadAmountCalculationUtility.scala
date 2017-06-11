@@ -3,12 +3,12 @@ package com.bwsw.tstreams.common
 import org.slf4j.LoggerFactory
 
 /**
-  * Created by ivan on 29.08.16.
+  * Created by Ivan Kudryavtsev on 29.08.16.
   */
-object Functions {
+object ThreadAmountCalculationUtility {
   val logger = LoggerFactory.getLogger(this.getClass)
 
-  def calculateThreadAmount(minThreads: Int, maxThreads: Int): Int = {
+  def calculateEvenThreadsAmount(minThreads: Int, maxThreads: Int): Int = {
     if (minThreads >= maxThreads) {
       logger.warn(s"User requested $minThreads worker threads, but total partitions amount is $maxThreads. Will use $maxThreads")
       return maxThreads

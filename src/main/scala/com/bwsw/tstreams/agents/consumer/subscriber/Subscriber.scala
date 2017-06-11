@@ -3,7 +3,7 @@ package com.bwsw.tstreams.agents.consumer.subscriber
 import java.util.concurrent.atomic.AtomicBoolean
 
 import com.bwsw.tstreams.agents.group.{GroupParticipant, StateInfo}
-import com.bwsw.tstreams.common.{Functions, GeneralOptions}
+import com.bwsw.tstreams.common.{GeneralOptions, ThreadAmountCalculationUtility}
 import com.bwsw.tstreams.coordination.server.StateUpdateServer
 import com.bwsw.tstreams.storage.StorageClient
 import com.bwsw.tstreams.streams.Stream
@@ -198,7 +198,7 @@ class Subscriber(val name: String,
   private def calculateBufferWorkersThreadAmount(): Int = {
     val maxThreads = options.readPolicy.getUsedPartitions.size
     val minThreads = options.transactionBufferWorkersThreadPoolAmount
-    Functions.calculateThreadAmount(minThreads, maxThreads)
+    ThreadAmountCalculationUtility.calculateEvenThreadsAmount(minThreads, maxThreads)
   }
 
   /**
@@ -209,7 +209,7 @@ class Subscriber(val name: String,
   def calculateProcessingEngineWorkersThreadAmount(): Int = {
     val maxThreads = options.readPolicy.getUsedPartitions.size
     val minThreads = options.processingEngineWorkersThreadAmount
-    Functions.calculateThreadAmount(minThreads, maxThreads)
+    ThreadAmountCalculationUtility.calculateEvenThreadsAmount(minThreads, maxThreads)
   }
 
 
