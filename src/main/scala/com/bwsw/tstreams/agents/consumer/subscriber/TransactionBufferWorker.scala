@@ -12,7 +12,7 @@ import scala.collection.mutable
 /**
   * Created by Ivan Kudryavtsev at 20.08.2016
   */
-class TransactionBufferWorker() {
+private[tstreams] class TransactionBufferWorker() {
   private val updateExecutor = new FirstFailLockableTaskExecutor("TransactionBufferWorker-updateExecutor")
   val transactionBufferMap = mutable.Map[Int, TransactionBuffer]()
 

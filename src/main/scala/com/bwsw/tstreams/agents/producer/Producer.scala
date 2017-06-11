@@ -261,9 +261,9 @@ class Producer(var name: String,
     openTransactions.getTransactionSetOption(partition).map(v => v._2.filter(!_.isClosed))
   }
 
-  private def doCheckpoint(checkpointRequests: Seq[StateInfo]) = {
+  private def doCheckpoint(checkpointRequests: Seq[State]) = {
     val producerRequests = checkpointRequests.map {
-      case ProducerTransactionStateInfo(_, _, _, streamName, partition, transaction, totalCnt, ttl) =>
+      case ProducerTransactionState(_, _, _, streamName, partition, transaction, totalCnt, ttl) =>
         new RPCProducerTransaction(streamName, partition, transaction, TransactionStates.Checkpointed, totalCnt, ttl)
       case _ => throw new IllegalStateException("Only ProducerCheckpointInfo allowed here.")
     }
@@ -271,9 +271,9 @@ class Producer(var name: String,
     stream.client.putTransactions(producerRequests, Seq(), availTime)
   }
 
-  private def notifyCheckpoint(checkpointInfo: Seq[StateInfo]) = {
+  private def notifyCheckpoint(checkpointInfo: Seq[State]) = {
     checkpointInfo foreach {
-      case ProducerTransactionStateInfo(_, agent, checkpointEvent, _, _, _, _, _) =>
+      case ProducerTransactionState(_, agent, checkpointEvent, _, _, _, _, _) =>
         notifyService.submit("<CheckpointEvent>", () => agent.publish(checkpointEvent, agent.stream.client.authenticationKey), None)
       case _ =>
     }
@@ -341,11 +341,11 @@ class Producer(var name: String,
   /**
     * Info to commit
     */
-  override private[tstreams] def getCheckpointInfoAndClear(): List[StateInfo] =  {
+  override private[tstreams] def getCheckpointInfoAndClear(): List[State] =  {
     getInfoAndClear(TransactionState.Status.Checkpointed)
   }
 
-  private[tstreams] def getCancelInfoAndClear(): List[StateInfo] = {
+  private[tstreams] def getCancelInfoAndClear(): List[State] = {
     getInfoAndClear(TransactionState.Status.Cancelled)
   }
 
@@ -357,12 +357,12 @@ class Producer(var name: String,
     stateInfo
   }
 
-  private def getPartitionCheckpointInfoAndClear(partition: Int): Seq[StateInfo] = this.synchronized {
+  private def getPartitionCheckpointInfoAndClear(partition: Int): Seq[State] = this.synchronized {
     checkStopped()
     checkUpdateFailure()
     val res = openTransactions.getTransactionSetOption(partition).map(partData => partData._2.map(txn => txn.getStateInfo(TransactionState.Status.Checkpointed)))
     openTransactions.clear(partition)
-    res.fold(Seq[StateInfo]())(resInt => resInt.toSeq)
+    res.fold(Seq[State]())(resInt => resInt.toSeq)
   }
 
   /**

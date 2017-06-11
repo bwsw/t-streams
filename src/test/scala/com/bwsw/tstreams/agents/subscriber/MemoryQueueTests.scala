@@ -13,83 +13,83 @@ import org.scalatest.{FlatSpec, Matchers}
 class MemoryQueueTests extends FlatSpec with Matchers {
 
   it should "created" in {
-    val q = new MemoryQueue[List[TransactionState]]()
+    val queue = new MemoryQueue[List[TransactionState]]()
   }
 
   it should "allow to put/get list" in {
-    val q = new MemoryQueue[List[TransactionState]]()
-    val s = TransactionState(transactionID = IncreasingGenerator.get,
+    val queue = new MemoryQueue[List[TransactionState]]()
+    val state = TransactionState(transactionID = IncreasingGenerator.get,
       partition = 0, masterID = 1, orderID = 1,
       count = 1, status = TransactionState.Status.Opened,
       ttlMs = 1)
-    q.put(List(s))
-    val g: List[TransactionState] = q.get(1, TimeUnit.SECONDS)
-    g.size shouldBe 1
-    g.head.transactionID shouldBe s.transactionID
+    queue.put(List(state))
+    val receivedStates = queue.get(1, TimeUnit.SECONDS)
+    receivedStates.size shouldBe 1
+    receivedStates.head.transactionID shouldBe state.transactionID
   }
 
   it should "return null no data in list" in {
-    val q = new MemoryQueue[List[TransactionState]]()
-    val g: List[TransactionState] = q.get(1, TimeUnit.SECONDS)
-    g shouldBe null
+    val queue = new MemoryQueue[List[TransactionState]]()
+    val receivedStates = queue.get(1, TimeUnit.SECONDS)
+    receivedStates shouldBe null
   }
 
   it should "lock if no data in list" in {
-    val q = new MemoryQueue[List[TransactionState]]()
+    val queue = new MemoryQueue[List[TransactionState]]()
     val start = System.currentTimeMillis()
-    val g: List[TransactionState] = q.get(10, TimeUnit.MILLISECONDS)
+    queue.get(10, TimeUnit.MILLISECONDS)
     val end = System.currentTimeMillis()
     end - start > 9 shouldBe true
   }
 
   it should "work with empty lists" in {
-    val q = new MemoryQueue[List[TransactionState]]()
-    q.put(Nil)
-    val g: List[TransactionState] = q.get(10, TimeUnit.MILLISECONDS)
-    g shouldBe Nil
+    val queue = new MemoryQueue[List[TransactionState]]()
+    queue.put(Nil)
+    val receivedStates = queue.get(10, TimeUnit.MILLISECONDS)
+    receivedStates shouldBe Nil
   }
 
   it should "keep all items" in {
-    val q = new MemoryQueue[List[TransactionState]]()
-    val N = 1000
-    for (i <- 0 until N) {
-      q.put(Nil)
+    val queue = new MemoryQueue[List[TransactionState]]()
+    val emptyStatesAmount = 1000
+    for (i <- 0 until emptyStatesAmount) {
+      queue.put(Nil)
     }
-    var ctr: Int = 0
-    var elt: List[TransactionState] = q.get(1, TimeUnit.MILLISECONDS)
-    while (elt != null) {
-      ctr += 1
-      elt = q.get(1, TimeUnit.MILLISECONDS)
+    var counter = 0
+    var receivedStates = queue.get(1, TimeUnit.MILLISECONDS)
+    while (receivedStates != null) {
+      counter += 1
+      receivedStates = queue.get(1, TimeUnit.MILLISECONDS)
     }
-    ctr shouldBe N
+    counter shouldBe emptyStatesAmount
   }
 
   it should "correctly work with inFlight count" in {
-    val q = new MemoryQueue[List[TransactionState]]()
-    val N = 1000
-    for (i <- 0 until N) {
-      q.put(Nil)
+    val queue = new MemoryQueue[List[TransactionState]]()
+    val emptyStatesAmount = 1000
+    for (i <- 0 until emptyStatesAmount) {
+      queue.put(Nil)
     }
-    q.getInFlight shouldBe 1000
-    for (i <- 0 until N) {
-      q.get(1, TimeUnit.MILLISECONDS)
+    queue.getInFlight shouldBe 1000
+    for (i <- 0 until emptyStatesAmount) {
+      queue.get(1, TimeUnit.MILLISECONDS)
     }
-    q.getInFlight shouldBe 0
+    queue.getInFlight shouldBe 0
 
-    q.get(1, TimeUnit.MILLISECONDS)
-    q.getInFlight shouldBe 0
+    queue.get(1, TimeUnit.MILLISECONDS)
+    queue.getInFlight shouldBe 0
 
   }
 
   it should "be signalled" in {
-    val q = new MemoryQueue[List[TransactionState]]()
-    val t = new Thread(() => {
+    val queue = new MemoryQueue[List[TransactionState]]()
+    val job = new Thread(() => {
       Thread.sleep(10)
-      q.put(Nil)
+      queue.put(Nil)
     })
-    t.start()
+    job.start()
     val start = System.currentTimeMillis()
-    q.get(100, TimeUnit.MILLISECONDS)
+    queue.get(100, TimeUnit.MILLISECONDS)
     val end = System.currentTimeMillis()
     end - start < 50 shouldBe true
   }

@@ -2,7 +2,7 @@ package com.bwsw.tstreams.agents.producer
 
 import java.util.concurrent.atomic.AtomicBoolean
 
-import com.bwsw.tstreams.agents.group.ProducerTransactionStateInfo
+import com.bwsw.tstreams.agents.group.ProducerTransactionState
 import com.bwsw.tstreamstransactionserver.protocol.TransactionState
 import com.bwsw.tstreamstransactionserver.rpc.TransactionStates
 import org.slf4j.LoggerFactory
@@ -248,7 +248,7 @@ class ProducerTransactionImpl(partition: Int,
     }
   }
 
-  def getStateInfo(status: TransactionState.Status): ProducerTransactionStateInfo = {
+  def getStateInfo(status: TransactionState.Status): ProducerTransactionState = {
 
     val event = TransactionState(
       transactionID = getTransactionID,
@@ -260,7 +260,7 @@ class ProducerTransactionImpl(partition: Int,
       orderID = -1,
       count = getDataItemsCount)
 
-    ProducerTransactionStateInfo(transactionRef = this,
+    ProducerTransactionState(transactionRef = this,
       agent = producer,
       event = event,
       streamID = producer.stream.id,

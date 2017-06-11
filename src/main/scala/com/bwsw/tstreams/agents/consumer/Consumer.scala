@@ -2,7 +2,7 @@ package com.bwsw.tstreams.agents.consumer
 
 import java.util.concurrent.atomic.AtomicBoolean
 
-import com.bwsw.tstreams.agents.group.{ConsumerStateInfo, GroupParticipant, StateInfo}
+import com.bwsw.tstreams.agents.group.{ConsumerState, GroupParticipant, State}
 import com.bwsw.tstreams.common.TransactionGenerator
 import com.bwsw.tstreams.storage.StorageClient
 import com.bwsw.tstreams.streams.Stream
@@ -307,13 +307,13 @@ class Consumer(val name: String,
   /**
     * Info to commit
     */
-  override def getCheckpointInfoAndClear(): List[StateInfo] = this.synchronized {
+  override def getCheckpointInfoAndClear(): List[State] = this.synchronized {
 
     if (!isStarted.get())
       throw new IllegalStateException("Consumer is not started. Start consumer first.")
 
     val checkpointData = checkpointOffsets.map { case (partition, lastTransaction) =>
-      ConsumerStateInfo(name, stream.id, partition, lastTransaction)
+      ConsumerState(name, stream.id, partition, lastTransaction)
     }.toList
     checkpointOffsets.clear()
     checkpointData

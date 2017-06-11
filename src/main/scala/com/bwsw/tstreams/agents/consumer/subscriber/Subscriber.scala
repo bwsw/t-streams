@@ -2,7 +2,7 @@ package com.bwsw.tstreams.agents.consumer.subscriber
 
 import java.util.concurrent.atomic.AtomicBoolean
 
-import com.bwsw.tstreams.agents.group.{GroupParticipant, StateInfo}
+import com.bwsw.tstreams.agents.group.{GroupParticipant, State}
 import com.bwsw.tstreams.common.{CommonConstants, ThreadAmountCalculationUtility}
 import com.bwsw.tstreams.coordination.server.StateUpdateServer
 import com.bwsw.tstreams.storage.StorageClient
@@ -225,7 +225,7 @@ class Subscriber(val name: String,
   /**
     * Info to commit
     */
-  override private[tstreams] def getCheckpointInfoAndClear(): List[StateInfo] = consumer.getCheckpointInfoAndClear()
+  override private[tstreams] def getCheckpointInfoAndClear(): List[State] = consumer.getCheckpointInfoAndClear()
 
   override private[tstreams] def getStorageClient(): StorageClient = consumer.getStorageClient()
 

@@ -6,7 +6,7 @@ import com.bwsw.tstreamstransactionserver.protocol.TransactionState
 /**
   * Represents factory which generates queues
   */
-object QueueBuilder {
+private[tstreams] object QueueBuilder {
 
   type QueueItemType = List[TransactionState]
   type QueueType = Queue[QueueItemType]

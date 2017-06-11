@@ -6,15 +6,14 @@ import com.bwsw.tstreamstransactionserver.protocol.TransactionState
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 
-object TransactionBuffer {
+private[tstreams] object TransactionBuffer {
   val MAX_POST_CHECKPOINT_WAIT = 2000
-
 }
 
 /**
   * Created by ivan on 15.09.16.
   */
-class TransactionBuffer(queue: QueueBuilder.QueueType, transactionQueueMaxLengthThreshold: Int = 1000) {
+private[tstreams] class TransactionBuffer(queue: QueueBuilder.QueueType, transactionQueueMaxLengthThreshold: Int = 1000) {
 
 
   val counters = TransactionBufferCounters()

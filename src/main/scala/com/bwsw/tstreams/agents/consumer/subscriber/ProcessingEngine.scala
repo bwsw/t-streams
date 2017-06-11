@@ -15,10 +15,10 @@ import scala.util.Random
   * Created by Ivan Kudryavtsev on 20.08.16.
   * Does top-level management tasks for new events.
   */
-class ProcessingEngine(consumer: TransactionOperator,
-                       partitions: Set[Int],
-                       queueBuilder: QueueBuilder.Abstract,
-                       callback: Callback, pollingInterval: Int) {
+private[tstreams] class ProcessingEngine(consumer: TransactionOperator,
+                                         partitions: Set[Int],
+                                         queueBuilder: QueueBuilder.Abstract,
+                                         callback: Callback, pollingInterval: Int) {
 
   private val id = Math.abs(Random.nextInt())
   // keeps last transaction states processed
@@ -29,7 +29,7 @@ class ProcessingEngine(consumer: TransactionOperator,
 
   private val executor = new Thread(() => {
     while (isRunning.get)
-      handleQueue(pollingInterval)
+      processReadyTransactions(pollingInterval)
   }, s"pe-$id-executor")
 
   private val loadExecutor = new FirstFailLockableTaskExecutor(s"pe-$id-loadExecutor")
@@ -70,11 +70,11 @@ class ProcessingEngine(consumer: TransactionOperator,
     })
 
   /**
-    * Reads transactions from database or fast load and does self-kick if no events.
+    * Reads transaction states from database or fast load and does self-kick if no events.
     *
     * @param pollTimeMs
     */
-  def handleQueue(pollTimeMs: Int) = {
+  def processReadyTransactions(pollTimeMs: Int) = {
 
     if (!isThresholdsSet.get()) {
       isThresholdsSet.set(true)
@@ -127,7 +127,7 @@ class ProcessingEngine(consumer: TransactionOperator,
   /**
     * Enqueues in queue last transaction from database
     */
-  private def enqueueLastPossibleTransactionState(partition: Int): Unit = {
+  private[tstreams] def enqueueLastPossibleTransactionState(partition: Int): Unit = {
     assert(partitions.contains(partition))
 
     val proposedTransactionId = consumer.getProposedTransactionId
@@ -155,7 +155,7 @@ class ProcessingEngine(consumer: TransactionOperator,
 }
 
 
-object ProcessingEngine {
+private[tstreams] object ProcessingEngine {
 
   // val PROTECTION_INTERVAL = 10
 
