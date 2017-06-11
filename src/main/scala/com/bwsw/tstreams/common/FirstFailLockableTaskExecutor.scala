@@ -13,15 +13,15 @@ import org.slf4j.LoggerFactory
   *
   * @param name
   */
-class FirstFailLockableTaskExecutor(name: String, cnt: Int = 1)
+private[tstreams] class FirstFailLockableTaskExecutor(name: String, cnt: Int = 1)
   extends ThreadPoolExecutor(cnt, cnt, 0, TimeUnit.MILLISECONDS,
     new LinkedBlockingQueue[Runnable],
     new ThreadFactoryBuilder().setNameFormat(s"$name-%d").build()) {
 
-  val queueLengthThreshold = new AtomicInteger(100)
-  val taskFullDelayThresholdMs = new AtomicInteger(120)
-  val taskDelayThresholdMs = new AtomicInteger(100)
-  val taskRunDelayThresholdMs = new AtomicInteger(20)
+  private val queueLengthThreshold = new AtomicInteger(100)
+  private val taskFullDelayThresholdMs = new AtomicInteger(120)
+  private val taskDelayThresholdMs = new AtomicInteger(100)
+  private val taskRunDelayThresholdMs = new AtomicInteger(20)
 
   queueLengthThreshold.set(FirstFailLockableExecutor.queueLengthThreshold.get)
   taskFullDelayThresholdMs.set(FirstFailLockableExecutor.taskFullDelayThresholdMs.get)
@@ -46,12 +46,12 @@ class FirstFailLockableTaskExecutor(name: String, cnt: Int = 1)
     this.taskRunDelayThresholdMs.set(taskRunDelayThresholdMs)
   }
 
-  val isFailed = new AtomicBoolean(false)
+  private val isFailed = new AtomicBoolean(false)
   private val logger = LoggerFactory.getLogger(this.getClass)
   private var failureExc: Throwable = null
 
 
-  abstract class FirstFailExecutorRunnable extends Runnable {
+  private[tstreams] abstract class FirstFailExecutorRunnable extends Runnable {
     val submitTime = System.currentTimeMillis()
     var runBeginTime = 0L
   }
@@ -62,7 +62,7 @@ class FirstFailLockableTaskExecutor(name: String, cnt: Int = 1)
     * @param r    Runnable to run wrapped
     * @param lock Lock
     */
-  class RunnableWithLock(r: Runnable, lock: ReentrantLock, name: String) extends FirstFailExecutorRunnable {
+  private[tstreams] class RunnableWithLock(r: Runnable, lock: ReentrantLock, name: String) extends FirstFailExecutorRunnable {
 
     override def toString() = name
 
@@ -72,7 +72,7 @@ class FirstFailLockableTaskExecutor(name: String, cnt: Int = 1)
     }
   }
 
-  class RunnableWithoutLock(r: Runnable, name: String) extends FirstFailExecutorRunnable {
+  private[tstreams] class RunnableWithoutLock(r: Runnable, name: String) extends FirstFailExecutorRunnable {
 
     override def toString() = name
 
