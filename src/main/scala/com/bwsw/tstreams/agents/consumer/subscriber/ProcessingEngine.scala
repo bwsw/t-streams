@@ -83,7 +83,7 @@ class ProcessingEngine(consumer: TransactionOperator,
         taskDelayThresholdMs = 100, taskRunDelayThresholdMs = 50)
     }
 
-    var loadFullDataExist = false
+    var loadFullDataExists = false
 
     val seq = queue.get(pollTimeMs, TimeUnit.MILLISECONDS)
 
@@ -100,7 +100,7 @@ class ProcessingEngine(consumer: TransactionOperator,
           if (fullLoader.checkIfTransactionLoadingIsPossible(seq)) {
             ProcessingEngine.logger.warn(s"PE $id - Load full occurred for seq $seq")
             if (fullLoader.load(seq, consumer, loadExecutor, callback) > 0)
-              loadFullDataExist = true
+              loadFullDataExists = true
           } else {
             Subscriber.logger.warn(s"Fast and Full loading failed for $seq.")
           }
@@ -109,37 +109,37 @@ class ProcessingEngine(consumer: TransactionOperator,
       }
     }
 
+    enqueueTransactionStateWhenNecessary(loadFullDataExists, pollTimeMs)
+  }
 
+  private def enqueueTransactionStateWhenNecessary(loadFullDataExists: Boolean, pollTimeMs: Int) = {
     partitions
       .foreach(p =>
-        if ((loadFullDataExist && queue.getInFlight() == 0)
+        if ((loadFullDataExists && queue.getInFlight == 0)
           || isFirstTime
-          || (System.currentTimeMillis() - getLastPartitionActivity(p) > pollTimeMs && queue.getInFlight() == 0)) {
-          enqueueLastPossibleTransaction(p)
+          || (System.currentTimeMillis() - getLastPartitionActivity(p) > pollTimeMs && queue.getInFlight == 0)) {
+          enqueueLastPossibleTransactionState(p)
         })
 
     isFirstTime = false
   }
 
-
   /**
     * Enqueues in queue last transaction from database
     */
-  def enqueueLastPossibleTransaction(partition: Int): Unit = {
-    //println(s"Partition is: ${partition} in ${partitions}")
-
+  private def enqueueLastPossibleTransactionState(partition: Int): Unit = {
     assert(partitions.contains(partition))
 
     val proposedTransactionId = consumer.getProposedTransactionId
 
-    val transactionStateList = List(TransactionState(
+    val transactionStates = List(TransactionState(
       transactionID = proposedTransactionId, partition = partition, masterID = 0, orderID = 0,
       count = -1, status = TransactionState.Status.Checkpointed, ttlMs = -1))
 
     if (Subscriber.logger.isDebugEnabled())
-      Subscriber.logger.debug(s"Enqueued $transactionStateList")
+      Subscriber.logger.debug(s"Enqueued $transactionStates")
 
-    queue.put(transactionStateList)
+    queue.put(transactionStates)
   }
 
   def start() = {
@@ -149,7 +149,7 @@ class ProcessingEngine(consumer: TransactionOperator,
 
   def stop() = {
     isRunning.set(false)
-    partitions.foreach(p => enqueueLastPossibleTransaction(p))
+    partitions.foreach(p => enqueueLastPossibleTransactionState(p))
     executor.join(Subscriber.SHUTDOWN_WAIT_MAX_SECONDS * 1000)
   }
 }

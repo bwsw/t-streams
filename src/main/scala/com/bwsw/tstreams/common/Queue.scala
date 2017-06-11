@@ -14,5 +14,5 @@ trait Queue[T] {
 
   def get(delay: Long, units: TimeUnit): T
 
-  def getInFlight(): Int = inFlight.get()
+  def getInFlight = inFlight.get()
 }

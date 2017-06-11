@@ -3,7 +3,7 @@ package com.bwsw.tstreams.agents.consumer.subscriber
 import java.util.concurrent.atomic.AtomicBoolean
 
 import com.bwsw.tstreams.agents.group.{GroupParticipant, StateInfo}
-import com.bwsw.tstreams.common.{GeneralOptions, ThreadAmountCalculationUtility}
+import com.bwsw.tstreams.common.{CommonConstants, ThreadAmountCalculationUtility}
 import com.bwsw.tstreams.coordination.server.StateUpdateServer
 import com.bwsw.tstreams.storage.StorageClient
 import com.bwsw.tstreams.streams.Stream
@@ -13,7 +13,7 @@ import scala.collection.mutable
 
 object Subscriber {
   val logger = LoggerFactory.getLogger(this.getClass)
-  var SHUTDOWN_WAIT_MAX_SECONDS = GeneralOptions.SHUTDOWN_WAIT_MAX_SECONDS
+  var SHUTDOWN_WAIT_MAX_SECONDS = CommonConstants.SHUTDOWN_WAIT_MAX_SECONDS
 }
 
 /**

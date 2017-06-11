@@ -5,7 +5,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 
 import com.bwsw.tstreams.agents.consumer.RPCConsumerTransaction
 import com.bwsw.tstreams.agents.producer.{Producer, RPCProducerTransaction}
-import com.bwsw.tstreams.common.{FirstFailLockableTaskExecutor, GeneralOptions}
+import com.bwsw.tstreams.common.{CommonConstants, FirstFailLockableTaskExecutor}
 import com.bwsw.tstreams.storage.StorageClient
 import com.bwsw.tstreamstransactionserver.rpc.TransactionStates
 import org.slf4j.LoggerFactory
@@ -15,7 +15,7 @@ import scala.concurrent.duration._
 
 
 object CheckpointGroup {
-  var SHUTDOWN_WAIT_MAX_SECONDS = GeneralOptions.SHUTDOWN_WAIT_MAX_SECONDS
+  var SHUTDOWN_WAIT_MAX_SECONDS = CommonConstants.SHUTDOWN_WAIT_MAX_SECONDS
   val logger = LoggerFactory.getLogger(this.getClass)
 }
 

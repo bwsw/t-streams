@@ -7,7 +7,6 @@ import com.bwsw.tstreams.agents.group._
 import com.bwsw.tstreams.agents.producer.NewProducerTransactionPolicy.ProducerPolicy
 import com.bwsw.tstreams.common._
 import com.bwsw.tstreams.coordination.client.UdpEventsBroadcastClient
-import com.bwsw.tstreams.generator.TransactionGenerator
 import com.bwsw.tstreams.storage.StorageClient
 import com.bwsw.tstreams.streams.Stream
 import com.bwsw.tstreamstransactionserver.protocol.TransactionState
@@ -21,7 +20,7 @@ import scala.util.Random
 
 object Producer {
   val logger = LoggerFactory.getLogger(this.getClass)
-  var SHUTDOWN_WAIT_MAX_SECONDS = GeneralOptions.SHUTDOWN_WAIT_MAX_SECONDS
+  var SHUTDOWN_WAIT_MAX_SECONDS = CommonConstants.SHUTDOWN_WAIT_MAX_SECONDS
 }
 
 /**

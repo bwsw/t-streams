@@ -1,6 +1,6 @@
 package com.bwsw.tstreams.agents.consumer.subscriber
 
-import com.bwsw.tstreams.common.{InMemoryQueue, Queue}
+import com.bwsw.tstreams.common.{MemoryQueue, Queue}
 import com.bwsw.tstreamstransactionserver.protocol.TransactionState
 
 /**
@@ -23,7 +23,7 @@ object QueueBuilder {
     */
   class InMemory extends Abstract {
     override def generateQueueObject(id: Int): QueueType
-    = new InMemoryQueue[QueueItemType]()
+    = new MemoryQueue[QueueItemType]()
   }
 
 }
