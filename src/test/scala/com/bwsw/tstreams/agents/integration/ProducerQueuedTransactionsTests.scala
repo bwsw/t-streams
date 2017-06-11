@@ -59,7 +59,7 @@ class ProducerQueuedTransactionsTests extends FlatSpec with Matchers with Before
 
 
   it should "create queued transactions, write them and subscriber must be able to read them" in {
-    val TOTAL = 1000
+    val TOTAL = 10000
     val latch = new CountDownLatch(TOTAL)
 
     val producer = f.getProducer(name = "test_producer", partitions = Set(0))
@@ -72,11 +72,13 @@ class ProducerQueuedTransactionsTests extends FlatSpec with Matchers with Before
     s.start()
 
     for (it <- 0 until TOTAL) {
-      val transaction = producer.newTransaction(NewProducerTransactionPolicy.EnqueueIfOpened)
-      transaction.send("test")
+      producer.newTransaction(NewProducerTransactionPolicy.EnqueueIfOpened).send("test")
     }
 
+    val begin = System.currentTimeMillis()
     producer.checkpoint()
+    val end = System.currentTimeMillis()
+    println(end - begin)
     producer.stop()
 
     latch.await(60, TimeUnit.SECONDS) shouldBe true
@@ -100,8 +102,7 @@ class ProducerQueuedTransactionsTests extends FlatSpec with Matchers with Before
     subscriber.start()
 
     for (it <- 0 until TOTAL) {
-      val transaction = producer.newTransaction(NewProducerTransactionPolicy.EnqueueIfOpened)
-      transaction.send("test")
+      producer.newTransaction(NewProducerTransactionPolicy.EnqueueIfOpened).send("test")
     }
 
     Thread.sleep(f.getProperty(ConfigurationOptions.Producer.Transaction.ttlMs).asInstanceOf[Int] + 1000)
@@ -137,16 +138,15 @@ class ProducerQueuedTransactionsTests extends FlatSpec with Matchers with Before
     s.start()
 
     for (it <- 0 until TOTAL) {
-      val transaction = producer.newTransaction(NewProducerTransactionPolicy.EnqueueIfOpened)
-      transaction.send("test")
+      producer.newTransaction(NewProducerTransactionPolicy.EnqueueIfOpened).send("test")
     }
 
     producer.cancel()
 
     for (it <- 0 until TOTAL) {
-      val transaction = producer.newTransaction(NewProducerTransactionPolicy.EnqueueIfOpened)
-      transaction.send("test")
-      producerAcc.append(transaction.getTransactionID)
+      producerAcc
+        .append(producer.newTransaction(NewProducerTransactionPolicy.EnqueueIfOpened)
+          .send("test").getTransactionID)
     }
     producer.checkpoint()
 

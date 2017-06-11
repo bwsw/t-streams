@@ -87,7 +87,7 @@ class SubscriberWithManyProcessingEnginesThreadsTest extends FlatSpec with Match
     producerThread.start()
     producerThread.join()
     val end = System.currentTimeMillis()
-    println(end - start)
+    // println(end - start)
     awaitTransactionsLatch.await(POLLING_FREQUENCY_DELAY_MS + 1000, TimeUnit.MILLISECONDS)
     subscriber.stop() // stop operation
     (producerTransactions.toSet -- subscriberTransactions.toSet).isEmpty shouldBe true

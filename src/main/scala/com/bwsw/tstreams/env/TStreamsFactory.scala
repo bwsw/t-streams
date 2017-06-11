@@ -195,7 +195,7 @@ class TStreamsFactory() {
 
     val consumerOptions = new ConsumerOptions(transactionsPreload = consumerTransactionsPreload,
       dataPreload = consumerDataPreload,
-      readPolicy = new RoundRobinPolicy(stream, partitions), offset = offset,
+      readPolicy = new RoundRobinPolicy(stream.partitionsCount, partitions), offset = offset,
       useLastOffset = useLastOffset,
       checkpointAtStart = checkpointAtStart)
 
@@ -244,7 +244,7 @@ class TStreamsFactory() {
 
     if (pAsString(co.Producer.Transaction.distributionPolicy) ==
       co.Producer.Transaction.Constants.DISTRIBUTION_POLICY_RR) {
-      writePolicy = new RoundRobinPolicy(stream, partitions)
+      writePolicy = new RoundRobinPolicy(stream.partitionsCount, partitions)
     }
     else {
       throw new InvalidParameterException("Only TSF_Dictionary.Producer.Transaction.Consts.DISTRIBUTION_POLICY_RR policy " +

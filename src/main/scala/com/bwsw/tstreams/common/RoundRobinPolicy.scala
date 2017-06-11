@@ -1,15 +1,13 @@
 package com.bwsw.tstreams.common
 
-import com.bwsw.tstreams.streams.Stream
-
 /**
   * Round robin policy impl of [[AbstractPolicy]]]
   *
   * @param usedPartitions Partitions from which agent will interact
   */
 
-class RoundRobinPolicy(stream: Stream, usedPartitions: Set[Int])
-  extends AbstractPolicy(stream = stream, usedPartitions = usedPartitions) {
+class RoundRobinPolicy(partitionsCount: Int, usedPartitions: Set[Int])
+  extends AbstractPolicy(partitionsCount, usedPartitions = usedPartitions) {
 
   /**
     * Get next partition to interact and update round value
@@ -17,14 +15,9 @@ class RoundRobinPolicy(stream: Stream, usedPartitions: Set[Int])
     * @return Next partition
     */
   override def getNextPartition(): Int = this.synchronized {
+    if(currentPos == usedPartitionsList.size) startNewRound()
     val partition = usedPartitionsList(currentPos)
-
-    if (roundPos < usedPartitionsList.size)
-      roundPos += 1
-
     currentPos += 1
-    currentPos %= usedPartitionsList.size
-
     partition
   }
 }
