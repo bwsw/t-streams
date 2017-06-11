@@ -8,7 +8,7 @@ import scala.collection.mutable.ListBuffer
   * Created by Ivan Kudryavtsev on 22.08.16.
   * Abstract type for Consumer
   */
-private[tstreams] trait TransactionOperator {
+trait TransactionOperator {
   def getLastTransaction(partition: Int): Option[ConsumerTransaction]
 
   def getTransactionById(partition: Int, transactionID: Long): Option[ConsumerTransaction]
