@@ -10,7 +10,7 @@ import org.scalatest.{FlatSpec, Matchers}
 /**
   * Created by Ivan Kudryavtsev on 19.08.16.
   */
-class InMemoryQueueTests extends FlatSpec with Matchers {
+class MemoryQueueTests extends FlatSpec with Matchers {
 
   it should "created" in {
     val q = new MemoryQueue[List[TransactionState]]()
