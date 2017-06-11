@@ -16,20 +16,20 @@ import scala.collection.mutable.ListBuffer
   * Created by Ivan Kudryavtsev on 16.05.17.
   */
 class ProducerQueuedTransactionsTests extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
-  lazy val srv = TestStorageServer.getNewClean()
+  lazy val server = TestStorageServer.getNewClean()
 
   override def beforeAll(): Unit = {
-    srv
+    server
     createNewStream()
   }
 
   override def afterAll(): Unit = {
-    TestStorageServer.dispose(srv)
+    TestStorageServer.dispose(server)
     onAfterAll()
   }
 
   it should "create queued transactions, checkpoint them in arbitrary order and subscriber must be able to read them" in {
-    val latch = new CountDownLatch(3)
+    val testComplete = new CountDownLatch(3)
     val subscriberAccumulator = new ListBuffer[Long]()
 
     val producer = f.getProducer(name = "test_producer", partitions = Set(0))
@@ -40,7 +40,7 @@ class ProducerQueuedTransactionsTests extends FlatSpec with Matchers with Before
       useLastOffset = false,
       callback = (consumer: TransactionOperator, transaction: ConsumerTransaction) => this.synchronized {
         subscriberAccumulator.append(transaction.getTransactionID)
-        latch.countDown()
+        testComplete.countDown()
       }).start()
 
     val transaction1 = producer.newTransaction(NewProducerTransactionPolicy.EnqueueIfOpened).send("test-t1")
@@ -52,14 +52,14 @@ class ProducerQueuedTransactionsTests extends FlatSpec with Matchers with Before
     producer.checkpoint()
     producer.stop()
 
-    latch.await(10, TimeUnit.SECONDS) shouldBe true
+    testComplete.await(10, TimeUnit.SECONDS) shouldBe true
     subscriberAccumulator.toSeq shouldBe Seq(transaction1, transaction2, transaction3).map(_.getTransactionID)
     s.stop()
   }
 
 
   it should "create queued transactions, write them and subscriber must be able to read them" in {
-    val TOTAL = 1000
+    val TOTAL = 10000
     val latch = new CountDownLatch(TOTAL)
 
     val producer = f.getProducer(name = "test_producer", partitions = Set(0))
@@ -72,8 +72,7 @@ class ProducerQueuedTransactionsTests extends FlatSpec with Matchers with Before
     s.start()
 
     for (it <- 0 until TOTAL) {
-      val transaction = producer.newTransaction(NewProducerTransactionPolicy.EnqueueIfOpened)
-      transaction.send("test")
+      producer.newTransaction(NewProducerTransactionPolicy.EnqueueIfOpened).send("test")
     }
 
     producer.checkpoint()
@@ -100,8 +99,7 @@ class ProducerQueuedTransactionsTests extends FlatSpec with Matchers with Before
     subscriber.start()
 
     for (it <- 0 until TOTAL) {
-      val transaction = producer.newTransaction(NewProducerTransactionPolicy.EnqueueIfOpened)
-      transaction.send("test")
+      producer.newTransaction(NewProducerTransactionPolicy.EnqueueIfOpened).send("test")
     }
 
     Thread.sleep(f.getProperty(ConfigurationOptions.Producer.Transaction.ttlMs).asInstanceOf[Int] + 1000)
@@ -137,16 +135,15 @@ class ProducerQueuedTransactionsTests extends FlatSpec with Matchers with Before
     s.start()
 
     for (it <- 0 until TOTAL) {
-      val transaction = producer.newTransaction(NewProducerTransactionPolicy.EnqueueIfOpened)
-      transaction.send("test")
+      producer.newTransaction(NewProducerTransactionPolicy.EnqueueIfOpened).send("test")
     }
 
     producer.cancel()
 
     for (it <- 0 until TOTAL) {
-      val transaction = producer.newTransaction(NewProducerTransactionPolicy.EnqueueIfOpened)
-      transaction.send("test")
-      producerAcc.append(transaction.getTransactionID)
+      producerAcc
+        .append(producer.newTransaction(NewProducerTransactionPolicy.EnqueueIfOpened)
+          .send("test").getTransactionID)
     }
     producer.checkpoint()
 

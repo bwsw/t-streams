@@ -2,8 +2,8 @@ package com.bwsw.tstreams.agents.consumer
 
 import java.util.concurrent.atomic.AtomicBoolean
 
-import com.bwsw.tstreams.agents.group.{ConsumerStateInfo, GroupParticipant, StateInfo}
-import com.bwsw.tstreams.generator.TransactionGenerator
+import com.bwsw.tstreams.agents.group.{ConsumerState, GroupParticipant, State}
+import com.bwsw.tstreams.common.TransactionGenerator
 import com.bwsw.tstreams.storage.StorageClient
 import com.bwsw.tstreams.streams.Stream
 import com.bwsw.tstreamstransactionserver.rpc.TransactionStates
@@ -76,7 +76,7 @@ class Consumer(val name: String,
   private def loadNextTransactionsForPartition(partition: Int, currentOffset: Long): mutable.Queue[ConsumerTransaction] = {
 
     val (last, seq) = stream.client.scanTransactions(stream.id, partition, currentOffset + 1,
-      transactionGenerator.getTransaction(), options.transactionsPreload, Set())
+      transactionGenerator.generateTransactionID, options.transactionsPreload, Set())
 
     val transactionsQueue = mutable.Queue[ConsumerTransaction]()
     seq.foreach(record => {
@@ -89,7 +89,7 @@ class Consumer(val name: String,
   /**
     * Starts the operation.
     */
-  def start(): Unit = this.synchronized {
+  def start(): Consumer = this.synchronized {
     Consumer.logger.info(s"[INIT] Consumer with name: $name, streamName : ${stream.name}, streamPartitions : ${stream.partitionsCount} is about to start.")
 
     if (isStopped.get())
@@ -128,11 +128,11 @@ class Consumer(val name: String,
         } else {
           val off = options.offset match {
             case Offset.Oldest =>
-              transactionGenerator.getTransaction(System.currentTimeMillis() - (stream.ttl + 1) * 1000)
+              transactionGenerator.generateTransactionIDForTimestamp(System.currentTimeMillis() - (stream.ttl + 1) * 1000)
             case Offset.Newest =>
-              transactionGenerator.getTransaction()
+              transactionGenerator.generateTransactionID
             case dateTime: Offset.DateTime =>
-              transactionGenerator.getTransaction(dateTime.startTime.getTime)
+              transactionGenerator.generateTransactionIDForTimestamp(dateTime.startTime.getTime)
             case offset: Offset.ID =>
               offset.startID
             case _ =>
@@ -152,6 +152,7 @@ class Consumer(val name: String,
 
     if (options.checkpointAtStart) checkpoint()
 
+    this
   }
 
 
@@ -306,13 +307,13 @@ class Consumer(val name: String,
   /**
     * Info to commit
     */
-  override def getCheckpointInfoAndClear(): List[StateInfo] = this.synchronized {
+  override def getCheckpointInfoAndClear(): List[State] = this.synchronized {
 
     if (!isStarted.get())
       throw new IllegalStateException("Consumer is not started. Start consumer first.")
 
     val checkpointData = checkpointOffsets.map { case (partition, lastTransaction) =>
-      ConsumerStateInfo(name, stream.id, partition, lastTransaction)
+      ConsumerState(name, stream.id, partition, lastTransaction)
     }.toList
     checkpointOffsets.clear()
     checkpointData
@@ -362,7 +363,7 @@ class Consumer(val name: String,
     result
   }
 
-  override def getProposedTransactionId: Long = transactionGenerator.getTransaction()
+  override def getProposedTransactionId: Long = transactionGenerator.generateTransactionID
 
   override def getStorageClient(): StorageClient = stream.client
 

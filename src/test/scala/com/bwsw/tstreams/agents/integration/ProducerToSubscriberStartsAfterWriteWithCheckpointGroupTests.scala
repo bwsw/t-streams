@@ -4,7 +4,7 @@ import java.util.concurrent.{CountDownLatch, TimeUnit}
 
 import com.bwsw.tstreams.agents.consumer.Offset.Oldest
 import com.bwsw.tstreams.agents.consumer.{ConsumerTransaction, TransactionOperator}
-import com.bwsw.tstreams.agents.producer.{NewProducerTransactionPolicy, ProducerTransaction}
+import com.bwsw.tstreams.agents.producer.{NewProducerTransactionPolicy, ProducerTransactionImpl}
 import com.bwsw.tstreams.testutils.{TestStorageServer, TestUtils}
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 
@@ -46,7 +46,7 @@ class ProducerToSubscriberStartsAfterWriteWithCheckpointGroupTests extends FlatS
       })
 
     for (i <- 0 until COUNT) {
-      val t: ProducerTransaction = producer.newTransaction(policy = NewProducerTransactionPolicy.CheckpointIfOpened)
+      val t: ProducerTransactionImpl = producer.newTransaction(policy = NewProducerTransactionPolicy.CheckpointIfOpened)
       t.send("test")
       t.checkpoint()
       bp.append(t.getTransactionID)
@@ -67,7 +67,6 @@ class ProducerToSubscriberStartsAfterWriteWithCheckpointGroupTests extends FlatS
 
     ttsSynchronizationLatch.await(10, TimeUnit.SECONDS) shouldBe true
 
-    val bs2 = ListBuffer[Long]()
     val subscriber2Latch = new CountDownLatch(1)
 
     val s2 = f.getSubscriber(name = "ss+2",

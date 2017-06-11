@@ -8,7 +8,7 @@ import com.bwsw.tstreamstransactionserver.rpc.TransactionStates
 
 import scala.collection.mutable.ListBuffer
 
-object TransactionFullLoader {
+private[tstreams] object TransactionFullLoader {
   val EXPECTED_BUT_EMPTY_RESPONSE_DELAY = 1000
 }
 
@@ -16,7 +16,7 @@ object TransactionFullLoader {
   * Created by Ivan Kudryavtsev on 22.08.16.
   * Loads transactions in full from database if fast loader is unable to load them
   */
-class TransactionFullLoader(partitions: Set[Int],
+private[tstreams] class TransactionFullLoader(partitions: Set[Int],
                             lastTransactionsMap: ProcessingEngine.LastTransactionStateMapType)
   extends AbstractTransactionLoader {
 

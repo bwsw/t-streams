@@ -12,7 +12,7 @@ import scala.collection.mutable
 /**
   * Created by Ivan Kudryavtsev at 20.08.2016
   */
-class TransactionBufferWorker() {
+private[tstreams] class TransactionBufferWorker() {
   private val updateExecutor = new FirstFailLockableTaskExecutor("TransactionBufferWorker-updateExecutor")
   val transactionBufferMap = mutable.Map[Int, TransactionBuffer]()
 
@@ -53,7 +53,8 @@ class TransactionBufferWorker() {
   def update(transactionState: TransactionState) = {
 
     updateExecutor.submit(s"<UpdateAndNotifyTask($transactionState)>", () => {
-      transactionBufferMap(transactionState.partition).update(transactionState)
+      transactionBufferMap(transactionState.partition)
+        .update(transactionState.withMasterID(Math.abs(transactionState.masterID)))
       if (transactionState.status == TransactionState.Status.Checkpointed) {
         transactionBufferMap(transactionState.partition).signalCompleteTransactions()
       }

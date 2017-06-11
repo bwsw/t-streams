@@ -8,6 +8,11 @@ import org.scalatest.{FlatSpec, Matchers}
 
 import scala.collection.mutable.ListBuffer
 
+
+/**
+  * Created by Ivan Kudryavtsev on 22.08.16.
+  */
+
 class ProcessingEngineOperatorTestImpl extends TransactionOperator {
 
   val TOTAL = 10
@@ -38,9 +43,6 @@ class ProcessingEngineOperatorTestImpl extends TransactionOperator {
   override def getProposedTransactionId(): Long = IncreasingGenerator.get
 }
 
-/**
-  * Created by Ivan Kudryavtsev on 22.08.16.
-  */
 class ProcessingEngineTests extends FlatSpec with Matchers {
 
   val cb = new Callback {
@@ -57,7 +59,7 @@ class ProcessingEngineTests extends FlatSpec with Matchers {
     val c = new ProcessingEngineOperatorTestImpl()
     val pe = new ProcessingEngine(c, Set[Int](0), qb, cb, 100)
     val act1 = pe.getLastPartitionActivity(0)
-    pe.handleQueue(10)
+    pe.processReadyTransactions(10)
     val act2 = pe.getLastPartitionActivity(0)
     act1 shouldBe act2
   }
@@ -66,10 +68,10 @@ class ProcessingEngineTests extends FlatSpec with Matchers {
     val c = new ProcessingEngineOperatorTestImpl()
     val pe = new ProcessingEngine(c, Set[Int](0), qb, cb, 100)
     c.lastTransaction = Option[ConsumerTransaction](new ConsumerTransaction(0, IncreasingGenerator.get, 1, TransactionStates.Checkpointed, -1))
-    pe.enqueueLastPossibleTransaction(0)
+    pe.enqueueLastPossibleTransactionState(0)
     val act1 = pe.getLastPartitionActivity(0)
     Thread.sleep(10)
-    pe.handleQueue(10)
+    pe.processReadyTransactions(10)
     val act2 = pe.getLastPartitionActivity(0)
     act2 - act1 > 0 shouldBe true
   }

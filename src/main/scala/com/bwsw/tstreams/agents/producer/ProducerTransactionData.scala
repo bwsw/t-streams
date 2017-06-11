@@ -10,7 +10,7 @@ import scala.concurrent.duration._
 /**
   * Created by Ivan Kudryavtsev on 15.08.16.
   */
-class ProducerTransactionData(transaction: ProducerTransaction, ttl: Long, storageClient: StorageClient) {
+class ProducerTransactionData(transaction: ProducerTransactionImpl, ttl: Long, storageClient: StorageClient) {
   private[tstreams] var items = ListBuffer[Array[Byte]]()
   private[tstreams] var lastOffset: Int = 0
 

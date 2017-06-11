@@ -2,8 +2,8 @@ package com.bwsw.tstreams.agents.consumer.subscriber
 
 import java.util.concurrent.atomic.AtomicBoolean
 
-import com.bwsw.tstreams.agents.group.{GroupParticipant, StateInfo}
-import com.bwsw.tstreams.common.{Functions, GeneralOptions}
+import com.bwsw.tstreams.agents.group.{GroupParticipant, State}
+import com.bwsw.tstreams.common.{CommonConstants, ThreadAmountCalculationUtility}
 import com.bwsw.tstreams.coordination.server.StateUpdateServer
 import com.bwsw.tstreams.storage.StorageClient
 import com.bwsw.tstreams.streams.Stream
@@ -13,7 +13,7 @@ import scala.collection.mutable
 
 object Subscriber {
   val logger = LoggerFactory.getLogger(this.getClass)
-  var SHUTDOWN_WAIT_MAX_SECONDS = GeneralOptions.SHUTDOWN_WAIT_MAX_SECONDS
+  var SHUTDOWN_WAIT_MAX_SECONDS = CommonConstants.SHUTDOWN_WAIT_MAX_SECONDS
 }
 
 /**
@@ -198,7 +198,7 @@ class Subscriber(val name: String,
   private def calculateBufferWorkersThreadAmount(): Int = {
     val maxThreads = options.readPolicy.getUsedPartitions.size
     val minThreads = options.transactionBufferWorkersThreadPoolAmount
-    Functions.calculateThreadAmount(minThreads, maxThreads)
+    ThreadAmountCalculationUtility.calculateEvenThreadsAmount(minThreads, maxThreads)
   }
 
   /**
@@ -209,7 +209,7 @@ class Subscriber(val name: String,
   def calculateProcessingEngineWorkersThreadAmount(): Int = {
     val maxThreads = options.readPolicy.getUsedPartitions.size
     val minThreads = options.processingEngineWorkersThreadAmount
-    Functions.calculateThreadAmount(minThreads, maxThreads)
+    ThreadAmountCalculationUtility.calculateEvenThreadsAmount(minThreads, maxThreads)
   }
 
 
@@ -225,7 +225,7 @@ class Subscriber(val name: String,
   /**
     * Info to commit
     */
-  override private[tstreams] def getCheckpointInfoAndClear(): List[StateInfo] = consumer.getCheckpointInfoAndClear()
+  override private[tstreams] def getCheckpointInfoAndClear(): List[State] = consumer.getCheckpointInfoAndClear()
 
   override private[tstreams] def getStorageClient(): StorageClient = consumer.getStorageClient()
 
