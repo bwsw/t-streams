@@ -227,6 +227,6 @@ class TransactionBufferTests extends FlatSpec with Matchers {
       b.update(ts0(OPENED))
     })
     b.signalCompleteTransactions()
-    b.getSize() shouldBe 0
+    b.getSize shouldBe 0
   }
 }
