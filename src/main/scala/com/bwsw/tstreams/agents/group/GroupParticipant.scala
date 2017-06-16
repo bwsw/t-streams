@@ -30,8 +30,14 @@ trait GroupParticipant {
 
   /**
     * Info to commit
+    * important: [[List]] was used instead of [[Array]]
+    * but sometimes there was appeared the following exception:
+    * Caused by: java.util.NoSuchElementException: head of empty list
+    * at scala.collection.immutable.Nil$.head(List.scala:417)
+    * at scala.collection.immutable.Nil$.head(List.scala:414)
+    * at scala.collection.immutable.List.map(List.scala:276)
     */
-  private[tstreams] def getStateAndClear(): List[State]
+  private[tstreams] def getStateAndClear(): Array[State]
 
   private[tstreams] def getStorageClient(): StorageClient
 

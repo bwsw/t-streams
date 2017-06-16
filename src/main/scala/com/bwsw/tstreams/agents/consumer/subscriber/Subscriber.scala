@@ -62,6 +62,7 @@ class Subscriber(val name: String,
   private val coordinator = new Coordinator()
 
   private[tstreams] val transactionGenerator = consumer.transactionGenerator
+
   /**
     * Erathosphene's grating algorithm
     *
@@ -244,10 +245,10 @@ class Subscriber(val name: String,
   /**
     * Info to commit
     */
-  override private[tstreams] def getStateAndClear(): List[State] = consumer.getStateAndClear()
+  override private[tstreams] def getStateAndClear(): Array[State] = consumer.getStateAndClear()
 
   override private[tstreams] def getStorageClient(): StorageClient = consumer.getStorageClient()
 
-  override def close(): Unit = if(!isStopped.get() && isStarted.get()) stop()
+  override def close(): Unit = if (!isStopped.get() && isStarted.get()) stop()
 }
 

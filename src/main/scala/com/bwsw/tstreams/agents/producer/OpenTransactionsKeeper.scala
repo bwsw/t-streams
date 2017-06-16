@@ -22,11 +22,17 @@ package com.bwsw.tstreams.agents.producer
 import com.bwsw.tstreams.agents.producer.NewProducerTransactionPolicy.ProducerPolicy
 
 import scala.collection.mutable
-import scala.collection.mutable.ListBuffer
 
 
 /**
   * Created by Ivan Kudryavtsev on 28.08.16.
+  *
+  * important: [[scala.collection.mutable.ListBuffer]] was used instead of [[mutable.ArrayBuffer]] within the class
+  * but sometimes there was appeared the following exception:
+  * Caused by: java.util.NoSuchElementException: head of empty list
+  * at scala.collection.immutable.Nil$.head(List.scala:417)
+  * at scala.collection.immutable.Nil$.head(List.scala:414)
+  * at scala.collection.immutable.List.map(List.scala:276)
   */
 class OpenTransactionsKeeper {
   private val openTransactionsMap = mutable.Map[Int, (Long, mutable.Set[ProducerTransaction])]()
@@ -39,7 +45,7 @@ class OpenTransactionsKeeper {
     * @return
     */
   def forallTransactionsDo[RV](f: (Int, ProducerTransaction) => RV): Iterable[RV] = openTransactionsMap.synchronized {
-    val res = ListBuffer[RV]()
+    val res = mutable.ArrayBuffer[RV]()
     openTransactionsMap.keys.foreach(partition =>
       openTransactionsMap.get(partition)
         .foreach(txnSetValue => {
@@ -49,13 +55,14 @@ class OpenTransactionsKeeper {
   }
 
   def forPartitionTransactionsDo[RV](partition: Int, f: (ProducerTransaction) => RV): Iterable[RV] = openTransactionsMap.synchronized {
-    val res = ListBuffer[RV]()
+    val res = mutable.ArrayBuffer[RV]()
     openTransactionsMap.get(partition)
       .foreach(txnSetValue => {
         res ++= txnSetValue._2.map(txn => f(txn))
       })
     res
   }
+
   /**
     * Returns if transaction is in map without checking if it's not closed
     *

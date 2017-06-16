@@ -105,10 +105,10 @@ class Producer(var name: String,
     lazy val message = s"Producer $name[${getUniqueAgentID}] missed transaction ttl interval. " +
       s"Last was $lastUpdateEndTime, now is $currentTime. It's critical situation, it is marked as non functional, only stop is allowed."
 
-    if(isMissedUpdate.get())
+    if (isMissedUpdate.get())
       throw new MissedUpdateException(message)
 
-    if(currentTime - lastUpdateEndTime > producerOptions.transactionTtlMs) {
+    if (currentTime - lastUpdateEndTime > producerOptions.transactionTtlMs) {
       Producer.logger.error(message)
       isMissedUpdate.set(true)
       throw new MissedUpdateException(message)
@@ -138,13 +138,13 @@ class Producer(var name: String,
           log.info(s"Producer $name[${getUniqueAgentID}] - object shutdown is requested. Exit KeepAliveThread.")
         } else {
           // do update
-          if(log.isDebugEnabled())
+          if (log.isDebugEnabled())
             log.debug(s"Producer $name[${getUniqueAgentID}] - update is started for long lasting transactions")
 
           val transactionStates = openTransactions.forallTransactionsDo((part: Int, transaction: ProducerTransaction) => transaction.getUpdateInfo)
           stream.client.putTransactions(transactionStates.flatten.toSeq, Seq())
 
-          if(log.isDebugEnabled())
+          if (log.isDebugEnabled())
             log.debug(s"Producer $name[${getUniqueAgentID}] - update is completed for long lasting transactions")
 
           // check if update is missed
@@ -152,7 +152,7 @@ class Producer(var name: String,
           if (currentUpdateEndTime - lastUpdateEndTime > producerOptions.transactionTtlMs) {
             isMissedUpdate.set(true)
             isExit = true
-            if(log.isDebugEnabled())
+            if (log.isDebugEnabled())
               log.debug(s"Producer $name[${getUniqueAgentID}] missed transaction ttl interval. " +
                 s"Last was $lastUpdateEndTime, now is $currentUpdateEndTime. " +
                 "It's critical situation, it is marked as non functional, only stop is allowed.")
@@ -360,28 +360,29 @@ class Producer(var name: String,
   /**
     * Info to commit
     */
-  override private[tstreams] def getStateAndClear(): List[State] = {
+  override private[tstreams] def getStateAndClear(): Array[State] = {
     getInfoAndClear(TransactionState.Status.Checkpointed)
   }
 
-  private[tstreams] def getCancelInfoAndClear(): List[State] = {
+  private[tstreams] def getCancelInfoAndClear(): Array[State] = {
     getInfoAndClear(TransactionState.Status.Cancelled)
   }
 
-  private def getInfoAndClear(status: TransactionState.Status) = this.synchronized {
+  private def getInfoAndClear(status: TransactionState.Status): Array[State] = this.synchronized {
     checkStopped()
     checkUpdateFailure()
-    val stateInfo = openTransactions.forallTransactionsDo((k: Int, v: ProducerTransaction) => v.getStateInfo(status)).toList
+    val stateInfo = openTransactions.forallTransactionsDo((k: Int, v: ProducerTransaction) => v.getStateInfo(status))
     openTransactions.clear()
-    stateInfo
+
+    stateInfo.toArray
   }
 
-  private def getPartitionCheckpointInfoAndClear(partition: Int): Seq[State] = this.synchronized {
+  private def getPartitionCheckpointInfoAndClear(partition: Int): Array[State] = this.synchronized {
     checkStopped()
     checkUpdateFailure()
     val res = openTransactions.getTransactionSetOption(partition).map(partData => partData._2.map(txn => txn.getStateInfo(TransactionState.Status.Checkpointed)))
     openTransactions.clear(partition)
-    res.fold(Seq[State]())(resInt => resInt.toSeq)
+    res.fold(Seq[State]())(resInt => resInt.toSeq).toArray
   }
 
   /**
@@ -411,5 +412,5 @@ class Producer(var name: String,
 
   override private[tstreams] def getStorageClient(): StorageClient = stream.client
 
-  override def close(): Unit = if(!isStopped.get()) stop()
+  override def close(): Unit = if (!isStopped.get()) stop()
 }
