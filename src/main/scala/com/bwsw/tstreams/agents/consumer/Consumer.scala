@@ -326,7 +326,7 @@ class Consumer(val name: String,
   /**
     * Info to commit
     */
-  override def getCheckpointInfoAndClear(): List[State] = this.synchronized {
+  override def getStateAndClear(): List[State] = this.synchronized {
 
     if (!isStarted.get())
       throw new IllegalStateException("Consumer is not started. Start consumer first.")

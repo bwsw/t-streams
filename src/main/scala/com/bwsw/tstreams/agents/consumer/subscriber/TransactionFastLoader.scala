@@ -20,8 +20,6 @@
 package com.bwsw.tstreams.agents.consumer.subscriber
 
 
-import java.util.concurrent.atomic.AtomicInteger
-
 import com.bwsw.tstreams.agents.consumer.TransactionOperator
 import com.bwsw.tstreams.common.FirstFailLockableTaskExecutor
 import com.bwsw.tstreamstransactionserver.protocol.TransactionState
@@ -72,8 +70,6 @@ private[tstreams] class TransactionFastLoader(partitions: Set[Int],
     checkListSeq(prev, seq, compareIfStrictlySequentialFast)
   }
 
-
-  val counter = new AtomicInteger(0)
   /**
     * allows to load data fast without database calls
     *

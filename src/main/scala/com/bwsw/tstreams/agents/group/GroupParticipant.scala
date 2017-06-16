@@ -31,7 +31,7 @@ trait GroupParticipant {
   /**
     * Info to commit
     */
-  private[tstreams] def getCheckpointInfoAndClear(): List[State]
+  private[tstreams] def getStateAndClear(): List[State]
 
   private[tstreams] def getStorageClient(): StorageClient
 

@@ -47,7 +47,7 @@ private[tstreams] class TransactionBuffer(queue: QueueBuilder.QueueType, transac
 
   def getSize = stateList.size
 
-  def update(update: TransactionState): Unit = this.synchronized {
+  def updateTransactionState(update: TransactionState): Unit = this.synchronized {
     counters.updateStateCounters(update)
 
     if (update.status == TransactionState.Status.Opened) {

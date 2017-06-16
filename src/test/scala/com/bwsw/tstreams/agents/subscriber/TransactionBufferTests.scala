@@ -68,7 +68,7 @@ class TransactionBufferTests extends FlatSpec with Matchers {
   it should "avoid addition of update state if no previous state" in {
     val b = new TransactionBuffer(new QueueBuilder.InMemory().generateQueueObject(0))
     val ts0 = generateAllStates()
-    b.update(ts0(UPDATE))
+    b.updateTransactionState(ts0(UPDATE))
     b.getState(ts0(UPDATE).transactionID).isDefined shouldBe false
   }
 
@@ -76,14 +76,14 @@ class TransactionBufferTests extends FlatSpec with Matchers {
   it should "avoid addition of post state if no previous state" in {
     val b = new TransactionBuffer(new QueueBuilder.InMemory().generateQueueObject(0))
     val ts0 = generateAllStates()
-    b.update(ts0(POST))
+    b.updateTransactionState(ts0(POST))
     b.getState(ts0(POST).transactionID).isDefined shouldBe false
   }
 
   it should "avoid addition of cancel state if no previous state" in {
     val b = new TransactionBuffer(new QueueBuilder.InMemory().generateQueueObject(0))
     val ts0 = generateAllStates()
-    b.update(ts0(CANCEL))
+    b.updateTransactionState(ts0(CANCEL))
     b.getState(ts0(CANCEL).transactionID).isDefined shouldBe false
   }
 
@@ -91,8 +91,8 @@ class TransactionBufferTests extends FlatSpec with Matchers {
     val b = new TransactionBuffer(new QueueBuilder.InMemory().generateQueueObject(0))
     val ts0 = generateAllStates()
     val ts1 = generateAllStates()
-    b.update(ts1(OPENED))
-    b.update(ts0(OPENED))
+    b.updateTransactionState(ts1(OPENED))
+    b.updateTransactionState(ts0(OPENED))
     b.getState(ts0(OPENED).transactionID).isDefined shouldBe false
     b.getState(ts1(OPENED).transactionID).isDefined shouldBe true
   }
@@ -101,15 +101,15 @@ class TransactionBufferTests extends FlatSpec with Matchers {
   it should "allow to place opened state" in {
     val b = new TransactionBuffer(new QueueBuilder.InMemory().generateQueueObject(0))
     val ts0 = generateAllStates()
-    b.update(ts0(OPENED))
+    b.updateTransactionState(ts0(OPENED))
     b.getState(ts0(OPENED).transactionID).isDefined shouldBe true
   }
 
   it should "move from opened to updated without problems, state should be opened, ttl must be changed" in {
     val b = new TransactionBuffer(new QueueBuilder.InMemory().generateQueueObject(0))
     val ts0 = generateAllStates()
-    b.update(ts0(OPENED))
-    b.update(ts0(UPDATE))
+    b.updateTransactionState(ts0(OPENED))
+    b.updateTransactionState(ts0(UPDATE))
     b.getState(ts0(UPDATE).transactionID).isDefined shouldBe true
     Math.abs(b.getState(ts0(UPDATE).transactionID).get.ttlMs - UPDATE_TTL - System.currentTimeMillis()) < 20 shouldBe true
     b.getState(ts0(UPDATE).transactionID).get.status shouldBe TransactionState.Status.Opened
@@ -118,8 +118,8 @@ class TransactionBufferTests extends FlatSpec with Matchers {
   it should "move from opened to cancelled" in {
     val b = new TransactionBuffer(new QueueBuilder.InMemory().generateQueueObject(0))
     val ts0 = generateAllStates()
-    b.update(ts0(OPENED))
-    b.update(ts0(CANCEL))
+    b.updateTransactionState(ts0(OPENED))
+    b.updateTransactionState(ts0(CANCEL))
     b.getState(ts0(UPDATE).transactionID).isDefined shouldBe true
   }
 
@@ -127,8 +127,8 @@ class TransactionBufferTests extends FlatSpec with Matchers {
   it should "move from opened to checkpoint" in {
     val b = new TransactionBuffer(new QueueBuilder.InMemory().generateQueueObject(0))
     val ts0 = generateAllStates()
-    b.update(ts0(OPENED))
-    b.update(ts0(POST))
+    b.updateTransactionState(ts0(OPENED))
+    b.updateTransactionState(ts0(POST))
     b.getState(ts0(POST).transactionID).isDefined shouldBe true
     b.getState(ts0(POST).transactionID).get.ttlMs shouldBe Long.MaxValue
   }
@@ -136,21 +136,21 @@ class TransactionBufferTests extends FlatSpec with Matchers {
   it should "move to checkpoint impossible" in {
     val b = new TransactionBuffer(new QueueBuilder.InMemory().generateQueueObject(0))
     val ts0 = generateAllStates()
-    b.update(ts0(POST))
+    b.updateTransactionState(ts0(POST))
     b.getState(ts0(POST).transactionID).isDefined shouldBe false
   }
 
   it should "move to cancel impossible" in {
     val b = new TransactionBuffer(new QueueBuilder.InMemory().generateQueueObject(0))
     val ts0 = generateAllStates()
-    b.update(ts0(CANCEL))
+    b.updateTransactionState(ts0(CANCEL))
     b.getState(ts0(CANCEL).transactionID).isDefined shouldBe false
   }
 
   it should "move to update impossible" in {
     val b = new TransactionBuffer(new QueueBuilder.InMemory().generateQueueObject(0))
     val ts0 = generateAllStates()
-    b.update(ts0(UPDATE))
+    b.updateTransactionState(ts0(UPDATE))
     b.getState(ts0(UPDATE).transactionID).isDefined shouldBe false
   }
 
@@ -159,8 +159,8 @@ class TransactionBufferTests extends FlatSpec with Matchers {
     val b = new TransactionBuffer(q)
     val ts0 = generateAllStates()
     val ts1 = generateAllStates()
-    b.update(ts0(OPENED))
-    b.update(ts0(POST))
+    b.updateTransactionState(ts0(OPENED))
+    b.updateTransactionState(ts0(POST))
     b.signalCompleteTransactions()
     val r = q.get(1, TimeUnit.MILLISECONDS)
     r.size shouldBe 1
@@ -174,10 +174,10 @@ class TransactionBufferTests extends FlatSpec with Matchers {
     val b = new TransactionBuffer(q)
     val ts0 = generateAllStates()
     val ts1 = generateAllStates()
-    b.update(ts0(OPENED))
-    b.update(ts1(OPENED))
-    b.update(ts0(POST))
-    b.update(ts1(POST))
+    b.updateTransactionState(ts0(OPENED))
+    b.updateTransactionState(ts1(OPENED))
+    b.updateTransactionState(ts0(POST))
+    b.updateTransactionState(ts1(POST))
     b.signalCompleteTransactions()
     val r = q.get(1, TimeUnit.MILLISECONDS)
     r.size shouldBe 2
@@ -190,9 +190,9 @@ class TransactionBufferTests extends FlatSpec with Matchers {
     val b = new TransactionBuffer(q)
     val ts0 = generateAllStates()
     val ts1 = generateAllStates()
-    b.update(ts0(OPENED))
-    b.update(ts1(OPENED))
-    b.update(ts1(POST))
+    b.updateTransactionState(ts0(OPENED))
+    b.updateTransactionState(ts1(OPENED))
+    b.updateTransactionState(ts1(POST))
     b.signalCompleteTransactions()
     val r = q.get(1, TimeUnit.MILLISECONDS)
     r shouldBe null
@@ -203,8 +203,8 @@ class TransactionBufferTests extends FlatSpec with Matchers {
     val b = new TransactionBuffer(q)
     val ts0 = generateAllStates()
     val ts1 = generateAllStates()
-    b.update(ts0(OPENED))
-    b.update(ts1(OPENED))
+    b.updateTransactionState(ts0(OPENED))
+    b.updateTransactionState(ts1(OPENED))
     b.signalCompleteTransactions()
     val r = q.get(1, TimeUnit.MILLISECONDS)
     r shouldBe null
@@ -215,9 +215,9 @@ class TransactionBufferTests extends FlatSpec with Matchers {
     val b = new TransactionBuffer(q)
     val ts0 = generateAllStates()
     val ts1 = generateAllStates()
-    b.update(ts0(OPENED))
-    b.update(ts1(OPENED))
-    b.update(ts0(POST))
+    b.updateTransactionState(ts0(OPENED))
+    b.updateTransactionState(ts1(OPENED))
+    b.updateTransactionState(ts0(POST))
     b.signalCompleteTransactions()
     val r = q.get(1, TimeUnit.MILLISECONDS)
     r.size shouldBe 1
@@ -228,10 +228,10 @@ class TransactionBufferTests extends FlatSpec with Matchers {
     val b = new TransactionBuffer(q)
     val ts0 = generateAllStates()
     val ts1 = generateAllStates()
-    b.update(ts0(OPENED))
-    b.update(ts1(OPENED))
-    b.update(ts1(POST))
-    b.update(ts0(POST))
+    b.updateTransactionState(ts0(OPENED))
+    b.updateTransactionState(ts1(OPENED))
+    b.updateTransactionState(ts1(POST))
+    b.updateTransactionState(ts0(POST))
     b.signalCompleteTransactions()
     val r = q.get(10, TimeUnit.MILLISECONDS)
     r.size shouldBe 2
@@ -243,7 +243,7 @@ class TransactionBufferTests extends FlatSpec with Matchers {
     val b = new TransactionBuffer(new QueueBuilder.InMemory().generateQueueObject(0), 100)
     (0 until 100).foreach(_ => {
       val ts0 = generateAllStates()
-      b.update(ts0(OPENED))
+      b.updateTransactionState(ts0(OPENED))
     })
     b.signalCompleteTransactions()
     b.getSize shouldBe 0

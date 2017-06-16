@@ -28,7 +28,7 @@ import com.bwsw.tstreamstransactionserver.rpc.TransactionStates
 import scala.collection.mutable.ListBuffer
 
 private[tstreams] object TransactionFullLoader {
-  val EXPECTED_BUT_EMPTY_RESPONSE_DELAY = 1000
+  val EXPECTED_BUT_EMPTY_RESPONSE_RETRY_DELAY = 1000
 }
 
 /**
@@ -36,13 +36,13 @@ private[tstreams] object TransactionFullLoader {
   * Loads transactions in full from database if fast loader is unable to load them
   */
 private[tstreams] class TransactionFullLoader(partitions: Set[Int],
-                            lastTransactionsMap: ProcessingEngine.LastTransactionStateMapType)
+                                              lastTransactionsMap: ProcessingEngine.LastTransactionStateMapType)
   extends AbstractTransactionLoader {
 
   /**
     * checks if possible to do full loading
     *
-    * @param seq
+    * @param seq sequence of states which are used to find the last transaction to read from the database.
     * @return
     */
   override def checkIfTransactionLoadingIsPossible(seq: QueueItemType): Boolean = {
@@ -76,20 +76,19 @@ private[tstreams] class TransactionFullLoader(partitions: Set[Int],
     var newTransactions = ListBuffer[ConsumerTransaction]()
     while (flag) {
       counter += 1
-      if(Subscriber.logger.isDebugEnabled())
+      if (Subscriber.logger.isDebugEnabled())
         Subscriber.logger.debug(s"Load full begin (partition = ${last.partition}, first = $first, last = ${last.transactionID}, master = ${last.masterID})")
+
       newTransactions = consumer.getTransactionsFromTo(last.partition, first, last.transactionID)
       transactions ++= newTransactions.filter(transaction => transaction.getState != TransactionStates.Invalid)
 
-      if(Subscriber.logger.isDebugEnabled())
+      if (Subscriber.logger.isDebugEnabled())
         Subscriber.logger.debug(s"Load full end (partition = ${last.partition}, first = $first, last = ${last.transactionID}, master = ${last.masterID})")
 
       if (last.masterID > 0 && !last.isNotReliable) {
-        // we wait for certain item
-        // to switch to fast load next
         if (newTransactions.nonEmpty) {
           if (newTransactions.last.getTransactionID == last.transactionID) {
-            if(Subscriber.logger.isDebugEnabled())
+            if (Subscriber.logger.isDebugEnabled())
               Subscriber.logger.debug(s"Load full completed (partition = ${last.partition}, first = $first, last = ${last.transactionID}, master = ${last.masterID}  )")
             flag = false
           }
@@ -97,12 +96,12 @@ private[tstreams] class TransactionFullLoader(partitions: Set[Int],
             first = newTransactions.last.getTransactionID
         } else {
           /*
-          to keep server ok from our activity add small delay
+          to keep server safe from our activity add small delay
           it happens very rare case - when load full occurred and no data available after response
           so sleep a little bit to give data time to be gathered
           in normal, stationary situation it must not happen.
           */
-          Thread.sleep(TransactionFullLoader.EXPECTED_BUT_EMPTY_RESPONSE_DELAY)
+          Thread.sleep(TransactionFullLoader.EXPECTED_BUT_EMPTY_RESPONSE_RETRY_DELAY)
         }
       } else {
         flag = false
@@ -112,18 +111,34 @@ private[tstreams] class TransactionFullLoader(partitions: Set[Int],
     if (Subscriber.logger.isDebugEnabled())
       Subscriber.logger.debug(s"Series received from the database:  $transactions")
 
+    submitTransactionsToCallback(consumer, executor, callback, last.partition, transactions)
+
+    if (newTransactions.nonEmpty)
+      updateLastTransactionMap(partition = last.partition,
+        transactionID = newTransactions.last.getTransactionID, masterID = last.masterID,
+        orderID = last.orderID, count = newTransactions.last.getCount)
+    //      lastTransactionsMap(last.partition) = TransactionState(transactionID = newTransactions.last.getTransactionID,
+    //        partition = last.partition, masterID = last.masterID, orderID = last.orderID,
+    //        count = newTransactions.last.getCount, status = TransactionState.Status.Checkpointed, ttlMs = -1)
+    transactions.size
+  }
+
+  private def submitTransactionsToCallback(consumer: TransactionOperator,
+                                           executor: FirstFailLockableTaskExecutor,
+                                           callback: Callback,
+                                           partition: Int,
+                                           transactions: ListBuffer[ConsumerTransaction]) = {
     transactions.foreach(elt =>
       executor.submit(s"<CallbackTask#Full>", new ProcessingEngine.CallbackTask(consumer,
         TransactionState(transactionID = elt.getTransactionID,
-          partition = last.partition, masterID = -1, orderID = -1, count = elt.getCount,
+          partition = partition, masterID = -1, orderID = -1, count = elt.getCount,
           status = TransactionState.Status.Checkpointed, ttlMs = -1), callback)))
+  }
 
-    if (newTransactions.nonEmpty)
-      lastTransactionsMap(last.partition) = TransactionState(transactionID = newTransactions.last.getTransactionID,
-        partition = last.partition, masterID = last.masterID, orderID = last.orderID,
-        count = newTransactions.last.getCount, status = TransactionState.Status.Checkpointed, ttlMs = -1)
-
-    transactions.size
+  private def updateLastTransactionMap(partition: Int, transactionID: Long, masterID: Int, orderID: Long, count: Int) = {
+    lastTransactionsMap(partition) = TransactionState(transactionID = transactionID,
+      partition = partition, masterID = masterID, orderID = orderID,
+      count = count, status = TransactionState.Status.Checkpointed, ttlMs = -1)
   }
 
 }
