@@ -302,7 +302,7 @@ class Producer(var name: String,
     checkStopped()
     checkUpdateFailure()
     finalizeDataSend()
-    val checkpointRequests = getCheckpointInfoAndClear()
+    val checkpointRequests = getStateAndClear()
     doCheckpoint(checkpointRequests)
     notifyCheckpoint(checkpointRequests)
     this
@@ -360,7 +360,7 @@ class Producer(var name: String,
   /**
     * Info to commit
     */
-  override private[tstreams] def getCheckpointInfoAndClear(): List[State] =  {
+  override private[tstreams] def getStateAndClear(): List[State] = {
     getInfoAndClear(TransactionState.Status.Checkpointed)
   }
 

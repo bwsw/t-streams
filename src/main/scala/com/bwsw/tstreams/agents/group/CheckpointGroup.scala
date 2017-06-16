@@ -163,22 +163,22 @@ class CheckpointGroup private[tstreams] (val executors: Int = 1) {
       log.debug("Gather checkpoint information from participants")
 
     // receive from all agents their checkpoint information
-    val checkpointStateInfo: List[State] = agents
-      .map { case (name, agent) => agent.getCheckpointInfoAndClear() }
+    val checkpointRequests: List[State] = agents
+      .map { case (name, agent) => agent.getStateAndClear() }
       .reduceRight((l1, l2) => l1 ++ l2)
 
-    if(checkpointStateInfo.isEmpty)
+    if (checkpointRequests.isEmpty)
       return
 
     if(log.isDebugEnabled()) {
-      log.debug(s"CheckpointGroup Info ${checkpointStateInfo}\n" + "Do group checkpoint.")
+      log.debug(s"CheckpointGroup Info ${checkpointRequests}\n" + "Do group checkpoint.")
     }
     //assume all agents use the same metadata entity
-    doGroupCheckpoint(agents.head._2.getStorageClient, checkpointStateInfo)
+    doGroupCheckpoint(agents.head._2.getStorageClient, checkpointRequests)
 
     if(log.isDebugEnabled()) log.debug("Do publish notifications")
 
-    publishEventForAllProducers(checkpointStateInfo)
+    publishEventForAllProducers(checkpointRequests)
 
     if(log.isDebugEnabled()) log.debug("End checkpoint")
   }

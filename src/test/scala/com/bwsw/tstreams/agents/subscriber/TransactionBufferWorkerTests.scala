@@ -37,11 +37,11 @@ class TransactionBufferWorkerTests extends FlatSpec with Matchers {
     val w = new TransactionBufferWorker()
     w.assign(0, b)
 
-    w.update(ts0(TransactionBufferTests.OPENED))
-    w.update(ts1(TransactionBufferTests.OPENED))
+    w.updateTransactionState(ts0(TransactionBufferTests.OPENED))
+    w.updateTransactionState(ts1(TransactionBufferTests.OPENED))
 
-    w.update(ts0(TransactionBufferTests.POST))
-    w.update(ts1(TransactionBufferTests.POST))
+    w.updateTransactionState(ts0(TransactionBufferTests.POST))
+    w.updateTransactionState(ts1(TransactionBufferTests.POST))
 
     val itm0 = q.get(100, TimeUnit.MILLISECONDS)
     itm0.size shouldBe 1
@@ -58,11 +58,11 @@ class TransactionBufferWorkerTests extends FlatSpec with Matchers {
     val w = new TransactionBufferWorker()
     w.assign(0, b)
 
-    w.update(ts0(TransactionBufferTests.OPENED))
-    w.update(ts1(TransactionBufferTests.OPENED))
+    w.updateTransactionState(ts0(TransactionBufferTests.OPENED))
+    w.updateTransactionState(ts1(TransactionBufferTests.OPENED))
 
-    w.update(ts1(TransactionBufferTests.POST))
-    w.update(ts0(TransactionBufferTests.POST))
+    w.updateTransactionState(ts1(TransactionBufferTests.POST))
+    w.updateTransactionState(ts0(TransactionBufferTests.POST))
 
     val itm0 = q.get(100, TimeUnit.MILLISECONDS)
     itm0.size shouldBe 2
@@ -79,11 +79,11 @@ class TransactionBufferWorkerTests extends FlatSpec with Matchers {
     val b = new TransactionBuffer(q)
     val w = new TransactionBufferWorker()
     w.assign(0, b)
-    w.update(ts0(TransactionBufferTests.OPENED))
+    w.updateTransactionState(ts0(TransactionBufferTests.OPENED))
     w.stop()
     val flag: Boolean = {
       try {
-        w.update(ts0(TransactionBufferTests.UPDATE))
+        w.updateTransactionState(ts0(TransactionBufferTests.UPDATE))
         false
       } catch {
         case e: RuntimeException =>
