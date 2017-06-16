@@ -19,8 +19,8 @@
 
 val baseSettings = Seq(
   name := "t-streams",
-  version := "3.0.2-SNAPSHOT",
-  scalaVersion := "2.12.1",
+  version := "3.0.4-SNAPSHOT",
+  scalaVersion := "2.12.2",
   organization := "com.bwsw",
   organizationName := "Bitworks Software, Ltd.",
   organizationHomepage := Some(url("https://bitworks.software/"))

@@ -47,7 +47,7 @@ class StateUpdateServer(host: String, port: Int, threads: Int,
 
     if(req.authKey == authenticationKey) {
       if (partitionCache.contains(req.partition))
-        partitionCache(req.partition).update(req)
+        partitionCache(req.partition).updateTransactionState(req)
       else
         Subscriber.logger.warn(s"Unknown partition ${req.partition} found in Message: $req.")
     } else {

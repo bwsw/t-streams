@@ -244,7 +244,7 @@ class Subscriber(val name: String,
   /**
     * Info to commit
     */
-  override private[tstreams] def getCheckpointInfoAndClear(): List[State] = consumer.getCheckpointInfoAndClear()
+  override private[tstreams] def getStateAndClear(): List[State] = consumer.getStateAndClear()
 
   override private[tstreams] def getStorageClient(): StorageClient = consumer.getStorageClient()
 

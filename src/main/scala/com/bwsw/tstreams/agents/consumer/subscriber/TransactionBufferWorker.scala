@@ -33,22 +33,24 @@ import scala.collection.mutable
   */
 private[tstreams] class TransactionBufferWorker() {
   private val updateExecutor = new FirstFailLockableTaskExecutor("TransactionBufferWorker-updateExecutor")
-  val transactionBufferMap = mutable.Map[Int, TransactionBuffer]()
+  private val transactionBufferMap = mutable.Map[Int, TransactionBuffer]()
+  private val isComplete = new AtomicBoolean(false)
+  private val idleTrigger = createIdleTrigger()
 
-  val isComplete = new AtomicBoolean(false)
+  idleTrigger.start()
 
-  val signalThread = new Thread(() => {
-    try {
-      while (!isComplete.get) {
-        signalTransactionStateSequences()
-        Thread.sleep(TransactionBuffer.MAX_POST_CHECKPOINT_WAIT * 2)
+  private def createIdleTrigger() = {
+    new Thread(() => {
+      try {
+        while (!isComplete.get) {
+          signalTransactionStateSequences()
+          Thread.sleep(TransactionBuffer.MAX_POST_CHECKPOINT_WAIT * 2)
+        }
+      } catch {
+        case _: InterruptedException =>
       }
-    } catch {
-      case _: InterruptedException =>
-    }
-  })
-
-  signalThread.start()
+    })
+  }
 
   def assign(partition: Int, transactionBuffer: TransactionBuffer) = this.synchronized {
     if (!transactionBufferMap.contains(partition)) {
@@ -69,15 +71,17 @@ private[tstreams] class TransactionBufferWorker() {
     *
     * @param transactionState
     */
-  def update(transactionState: TransactionState) = {
+  def updateTransactionState(transactionState: TransactionState) = {
 
     updateExecutor.submit(s"<UpdateAndNotifyTask($transactionState)>", () => {
       transactionBufferMap(transactionState.partition)
-        .update(transactionState.withMasterID(Math.abs(transactionState.masterID)))
+        .updateTransactionState(transactionState.withMasterID(Math.abs(transactionState.masterID)))
+
       if (transactionState.status == TransactionState.Status.Checkpointed) {
         transactionBufferMap(transactionState.partition).signalCompleteTransactions()
       }
     })
+
   }
 
   /**
@@ -85,8 +89,8 @@ private[tstreams] class TransactionBufferWorker() {
     */
   def stop() = {
     isComplete.set(true)
-    signalThread.interrupt()
-    signalThread.join()
+    idleTrigger.interrupt()
+    idleTrigger.join()
     updateExecutor.shutdownOrDie(Subscriber.SHUTDOWN_WAIT_MAX_SECONDS, TimeUnit.SECONDS)
     transactionBufferMap.foreach(kv => kv._2.counters.dump(kv._1))
     transactionBufferMap.clear()
