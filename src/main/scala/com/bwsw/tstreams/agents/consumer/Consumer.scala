@@ -326,16 +326,17 @@ class Consumer(val name: String,
   /**
     * Info to commit
     */
-  override def getStateAndClear(): List[State] = this.synchronized {
+  override def getStateAndClear(): Array[State] = this.synchronized {
 
     if (!isStarted.get())
       throw new IllegalStateException("Consumer is not started. Start consumer first.")
 
     val checkpointData = checkpointOffsets.map { case (partition, lastTransaction) =>
       ConsumerState(name, stream.id, partition, lastTransaction)
-    }.toList
+    }
     checkpointOffsets.clear()
-    checkpointData
+
+    checkpointData.toArray
   }
 
   def stop() = {
@@ -371,7 +372,7 @@ class Consumer(val name: String,
   override def getTransactionsFromTo(partition: Int, from: Long, to: Long): ListBuffer[ConsumerTransaction] = {
     val set = Set[TransactionStates](TransactionStates.Opened)
     val (_, seq) = stream.client.scanTransactions(stream.id, partition, from + 1, to, options.transactionsPreload, set)
-    if(Consumer.logger.isDebugEnabled())
+    if (Consumer.logger.isDebugEnabled())
       Consumer.logger.debug(s"scanTransactions(${stream.name}, $partition, ${from + 1}, $to, ${options.transactionsPreload}, $set) -> $seq")
     val result = ListBuffer[ConsumerTransaction]()
     seq.foreach(rec => {
@@ -386,5 +387,5 @@ class Consumer(val name: String,
 
   override def getStorageClient(): StorageClient = stream.client
 
-  override def close(): Unit = if(!isStopped.get() && isStarted.get()) stop()
+  override def close(): Unit = if (!isStopped.get() && isStarted.get()) stop()
 }
