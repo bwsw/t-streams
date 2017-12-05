@@ -33,7 +33,7 @@ object Dependencies {
 
   val `BW-SW` = Seq(
     libraryDependencies ++= Seq(
-      "com.bwsw" % "tstreams-transaction-server_2.12" % "1.3.8.0-SNAPSHOT"
+      "com.bwsw" % "tstreams-transaction-server_2.12" % "1.5.0-SNAPSHOT"
     ))
 }
 

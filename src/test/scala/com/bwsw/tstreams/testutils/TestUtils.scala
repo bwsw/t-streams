@@ -129,7 +129,7 @@ trait TestUtils {
 
   def createNewStream(partitions: Int = 3, name: String = DEFAULT_STREAM_NAME) = {
     val storageClient = f.getStorageClient()
-    if(storageClient.checkStreamExists(name))
+    if (storageClient.checkStreamExists(name))
       storageClient.deleteStream(name)
 
     storageClient.createStream(name, partitions, 24 * 3600, "")
@@ -155,6 +155,7 @@ object TestUtils {
   private val zk = new ZookeeperTestServer(ZOOKEEPER_PORT, Files.createTempDir().toString)
 
   val AUTH_KEY = "test"
+  val MASTER_PREFIX = "/tts/master"
 
 }
 

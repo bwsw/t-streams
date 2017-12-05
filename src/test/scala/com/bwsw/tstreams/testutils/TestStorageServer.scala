@@ -21,40 +21,42 @@ package com.bwsw.tstreams.testutils
 
 import java.util.concurrent.CountDownLatch
 
-import com.bwsw.tstreamstransactionserver.netty.server.Server
+import com.bwsw.tstreamstransactionserver.netty.server.singleNode.TestSingleNodeServer
 import com.bwsw.tstreamstransactionserver.options.CommonOptions.ZookeeperOptions
-import com.bwsw.tstreamstransactionserver.options.ServerBuilder
-import com.bwsw.tstreamstransactionserver.options.ServerOptions.{AuthOptions, CommitLogOptions, StorageOptions}
+import com.bwsw.tstreamstransactionserver.options.SingleNodeServerOptions._
 
 /**
   * Created by Ivan Kudryavtsev on 29.01.17.
   */
 object TestStorageServer {
 
-  private val serverBuilder = new ServerBuilder()
-    .withZookeeperOptions(new ZookeeperOptions(endpoints = s"127.0.0.1:${TestUtils.ZOOKEEPER_PORT}"))
-
   private var tempDir: String = TestUtils.getTmpDir()
 
-  def getNewClean(): Server = {
+  def getNewClean(): TestSingleNodeServer = {
     tempDir = TestUtils.getTmpDir()
+
     get()
   }
 
-  def get(): Server = {
-    val transactionServer = serverBuilder
-        .withAuthOptions(new AuthOptions(key = TestUtils.AUTH_KEY))
-      .withServerStorageOptions(new StorageOptions(path = tempDir))
-      .withCommitLogOptions(new CommitLogOptions(commitLogCloseDelayMs = 100))
-      .build()
+  def get(): TestSingleNodeServer = {
+    val transactionServer = new TestSingleNodeServer(
+      authenticationOpts = AuthenticationOptions(key = TestUtils.AUTH_KEY),
+      zookeeperOpts = ZookeeperOptions(endpoints = s"127.0.0.1:${TestUtils.ZOOKEEPER_PORT}"),
+      serverOpts = BootstrapOptions(),
+      commonRoleOptions = CommonRoleOptions(commonMasterPrefix = TestUtils.MASTER_PREFIX),
+      checkpointGroupRoleOptions = CheckpointGroupRoleOptions(),
+      storageOpts = StorageOptions(path = tempDir),
+      rocksStorageOpts = RocksStorageOptions(),
+      commitLogOptions = CommitLogOptions(closeDelayMs = 100),
+      packageTransmissionOpts = TransportOptions(),
+      subscribersUpdateOptions = SubscriberUpdateOptions())
+
     val l = new CountDownLatch(1)
     new Thread(() => transactionServer.start(l.countDown())).start()
     l.await()
     transactionServer
   }
 
-  def dispose(transactionServer: Server) = {
+  def dispose(transactionServer: TestSingleNodeServer): Unit =
     transactionServer.shutdown()
-  }
-
 }

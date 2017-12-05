@@ -23,7 +23,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 
 import com.bwsw.tstreams.agents.consumer.RPCConsumerTransaction
 import com.bwsw.tstreams.streams.Stream
-import com.bwsw.tstreamstransactionserver.options.ClientBuilder
+import com.bwsw.tstreamstransactionserver.netty.client.ClientBuilder
 import com.bwsw.tstreamstransactionserver.options.ClientOptions.{AuthOptions, ConnectionOptions}
 import com.bwsw.tstreamstransactionserver.options.CommonOptions.ZookeeperOptions
 import com.bwsw.tstreamstransactionserver.rpc.{CommitLogInfo, ConsumerTransaction, ProducerTransaction, TransactionStates}
@@ -56,12 +56,12 @@ class StorageClient(clientOptions: ConnectionOptions,
 
   val isShutdown = new AtomicBoolean(false)
 
-  def curatorClient = curator
+  def curatorClient: CuratorFramework = curator
 
-  def authenticationKey = authOptions.key
+  def authenticationKey: String = authOptions.key
 
-  def shutdown() = {
-    if(!isShutdown.getAndSet(true)) {
+  def shutdown(): Unit = {
+    if (!isShutdown.getAndSet(true)) {
       client.shutdown()
       curator.close()
     }
@@ -106,7 +106,7 @@ class StorageClient(clientOptions: ConnectionOptions,
     *
     * @param streamName Name of the stream to delete
     */
-  def deleteStream(streamName: String, timeout: Duration = StorageClient.maxAwaiTimeout) = {
+  def deleteStream(streamName: String, timeout: Duration = StorageClient.maxAwaiTimeout): Boolean = {
     Await.result(client.delStream(streamName), timeout)
   }
 
@@ -116,7 +116,7 @@ class StorageClient(clientOptions: ConnectionOptions,
     *
     * @param streamName Name of the stream to check
     */
-  def checkStreamExists(streamName: String, timeout: Duration = StorageClient.maxAwaiTimeout) = {
+  def checkStreamExists(streamName: String, timeout: Duration = StorageClient.maxAwaiTimeout): Boolean = {
     Await.result(client.checkStreamExists(streamName), timeout)
   }
 
@@ -128,7 +128,7 @@ class StorageClient(clientOptions: ConnectionOptions,
     * @return Exist or not concrete consumer
     */
   def checkConsumerOffsetExists(consumerName: String, streamID: Int, partition: Int,
-                                timeout: Duration = StorageClient.maxAwaiTimeout) = {
+                                timeout: Duration = StorageClient.maxAwaiTimeout): Boolean = {
     Await.result(client.getConsumerState(name = consumerName, streamID = streamID, partition = partition), timeout) > 0
   }
 
@@ -136,11 +136,11 @@ class StorageClient(clientOptions: ConnectionOptions,
     * Saving offset batch
     *
     * @param consumerName                Name of the consumer
-    * @param streamID                      Name of the specific stream
+    * @param streamID                    Name of the specific stream
     * @param partitionAndLastTransaction Set of partition and last transaction pairs to save
     */
   def saveConsumerOffsetBatch(consumerName: String, streamID: Int, partitionAndLastTransaction: scala.collection.mutable.Map[Int, Long],
-                              timeout: Duration = StorageClient.maxAwaiTimeout) = {
+                              timeout: Duration = StorageClient.maxAwaiTimeout): Boolean = {
     val batch = ListBuffer[ConsumerTransaction]()
     batch.appendAll(partitionAndLastTransaction.map { case (partition, offset) =>
       new RPCConsumerTransaction(consumerName, streamID, partition, offset)
@@ -153,7 +153,7 @@ class StorageClient(clientOptions: ConnectionOptions,
     * Saving single offset
     *
     * @param consumerName Name of the specific consumer
-    * @param streamID       Name of the specific stream
+    * @param streamID     Name of the specific stream
     * @param partition    Name of the specific partition
     * @param offset       Offset to save
     */
@@ -166,7 +166,7 @@ class StorageClient(clientOptions: ConnectionOptions,
     * Retrieving specific offset for particular consumer
     *
     * @param consumerName Name of the specific consumer
-    * @param streamID       Name of the specific stream
+    * @param streamID     Name of the specific stream
     * @param partition    Name of the specific partition
     * @return Offset
     */
@@ -175,17 +175,17 @@ class StorageClient(clientOptions: ConnectionOptions,
     Await.result(client.getConsumerState(name = consumerName, streamID = streamID, partition = partition), timeout)
   }
 
-  def putTransactionSync(transaction: ProducerTransaction, timeout: Duration = StorageClient.maxAwaiTimeout) = {
+  def putTransactionSync(transaction: ProducerTransaction, timeout: Duration = StorageClient.maxAwaiTimeout): Boolean = {
     val f = client.putProducerState(transaction)
-    if(StorageClient.logger.isDebugEnabled)
+    if (StorageClient.logger.isDebugEnabled)
       StorageClient.logger.debug(s"Placed $transaction [putTransactionSync]")
     Await.result(f, timeout)
   }
 
   def putTransactionWithDataSync[T](transaction: ProducerTransaction, data: ListBuffer[Array[Byte]], lastOffset: Int,
-                                    timeout: Duration = StorageClient.maxAwaiTimeout) = {
+                                    timeout: Duration = StorageClient.maxAwaiTimeout): Boolean = {
     val f = client.putProducerStateWithData(transaction, data, lastOffset)
-    if(StorageClient.logger.isDebugEnabled)
+    if (StorageClient.logger.isDebugEnabled)
       StorageClient.logger.debug(s"Placed $transaction [putTransactionWithDataSync]")
     Await.result(f, timeout)
   }
@@ -241,7 +241,7 @@ class StorageClient(clientOptions: ConnectionOptions,
                       consumerTransactions: Seq[com.bwsw.tstreamstransactionserver.rpc.ConsumerTransaction],
                       timeout: Duration = StorageClient.maxAwaiTimeout): Boolean = {
     val res = Await.result(client.putTransactions(producerTransactions, consumerTransactions), timeout)
-    if(StorageClient.logger.isDebugEnabled) {
+    if (StorageClient.logger.isDebugEnabled) {
       StorageClient.logger.debug(s"Placed ProducerTransactions $producerTransactions  [putTransactions]")
       StorageClient.logger.debug(s"Placed ConsumerStates $consumerTransactions  [putTransactions]")
     }

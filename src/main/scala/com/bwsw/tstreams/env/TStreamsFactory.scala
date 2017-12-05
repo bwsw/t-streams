@@ -133,18 +133,19 @@ class TStreamsFactory() {
     s.toString
   }
 
-  def getStorageClient() = this.synchronized {
+  def getStorageClient(): StorageClient = this.synchronized {
 
-    val clientOptions = new ConnectionOptions(
+    val clientOptions = ConnectionOptions(
       connectionTimeoutMs = pAsInt(co.StorageClient.connectionTimeoutMs),
+      requestTimeoutMs = pAsInt(co.StorageClient.requestTimeoutMs),
+      requestTimeoutRetryCount = pAsInt(co.StorageClient.requestTimeoutRetryCount),
       retryDelayMs = pAsInt(co.StorageClient.retryDelayMs),
       threadPool = pAsInt(co.StorageClient.threadPool),
-      requestTimeoutMs = pAsInt(co.StorageClient.requestTimeoutMs),
-      requestTimeoutRetryCount = pAsInt(co.StorageClient.requestTimeoutRetryCount))
+      prefix = pAsString(co.Coordination.path))
 
-    val authOptions = new AuthOptions(key = pAsString(co.Common.authenticationKey))
+    val authOptions = AuthOptions(key = pAsString(co.Common.authenticationKey))
 
-    val zookeeperOptions = new ZookeeperOptions(prefix = pAsString(co.Coordination.path))
+    val zookeeperOptions = ZookeeperOptions(endpoints = pAsString(co.Coordination.endpoints))
 
     val curator = CuratorFrameworkFactory.builder()
       .connectionTimeoutMs(pAsInt(co.Coordination.connectionTimeoutMs))
@@ -155,8 +156,10 @@ class TStreamsFactory() {
 
     curator.start()
 
-    val client = new StorageClient(clientOptions = clientOptions,
-      authOptions = authOptions,zookeeperOptions = zookeeperOptions,
+    val client = new StorageClient(
+      clientOptions = clientOptions,
+      authOptions = authOptions,
+      zookeeperOptions = zookeeperOptions,
       curator = curator)
 
     if (logger.isDebugEnabled)
@@ -165,7 +168,7 @@ class TStreamsFactory() {
     client
   }
 
-  def getCheckpointGroup(executors: Int  = 1) = new CheckpointGroup(executors)
+  def getCheckpointGroup(executors: Int = 1) = new CheckpointGroup(executors)
 
   /**
     * Special debugging method to find leaks in factory. Used only in tests.
@@ -212,7 +215,8 @@ class TStreamsFactory() {
     val consumerDataPreload = pAsInt(co.Consumer.dataPreload, consumerDefaults.Consumer.dataPreload.default)
     consumerDefaults.Consumer.dataPreload.check(consumerDataPreload)
 
-    val consumerOptions = new ConsumerOptions(transactionsPreload = consumerTransactionsPreload,
+    val consumerOptions = ConsumerOptions(
+      transactionsPreload = consumerTransactionsPreload,
       dataPreload = consumerDataPreload,
       readPolicy = new RoundRobinPartitionIterationPolicy(stream.partitionsCount, partitions), offset = offset,
       useLastOffset = useLastOffset,
