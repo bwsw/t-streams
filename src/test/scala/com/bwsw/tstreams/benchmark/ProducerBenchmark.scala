@@ -66,8 +66,8 @@ class ProducerBenchmark(address: String,
     val data = (1 to dataSize).map(_.toByte).toArray
 
     val newTransaction = new ExecutionTimeMeasurement
-    val send = createIf(dataSize > 0)
-    val checkpoint = createIf(withCheckpoint)
+    val send = createTimeMeasurementIf(dataSize > 0)
+    val checkpoint = createTimeMeasurementIf(withCheckpoint)
 
     for (i <- 1 to iterations) {
       val transaction = newTransaction(() => producer.newTransaction(NewProducerTransactionPolicy.ErrorIfOpened))
@@ -90,7 +90,7 @@ class ProducerBenchmark(address: String,
     factory.close()
 
 
-  private def createIf(condition: Boolean): Option[ExecutionTimeMeasurement] = {
+  private def createTimeMeasurementIf(condition: Boolean): Option[ExecutionTimeMeasurement] = {
     if (condition) Some(new ExecutionTimeMeasurement)
     else None
   }
@@ -101,6 +101,13 @@ object ProducerBenchmark extends App {
 
   case class Result(newTransaction: ExecutionTimeMeasurement.Result,
                     sendData: Option[ExecutionTimeMeasurement.Result] = None,
-                    checkpoint: Option[ExecutionTimeMeasurement.Result] = None)
+                    checkpoint: Option[ExecutionTimeMeasurement.Result] = None) {
+
+    def toMap: Map[String, ExecutionTimeMeasurement.Result] = {
+      Map("newTransaction" -> newTransaction) ++
+        sendData.map(result => "sendData" -> result) ++
+        checkpoint.map(result => "checkpoint" -> result)
+    }
+  }
 
 }

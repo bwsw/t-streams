@@ -29,7 +29,8 @@ object Dependencies {
       "org.apache.curator" % "curator-recipes" % "2.12.0",
       "org.scalatest" %% "scalatest" % "3.0.1" % "test",
       "org.scalamock" %% "scalamock-scalatest-support" % "3.5.0" % "test",
-      "org.rogach" %% "scallop" % "3.1.1" % "test"
+      "org.rogach" %% "scallop" % "3.1.1" % "test",
+      "org.apache.commons" % "commons-math3" % "3.6.1" % "test"
     ))
 
   val `BW-SW` = Seq(

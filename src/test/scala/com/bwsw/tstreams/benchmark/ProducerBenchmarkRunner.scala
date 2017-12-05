@@ -37,7 +37,6 @@ import org.rogach.scallop.{ScallopConf, ScallopOption}
   */
 object ProducerBenchmarkRunner extends App {
 
-  println(args.toSeq)
   private val config = new Config(args)
   private val benchmark = new ProducerBenchmark(
     address = config.address(),
@@ -46,12 +45,15 @@ object ProducerBenchmarkRunner extends App {
     stream = config.stream(),
     partitions = config.partitions())
 
-  println(config.dataSize())
-
   private val result = benchmark.run(config.iterations(), dataSize = config.dataSize())
   benchmark.close()
-  println("done")
-  println(result)
+
+  println(("method" +: ExecutionTimeMeasurement.Result.fields).mkString(", "))
+  println(
+    result.toMap
+      .mapValues(_.toSeq.mkString(", "))
+      .map { case (k, v) => s"$k, $v" }
+      .mkString("\n"))
 
   System.exit(0)
 
@@ -62,7 +64,7 @@ object ProducerBenchmarkRunner extends App {
     val prefix: ScallopOption[String] = opt[String](required = true, short = 'p')
     val stream: ScallopOption[String] = opt[String](default = Some("test"))
     val partitions: ScallopOption[Int] = opt[Int](default = Some(1))
-    val iterations: ScallopOption[Int] = opt[Int](default = Some(100000))
+    val iterations: ScallopOption[Int] = opt[Int](default = Some(10000))
     val dataSize: ScallopOption[Int] = opt[Int](default = Some(100))
     verify()
   }
