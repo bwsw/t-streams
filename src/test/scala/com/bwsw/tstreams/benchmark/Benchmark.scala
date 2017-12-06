@@ -66,34 +66,41 @@ class Benchmark(address: String,
   def testProducer(iterations: Int,
                    dataSize: Int = 100,
                    cancelEachTransaction: Boolean = false,
-                   progressReportRate: Int = 1000): ProducerBenchmark.Result = {
+                   progressReportRate: Int = 1000,
+                   warmingUpIterations: Int = 5000): ProducerBenchmark.Result = {
     val producer = factory.getProducer(stream, (0 until partitions).toSet)
     val data = (1 to dataSize).map(_.toByte).toArray
 
-    val newTransaction = new ExecutionTimeMeasurement
-    val send = createTimeMeasurementIf(dataSize > 0)
-    val checkpoint = createTimeMeasurementIf(!cancelEachTransaction)
-    val cancel = createTimeMeasurementIf(cancelEachTransaction)
-    val progressBar =
-      if (progressReportRate > 0) Some(new ProgressBar(iterations))
-      else None
 
-    for (i <- 1 to iterations) {
-      val transaction = newTransaction(() => producer.newTransaction(NewProducerTransactionPolicy.ErrorIfOpened))
-      send.foreach(_.apply(() => transaction.send(data)))
-      checkpoint.foreach(_.apply(() => producer.checkpoint()))
-      cancel.foreach(_.apply(() => producer.cancel()))
+    def inner(iterations: Int, maybeProgressBar: Option[ProgressBar]) = {
+      val newTransaction = new ExecutionTimeMeasurement
+      val send = createTimeMeasurementIf(dataSize > 0)
+      val checkpoint = createTimeMeasurementIf(!cancelEachTransaction)
+      val cancel = createTimeMeasurementIf(cancelEachTransaction)
 
-      progressBar.foreach(_.show(i, progressReportRate))
+      for (i <- 1 to iterations) {
+        val transaction = newTransaction(() => producer.newTransaction(NewProducerTransactionPolicy.ErrorIfOpened))
+        send.foreach(_.apply(() => transaction.send(data)))
+        checkpoint.foreach(_.apply(() => producer.checkpoint()))
+        cancel.foreach(_.apply(() => producer.cancel()))
+
+        maybeProgressBar.foreach(_.show(i, progressReportRate))
+      }
+
+      ProducerBenchmark.Result(
+        newTransaction = newTransaction.result,
+        sendData = send.map(_.result),
+        checkpoint = checkpoint.map(_.result),
+        cancel = cancel.map(_.result))
     }
+
+
+    inner(warmingUpIterations, createIf(progressReportRate > 0, new ProgressBar(warmingUpIterations, "warming up")))
+    val result = inner(iterations, createIf(progressReportRate > 0, new ProgressBar(iterations)))
 
     producer.close()
 
-    ProducerBenchmark.Result(
-      newTransaction = newTransaction.result,
-      sendData = send.map(_.result),
-      checkpoint = checkpoint.map(_.result),
-      cancel = cancel.map(_.result))
+    result
   }
 
 
@@ -112,18 +119,14 @@ class Benchmark(address: String,
                          partition: Int = 0,
                          dataSize: Int = 100,
                          loadData: Boolean = false,
-                         progressReportRate: Int = 1000): ConsumerBenchmark.Result = {
+                         progressReportRate: Int = 1000,
+                         warmingUpIterations: Int = 5000): ConsumerBenchmark.Result = {
     val producer = factory.getProducer(stream, Set(partition))
-    val (preparation, progressBar) =
-      if (progressReportRate > 0)
-        (Some(new ProgressBar(iterations, "preparation")), Some(new ProgressBar(iterations)))
-      else
-        (None, None)
-
     val data = (1 to dataSize).map(_.toByte).toArray
 
-    for (i <- 1 to iterations) {
-      val transaction = producer.newTransaction(NewProducerTransactionPolicy.ErrorIfOpened)
+    val preparation = createIf(progressReportRate > 0, new ProgressBar(iterations + warmingUpIterations, "preparation"))
+    for (i <- 1 to iterations + warmingUpIterations) {
+      val transaction = producer.newTransaction(NewProducerTransactionPolicy.ErrorIfOpened, partition)
       transaction.send(data)
       producer.checkpoint()
 
@@ -132,49 +135,57 @@ class Benchmark(address: String,
 
     producer.close()
 
-
     val consumer = factory.getConsumer(stream, Set(partition), Offset.Oldest)
     consumer.start()
 
-    val getTransaction = new ExecutionTimeMeasurement
-    val getTransactionData = createTimeMeasurementIf(loadData)
+    def inner(iterations: Int, maybeProgressBar: Option[ProgressBar]) = {
+      val getTransaction = new ExecutionTimeMeasurement
+      val getTransactionData = createTimeMeasurementIf(loadData)
 
+      @tailrec
+      def iteration(i: Int): Unit = {
+        if (i <= iterations) {
+          val maybeTransaction = getTransaction(() => consumer.getTransaction(partition))
 
-    @tailrec
-    def iteration(i: Int): Unit = {
-      if (i <= iterations) {
-        val maybeTransaction = getTransaction(() => consumer.getTransaction(partition))
+          maybeTransaction match {
+            case Some(transaction) =>
+              getTransactionData.foreach(_.apply(() => transaction.getAll))
+              maybeProgressBar.foreach(_.show(i, progressReportRate))
+              iteration(i + 1)
 
-        maybeTransaction match {
-          case Some(transaction) =>
-            getTransactionData.foreach(_.apply(() => transaction.getAll))
-            progressBar.foreach(_.show(i, progressReportRate))
-            iteration(i + 1)
-
-          case None =>
-            progressBar.foreach(_.show(i))
-            println()
-            println("CAN'T GET TRANSACTION")
+            case None =>
+              maybeProgressBar.foreach(_.show(i))
+              println()
+              println("CAN'T GET TRANSACTION")
+          }
         }
       }
+
+      iteration(1)
+
+      ConsumerBenchmark.Result(
+        getTransaction = getTransaction.result,
+        getTransactionData = getTransactionData.map(_.result))
     }
 
-    iteration(1)
+
+    inner(warmingUpIterations, createIf(progressReportRate > 0, new ProgressBar(warmingUpIterations, "warming up")))
+    val result = inner(iterations, createIf(progressReportRate > 0, new ProgressBar(iterations)))
+
     consumer.close()
 
-    ConsumerBenchmark.Result(
-      getTransaction = getTransaction.result,
-      getTransactionData = getTransactionData.map(_.result))
+    result
   }
 
   def close(): Unit =
     factory.close()
 
 
-  private def createTimeMeasurementIf(condition: Boolean): Option[ExecutionTimeMeasurement] = {
-    if (condition) Some(new ExecutionTimeMeasurement)
-    else None
-  }
+  private def createTimeMeasurementIf(condition: Boolean): Option[ExecutionTimeMeasurement] =
+    createIf(condition, new ExecutionTimeMeasurement)
+
+  private def createIf[T](condition: Boolean, constructor: => T) =
+    if (condition) Some(constructor) else None
 }
 
 object Benchmark {
