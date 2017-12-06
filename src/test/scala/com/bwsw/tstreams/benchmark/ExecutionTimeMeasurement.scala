@@ -19,6 +19,8 @@
 
 package com.bwsw.tstreams.benchmark
 
+import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics
+
 import scala.collection.mutable.ArrayBuffer
 
 /**
@@ -52,14 +54,55 @@ class ExecutionTimeMeasurement {
     */
   def average: Long = time.sum / time.length
 
-  def result: ExecutionTimeMeasurement.Result =
-    ExecutionTimeMeasurement.Result(average = average)
+  /**
+    * Returns the smallest execution time of some method (in nanoseconds)
+    *
+    * @return the smallest execution time of some method (in nanoseconds)
+    */
+  def min: Long = time.min
+
+  /**
+    * Returns the largest execution time of some method (in nanoseconds)
+    *
+    * @return the largest execution time of some method (in nanoseconds)
+    */
+  def max: Long = time.max
+
+  /**
+    * Returns an 95% confidence interval of execution time of some method (in nanoseconds)
+    *
+    * @return an largest execution time of some method (in nanoseconds)
+    */
+  def confidenceInterval: (Long, Long) = {
+    val statistics = new DescriptiveStatistics(time.map(_.toDouble).toArray)
+    val mean = statistics.getMean
+    val interval = 1.96 * (statistics.getStandardDeviation / Math.sqrt(statistics.getN))
+
+    ((mean - interval).round, (mean + interval).round)
+  }
+
+  def result: ExecutionTimeMeasurement.Result = {
+    ExecutionTimeMeasurement.Result(
+      average = average,
+      min = min,
+      max = max,
+      confidenceInterval = confidenceInterval)
+  }
 }
 
 object ExecutionTimeMeasurement {
 
-  case class Result(average: Long) {
-    def toSeq: Seq[Long] = Seq(average)
+  case class Result(average: Long,
+                    min: Long,
+                    max: Long,
+                    confidenceInterval: (Long, Long)) {
+    def toSeq: Seq[Long] =
+      Seq(average, min, max, confidenceInterval._1, confidenceInterval._2)
+  }
+
+  object Result {
+    def fields: Seq[String] =
+      Seq("average", "min", "max", "confidenceIntervalLow", "confidenceIntervalHigh")
   }
 
 }
