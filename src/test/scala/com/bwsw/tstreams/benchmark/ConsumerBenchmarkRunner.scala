@@ -26,20 +26,21 @@ package com.bwsw.tstreams.benchmark
   * -a, --address - ZooKeeper address;
   * -t, --token - authentication token;
   * -p, --prefix - path to master node in ZooKeeper;
-  * --cancel - if set, each transaction will be cancelled,
-  * otherwise a checkpoint will be performed for each transaction;
   * --stream - stream name (test by default);
   * --partitions - amount of partitions on stream (1 by default);
   * --iterations - amount of measurements (100000 by default);
-  * --data-size - size of data sent in each transaction (100 by default).
+  * --data-size - size of data sent in each transaction (100 by default);
+  * --partition - stream partition (0 by default);
+  * --load-data - if set, data will be retrieved from transactions
   *
   * @author Pavel Tomskikh
   */
-object ProducerBenchmarkRunner extends BenchmarkRunner {
+object ConsumerBenchmarkRunner extends BenchmarkRunner {
 
-  override def runBenchmark(benchmark: Benchmark, config: BenchmarkConfig): ProducerBenchmark.Result =
-    benchmark.testProducer(
+  override def runBenchmark(benchmark: Benchmark, config: BenchmarkConfig): ConsumerBenchmark.Result =
+    benchmark.testGetTransaction(
       config.iterations(),
+      partition = config.partition(),
       dataSize = config.dataSize(),
-      cancelEachTransaction = config.cancel())
+      loadData = config.loadData())
 }

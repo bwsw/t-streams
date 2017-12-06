@@ -22,19 +22,15 @@ package com.bwsw.tstreams.benchmark
 /**
   * @author Pavel Tomskikh
   */
-object ProducerBenchmark {
+object ConsumerBenchmark {
 
-  case class Result(newTransaction: ExecutionTimeMeasurement.Result,
-                    sendData: Option[ExecutionTimeMeasurement.Result] = None,
-                    checkpoint: Option[ExecutionTimeMeasurement.Result] = None,
-                    cancel: Option[ExecutionTimeMeasurement.Result] = None)
+  case class Result(getTransaction: ExecutionTimeMeasurement.Result,
+                    getTransactionData: Option[ExecutionTimeMeasurement.Result] = None)
     extends Benchmark.Result {
 
     override def toMap: Map[String, ExecutionTimeMeasurement.Result] = {
-      Map("newTransaction" -> newTransaction) ++
-        sendData.map(result => "sendData" -> result) ++
-        checkpoint.map(result => "checkpoint" -> result) ++
-        cancel.map(result => "cancel" -> result)
+      Map("getTransaction" -> getTransaction) ++
+        getTransactionData.map(result => "getTransactionData" -> result)
     }
   }
 
