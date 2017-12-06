@@ -28,6 +28,8 @@ import org.rogach.scallop.{ScallopConf, ScallopOption}
   * -a, --address - ZooKeeper address;
   * -t, --token - authentication token;
   * -p, --prefix - path to master node in ZooKeeper;
+  * -c, --cancel - if set, each transaction will be cancelled,
+  * otherwise a checkpoint will be performed for each transaction;
   * --stream - stream name (test by default);
   * --partitions - amount of partitions on stream (1 by default);
   * --iterations - amount of measurements (100000 by default);
@@ -45,7 +47,10 @@ object ProducerBenchmarkRunner extends App {
     stream = config.stream(),
     partitions = config.partitions())
 
-  private val result = benchmark.run(config.iterations(), dataSize = config.dataSize())
+  private val result = benchmark.run(
+    config.iterations(),
+    dataSize = config.dataSize(),
+    cancelTransactions = config.cancel())
   benchmark.close()
 
   println(("method" +: ExecutionTimeMeasurement.Result.fields).mkString(", "))
@@ -66,6 +71,8 @@ object ProducerBenchmarkRunner extends App {
     val partitions: ScallopOption[Int] = opt[Int](default = Some(1))
     val iterations: ScallopOption[Int] = opt[Int](default = Some(10000))
     val dataSize: ScallopOption[Int] = opt[Int](default = Some(100))
+    val cancel: ScallopOption[Boolean] = opt[Boolean](short = 'c')
+
     verify()
   }
 
