@@ -52,22 +52,24 @@ class ProducerBenchmark(address: String,
   /**
     * Measures time of [[com.bwsw.tstreams.agents.producer.Producer]]'s methods
     *
-    * @param iterations         amount of measurements
-    * @param dataSize           size of data sent in each transaction
-    * @param withCheckpoint     if true, a checkpoint will be performed for each transaction
-    * @param progressReportRate progress will be printed to the console after this number of iterations
+    * @param iterations            amount of measurements
+    * @param dataSize              size of data sent in each transaction
+    * @param cancelEachTransaction if true, each transaction will be cancelled,
+    *                              otherwise a checkpoint will be performed for each transaction
+    * @param progressReportRate    progress will be printed to the console after this number of iterations
     * @return measurement result
     */
   def run(iterations: Int,
           dataSize: Int = 100,
-          withCheckpoint: Boolean = true,
+          cancelEachTransaction: Boolean = false,
           progressReportRate: Int = 1000): ProducerBenchmark.Result = {
     val producer = factory.getProducer(stream, (0 until partitions).toSet)
     val data = (1 to dataSize).map(_.toByte).toArray
 
     val newTransaction = new ExecutionTimeMeasurement
     val send = createTimeMeasurementIf(dataSize > 0)
-    val checkpoint = createTimeMeasurementIf(withCheckpoint)
+    val checkpoint = createTimeMeasurementIf(!cancelEachTransaction)
+    val cancel = createTimeMeasurementIf(cancelEachTransaction)
     val progressBar =
       if (progressReportRate > 0) Some(new ProgressBar(iterations))
       else None
@@ -76,6 +78,7 @@ class ProducerBenchmark(address: String,
       val transaction = newTransaction(() => producer.newTransaction(NewProducerTransactionPolicy.ErrorIfOpened))
       send.foreach(_.apply(() => transaction.send(data)))
       checkpoint.foreach(_.apply(() => producer.checkpoint()))
+      cancel.foreach(_.apply(() => producer.cancel()))
 
       progressBar.foreach(_.show(i, progressReportRate))
     }
@@ -85,7 +88,8 @@ class ProducerBenchmark(address: String,
     ProducerBenchmark.Result(
       newTransaction = newTransaction.result,
       sendData = send.map(_.result),
-      checkpoint = checkpoint.map(_.result))
+      checkpoint = checkpoint.map(_.result),
+      cancel = cancel.map(_.result))
   }
 
   def close(): Unit =
@@ -103,12 +107,14 @@ object ProducerBenchmark extends App {
 
   case class Result(newTransaction: ExecutionTimeMeasurement.Result,
                     sendData: Option[ExecutionTimeMeasurement.Result] = None,
-                    checkpoint: Option[ExecutionTimeMeasurement.Result] = None) {
+                    checkpoint: Option[ExecutionTimeMeasurement.Result] = None,
+                    cancel: Option[ExecutionTimeMeasurement.Result] = None) {
 
     def toMap: Map[String, ExecutionTimeMeasurement.Result] = {
       Map("newTransaction" -> newTransaction) ++
         sendData.map(result => "sendData" -> result) ++
-        checkpoint.map(result => "checkpoint" -> result)
+        checkpoint.map(result => "checkpoint" -> result) ++
+        cancel.map(result => "cancel" -> result)
     }
   }
 
