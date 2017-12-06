@@ -28,8 +28,8 @@ import com.bwsw.tstreams.env.{ConfigurationOptions, TStreamsFactory}
   * @param address    ZooKeeper address
   * @param token      authentication token
   * @param prefix     path to master node in ZooKeeper
-  * @param stream     stream name. Stream will be created if it not exists.
-  * @param partitions amount of partitions on stream
+  * @param stream     stream name. Stream will be created if it doesn't exists.
+  * @param partitions amount of stream partitions
   * @author Pavel Tomskikh
   */
 class ProducerBenchmark(address: String,
@@ -54,8 +54,8 @@ class ProducerBenchmark(address: String,
     *
     * @param iterations         amount of measurements
     * @param dataSize           size of data sent in each transaction
-    * @param withCheckpoint     if true, for each transaction checkpoint will be performed
-    * @param progressReportRate progress will be printed in console after each progressReportRate iterations
+    * @param withCheckpoint     if true, a checkpoint will be performed for each transaction
+    * @param progressReportRate progress will be printed to the console after this number of iterations
     * @return measurement result
     */
   def run(iterations: Int,
@@ -68,14 +68,16 @@ class ProducerBenchmark(address: String,
     val newTransaction = new ExecutionTimeMeasurement
     val send = createTimeMeasurementIf(dataSize > 0)
     val checkpoint = createTimeMeasurementIf(withCheckpoint)
+    val progressBar =
+      if (progressReportRate > 0) Some(new ProgressBar(iterations))
+      else None
 
     for (i <- 1 to iterations) {
       val transaction = newTransaction(() => producer.newTransaction(NewProducerTransactionPolicy.ErrorIfOpened))
       send.foreach(_.apply(() => transaction.send(data)))
       checkpoint.foreach(_.apply(() => producer.checkpoint()))
 
-      if (progressReportRate > 0 && i % progressReportRate == 0)
-        println(s"progress: $i/$iterations")
+      progressBar.foreach(_.show(i, progressReportRate))
     }
 
     producer.close()
