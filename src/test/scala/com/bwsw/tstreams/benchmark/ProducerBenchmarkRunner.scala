@@ -37,7 +37,6 @@ import org.rogach.scallop.{ScallopConf, ScallopOption}
   */
 object ProducerBenchmarkRunner extends App {
 
-  println(args.toSeq)
   private val config = new Config(args)
   private val benchmark = new ProducerBenchmark(
     address = config.address(),
@@ -46,11 +45,8 @@ object ProducerBenchmarkRunner extends App {
     stream = config.stream(),
     partitions = config.partitions())
 
-  println(config.dataSize())
-
   private val result = benchmark.run(config.iterations(), dataSize = config.dataSize())
   benchmark.close()
-  println("done")
   println(result)
 
   System.exit(0)
