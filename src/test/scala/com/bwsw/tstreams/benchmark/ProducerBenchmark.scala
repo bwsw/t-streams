@@ -52,24 +52,24 @@ class ProducerBenchmark(address: String,
   /**
     * Measures time of [[com.bwsw.tstreams.agents.producer.Producer]]'s methods
     *
-    * @param iterations         amount of measurements
-    * @param dataSize           size of data sent in each transaction
-    * @param cancelTransactions if true, each transaction will be cancelled,
-    *                           otherwise a checkpoint will be performed for each transaction
-    * @param progressReportRate progress will be printed to the console after this number of iterations
+    * @param iterations            amount of measurements
+    * @param dataSize              size of data sent in each transaction
+    * @param cancelEachTransaction if true, each transaction will be cancelled,
+    *                              otherwise a checkpoint will be performed for each transaction
+    * @param progressReportRate    progress will be printed to the console after this number of iterations
     * @return measurement result
     */
   def run(iterations: Int,
           dataSize: Int = 100,
-          cancelTransactions: Boolean = false,
+          cancelEachTransaction: Boolean = false,
           progressReportRate: Int = 1000): ProducerBenchmark.Result = {
     val producer = factory.getProducer(stream, (0 until partitions).toSet)
     val data = (1 to dataSize).map(_.toByte).toArray
 
     val newTransaction = new ExecutionTimeMeasurement
     val send = createTimeMeasurementIf(dataSize > 0)
-    val checkpoint = createTimeMeasurementIf(!cancelTransactions)
-    val cancel = createTimeMeasurementIf(cancelTransactions)
+    val checkpoint = createTimeMeasurementIf(!cancelEachTransaction)
+    val cancel = createTimeMeasurementIf(cancelEachTransaction)
     val progressBar =
       if (progressReportRate > 0) Some(new ProgressBar(iterations))
       else None
