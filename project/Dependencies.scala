@@ -24,12 +24,13 @@ object Dependencies {
 
   val Common = Seq(
     libraryDependencies ++= Seq(
-    "org.slf4j" % "slf4j-api" % "1.7.24",
-    "org.slf4j" % "slf4j-log4j12" % "1.7.24",
-    "org.apache.curator" % "curator-recipes" % "2.12.0",
-    "org.scalatest" %% "scalatest" % "3.0.1" % "test",
-    "org.scalamock" %% "scalamock-scalatest-support" % "3.5.0" % "test"
-  ))
+      "org.slf4j" % "slf4j-api" % "1.7.24",
+      "org.slf4j" % "slf4j-log4j12" % "1.7.24",
+      "org.apache.curator" % "curator-recipes" % "2.12.0",
+      "org.scalatest" %% "scalatest" % "3.0.1" % "test",
+      "org.scalamock" %% "scalamock-scalatest-support" % "3.5.0" % "test",
+      "org.rogach" %% "scallop" % "3.1.1" % "test"
+    ))
 
   val `BW-SW` = Seq(
     libraryDependencies ++= Seq(

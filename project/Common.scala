@@ -39,7 +39,7 @@ object Common {
 
   val projectSettings =
     Dependencies.Common ++
-    Dependencies.`BW-SW` ++ Seq(
+      Dependencies.`BW-SW` ++ Seq(
       scalacOptions ++= Seq(
         "-deprecation", "-feature"
       ),
@@ -54,7 +54,9 @@ object Common {
         "Oracle Maven2 Repo" at "http://download.oracle.com/maven"),
 
       parallelExecution in ThisBuild := false, //tests property
-      fork := true
+      fork := true,
 
+      connectInput in run := true,
+      outputStrategy := Some(StdoutOutput) // to suppress logging prefixes in sbt runMain
     ) ++ assemblyStrategySettings ++ publishSettings
 }
