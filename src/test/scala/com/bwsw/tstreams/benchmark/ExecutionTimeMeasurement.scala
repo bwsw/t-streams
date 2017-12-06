@@ -55,16 +55,16 @@ class ExecutionTimeMeasurement {
   def average: Long = time.sum / time.length
 
   /**
-    * Returns an smallest execution time of some method (in nanoseconds)
+    * Returns the smallest execution time of some method (in nanoseconds)
     *
-    * @return an smallest execution time of some method (in nanoseconds)
+    * @return the smallest execution time of some method (in nanoseconds)
     */
   def min: Long = time.min
 
   /**
-    * Returns an largest execution time of some method (in nanoseconds)
+    * Returns the largest execution time of some method (in nanoseconds)
     *
-    * @return an largest execution time of some method (in nanoseconds)
+    * @return the largest execution time of some method (in nanoseconds)
     */
   def max: Long = time.max
 
