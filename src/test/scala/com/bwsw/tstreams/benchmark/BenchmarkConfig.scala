@@ -52,7 +52,7 @@ class BenchmarkConfig(arguments: Seq[String]) extends ScallopConf(arguments) {
 
   val partitions: ScallopOption[Int] = opt[Int](
     default = Some(Default.partitions),
-    descr = s"amount of partitions on stream (${Default.partitions} by default)")
+    descr = s"amount of stream partitions (${Default.partitions} by default)")
 
   val iterations: ScallopOption[Int] = opt[Int](
     default = Some(Default.iterations),
@@ -60,7 +60,7 @@ class BenchmarkConfig(arguments: Seq[String]) extends ScallopConf(arguments) {
 
   val dataSize: ScallopOption[Int] = opt[Int](
     default = Some(Default.dataSize),
-    descr = s"size of data sent in each transaction (${Default.dataSize} by default)")
+    descr = s"size of data sent to each transaction (${Default.dataSize} by default)")
 
   val cancel: ScallopOption[Boolean] = opt[Boolean](
     descr = "if set, each transaction will be cancelled, otherwise a checkpoint will be performed for each transaction")
