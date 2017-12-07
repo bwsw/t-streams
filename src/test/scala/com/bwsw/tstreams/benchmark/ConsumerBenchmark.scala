@@ -24,13 +24,15 @@ package com.bwsw.tstreams.benchmark
   */
 object ConsumerBenchmark {
 
-  case class Result(getTransaction: ExecutionTimeMeasurement.Result,
-                    getTransactionData: Option[ExecutionTimeMeasurement.Result] = None)
+  case class Result(getTransaction: Option[ExecutionTimeMeasurement.Result] = None,
+                    getTransactionData: Option[ExecutionTimeMeasurement.Result] = None,
+                    getTransactionFromTo: Option[ExecutionTimeMeasurement.Result] = None)
     extends Benchmark.Result {
 
     override def toMap: Map[String, ExecutionTimeMeasurement.Result] = {
-      Map("getTransaction" -> getTransaction) ++
-        getTransactionData.map(result => "getTransactionData" -> result)
+      getTransaction.map(result => "getTransaction" -> result).toMap ++
+        getTransactionFromTo.map(result => "getTransactionFromTo" -> result) ++
+        getTransactionData.map(result => "transaction.getAll" -> result)
     }
   }
 
