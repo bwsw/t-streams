@@ -74,7 +74,7 @@ class BenchmarkConfig(arguments: Seq[String]) extends ScallopConf(arguments) {
     descr = "if set, data will be retrieved from transactions")
 
   val interval: ScallopOption[Int] = opt[Int](
-    descr = "amount of transaction that retrieves by one invocation of Consumer.getTransactionsFromTo() (optional)")
+    descr = "amount of transaction retrieved by one invocation of Consumer.getTransactionsFromTo() (optional)")
 
 
   verify()

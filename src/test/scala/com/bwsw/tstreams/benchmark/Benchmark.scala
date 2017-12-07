@@ -181,10 +181,10 @@ class Benchmark(address: String,
     * [[com.bwsw.tstreams.agents.consumer.ConsumerTransaction.getAll]]
     *
     * @param iterations         amount of measurements
-    * @param interval           amount of transaction that retrieves by one invocation of
+    * @param interval           amount of transaction retrieved by one invocation of
     *                           [[com.bwsw.tstreams.agents.consumer.Consumer.getTransactionsFromTo()]]
     * @param partition          stream partition
-    * @param dataSize           size of data sent in each transaction
+    * @param dataSize           size of data sent to each transaction
     * @param loadData           if true, data will be retrieved from transactions
     * @param progressReportRate progress will be printed to the console after this number of iterations
     * @return measurement result

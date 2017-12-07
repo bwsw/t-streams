@@ -32,7 +32,7 @@ package com.bwsw.tstreams.benchmark
   * --data-size - size of data sent in each transaction (100 by default);
   * --partition - stream partition (0 by default);
   * --load-data - if set, data will be retrieved from transactions
-  * --interval - amount of transaction that retrieves by one invocation of (optional)
+  * --interval - amount of transaction retrieved by one invocation of (optional)
   * [[com.bwsw.tstreams.agents.consumer.Consumer.getTransactionsFromTo()]]
   *
   * @author Pavel Tomskikh
