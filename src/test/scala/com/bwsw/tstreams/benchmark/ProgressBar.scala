@@ -33,8 +33,10 @@ class ProgressBar(max: Int, prefix: String = "progress") {
     *
     * @param progress current progress
     */
-  def show(progress: Int): Unit =
-    show(progress, i => s"\rprogress: $i/$max (${i * 100 / max}%)")
+  def show(progress: Int): Unit = {
+    print(s"\r$prefix: $progress/$max (${progress * 100 / max}%)")
+    if (progress == max) println()
+  }
 
   /**
     * Prints progress to the console at rate
@@ -45,11 +47,5 @@ class ProgressBar(max: Int, prefix: String = "progress") {
   def show(progress: Int, rate: Int): Unit = {
     if (progress % rate == 0 || progress == max)
       show(progress)
-  }
-
-
-  private def show(progress: Int, progressToString: Int => String) = {
-    print(progressToString(progress))
-    if (progress == max) println()
   }
 }

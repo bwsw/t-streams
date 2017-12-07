@@ -20,22 +20,33 @@
 package com.bwsw.tstreams.benchmark
 
 /**
+  * Performs [[ProducerBenchmark]].
+  *
   * @author Pavel Tomskikh
   */
-object ProducerBenchmark {
+trait BenchmarkRunner {
 
-  case class Result(newTransaction: ExecutionTimeMeasurement.Result,
-                    sendData: Option[ExecutionTimeMeasurement.Result] = None,
-                    checkpoint: Option[ExecutionTimeMeasurement.Result] = None,
-                    cancel: Option[ExecutionTimeMeasurement.Result] = None)
-    extends Benchmark.Result {
+  def main(args: Array[String]): Unit = {
+    val config = new BenchmarkConfig(args)
+    val benchmark = new Benchmark(
+      address = config.address(),
+      token = config.token(),
+      prefix = config.prefix(),
+      stream = config.stream(),
+      partitions = config.partitions())
 
-    override def toMap: Map[String, ExecutionTimeMeasurement.Result] = {
-      Map("newTransaction" -> newTransaction) ++
-        sendData.map(result => "sendData" -> result) ++
-        checkpoint.map(result => "checkpoint" -> result) ++
-        cancel.map(result => "cancel" -> result)
-    }
+    val result = runBenchmark(benchmark, config)
+    benchmark.close()
+
+    println(("method" +: ExecutionTimeMeasurement.Result.fields).mkString(", "))
+    println(
+      result.toMap
+        .mapValues(_.toSeq.mkString(", "))
+        .map { case (k, v) => s"$k, $v" }
+        .mkString("\n"))
+
+    System.exit(0)
   }
 
+  def runBenchmark(benchmark: Benchmark, config: BenchmarkConfig): Benchmark.Result
 }
