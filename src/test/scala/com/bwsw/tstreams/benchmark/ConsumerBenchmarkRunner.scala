@@ -32,15 +32,29 @@ package com.bwsw.tstreams.benchmark
   * --data-size - size of data sent in each transaction (100 by default);
   * --partition - stream partition (0 by default);
   * --load-data - if set, data will be retrieved from transactions
+  * --interval - amount of transaction retrieved by one invocation of (optional)
+  * [[com.bwsw.tstreams.agents.consumer.Consumer.getTransactionsFromTo()]]
   *
   * @author Pavel Tomskikh
   */
 object ConsumerBenchmarkRunner extends BenchmarkRunner {
 
-  override def runBenchmark(benchmark: Benchmark, config: BenchmarkConfig): ConsumerBenchmark.Result =
-    benchmark.testGetTransaction(
-      config.iterations(),
-      partition = config.partition(),
-      dataSize = config.dataSize(),
-      loadData = config.loadData())
+  override def runBenchmark(benchmark: Benchmark, config: BenchmarkConfig): ConsumerBenchmark.Result = {
+    config.interval.toOption match {
+      case Some(interval) =>
+        benchmark.testGetTransactionsFromTo(
+          iterations = config.iterations(),
+          interval = interval,
+          partition = config.partition(),
+          dataSize = config.dataSize(),
+          loadData = config.loadData())
+
+      case None =>
+        benchmark.testGetTransaction(
+          iterations = config.iterations(),
+          partition = config.partition(),
+          dataSize = config.dataSize(),
+          loadData = config.loadData())
+    }
+  }
 }
