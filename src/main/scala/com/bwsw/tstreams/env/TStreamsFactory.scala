@@ -29,10 +29,11 @@ import com.bwsw.tstreams.agents.group.CheckpointGroup
 import com.bwsw.tstreams.agents.producer.{Producer, ProducerOptions}
 import com.bwsw.tstreams.common.{RoundRobinPartitionIterationPolicy, _}
 import com.bwsw.tstreams.env.defaults.TStreamsFactoryProducerDefaults.PortRange
+import com.bwsw.tstreams.env.defaults.TStreamsFactoryStorageClientDefaults
 import com.bwsw.tstreams.storage.StorageClient
 import com.bwsw.tstreams.streams.Stream
 import com.bwsw.tstreamstransactionserver.options.ClientOptions.{AuthOptions, ConnectionOptions}
-import com.bwsw.tstreamstransactionserver.options.CommonOptions.ZookeeperOptions
+import com.bwsw.tstreamstransactionserver.options.CommonOptions.{TracingOptions, ZookeeperOptions}
 import org.apache.curator.framework.CuratorFrameworkFactory
 import org.apache.curator.retry.ExponentialBackoffRetry
 import org.slf4j.LoggerFactory
@@ -156,11 +157,22 @@ class TStreamsFactory() {
 
     curator.start()
 
+    val tracingOptions =
+      if (propertyMap.get(co.StorageClient.tracingEnabled).exists(_.asInstanceOf[Boolean]))
+        TracingOptions(
+          enabled = true,
+          endpoint = propertyMap
+            .get(co.StorageClient.tracingAddress)
+            .map(_.asInstanceOf[String])
+            .getOrElse(TStreamsFactoryStorageClientDefaults.StorageClient.tracingAddress))
+      else TracingOptions(enabled = false)
+
     val client = new StorageClient(
       clientOptions = clientOptions,
       authOptions = authOptions,
       zookeeperOptions = zookeeperOptions,
-      curator = curator)
+      curator = curator,
+      tracingOptions = tracingOptions)
 
     if (logger.isDebugEnabled)
       storageClientList.append(client)

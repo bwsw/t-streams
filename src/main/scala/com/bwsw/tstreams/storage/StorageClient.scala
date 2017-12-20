@@ -25,7 +25,7 @@ import com.bwsw.tstreams.agents.consumer.RPCConsumerTransaction
 import com.bwsw.tstreams.streams.Stream
 import com.bwsw.tstreamstransactionserver.netty.client.ClientBuilder
 import com.bwsw.tstreamstransactionserver.options.ClientOptions.{AuthOptions, ConnectionOptions}
-import com.bwsw.tstreamstransactionserver.options.CommonOptions.ZookeeperOptions
+import com.bwsw.tstreamstransactionserver.options.CommonOptions.{TracingOptions, ZookeeperOptions}
 import com.bwsw.tstreamstransactionserver.rpc.{CommitLogInfo, ConsumerTransaction, ProducerTransaction, TransactionStates}
 import org.apache.curator.framework.CuratorFramework
 import org.apache.zookeeper.KeeperException.BadArgumentsException
@@ -44,7 +44,8 @@ object StorageClient {
 class StorageClient(clientOptions: ConnectionOptions,
                     authOptions: AuthOptions,
                     zookeeperOptions: ZookeeperOptions,
-                    curator: CuratorFramework) {
+                    curator: CuratorFramework,
+                    tracingOptions: TracingOptions = TracingOptions()) {
   private val clientBuilder = new ClientBuilder()
 
   private val client = clientBuilder
@@ -52,6 +53,7 @@ class StorageClient(clientOptions: ConnectionOptions,
     .withAuthOptions(authOptions)
     .withZookeeperOptions(zookeeperOptions)
     .withCuratorConnection(curatorClient)
+    .withTracingOpts(tracingOptions)
     .build()
 
   val isShutdown = new AtomicBoolean(false)
