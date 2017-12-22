@@ -35,6 +35,8 @@ object TStreamsFactoryStorageClientDefaults {
     val requestTimeoutMs = IntMinMaxDefault(100, 5000, 5000)
     val requestTimeoutRetryCount = IntMinMaxDefault(1, 20, 5)
     val retryDelayMs = IntMinMaxDefault(50, 5000, 1000)
+    val tracingEnabled = false
+    val tracingAddress = "localhost:9411"
 
 
   }
@@ -48,6 +50,8 @@ object TStreamsFactoryStorageClientDefaults {
     m(co.requestTimeoutMs) = StorageClient.requestTimeoutMs.default
     m(co.requestTimeoutRetryCount) = StorageClient.requestTimeoutRetryCount.default
     m(co.retryDelayMs) = StorageClient.retryDelayMs.default
+    m(co.tracingEnabled) = StorageClient.tracingEnabled
+    m(co.tracingAddress) = StorageClient.tracingAddress
 
     m
   }

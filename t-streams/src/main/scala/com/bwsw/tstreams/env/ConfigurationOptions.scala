@@ -37,6 +37,8 @@ object ConfigurationOptions {
     val requestTimeoutRetryCount = "storage-client.request-timeout-retry-count"
     val retryDelayMs = "storage-client.retry-delay-ms"
     val threadPool = "storage-client.thread-pool"
+    val tracingEnabled = "storage-client.tracing.enabled"
+    val tracingAddress = "storage-client.tracing.address"
   }
 
   object Stream {
