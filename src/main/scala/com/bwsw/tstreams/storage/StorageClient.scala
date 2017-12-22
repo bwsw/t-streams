@@ -53,7 +53,7 @@ class StorageClient(clientOptions: ConnectionOptions,
     .withAuthOptions(authOptions)
     .withZookeeperOptions(zookeeperOptions)
     .withCuratorConnection(curatorClient)
-    .withTracingOpts(tracingOptions)
+    .withTracingOptions(tracingOptions)
     .build()
 
   val isShutdown = new AtomicBoolean(false)
