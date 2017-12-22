@@ -29,10 +29,6 @@ object TStreamsTransactionServer {
   val protobufGenOutput = "src/main/protobuf/gen"
 
   val projectSettings = Common.projectSettings ++ Seq(
-    name := "tstreams-transaction-server",
-    version := "1.5.0-SNAPSHOT",
-    isSnapshot := true,
-
     assemblyJarName in assembly := s"${name.value}-${version.value}.jar",
 
     ScroogeSBT.autoImport.scroogeThriftOutputFolder in Compile := baseDirectory.value / sroogeGenOutput,

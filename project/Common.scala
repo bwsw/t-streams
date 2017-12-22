@@ -39,6 +39,8 @@ object Common {
 
   val projectSettings =
     Dependencies.Common ++ Seq(
+      version := "3.0.6-SNAPSHOT",
+      isSnapshot := true,
       scalaVersion := "2.12.4",
       organization := "com.bwsw",
       organizationName := "Bitworks Software, Ltd.",
