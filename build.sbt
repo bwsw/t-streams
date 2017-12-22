@@ -17,17 +17,20 @@
  * under the License.
  */
 
-val baseSettings = Seq(
-  name := "t-streams",
-  version := "3.0.6-SNAPSHOT",
-  scalaVersion := "2.12.2",
-  organization := "com.bwsw",
-  organizationName := "Bitworks Software, Ltd.",
-  organizationHomepage := Some(url("https://bitworks.software/"))
-)
-
-lazy val root = project
-  .in(file("."))
-  .settings(baseSettings ++ Common.projectSettings:_*)
+lazy val root = (project in file("."))
+  .settings(publish := {})
+  .settings(updateOptions :=
+    updateOptions.value.withCachedResolution(true))
+  .aggregate(tStreams, tStreamsTransactionServer)
 
 
+lazy val tStreams = Project(
+  id = "t-streams",
+  base = file("./t-streams"))
+  .settings(Common.projectSettings: _*)
+  .dependsOn(tStreamsTransactionServer)
+
+lazy val tStreamsTransactionServer = Project(
+  id = "tstreams-transaction-server",
+  base = file("./tstreams-transaction-server"))
+  .settings(TStreamsTransactionServer.projectSettings: _*)

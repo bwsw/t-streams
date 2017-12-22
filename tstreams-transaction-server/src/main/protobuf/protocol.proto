@@ -1,0 +1,47 @@
+syntax = "proto3";
+
+package com.bwsw.tstreamstransactionserver;
+option optimize_for = SPEED;
+
+message TransactionRequest {
+    int64 id              = 1;
+    int32 partition       = 2;
+    bool isInstant        = 3;
+    bool isReliable       = 4;      // only meaningful isInstant = true,
+    // makes fast operation without awaiting of responses
+    repeated bytes data   = 5;
+    string authKey        = 6;
+}
+
+message TransactionResponse {
+    int64 id            = 1;
+    int32 partition     = 2;
+    int64 transaction   = 3;
+    int32 master        = 4;
+    string authKey      = 5;
+}
+
+message TransactionState {
+    enum Status {
+        Opened          = 0;
+        Checkpointed    = 1;
+        Cancelled       = 2;
+        Updated         = 3;
+        Invalid         = 4;
+        Instant         = 5;
+    }
+
+    int64 transactionID = 1;
+    int32 partition     = 2;
+    int32 masterID      = 3;
+    int64 orderID       = 4;
+    int32 count         = 5;
+    Status status       = 6;
+    int64 ttlMs         = 7;
+    bool isNotReliable  = 8;
+    string authKey      = 9;
+}
+
+message TransactionStateList {
+    repeated TransactionState states = 1;
+}
