@@ -38,8 +38,14 @@ object Common {
   })
 
   val projectSettings =
-    Dependencies.Common ++
-      Dependencies.`BW-SW` ++ Seq(
+    Dependencies.Common ++ Seq(
+      version := "3.0.6-SNAPSHOT",
+      isSnapshot := true,
+      scalaVersion := "2.12.4",
+      organization := "com.bwsw",
+      organizationName := "Bitworks Software, Ltd.",
+      organizationHomepage := Some(url("https://bitworks.software/")),
+
       scalacOptions ++= Seq(
         "-deprecation", "-feature"
       ),
@@ -48,13 +54,17 @@ object Common {
         "-Dsun.net.maxDatagramSockets=1000"
       ),
 
-      resolvers ++= Seq("Sonatype OSS" at "https://oss.sonatype.org/service/local/staging/deploy/maven2",
+      resolvers ++= Seq(
+        "Sonatype OSS" at "https://oss.sonatype.org/service/local/staging/deploy/maven2",
         "Sonatype OSS snapshots" at "https://oss.sonatype.org/content/repositories/snapshots",
         "Twitter Repo" at "https://maven.twttr.com",
         "Oracle Maven2 Repo" at "http://download.oracle.com/maven"),
 
       parallelExecution in ThisBuild := false, //tests property
+      parallelExecution in Test := false,
       fork := true,
+      fork in run := true,
+      fork in Test := true,
 
       connectInput in run := true,
       outputStrategy := Some(StdoutOutput) // to suppress logging prefixes in sbt runMain

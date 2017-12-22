@@ -24,19 +24,33 @@ object Dependencies {
 
   val Common = Seq(
     libraryDependencies ++= Seq(
-      "org.slf4j" % "slf4j-api" % "1.7.24",
-      "org.slf4j" % "slf4j-log4j12" % "1.7.24",
+      "org.slf4j" % "slf4j-api" % "1.7.25",
+      "org.slf4j" % "slf4j-log4j12" % "1.7.25",
       "org.apache.curator" % "curator-recipes" % "2.12.0",
-      "org.scalatest" %% "scalatest" % "3.0.1" % "test",
+      "org.scalatest" %% "scalatest" % "3.0.4" % "test",
       "org.scalamock" %% "scalamock-scalatest-support" % "3.5.0" % "test",
       "org.rogach" %% "scallop" % "3.1.1" % "test",
       "org.apache.commons" % "commons-math3" % "3.6.1" % "test"
     ))
 
-  val `BW-SW` = Seq(
+  val TStreamsTransactionServer = Seq(
     libraryDependencies ++= Seq(
-      "com.bwsw" % "tstreams-transaction-server_2.12" % "1.5.0-SNAPSHOT"
-    ))
+      "commons-io" % "commons-io" % "2.5",
+      "com.twitter" %% "scrooge-core" % "17.10.0",
+      "com.twitter" % "libthrift" % "0.5.0-7",
+      "org.rocksdb" % "rocksdbjni" % "5.7.5",
+      "org.scalactic" %% "scalactic" % "3.0.4",
+      "io.netty" % "netty" % "3.10.6.Final",
+      "io.netty" % "netty-all" % "4.1.19.Final",
+      "org.json4s" %% "json4s-jackson" % "3.5.3",
+      "org.apache.zookeeper" % "zookeeper" % "3.4.11" pomOnly(),
+      "org.apache.bookkeeper" % "bookkeeper-server" % "4.5.1",
+      "commons-validator" % "commons-validator" % "1.6",
+      "org.apache.curator" % "curator-framework" % "2.12.0",
+      "org.apache.curator" % "curator-test" % "2.12.0",
+      "io.zipkin.reporter2" % "zipkin-sender-okhttp3" % "2.2.2"
+    )
+  )
 }
 
 
