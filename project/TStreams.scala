@@ -17,13 +17,13 @@
  * under the License.
  */
 
-logLevel := Level.Warn
+import sbt.Keys._
 
-addSbtPlugin("com.eed3si9n" % "sbt-assembly" % "0.14.6")
-addSbtPlugin("net.virtual-void" % "sbt-dependency-graph" % "0.9.0")
-addSbtPlugin("io.get-coursier" % "sbt-coursier" % "1.0.0-RC3")
-addSbtPlugin("com.twitter" % "scrooge-sbt-plugin" % "17.10.0")
-addSbtPlugin("org.scoverage" % "sbt-scoverage" % "1.5.1")
-addSbtPlugin("com.thesamet" % "sbt-protoc" % "0.99.12")
+object TStreams {
 
-libraryDependencies += "com.trueaccord.scalapb" %% "compilerplugin" % "0.6.6"
+  val projectSettings = Common.projectSettings ++ Seq(
+    name := "t-streams",
+    version := "3.0.6-SNAPSHOT",
+    isSnapshot := true
+  )
+}
