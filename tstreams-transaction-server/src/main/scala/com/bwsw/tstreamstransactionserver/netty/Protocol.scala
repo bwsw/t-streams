@@ -23,7 +23,7 @@ package com.bwsw.tstreamstransactionserver.netty
 import java.util
 
 import com.bwsw.tstreamstransactionserver.rpc.TransactionService
-import com.twitter.scrooge.{ThriftStruct, ThriftStructCodec3}
+import com.twitter.scrooge.{ThriftStruct, ThriftStructCodec, ThriftStructCodec3}
 import io.netty.buffer.ByteBuf
 import org.apache.thrift.protocol._
 import org.apache.thrift.transport.{TMemoryBuffer, TMemoryInputTransport}
@@ -154,7 +154,7 @@ object Protocol {
     /** A method for serializing request and adding an id to id. */
     @inline
     final def encodeRequestToMessage(entity: Request)(messageId: Long, token: Int, isFireAndForgetMethod: Boolean): RequestMessage =
-    encode(entity, protocolReq, messageId, token, isFireAndForgetMethod)
+      encode(entity, protocolReq, messageId, token, isFireAndForgetMethod)
 
 
     @inline
@@ -180,7 +180,7 @@ object Protocol {
     /** A method for serializing response and adding an id to id. */
     @inline
     final def encodeResponseToMessage(entity: Response)(messageId: Long, token: Int, isFireAndForgetMethod: Boolean): RequestMessage =
-    encode(entity, protocolRep, messageId, token, isFireAndForgetMethod)
+      encode(entity, protocolRep, messageId, token, isFireAndForgetMethod)
 
     /** A method for building request/response methods to serialize.
       *
@@ -333,4 +333,28 @@ object Protocol {
   case object GetZKCheckpointGroupServerPrefix extends
     Descriptor(getZKCheckpointGroupServerPrefix, 22: Byte, TransactionService.GetZKCheckpointGroupServerPrefix.Args, TransactionService.GetZKCheckpointGroupServerPrefix.Result, protocolTBinaryFactory, protocolTBinaryFactory)
 
+
+  def encode(entity: ThriftStruct): Array[Byte] =
+    encode(entity, protocolTBinaryFactory)
+
+  private def encode(entity: ThriftStruct, protocolFactory: TProtocolFactory): Array[Byte] = {
+    val buffer = new TMemoryBuffer(128)
+    val protocol = protocolFactory.getProtocol(buffer)
+    entity.write(protocol)
+
+    util.Arrays.copyOfRange(buffer.getArray, 0, buffer.length)
+  }
+
+
+  def decode[T <: ThriftStruct](bytes: Array[Byte], codec: ThriftStructCodec[T]): T =
+    decode(bytes, codec, protocolTBinaryFactory)
+
+
+  private def decode[T <: ThriftStruct](bytes: Array[Byte],
+                                        codec: ThriftStructCodec[T],
+                                        protocolFactory: TProtocolFactory): T = {
+    val protocol = protocolFactory.getProtocol(new TMemoryInputTransport(bytes))
+
+    codec.decode(protocol)
+  }
 }

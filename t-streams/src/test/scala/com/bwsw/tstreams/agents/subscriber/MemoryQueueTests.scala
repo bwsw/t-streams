@@ -23,7 +23,7 @@ import java.util.concurrent.TimeUnit
 
 import com.bwsw.tstreams.common.MemoryQueue
 import com.bwsw.tstreams.testutils.IncreasingGenerator
-import com.bwsw.tstreamstransactionserver.protocol.TransactionState
+import com.bwsw.tstreamstransactionserver.rpc.{TransactionState, TransactionStates}
 import org.scalatest.{FlatSpec, Matchers}
 
 /**
@@ -31,16 +31,23 @@ import org.scalatest.{FlatSpec, Matchers}
   */
 class MemoryQueueTests extends FlatSpec with Matchers {
 
+  val authKey = "auth-key"
+
   it should "created" in {
     val queue = new MemoryQueue[List[TransactionState]]()
   }
 
   it should "allow to put/get list" in {
     val queue = new MemoryQueue[List[TransactionState]]()
-    val state = TransactionState(transactionID = IncreasingGenerator.get,
-      partition = 0, masterID = 1, orderID = 1,
-      count = 1, status = TransactionState.Status.Opened,
-      ttlMs = 1)
+    val state = TransactionState(
+      transactionID = IncreasingGenerator.get,
+      partition = 0,
+      masterID = 1,
+      orderID = 1,
+      count = 1,
+      status = TransactionStates.Opened,
+      ttlMs = 1,
+      authKey = authKey)
     queue.put(List(state))
     val receivedStates = queue.get(1, TimeUnit.SECONDS)
     receivedStates.size shouldBe 1

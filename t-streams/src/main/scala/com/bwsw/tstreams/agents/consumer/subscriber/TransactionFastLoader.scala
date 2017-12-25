@@ -22,13 +22,14 @@ package com.bwsw.tstreams.agents.consumer.subscriber
 
 import com.bwsw.tstreams.agents.consumer.TransactionOperator
 import com.bwsw.tstreams.common.FirstFailLockableTaskExecutor
-import com.bwsw.tstreamstransactionserver.protocol.TransactionState
+import com.bwsw.tstreamstransactionserver.rpc.{TransactionState, TransactionStates}
 
 /**
   * Created by Ivan Kudryavtsev on 21.08.16.
   */
 private[tstreams] class TransactionFastLoader(partitions: Set[Int],
-                            lastTransactionsMap: ProcessingEngine.LastTransactionStateMapType) extends AbstractTransactionLoader {
+                                              lastTransactionsMap: ProcessingEngine.LastTransactionStateMapType)
+  extends AbstractTransactionLoader {
 
   /**
     * checks that two items satisfy load fast condition
@@ -50,11 +51,12 @@ private[tstreams] class TransactionFastLoader(partitions: Set[Int],
     */
   private def checkListSeq(head: TransactionState,
                            l: QueueBuilder.QueueItemType,
-                           predicate: (TransactionState, TransactionState) => Boolean): Boolean = (head, l, predicate) match {
-    case (_, Nil, _) => true
-    case (_, elt :: tail, _) =>
-      predicate(head, elt) && checkListSeq(elt, tail, predicate)
-  }
+                           predicate: (TransactionState, TransactionState) => Boolean): Boolean =
+    (head, l, predicate) match {
+      case (_, Nil, _) => true
+      case (_, elt :: tail, _) =>
+        predicate(head, elt) && checkListSeq(elt, tail, predicate)
+    }
 
   /**
     * Checks if seq can be load fast without additional calls to database
@@ -81,7 +83,7 @@ private[tstreams] class TransactionFastLoader(partitions: Set[Int],
                     callback: Callback): Int = {
 
     seq.foreach(elt =>
-      if (elt.status == TransactionState.Status.Checkpointed)
+      if (elt.status == TransactionStates.Checkpointed)
         executor.submit(s"<CallbackTask#Fast>", new ProcessingEngine.CallbackTask(consumer, elt, callback)))
 
     val last = seq.last

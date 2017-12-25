@@ -9,7 +9,6 @@ import com.bwsw.tstreamstransactionserver.netty.server.subscriber.OpenedTransact
 import com.bwsw.tstreamstransactionserver.netty.server.{OrderedExecutionContextPool, TransactionServer}
 import com.bwsw.tstreamstransactionserver.netty.{Protocol, RequestMessage}
 import com.bwsw.tstreamstransactionserver.options.SingleNodeServerOptions.AuthenticationOptions
-import com.bwsw.tstreamstransactionserver.protocol.TransactionState
 import com.bwsw.tstreamstransactionserver.rpc._
 import com.bwsw.tstreamstransactionserver.tracing.ServerTracer.tracer
 import io.netty.channel.ChannelHandlerContext
@@ -68,7 +67,7 @@ class OpenTransactionHandler(server: TransactionServer,
             partition,
             transactionId,
             0,
-            TransactionState.Status.Opened,
+            TransactionStates.Opened,
             ttlMs,
             authOptions.key,
             isNotReliable = false,
@@ -102,7 +101,7 @@ class OpenTransactionHandler(server: TransactionServer,
             partition,
             transactionId,
             count = 0,
-            TransactionState.Status.Opened,
+            TransactionStates.Opened,
             ttlMs,
             authOptions.key,
             isNotReliable = true,

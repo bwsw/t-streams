@@ -6,6 +6,7 @@ enum TransactionStates {
     Cancel       = 3
     Invalid      = 4
     Checkpointed = 5
+    Instant      = 6
 }
 
 typedef i32    StreamIDType
@@ -76,6 +77,18 @@ struct ScanTransactionsInfo {
 struct TransactionInfo {
     1: required bool                 exists
     2: optional ProducerTransaction  transaction
+}
+
+struct TransactionState {
+    1: required transactionIDType transactionID
+    2: required PartitionType partition
+    3: required i32 masterID
+    4: required i64 orderID
+    5: required i32 count
+    6: required TransactionStates status
+    7: required tllType ttlMs
+    8: required string authKey
+    9: optional bool isNotReliable = true
 }
 
 exception ServerException {

@@ -24,9 +24,9 @@ import java.util.concurrent.atomic.{AtomicInteger, AtomicLong}
 import java.util.concurrent.{ConcurrentHashMap, ExecutorService, Executors}
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder
-import com.google.protobuf.InvalidProtocolBufferException
 
 import scala.collection.JavaConverters._
+import scala.util.Try
 
 /**
   * Created by Ivan Kudryavtsev on 20.04.17.
@@ -68,14 +68,7 @@ abstract class UdpServer(host: String, port: Int, threads: Int) extends UdpProce
 
   override def handleMessage(socket: DatagramSocket, packet: DatagramPacket): Unit = {
 
-    val objOpt = try {
-      getObjectFromDatagramPacket(packet)
-    } catch {
-      case ex: InvalidProtocolBufferException => None
-    }
-
-
-    objOpt.foreach(obj => {
+    Try(getObjectFromDatagramPacket(packet)).toOption.flatten.foreach(obj => {
       val objKey = getKey(obj)
       if (keyCounterMap.getOrDefault(objKey, null) == null) keyCounterMap.put(objKey, new AtomicLong(0))
 

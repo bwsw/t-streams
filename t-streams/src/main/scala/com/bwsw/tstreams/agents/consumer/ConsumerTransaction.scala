@@ -42,14 +42,17 @@ class ConsumerTransaction(partition: Int,
     s"consumer.Transaction(id=$transactionID,partition=$partition, count=$count, ttl=$ttl)"
   }
 
-  var consumer: Consumer = null
+  private var _consumer: Option[Consumer] = None
+
+  def consumer: Consumer =
+    _consumer.getOrElse(throw new IllegalStateException("The transaction is not yet attached to consumer"))
 
   def attach(c: Consumer) = {
     if (c == null)
       throw new IllegalArgumentException("Argument must be not null.")
 
-    if (consumer == null)
-      consumer = c
+    if (_consumer.isEmpty)
+      _consumer = Some(c)
     else
       throw new IllegalStateException("The transaction is already attached to consumer")
   }

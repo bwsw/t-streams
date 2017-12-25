@@ -22,11 +22,14 @@ package com.bwsw.tstreams.agents.subscriber
 import java.util.concurrent.{CountDownLatch, TimeUnit}
 
 import com.bwsw.tstreams.agents.consumer.subscriber.TransactionFullLoader
-import com.bwsw.tstreams.agents.consumer.{ConsumerTransaction, TransactionOperator}
+import com.bwsw.tstreams.agents.consumer.{Consumer, ConsumerTransaction, TransactionOperator}
 import com.bwsw.tstreams.common.FirstFailLockableTaskExecutor
+import com.bwsw.tstreams.storage.StorageClient
+import com.bwsw.tstreams.streams.Stream
 import com.bwsw.tstreams.testutils.IncreasingGenerator
-import com.bwsw.tstreamstransactionserver.protocol.TransactionState
-import com.bwsw.tstreamstransactionserver.rpc.TransactionStates
+import com.bwsw.tstreamstransactionserver.rpc.{TransactionState, TransactionStates}
+import org.mockito.Mockito
+import org.scalatest.mockito.MockitoSugar
 import org.scalatest.{FlatSpec, Matchers}
 
 import scala.collection.mutable
@@ -35,9 +38,12 @@ import scala.collection.mutable.ListBuffer
 class FullLoaderOperatorTestImpl extends TransactionOperator {
 
   val TOTAL = 10
-  val transactions = new ListBuffer[ConsumerTransaction]()
-  for (i <- 0 until TOTAL)
-    transactions += new ConsumerTransaction(0, IncreasingGenerator.get, 1, TransactionStates.Checkpointed, -1)
+  val transactions = (0 until TOTAL)
+    .map(_ => new ConsumerTransaction(0, IncreasingGenerator.get, 1, TransactionStates.Checkpointed, -1))
+    .to[ListBuffer]
+
+  transactions.foreach(_.attach(FullLoaderOperatorTestImpl.Mocks.consumer))
+
 
   override def getLastTransaction(partition: Int): Option[ConsumerTransaction] = None
 
@@ -61,6 +67,22 @@ class FullLoaderOperatorTestImpl extends TransactionOperator {
   override def getProposedTransactionId(): Long = IncreasingGenerator.get
 }
 
+object FullLoaderOperatorTestImpl {
+  val authKey = "auth-key"
+
+  object Mocks extends MockitoSugar {
+    val storageClient: StorageClient = mock[StorageClient]
+    Mockito.when(storageClient.authenticationKey).thenReturn(authKey)
+
+    val stream: Stream = mock[Stream]
+    Mockito.when(stream.client).thenReturn(storageClient)
+
+    val consumer: Consumer = mock[Consumer]
+    Mockito.when(consumer.stream).thenReturn(stream)
+  }
+
+}
+
 trait FullLoaderTestContainer {
   val lastTransactionsMap = mutable.Map[Int, TransactionState]()
   val fullLoader = new TransactionFullLoader(partitions(), lastTransactionsMap)
@@ -76,13 +98,15 @@ trait FullLoaderTestContainer {
   */
 class TransactionFullLoaderTests extends FlatSpec with Matchers {
 
+  val authKey = "auth-key"
+
   it should "load if next state is after prev state by id" in {
     val tc = new FullLoaderTestContainer {
       val partition = 0
       val masterID = 0
       val orderID = 0
-      lastTransactionsMap(0) = TransactionState(IncreasingGenerator.get, partition, masterID, orderID, 1, TransactionState.Status.Checkpointed, -1)
-      val nextTransactionState = List(TransactionState(IncreasingGenerator.get + 1, partition, masterID, orderID + 1, 1, TransactionState.Status.Checkpointed, -1))
+      lastTransactionsMap(0) = TransactionState(IncreasingGenerator.get, partition, masterID, orderID, 1, TransactionStates.Checkpointed, -1, authKey)
+      val nextTransactionState = List(TransactionState(IncreasingGenerator.get + 1, partition, masterID, orderID + 1, 1, TransactionStates.Checkpointed, -1, authKey))
 
       override def test(): Unit = {
         fullLoader.checkIfTransactionLoadingIsPossible(nextTransactionState) shouldBe true
@@ -97,8 +121,8 @@ class TransactionFullLoaderTests extends FlatSpec with Matchers {
       val partition = 0
       val masterID = 0
       val orderID = 0
-      val nextTransactionState = List(TransactionState(IncreasingGenerator.get, partition, masterID, orderID + 1, 1, TransactionState.Status.Checkpointed, -1))
-      lastTransactionsMap(0) = TransactionState(IncreasingGenerator.get + 1, partition, masterID, orderID, 1, TransactionState.Status.Checkpointed, -1)
+      val nextTransactionState = List(TransactionState(IncreasingGenerator.get, partition, masterID, orderID + 1, 1, TransactionStates.Checkpointed, -1, authKey))
+      lastTransactionsMap(0) = TransactionState(IncreasingGenerator.get + 1, partition, masterID, orderID, 1, TransactionStates.Checkpointed, -1, authKey)
 
       override def test(): Unit = {
         fullLoader.checkIfTransactionLoadingIsPossible(nextTransactionState) shouldBe false
@@ -113,10 +137,10 @@ class TransactionFullLoaderTests extends FlatSpec with Matchers {
       val partition = 0
       val masterID = 0
       val orderID = 0
-      lastTransactionsMap(0) = TransactionState(IncreasingGenerator.get, partition, masterID, orderID, 1, TransactionState.Status.Checkpointed, -1)
+      lastTransactionsMap(0) = TransactionState(IncreasingGenerator.get, partition, masterID, orderID, 1, TransactionStates.Checkpointed, -1, authKey)
       val fullLoader2 = new TransactionFullLoader(partitions(), lastTransactionsMap)
       val consumerOuter = new FullLoaderOperatorTestImpl()
-      val nextTransactionState = List(TransactionState(consumerOuter.transactions.last.getTransactionID, partition, masterID, orderID + 1, 1, TransactionState.Status.Checkpointed, -1))
+      val nextTransactionState = List(TransactionState(consumerOuter.transactions.last.getTransactionID, partition, masterID, orderID + 1, 1, TransactionStates.Checkpointed, -1, authKey))
 
       override def test(): Unit = {
         var ctr: Int = 0
@@ -142,10 +166,10 @@ class TransactionFullLoaderTests extends FlatSpec with Matchers {
       val partition = 0
       val masterID = 0
       val orderID = 0
-      lastTransactionsMap(0) = TransactionState(IncreasingGenerator.get, partition, masterID, orderID, 1, TransactionState.Status.Checkpointed, -1)
+      lastTransactionsMap(0) = TransactionState(IncreasingGenerator.get, partition, masterID, orderID, 1, TransactionStates.Checkpointed, -1, authKey)
       val fullLoader2 = new TransactionFullLoader(partitions(), lastTransactionsMap)
       val consumerOuter = new FullLoaderOperatorTestImpl()
-      val nextTransactionState = List(TransactionState(consumerOuter.transactions.last.getTransactionID, partition, masterID, orderID + 1, 1, TransactionState.Status.Checkpointed, -1))
+      val nextTransactionState = List(TransactionState(consumerOuter.transactions.last.getTransactionID, partition, masterID, orderID + 1, 1, TransactionStates.Checkpointed, -1, authKey))
 
       override def test(): Unit = {
         var ctr: Int = 0

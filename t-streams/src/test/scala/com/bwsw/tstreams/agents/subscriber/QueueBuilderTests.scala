@@ -21,7 +21,7 @@ package com.bwsw.tstreams.agents.subscriber
 
 import com.bwsw.tstreams.agents.consumer.subscriber.QueueBuilder
 import com.bwsw.tstreams.common.MemoryQueue
-import com.bwsw.tstreamstransactionserver.protocol.TransactionState
+import com.bwsw.tstreamstransactionserver.rpc.TransactionState
 import org.scalatest.{FlatSpec, Matchers}
 
 /**

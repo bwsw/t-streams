@@ -20,7 +20,7 @@
 package com.bwsw.tstreams.agents.consumer.subscriber
 
 
-import com.bwsw.tstreamstransactionserver.protocol.TransactionState
+import com.bwsw.tstreamstransactionserver.rpc.{TransactionState, TransactionStates}
 
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
@@ -50,7 +50,7 @@ private[tstreams] class TransactionBuffer(queue: QueueBuilder.QueueType, transac
   def updateTransactionState(update: TransactionState): Unit = this.synchronized {
     counters.updateStateCounters(update)
 
-    if (update.status == TransactionState.Status.Opened) {
+    if (update.status == TransactionStates.Opened) {
       Try(checkOpenStateIsValid(update)) match {
         case Success(_) =>
           lastTransaction = update.transactionID
@@ -74,12 +74,12 @@ private[tstreams] class TransactionBuffer(queue: QueueBuilder.QueueType, transac
 
   private def initializeState(update: TransactionState) = {
     update.status match {
-      case TransactionState.Status.Opened =>
-        val upd = update.withTtlMs(System.currentTimeMillis() + update.ttlMs)
+      case TransactionStates.Opened =>
+        val upd = update.copy(ttlMs = System.currentTimeMillis() + update.ttlMs)
         stateMap(update.transactionID) = upd
         stateList.append(upd.transactionID)
-      case TransactionState.Status.Instant =>
-        val upd = update.withStatus(TransactionState.Status.Checkpointed).withTtlMs(Long.MaxValue)
+      case TransactionStates.Instant =>
+        val upd = update.copy(status = TransactionStates.Checkpointed, ttlMs = Long.MaxValue)
         stateMap(update.transactionID) = upd
         stateList.append(upd.transactionID)
       case _ =>
@@ -90,31 +90,31 @@ private[tstreams] class TransactionBuffer(queue: QueueBuilder.QueueType, transac
     val storedState = stateMap(update.transactionID)
     val orderID = storedState.orderID
 
-    stateMap(update.transactionID) = storedState.withMasterID(update.masterID)
+    stateMap(update.transactionID) = storedState.copy(masterID = update.masterID)
 
     /*
     * state switching system (almost finite automate)
     * */
     (storedState.status, update.status) match {
 
-      case (TransactionState.Status.Opened, TransactionState.Status.Updated) =>
-        stateMap(update.transactionID) = storedState
-          .withOrderID(orderID)
-          .withStatus(TransactionState.Status.Opened)
-          .withTtlMs(System.currentTimeMillis() + update.ttlMs)
+      case (TransactionStates.Opened, TransactionStates.Updated) =>
+        stateMap(update.transactionID) = storedState.copy(
+          orderID = orderID,
+          status = TransactionStates.Opened,
+          ttlMs = System.currentTimeMillis() + update.ttlMs)
 
-      case (TransactionState.Status.Opened, TransactionState.Status.Cancelled) =>
-        stateMap(update.transactionID) = storedState
-          .withStatus(TransactionState.Status.Invalid)
-          .withTtlMs(0L)
-          .withOrderID(orderID)
+      case (TransactionStates.Opened, TransactionStates.Cancel) =>
+        stateMap(update.transactionID) = storedState.copy(
+          status = TransactionStates.Invalid,
+          ttlMs = 0L,
+          orderID = orderID)
 
-      case (TransactionState.Status.Opened, TransactionState.Status.Checkpointed) =>
-        stateMap(update.transactionID) = storedState
-          .withOrderID(orderID)
-          .withStatus(TransactionState.Status.Checkpointed)
-          .withCount(update.count)
-          .withTtlMs(Long.MaxValue)
+      case (TransactionStates.Opened, TransactionStates.Checkpointed) =>
+        stateMap(update.transactionID) = storedState.copy(
+          orderID = orderID,
+          status = TransactionStates.Checkpointed,
+          count = update.count,
+          ttlMs = Long.MaxValue)
 
       case (_, _) =>
         Subscriber.logger.warn(s"Transaction update $update switched from ${storedState.status} to ${update.status} which is incorrect. " +
@@ -151,7 +151,7 @@ private[tstreams] class TransactionBuffer(queue: QueueBuilder.QueueType, transac
   private def signalCheckpointedAndInvalidTransactions() = {
     val meetCheckpoint = stateList.takeWhile(ts => {
       val s = stateMap(ts)
-      s.status == TransactionState.Status.Checkpointed || s.status == TransactionState.Status.Invalid
+      s.status == TransactionStates.Checkpointed || s.status == TransactionStates.Invalid
     })
 
     if (meetCheckpoint.nonEmpty) {

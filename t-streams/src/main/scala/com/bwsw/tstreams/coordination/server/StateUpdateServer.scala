@@ -23,7 +23,8 @@ import java.net.{DatagramPacket, SocketAddress}
 
 import com.bwsw.tstreams.agents.consumer.subscriber.{Subscriber, TransactionBufferWorker}
 import com.bwsw.tstreams.common.UdpServer
-import com.bwsw.tstreamstransactionserver.protocol.TransactionState
+import com.bwsw.tstreamstransactionserver.netty.Protocol
+import com.bwsw.tstreamstransactionserver.rpc.TransactionState
 
 import scala.collection.mutable
 
@@ -42,10 +43,10 @@ class StateUpdateServer(host: String, port: Int, threads: Int,
   override def handleRequest(client: SocketAddress, reqAny: AnyRef): Unit = {
     val req = reqAny.asInstanceOf[TransactionState]
 
-    if(Subscriber.logger.isDebugEnabled())
-      Subscriber.logger.debug(s"Transaction State Update: ${req}")
+    if (Subscriber.logger.isDebugEnabled())
+      Subscriber.logger.debug(s"Transaction State Update: $req")
 
-    if(req.authKey == authenticationKey) {
+    if (req.authKey == authenticationKey) {
       if (partitionCache.contains(req.partition))
         partitionCache(req.partition).updateTransactionState(req)
       else
@@ -56,7 +57,7 @@ class StateUpdateServer(host: String, port: Int, threads: Int,
   }
 
   override def getObjectFromDatagramPacket(packet: DatagramPacket): Option[AnyRef] =
-      Some(TransactionState.parseFrom(packet.getData.take(packet.getLength)))
+    Some(Protocol.decode(packet.getData.take(packet.getLength), TransactionState))
 
   override def getKey(objAny: AnyRef): Int = objAny.asInstanceOf[TransactionState].partition
 }

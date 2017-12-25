@@ -21,12 +21,10 @@ import com.twitter.scrooge.ScroogeSBT
 import sbt.Keys._
 import sbt._
 import sbtassembly.AssemblyPlugin.autoImport._
-import sbtprotoc.ProtocPlugin.autoImport.PB
 
 object TStreamsTransactionServer {
 
   val sroogeGenOutput = "src/main/thrift/gen"
-  val protobufGenOutput = "src/main/protobuf/gen"
 
   val projectSettings = Common.projectSettings ++ Seq(
     assemblyJarName in assembly := s"${name.value}-${version.value}.jar",
@@ -35,11 +33,6 @@ object TStreamsTransactionServer {
     ScroogeSBT.autoImport.scroogeBuildOptions in Compile := Seq(),
 
     unmanagedSourceDirectories in Compile += baseDirectory.value / "src/main/resources",
-    managedSourceDirectories in Compile += baseDirectory.value / sroogeGenOutput,
-    managedSourceDirectories in Compile += baseDirectory.value / protobufGenOutput,
-
-    PB.targets in Compile := Seq(
-      scalapb.gen(singleLineToString = true) -> baseDirectory.value / protobufGenOutput
-    )
+    managedSourceDirectories in Compile += baseDirectory.value / sroogeGenOutput
   ) ++ Dependencies.TStreamsTransactionServer
 }

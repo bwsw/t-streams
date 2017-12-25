@@ -120,8 +120,13 @@ class Subscriber(val name: String,
 
       Subscriber.logger.info(s"[INIT] Subscriber $name PE $thID got $parts")
 
-      processingEngines(thID) = new ProcessingEngine(consumer, parts, options.transactionsQueueBuilder,
-        callback, options.pollingFrequencyDelayMs)
+      processingEngines(thID) = new ProcessingEngine(
+        consumer = consumer,
+        partitions = parts,
+        queueBuilder = options.transactionsQueueBuilder,
+        callback = callback,
+        pollingInterval = options.pollingFrequencyDelayMs,
+        authKey = consumer.stream.client.authenticationKey)
     }
 
     Subscriber.logger.info(s"[INIT] Subscriber $name: has created PEs.")

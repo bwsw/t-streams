@@ -28,8 +28,7 @@ import com.bwsw.tstreams.common._
 import com.bwsw.tstreams.coordination.client.UdpEventsBroadcastClient
 import com.bwsw.tstreams.storage.StorageClient
 import com.bwsw.tstreams.streams.Stream
-import com.bwsw.tstreamstransactionserver.protocol.TransactionState
-import com.bwsw.tstreamstransactionserver.rpc.TransactionStates
+import com.bwsw.tstreamstransactionserver.rpc.{TransactionState, TransactionStates}
 import org.apache.zookeeper.KeeperException
 import org.slf4j.LoggerFactory
 
@@ -98,7 +97,7 @@ class Producer(var name: String,
     * @param msg
     * @return
     */
-  def publish(msg: TransactionState, authKey: String) = subscriberNotifier.publish(msg.withAuthKey(authKey))
+  def publish(msg: TransactionState) = subscriberNotifier.publish(msg)
 
   private[tstreams] def checkUpdateFailure() = {
     val currentTime = System.currentTimeMillis()
@@ -293,7 +292,10 @@ class Producer(var name: String,
   private def notifyCheckpoint(checkpointInfo: Seq[State]) = {
     checkpointInfo foreach {
       case ProducerTransactionState(_, agent, checkpointEvent, _, _, _, _, _) =>
-        notifyService.submit("<CheckpointEvent>", () => agent.publish(checkpointEvent, agent.stream.client.authenticationKey), None)
+        notifyService.submit(
+          "<CheckpointEvent>",
+          () => agent.publish(checkpointEvent),
+          None)
       case _ =>
     }
   }
@@ -361,14 +363,14 @@ class Producer(var name: String,
     * Info to commit
     */
   override private[tstreams] def getStateAndClear(): Array[State] = {
-    getInfoAndClear(TransactionState.Status.Checkpointed)
+    getInfoAndClear(TransactionStates.Checkpointed)
   }
 
   private[tstreams] def getCancelInfoAndClear(): Array[State] = {
-    getInfoAndClear(TransactionState.Status.Cancelled)
+    getInfoAndClear(TransactionStates.Cancel)
   }
 
-  private def getInfoAndClear(status: TransactionState.Status): Array[State] = this.synchronized {
+  private def getInfoAndClear(status: TransactionStates): Array[State] = this.synchronized {
     checkStopped()
     checkUpdateFailure()
     val stateInfo = openTransactions.forallTransactionsDo((k: Int, v: ProducerTransaction) => v.getStateInfo(status))
@@ -380,7 +382,7 @@ class Producer(var name: String,
   private def getPartitionCheckpointInfoAndClear(partition: Int): Array[State] = this.synchronized {
     checkStopped()
     checkUpdateFailure()
-    val res = openTransactions.getTransactionSetOption(partition).map(partData => partData._2.map(txn => txn.getStateInfo(TransactionState.Status.Checkpointed)))
+    val res = openTransactions.getTransactionSetOption(partition).map(partData => partData._2.map(txn => txn.getStateInfo(TransactionStates.Checkpointed)))
     openTransactions.clear(partition)
     res.fold(Seq[State]())(resInt => resInt.toSeq).toArray
   }

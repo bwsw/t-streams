@@ -21,7 +21,7 @@ package com.bwsw.tstreamstransactionserver.netty.server.subscriber
 import java.util.concurrent.atomic.AtomicLong
 
 import com.bwsw.tstreamstransactionserver.netty.RequestMessage
-import com.bwsw.tstreamstransactionserver.protocol._
+import com.bwsw.tstreamstransactionserver.rpc.{TransactionState, TransactionStates}
 import com.bwsw.tstreamstransactionserver.tracing.ServerTracer.tracer
 
 import scala.util.Random
@@ -38,7 +38,7 @@ final class OpenedTransactionNotifier(observer: SubscribersObserver,
                         partition: Int,
                         transactionId: Long,
                         count: Int,
-                        status: TransactionState.Status,
+                        status: TransactionStates,
                         ttlMs: Long,
                         authKey: String,
                         isNotReliable: Boolean,
@@ -51,16 +51,16 @@ final class OpenedTransactionNotifier(observer: SubscribersObserver,
       ).getAndIncrement()
 
       // 2. create state (open)
-      val transactionState = new TransactionState(
-        transactionId,
-        partition,
-        uniqueMasterId,
-        currentCounter,
-        count,
-        status,
-        ttlMs,
-        isNotReliable,
-        authKey
+      val transactionState = TransactionState(
+        transactionID = transactionId,
+        partition = partition,
+        masterID = uniqueMasterId,
+        orderID = currentCounter,
+        count = count,
+        status = status,
+        ttlMs = ttlMs,
+        authKey = authKey,
+        isNotReliable = isNotReliable
       )
 
       // 3. send it via notifier to subscribers

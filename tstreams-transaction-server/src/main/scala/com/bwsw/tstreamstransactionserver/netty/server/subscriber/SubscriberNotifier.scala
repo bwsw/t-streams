@@ -20,7 +20,8 @@ package com.bwsw.tstreamstransactionserver.netty.server.subscriber
 
 import java.net.{DatagramSocket, InetAddress}
 
-import com.bwsw.tstreamstransactionserver.protocol.TransactionState
+import com.bwsw.tstreamstransactionserver.netty.Protocol
+import com.bwsw.tstreamstransactionserver.rpc.TransactionState
 import org.slf4j.{Logger, LoggerFactory}
 
 private object SubscriberNotifier {
@@ -35,10 +36,8 @@ private[server] class SubscriberNotifier {
 
   def broadcast(subscribers: java.util.Collection[String],
                 message: TransactionState): Unit = {
-    if (subscribers.isEmpty || isStopped) {
-      //do nothing
-    } else {
-      val binaryMessage = message.toByteArray
+    if (!(subscribers.isEmpty || isStopped)) {
+      val binaryMessage = Protocol.encode(message)
 
       if (SubscriberNotifier.logger.isDebugEnabled())
         SubscriberNotifier.logger.debug(

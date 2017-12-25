@@ -23,7 +23,8 @@ import java.net.{DatagramSocket, InetAddress}
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.atomic.AtomicBoolean
 
-import com.bwsw.tstreamstransactionserver.protocol.TransactionState
+import com.bwsw.tstreamstransactionserver.netty.Protocol
+import com.bwsw.tstreamstransactionserver.rpc.TransactionState
 import org.apache.curator.framework.CuratorFramework
 import org.slf4j.LoggerFactory
 
@@ -74,8 +75,8 @@ class UdpEventsBroadcastClient(curatorClient: CuratorFramework, prefix: String, 
   }
 
   private def broadcast(set: Set[String], msg: TransactionState): Unit = {
-    if(!set.isEmpty) {
-      val bytes = msg.toByteArray
+    if (set.nonEmpty) {
+      val bytes = Protocol.encode(msg)
 
       if (UdpEventsBroadcastClient.logger.isDebugEnabled())
         UdpEventsBroadcastClient.logger.debug(s"Producer Broadcast Set Is: ${set}")

@@ -22,8 +22,7 @@ package com.bwsw.tstreams.agents.producer
 import java.util.concurrent.atomic.AtomicBoolean
 
 import com.bwsw.tstreams.agents.group.ProducerTransactionState
-import com.bwsw.tstreamstransactionserver.protocol.TransactionState
-import com.bwsw.tstreamstransactionserver.rpc.TransactionStates
+import com.bwsw.tstreamstransactionserver.rpc.{TransactionState, TransactionStates}
 import org.slf4j.LoggerFactory
 
 import scala.collection.mutable.ListBuffer
@@ -137,12 +136,13 @@ class ProducerTransactionImpl(partition: Int,
   private[tstreams] def notifyCancelEvent() = {
     val msg = TransactionState(transactionID = transactionID,
       ttlMs = -1,
-      status = TransactionState.Status.Cancelled,
+      status = TransactionStates.Cancel,
       partition = partition,
       masterID = 0,
       orderID = -1,
-      count = 0)
-    producer.publish(msg, producer.stream.client.authenticationKey)
+      count = 0,
+      authKey = producer.stream.client.authenticationKey)
+    producer.publish(msg)
   }
 
   private def cancelTransaction() = {
@@ -202,11 +202,13 @@ class ProducerTransactionImpl(partition: Int,
         producer.publish(TransactionState(
           transactionID = transactionID,
           ttlMs = -1,
-          status = TransactionState.Status.Checkpointed,
+          status = TransactionStates.Checkpointed,
           partition = partition,
           masterID = 0,
           orderID = -1,
-          count = getDataItemsCount), producer.stream.client.authenticationKey))
+          count = getDataItemsCount,
+          authKey = producer.stream.client.authenticationKey))
+      )
 
       if (ProducerTransactionImpl.logger.isDebugEnabled) {
         ProducerTransactionImpl.logger.debug("[FINAL CHECKPOINT PARTITION_{}] ts={}", partition, transactionID.toString)
@@ -227,7 +229,7 @@ class ProducerTransactionImpl(partition: Int,
     if (ProducerTransactionImpl.logger.isDebugEnabled) {
       ProducerTransactionImpl.logger.debug("Cancel info request for Transaction {}, partition: {}", transactionID, partition)
     }
-    val res = if(isClosed) {
+    val res = if (isClosed) {
       None
     } else {
       Some(new RPCProducerTransaction(producer.stream.id, partition, transactionID, TransactionStates.Cancel, 0, -1L))
@@ -244,7 +246,7 @@ class ProducerTransactionImpl(partition: Int,
     if (ProducerTransactionImpl.logger.isDebugEnabled) {
       ProducerTransactionImpl.logger.debug("Update info request for Transaction {}, partition: {}", transactionID, partition)
     }
-    if(isClosed) {
+    if (isClosed) {
       None
     } else {
       Some(new RPCProducerTransaction(producer.stream.id, partition, transactionID, TransactionStates.Updated, -1, producer.producerOptions.transactionTtlMs))
@@ -253,21 +255,21 @@ class ProducerTransactionImpl(partition: Int,
 
   private[tstreams] def notifyUpdate() = {
     // atomically check state and launch update process
-    if(!isClosed) {
+    if (!isClosed) {
       producer.notifyService.submit(s"NotifyTask-Part[$partition]-Txn[$transactionID]", () =>
         producer.publish(TransactionState(
           transactionID = transactionID,
           authKey = producer.stream.client.authenticationKey,
           ttlMs = producer.producerOptions.transactionTtlMs,
-          status = TransactionState.Status.Updated,
+          status = TransactionStates.Updated,
           partition = partition,
           masterID = 0,
           orderID = -1,
-          count = 0), producer.stream.client.authenticationKey))
+          count = 0)))
     }
   }
 
-  def getStateInfo(status: TransactionState.Status): ProducerTransactionState = {
+  def getStateInfo(status: TransactionStates): ProducerTransactionState = {
 
     val event = TransactionState(
       transactionID = getTransactionID,

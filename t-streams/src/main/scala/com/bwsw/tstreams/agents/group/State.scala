@@ -20,7 +20,7 @@
 package com.bwsw.tstreams.agents.group
 
 import com.bwsw.tstreams.agents.producer.{Producer, ProducerTransactionImpl}
-import com.bwsw.tstreamstransactionserver.protocol.TransactionState
+import com.bwsw.tstreamstransactionserver.rpc.TransactionState
 
 /**
   * Basic commit trait
@@ -37,7 +37,7 @@ sealed trait State
   *                       second - commit transaction metadata in database
   *                       third - do final checkpoint event for all subscribers
   * @param event
-  * @param streamID     Stream name
+  * @param streamID       Stream name
   * @param partition      Partition number
   * @param transaction    Transaction to commit
   * @param totalCnt       Total info in transaction
@@ -56,7 +56,7 @@ case class ProducerTransactionState(transactionRef: ProducerTransactionImpl,
   * BasicConsumer commit information
   *
   * @param name      Concrete consumer name
-  * @param streamID    Stream name
+  * @param streamID  Stream name
   * @param partition Partition number
   * @param offset    Offset to commit
   */

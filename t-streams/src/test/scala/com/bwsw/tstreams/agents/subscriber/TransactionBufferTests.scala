@@ -24,7 +24,7 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicLong
 
 import com.bwsw.tstreams.agents.consumer.subscriber.{QueueBuilder, TransactionBuffer}
-import com.bwsw.tstreamstransactionserver.protocol.TransactionState
+import com.bwsw.tstreamstransactionserver.rpc.{TransactionState, TransactionStates}
 import org.scalatest.{FlatSpec, Matchers}
 
 object TransactionBufferTests {
@@ -35,14 +35,15 @@ object TransactionBufferTests {
   val UPDATE_TTL = 20
   val OPEN_TTL = 1000
   val cntr = new AtomicLong(0)
+  val authKey = "auth-key"
 
   def generateAllStates(): Array[TransactionState] = {
     val id = cntr.incrementAndGet()
     Array[TransactionState](
-      TransactionState(transactionID = id, partition = 0, masterID = 0, orderID = 0, count = -1, status = TransactionState.Status.Opened, ttlMs = OPEN_TTL),
-      TransactionState(transactionID = id, partition = 0, masterID = 0, orderID = 0, count = -1, status = TransactionState.Status.Updated, ttlMs = UPDATE_TTL),
-      TransactionState(transactionID = id, partition = 0, masterID = 0, orderID = 0, count = -1, status = TransactionState.Status.Checkpointed, ttlMs = 10),
-      TransactionState(transactionID = id, partition = 0, masterID = 0, orderID = 0, count = -1, status = TransactionState.Status.Cancelled, ttlMs = 10))
+      TransactionState(transactionID = id, partition = 0, masterID = 0, orderID = 0, count = -1, status = TransactionStates.Opened, ttlMs = OPEN_TTL, authKey = authKey),
+      TransactionState(transactionID = id, partition = 0, masterID = 0, orderID = 0, count = -1, status = TransactionStates.Updated, ttlMs = UPDATE_TTL, authKey = authKey),
+      TransactionState(transactionID = id, partition = 0, masterID = 0, orderID = 0, count = -1, status = TransactionStates.Checkpointed, ttlMs = 10, authKey = authKey),
+      TransactionState(transactionID = id, partition = 0, masterID = 0, orderID = 0, count = -1, status = TransactionStates.Cancel, ttlMs = 10, authKey = authKey))
   }
 }
 
@@ -112,7 +113,7 @@ class TransactionBufferTests extends FlatSpec with Matchers {
     b.updateTransactionState(ts0(UPDATE))
     b.getState(ts0(UPDATE).transactionID).isDefined shouldBe true
     Math.abs(b.getState(ts0(UPDATE).transactionID).get.ttlMs - UPDATE_TTL - System.currentTimeMillis()) < 20 shouldBe true
-    b.getState(ts0(UPDATE).transactionID).get.status shouldBe TransactionState.Status.Opened
+    b.getState(ts0(UPDATE).transactionID).get.status shouldBe TransactionStates.Opened
   }
 
   it should "move from opened to cancelled" in {

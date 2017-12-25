@@ -24,7 +24,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 
 import com.bwsw.tstreams.agents.consumer.TransactionOperator
 import com.bwsw.tstreams.common.FirstFailLockableTaskExecutor
-import com.bwsw.tstreamstransactionserver.protocol.TransactionState
+import com.bwsw.tstreamstransactionserver.rpc.{TransactionState, TransactionStates}
 import org.slf4j.LoggerFactory
 
 import scala.collection.mutable
@@ -37,7 +37,9 @@ import scala.util.Random
 private[tstreams] class ProcessingEngine(consumer: TransactionOperator,
                                          partitions: Set[Int],
                                          queueBuilder: QueueBuilder.Abstract,
-                                         callback: Callback, pollingInterval: Int) {
+                                         callback: Callback,
+                                         pollingInterval: Int,
+                                         authKey: String) {
 
   private val id = Math.abs(Random.nextInt())
   // keeps last transaction states processed
@@ -83,9 +85,15 @@ private[tstreams] class ProcessingEngine(consumer: TransactionOperator,
   partitions
     .foreach(p => {
       setLastPartitionActivity(p)
-      lastTransactionsMap(p) = TransactionState(transactionID = consumer.getCurrentOffset(p),
-        status = TransactionState.Status.Checkpointed, partition = p, masterID = -1,
-        orderID = -1, count = -1, ttlMs = -1)
+      lastTransactionsMap(p) = TransactionState(
+        transactionID = consumer.getCurrentOffset(p),
+        status = TransactionStates.Checkpointed,
+        partition = p,
+        masterID = -1,
+        orderID = -1,
+        count = -1,
+        ttlMs = -1,
+        authKey = authKey)
     })
 
   /**
@@ -152,8 +160,14 @@ private[tstreams] class ProcessingEngine(consumer: TransactionOperator,
     val proposedTransactionId = consumer.getProposedTransactionId
 
     val transactionStates = List(TransactionState(
-      transactionID = proposedTransactionId, partition = partition, masterID = 0, orderID = 0,
-      count = -1, status = TransactionState.Status.Checkpointed, ttlMs = -1))
+      transactionID = proposedTransactionId,
+      partition = partition,
+      masterID = 0,
+      orderID = 0,
+      count = -1,
+      status = TransactionStates.Checkpointed,
+      ttlMs = -1,
+      authKey = authKey))
 
     if (Subscriber.logger.isDebugEnabled())
       Subscriber.logger.debug(s"Enqueued $transactionStates")

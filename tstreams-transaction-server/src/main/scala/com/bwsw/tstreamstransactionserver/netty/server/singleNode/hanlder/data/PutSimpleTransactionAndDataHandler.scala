@@ -21,17 +21,16 @@ package com.bwsw.tstreamstransactionserver.netty.server.singleNode.hanlder.data
 import com.bwsw.tstreamstransactionserver.netty.server.batch.Frame
 import com.bwsw.tstreamstransactionserver.netty.server.commitLogService.ScheduledCommitLog
 import com.bwsw.tstreamstransactionserver.netty.server.handler.ArgsDependentContextHandler
+import com.bwsw.tstreamstransactionserver.netty.server.singleNode.hanlder.data.PutSimpleTransactionAndDataHandler._
 import com.bwsw.tstreamstransactionserver.netty.server.subscriber.OpenedTransactionNotifier
 import com.bwsw.tstreamstransactionserver.netty.server.{OrderedExecutionContextPool, TransactionServer}
 import com.bwsw.tstreamstransactionserver.netty.{Protocol, RequestMessage}
 import com.bwsw.tstreamstransactionserver.options.SingleNodeServerOptions.AuthenticationOptions
-import com.bwsw.tstreamstransactionserver.protocol.TransactionState
 import com.bwsw.tstreamstransactionserver.rpc.TransactionService.PutSimpleTransactionAndData
 import com.bwsw.tstreamstransactionserver.rpc._
 import io.netty.channel.ChannelHandlerContext
 
 import scala.concurrent.{ExecutionContext, Future}
-import com.bwsw.tstreamstransactionserver.netty.server.singleNode.hanlder.data.PutSimpleTransactionAndDataHandler._
 
 private object PutSimpleTransactionAndDataHandler {
   val descriptor = Protocol.PutSimpleTransactionAndData
@@ -71,7 +70,7 @@ class PutSimpleTransactionAndDataHandler(server: TransactionServer,
         args.partition,
         transactionID,
         args.data.size,
-        TransactionState.Status.Instant,
+        TransactionStates.Instant,
         Long.MaxValue,
         authOptions.key,
         isNotReliable = true
@@ -145,7 +144,7 @@ class PutSimpleTransactionAndDataHandler(server: TransactionServer,
         args.partition,
         transactionID,
         args.data.size,
-        TransactionState.Status.Instant,
+        TransactionStates.Instant,
         Long.MaxValue,
         authOptions.key,
         isNotReliable = false

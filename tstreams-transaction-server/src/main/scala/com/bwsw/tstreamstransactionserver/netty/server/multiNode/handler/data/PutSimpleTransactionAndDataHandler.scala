@@ -3,22 +3,21 @@ package com.bwsw.tstreamstransactionserver.netty.server.multiNode.handler.data
 
 import com.bwsw.tstreamstransactionserver.netty.server.batch.Frame
 import com.bwsw.tstreamstransactionserver.netty.server.multiNode.Structure.PutTransactionsAndData
-import com.bwsw.tstreamstransactionserver.netty.{Protocol, RequestMessage}
-import com.bwsw.tstreamstransactionserver.netty.server.{OrderedExecutionContextPool, TransactionServer}
 import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeperService.BookkeeperMaster
 import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeperService.data.Record
 import com.bwsw.tstreamstransactionserver.netty.server.multiNode.handler.MultiNodeArgsDependentContextHandler
-import com.bwsw.tstreamstransactionserver.netty.server.subscriber.OpenedTransactionNotifier
-import com.bwsw.tstreamstransactionserver.options.SingleNodeServerOptions.AuthenticationOptions
 import com.bwsw.tstreamstransactionserver.netty.server.multiNode.handler.data.PutSimpleTransactionAndDataHandler._
-import com.bwsw.tstreamstransactionserver.protocol.TransactionState
+import com.bwsw.tstreamstransactionserver.netty.server.subscriber.OpenedTransactionNotifier
+import com.bwsw.tstreamstransactionserver.netty.server.{OrderedExecutionContextPool, TransactionServer}
+import com.bwsw.tstreamstransactionserver.netty.{Protocol, RequestMessage}
+import com.bwsw.tstreamstransactionserver.options.SingleNodeServerOptions.AuthenticationOptions
 import com.bwsw.tstreamstransactionserver.rpc.TransactionService.PutSimpleTransactionAndData
 import com.bwsw.tstreamstransactionserver.rpc._
 import io.netty.channel.ChannelHandlerContext
 import org.apache.bookkeeper.client.BKException.Code
 import org.apache.bookkeeper.client.{AsyncCallback, BKException, LedgerHandle}
 
-import scala.concurrent.{ExecutionContext, ExecutionContextExecutorService, Future, Promise}
+import scala.concurrent.{ExecutionContext, Future, Promise}
 
 private object PutSimpleTransactionAndDataHandler {
   val descriptor = Protocol.PutSimpleTransactionAndData
@@ -62,7 +61,7 @@ class PutSimpleTransactionAndDataHandler(server: TransactionServer,
           partition,
           transactionId,
           count,
-          TransactionState.Status.Instant,
+          TransactionStates.Instant,
           Long.MaxValue,
           authOptions.key,
           isNotReliable = false
@@ -91,7 +90,7 @@ class PutSimpleTransactionAndDataHandler(server: TransactionServer,
           partition,
           transactionId,
           count,
-          TransactionState.Status.Instant,
+          TransactionStates.Instant,
           Long.MaxValue,
           authOptions.key,
           isNotReliable = true
@@ -104,19 +103,6 @@ class PutSimpleTransactionAndDataHandler(server: TransactionServer,
     }
   }
 
-//  private def callback = new AsyncCallback.AddCallback {
-//    override def addComplete(bkCode: Int,
-//                             ledgerHandle: LedgerHandle,
-//                             entryId: Long,
-//                             obj: scala.Any): Unit = {
-//      val promise = obj.asInstanceOf[Promise[Boolean]]
-//      if (Code.OK == bkCode)
-//        promise.success(true)
-//      else
-//        promise.failure(BKException.create(bkCode).fillInStackTrace())
-//
-//    }
-//  }
 
   private def prepareData(txn: PutSimpleTransactionAndData.Args,
                           transactionID: Long): ProducerTransactionsAndData = {

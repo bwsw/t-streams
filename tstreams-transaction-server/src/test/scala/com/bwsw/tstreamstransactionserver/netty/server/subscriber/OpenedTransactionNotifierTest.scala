@@ -1,15 +1,15 @@
 package com.bwsw.tstreamstransactionserver.netty.server.subscriber
 
+import com.bwsw.tstreamstransactionserver.netty.Protocol
 import com.bwsw.tstreamstransactionserver.netty.server.db.zk.ZookeeperStreamRepository
 import com.bwsw.tstreamstransactionserver.netty.server.streamService.StreamValue
-import com.bwsw.tstreamstransactionserver.protocol.TransactionState
+import com.bwsw.tstreamstransactionserver.rpc.{TransactionState, TransactionStates}
 import org.scalatest.{FlatSpec, Matchers}
 import util.{SubscriberUtils, UdpServer, Utils}
 
 class OpenedTransactionNotifierTest
   extends FlatSpec
-    with Matchers
-{
+    with Matchers {
 
   "Open transaction state notifier" should "transmit message to its subscriber" in {
     val (zkServer, zkClient) = Utils.startZkServerAndGetIt
@@ -25,9 +25,9 @@ class OpenedTransactionNotifierTest
     val notifier = new OpenedTransactionNotifier(observer, subscriberNotifier)
 
     val streamBody = StreamValue(0.toString, 100, None, 1000L, None)
-    val streamKey   = zookeeperStreamRepository.put(streamBody)
+    val streamKey = zookeeperStreamRepository.put(streamBody)
     val streamRecord = zookeeperStreamRepository.get(streamKey).get
-    val partition  = 1
+    val partition = 1
 
     val subscriber = new UdpServer
     SubscriberUtils.putSubscriberInStream(
@@ -42,7 +42,7 @@ class OpenedTransactionNotifierTest
 
     val transactionID = 1L
     val count = -1
-    val status = TransactionState.Status.Opened
+    val status = TransactionStates.Opened
     val ttlMs = 120L
     val authKey = ""
     val isNotReliable = false
@@ -65,7 +65,8 @@ class OpenedTransactionNotifierTest
     zkClient.close()
     zkServer.close()
 
-    val transactionState = TransactionState.parseFrom(data)
+    val transactionState = Protocol.decode(data, TransactionState)
+
     transactionState.transactionID shouldBe transactionID
     transactionState.ttlMs shouldBe ttlMs
     transactionState.authKey shouldBe authKey
@@ -86,9 +87,9 @@ class OpenedTransactionNotifierTest
     val notifier = new OpenedTransactionNotifier(observer, subscriberNotifier)
 
     val streamBody = StreamValue(0.toString, 100, None, 1000L, None)
-    val streamKey   = zookeeperStreamRepository.put(streamBody)
+    val streamKey = zookeeperStreamRepository.put(streamBody)
     val streamRecord = zookeeperStreamRepository.get(streamKey).get
-    val partition  = 1
+    val partition = 1
 
     val subscriber = new UdpServer
     SubscriberUtils.putSubscriberInStream(
@@ -104,7 +105,7 @@ class OpenedTransactionNotifierTest
     val fakeStreamID = -200
     val transactionID = 1L
     val count = -1
-    val status = TransactionState.Status.Opened
+    val status = TransactionStates.Opened
     val ttlMs = 120L
     val authKey = ""
     val isNotReliable = false
@@ -144,12 +145,12 @@ class OpenedTransactionNotifierTest
     val notifier = new OpenedTransactionNotifier(observer, subscriberNotifier)
 
     val streamBody = StreamValue(0.toString, 100, None, 1000L, None)
-    val streamKey   = zookeeperStreamRepository.put(streamBody)
+    val streamKey = zookeeperStreamRepository.put(streamBody)
     val streamRecord = zookeeperStreamRepository.get(streamKey).get
-    val partition  = 1
+    val partition = 1
 
     val subscribersNum = 10
-    val subscribers = Array.fill(subscribersNum){
+    val subscribers = Array.fill(subscribersNum) {
       val subscriber = new UdpServer
       SubscriberUtils.putSubscriberInStream(
         zkClient,
@@ -165,7 +166,7 @@ class OpenedTransactionNotifierTest
 
     val transactionID = 1L
     val count = -1
-    val status = TransactionState.Status.Opened
+    val status = TransactionStates.Opened
     val ttlMs = 120L
     val authKey = ""
     val isNotReliable = false
@@ -181,7 +182,7 @@ class OpenedTransactionNotifierTest
     )
 
     val data = subscribers.map(subscriber =>
-      TransactionState.parseFrom(subscriber.recieve(0))
+      Protocol.decode(subscriber.recieve(0), TransactionState)
     )
 
     subscribers.foreach(subscriber => subscriber.close())

@@ -20,9 +20,13 @@
 package com.bwsw.tstreams.agents.subscriber
 
 import com.bwsw.tstreams.agents.consumer.subscriber.{Callback, ProcessingEngine, QueueBuilder}
-import com.bwsw.tstreams.agents.consumer.{ConsumerTransaction, TransactionOperator}
+import com.bwsw.tstreams.agents.consumer.{Consumer, ConsumerTransaction, TransactionOperator}
+import com.bwsw.tstreams.storage.StorageClient
 import com.bwsw.tstreams.testutils.IncreasingGenerator
 import com.bwsw.tstreamstransactionserver.rpc.TransactionStates
+import com.bwsw.tstreams.streams.Stream
+import org.mockito.Mockito
+import org.scalatest.mockito.MockitoSugar
 import org.scalatest.{FlatSpec, Matchers}
 
 import scala.collection.mutable.ListBuffer
@@ -35,9 +39,11 @@ import scala.collection.mutable.ListBuffer
 class ProcessingEngineOperatorTestImpl extends TransactionOperator {
 
   val TOTAL = 10
-  val transactions = new ListBuffer[ConsumerTransaction]()
-  for (i <- 0 until TOTAL)
-    transactions += new ConsumerTransaction(0, IncreasingGenerator.get, 1, TransactionStates.Checkpointed, -1)
+  val transactions: ListBuffer[ConsumerTransaction] = (0 until TOTAL)
+    .map(_ => new ConsumerTransaction(0, IncreasingGenerator.get, 1, TransactionStates.Checkpointed, -1))
+    .to[ListBuffer]
+
+  transactions.foreach(_.attach(ProcessingEngineTests.Mocks.consumer))
 
   var lastTransaction: Option[ConsumerTransaction] = None
 
@@ -62,7 +68,9 @@ class ProcessingEngineOperatorTestImpl extends TransactionOperator {
   override def getProposedTransactionId(): Long = IncreasingGenerator.get
 }
 
-class ProcessingEngineTests extends FlatSpec with Matchers {
+class ProcessingEngineTests extends FlatSpec with Matchers with MockitoSugar {
+
+  val authKey = "auth-key"
 
   val cb = new Callback {
     override def onTransaction(consumer: TransactionOperator, transaction: ConsumerTransaction): Unit = {}
@@ -71,12 +79,12 @@ class ProcessingEngineTests extends FlatSpec with Matchers {
 
 
   "constructor" should "create Processing engine" in {
-    val pe = new ProcessingEngine(new ProcessingEngineOperatorTestImpl(), Set[Int](0), qb, cb, 100)
+    val pe = new ProcessingEngine(new ProcessingEngineOperatorTestImpl(), Set[Int](0), qb, cb, 100, authKey)
   }
 
   "handleQueue" should "do nothing if there is nothing in queue" in {
     val c = new ProcessingEngineOperatorTestImpl()
-    val pe = new ProcessingEngine(c, Set[Int](0), qb, cb, 100)
+    val pe = new ProcessingEngine(c, Set[Int](0), qb, cb, 100, authKey)
     val act1 = pe.getLastPartitionActivity(0)
     pe.processReadyTransactions(10)
     val act2 = pe.getLastPartitionActivity(0)
@@ -85,8 +93,12 @@ class ProcessingEngineTests extends FlatSpec with Matchers {
 
   "handleQueue" should "do fast/full load if there is seq in queue" in {
     val c = new ProcessingEngineOperatorTestImpl()
-    val pe = new ProcessingEngine(c, Set[Int](0), qb, cb, 100)
-    c.lastTransaction = Option[ConsumerTransaction](new ConsumerTransaction(0, IncreasingGenerator.get, 1, TransactionStates.Checkpointed, -1))
+    val pe = new ProcessingEngine(c, Set[Int](0), qb, cb, 100, authKey)
+
+    val consumerTransaction = new ConsumerTransaction(0, IncreasingGenerator.get, 1, TransactionStates.Checkpointed, -1)
+    consumerTransaction.attach(ProcessingEngineTests.Mocks.consumer)
+
+    c.lastTransaction = Option[ConsumerTransaction](consumerTransaction)
     pe.enqueueLastPossibleTransactionState(0)
     val act1 = pe.getLastPartitionActivity(0)
     Thread.sleep(10)
@@ -95,5 +107,21 @@ class ProcessingEngineTests extends FlatSpec with Matchers {
     act2 - act1 > 0 shouldBe true
   }
 
+
+}
+
+object ProcessingEngineTests {
+  val authKey = "auth-key"
+
+  object Mocks extends MockitoSugar {
+    val storageClient: StorageClient = mock[StorageClient]
+    Mockito.when(storageClient.authenticationKey).thenReturn(authKey)
+
+    val stream: Stream = mock[Stream]
+    Mockito.when(stream.client).thenReturn(storageClient)
+
+    val consumer: Consumer = mock[Consumer]
+    Mockito.when(consumer.stream).thenReturn(stream)
+  }
 
 }

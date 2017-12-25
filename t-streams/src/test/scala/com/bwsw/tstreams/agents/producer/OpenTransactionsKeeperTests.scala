@@ -22,7 +22,7 @@ package com.bwsw.tstreams.agents.producer
 
 import com.bwsw.tstreams.agents.group.ProducerTransactionState
 import com.bwsw.tstreams.testutils.IncreasingGenerator
-import com.bwsw.tstreamstransactionserver.protocol.TransactionState
+import com.bwsw.tstreamstransactionserver.rpc.TransactionStates
 import org.scalatest.{FlatSpec, Matchers}
 
 /**
@@ -51,7 +51,7 @@ class OpenTransactionsKeeperTests extends FlatSpec with Matchers {
       ctr += 1
     }
 
-    override def getStateInfo(status: TransactionState.Status): ProducerTransactionState = null
+    override def getStateInfo(status: TransactionStates): ProducerTransactionState = null
 
     override def getTransactionID(): Long = IncreasingGenerator.get
 

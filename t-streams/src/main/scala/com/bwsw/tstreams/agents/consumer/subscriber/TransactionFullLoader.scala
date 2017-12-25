@@ -22,8 +22,7 @@ package com.bwsw.tstreams.agents.consumer.subscriber
 import com.bwsw.tstreams.agents.consumer.subscriber.QueueBuilder.QueueItemType
 import com.bwsw.tstreams.agents.consumer.{ConsumerTransaction, TransactionOperator}
 import com.bwsw.tstreams.common.FirstFailLockableTaskExecutor
-import com.bwsw.tstreamstransactionserver.protocol.TransactionState
-import com.bwsw.tstreamstransactionserver.rpc.TransactionStates
+import com.bwsw.tstreamstransactionserver.rpc.{TransactionState, TransactionStates}
 
 import scala.collection.mutable.ListBuffer
 
@@ -114,12 +113,16 @@ private[tstreams] class TransactionFullLoader(partitions: Set[Int],
     submitTransactionsToCallback(consumer, executor, callback, last.partition, transactions)
 
     if (newTransactions.nonEmpty)
-      updateLastTransactionMap(partition = last.partition,
-        transactionID = newTransactions.last.getTransactionID, masterID = last.masterID,
-        orderID = last.orderID, count = newTransactions.last.getCount)
+      updateLastTransactionMap(
+        partition = last.partition,
+        transactionID = newTransactions.last.getTransactionID,
+        masterID = last.masterID,
+        orderID = last.orderID,
+        count = newTransactions.last.getCount,
+        authKey = last.authKey)
     //      lastTransactionsMap(last.partition) = TransactionState(transactionID = newTransactions.last.getTransactionID,
     //        partition = last.partition, masterID = last.masterID, orderID = last.orderID,
-    //        count = newTransactions.last.getCount, status = TransactionState.Status.Checkpointed, ttlMs = -1)
+    //        count = newTransactions.last.getCount, status = TransactionStates.Checkpointed, ttlMs = -1)
     transactions.size
   }
 
@@ -129,16 +132,35 @@ private[tstreams] class TransactionFullLoader(partitions: Set[Int],
                                            partition: Int,
                                            transactions: ListBuffer[ConsumerTransaction]) = {
     transactions.foreach(elt =>
-      executor.submit(s"<CallbackTask#Full>", new ProcessingEngine.CallbackTask(consumer,
-        TransactionState(transactionID = elt.getTransactionID,
-          partition = partition, masterID = -1, orderID = -1, count = elt.getCount,
-          status = TransactionState.Status.Checkpointed, ttlMs = -1), callback)))
+      executor.submit(s"<CallbackTask#Full>", new ProcessingEngine.CallbackTask(
+        consumer,
+        TransactionState(
+          transactionID = elt.getTransactionID,
+          partition = partition,
+          masterID = -1,
+          orderID = -1,
+          count = elt.getCount,
+          status = TransactionStates.Checkpointed,
+          ttlMs = -1,
+          authKey = elt.consumer.stream.client.authenticationKey),
+        callback)))
   }
 
-  private def updateLastTransactionMap(partition: Int, transactionID: Long, masterID: Int, orderID: Long, count: Int) = {
-    lastTransactionsMap(partition) = TransactionState(transactionID = transactionID,
-      partition = partition, masterID = masterID, orderID = orderID,
-      count = count, status = TransactionState.Status.Checkpointed, ttlMs = -1)
+  private def updateLastTransactionMap(partition: Int,
+                                       transactionID: Long,
+                                       masterID: Int,
+                                       orderID: Long,
+                                       count: Int,
+                                       authKey: String) = {
+    lastTransactionsMap(partition) = TransactionState(
+      transactionID = transactionID,
+      partition = partition,
+      masterID = masterID,
+      orderID = orderID,
+      count = count,
+      status = TransactionStates.Checkpointed,
+      ttlMs = -1,
+      authKey = authKey)
   }
 
 }

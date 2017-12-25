@@ -21,7 +21,7 @@ package com.bwsw.tstreams.agents.consumer.subscriber
 
 import java.util.concurrent.atomic.AtomicLong
 
-import com.bwsw.tstreamstransactionserver.protocol.TransactionState
+import com.bwsw.tstreamstransactionserver.rpc.{TransactionState, TransactionStates}
 
 /**
   * Counts events which are delivered to transaction buffer v2
@@ -32,10 +32,10 @@ import com.bwsw.tstreamstransactionserver.protocol.TransactionState
   * @param checkpointEvents
   */
 private[tstreams] case class TransactionBufferCounters(openEvents: AtomicLong = new AtomicLong(0),
-                                     cancelEvents: AtomicLong = new AtomicLong(0),
-                                     updateEvents: AtomicLong = new AtomicLong(0),
-                                     checkpointEvents: AtomicLong = new AtomicLong(0),
-                                     instantEvents: AtomicLong = new AtomicLong(0)) {
+                                                       cancelEvents: AtomicLong = new AtomicLong(0),
+                                                       updateEvents: AtomicLong = new AtomicLong(0),
+                                                       checkpointEvents: AtomicLong = new AtomicLong(0),
+                                                       instantEvents: AtomicLong = new AtomicLong(0)) {
   def dump(partition: Int): Unit = {
     Subscriber.logger.info(s"Partitions $partition - Open Events received: ${openEvents.get()}")
     Subscriber.logger.info(s"Partitions $partition - Cancel Events received: ${cancelEvents.get()}")
@@ -47,11 +47,11 @@ private[tstreams] case class TransactionBufferCounters(openEvents: AtomicLong = 
 
   private[subscriber] def updateStateCounters(state: TransactionState) =
     state.status match {
-      case TransactionState.Status.Opened => openEvents.incrementAndGet()
-      case TransactionState.Status.Cancelled => cancelEvents.incrementAndGet()
-      case TransactionState.Status.Updated => updateEvents.incrementAndGet()
-      case TransactionState.Status.Checkpointed => checkpointEvents.incrementAndGet()
-      case TransactionState.Status.Instant => instantEvents.incrementAndGet()
+      case TransactionStates.Opened => openEvents.incrementAndGet()
+      case TransactionStates.Cancel => cancelEvents.incrementAndGet()
+      case TransactionStates.Updated => updateEvents.incrementAndGet()
+      case TransactionStates.Checkpointed => checkpointEvents.incrementAndGet()
+      case TransactionStates.Instant => instantEvents.incrementAndGet()
       case _ =>
     }
 }

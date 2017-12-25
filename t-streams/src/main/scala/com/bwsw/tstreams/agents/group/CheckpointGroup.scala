@@ -219,7 +219,7 @@ class CheckpointGroup private[tstreams](val executors: Int = 1) {
   private def publishEventForAllProducers(stateInfoList: Array[State]) = {
     stateInfoList foreach {
       case ProducerTransactionState(_, agent, stateEvent, _, _, _, _, _) =>
-        executorPool.submit("<Event>", () => agent.publish(stateEvent, agent.stream.client.authenticationKey), None)
+        executorPool.submit("<Event>", () => agent.publish(stateEvent), None)
       case _ =>
     }
   }

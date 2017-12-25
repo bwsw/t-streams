@@ -23,7 +23,7 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 
 import com.bwsw.tstreams.common.FirstFailLockableTaskExecutor
-import com.bwsw.tstreamstransactionserver.protocol.TransactionState
+import com.bwsw.tstreamstransactionserver.rpc.{TransactionState, TransactionStates}
 
 import scala.collection.mutable
 
@@ -75,9 +75,9 @@ private[tstreams] class TransactionBufferWorker() {
 
     updateExecutor.submit(s"<UpdateAndNotifyTask($transactionState)>", () => {
       transactionBufferMap(transactionState.partition)
-        .updateTransactionState(transactionState.withMasterID(Math.abs(transactionState.masterID)))
+        .updateTransactionState(transactionState.copy(masterID = Math.abs(transactionState.masterID)))
 
-      if (transactionState.status == TransactionState.Status.Checkpointed) {
+      if (transactionState.status == TransactionStates.Checkpointed) {
         transactionBufferMap(transactionState.partition).signalCompleteTransactions()
       }
     })
