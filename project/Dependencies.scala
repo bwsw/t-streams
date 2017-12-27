@@ -44,8 +44,9 @@ object Dependencies {
       "io.netty" % "netty" % "3.10.6.Final",
       "io.netty" % "netty-all" % "4.1.19.Final",
       "org.json4s" %% "json4s-jackson" % "3.5.3",
-      "org.apache.zookeeper" % "zookeeper" % "3.4.11" pomOnly(),
-      "org.apache.bookkeeper" % "bookkeeper-server" % "4.5.1",
+      "org.apache.zookeeper" % "zookeeper" % "3.4.11",
+      ("org.apache.bookkeeper" % "bookkeeper-server" % "4.5.1")
+        .exclude("org.apache.zookeeper", "zookeeper"),
       "commons-validator" % "commons-validator" % "1.6",
       "org.apache.curator" % "curator-framework" % "2.12.0",
       "org.apache.curator" % "curator-test" % "2.12.0",
