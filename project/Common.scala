@@ -31,42 +31,44 @@ object Common {
     case PathList("org", "slf4j", xs@_*) => MergeStrategy.first
     case PathList("org", "scalatest", xs@_*) => MergeStrategy.discard
     case PathList("org", "scalamock", xs@_*) => MergeStrategy.discard
+    case PathList("org", "apache", "commons", "collections", xs@_*) => MergeStrategy.first
+    case PathList("org", "apache", "commons", "beanutils", xs@_*) => MergeStrategy.first
+    case x if x.endsWith("io.netty.versions.properties") => MergeStrategy.first
     case "log4j.properties" => MergeStrategy.concat
     case x =>
       val oldStrategy = (assemblyMergeStrategy in assembly).value
       oldStrategy(x)
   })
 
-  val projectSettings =
-    Dependencies.Common ++ Seq(
-      version := "3.0.6-SNAPSHOT",
-      isSnapshot := true,
-      scalaVersion := "2.12.4",
-      organization := "com.bwsw",
-      organizationName := "Bitworks Software, Ltd.",
-      organizationHomepage := Some(url("https://bitworks.software/")),
+  val projectSettings = Seq(
+    version := "3.0.6-SNAPSHOT",
+    isSnapshot := true,
+    scalaVersion := "2.12.4",
+    organization := "com.bwsw",
+    organizationName := "Bitworks Software, Ltd.",
+    organizationHomepage := Some(url("https://bitworks.software/")),
 
-      scalacOptions ++= Seq(
-        "-deprecation", "-feature"
-      ),
+    scalacOptions ++= Seq(
+      "-deprecation", "-feature"
+    ),
 
-      javacOptions ++= Seq(
-        "-Dsun.net.maxDatagramSockets=1000"
-      ),
+    javacOptions ++= Seq(
+      "-Dsun.net.maxDatagramSockets=1000"
+    ),
 
-      resolvers ++= Seq(
-        "Sonatype OSS" at "https://oss.sonatype.org/service/local/staging/deploy/maven2",
-        "Sonatype OSS snapshots" at "https://oss.sonatype.org/content/repositories/snapshots",
-        "Twitter Repo" at "https://maven.twttr.com",
-        "Oracle Maven2 Repo" at "http://download.oracle.com/maven"),
+    resolvers ++= Seq(
+      "Sonatype OSS" at "https://oss.sonatype.org/service/local/staging/deploy/maven2",
+      "Sonatype OSS snapshots" at "https://oss.sonatype.org/content/repositories/snapshots",
+      "Twitter Repo" at "https://maven.twttr.com",
+      "Oracle Maven2 Repo" at "http://download.oracle.com/maven"),
 
-      parallelExecution in ThisBuild := false, //tests property
-      parallelExecution in Test := false,
-      fork := true,
-      fork in run := true,
-      fork in Test := true,
+    parallelExecution in ThisBuild := false, //tests property
+    parallelExecution in Test := false,
+    fork := true,
+    fork in run := true,
+    fork in Test := true,
 
-      connectInput in run := true,
-      outputStrategy := Some(StdoutOutput) // to suppress logging prefixes in sbt runMain
-    ) ++ assemblyStrategySettings ++ publishSettings
+    connectInput in run := true,
+    outputStrategy := Some(StdoutOutput) // to suppress logging prefixes in sbt runMain
+  ) ++ assemblyStrategySettings ++ publishSettings
 }

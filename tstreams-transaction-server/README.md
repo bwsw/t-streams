@@ -4,8 +4,14 @@ Implements Transaction storage server for T-Streams (hereinafter - TTS)
 ## Table of contents
 
 - [Launching](#launching)
+    - [Configuration](#configuration)
+        - [General](#general)
+        - [Multinode](#multinode)
+        - [Tracing](#tracing)
+    - [Preparation](#preparation)
     - [Java](#java)
     - [Docker](#docker)
+        - [Environment variables](#environment-variables)
 - [License](#license)
 
 ## Launching
@@ -16,8 +22,13 @@ There is two ways to launch TTS:
 
 You should pass a file with properties in both cases. The file should contain the following properties:
 
+### Configuration
+
+#### General
+
 |NAME                                               |DESCRIPTION    |TYPE           |EXAMPLE        |VALID VALUES|
 | --------------------------------------------------| ------------- | ------------- | ------------- | ------------- |
+| server.type                                       | The type of server. |string|multinode|one of: singlenode, multinode, common, checkpoint-group|
 | bootstrap.host                                    | ipv4 or ipv6 listen address. |string | 127.0.0.1| |
 | bootstrap.port                                    | Port to a server binds.  |int    |8071| |
 | bootstrap.open-ops-pool-size                      | Size of the ordered pool that contains single thread executors to work with some producer transaction operations. |int | Runtime.getRuntime.availableProcessors() |positive integer |
@@ -40,7 +51,10 @@ You should pass a file with properties in both cases. The file should contain th
 | rocksdb.compression-type                          | Compression takes one of values: [NO_COMPRESSION, SNAPPY_COMPRESSION, ZLIB_COMPRESSION, BZLIB2_COMPRESSION, LZ4_COMPRESSION, LZ4HC_COMPRESSION]. If it's unimportant use a *LZ4_COMPRESSION* as default value.  |string |LZ4_COMPRESSION| |
 | rocksdb.is-fsync                                  | If true, then every store to stable storage will issue a fsync. If false, then every store to stable storage will issue a fdatasync. This parameter should be set to true while storing data to filesystem like ext3 that can lose files after a reboot.   |boolean| true| |
 | zk.endpoints                                      | The socket address(es) of ZooKeeper servers.  |string |127.0.0.1:2181| |
-| zk.prefix                                         | The coordination path to retrieve/persist socket address of t-streams transaction server.  |string |/tts/master | |
+| zk.common.prefix                                  | The coordination path to retrieve/persist socket address of t-streams transaction server.  |string |/tts/master | |
+| zk.common.election-prefix | The coordination path is used for leader election among common servers. | string | /tts/election |  |
+| zk.checkpointgroup.prefix | The coordination path is used for providing current master/leader checkpoint group server. | string | /tts/cg |  |
+| zk.checkpointgroup.election-prefix | The coordination path is used for leader election among checkpoint group servers. | string | /tts/cgelection |  |
 | zk.session-timeout-ms                             | The time to wait while trying to re-establish a connection to a ZooKeeper server(s).  |int    | 10000| [1,...]|
 | zk.connection-retry-delay-ms                      | Delay between retry attempts to establish connection to ZooKeepers server on case of lost connection.  |int    | 500| [1,...]|
 | zk.connection-timeout-ms                          | The time to wait while trying to establish a connection to a ZooKeeper server(s) on first connection.  |int    | 10000| [1,...]|
@@ -54,23 +68,71 @@ You should pass a file with properties in both cases. The file should contain th
 | commit-log.zk-file-id-gen-path                    | The coordination path for counter that is used to generate and retrieve commit log file id. | string | /server_counter/file_id_gen |
 
 It isn't required to adhere the specified order of the properties, it's for example only. 
-But all properties should be defined with the exact names and appropriate types. 
+But all this properties should be defined with the exact names and appropriate types.
+
+#### Multinode
+
+This properties is required for multinode server.
+
+| NAME | DESCRIPTION | TYPE | EXAMPLE |
+| --- | --- | --- | --- |
+| replicable.common.zk.path | The coordination path to TreeList for common group. | string | /tts/commonmaster_tree |
+| replicable.common.last-closed-ledger | The coordination path for last closed ledger for common group. | string | /tts/commonlast_closed_ledger |
+| replicable.common.close-delay-ms | The delay between creating new ledgers. | int | 200 |
+| replicable.cg.zk.path | The coordination path to TreeList for checkpoint group. | string | /tts/cgmaster_tree |
+| replicable.cg.last-closed-ledger | The coordination path for last closed ledger for checkpoint group. | string | /tts/cglast_closed_ledger |
+| replicable.cg.close-delay-ms | The delay between creating new ledgers. | int | 200 |
+| replicable.ensemble-number | The number of bookies the data in the ledger will be stored on. | int | 3 |
+| replicable.write-quorum-number | The number of bookies each entry is written to. | int | 3 |
+| replicable.ack-quorum-number | The number of bookies we must get a response from before we acknowledge the write to the client. | int | 2 |
+| replicable.password | The password to access constructed ledgers and create new ledgers. | string | bkpassword |
+
+#### Tracing
+
+To enable tracing to [OpenZipkin](http://zipkin.io) server set the
+following properties:
+
+| NAME | DESCRIPTION | TYPE | EXAMPLE |
+| --- | --- | --- | --- |
+| tracing.enabled | If true, tracing is enabled (false by default). | string | true |
+| tracing.endpoint | OpenZipkin server address. | string | localhost:9411 |
+
+
+### Preparation
+
+Run that command from a project root directory to build a server:
+
+```bash
+sbt tstreams-transaction-server/assembly
+```
+
+or if you want to skip tests:
+
+```bash
+sbt 'set (test in assembly) in tStreamsTransactionServer := {}' tstreams-transaction-server/assembly
+```
+
 
 ### Java
 
-In addition to the properties file you should provide two dependencies through adding jars of 'slf4j-api-1.7.24' 
-and 'slf4j-log4j12-1.7.24' to a classpath, to launch TTS. That is run the following command:
+In addition to the properties file you should provide dependency through
+adding jar of 'slf4j-log4j12-1.7.25' to a classpath, to launch TTS.
+That is run the following command:
 
 ```bash
-java -Dconfig=<path_to_config>/config.properties -cp <path_to_TTS_jar>/tstreams-transaction-server-<version>.jar:<path_to_slf4j_api_jar>/slf4j-api-1.7.24.jar:<path_to_slf4j_impl_jar>/slf4j-log4j12-1.7.24.jar com.bwsw.tstreamstransactionserver.ServerLauncher
+java -Dconfig=<path_to_config>/config.properties -cp <path_to_TTS_jar>/tstreams-transaction-server-<version>.jar:<path_to_slf4j_impl_jar>/slf4j-log4j12-1.7.25.jar com.bwsw.tstreamstransactionserver.ServerLauncher
 ```
+
+To use your own logging configuration write configuration file
+[log4j.properties](src/main/resources/log4j.properties) and add a java
+option `-Dlog4j.configurationFile=<path-to-log4j-properties>`.
 
 ### Docker
 
-The docker file is in the root directory. To build image: 
+To build docker image:
 
 ```bash
-docker build --tag bwsw/tstreams-transaction-server .
+docker build --build-args version=<version> --tag bwsw/tstreams-transaction-server .
 ```
 
 To download image use:
@@ -78,11 +140,30 @@ To download image use:
 docker pull bwsw/tstreams-transaction-server
 ```
 
-To run docker image you should provide a path to config directory where a file named 'config.properties' is, specify the external host and port to be able to connect:
+To run docker image you should provide a path to config directory where
+a file named `config.properties` is, `bootstrap.port` in `config.properties`
+file should be `8071`:
 
 ```bash
-docker run -v <path_to_conf>:/etc/conf/config.properties -v <path_to_databases_dir>:/storage -v <path_to_logs_dir>:/var/log/tts -p <external_port>:8080 -e HOST=<external_host> -e PORT0=<external_port> bwsw/tstreams-transaction-server
+docker run -v <path_to_config_properties>:/etc/conf/config.properties [-v <path_to_storage_dir>:<storage-model.file-prefix>] [-p <external_port>:8071] bwsw/tstreams-transaction-server
 ```
+
+- `<path_to_config_properties>` &mdash; absolute path to `config.properties` file (e.g. `${PWD}/config.properties`);
+- `<path_to_storage_dir>` &mdash; path to storage directory;
+- `<storage-model.file-prefix>` &mdash; value of `storage-model.file-prefix` configuration.
+
+To use your own logging configuration add volume with logging configuration
+file (e.g. `-v ${PWD}/log4j.properties:/etc/conf/log4j.properties`) and
+put container path to configuration file to environment variable
+LOG4J_PROPERTIES_FILE (e.g. `-e LOG4J_PROPERTIES_FILE=/etc/conf/log4j.properties`)
+
+
+#### Environment variables:
+
+| Name | Description | Default |
+| --- | --- | --- |
+| CONFIG_FILE | Path to configuration file | /etc/conf/config.properties |
+| LOG4J_PROPERTIES_FILE | Path to custom logging configuration file ([log4j.properties](src/main/resources/log4j.properties)). |  |
 
 ## License
 

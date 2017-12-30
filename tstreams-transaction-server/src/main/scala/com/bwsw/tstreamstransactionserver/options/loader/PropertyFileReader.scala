@@ -19,13 +19,13 @@
 
 package com.bwsw.tstreamstransactionserver.options.loader
 
-import com.bwsw.tstreamstransactionserver.options.CommonOptions.{TracingOptions, ZookeeperOptions}
+import com.bwsw.tstreamstransactionserver.options.CommonOptions.{ServerTypeOptions, TracingOptions, ZookeeperOptions}
 import com.bwsw.tstreamstransactionserver.options.MultiNodeServerOptions.{BookkeeperOptions, CheckpointGroupPrefixesOptions, CommonPrefixesOptions}
 import com.bwsw.tstreamstransactionserver.options.SingleNodeServerOptions._
 import com.bwsw.tstreamstransactionserver.options.{CommitLogWriteSyncPolicy, IncompleteCommitLogReadPolicy, SingleNodeServerOptions}
 import org.rocksdb.CompressionType
 
-import scala.util.Try
+import scala.util.{Failure, Success, Try}
 
 
 object PropertyFileReader {
@@ -295,5 +295,18 @@ object PropertyFileReader {
       TracingOptions(tracingEnabled, endpoint)
     } else
       TracingOptions()
+  }
+
+  final def loadServerTypeOptions(loader: PropertyFileLoader): ServerTypeOptions = {
+    implicit val typeTag: Class[ServerTypeOptions] = classOf[ServerTypeOptions]
+
+    Try(loader.castCheck("server.type", identity)) match {
+      case Success(serverType) =>
+        if (ServerTypeOptions.types.contains(serverType)) ServerTypeOptions(serverType)
+        else throw new IllegalStateException(
+          s"Illegal value of option 'server.type=$serverType'. " +
+            s"Available values: ${ServerTypeOptions.types.mkString("[", ", ", "]")}")
+      case Failure(_) => ServerTypeOptions()
+    }
   }
 }

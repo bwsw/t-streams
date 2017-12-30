@@ -27,6 +27,8 @@ object TStreamsTransactionServer {
   val sroogeGenOutput = "src/main/thrift/gen"
 
   val projectSettings = Common.projectSettings ++ Seq(
+    mainClass in Compile := Some("com.bwsw.tstreamstransactionserver.ServerLauncher"),
+
     assemblyJarName in assembly := s"${name.value}-${version.value}.jar",
 
     ScroogeSBT.autoImport.scroogeThriftOutputFolder in Compile := baseDirectory.value / sroogeGenOutput,

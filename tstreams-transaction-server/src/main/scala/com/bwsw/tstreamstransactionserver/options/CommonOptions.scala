@@ -43,4 +43,15 @@ object CommonOptions {
   case class TracingOptions(enabled: Boolean = false,
                             endpoint: String = "127.0.0.1:9411")
 
+  case class ServerTypeOptions(serverType: String = ServerTypeOptions.singleNode)
+
+  object ServerTypeOptions {
+    val singleNode = "singlenode"
+    val multinode = "multinode"
+    val common = "common"
+    val checkpointGroup = "checkpoint-group"
+
+    val types = Set(singleNode, multinode, common, checkpointGroup)
+  }
+
 }
