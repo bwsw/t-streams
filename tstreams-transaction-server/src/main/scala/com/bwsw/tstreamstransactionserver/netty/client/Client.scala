@@ -208,4 +208,6 @@ class Client(clientOpts: ConnectionOptions,
 
   override def shutdown(): Unit =
     inetClientProxy.shutdown()
+
+  override def isConnected: Boolean = inetClientProxy.isConnected
 }

@@ -28,7 +28,7 @@ import com.bwsw.tstreamstransactionserver.rpc.{TransactionState, TransactionStat
 import org.slf4j.LoggerFactory
 
 import scala.collection.mutable
-import scala.util.Random
+import scala.util.{Failure, Random, Try}
 
 /**
   * Created by Ivan Kudryavtsev on 20.08.16.
@@ -102,41 +102,49 @@ private[tstreams] class ProcessingEngine(consumer: TransactionOperator,
     * @param pollTimeMs
     */
   def processReadyTransactions(pollTimeMs: Int) = {
+    Try {
+      if (!isThresholdsSet.get()) {
+        isThresholdsSet.set(true)
 
-    if (!isThresholdsSet.get()) {
-      isThresholdsSet.set(true)
-
-      loadExecutor.setThresholds(queueLengthThreshold = 1000, taskFullDelayThresholdMs = 150,
-        taskDelayThresholdMs = 100, taskRunDelayThresholdMs = 50)
-    }
-
-    var loadFullDataExists = false
-
-    val seq = queue.get(pollTimeMs, TimeUnit.MILLISECONDS)
-
-    if (Subscriber.logger.isDebugEnabled())
-      Subscriber.logger.debug(s"$seq")
-
-    if (seq != null) {
-      isFirstTime = false
-      if (seq.nonEmpty) {
-        if (fastLoader.checkIfTransactionLoadingIsPossible(seq)) {
-          fastLoader.load(seq, consumer, loadExecutor, callback)
-        }
-        else {
-          if (fullLoader.checkIfTransactionLoadingIsPossible(seq)) {
-            ProcessingEngine.logger.warn(s"PE $id - Load full occurred for seq $seq")
-            if (fullLoader.load(seq, consumer, loadExecutor, callback) > 0)
-              loadFullDataExists = true
-          } else {
-            Subscriber.logger.warn(s"Fast and Full loading failed for $seq.")
-          }
-        }
-        setLastPartitionActivity(seq.head.partition)
+        loadExecutor.setThresholds(queueLengthThreshold = 1000, taskFullDelayThresholdMs = 150,
+          taskDelayThresholdMs = 100, taskRunDelayThresholdMs = 50)
       }
-    }
 
-    enqueueTransactionStateWhenNecessary(loadFullDataExists, pollTimeMs)
+      var loadFullDataExists = false
+
+      val seq = queue.get(pollTimeMs, TimeUnit.MILLISECONDS)
+
+      if (Subscriber.logger.isDebugEnabled())
+        Subscriber.logger.debug(s"$seq")
+
+      if (seq != null) {
+        isFirstTime = false
+        if (seq.nonEmpty) {
+          if (fastLoader.checkIfTransactionLoadingIsPossible(seq)) {
+            fastLoader.load(seq, consumer, loadExecutor, callback)
+          }
+          else {
+            if (fullLoader.checkIfTransactionLoadingIsPossible(seq)) {
+              ProcessingEngine.logger.warn(s"PE $id - Load full occurred for seq $seq")
+              if (fullLoader.load(seq, consumer, loadExecutor, callback) > 0)
+                loadFullDataExists = true
+            } else {
+              Subscriber.logger.warn(s"Fast and Full loading failed for $seq.")
+            }
+          }
+          setLastPartitionActivity(seq.head.partition)
+        }
+      }
+
+      enqueueTransactionStateWhenNecessary(loadFullDataExists, pollTimeMs)
+    } match {
+      case Failure(exception) =>
+        callback.onFailure(exception)
+        isRunning.set(false)
+        throw exception
+
+      case _ =>
+    }
   }
 
   private def enqueueTransactionStateWhenNecessary(loadFullDataExists: Boolean, pollTimeMs: Int) = {
@@ -176,14 +184,15 @@ private[tstreams] class ProcessingEngine(consumer: TransactionOperator,
   }
 
   def start() = {
-    isRunning.set(true)
-    executor.start()
+    if (!isRunning.getAndSet(true))
+      executor.start()
   }
 
   def stop() = {
-    isRunning.set(false)
-    partitions.foreach(p => enqueueLastPossibleTransactionState(p))
-    executor.join(Subscriber.SHUTDOWN_WAIT_MAX_SECONDS * 1000)
+    if (isRunning.getAndSet(false)) {
+      partitions.foreach(p => enqueueLastPossibleTransactionState(p))
+      executor.join(Subscriber.SHUTDOWN_WAIT_MAX_SECONDS * 1000)
+    }
   }
 }
 

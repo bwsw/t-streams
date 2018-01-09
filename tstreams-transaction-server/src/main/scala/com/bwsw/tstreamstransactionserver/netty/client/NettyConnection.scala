@@ -34,12 +34,10 @@ import org.slf4j.LoggerFactory
 
 
 class NettyConnection(workerGroup: EventLoopGroup,
-                      initialConnectionAddress: SocketHostPortPair,
+                      master: SocketHostPortPair,
                       connectionOptions: ConnectionOptions,
                       handlers: => Seq[ChannelHandler],
-                      onConnectionLostDo: => Unit)
-  extends MasterReelectionListener
-{
+                      onConnectionLostDo: => Unit) {
 
   private val logger =
     LoggerFactory.getLogger(this.getClass)
@@ -74,19 +72,15 @@ class NettyConnection(workerGroup: EventLoopGroup,
           )
 
           pipeline.addLast(
-            new NettyConnectionHandler(
-              connectionOptions.retryDelayMs,
-              onConnectionLostDo,
-              connect()
-            ))
+            new NettyConnectionHandler(onConnectionLostDo))
         }
       })
   }
 
 
-  @volatile private var master: SocketHostPortPair =
-    initialConnectionAddress
-  @volatile private var channel: ChannelFuture = {
+  private val channel: ChannelFuture = {
+    logger.info(s"Start connection with $master")
+
     bootstrap
       .connect(master.address, master.port)
       .awaitUninterruptibly()
@@ -101,33 +95,13 @@ class NettyConnection(workerGroup: EventLoopGroup,
       )
     }
 
-  private final def connect() = {
-    val socket = master
-    bootstrap.connect(
-      socket.address,
-      socket.port
-    ).addListener { (futureChannel: ChannelFuture) =>
-      if (futureChannel.cause() != null) {
-        if (logger.isInfoEnabled)
-          logger.debug(s"Failed to connect: ${socket.address}:${socket.port}, cause: ${futureChannel.cause}")
-      }
-      else {
-        if (logger.isInfoEnabled)
-          logger.debug(s"Connected to: ${futureChannel.channel().remoteAddress()}")
-        channel = futureChannel
-      }
-    }
-  }
-
-  final def reconnect(): Unit = {
-    channel.channel().deregister()
-  }
-
   final def getChannel(): Channel = {
     channel.channel()
   }
 
   def stop(): Unit = {
+    logger.info(s"Close connection with $master")
+
     val isNotStopped =
       isStopped.compareAndSet(false, true)
     if (isNotStopped) {
@@ -136,20 +110,6 @@ class NettyConnection(workerGroup: EventLoopGroup,
           .close()
           .cancel(true)
       )
-    }
-  }
-
-
-  override def masterChanged(newMaster: Either[Throwable, Option[SocketHostPortPair]]): Unit = {
-    newMaster match {
-      case Left(throwable) =>
-        stop()
-        throw throwable
-      case Right(socketOpt) =>
-        socketOpt.foreach { socket =>
-          master = socket
-          reconnect()
-        }
     }
   }
 }

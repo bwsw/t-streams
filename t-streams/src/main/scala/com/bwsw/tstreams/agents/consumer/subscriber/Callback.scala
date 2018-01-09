@@ -50,4 +50,11 @@ trait Callback {
     consumer.buildTransactionObject(partition, transactionID, TransactionStates.Checkpointed, count)
       .foreach(transaction => onTransaction(consumer, transaction = transaction))
   }
+
+  /**
+    * Callback which is called when subscriber failed
+    *
+    * @param exception thrown exception
+    */
+  def onFailure(exception: Throwable): Unit = {}
 }

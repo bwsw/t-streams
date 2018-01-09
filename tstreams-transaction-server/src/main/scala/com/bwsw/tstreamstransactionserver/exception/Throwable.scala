@@ -20,6 +20,8 @@ package com.bwsw.tstreamstransactionserver.exception
 
 import java.net.SocketTimeoutException
 
+import com.bwsw.tstreamstransactionserver.netty.SocketHostPortPair
+
 object Throwable {
   val TokenInvalidExceptionMessage: String = "Token isn't valid."
   val serverConnectionExceptionMessage: String = "Can't connect to Server."
@@ -75,6 +77,13 @@ object Throwable {
   class MasterPathIsAbsent(path: String)
     extends IllegalArgumentException(s"Master path: $path doesn't exist.")
 
+  class MasterChangedException(val newMaster: SocketHostPortPair)
+    extends Exception(s"Master changed to $newMaster")
+
+  class MasterLostException extends Exception("Lost connection to master.")
+
+  class ClientNotConnectedException extends IllegalStateException("Client doesn't connect to server.")
+
   class StreamDoesNotExist(stream: String, isPartialMessage: Boolean = true) extends {
     private val message: String = if (isPartialMessage) s"Stream $stream doesn't exist in database!" else stream
   } with NoSuchElementException(message)
@@ -82,6 +91,7 @@ object Throwable {
   class PackageTooBigException(msg: String = "")
     extends Exception(msg)
 
-  object ClientIllegalOperationAfterShutdown
+  class ClientIllegalOperationAfterShutdown
     extends IllegalStateException("It's not allowed do any operations after client shutdown!")
+
 }

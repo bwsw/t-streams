@@ -23,8 +23,9 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.{AtomicLong, LongAdder}
 
 import com.bwsw.tstreamstransactionserver.configProperties.ClientExecutionContextGrid
-import com.bwsw.tstreamstransactionserver.netty.client.{ClientBuilder, InetClient}
+import com.bwsw.tstreamstransactionserver.exception.Throwable.ClientNotConnectedException
 import com.bwsw.tstreamstransactionserver.netty.client.zk.ZKClient
+import com.bwsw.tstreamstransactionserver.netty.client.{ClientBuilder, InetClient}
 import com.bwsw.tstreamstransactionserver.netty.server.singleNode.SingleNodeServerBuilder
 import com.bwsw.tstreamstransactionserver.options._
 import com.bwsw.tstreamstransactionserver.rpc._
@@ -34,14 +35,14 @@ import io.netty.channel.epoll.{Epoll, EpollEventLoopGroup}
 import io.netty.channel.nio.NioEventLoopGroup
 import org.apache.curator.retry.RetryForever
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
-import util.{Time, Utils}
+import util.Implicit.ProducerTransactionSortable
 import util.Utils.startZkServerAndGetIt
+import util.{Time, Utils}
 
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future, Promise}
-import util.Implicit.ProducerTransactionSortable
 
 class ServerClientInterconnectionTest
   extends FlatSpec
@@ -63,7 +64,9 @@ class ServerClientInterconnectionTest
     private var currentTime = initialTime
 
     override def getCurrentTime: Long = currentTime
+
     def resetTimer(): Unit = currentTime = initialTime
+
     def updateTime(newTime: Long) = currentTime = newTime
   }
 
@@ -310,7 +313,7 @@ class ServerClientInterconnectionTest
     }
   }
 
-  it should "throw an exception when the a server isn't available for time greater than in config" in {
+  it should "throw an exception when the a server isn't available" in {
     val bundle = Utils.startTransactionServerAndClient(
       zkClient, serverBuilder, clientBuilder
     )
@@ -329,13 +332,13 @@ class ServerClientInterconnectionTest
       transactionServer.shutdown()
 
       val timeToWait = clientBuilder.getConnectionOptions.connectionTimeoutMs.milliseconds
-      assertThrows[java.util.concurrent.TimeoutException] {
+      a[ClientNotConnectedException] shouldBe thrownBy {
         Await.result(resultInFuture, timeToWait)
       }
     }
   }
 
-  it should "not throw an exception when the server isn't available for time less than in config" in {
+  it should "throw an exception when the master server changed" in {
     val bundle = Utils.startTransactionServerAndClient(
       zkClient, serverBuilder, clientBuilder
     )
@@ -353,7 +356,7 @@ class ServerClientInterconnectionTest
 
     transactionServer.shutdown()
     val secondServer = bundle.serverBuilder
-        .withBootstrapOptions(SingleNodeServerOptions.BootstrapOptions(bindPort = Utils.getRandomPort))
+      .withBootstrapOptions(SingleNodeServerOptions.BootstrapOptions(bindPort = Utils.getRandomPort))
       .build()
 
     val task = new Thread(
@@ -362,7 +365,9 @@ class ServerClientInterconnectionTest
 
     task.start()
 
-    Await.result(resultInFuture, 10000.seconds) shouldBe true
+    a[ClientNotConnectedException] shouldBe thrownBy {
+      Await.result(resultInFuture, 10000.seconds)
+    }
 
     secondServer.shutdown()
     task.interrupt()
@@ -649,7 +654,7 @@ class ServerClientInterconnectionTest
 
     bundle.operate { _ =>
       val clients = bundle.clients
-      val client  = bundle.clients.head
+      val client = bundle.clients.head
 
       val streams = Array.fill(10000)(getRandomStream)
       val streamID = Await.result(client.putStream(chooseStreamRandomly(streams)), secondsWait.seconds)

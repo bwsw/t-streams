@@ -22,9 +22,11 @@ package com.bwsw.tstreams.agents.integration
 import java.util.concurrent.{CountDownLatch, TimeUnit}
 
 import com.bwsw.tstreams.agents.consumer.Offset.Oldest
+import com.bwsw.tstreams.agents.consumer.subscriber.Callback
 import com.bwsw.tstreams.agents.consumer.{ConsumerTransaction, TransactionOperator}
 import com.bwsw.tstreams.env.ConfigurationOptions
 import com.bwsw.tstreams.testutils.{TestStorageServer, TestUtils}
+import com.bwsw.tstreamstransactionserver.exception.Throwable.ClientNotConnectedException
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 
 import scala.util.Try
@@ -32,7 +34,7 @@ import scala.util.Try
 /**
   * Created by Ivan Kudryavtsev on 19.05.17.
   */
-class StorageBlinkingTest  extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
+class StorageBlinkingTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
 
   override def beforeAll(): Unit = {
     val srv = TestStorageServer.getNewClean()
@@ -44,8 +46,7 @@ class StorageBlinkingTest  extends FlatSpec with Matchers with BeforeAndAfterAll
     onAfterAll()
   }
 
-  "Producer and subscriber" should "work while storage blinks" in {
-    val latchStopOnOpen = new CountDownLatch(1)
+  "Producer and subscriber" should "fail when storage blinks" in {
     val latchStopOnCheckpoint = new CountDownLatch(1)
     val latchFinal = new CountDownLatch(1)
     val subscriberLatch = new CountDownLatch(1)
@@ -53,14 +54,6 @@ class StorageBlinkingTest  extends FlatSpec with Matchers with BeforeAndAfterAll
     val pause = 5000
 
     new Thread(() => {
-      Try({
-        val srv = TestStorageServer.getNewClean()
-        latchStopOnOpen.await()
-        srv
-      }).map(srv => TestStorageServer.dispose(srv))
-
-      Thread.sleep(pause)
-
       Try({
         val srv = TestStorageServer.get()
         latchStopOnCheckpoint.await()
@@ -85,12 +78,23 @@ class StorageBlinkingTest  extends FlatSpec with Matchers with BeforeAndAfterAll
       partitions = Set(0),
       offset = Oldest,
       useLastOffset = true,
-      callback = (consumer: TransactionOperator, transaction: ConsumerTransaction) => subscriberLatch.countDown()).start()
+      callback = new Callback {
+        override def onTransaction(consumer: TransactionOperator, transaction: ConsumerTransaction): Unit =
+          subscriberLatch.countDown()
 
-    latchStopOnOpen.countDown()
+        override def onFailure(exception: Throwable): Unit =
+          exception shouldBe a[ClientNotConnectedException]
+      }).start()
+
     producer.newTransaction().send("")
-    latchStopOnCheckpoint.countDown()
     producer.checkpoint()
+    producer.newTransaction().send("")
+    Thread.sleep(pause)
+    latchStopOnCheckpoint.countDown()
+    Thread.sleep(pause)
+    a[ClientNotConnectedException] shouldBe thrownBy {
+      producer.checkpoint()
+    }
     val transactionTTL = f.getProperty(ConfigurationOptions.Producer.Transaction.ttlMs)
     subscriberLatch.await(pause * 2 + transactionTTL.asInstanceOf[Int], TimeUnit.MILLISECONDS) shouldBe true
     subscriber.stop()

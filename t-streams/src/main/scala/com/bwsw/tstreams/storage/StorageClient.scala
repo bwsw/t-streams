@@ -262,4 +262,5 @@ class StorageClient(clientOptions: ConnectionOptions,
     Await.result(client.getTransaction(time), timeout)
   }
 
+  def isConnected: Boolean = client.isConnected
 }
