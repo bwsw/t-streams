@@ -19,8 +19,10 @@
 
 package it.multinode
 
+import java.util.UUID
 import java.util.concurrent.{CountDownLatch, TimeUnit}
 
+import com.bwsw.tstreamstransactionserver.exception.Throwable.MasterChangedException
 import com.bwsw.tstreamstransactionserver.netty.client.ClientBuilder
 import com.bwsw.tstreamstransactionserver.netty.server.multiNode.CommonCheckpointGroupServerBuilder
 import com.bwsw.tstreamstransactionserver.options.MultiNodeServerOptions.BookkeeperOptions
@@ -28,8 +30,8 @@ import com.bwsw.tstreamstransactionserver.rpc.{ConsumerTransaction, ProducerTran
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import util.Implicit.ProducerTransactionSortable
 
-import scala.concurrent.duration._
 import scala.concurrent.Await
+import scala.concurrent.duration._
 
 class CommonCheckpointGroupServerTest
   extends FlatSpec
@@ -194,7 +196,7 @@ class CommonCheckpointGroupServerTest
 
       val stream = getRandomStream
       val streamID = Await.result(client.putStream(stream), secondsWait.seconds)
-      streamID shouldNot be (-1)
+      streamID shouldNot be(-1)
 
       val txn = getRandomProducerTransaction(streamID, stream)
       Await.result(client.putProducerState(txn), secondsWait.seconds)
@@ -272,6 +274,47 @@ class CommonCheckpointGroupServerTest
       )
 
       successResponseData should contain theSameElementsInOrderAs data
+    }
+  }
+
+  "Client" should "throw MasterChangedException when a master changed" in {
+    val bundle1 = util.multiNode.Util.getCommonCheckpointGroupServerBundle(
+      zkClient, bookkeeperOptions, serverBuilder, clientBuilder, maxIdleTimeBetweenRecordsMs
+    )
+
+    bundle1.operate { server1 =>
+      val client = bundle1.client
+
+      val storageOptions = serverBuilder.getStorageOptions.copy(path = s"/tmp/tts-${UUID.randomUUID().toString}")
+      val serverBuilder2 = serverBuilder.withServerStorageOptions(storageOptions)
+
+      val bundle2 = util.multiNode.Util.getCommonCheckpointGroupServerBundle(
+        zkClient, bookkeeperOptions, serverBuilder2, clientBuilder, maxIdleTimeBetweenRecordsMs)
+
+      bundle2.operate { _ =>
+
+        val stream = getRandomStream
+        val streamID = Await.result(client.putStream(stream), secondsWait.seconds)
+
+        val producerTransactions = Array.fill(100)(getRandomProducerTransaction(streamID, stream))
+        val consumerTransactions = Array.fill(100)(getRandomConsumerTransaction(streamID, stream))
+
+        val result = client.putTransactions(producerTransactions, consumerTransactions)
+
+        Await.result(result, 5.seconds) shouldBe true
+
+        server1.shutdown()
+        Thread.sleep(1000)
+
+        val otherProducerTransactions = Array.fill(100)(getRandomProducerTransaction(streamID, stream))
+        val otherConsumerTransactions = Array.fill(100)(getRandomConsumerTransaction(streamID, stream))
+
+        a[MasterChangedException] shouldBe thrownBy {
+          Await.result(
+            client.putTransactions(otherProducerTransactions, otherConsumerTransactions),
+            5.seconds)
+        }
+      }
     }
   }
 }

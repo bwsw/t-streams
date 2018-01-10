@@ -80,6 +80,8 @@ class InetClient(zookeeperOptions: ZookeeperOptions,
 
   private val connected = new AtomicBoolean(false)
   private val isStopped = new AtomicBoolean(false)
+  private var masterChangedException: Option[Throwable] = None
+
   private val nettyClient: NettyConnection = {
     val connectionAddress =
       commonServerPathMonitor.getMasterInBlockingManner
@@ -104,11 +106,13 @@ class InetClient(zookeeperOptions: ZookeeperOptions,
         connected.set(true)
         commonServerPathMonitor.addMasterReelectionListener { newMaster =>
           shutdown()
-          newMaster match {
-            case Left(throwable) => throw throwable
-            case Right(None) => throw new MasterLostException
-            case Right(Some(socketHostPortPair)) => throw new MasterChangedException(socketHostPortPair)
+          val exception = newMaster match {
+            case Left(throwable) => throwable
+            case Right(None) => new MasterLostException
+            case Right(Some(socketHostPortPair)) => new MasterChangedException(socketHostPortPair)
           }
+          masterChangedException = Some(exception)
+          throw exception
         }
 
         client
@@ -211,7 +215,8 @@ class InetClient(zookeeperOptions: ZookeeperOptions,
     if (isShutdown) throw new ClientIllegalOperationAfterShutdown
 
   private def onNotConnectedThrowException(): Unit = {
-    if (!isConnected) throw new ClientNotConnectedException
+    if (!isConnected)
+      throw masterChangedException.getOrElse(new ClientNotConnectedException)
   }
 
 

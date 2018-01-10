@@ -23,7 +23,7 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.{AtomicLong, LongAdder}
 
 import com.bwsw.tstreamstransactionserver.configProperties.ClientExecutionContextGrid
-import com.bwsw.tstreamstransactionserver.exception.Throwable.ClientNotConnectedException
+import com.bwsw.tstreamstransactionserver.exception.Throwable.MasterLostException
 import com.bwsw.tstreamstransactionserver.netty.client.zk.ZKClient
 import com.bwsw.tstreamstransactionserver.netty.client.{ClientBuilder, InetClient}
 import com.bwsw.tstreamstransactionserver.netty.server.singleNode.SingleNodeServerBuilder
@@ -332,7 +332,7 @@ class ServerClientInterconnectionTest
       transactionServer.shutdown()
 
       val timeToWait = clientBuilder.getConnectionOptions.connectionTimeoutMs.milliseconds
-      a[ClientNotConnectedException] shouldBe thrownBy {
+      a[MasterLostException] shouldBe thrownBy {
         Await.result(resultInFuture, timeToWait)
       }
     }
@@ -365,7 +365,7 @@ class ServerClientInterconnectionTest
 
     task.start()
 
-    a[ClientNotConnectedException] shouldBe thrownBy {
+    a[MasterLostException] shouldBe thrownBy {
       Await.result(resultInFuture, 10000.seconds)
     }
 
