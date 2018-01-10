@@ -37,17 +37,17 @@ import scala.concurrent.duration._
 class SingleNodeServerProducerTransactionNotificationTest
   extends FlatSpec
     with Matchers
-    with BeforeAndAfterAll
-{
+    with BeforeAndAfterAll {
   private val commitLogToBerkeleyDBTaskDelayMs = 100
   private lazy val serverBuilder = new SingleNodeServerBuilder()
-   .withCommitLogOptions(SingleNodeServerOptions.CommitLogOptions(
-    closeDelayMs = commitLogToBerkeleyDBTaskDelayMs
-   ))
+    .withCommitLogOptions(SingleNodeServerOptions.CommitLogOptions(
+      closeDelayMs = commitLogToBerkeleyDBTaskDelayMs
+    ))
 
   private lazy val clientBuilder = new ClientBuilder()
 
   private val rand = scala.util.Random
+
   private def getRandomStream = Utils.getRandomStream
 
   private lazy val (zkServer, zkClient) =
@@ -448,7 +448,7 @@ class SingleNodeServerProducerTransactionNotificationTest
         bundle.client.putProducerState(openedTransaction.copy(state = TransactionStates.Checkpointed))
       }
 
-      putCounter.await(3000, TimeUnit.MILLISECONDS) shouldBe true
+      putCounter.await(6, TimeUnit.SECONDS) shouldBe true
 
       val res = Await.result(
         bundle.client.scanTransactions(
@@ -461,7 +461,6 @@ class SingleNodeServerProducerTransactionNotificationTest
   }
 
 
-
   it should "return checkpointed transaction after client sent different transactions on different partitions." in {
     val bundle = Utils.startTransactionServerAndClient(zkClient, serverBuilder, clientBuilder)
 
@@ -469,7 +468,7 @@ class SingleNodeServerProducerTransactionNotificationTest
 
       val stream = getRandomStream
       val streamID = Await.result(bundle.client.putStream(stream), secondsWait.seconds)
-      streamID shouldNot be (-1)
+      streamID shouldNot be(-1)
 
       val firstTransaction1 = System.currentTimeMillis() + 10L
       val firstTransaction2 = System.currentTimeMillis() + 124L
@@ -504,8 +503,10 @@ class SingleNodeServerProducerTransactionNotificationTest
 
       bundle.client.putProducerState(ProducerTransaction(streamID, 1, firstTransaction1, TransactionStates.Checkpointed, 1, 120L))
       bundle.client.putProducerState(ProducerTransaction(streamID, 2, firstTransaction2, TransactionStates.Checkpointed, 1, 120L))
-      putCounter1.await(5000, TimeUnit.MILLISECONDS) shouldBe true
-      putCounter2.await(5000, TimeUnit.MILLISECONDS) shouldBe true
+
+      val timeout = 10
+      putCounter1.await(timeout, TimeUnit.SECONDS) shouldBe true
+      putCounter2.await(timeout, TimeUnit.SECONDS) shouldBe true
 
       val firstTransaction00 = System.currentTimeMillis()
       val rootTransaction00 = ProducerTransaction(streamID, 0, firstTransaction00, TransactionStates.Opened, 1, 120L)
