@@ -21,12 +21,12 @@ package util.multiNode
 
 import java.io.File
 
-import com.bwsw.tstreamstransactionserver.netty.client.api.TTSClient
+import com.bwsw.tstreamstransactionserver.netty.client.api.TTSInetClient
 import com.bwsw.tstreamstransactionserver.netty.server.multiNode.{CommonCheckpointGroupServerBuilder, TestCommonCheckpointGroupServer}
 import org.apache.commons.io.FileUtils
 
 class ZkServerTxnMultiNodeServerTxnClient(val transactionServer: TestCommonCheckpointGroupServer,
-                                          val client: TTSClient,
+                                          val client: TTSInetClient,
                                           val serverBuilder: CommonCheckpointGroupServerBuilder) {
   def operate(operation: TestCommonCheckpointGroupServer => Unit): Unit = {
     try {

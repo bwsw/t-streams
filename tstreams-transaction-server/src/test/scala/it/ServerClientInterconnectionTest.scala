@@ -500,6 +500,24 @@ class ServerClientInterconnectionTest
     }
   }
 
+  it should "disconnect from server when server is down" in {
+    val bundle = Utils.startTransactionServerAndClient(
+      zkClient, serverBuilder, clientBuilder
+    )
+
+    bundle.operate { server =>
+      val client = bundle.client
+
+      Thread.sleep(1000)
+      client.isConnected shouldBe true
+
+      server.shutdown()
+      Thread.sleep(1000)
+
+      client.isConnected shouldBe false
+    }
+  }
+
   "getTransaction" should "not get a producer transaction if there's no transaction" in {
     val bundle = Utils.startTransactionServerAndClient(
       zkClient, serverBuilder, clientBuilder
