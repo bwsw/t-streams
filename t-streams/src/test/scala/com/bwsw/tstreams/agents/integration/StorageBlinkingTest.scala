@@ -26,7 +26,7 @@ import com.bwsw.tstreams.agents.consumer.subscriber.Callback
 import com.bwsw.tstreams.agents.consumer.{ConsumerTransaction, TransactionOperator}
 import com.bwsw.tstreams.env.ConfigurationOptions
 import com.bwsw.tstreams.testutils.{TestStorageServer, TestUtils}
-import com.bwsw.tstreamstransactionserver.exception.Throwable.MasterLostException
+import com.bwsw.tstreamstransactionserver.exception.Throwable.ServerConnectionException
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 
 import scala.util.Try
@@ -83,7 +83,7 @@ class StorageBlinkingTest extends FlatSpec with Matchers with BeforeAndAfterAll 
           subscriberLatch.countDown()
 
         override def onFailure(exception: Throwable): Unit =
-          exception shouldBe a[MasterLostException]
+          exception shouldBe a[ServerConnectionException]
       }).start()
 
     producer.newTransaction().send("")
@@ -92,7 +92,7 @@ class StorageBlinkingTest extends FlatSpec with Matchers with BeforeAndAfterAll 
     Thread.sleep(pause)
     latchStopOnCheckpoint.countDown()
     Thread.sleep(pause)
-    a[MasterLostException] shouldBe thrownBy {
+    a[ServerConnectionException] shouldBe thrownBy {
       producer.checkpoint()
     }
     val transactionTTL = f.getProperty(ConfigurationOptions.Producer.Transaction.ttlMs)

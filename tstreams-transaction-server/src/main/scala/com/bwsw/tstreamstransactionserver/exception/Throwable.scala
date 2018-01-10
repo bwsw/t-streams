@@ -18,13 +18,10 @@
  */
 package com.bwsw.tstreamstransactionserver.exception
 
-import java.net.SocketTimeoutException
-
 import com.bwsw.tstreamstransactionserver.netty.SocketHostPortPair
 
 object Throwable {
   val TokenInvalidExceptionMessage: String = "Token isn't valid."
-  val serverConnectionExceptionMessage: String = "Can't connect to Server."
   val serverUnreachableExceptionMessage: String = "Server is unreachable."
   val zkGetMasterExceptionMessage: String = "Can't get master from ZooKeeper."
   val zkNoConnectionExceptionMessage: String = "Can't connect to ZooKeeper server(s): "
@@ -44,11 +41,10 @@ object Throwable {
   class TokenInvalidException(message: String = TokenInvalidExceptionMessage)
     extends IllegalArgumentException(message)
 
-  class ServerConnectionException
-    extends SocketTimeoutException(serverConnectionExceptionMessage)
+  class ServerConnectionException(message: String) extends IllegalStateException(message)
 
   class ServerUnreachableException(socket: String)
-    extends SocketTimeoutException(s"Server $socket is unreachable.")
+    extends ServerConnectionException(s"Server $socket is unreachable.")
 
   class RequestTimeoutException(reqId: Long, ttl: Long)
     extends Exception(s"Request $reqId exceeds $ttl ms.")
@@ -78,11 +74,11 @@ object Throwable {
     extends IllegalArgumentException(s"Master path: $path doesn't exist.")
 
   class MasterChangedException(val newMaster: SocketHostPortPair)
-    extends Exception(s"Master changed to $newMaster")
+    extends ServerConnectionException(s"Master changed to $newMaster")
 
-  class MasterLostException extends Exception("Lost connection to master.")
+  class MasterLostException extends ServerConnectionException("Lost connection to master.")
 
-  class ClientNotConnectedException extends IllegalStateException("Client doesn't connect to server.")
+  class ClientNotConnectedException extends ServerConnectionException("Client doesn't connect to server.")
 
   class StreamDoesNotExist(stream: String, isPartialMessage: Boolean = true) extends {
     private val message: String = if (isPartialMessage) s"Stream $stream doesn't exist in database!" else stream
