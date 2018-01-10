@@ -106,7 +106,7 @@ class ZookeeperTreeListTest
     (startNumber to maxNumbers)
       .foreach(number => treeListLong.createNode(number))
 
-    val id = scala.util.Random.nextInt(maxNumbers + 1)
+    val id = scala.util.Random.nextInt(maxNumbers) + 1
     treeListLong.getPreviousNode(id) shouldBe Some(id - 1)
   }
 
