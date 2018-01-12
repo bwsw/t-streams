@@ -19,43 +19,57 @@
 
 package com.bwsw.tstreams.agents.integration
 
-import java.util.concurrent.CountDownLatch
+import java.util.concurrent.{CountDownLatch, TimeUnit}
 
+import com.bwsw.tstreams.agents.consumer.Consumer
 import com.bwsw.tstreams.agents.consumer.Offset.Oldest
-import com.bwsw.tstreams.agents.producer.NewProducerTransactionPolicy
-import com.bwsw.tstreams.testutils._
-import com.bwsw.tstreamstransactionserver.rpc.TransactionStates
-import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
+import com.bwsw.tstreams.agents.producer.{NewProducerTransactionPolicy, Producer}
+import com.bwsw.tstreams.testutils.{TestStorageServer, TestUtils}
+import com.bwsw.tstreamstransactionserver.netty.server.singleNode.TestSingleNodeServer
+import com.bwsw.tstreamstransactionserver.rpc.TransactionStates.{Checkpointed, Invalid}
+import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, FlatSpec, Matchers}
 
+import scala.util.Random
 
-class CheckpointGroupCheckpointTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
+class CheckpointGroupCheckpointTest
+  extends FlatSpec
+    with Matchers
+    with BeforeAndAfterAll
+    with BeforeAndAfterEach
+    with TestUtils {
 
-  lazy val srv = TestStorageServer.getNewClean()
+  private val partitionsCount = 10
+  private val partitions: Set[Int] = (0 until partitionsCount).toSet
+  private val waitingTimeout = 5000
 
-  lazy val producer = f.getProducer(
-    name = "test_producer",
-    partitions = Set(0, 1, 2))
+  private var server: TestSingleNodeServer = _
 
-  lazy val consumer = f.getConsumer(
-    name = "test_consumer",
-    partitions = Set(0, 1, 2),
+  private def createProducer(): Producer = f.getProducer(
+    name = s"test_producer-${Random.nextInt}",
+    partitions = partitions)
+
+  private def createConsumer(): Consumer = f.getConsumer(
+    name = s"test_consumer-$id",
+    partitions = partitions,
     offset = Oldest,
     useLastOffset = true)
 
-  lazy val consumer2 = f.getConsumer(
-    name = "test_consumer",
-    partitions = Set(0, 1, 2),
-    offset = Oldest,
-    useLastOffset = true)
+  override protected def beforeEach(): Unit = {
+    server = TestStorageServer.getNewClean()
+    createNewStream(partitions = partitionsCount)
+  }
 
-  override def beforeAll(): Unit = {
-    srv
-    createNewStream()
-    consumer.start
+  override protected def afterEach(): Unit = {
+    TestStorageServer.dispose(server)
   }
 
 
   "Group commit" should "checkpoint all AgentsGroup state" in {
+    val producer = createProducer()
+    val consumer = createConsumer()
+    val consumer2 = createConsumer()
+    consumer.start()
+
     val group = f.getCheckpointGroup()
     group.add(producer)
     group.add(consumer)
@@ -65,8 +79,8 @@ class CheckpointGroupCheckpointTest extends FlatSpec with Matchers with BeforeAn
 
     val transaction1 = producer.newTransaction(NewProducerTransactionPolicy.ErrorIfOpened)
 
-    srv.notifyProducerTransactionCompleted(t =>
-      transaction1.getTransactionID == t.transactionID && t.state == TransactionStates.Checkpointed, l1.countDown())
+    server.notifyProducerTransactionCompleted(t =>
+      transaction1.getTransactionID == t.transactionID && t.state == Checkpointed, l1.countDown())
 
     logger.info("Transaction 1 is " + transaction1.getTransactionID.toString)
     transaction1.send("info1".getBytes())
@@ -80,8 +94,8 @@ class CheckpointGroupCheckpointTest extends FlatSpec with Matchers with BeforeAn
     //open transaction without close
     val transaction2 = producer.newTransaction(NewProducerTransactionPolicy.ErrorIfOpened, 1)
 
-    srv.notifyProducerTransactionCompleted(t =>
-      transaction2.getTransactionID == t.transactionID && t.state == TransactionStates.Checkpointed, l2.countDown())
+    server.notifyProducerTransactionCompleted(t =>
+      transaction2.getTransactionID == t.transactionID && t.state == Checkpointed, l2.countDown())
 
     logger.info("Transaction 2 is " + transaction2.getTransactionID.toString)
     transaction2.send("info2".getBytes())
@@ -95,10 +109,118 @@ class CheckpointGroupCheckpointTest extends FlatSpec with Matchers with BeforeAn
     consumer2.getTransaction(1).get.getAll.head shouldBe "info2".getBytes()
   }
 
-  override def afterAll(): Unit = {
-    producer.stop()
-    Seq(consumer, consumer2).foreach(c => c.stop())
-    TestStorageServer.dispose(srv)
-    onAfterAll()
+
+  it should "checkpoint transactions properly" in {
+    val partition = partitions.head
+
+    val producer = createProducer()
+    val producer2 = createProducer()
+    val consumer = createConsumer()
+    consumer.start()
+
+    val group = f.getCheckpointGroup()
+    group.add(producer)
+    group.add(producer2)
+
+    val nonEmptyTransaction1 = producer.newTransaction(NewProducerTransactionPolicy.ErrorIfOpened, partition)
+    nonEmptyTransaction1.send("data")
+    group.checkpoint()
+
+    val emptyTransaction1 = producer.newTransaction(NewProducerTransactionPolicy.ErrorIfOpened, partition)
+    val nonEmptyTransaction2 = producer2.newTransaction(NewProducerTransactionPolicy.ErrorIfOpened, partition)
+    nonEmptyTransaction2.send("data")
+    group.checkpoint()
+
+    val nonEmptyTransaction3 = producer.newTransaction(NewProducerTransactionPolicy.ErrorIfOpened, partition)
+    nonEmptyTransaction3.send("data")
+    val emptyTransaction2 = producer2.newTransaction(NewProducerTransactionPolicy.ErrorIfOpened, partition)
+    group.checkpoint()
+
+    val nonEmptyTransaction4 = producer2.newTransaction(NewProducerTransactionPolicy.ErrorIfOpened, partition)
+    val latch = new CountDownLatch(1)
+    server.notifyProducerTransactionCompleted(
+      t => t.transactionID == nonEmptyTransaction4.getTransactionID && t.state == Checkpointed,
+      latch.countDown())
+
+    nonEmptyTransaction4.send("data")
+    group.checkpoint()
+
+    latch.await(waitingTimeout, TimeUnit.MILLISECONDS)
+
+    checkTransactions(
+      consumer,
+      partition,
+      Table(
+        ("transaction", "state"),
+        (nonEmptyTransaction1, Checkpointed),
+        (nonEmptyTransaction2, Checkpointed),
+        (nonEmptyTransaction3, Checkpointed),
+        (nonEmptyTransaction4, Checkpointed),
+        (emptyTransaction1, Invalid),
+        (emptyTransaction2, Invalid)))
+
+    group.stop()
+    producer.close()
+    producer2.close()
+    consumer.close()
   }
+
+
+  it should "cancel transactions properly" in {
+    val partition = partitions.head
+
+    val producer = createProducer()
+    val producer2 = createProducer()
+    val consumer = createConsumer()
+    consumer.start()
+
+    val group = f.getCheckpointGroup()
+    group.add(producer)
+    group.add(producer2)
+
+    val nonEmptyTransaction1 = producer.newTransaction(NewProducerTransactionPolicy.ErrorIfOpened, partition)
+    nonEmptyTransaction1.send("data")
+    group.cancel()
+
+    val emptyTransaction1 = producer.newTransaction(NewProducerTransactionPolicy.ErrorIfOpened, partition)
+    val nonEmptyTransaction2 = producer2.newTransaction(NewProducerTransactionPolicy.ErrorIfOpened, partition)
+    nonEmptyTransaction2.send("data")
+    group.cancel()
+
+    val nonEmptyTransaction3 = producer.newTransaction(NewProducerTransactionPolicy.ErrorIfOpened, partition)
+    nonEmptyTransaction3.send("data")
+    val emptyTransaction2 = producer2.newTransaction(NewProducerTransactionPolicy.ErrorIfOpened, partition)
+    group.cancel()
+
+    val nonEmptyTransaction4 = producer2.newTransaction(NewProducerTransactionPolicy.ErrorIfOpened, partition)
+    val latch = new CountDownLatch(1)
+    server.notifyProducerTransactionCompleted(
+      t => t.transactionID == nonEmptyTransaction4.getTransactionID && t.state == Invalid,
+      latch.countDown())
+
+    nonEmptyTransaction4.send("data")
+    group.cancel()
+
+    latch.await(waitingTimeout, TimeUnit.MILLISECONDS)
+
+    checkTransactions(
+      consumer,
+      partition,
+      Table(
+        ("transaction", "state"),
+        (nonEmptyTransaction1, Invalid),
+        (nonEmptyTransaction2, Invalid),
+        (nonEmptyTransaction3, Invalid),
+        (nonEmptyTransaction4, Invalid),
+        (emptyTransaction1, Invalid),
+        (emptyTransaction2, Invalid)))
+
+    group.stop()
+    producer.close()
+    producer2.close()
+    consumer.close()
+  }
+
+
+  override protected def afterAll(): Unit = onAfterAll()
 }

@@ -22,6 +22,7 @@ package com.bwsw.tstreams.agents.producer
 import java.util.concurrent.atomic.AtomicBoolean
 
 import com.bwsw.tstreams.agents.group.ProducerTransactionState
+import com.bwsw.tstreamstransactionserver.rpc
 import com.bwsw.tstreamstransactionserver.rpc.{TransactionState, TransactionStates}
 import org.slf4j.LoggerFactory
 
@@ -180,8 +181,13 @@ class ProducerTransactionImpl(partition: Int,
         ProducerTransactionImpl.logger.debug("[START PRE CHECKPOINT PARTITION_{}] ts={}", partition, transactionID.toString)
       }
 
-      val transactionRecord = new RPCProducerTransaction(producer.stream.id, partition, transactionID,
-        TransactionStates.Checkpointed, getDataItemsCount, producer.stream.ttl)
+      val transactionRecord = rpc.ProducerTransaction(
+        stream = producer.stream.id,
+        partition = partition,
+        transactionID = transactionID,
+        state = TransactionStates.Checkpointed,
+        quantity = getDataItemsCount,
+        ttl = producer.stream.ttl)
 
       val availTime = producer.checkUpdateFailure()
       producer.stream.client.putTransactionWithDataSync(transactionRecord, data.items, data.lastOffset, availTime)
@@ -225,16 +231,23 @@ class ProducerTransactionImpl(partition: Int,
     *
     * @return
     */
-  private[tstreams] def getCancelInfoAndClose: Option[RPCProducerTransaction] = this.synchronized {
+  private[tstreams] def getCancelInfoAndClose(): Option[rpc.ProducerTransaction] = this.synchronized {
     if (ProducerTransactionImpl.logger.isDebugEnabled) {
       ProducerTransactionImpl.logger.debug("Cancel info request for Transaction {}, partition: {}", transactionID, partition)
     }
-    val res = if (isClosed) {
-      None
-    } else {
-      Some(new RPCProducerTransaction(producer.stream.id, partition, transactionID, TransactionStates.Cancel, 0, -1L))
-    }
+    val res =
+      if (isClosed) None
+      else Some(
+        rpc.ProducerTransaction(
+          stream = producer.stream.id,
+          partition = partition,
+          transactionID = transactionID,
+          state = TransactionStates.Cancel,
+          quantity = 0,
+          ttl = -1L))
+
     isTransactionClosed.set(true)
+
     res
   }
 
@@ -242,15 +255,20 @@ class ProducerTransactionImpl(partition: Int,
     *
     * @return
     */
-  private[tstreams] def getUpdateInfo: Option[RPCProducerTransaction] = {
+  private[tstreams] def getUpdateInfo(): Option[rpc.ProducerTransaction] = {
     if (ProducerTransactionImpl.logger.isDebugEnabled) {
       ProducerTransactionImpl.logger.debug("Update info request for Transaction {}, partition: {}", transactionID, partition)
     }
-    if (isClosed) {
+    if (isClosed)
       None
-    } else {
-      Some(new RPCProducerTransaction(producer.stream.id, partition, transactionID, TransactionStates.Updated, -1, producer.producerOptions.transactionTtlMs))
-    }
+    else
+      Some(rpc.ProducerTransaction(
+        stream = producer.stream.id,
+        partition = partition,
+        transactionID = transactionID,
+        state = TransactionStates.Updated,
+        quantity = -1,
+        ttl = producer.producerOptions.transactionTtlMs))
   }
 
   private[tstreams] def notifyUpdate() = {
@@ -269,26 +287,31 @@ class ProducerTransactionImpl(partition: Int,
     }
   }
 
-  def getStateInfo(status: TransactionStates): ProducerTransactionState = {
+  def getStateInfo(checkpoint: Boolean): ProducerTransactionState = {
+    val count = getDataItemsCount
+    val status =
+      if (checkpoint && count > 0) TransactionStates.Checkpointed
+      else TransactionStates.Cancel
 
-    val event = TransactionState(
-      transactionID = getTransactionID,
-      authKey = producer.stream.client.authenticationKey,
-      ttlMs = -1,
-      status = status,
-      partition = partition,
-      masterID = 0,
-      orderID = -1,
-      count = getDataItemsCount)
-
-    ProducerTransactionState(transactionRef = this,
+    ProducerTransactionState(
+      transactionRef = this,
       agent = producer,
-      event = event,
-      streamID = producer.stream.id,
-      partition = partition,
-      transaction = getTransactionID,
-      totalCnt = getDataItemsCount,
-      ttl = producer.stream.ttl)
+      event = TransactionState(
+        transactionID = getTransactionID,
+        authKey = producer.stream.client.authenticationKey,
+        ttlMs = -1,
+        status = status,
+        partition = partition,
+        masterID = 0,
+        orderID = -1,
+        count = count),
+      rpcTransaction = rpc.ProducerTransaction(
+        stream = producer.stream.id,
+        partition = partition,
+        transactionID = getTransactionID,
+        state = status,
+        quantity = count,
+        ttl = producer.stream.ttl))
   }
 
 }

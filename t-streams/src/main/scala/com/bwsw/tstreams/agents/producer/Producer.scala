@@ -28,17 +28,19 @@ import com.bwsw.tstreams.common._
 import com.bwsw.tstreams.coordination.client.UdpEventsBroadcastClient
 import com.bwsw.tstreams.storage.StorageClient
 import com.bwsw.tstreams.streams.Stream
-import com.bwsw.tstreamstransactionserver.rpc.{TransactionState, TransactionStates}
+import com.bwsw.tstreamstransactionserver.rpc.TransactionState
 import org.apache.zookeeper.KeeperException
-import org.slf4j.LoggerFactory
+import org.slf4j.{Logger, LoggerFactory}
 
+import scala.annotation.tailrec
+import scala.collection.mutable
 import scala.concurrent.duration._
-import scala.util.Random
+import scala.util.{Failure, Random, Try}
 
 
 object Producer {
-  val logger = LoggerFactory.getLogger(this.getClass)
-  var SHUTDOWN_WAIT_MAX_SECONDS = CommonConstants.SHUTDOWN_WAIT_MAX_SECONDS
+  val logger: Logger = LoggerFactory.getLogger(classOf[Producer])
+  var SHUTDOWN_WAIT_MAX_SECONDS: Int = CommonConstants.SHUTDOWN_WAIT_MAX_SECONDS
 }
 
 /**
@@ -53,34 +55,37 @@ class Producer(var name: String,
                val producerOptions: ProducerOptions)
   extends GroupParticipant with SendingAgent with AutoCloseable {
 
-  val isStopped = new AtomicBoolean(false)
-  val isMissedUpdate = new AtomicBoolean(false)
-  val fullPrefix = stream.path
+  import Producer.logger
+
+  private val isStopped = new AtomicBoolean(false)
+  private val isMissedUpdate = new AtomicBoolean(false)
+  private val fullPrefix = stream.path
 
   /**
     * Queue to figure out moment when transaction is going to close
     */
   private val shutdownKeepAliveThread = new ThreadSignalSleepVar[Boolean](1)
   private lazy val transactionKeepAliveThread = getTransactionKeepAliveThread
-  private val log = Producer.logger
 
   private[tstreams] val openTransactions = new OpenTransactionsKeeper()
-  private[tstreams] val notifyService = new FirstFailLockableTaskExecutor(s"NotifyService-$name", producerOptions.notifyJobsThreadPoolSize)
+  private[tstreams] val notifyService =
+    new FirstFailLockableTaskExecutor(s"NotifyService-$name", producerOptions.notifyJobsThreadPoolSize)
   private[tstreams] val curatorClient = stream.client.curatorClient
-  private[tstreams] val subscriberNotifier = new UdpEventsBroadcastClient(curatorClient, prefix = fullPrefix, partitions = producerOptions.writePolicy.getUsedPartitions)
+  private[tstreams] val subscriberNotifier = new UdpEventsBroadcastClient(
+    curatorClient, prefix = fullPrefix, partitions = producerOptions.writePolicy.getUsedPartitions)
   private[tstreams] var lastUpdateEndTime = System.currentTimeMillis()
   private[tstreams] val getUniqueAgentID = Random.nextLong()
   private[tstreams] val transactionGenerator = new TransactionGenerator(stream.client)
 
 
-  log.info(s"Start new Basic producer with id: ${getUniqueAgentID}, name : $name, streamName : ${stream.name}, streamPartitions : ${stream.partitionsCount}")
+  logger.info(
+    s"Start new Basic producer with id: $getUniqueAgentID, name : $name, " +
+      "streamName : ${stream.name}, streamPartitions : ${stream.partitionsCount}")
 
-  try {
-    curatorClient.create().creatingParentContainersIfNeeded().forPath(s"$fullPrefix/subscribers")
-  } catch {
-    case e: KeeperException =>
-      if (e.code() != KeeperException.Code.NODEEXISTS)
-        throw e
+  Try(curatorClient.create().creatingParentContainersIfNeeded().forPath(s"$fullPrefix/subscribers")) match {
+    case Failure(e: KeeperException) if e.code() == KeeperException.Code.NODEEXISTS =>
+    case Failure(e) => throw e
+    case _ =>
   }
 
   subscriberNotifier.init()
@@ -97,12 +102,14 @@ class Producer(var name: String,
     * @param msg
     * @return
     */
-  def publish(msg: TransactionState) = subscriberNotifier.publish(msg)
+  def publish(msg: TransactionState): Unit = subscriberNotifier.publish(msg)
 
   private[tstreams] def checkUpdateFailure() = {
     val currentTime = System.currentTimeMillis()
-    lazy val message = s"Producer $name[${getUniqueAgentID}] missed transaction ttl interval. " +
-      s"Last was $lastUpdateEndTime, now is $currentTime. It's critical situation, it is marked as non functional, only stop is allowed."
+    lazy val message =
+      s"Producer $name[$getUniqueAgentID] missed transaction ttl interval. " +
+        s"Last was $lastUpdateEndTime, now is $currentTime. It's critical situation, " +
+        "it is marked as non functional, only stop is allowed."
 
     if (isMissedUpdate.get())
       throw new MissedUpdateException(message)
@@ -113,68 +120,80 @@ class Producer(var name: String,
       throw new MissedUpdateException(message)
     }
     val avail = producerOptions.transactionTtlMs - (currentTime - lastUpdateEndTime) - 1
+
     avail.milliseconds
   }
 
   private[tstreams] def checkStopped(setState: Boolean = false) = {
     if (isStopped.getAndSet(setState))
-      throw new IllegalStateException(s"Producer ${this.name}[${getUniqueAgentID}] is already stopped. Unable to get new transaction.")
+      throw new IllegalStateException(
+        s"Producer $name[$getUniqueAgentID] is already stopped. Unable to get new transaction.")
   }
 
-  /**
-    *
-    */
   private def getTransactionKeepAliveThread: Thread = {
     val latch = new CountDownLatch(1)
     val transactionKeepAliveThread = new Thread(() => {
-      Thread.currentThread().setName(s"Producer-$name[${getUniqueAgentID}]-KeepAlive")
+      Thread.currentThread().setName(s"Producer-$name[$getUniqueAgentID]-KeepAlive")
       latch.countDown()
-      log.info(s"Producer $name[${getUniqueAgentID}] - object is started, launched open transaction update thread")
+      logger.info(s"Producer $name[$getUniqueAgentID] - object is started, launched open transaction update thread")
       var isExit = false
-      while (!isExit) {
-        isExit = shutdownKeepAliveThread.wait(producerOptions.transactionKeepAliveMs)
-        if (isExit) {
-          log.info(s"Producer $name[${getUniqueAgentID}] - object shutdown is requested. Exit KeepAliveThread.")
+
+      @tailrec
+      def loop(): Unit = {
+        if (isExit || shutdownKeepAliveThread.wait(producerOptions.transactionKeepAliveMs)) {
+          logger.info(s"Producer $name[$getUniqueAgentID] - object shutdown is requested. Exit KeepAliveThread.")
         } else {
           // do update
-          if (log.isDebugEnabled())
-            log.debug(s"Producer $name[${getUniqueAgentID}] - update is started for long lasting transactions")
+          if (logger.isDebugEnabled())
+            logger.debug(s"Producer $name[$getUniqueAgentID] - update is started for long lasting transactions")
 
-          val transactionStates = openTransactions.forallTransactionsDo((part: Int, transaction: ProducerTransaction) => transaction.getUpdateInfo)
+          val transactionStates = openTransactions.forallTransactionsDo((_, transaction) => transaction.getUpdateInfo())
           stream.client.putTransactions(transactionStates.flatten.toSeq, Seq())
 
-          if (log.isDebugEnabled())
-            log.debug(s"Producer $name[${getUniqueAgentID}] - update is completed for long lasting transactions")
+          if (logger.isDebugEnabled())
+            logger.debug(s"Producer $name[$getUniqueAgentID] - update is completed for long lasting transactions")
 
           // check if update is missed
           val currentUpdateEndTime = System.currentTimeMillis()
           if (currentUpdateEndTime - lastUpdateEndTime > producerOptions.transactionTtlMs) {
             isMissedUpdate.set(true)
             isExit = true
-            if (log.isDebugEnabled())
-              log.debug(s"Producer $name[${getUniqueAgentID}] missed transaction ttl interval. " +
+            if (logger.isDebugEnabled())
+              logger.debug(s"Producer $name[$getUniqueAgentID] missed transaction ttl interval. " +
                 s"Last was $lastUpdateEndTime, now is $currentUpdateEndTime. " +
                 "It's critical situation, it is marked as non functional, only stop is allowed.")
           }
-          openTransactions.forallTransactionsDo((part: Int, transaction: ProducerTransaction) => transaction.notifyUpdate())
+          openTransactions.forallTransactionsDo((_, transaction) => transaction.notifyUpdate())
           lastUpdateEndTime = currentUpdateEndTime
+
+          loop()
         }
       }
 
+      loop()
     })
+
     transactionKeepAliveThread.start()
     latch.await()
+
     transactionKeepAliveThread
   }
 
-  def generateNewTransaction(partition: Int, isInstant: Boolean = false, isReliable: Boolean = true, data: Seq[Array[Byte]] = Seq()): Long = {
+  def generateNewTransaction(partition: Int,
+                             isInstant: Boolean = false,
+                             isReliable: Boolean = true,
+                             data: Seq[Array[Byte]] = Seq()): Long = {
     (isInstant, isReliable) match {
-      case (true, true) => getStorageClient().putInstantTransactionSync(stream.id, partition, data)
-      case (true, false) => {
+      case (true, true) =>
+        getStorageClient().putInstantTransactionSync(stream.id, partition, data)
+
+      case (true, false) =>
         getStorageClient().putInstantTransactionUnreliable(stream.id, partition, data)
+
         0
-      }
-      case (false, _) => getStorageClient().openTransactionSync(stream.id, partition, producerOptions.transactionTtlMs)
+
+      case (false, _) =>
+        getStorageClient().openTransactionSync(stream.id, partition, producerOptions.transactionTtlMs)
     }
   }
 
@@ -197,7 +216,7 @@ class Producer(var name: String,
     checkStopped()
     checkUpdateFailure()
     if (!producerOptions.writePolicy.getUsedPartitions.contains(partition))
-      throw new IllegalArgumentException(s"Producer $name[${getUniqueAgentID}] - invalid partition $partition")
+      throw new IllegalArgumentException(s"Producer $name[$getUniqueAgentID] - invalid partition $partition")
 
     generateNewTransaction(partition = partition, isInstant = true, isReliable = isReliable, data = data)
   }
@@ -223,7 +242,8 @@ class Producer(var name: String,
     * @param partition if -1 specified (default) then the method uses writePolicy (round robin)
     * @return new transaction object
     */
-  def newTransaction(policy: ProducerPolicy = NewProducerTransactionPolicy.EnqueueIfOpened, partition: Int = -1): ProducerTransactionImpl = {
+  def newTransaction(policy: ProducerPolicy = NewProducerTransactionPolicy.EnqueueIfOpened,
+                     partition: Int = -1): ProducerTransactionImpl = {
     checkStopped()
     checkUpdateFailure()
 
@@ -234,31 +254,34 @@ class Producer(var name: String,
         partition
     }
 
-    if (log.isDebugEnabled) log.debug(s"Evaluate a partition for new transaction [PARTITION_$evaluatedPartition]")
+    if (logger.isDebugEnabled) logger.debug(s"Evaluate a partition for new transaction [PARTITION_$evaluatedPartition]")
 
     if (!producerOptions.writePolicy.getUsedPartitions.contains(evaluatedPartition))
-      throw new IllegalArgumentException(s"Producer $name[${getUniqueAgentID}] - invalid partition $evaluatedPartition")
+      throw new IllegalArgumentException(s"Producer $name[$getUniqueAgentID] - invalid partition $evaluatedPartition")
 
-    if (log.isDebugEnabled)
-      log.debug(s"Producer $name[${getUniqueAgentID}] [PARTITION_$evaluatedPartition] Handle the previous opened transaction if it exists")
+    if (logger.isDebugEnabled)
+      logger.debug(
+        s"Producer $name[$getUniqueAgentID] [PARTITION_$evaluatedPartition] " +
+          "Handle the previous opened transaction if it exists")
 
     val previousTransactionAction = openTransactions.handlePreviousOpenTransaction(evaluatedPartition, policy)
-    if (previousTransactionAction != null) {
 
-      if (log.isDebugEnabled)
-        log.debug(s"Producer $name[${getUniqueAgentID}] [PARTITION_$evaluatedPartition] The previous opened transaction exists so do an action")
+    if (logger.isDebugEnabled)
+      logger.debug(
+        s"Producer $name[$getUniqueAgentID] [PARTITION_$evaluatedPartition] " +
+          "The previous opened transaction exists so do an action")
 
-      previousTransactionAction()
-    }
+    previousTransactionAction()
 
-    if (log.isDebugEnabled)
-      log.debug(s"Producer $name[${getUniqueAgentID}] [PARTITION_$evaluatedPartition] Start generating a new transaction id")
+    if (logger.isDebugEnabled)
+      logger.debug(
+        s"Producer $name[$getUniqueAgentID] [PARTITION_$evaluatedPartition] Start generating a new transaction id")
 
     val transactionID = generateNewTransaction(evaluatedPartition)
 
-
-    if (log.isDebugEnabled)
-      log.debug(s"Producer $name[${getUniqueAgentID}] [NEW_TRANSACTION PARTITION_$evaluatedPartition] ID=$transactionID")
+    if (logger.isDebugEnabled)
+      logger.debug(
+        s"Producer $name[$getUniqueAgentID] [NEW_TRANSACTION PARTITION_$evaluatedPartition] ID=$transactionID")
 
     val transaction = new ProducerTransactionImpl(evaluatedPartition, transactionID, this)
     openTransactions.put(evaluatedPartition, transaction)
@@ -273,25 +296,26 @@ class Producer(var name: String,
     * @param partition Partition from which transaction will be retrieved
     * @return Transaction reference if it exist and is opened
     */
-  private[tstreams] def getOpenedTransactionsForPartition(partition: Int): Option[scala.collection.mutable.Set[ProducerTransaction]] = {
-    if (!(partition >= 0 && partition < stream.partitionsCount))
-      throw new IllegalArgumentException(s"Producer $name[${getUniqueAgentID}] - invalid partition")
+  private[tstreams] def getOpenedTransactionsForPartition(partition: Int): Option[mutable.Set[ProducerTransaction]] = {
+    if (partition < 0 || partition >= stream.partitionsCount)
+      throw new IllegalArgumentException(s"Producer $name[$getUniqueAgentID] - invalid partition")
+
     openTransactions.getTransactionSetOption(partition).map(v => v._2.filter(!_.isClosed))
   }
 
   private def doCheckpoint(checkpointRequests: Seq[State]) = {
     val producerRequests = checkpointRequests.map {
-      case ProducerTransactionState(_, _, _, streamName, partition, transaction, totalCnt, ttl) =>
-        new RPCProducerTransaction(streamName, partition, transaction, TransactionStates.Checkpointed, totalCnt, ttl)
+      case ProducerTransactionState(_, _, _, rpcTransaction) => rpcTransaction
       case _ => throw new IllegalStateException("Only ProducerCheckpointInfo allowed here.")
     }
     val availTime = checkUpdateFailure()
+
     stream.client.putTransactions(producerRequests, Seq(), availTime)
   }
 
   private def notifyCheckpoint(checkpointInfo: Seq[State]) = {
     checkpointInfo foreach {
-      case ProducerTransactionState(_, agent, checkpointEvent, _, _, _, _, _) =>
+      case ProducerTransactionState(_, agent, checkpointEvent, _) =>
         notifyService.submit(
           "<CheckpointEvent>",
           () => agent.publish(checkpointEvent),
@@ -307,6 +331,7 @@ class Producer(var name: String,
     val checkpointRequests = getStateAndClear()
     doCheckpoint(checkpointRequests)
     notifyCheckpoint(checkpointRequests)
+
     this
   }
 
@@ -317,13 +342,15 @@ class Producer(var name: String,
     val checkpointRequests = getPartitionCheckpointInfoAndClear(partition)
     doCheckpoint(checkpointRequests)
     notifyCheckpoint(checkpointRequests)
+
     this
   }
 
   private def cancelPendingTransactions() = this.synchronized {
-    val transactionStates = openTransactions.forallTransactionsDo((part: Int, transaction: ProducerTransaction) => transaction.getCancelInfoAndClose)
+    val transactionStates =
+      openTransactions.forallTransactionsDo((_, transaction) => transaction.getCancelInfoAndClose())
     stream.client.putTransactions(transactionStates.flatten.toSeq, Seq())
-    openTransactions.forallTransactionsDo((k: Int, v: ProducerTransaction) => v.notifyCancelEvent())
+    openTransactions.forallTransactionsDo((_, v) => v.notifyCancelEvent())
     openTransactions.clear()
   }
 
@@ -334,13 +361,18 @@ class Producer(var name: String,
     checkStopped()
     checkUpdateFailure()
     cancelPendingTransactions()
+
     this
   }
 
-  def cancel(partition: Int) = {
-    val transactionStatesOpt = openTransactions.getTransactionSetOption(partition).map(partData => partData._2.map(txn => txn.getCancelInfoAndClose))
-    transactionStatesOpt.map(transactionStates => stream.client.putTransactions(transactionStates.flatten.toSeq, Seq()))
+  def cancel(partition: Int): Option[(Long, mutable.Set[ProducerTransaction])] = {
+    openTransactions.getTransactionSetOption(partition).foreach {
+      case (_, transactions) =>
+        val transactionStates = transactions.flatMap(_.getCancelInfoAndClose()).toSeq
+        stream.client.putTransactions(transactionStates, Seq())
+    }
     openTransactions.forPartitionTransactionsDo(partition, _.notifyCancelEvent())
+
     openTransactions.clear(partition)
   }
 
@@ -350,30 +382,26 @@ class Producer(var name: String,
   override private[tstreams] def finalizeDataSend(): Unit = this.synchronized {
     checkStopped()
     checkUpdateFailure()
-    openTransactions.forallTransactionsDo((k: Int, t: ProducerTransaction) => t.finalizeDataSend())
+    openTransactions.forallTransactionsDo((_, t) => t.finalizeDataSend())
   }
 
   private def finalizePartitionDataSend(partition: Int): Unit = this.synchronized {
     checkStopped()
     checkUpdateFailure()
-    openTransactions.forPartitionTransactionsDo(partition, (t: ProducerTransaction) => t.finalizeDataSend())
+    openTransactions.forPartitionTransactionsDo(partition, _.finalizeDataSend())
   }
 
   /**
     * Info to commit
     */
-  override private[tstreams] def getStateAndClear(): Array[State] = {
-    getInfoAndClear(TransactionStates.Checkpointed)
-  }
+  override private[tstreams] def getStateAndClear(): Array[State] = getInfoAndClear(true)
 
-  private[tstreams] def getCancelInfoAndClear(): Array[State] = {
-    getInfoAndClear(TransactionStates.Cancel)
-  }
+  private[tstreams] def getCancelInfoAndClear(): Array[State] = getInfoAndClear(false)
 
-  private def getInfoAndClear(status: TransactionStates): Array[State] = this.synchronized {
+  private def getInfoAndClear(checkpoint: Boolean): Array[State] = this.synchronized {
     checkStopped()
     checkUpdateFailure()
-    val stateInfo = openTransactions.forallTransactionsDo((k: Int, v: ProducerTransaction) => v.getStateInfo(status))
+    val stateInfo = openTransactions.forallTransactionsDo((_, v) => v.getStateInfo(checkpoint))
     openTransactions.clear()
 
     stateInfo.toArray
@@ -382,17 +410,19 @@ class Producer(var name: String,
   private def getPartitionCheckpointInfoAndClear(partition: Int): Array[State] = this.synchronized {
     checkStopped()
     checkUpdateFailure()
-    val res = openTransactions.getTransactionSetOption(partition).map(partData => partData._2.map(txn => txn.getStateInfo(TransactionStates.Checkpointed)))
+    val res = openTransactions.getTransactionSetOption(partition)
+      .map(partData => partData._2.map(txn => txn.getStateInfo(true)))
     openTransactions.clear(partition)
-    res.fold(Seq[State]())(resInt => resInt.toSeq).toArray
+
+    res.map(_.toArray[State]).getOrElse(Array.empty)
   }
 
   /**
     * Stop this agent
     */
-  def stop() = this.synchronized {
+  def stop(): Unit = this.synchronized {
     try {
-      log.info(s"Producer $name[${getUniqueAgentID}] is shutting down.")
+      logger.info(s"Producer $name[$getUniqueAgentID] is shutting down.")
       cancel()
       checkStopped(true)
 
