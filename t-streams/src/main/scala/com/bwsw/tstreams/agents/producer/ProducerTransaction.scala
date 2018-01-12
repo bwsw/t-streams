@@ -20,7 +20,7 @@
 package com.bwsw.tstreams.agents.producer
 
 import com.bwsw.tstreams.agents.group.ProducerTransactionState
-import com.bwsw.tstreamstransactionserver.rpc.TransactionStates
+import com.bwsw.tstreamstransactionserver.rpc
 
 /**
   * Created by Ivan Kudryavtsev on 29.08.16.
@@ -35,11 +35,11 @@ trait ProducerTransaction {
 
   def checkpoint(): Unit
 
-  def getStateInfo(status: TransactionStates): ProducerTransactionState
+  def getStateInfo(checkpoint: Boolean): ProducerTransactionState
 
-  private[tstreams] def getUpdateInfo: Option[RPCProducerTransaction]
+  private[tstreams] def getUpdateInfo(): Option[rpc.ProducerTransaction]
 
-  private[tstreams] def getCancelInfoAndClose: Option[RPCProducerTransaction]
+  private[tstreams] def getCancelInfoAndClose(): Option[rpc.ProducerTransaction]
 
   private[tstreams] def notifyCancelEvent()
 

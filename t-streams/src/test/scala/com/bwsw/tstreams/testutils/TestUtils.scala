@@ -23,18 +23,23 @@ import java.io.File
 import java.lang.management.ManagementFactory
 import java.util.concurrent.atomic.AtomicInteger
 
+import com.bwsw.tstreams.agents.consumer.Consumer
+import com.bwsw.tstreams.agents.producer.ProducerTransaction
 import com.bwsw.tstreams.env.{ConfigurationOptions, TStreamsFactory}
+import com.bwsw.tstreamstransactionserver.rpc.TransactionStates
 import com.google.common.io.Files
-import org.apache.curator.framework.CuratorFrameworkFactory
+import org.apache.curator.framework.{CuratorFramework, CuratorFrameworkFactory}
 import org.apache.curator.retry.ExponentialBackoffRetry
-import org.slf4j.LoggerFactory
+import org.scalatest.prop.{TableDrivenPropertyChecks, TableFor2}
+import org.scalatest.{Assertion, Matchers}
+import org.slf4j.{Logger, LoggerFactory}
 
 import scala.collection.mutable.ListBuffer
 
 /**
   * Test help utils
   */
-trait TestUtils {
+trait TestUtils extends Matchers with TableDrivenPropertyChecks {
   protected val batchSizeTestVal = 5
 
   /**
@@ -42,14 +47,14 @@ trait TestUtils {
     *
     * @return Alpha string
     */
-  val id = TestUtils.moveId()
-  val randomKeyspace = TestUtils.getKeyspace(id)
+  val id: Int = TestUtils.moveId()
+  val randomKeyspace: String = TestUtils.getKeyspace(id)
 
-  val zookeeperPort = TestUtils.ZOOKEEPER_PORT
+  val zookeeperPort: Int = TestUtils.ZOOKEEPER_PORT
 
 
-  val logger = LoggerFactory.getLogger(this.getClass)
-  val uptime = ManagementFactory.getRuntimeMXBean.getStartTime
+  val logger: Logger = LoggerFactory.getLogger(this.getClass)
+  val uptime: Long = ManagementFactory.getRuntimeMXBean.getStartTime
 
   logger.info("-------------------------------------------------------")
   logger.info("Test suite " + this.getClass.toString + " started")
@@ -64,7 +69,7 @@ trait TestUtils {
     .setProperty(ConfigurationOptions.Stream.partitionsCount, 3)
     .setProperty(ConfigurationOptions.Common.authenticationKey, TestUtils.AUTH_KEY)
 
-  val curatorClient = CuratorFrameworkFactory.builder()
+  val curatorClient: CuratorFramework = CuratorFrameworkFactory.builder()
     .namespace("")
     .connectionTimeoutMs(7000)
     .sessionTimeoutMs(7000)
@@ -72,7 +77,7 @@ trait TestUtils {
     .connectString(s"127.0.0.1:$zookeeperPort").build()
   curatorClient.start()
 
-  if (curatorClient.checkExists().forPath("/tts") == null)
+  if (Option(curatorClient.checkExists().forPath("/tts")).isEmpty)
     curatorClient.create().forPath("/tts")
 
   removeZkMetadata(f.getProperty(ConfigurationOptions.Coordination.path).toString)
@@ -83,17 +88,16 @@ trait TestUtils {
     * Sorting checker
     */
   def isSorted(list: ListBuffer[Long]): Boolean = {
-    if (list.isEmpty)
-      return true
-    var checkVal = true
-    var curVal = list.head
-    list foreach { el =>
-      if (el < curVal)
-        checkVal = false
-      if (el > curVal)
-        curVal = el
+    var currentMax = Long.MinValue
+
+    list.forall { value =>
+      if (value < currentMax) false
+      else {
+        currentMax = value
+
+        true
+      }
     }
-    checkVal
   }
 
   /**
@@ -101,25 +105,24 @@ trait TestUtils {
     *
     * @param path Zk root to delete
     */
-  def removeZkMetadata(path: String) = {
-    if (curatorClient.checkExists.forPath(path) != null)
+  def removeZkMetadata(path: String): Unit = {
+    if (Option(curatorClient.checkExists.forPath(path)).isDefined)
       curatorClient.delete.deletingChildrenIfNeeded().forPath(path)
   }
 
   /**
     * Remove directory recursive
     *
-    * @param f Dir to remove
+    * @param file Dir to remove
     */
-  def remove(f: File): Unit = {
-    if (f.isDirectory) {
-      for (c <- f.listFiles())
-        remove(c)
-    }
-    f.delete()
+  def remove(file: File): Unit = {
+    if (file.isDirectory)
+      file.listFiles().foreach(remove)
+
+    file.delete()
   }
 
-  def onAfterAll() = {
+  def onAfterAll(): Unit = {
     System.setProperty("DEBUG", "false")
     removeZkMetadata(f.getProperty(ConfigurationOptions.Coordination.path).toString)
     removeZkMetadata("/unit")
@@ -127,7 +130,7 @@ trait TestUtils {
     f.dumpStorageClients()
   }
 
-  def createNewStream(partitions: Int = 3, name: String = DEFAULT_STREAM_NAME) = {
+  def createNewStream(partitions: Int = 3, name: String = DEFAULT_STREAM_NAME): Unit = {
     val storageClient = f.getStorageClient()
     if (storageClient.checkStreamExists(name))
       storageClient.deleteStream(name)
@@ -135,7 +138,21 @@ trait TestUtils {
     storageClient.createStream(name, partitions, 24 * 3600, "")
     storageClient.shutdown()
   }
+
+  def checkTransactions(consumer: Consumer,
+                        partition: Int,
+                        table: TableFor2[ProducerTransaction, TransactionStates]): Assertion = {
+    forAll(table) { (transaction, state) =>
+      val maybeConsumerTransaction = consumer.getTransactionById(partition, transaction.getTransactionID)
+      maybeConsumerTransaction shouldBe defined
+
+      val consumerTransaction = maybeConsumerTransaction.get
+      consumerTransaction.getTransactionID shouldBe transaction.getTransactionID
+      consumerTransaction.getState shouldBe state
+    }
+  }
 }
+
 
 object TestUtils {
   System.getProperty("java.io.tmpdir", "./target/")
@@ -143,19 +160,15 @@ object TestUtils {
 
   private val id: AtomicInteger = new AtomicInteger(0)
 
-  def moveId(): Int = {
-    val rid = id.incrementAndGet()
-    rid
-  }
+  def moveId(): Int = id.incrementAndGet()
 
   def getKeyspace(id: Int): String = "tk_" + id.toString
 
   def getTmpDir(): String = Files.createTempDir().toString
 
-  private val zk = new ZookeeperTestServer(ZOOKEEPER_PORT, Files.createTempDir().toString)
+  new ZookeeperTestServer(ZOOKEEPER_PORT, Files.createTempDir().toString)
 
   val AUTH_KEY = "test"
   val MASTER_PREFIX = "/tts/master"
 
 }
-
