@@ -24,12 +24,13 @@ import java.util.concurrent.{CountDownLatch, TimeUnit}
 
 import com.bwsw.tstreamstransactionserver.exception.Throwable._
 import com.bwsw.tstreamstransactionserver.netty.SocketHostPortPair
-import com.bwsw.tstreamstransactionserver.netty.client.{ClientBuilder, MasterReelectionListener}
 import com.bwsw.tstreamstransactionserver.netty.client.zk.ZKMasterPathMonitor
+import com.bwsw.tstreamstransactionserver.netty.client.{ClientBuilder, MasterReelectionListener}
 import com.bwsw.tstreamstransactionserver.netty.server.singleNode.SingleNodeServerBuilder
 import com.bwsw.tstreamstransactionserver.netty.server.zk.ZookeeperClient
 import com.bwsw.tstreamstransactionserver.options.ClientOptions.ConnectionOptions
 import com.bwsw.tstreamstransactionserver.options.CommonOptions.ZookeeperOptions
+import com.bwsw.tstreamstransactionserver.options.SingleNodeServerOptions
 import com.bwsw.tstreamstransactionserver.options.SingleNodeServerOptions.{BootstrapOptions, StorageOptions}
 import org.apache.commons.io.FileUtils
 import org.apache.curator.framework.CuratorFrameworkFactory
@@ -39,14 +40,20 @@ import org.apache.zookeeper.CreateMode
 import org.apache.zookeeper.ZooDefs.{Ids, Perms}
 import org.apache.zookeeper.data.ACL
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
+import util.Utils
+import util.Utils.{getRandomConsumerTransaction, getRandomProducerTransaction, getRandomStream, startZkServerAndGetIt}
+
+import scala.concurrent.Await
+import scala.concurrent.duration._
 
 
 class ClientSingleNodeServerZookeeperTest
   extends FlatSpec
     with Matchers
-    with BeforeAndAfterAll
-{
+    with BeforeAndAfterAll {
   private val zkTestServer = new TestingServer(false)
+  private val secondsWait = 10
+
   private def uuid = util.Utils.uuid
 
 
@@ -74,7 +81,7 @@ class ClientSingleNodeServerZookeeperTest
     }
   }
 
-  
+
   it should "not connect to server which socket address(retrieved from zooKeeper server) is wrong" in {
     val zkPrefix = s"/$uuid"
 
@@ -316,7 +323,6 @@ class ClientSingleNodeServerZookeeperTest
     zKMasterPathMonitor.startMonitoringMasterServerPath()
 
 
-
     elector1.start()
     Thread.sleep(100)
     elector2.start()
@@ -325,6 +331,32 @@ class ClientSingleNodeServerZookeeperTest
 
     elector2.stop()
     zkClient.close()
+  }
+
+  it should "throw a ZkNoConnectionException when client lost connection with ZooKeeper" in {
+    val (zkServer, zkClient) = startZkServerAndGetIt
+    val serverBuilder = new SingleNodeServerBuilder()
+      .withCommitLogOptions(SingleNodeServerOptions.CommitLogOptions(closeDelayMs = Int.MaxValue))
+
+    val clientBuilder = new ClientBuilder()
+
+    val bundle = Utils.startTransactionServerAndClient(
+      zkClient, serverBuilder, clientBuilder)
+
+    bundle.operate { _ =>
+      val client = bundle.client
+      val stream = getRandomStream
+      zkServer.close()
+
+      val producerTransactions = Array.fill(100)(getRandomProducerTransaction(1, stream))
+      val consumerTransactions = Array.fill(100)(getRandomConsumerTransaction(1, stream))
+
+      a[ZkNoConnectionException] shouldBe thrownBy {
+        Await.result(
+          client.putTransactions(producerTransactions, consumerTransactions),
+          secondsWait.seconds)
+      }
+    }
   }
 
 

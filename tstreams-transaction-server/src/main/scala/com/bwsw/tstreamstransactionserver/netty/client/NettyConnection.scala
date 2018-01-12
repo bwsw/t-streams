@@ -24,12 +24,12 @@ import java.util.concurrent.atomic.AtomicBoolean
 import com.bwsw.tstreamstransactionserver.netty.SocketHostPortPair
 import com.bwsw.tstreamstransactionserver.options.ClientOptions.ConnectionOptions
 import io.netty.bootstrap.Bootstrap
+import io.netty.channel._
 import io.netty.channel.epoll.{EpollEventLoopGroup, EpollSocketChannel}
 import io.netty.channel.nio.NioEventLoopGroup
 import io.netty.channel.socket.SocketChannel
 import io.netty.channel.socket.nio.NioSocketChannel
-import io.netty.channel.{ChannelInitializer, _}
-import io.netty.handler.logging.{LogLevel, LoggingHandler}
+import io.netty.handler.logging.LoggingHandler
 import org.slf4j.LoggerFactory
 
 
@@ -67,9 +67,7 @@ class NettyConnection(workerGroup: EventLoopGroup,
             pipeline.addLast(handler)
           )
 
-          pipeline.addFirst(
-            new LoggingHandler(LogLevel.DEBUG)
-          )
+          pipeline.addFirst(new LoggingHandler())
 
           pipeline.addLast(
             new NettyConnectionHandler(onConnectionLostDo))
@@ -79,7 +77,7 @@ class NettyConnection(workerGroup: EventLoopGroup,
 
 
   private val channel: ChannelFuture = {
-    logger.info(s"Start connection with $master")
+    logger.info(s"Start a connection to $master")
 
     bootstrap
       .connect(master.address, master.port)
@@ -100,7 +98,7 @@ class NettyConnection(workerGroup: EventLoopGroup,
   }
 
   def stop(): Unit = {
-    logger.info(s"Close connection with $master")
+    logger.info(s"Close a connection to $master")
 
     val isNotStopped =
       isStopped.compareAndSet(false, true)

@@ -24,12 +24,9 @@ import java.util.concurrent.{CountDownLatch, TimeUnit}
 import com.bwsw.tstreams.agents.consumer.Offset.Oldest
 import com.bwsw.tstreams.agents.consumer.subscriber.Callback
 import com.bwsw.tstreams.agents.consumer.{ConsumerTransaction, TransactionOperator}
-import com.bwsw.tstreams.env.ConfigurationOptions
 import com.bwsw.tstreams.testutils.{TestStorageServer, TestUtils}
 import com.bwsw.tstreamstransactionserver.exception.Throwable.ServerConnectionException
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
-
-import scala.util.Try
 
 /**
   * Created by Ivan Kudryavtsev on 19.05.17.
@@ -47,35 +44,17 @@ class StorageBlinkingTest extends FlatSpec with Matchers with BeforeAndAfterAll 
   }
 
   "Producer and subscriber" should "fail when storage blinks" in {
-    val latchStopOnCheckpoint = new CountDownLatch(1)
-    val latchFinal = new CountDownLatch(1)
     val subscriberLatch = new CountDownLatch(1)
-
     val pause = 5000
-
-    new Thread(() => {
-      Try({
-        val srv = TestStorageServer.get()
-        latchStopOnCheckpoint.await()
-        srv
-      }).map(srv => TestStorageServer.dispose(srv))
-
-      Thread.sleep(pause)
-
-      Try({
-        val srv = TestStorageServer.get()
-        latchFinal.await()
-        srv
-      }).map(srv => TestStorageServer.dispose(srv))
-
-    }).start()
+    val partitions = Set(0)
+    val server1 = TestStorageServer.get()
 
     val producer = f.getProducer(
       name = "producer",
-      partitions = Set(0))
+      partitions = partitions)
 
     val subscriber = f.getSubscriber(name = "subscriber",
-      partitions = Set(0),
+      partitions = partitions,
       offset = Oldest,
       useLastOffset = true,
       callback = new Callback {
@@ -86,18 +65,21 @@ class StorageBlinkingTest extends FlatSpec with Matchers with BeforeAndAfterAll 
           exception shouldBe a[ServerConnectionException]
       }).start()
 
-    producer.newTransaction().send("")
+    producer.newTransaction().send("data")
     producer.checkpoint()
-    producer.newTransaction().send("")
-    Thread.sleep(pause)
-    latchStopOnCheckpoint.countDown()
-    Thread.sleep(pause)
+    subscriberLatch.await(pause, TimeUnit.MILLISECONDS) shouldBe true
+
+    producer.newTransaction().send("data")
+
+    TestStorageServer.dispose(server1)
+    val server2 = TestStorageServer.get()
+    Thread.sleep(pause) // wait until server started
+
     a[ServerConnectionException] shouldBe thrownBy {
       producer.checkpoint()
     }
-    val transactionTTL = f.getProperty(ConfigurationOptions.Producer.Transaction.ttlMs)
-    subscriberLatch.await(pause * 2 + transactionTTL.asInstanceOf[Int], TimeUnit.MILLISECONDS) shouldBe true
+
     subscriber.stop()
-    latchFinal.countDown()
+    TestStorageServer.dispose(server2)
   }
 }

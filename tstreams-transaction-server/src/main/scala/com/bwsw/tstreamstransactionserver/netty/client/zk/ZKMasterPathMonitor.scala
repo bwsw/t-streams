@@ -21,13 +21,13 @@ package com.bwsw.tstreamstransactionserver.netty.client.zk
 
 import java.util.concurrent.atomic.AtomicBoolean
 
-import com.bwsw.tstreamstransactionserver.exception.Throwable.{MasterDataIsIllegalException, MasterIsPersistentZnodeException}
+import com.bwsw.tstreamstransactionserver.exception.Throwable.{MasterDataIsIllegalException, MasterIsPersistentZnodeException, ZkNoConnectionException}
 import com.bwsw.tstreamstransactionserver.netty.SocketHostPortPair
 import com.bwsw.tstreamstransactionserver.netty.client.MasterReelectionListener
 import org.apache.curator.framework.CuratorFramework
 import org.apache.curator.framework.api.{CuratorEvent, CuratorListener}
 import org.apache.curator.framework.recipes.cache.{ChildData, NodeCache, NodeCacheListener}
-import org.apache.curator.framework.state.ConnectionState
+import org.apache.zookeeper.Watcher.Event.KeeperState
 import org.slf4j.LoggerFactory
 
 import scala.annotation.tailrec
@@ -53,10 +53,9 @@ class ZKMasterPathMonitor(connection: CuratorFramework,
     false
   )
 
-  private var master: Either[Throwable, Option[SocketHostPortPair]] =
-    Right(None)
+  private var master: Either[Throwable, Option[SocketHostPortPair]] = Right(None)
 
-  final def getCurrentMaster = master
+  final def getCurrentMaster: Either[Throwable, Option[SocketHostPortPair]] = master
 
   final def getMasterInBlockingManner: Either[Throwable, SocketHostPortPair] = {
     @tailrec
@@ -84,12 +83,12 @@ class ZKMasterPathMonitor(connection: CuratorFramework,
           }
       }
     }
+
     go(System.currentTimeMillis())
   }
 
   private def validateMaster(node: ChildData) = {
-    val hostPort =
-      new String(node.getData)
+    val hostPort = new String(node.getData)
 
     val connectionData = connection
       .getZookeeperClient.getCurrentConnectionString
@@ -114,47 +113,29 @@ class ZKMasterPathMonitor(connection: CuratorFramework,
       ).getOrElse(Right(None))
 
     master = newMaster
-
-    listeners.forEach(listener =>
-      listener.masterChanged(newMaster)
-    )
-
-    //        setMaster(
-    //          Left(
-    //            throw new MasterPathIsAbsent(prefix)
-    //          )
-    //        )
+    listeners.forEach(_.masterChanged(newMaster))
   }
 
   override def eventReceived(client: CuratorFramework,
                              event: CuratorEvent): Unit = {
-    event match {
-      case ConnectionState.LOST =>
-        val newMaster = Right(None)
+    event.getWatchedEvent.getState match {
+      case KeeperState.Disconnected =>
+        val newMaster = Left(
+          new ZkNoConnectionException(client.getZookeeperClient.getCurrentConnectionString))
 
         master = newMaster
+        listeners.forEach(_.masterChanged(newMaster))
 
-        listeners.forEach(listener =>
-          listener.masterChanged(
-            newMaster
-          )
-        )
       case _ =>
-        ()
     }
   }
 
-  def addMasterReelectionListener(listener: MasterReelectionListener): Unit = {
-    listeners.add(listener)
-  }
+  def addMasterReelectionListener(listener: MasterReelectionListener): Unit = listeners.add(listener)
 
-  def removeMasterReelectionListener(listener: MasterReelectionListener): Unit = {
-    listeners.remove(listener)
-  }
+  def removeMasterReelectionListener(listener: MasterReelectionListener): Unit = listeners.remove(listener)
 
   def startMonitoringMasterServerPath(): Unit = {
-    val closedNow = isClosed.getAndSet(false)
-    if (closedNow) {
+    if (isClosed.getAndSet(false)) {
       nodeToWatch.getListenable.addListener(this)
       connection.getCuratorListenable.addListener(this)
       nodeToWatch.start()
@@ -162,8 +143,7 @@ class ZKMasterPathMonitor(connection: CuratorFramework,
   }
 
   def stopMonitoringMasterServerPath(): Unit = {
-    val closedNow = isClosed.getAndSet(true)
-    if (!closedNow) {
+    if (!isClosed.getAndSet(true)) {
       nodeToWatch.getListenable.removeListener(this)
       connection.getCuratorListenable.removeListener(this)
       nodeToWatch.close()

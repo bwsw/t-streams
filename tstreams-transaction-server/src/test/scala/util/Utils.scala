@@ -35,6 +35,8 @@ import com.bwsw.tstreamstransactionserver.netty.server.{RocksReader, RocksWriter
 import com.bwsw.tstreamstransactionserver.options.ClientOptions.ConnectionOptions
 import com.bwsw.tstreamstransactionserver.options.CommonOptions.ZookeeperOptions
 import com.bwsw.tstreamstransactionserver.options.SingleNodeServerOptions.{RocksStorageOptions, StorageOptions}
+import com.bwsw.tstreamstransactionserver.rpc
+import com.bwsw.tstreamstransactionserver.rpc.{ConsumerTransaction, ProducerTransaction, TransactionStates}
 import org.apache.bookkeeper.conf.ServerConfiguration
 import org.apache.bookkeeper.meta.LongHierarchicalLedgerManagerFactory
 import org.apache.bookkeeper.proto.BookieServer
@@ -44,6 +46,8 @@ import org.apache.curator.test.TestingServer
 import org.apache.zookeeper.CreateMode
 import org.apache.zookeeper.ZooDefs.Ids
 import org.apache.zookeeper.data.ACL
+
+import scala.util.{Random, Try}
 
 
 object Utils {
@@ -136,19 +140,35 @@ object Utils {
     (zkServer, zkClient, bookies)
   }
 
-  private val rand = scala.util.Random
+  def getRandomStream = rpc.StreamValue(
+    name = Random.nextInt(10000).toString,
+    partitions = Random.nextInt(10000),
+    description = if (Random.nextBoolean()) Some(Random.nextInt(10000).toString) else None,
+    ttl = Long.MaxValue,
+    zkPath = None)
 
-  def getRandomStream =
-    new com.bwsw.tstreamstransactionserver.rpc.StreamValue {
-      override val name: String = rand.nextInt(10000).toString
-      override val partitions: Int = rand.nextInt(10000)
-      override val description: Option[String] = if (rand.nextBoolean()) Some(rand.nextInt(10000).toString) else None
-      override val ttl: Long = Long.MaxValue
-      override val zkPath: Option[String] = None
-    }
+  def getRandomProducerTransaction(streamID: Int,
+                                   streamObj: rpc.StreamValue,
+                                   transactionState: TransactionStates = TransactionStates(
+                                     Random.nextInt(TransactionStates.list.length) + 1),
+                                   id: Long = System.nanoTime()) =
+    ProducerTransaction(
+      transactionID = id,
+      state = transactionState,
+      stream = streamID,
+      ttl = Long.MaxValue,
+      quantity = 0,
+      partition = streamObj.partitions)
+
+  def getRandomConsumerTransaction(streamID: Int, streamObj: rpc.StreamValue) =
+    ConsumerTransaction(
+      transactionID = scala.util.Random.nextLong(),
+      name = Random.nextInt(10000).toString,
+      stream = streamID,
+      partition = streamObj.partitions)
 
   def getRandomPort: Int = {
-    scala.util.Try {
+    Try {
       new ServerSocket(0)
     }.map { server =>
       val port = server.getLocalPort
@@ -158,25 +178,19 @@ object Utils {
   }
 
   private def testStorageOptions(dbPath: File) = {
-    StorageOptions().copy(
+    StorageOptions(
       path = dbPath.getPath,
       streamZookeeperDirectory = s"/$uuid"
     )
   }
 
-  private def tempFolder() = {
+  private def tempFolder() =
     Files.createTempDirectory("tts").toFile
-  }
 
-  def getRocksReaderAndRocksWriter(zkClient: CuratorFramework) = {
+  def getRocksReaderAndRocksWriter(zkClient: CuratorFramework): RocksReaderAndWriter = {
     val dbPath = tempFolder()
-
-    val storageOptions =
-      testStorageOptions(dbPath)
-
-    val rocksStorageOptions =
-      RocksStorageOptions()
-
+    val storageOptions = testStorageOptions(dbPath)
+    val rocksStorageOptions = RocksStorageOptions()
 
     new RocksReaderAndWriter(zkClient, storageOptions, rocksStorageOptions)
   }
@@ -184,11 +198,9 @@ object Utils {
   def getTransactionServerBundle(zkClient: CuratorFramework): TransactionServerBundle = {
     val dbPath = tempFolder()
 
-    val storageOptions =
-      testStorageOptions(dbPath)
+    val storageOptions = testStorageOptions(dbPath)
 
-    val rocksStorageOptions =
-      RocksStorageOptions()
+    val rocksStorageOptions = RocksStorageOptions()
 
     val rocksStorage =
       new MultiAndSingleNodeRockStorage(
@@ -260,6 +272,7 @@ object Utils {
     }).start()
 
     latch.await(3000, TimeUnit.SECONDS)
+
     ZkSeverAndTransactionServer(zkTestServer, transactionServer)
   }
 
@@ -330,14 +343,11 @@ object Utils {
                                       clientsNumber: Int): ZkSeverTxnServerTxnClients = {
     val dbPath = Files.createTempDirectory("tts").toFile
 
-    val streamRepositoryPath =
-      s"/$uuid"
+    val streamRepositoryPath = s"/$uuid"
 
-    val zkConnectionString =
-      zkClient.getZookeeperClient.getCurrentConnectionString
+    val zkConnectionString = zkClient.getZookeeperClient.getCurrentConnectionString
 
-    val port =
-      getRandomPort
+    val port = getRandomPort
 
     val updatedBuilder = serverBuilder
       .withZookeeperOptions(
@@ -389,6 +399,4 @@ object Utils {
 
     new ZkSeverTxnServerTxnClients(transactionServer, clients, updatedBuilder)
   }
-
-
 }
