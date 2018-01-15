@@ -19,9 +19,6 @@
 
 package com.bwsw.tstreamstransactionserver.netty.server.storage.rocks
 
-import java.util.concurrent.TimeUnit
-
-import com.bwsw.tstreamstransactionserver.netty.server.db.KeyValueDbBatch
 import com.bwsw.tstreamstransactionserver.netty.server.db.rocks.RocksDbDescriptor
 import com.bwsw.tstreamstransactionserver.netty.server.storage.Storage
 import com.bwsw.tstreamstransactionserver.options.SingleNodeServerOptions.{RocksStorageOptions, StorageOptions}
@@ -40,9 +37,10 @@ abstract class RocksStorage(storageOpts: StorageOptions,
       RocksDbDescriptor(Storage.lastOpenedTransactionStorageDescriptorInfo, columnFamilyOptions),
       RocksDbDescriptor(Storage.lastCheckpointedTransactionStorageDescriptorInfo, columnFamilyOptions),
       RocksDbDescriptor(Storage.consumerStoreDescriptorInfo, columnFamilyOptions),
-      RocksDbDescriptor(Storage.transactionAllStoreDescriptorInfo, columnFamilyOptions,
-        TimeUnit.MINUTES.toSeconds(rocksOpts.transactionExpungeDelayMin).toInt
-      ),
+      RocksDbDescriptor(
+        Storage.transactionAllStoreDescriptorInfo,
+        columnFamilyOptions,
+        rocksOpts.transactionExpungeDelaySec),
       RocksDbDescriptor(Storage.transactionOpenStoreDescriptorInfo, columnFamilyOptions)
     )
 }

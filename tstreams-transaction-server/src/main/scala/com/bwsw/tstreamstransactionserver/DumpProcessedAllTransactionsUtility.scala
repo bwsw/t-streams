@@ -45,7 +45,7 @@ object DumpProcessedAllTransactionsUtility {
           metadataDirectory = args(1)
         ),
         SingleNodeServerOptions.RocksStorageOptions(
-          transactionExpungeDelayMin = -1
+          transactionExpungeDelaySec = -1
         ),
         readOnly = true
       )
@@ -57,7 +57,7 @@ object DumpProcessedAllTransactionsUtility {
 
       val records = new ArrayBuffer[ProducerTransactionRecordWrapper]()
       while (iterator.isValid) {
-        val key = ProducerTransactionKey.fromByteArray(iterator.key)
+        val key = ProducerTransactionKey.fromByteArray(iterator.key())
         val value = ProducerTransactionValue.fromByteArray(iterator.value())
 
         records += ProducerTransactionRecordWrapper(

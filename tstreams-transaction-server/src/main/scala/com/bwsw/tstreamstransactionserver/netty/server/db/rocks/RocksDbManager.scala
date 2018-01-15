@@ -19,8 +19,10 @@
 package com.bwsw.tstreamstransactionserver.netty.server.db.rocks
 
 import java.io.File
+import java.util.concurrent.TimeUnit
 
 import com.bwsw.tstreamstransactionserver.netty.server.db.{DbMeta, KeyValueDbManager}
+import com.bwsw.tstreamstransactionserver.netty.server.storage.rocks.CompactionJob
 import com.bwsw.tstreamstransactionserver.options.SingleNodeServerOptions.RocksStorageOptions
 import org.apache.commons.io.FileUtils
 import org.rocksdb._
@@ -69,7 +71,8 @@ class RocksDbManager(absolutePath: String,
     val handlerToIndexMap: collection.immutable.Map[Int, ColumnFamilyHandle] =
       JavaConverters.asScalaBuffer(databaseHandlers)
         .zip(descriptorsWithDefaultDescriptor)
-        .map(x => (x._2.id, x._1)).toMap
+        .map { case (handler, descriptor) => (descriptor.id, handler) }
+        .toMap
 
     (
       connection,
@@ -79,14 +82,25 @@ class RocksDbManager(absolutePath: String,
   }
 
 
-  def getDatabase(index: Int): RocksDb = {
+  private val maybeCompactionJob =
+    if (readMode) None
+    else Some(new CompactionJob(
+      client,
+      databaseHandlers.values.toSeq,
+      rocksStorageOpts.compactionInterval,
+      TimeUnit.SECONDS))
+
+  maybeCompactionJob.foreach(_.start())
+
+
+  def getDatabase(index: Int): RocksDb =
     new RocksDb(client, databaseHandlers(index))
-  }
 
   def newBatch: RocksDbBatch =
     new RocksDbBatch(client, databaseHandlers)
 
-  override def closeDatabases(): Unit =
+  override def closeDatabases(): Unit = {
+    maybeCompactionJob.foreach(_.close())
     client.close()
+  }
 }
-
