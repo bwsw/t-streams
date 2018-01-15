@@ -184,7 +184,6 @@ class InetClient(zookeeperOptions: ZookeeperOptions,
 
   private final def onServerConnectionLostDefaultBehaviour(): Unit = {
     val exception = maybeFailCause.get().getOrElse {
-      commonServerPathMonitor.getCurrentMaster.toOption.flatten.getOrElse("NO_CONNECTION_SOCKET")
       val connectionSocket = commonServerPathMonitor.getCurrentMaster
         .toOption
         .flatten

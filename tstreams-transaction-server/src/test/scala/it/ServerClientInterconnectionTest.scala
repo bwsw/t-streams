@@ -332,6 +332,11 @@ class ServerClientInterconnectionTest
 
     task.start()
 
+    /*
+     * The type of this exception can be either MasterLostException or ServerUnreachableException,
+     * depends what happens earlier: updation of master node in ZooKeeper or
+     * invocation InetClient.onServerConnectionLostDefaultBehaviour() from NettyConnectionHandler
+     */
     a[ServerConnectionException] shouldBe thrownBy {
       Await.result(resultInFuture, 10000.seconds)
     }
