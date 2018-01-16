@@ -175,7 +175,7 @@ class InetClientProxy(connectionOptions: ConnectionOptions,
   }
 
   private def onShutdownThrowException(): Unit =
-    if (isShutdown.get()) throw ClientIllegalOperationAfterShutdown
+    if (isShutdown.get()) throw new ClientIllegalOperationAfterShutdown
 
   /** Putting a stream on a server by primitive type parameters.
     *
@@ -797,4 +797,11 @@ class InetClientProxy(connectionOptions: ConnectionOptions,
 
   override protected def onRequestTimeout(): Unit =
     onRequestTimeoutFunc
+
+  override def isConnected: Boolean = {
+    commonInetClient.isConnected && (checkpointGroupInetClient.value match {
+      case Some(Success(inetClient)) => inetClient.isConnected
+      case _ => false
+    })
+  }
 }

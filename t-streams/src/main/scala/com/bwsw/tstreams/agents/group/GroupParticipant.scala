@@ -41,6 +41,7 @@ trait GroupParticipant {
 
   private[tstreams] def getStorageClient(): StorageClient
 
+  def isConnected: Boolean = getStorageClient().isConnected
 }
 
 /**

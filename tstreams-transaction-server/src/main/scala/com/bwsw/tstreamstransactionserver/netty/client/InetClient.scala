@@ -19,7 +19,7 @@
 
 package com.bwsw.tstreamstransactionserver.netty.client
 
-import java.util.concurrent.atomic.AtomicLong
+import java.util.concurrent.atomic.{AtomicBoolean, AtomicLong, AtomicReference}
 import java.util.concurrent.{ConcurrentHashMap, CountDownLatch, TimeUnit}
 
 import com.bwsw.tstreamstransactionserver.exception.Throwable._
@@ -40,6 +40,8 @@ import org.slf4j.LoggerFactory
 
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContextExecutorService, Future, Promise}
+import scala.util.{Failure, Success, Try}
+import scala.collection.JavaConverters._
 
 class InetClient(zookeeperOptions: ZookeeperOptions,
                  connectionOptions: ConnectionOptions,
@@ -78,6 +80,10 @@ class InetClient(zookeeperOptions: ZookeeperOptions,
   commonServerPathMonitor
     .startMonitoringMasterServerPath()
 
+  private val connected = new AtomicBoolean(false)
+  private val isStopped = new AtomicBoolean(false)
+  private val maybeFailCause = new AtomicReference[Option[Throwable]](None)
+
   private val nettyClient: NettyConnection = {
     val connectionAddress =
       commonServerPathMonitor.getMasterInBlockingManner
@@ -98,7 +104,19 @@ class InetClient(zookeeperOptions: ZookeeperOptions,
             }(context)
           }
         )
-        commonServerPathMonitor.addMasterReelectionListener(client)
+
+        connected.set(true)
+        commonServerPathMonitor.addMasterReelectionListener { newMaster =>
+          shutdown()
+          val exception = newMaster match {
+            case Left(throwable) => throwable
+            case Right(None) => new MasterLostException
+            case Right(Some(socketHostPortPair)) => new MasterChangedException(socketHostPortPair)
+          }
+          maybeFailCause.compareAndSet(None, Some(exception))
+          throw exception
+        }
+
         client
     }
   }
@@ -129,6 +147,7 @@ class InetClient(zookeeperOptions: ZookeeperOptions,
   @throws[PackageTooBigException]
   final def methodFireAndForget[Req <: ThriftStruct](descriptor: Protocol.Descriptor[Req, _],
                                                      request: Req): Unit = {
+    onNotConnectedThrowException()
 
     if (getToken == -1)
       authenticate()
@@ -163,23 +182,19 @@ class InetClient(zookeeperOptions: ZookeeperOptions,
     )(context)
   }
 
-  private final def onRequestTimeoutDefaultBehaviour(): Unit = {
-    TimeUnit.MILLISECONDS.sleep(connectionOptions.retryDelayMs)
-    onRequestTimeout
-  }
-
   private final def onServerConnectionLostDefaultBehaviour(): Unit = {
-    val connectionSocket = commonServerPathMonitor.getCurrentMaster
-      .right.map(_.map(_.toString).getOrElse("NO_CONNECTION_SOCKET"))
-      .right.getOrElse("NO_CONNECTION_SOCKET")
+    val exception = maybeFailCause.get().getOrElse {
+      val connectionSocket = commonServerPathMonitor.getCurrentMaster
+        .toOption
+        .flatten
+        .map(_.toString)
+        .getOrElse("NO_CONNECTION_SOCKET")
 
-    val requests = requestIdToResponseMap.elements()
-    while (requests.hasMoreElements) {
-      val request = requests.nextElement()
-      request.tryFailure(new ServerUnreachableException(
-        connectionSocket
-      ))
+      new ServerUnreachableException(connectionSocket)
     }
+
+    requestIdToResponseMap.elements().asScala
+      .foreach(_.tryFailure(exception))
   }
 
   private def handlers = {
@@ -195,7 +210,13 @@ class InetClient(zookeeperOptions: ZookeeperOptions,
   }
 
   private def onShutdownThrowException(): Unit =
-    if (isShutdown) throw ClientIllegalOperationAfterShutdown
+    if (isShutdown) throw new ClientIllegalOperationAfterShutdown
+
+  private def onNotConnectedThrowException(): Unit = {
+    if (!isConnected) {
+      throw maybeFailCause.get().getOrElse(new ClientNotConnectedException)
+    }
+  }
 
 
   private def sendRequest[Req <: ThriftStruct, Rep <: ThriftStruct, A](message: RequestMessage,
@@ -204,6 +225,7 @@ class InetClient(zookeeperOptions: ZookeeperOptions,
                                                                        previousException: Option[Throwable] = None,
                                                                        retryCount: Int = Int.MaxValue)
                                                                       (implicit methodContext: concurrent.ExecutionContext): Future[A] = {
+    onNotConnectedThrowException()
     val updatedMessage = tracer.clientSend(message)
     val promise = Promise[ByteBuf]
     requestIdToResponseMap.put(updatedMessage.id, promise)
@@ -298,36 +320,16 @@ class InetClient(zookeeperOptions: ZookeeperOptions,
         }
 
       case concreteThrowable: ServerUnreachableException =>
-        scala.util.Try(onServerConnectionLostDefaultBehaviour())
-        match {
-          case scala.util.Failure(throwable) =>
-            (throwable, 0)
-          case scala.util.Success(_) =>
-            (concreteThrowable, Int.MaxValue)
+        Try(onServerConnectionLostDefaultBehaviour()) match {
+          case Failure(throwable) => (throwable, 0)
+          case Success(_) => (concreteThrowable, 0)
         }
 
       case concreteThrowable: RequestTimeoutException =>
-        scala.util.Try(onRequestTimeoutDefaultBehaviour()) match {
-          case scala.util.Failure(throwable) =>
-            (throwable, 0)
-          case scala.util.Success(_) =>
-            previousException match {
-              case Some(_: RequestTimeoutException) =>
-                if (retryCount == Int.MaxValue) {
-                  (concreteThrowable, connectionOptions.requestTimeoutRetryCount)
-                }
-                else {
-                  val updatedCounter = retryCount - 1
-                  if (updatedCounter <= 0) {
-                    nettyClient.reconnect()
-                    (concreteThrowable, Int.MaxValue)
-                  } else {
-                    (concreteThrowable, updatedCounter)
-                  }
-                }
-              case _ =>
-                (concreteThrowable, Int.MaxValue)
-            }
+        maybeFailCause.compareAndSet(None, Some(concreteThrowable))
+        Try(onRequestTimeout) match {
+          case Failure(throwable) => (throwable, 0)
+          case Success(_) => (concreteThrowable, 0)
         }
 
       case otherThrowable =>
@@ -415,15 +417,14 @@ class InetClient(zookeeperOptions: ZookeeperOptions,
   }
 
   def shutdown(): Unit = {
-    if (commonServerPathMonitor != null) {
+    if (!isStopped.getAndSet(true)) {
       commonServerPathMonitor.stopMonitoringMasterServerPath()
-    }
-    if (nettyClient != null) {
-      nettyClient.stop()
-    }
-    if (zkConnectionLostListener != null) {
+      if (connected.getAndSet(false))
+        nettyClient.stop()
       zkConnectionLostListener.stop()
+      tracer.close()
     }
-    tracer.close()
   }
+
+  def isConnected: Boolean = connected.get()
 }

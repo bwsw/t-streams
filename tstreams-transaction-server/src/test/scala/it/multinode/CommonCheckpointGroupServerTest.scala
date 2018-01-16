@@ -19,54 +19,26 @@
 
 package it.multinode
 
+import java.util.UUID
 import java.util.concurrent.{CountDownLatch, TimeUnit}
 
+import com.bwsw.tstreamstransactionserver.exception.Throwable.{MasterChangedException, MasterLostException}
 import com.bwsw.tstreamstransactionserver.netty.client.ClientBuilder
 import com.bwsw.tstreamstransactionserver.netty.server.multiNode.CommonCheckpointGroupServerBuilder
 import com.bwsw.tstreamstransactionserver.options.MultiNodeServerOptions.BookkeeperOptions
-import com.bwsw.tstreamstransactionserver.rpc.{ConsumerTransaction, ProducerTransaction, TransactionInfo, TransactionStates}
+import com.bwsw.tstreamstransactionserver.rpc.{TransactionInfo, TransactionStates}
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import util.Implicit.ProducerTransactionSortable
+import util.Utils.{getRandomConsumerTransaction, getRandomProducerTransaction, getRandomStream}
 
-import scala.concurrent.duration._
 import scala.concurrent.Await
+import scala.concurrent.duration._
+import scala.util.{Failure, Random, Try}
 
 class CommonCheckpointGroupServerTest
   extends FlatSpec
     with BeforeAndAfterAll
     with Matchers {
-
-  private val rand = scala.util.Random
-
-  private def getRandomStream =
-    new com.bwsw.tstreamstransactionserver.rpc.StreamValue {
-      override val name: String = rand.nextInt(10000).toString
-      override val partitions: Int = rand.nextInt(10000)
-      override val description: Option[String] = if (rand.nextBoolean()) Some(rand.nextInt(10000).toString) else None
-      override val ttl: Long = Long.MaxValue
-      override val zkPath: Option[String] = None
-    }
-
-  private def getRandomProducerTransaction(streamID: Int,
-                                           streamObj: com.bwsw.tstreamstransactionserver.rpc.StreamValue,
-                                           transactionState: TransactionStates = TransactionStates(rand.nextInt(TransactionStates.list.length) + 1),
-                                           id: Long = System.nanoTime()) =
-    new ProducerTransaction {
-      override val transactionID: Long = id
-      override val state: TransactionStates = transactionState
-      override val stream: Int = streamID
-      override val ttl: Long = Long.MaxValue
-      override val quantity: Int = 0
-      override val partition: Int = streamObj.partitions
-    }
-
-  private def getRandomConsumerTransaction(streamID: Int, streamObj: com.bwsw.tstreamstransactionserver.rpc.StreamValue) =
-    new ConsumerTransaction {
-      override val transactionID: Long = scala.util.Random.nextLong()
-      override val name: String = rand.nextInt(10000).toString
-      override val stream: Int = streamID
-      override val partition: Int = streamObj.partitions
-    }
 
   private val ensembleNumber = 3
   private val writeQourumNumber = 3
@@ -194,13 +166,13 @@ class CommonCheckpointGroupServerTest
 
       val stream = getRandomStream
       val streamID = Await.result(client.putStream(stream), secondsWait.seconds)
-      streamID shouldNot be (-1)
+      streamID shouldNot be(-1)
 
       val txn = getRandomProducerTransaction(streamID, stream)
       Await.result(client.putProducerState(txn), secondsWait.seconds)
 
       val dataAmount = 5000
-      val data = Array.fill(dataAmount)(rand.nextString(10).getBytes)
+      val data = Array.fill(dataAmount)(Random.nextString(10).getBytes)
 
       val resultInFuture = Await.result(client.putTransactionData(streamID, txn.partition, txn.transactionID, data, 0), secondsWait.seconds)
       resultInFuture shouldBe true
@@ -240,7 +212,7 @@ class CommonCheckpointGroupServerTest
         getRandomProducerTransaction(streamID, stream, TransactionStates.Opened)
 
       val dataAmount = 30
-      val data = Array.fill(dataAmount)(rand.nextString(10).getBytes)
+      val data = Array.fill(dataAmount)(Random.nextString(10).getBytes)
 
       val latch = new CountDownLatch(1)
       transactionServer.notifyProducerTransactionCompleted(
@@ -272,6 +244,95 @@ class CommonCheckpointGroupServerTest
       )
 
       successResponseData should contain theSameElementsInOrderAs data
+    }
+  }
+
+  "Client" should "throw MasterChangedException when a master changed" in {
+    val bundle1 = util.multiNode.Util.getCommonCheckpointGroupServerBundle(
+      zkClient, bookkeeperOptions, serverBuilder, clientBuilder, maxIdleTimeBetweenRecordsMs
+    )
+
+    bundle1.operate { server1 =>
+      val client = bundle1.client
+
+      val storageOptions = serverBuilder.getStorageOptions.copy(path = s"/tmp/tts-${UUID.randomUUID().toString}")
+      val serverBuilder2 = serverBuilder.withServerStorageOptions(storageOptions)
+
+      val bundle2 = util.multiNode.Util.getCommonCheckpointGroupServerBundle(
+        zkClient, bookkeeperOptions, serverBuilder2, clientBuilder, maxIdleTimeBetweenRecordsMs)
+
+      bundle2.operate { _ =>
+
+        val stream = getRandomStream
+        val streamID = Await.result(client.putStream(stream), secondsWait.seconds)
+
+        val producerTransactions = Array.fill(100)(getRandomProducerTransaction(streamID, stream))
+        val consumerTransactions = Array.fill(100)(getRandomConsumerTransaction(streamID, stream))
+
+        val result = client.putTransactions(producerTransactions, consumerTransactions)
+
+        Await.result(result, 5.seconds) shouldBe true
+
+        server1.shutdown()
+        Thread.sleep(1000) // wait until master node in zookeeper updated
+
+        val otherProducerTransactions = Array.fill(100)(getRandomProducerTransaction(streamID, stream))
+        val otherConsumerTransactions = Array.fill(100)(getRandomConsumerTransaction(streamID, stream))
+
+        /*
+         * The type of this exception can be MasterChangedException if the second server had updated
+         * a master node in ZooKeeper before the client received a notification that this node changed,
+         * or MasterLostException otherwise
+         */
+        Try(Await.result(
+          client.putTransactions(otherProducerTransactions, otherConsumerTransactions),
+          secondsWait.seconds)) should matchPattern {
+          case Failure(_: MasterChangedException) =>
+          case Failure(_: MasterLostException) =>
+        }
+      }
+    }
+  }
+
+  it should "disconnect from server when it is off" in {
+    val bundle = util.multiNode.Util.getCommonCheckpointGroupServerBundle(
+      zkClient, bookkeeperOptions, serverBuilder, clientBuilder, maxIdleTimeBetweenRecordsMs)
+
+    bundle.operate { server =>
+      val client = bundle.client
+
+      Thread.sleep(1000) // wait until client connected from server
+      client.isConnected shouldBe true
+
+      server.shutdown()
+      Thread.sleep(1000) // wait until client disconnected from server
+
+      client.isConnected shouldBe false
+    }
+  }
+
+  it should "disconnect from server when master is changed" in {
+    val bundle1 = util.multiNode.Util.getCommonCheckpointGroupServerBundle(
+      zkClient, bookkeeperOptions, serverBuilder, clientBuilder, maxIdleTimeBetweenRecordsMs)
+
+    bundle1.operate { server1 =>
+      val client = bundle1.client
+
+      val storageOptions = serverBuilder.getStorageOptions.copy(path = s"/tmp/tts-${UUID.randomUUID().toString}")
+      val serverBuilder2 = serverBuilder.withServerStorageOptions(storageOptions)
+
+      val bundle2 = util.multiNode.Util.getCommonCheckpointGroupServerBundle(
+        zkClient, bookkeeperOptions, serverBuilder2, clientBuilder, maxIdleTimeBetweenRecordsMs)
+
+      bundle2.operate { _ =>
+        Thread.sleep(1000) // wait until client connected from server
+        client.isConnected shouldBe true
+
+        server1.shutdown()
+        Thread.sleep(1000) // wait until client disconnected from server
+
+        client.isConnected shouldBe false
+      }
     }
   }
 }
