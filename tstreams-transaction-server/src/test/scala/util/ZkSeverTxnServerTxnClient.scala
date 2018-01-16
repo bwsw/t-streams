@@ -22,14 +22,13 @@ package util
 
 import java.io.File
 
-import com.bwsw.tstreamstransactionserver.netty.client.api.TTSClient
+import com.bwsw.tstreamstransactionserver.netty.client.api.TTSInetClient
 import com.bwsw.tstreamstransactionserver.netty.server.singleNode.{SingleNodeServerBuilder, TestSingleNodeServer}
 import org.apache.commons.io.FileUtils
 
 class ZkSeverTxnServerTxnClient(val transactionServer: TestSingleNodeServer,
-                                val client: TTSClient,
-                                val serverBuilder: SingleNodeServerBuilder)
-{
+                                val client: TTSInetClient,
+                                val serverBuilder: SingleNodeServerBuilder) {
 
   def operate(operation: TestSingleNodeServer => Unit): Unit = {
     try {

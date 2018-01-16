@@ -24,6 +24,8 @@ import org.apache.curator.framework.state.ConnectionState
 trait TTSInetClient
   extends TTSClient {
 
+  def isConnected: Boolean
+
   protected def onZKConnectionStateChanged(newState: ConnectionState): Unit = {}
 
   protected def onServerConnectionLost(): Unit = {}

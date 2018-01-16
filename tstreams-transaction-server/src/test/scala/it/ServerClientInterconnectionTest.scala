@@ -23,8 +23,9 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.{AtomicLong, LongAdder}
 
 import com.bwsw.tstreamstransactionserver.configProperties.ClientExecutionContextGrid
-import com.bwsw.tstreamstransactionserver.netty.client.{ClientBuilder, InetClient}
+import com.bwsw.tstreamstransactionserver.exception.Throwable.ServerConnectionException
 import com.bwsw.tstreamstransactionserver.netty.client.zk.ZKClient
+import com.bwsw.tstreamstransactionserver.netty.client.{ClientBuilder, InetClient}
 import com.bwsw.tstreamstransactionserver.netty.server.singleNode.SingleNodeServerBuilder
 import com.bwsw.tstreamstransactionserver.options._
 import com.bwsw.tstreamstransactionserver.rpc._
@@ -34,14 +35,15 @@ import io.netty.channel.epoll.{Epoll, EpollEventLoopGroup}
 import io.netty.channel.nio.NioEventLoopGroup
 import org.apache.curator.retry.RetryForever
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
+import util.Implicit.ProducerTransactionSortable
+import util.Utils.{getRandomConsumerTransaction, getRandomProducerTransaction, getRandomStream, startZkServerAndGetIt}
 import util.{Time, Utils}
-import util.Utils.startZkServerAndGetIt
 
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future, Promise}
-import util.Implicit.ProducerTransactionSortable
+import scala.util.Random
 
 class ServerClientInterconnectionTest
   extends FlatSpec
@@ -63,8 +65,10 @@ class ServerClientInterconnectionTest
     private var currentTime = initialTime
 
     override def getCurrentTime: Long = currentTime
+
     def resetTimer(): Unit = currentTime = initialTime
-    def updateTime(newTime: Long) = currentTime = newTime
+
+    def updateTime(newTime: Long): Unit = currentTime = newTime
   }
 
   private lazy val (zkServer, zkClient) =
@@ -80,45 +84,12 @@ class ServerClientInterconnectionTest
     zkServer.close()
   }
 
-  private val rand = scala.util.Random
-
-  private def getRandomStream =
-    new com.bwsw.tstreamstransactionserver.rpc.StreamValue {
-      override val name: String = rand.nextInt(10000).toString
-      override val partitions: Int = rand.nextInt(10000)
-      override val description: Option[String] = if (rand.nextBoolean()) Some(rand.nextInt(10000).toString) else None
-      override val ttl: Long = Long.MaxValue
-      override val zkPath: Option[String] = None
-    }
-
-  private def chooseStreamRandomly(streams: IndexedSeq[com.bwsw.tstreamstransactionserver.rpc.StreamValue]) = streams(rand.nextInt(streams.length))
-
-  private def getRandomProducerTransaction(streamID: Int,
-                                           streamObj: com.bwsw.tstreamstransactionserver.rpc.StreamValue,
-                                           transactionState: TransactionStates = TransactionStates(rand.nextInt(TransactionStates.list.length) + 1),
-                                           id: Long = System.nanoTime()) =
-    new ProducerTransaction {
-      override val transactionID: Long = id
-      override val state: TransactionStates = transactionState
-      override val stream: Int = streamID
-      override val ttl: Long = Long.MaxValue
-      override val quantity: Int = 0
-      override val partition: Int = streamObj.partitions
-    }
-
-  private def getRandomConsumerTransaction(streamID: Int, streamObj: com.bwsw.tstreamstransactionserver.rpc.StreamValue) =
-    new ConsumerTransaction {
-      override val transactionID: Long = scala.util.Random.nextLong()
-      override val name: String = rand.nextInt(10000).toString
-      override val stream: Int = streamID
-      override val partition: Int = streamObj.partitions
-    }
-
+  private def chooseStreamRandomly(streams: IndexedSeq[com.bwsw.tstreamstransactionserver.rpc.StreamValue]) = streams(Random.nextInt(streams.length))
 
   val secondsWait = 10
 
 
-  "Client" should "not send requests to server if it is shutdown" in {
+  "Client" should "not send requests to the server if it is shutdown" in {
     val bundle = Utils.startTransactionServerAndClient(
       zkClient, serverBuilder, clientBuilder
     )
@@ -310,7 +281,7 @@ class ServerClientInterconnectionTest
     }
   }
 
-  it should "throw an exception when the a server isn't available for time greater than in config" in {
+  it should "throw an exception when the server isn't available" in {
     val bundle = Utils.startTransactionServerAndClient(
       zkClient, serverBuilder, clientBuilder
     )
@@ -328,14 +299,13 @@ class ServerClientInterconnectionTest
 
       transactionServer.shutdown()
 
-      val timeToWait = clientBuilder.getConnectionOptions.connectionTimeoutMs.milliseconds
-      assertThrows[java.util.concurrent.TimeoutException] {
-        Await.result(resultInFuture, timeToWait)
+      a[ServerConnectionException] shouldBe thrownBy {
+        Await.result(resultInFuture, secondsWait.seconds)
       }
     }
   }
 
-  it should "not throw an exception when the server isn't available for time less than in config" in {
+  it should "throw an exception when the server restarted" in {
     val bundle = Utils.startTransactionServerAndClient(
       zkClient, serverBuilder, clientBuilder
     )
@@ -353,7 +323,7 @@ class ServerClientInterconnectionTest
 
     transactionServer.shutdown()
     val secondServer = bundle.serverBuilder
-        .withBootstrapOptions(SingleNodeServerOptions.BootstrapOptions(bindPort = Utils.getRandomPort))
+      .withBootstrapOptions(SingleNodeServerOptions.BootstrapOptions(bindPort = Utils.getRandomPort))
       .build()
 
     val task = new Thread(
@@ -362,7 +332,14 @@ class ServerClientInterconnectionTest
 
     task.start()
 
-    Await.result(resultInFuture, 10000.seconds) shouldBe true
+    /*
+     * The type of this exception can be either MasterLostException or ServerUnreachableException,
+     * depends what happens earlier: updation of master node in ZooKeeper or
+     * invocation InetClient.onServerConnectionLostDefaultBehaviour() from NettyConnectionHandler
+     */
+    a[ServerConnectionException] shouldBe thrownBy {
+      Await.result(resultInFuture, 10000.seconds)
+    }
 
     secondServer.shutdown()
     task.interrupt()
@@ -384,7 +361,7 @@ class ServerClientInterconnectionTest
       Await.result(client.putProducerState(txn), secondsWait.seconds)
 
       val dataAmount = 5000
-      val data = Array.fill(dataAmount)(rand.nextString(10).getBytes)
+      val data = Array.fill(dataAmount)(Random.nextString(10).getBytes)
 
       val resultInFuture = Await.result(client.putTransactionData(streamID, txn.partition, txn.transactionID, data, 0), secondsWait.seconds)
       resultInFuture shouldBe true
@@ -413,7 +390,7 @@ class ServerClientInterconnectionTest
         getRandomProducerTransaction(streamID, stream, TransactionStates.Opened)
 
       val dataAmount = 30
-      val data = Array.fill(dataAmount)(rand.nextString(10).getBytes)
+      val data = Array.fill(dataAmount)(Random.nextString(10).getBytes)
 
       val from = dataAmount
       val to = 2 * from
@@ -494,6 +471,25 @@ class ServerClientInterconnectionTest
       res shouldBe sorted
     }
   }
+
+  it should "disconnect from the server when it is off" in {
+    val bundle = Utils.startTransactionServerAndClient(
+      zkClient, serverBuilder, clientBuilder
+    )
+
+    bundle.operate { server =>
+      val client = bundle.client
+
+      Thread.sleep(1000) // wait until client connected to server
+      client.isConnected shouldBe true
+
+      server.shutdown()
+      Thread.sleep(1000) // wait until client disconnected from server
+
+      client.isConnected shouldBe false
+    }
+  }
+
 
   "getTransaction" should "not get a producer transaction if there's no transaction" in {
     val bundle = Utils.startTransactionServerAndClient(
@@ -649,7 +645,7 @@ class ServerClientInterconnectionTest
 
     bundle.operate { _ =>
       val clients = bundle.clients
-      val client  = bundle.clients.head
+      val client = bundle.clients.head
 
       val streams = Array.fill(10000)(getRandomStream)
       val streamID = Await.result(client.putStream(chooseStreamRandomly(streams)), secondsWait.seconds)
@@ -669,7 +665,7 @@ class ServerClientInterconnectionTest
         client.putStream(streamFake).flatMap { streamID =>
           val producerTransactions = Array.fill(100)(getRandomProducerTransaction(streamID, streamFake))
           val consumerTransactions = Array.fill(100)(getRandomConsumerTransaction(streamID, streamFake))
-          val data = Array.fill(100)(rand.nextInt(10000).toString.getBytes)
+          val data = Array.fill(100)(Random.nextInt(10000).toString.getBytes)
 
           client.putTransactions(producerTransactions, consumerTransactions)
 

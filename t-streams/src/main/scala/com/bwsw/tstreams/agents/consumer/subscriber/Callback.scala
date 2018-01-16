@@ -21,11 +21,15 @@ package com.bwsw.tstreams.agents.consumer.subscriber
 
 import com.bwsw.tstreams.agents.consumer.{ConsumerTransaction, TransactionOperator}
 import com.bwsw.tstreamstransactionserver.rpc.TransactionStates
+import org.slf4j.LoggerFactory
 
 /**
   * Trait to implement to handle incoming messages
   */
 trait Callback {
+
+  private val logger = LoggerFactory.getLogger(getClass)
+
   /**
     * Callback which is called on every closed transaction
     *
@@ -42,12 +46,32 @@ trait Callback {
     * @param transactionID transaction ID
     * @param count         amount of data items inside of the transaction
     */
-  def onTransactionCall(consumer: TransactionOperator,
-                        partition: Int,
-                        transactionID: Long,
-                        count: Int) = {
+  private[subscriber] final def onTransactionCall(consumer: TransactionOperator,
+                                                  partition: Int,
+                                                  transactionID: Long,
+                                                  count: Int): Unit = {
     consumer.setStreamPartitionOffset(partition, transactionID)
     consumer.buildTransactionObject(partition, transactionID, TransactionStates.Checkpointed, count)
       .foreach(transaction => onTransaction(consumer, transaction = transaction))
+  }
+
+
+  /**
+    * Callback which is called when subscriber failed
+    *
+    * @param exception thrown exception
+    */
+  def onFailure(exception: Throwable): Unit = {}
+
+  /**
+    * Logs subscriber failure and calls [[onFailure(exception)]]
+    *
+    * @param consumer  consumer object which is associated with the subscriber
+    * @param exception thrown exception
+    */
+  private[subscriber] final def onFailureCall(consumer: TransactionOperator, exception: Throwable): Unit = {
+    if (logger.isErrorEnabled)
+      logger.error(s"Subscriber $consumer failed", exception)
+    onFailure(exception)
   }
 }

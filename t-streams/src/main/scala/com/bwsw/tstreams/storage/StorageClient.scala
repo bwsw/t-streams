@@ -290,4 +290,6 @@ class StorageClient(clientOptions: ConnectionOptions,
 
   def generateTransactionForTimestamp(time: Long, timeout: Duration = StorageClient.maxAwaiTimeout): Long =
     Await.result(client.getTransaction(time), timeout)
+
+  def isConnected: Boolean = client.isConnected
 }
