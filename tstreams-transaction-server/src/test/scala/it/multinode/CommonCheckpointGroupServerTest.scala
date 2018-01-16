@@ -22,7 +22,7 @@ package it.multinode
 import java.util.UUID
 import java.util.concurrent.{CountDownLatch, TimeUnit}
 
-import com.bwsw.tstreamstransactionserver.exception.Throwable.MasterChangedException
+import com.bwsw.tstreamstransactionserver.exception.Throwable.{MasterChangedException, MasterLostException}
 import com.bwsw.tstreamstransactionserver.netty.client.ClientBuilder
 import com.bwsw.tstreamstransactionserver.netty.server.multiNode.CommonCheckpointGroupServerBuilder
 import com.bwsw.tstreamstransactionserver.options.MultiNodeServerOptions.BookkeeperOptions
@@ -33,7 +33,7 @@ import util.Utils.{getRandomConsumerTransaction, getRandomProducerTransaction, g
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
-import scala.util.Random
+import scala.util.{Failure, Random, Try}
 
 class CommonCheckpointGroupServerTest
   extends FlatSpec
@@ -279,10 +279,16 @@ class CommonCheckpointGroupServerTest
         val otherProducerTransactions = Array.fill(100)(getRandomProducerTransaction(streamID, stream))
         val otherConsumerTransactions = Array.fill(100)(getRandomConsumerTransaction(streamID, stream))
 
-        a[MasterChangedException] shouldBe thrownBy {
-          Await.result(
-            client.putTransactions(otherProducerTransactions, otherConsumerTransactions),
-            secondsWait.seconds)
+        /*
+         * The type of this exception can be MasterChangedException if the second server update
+         * master node in ZooKeeper before the client got notify that this node changed,
+         * or MasterLostException otherwise
+         */
+        Try(Await.result(
+          client.putTransactions(otherProducerTransactions, otherConsumerTransactions),
+          secondsWait.seconds)) should matchPattern {
+          case Failure(_: MasterChangedException) =>
+          case Failure(_: MasterLostException) =>
         }
       }
     }
