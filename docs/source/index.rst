@@ -10,7 +10,7 @@ T-streams (transactional streams) is a Scala library and infrastructure componen
 
 It is implemented with Scala 2.12, Apache Curator, Google Netty, Google Guava and other standard sound components purposed for the development of reliable distributed applications.
 
-Visit the project `web-site <http://t-streams.com/>`.
+Visit the project `web-site <http://t-streams.com/>`_.
 
 License
 -------------
