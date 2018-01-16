@@ -280,8 +280,8 @@ class CommonCheckpointGroupServerTest
         val otherConsumerTransactions = Array.fill(100)(getRandomConsumerTransaction(streamID, stream))
 
         /*
-         * The type of this exception can be MasterChangedException if the second server update
-         * master node in ZooKeeper before the client got notify that this node changed,
+         * The type of this exception can be MasterChangedException if the second server had updated
+         * a master node in ZooKeeper before the client received a notification that this node changed,
          * or MasterLostException otherwise
          */
         Try(Await.result(
