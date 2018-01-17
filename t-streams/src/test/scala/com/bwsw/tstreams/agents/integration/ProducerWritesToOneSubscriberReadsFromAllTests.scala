@@ -43,27 +43,27 @@ class ProducerWritesToOneSubscriberReadsFromAllTests
   }
 
   "Subscriber" should "handle all transactions produced by producer" in {
-    val TransactionsAmount = 10000
-    val latch = new CountDownLatch(TransactionsAmount)
+    val transactionsAmount = 10000
+    val latch = new CountDownLatch(transactionsAmount)
 
     val producer = f.getProducer(
       name = "test_producer",
       partitions = Set(0))
 
-    val s = f.getSubscriber(name = "sv2",
+    val subscriber = f.getSubscriber(name = "sv2",
       partitions = Set(0, 1, 2),
       offset = Newest,
       useLastOffset = true,
       callback = (_, _) => latch.countDown())
-    s.start()
-    for (_ <- 0 until TransactionsAmount) {
+    subscriber.start()
+    for (_ <- 0 until transactionsAmount) {
       val transaction = producer.newTransaction(NewProducerTransactionPolicy.ErrorIfOpened)
       transaction.send("test")
       transaction.checkpoint()
     }
     producer.stop()
     latch.await(5000, TimeUnit.MILLISECONDS) shouldBe true
-    s.stop()
+    subscriber.stop()
   }
 
   override def afterAll(): Unit = {

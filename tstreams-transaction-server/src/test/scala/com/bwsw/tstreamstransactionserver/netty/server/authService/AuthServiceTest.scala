@@ -50,14 +50,14 @@ class AuthServiceTest extends FlatSpec with Matchers {
   }
 
 
-  it should "validate token if it is exists in a cache" in {
+  it should "validate token if it exists in a cache" in {
     val authService = new AuthService(authenticationOptions)
     val token = authService.authenticate(authenticationOptions.key).get
 
     authService.isValid(token) shouldBe true
   }
 
-  it should "not validate token if it is doesn't exists in a cache" in {
+  it should "not validate token if it doesn't exists in a cache" in {
     val authService = new AuthService(authenticationOptions)
     val token = authService.authenticate(authenticationOptions.key).get
     val wrongToken = token + 1
@@ -66,14 +66,14 @@ class AuthServiceTest extends FlatSpec with Matchers {
   }
 
 
-  it should "update token if it is exists in a cache" in {
+  it should "update token if it exists in a cache" in {
     val authService = new AuthService(authenticationOptions)
     val token = authService.authenticate(authenticationOptions.key).get
 
     authService.update(token) shouldBe true
   }
 
-  it should "not update token if it is doesn't exists in a cache" in {
+  it should "not update token if it doesn't exists in a cache" in {
     val authService = new AuthService(authenticationOptions)
     val token = authService.authenticate(authenticationOptions.key).get
     val wrongToken = token + 1
