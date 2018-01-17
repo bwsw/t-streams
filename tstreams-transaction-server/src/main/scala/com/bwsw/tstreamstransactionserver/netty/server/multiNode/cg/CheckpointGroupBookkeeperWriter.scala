@@ -41,7 +41,7 @@ class CheckpointGroupBookkeeperWriter(zookeeperClient: CuratorFramework,
 
   override def getLastConstructedLedger: Long = {
     checkpointMasterZkTreeList
-      .lastEntityID
+      .lastEntityId
       .getOrElse(-1L)
   }
 

@@ -21,9 +21,17 @@ package com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeperServi
 
 import org.apache.curator.framework.CuratorFramework
 
+/**
+  * Class manages entities meta in zookeeper using 4-level hierarchical znodes.
+  *
+  * It splits the id into 4 parts (2 bytes each) and convert each of parts to hex-digit.
+  * Then these parts are used to store id as a hierarchical structure of znodes.
+  *
+  * @param client   zookeeper client
+  * @param rootPath node path
+  */
 class LongZookeeperTreeList(client: CuratorFramework, rootPath: String)
   extends ZookeeperTreeList[Long](client, rootPath) {
-
 
   override def entityToPath(entity: Long): Array[String] = {
     def splitLongToHexes: Array[String] = {
@@ -43,7 +51,7 @@ class LongZookeeperTreeList(client: CuratorFramework, rootPath: String)
     splitLongToHexes
   }
 
-  override def entityIDtoBytes(entity: Long): Array[Byte] = {
+  override def entityIdToBytes(entity: Long): Array[Byte] = {
     val size = java.lang.Long.BYTES
     val buffer = java.nio.ByteBuffer.allocate(size)
 
@@ -55,7 +63,7 @@ class LongZookeeperTreeList(client: CuratorFramework, rootPath: String)
     bytes
   }
 
-  override def bytesToEntityID(bytes: Array[Byte]): Long = {
+  override def bytesToEntityId(bytes: Array[Byte]): Long = {
     val buffer = java.nio.ByteBuffer.wrap(bytes)
     buffer.getLong()
   }

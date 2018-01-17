@@ -122,7 +122,7 @@ class ZkMultipleTreeListReader(zkTreeLists: Array[LongZookeeperTreeList],
     else {
       zkTreeLists.zip(lastClosedLedgers)
         .map { case (zkTreeList, lastClosedLedgerHandler) =>
-          zkTreeList.firstEntityID
+          zkTreeList.firstEntityId
             .map { id =>
               if (id >= 0 && lastClosedLedgerHandler.getId >= 0) {
                 LedgerMetadata(id, NoRecordRead, NoRecordReadStatus)

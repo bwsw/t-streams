@@ -22,39 +22,32 @@ package com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeperServi
 import org.apache.curator.framework.CuratorFramework
 import org.apache.curator.framework.recipes.cache.NodeCache
 
-
+/**
+  * Class allows managing data of znode. Data consists of two elements, each of which is set of bytes
+  * @param client zookeeper client
+  * @param rootPath node path
+  */
 class RootNode(client: CuratorFramework,
                rootPath: String) {
 
-  private val nodeCache =
-    new NodeCache(client, rootPath, false)
+  private val nodeCache = new NodeCache(client, rootPath, false)
   nodeCache.start()
 
-
-  final def getCurrentData: RootNodeData = {
+  final def getData(): RootNodeData = {
     nodeCache.rebuild()
-    getLocalCachedCurrentData
-  }
-
-  final def getLocalCachedCurrentData: RootNodeData = {
     Option(nodeCache.getCurrentData)
-      .map { node =>
-        RootNodeData.fromByteArray(node.getData)
-      }
-      .getOrElse(
-        RootNodeData(
-          Array.emptyByteArray,
-          Array.emptyByteArray
-        ))
+      .map(node => RootNodeData.fromByteArray(node.getData))
+      .getOrElse(RootNodeData())
   }
 
-  final def setFirstAndLastIDInRootNode(first: Array[Byte],
-                                        second: Array[Byte]): Unit = {
-    val nodeData =
-      RootNodeData(first, second)
-        .toByteArray
+  final def setData(firstId: Array[Byte],
+                    lastId: Array[Byte]): Unit = {
+    val nodeData = RootNodeData(firstId, lastId).toByteArray
+    client.setData().forPath(rootPath, nodeData)
+  }
 
-    client.setData()
-      .forPath(rootPath, nodeData)
+  final def clear(): Unit = {
+    val emptyNodeData = RootNodeData().toByteArray
+    client.setData().forPath(rootPath, emptyNodeData)
   }
 }

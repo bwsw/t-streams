@@ -46,7 +46,7 @@ class BookkeeperMaster(bookKeeper: BookKeeper,
 
   private def closeLastLedger(): Unit = {
     zkTreeListLedger
-      .lastEntityID
+      .lastEntityId
       .foreach { id =>
         closeLedger(id)
       }

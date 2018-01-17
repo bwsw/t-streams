@@ -72,7 +72,7 @@ class CommonCheckpointGroupBookkeeperWriter(zookeeperClient: CuratorFramework,
     val ledgerIds =
       for {
         zkTree <- zkTreesList
-        lastConstructedLedgerId <- zkTree.lastEntityID
+        lastConstructedLedgerId <- zkTree.lastEntityId
       } yield lastConstructedLedgerId
 
     if (ledgerIds.isEmpty) {

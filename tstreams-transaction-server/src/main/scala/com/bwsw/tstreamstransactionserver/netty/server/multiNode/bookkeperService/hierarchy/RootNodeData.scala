@@ -39,35 +39,32 @@ object RootNodeData {
       val first = new Array[Byte](firstSize)
       buf.get(first)
 
-      val second = new Array[Byte](buf.remaining())
-      buf.get(second)
+      val last = new Array[Byte](buf.remaining())
+      buf.get(last)
 
-      new RootNodeData(
-        first,
-        second
-      )
+      new RootNodeData(first, last)
     }
   }
 
-  def apply(firstID: Array[Byte],
-            lastID: Array[Byte]): RootNodeData =
-    new RootNodeData(firstID, lastID)
+  def apply(firstId: Array[Byte] = Array.emptyByteArray,
+            lastId: Array[Byte] = Array.emptyByteArray): RootNodeData =
+    new RootNodeData(firstId, lastId)
 }
 
 
-class RootNodeData(val firstID: Array[Byte],
-                   val lastID: Array[Byte]) {
+class RootNodeData(val firstId: Array[Byte],
+                   val lastId: Array[Byte]) {
   def toByteArray: Array[Byte] = {
     val size =
       RootNodeData.delimiterIndexFieldSize +
-        firstID.length +
-        lastID.length
+        firstId.length +
+        lastId.length
 
     val buf = java.nio.ByteBuffer
       .allocate(size)
-      .putInt(firstID.length)
-      .put(firstID)
-      .put(lastID)
+      .putInt(firstId.length)
+      .put(firstId)
+      .put(lastId)
     buf.flip()
 
     if (buf.hasArray) {
@@ -82,10 +79,10 @@ class RootNodeData(val firstID: Array[Byte],
 
   override def hashCode(): Int = {
     val firstIdHash =
-      java.util.Arrays.hashCode(firstID)
+      java.util.Arrays.hashCode(firstId)
 
     val lastIdHash =
-      java.util.Arrays.hashCode(lastID)
+      java.util.Arrays.hashCode(lastId)
 
     31 * (
       31 + firstIdHash.hashCode()
@@ -94,8 +91,8 @@ class RootNodeData(val firstID: Array[Byte],
 
   override def equals(o: scala.Any): Boolean = o match {
     case that: RootNodeData =>
-      this.firstID.sameElements(that.firstID) &&
-        this.lastID.sameElements(that.lastID)
+      this.firstId.sameElements(that.firstId) &&
+        this.lastId.sameElements(that.lastId)
     case _ => false
   }
 }

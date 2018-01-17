@@ -42,8 +42,8 @@ class ZookeeperTreeListTest
   "ZookeeperTreeListLong" should "return first entry id and last entry id as Nones" in {
     val treeListLong = new LongZookeeperTreeList(zkClient, s"/$uuid")
 
-    treeListLong.lastEntityID shouldBe None
-    treeListLong.firstEntityID shouldBe None
+    treeListLong.lastEntityId shouldBe None
+    treeListLong.firstEntityId shouldBe None
   }
 
   it should "return first entry id and last entry id the same as only one entity id was persisted" in {
@@ -52,10 +52,10 @@ class ZookeeperTreeListTest
     val value = 1L
     treeListLong.createNode(value)
 
-    treeListLong.firstEntityID shouldBe defined
-    treeListLong.firstEntityID.get == value
+    treeListLong.firstEntityId shouldBe defined
+    treeListLong.firstEntityId.get == value
 
-    treeListLong.firstEntityID shouldBe treeListLong.lastEntityID
+    treeListLong.firstEntityId shouldBe treeListLong.lastEntityId
   }
 
   it should "return first entry id and last entry id properly" in {
@@ -67,8 +67,8 @@ class ZookeeperTreeListTest
     (startNumber to maxNumbers)
       .foreach(number => treeListLong.createNode(number))
 
-    treeListLong.firstEntityID shouldBe Some(startNumber)
-    treeListLong.lastEntityID  shouldBe Some(maxNumbers)
+    treeListLong.firstEntityId shouldBe Some(startNumber)
+    treeListLong.lastEntityId  shouldBe Some(maxNumbers)
   }
 
   it should "return a next node of some node properly" in {
@@ -138,8 +138,8 @@ class ZookeeperTreeListTest
     val id = 0
     treeListLong.deleteNode(id) shouldBe true
 
-    treeListLong.firstEntityID shouldBe None
-    treeListLong.lastEntityID  shouldBe None
+    treeListLong.firstEntityId shouldBe None
+    treeListLong.lastEntityId  shouldBe None
   }
 
   it should "delete the first node correctly" in {
@@ -158,8 +158,8 @@ class ZookeeperTreeListTest
     val nextID  = startNumber + 1
     treeListLong.deleteNode(firstID) shouldBe true
 
-    treeListLong.firstEntityID shouldBe Some(nextID)
-    treeListLong.lastEntityID  shouldBe Some(maxNumbers)
+    treeListLong.firstEntityId shouldBe Some(nextID)
+    treeListLong.lastEntityId  shouldBe Some(maxNumbers)
   }
 
   it should "delete the last node correctly" in {
@@ -179,8 +179,8 @@ class ZookeeperTreeListTest
     treeListLong.deleteNode(lastID) shouldBe true
     treeListLong.getNextNode(previousID) shouldBe None
 
-    treeListLong.firstEntityID shouldBe Some(startNumber)
-    treeListLong.lastEntityID  shouldBe Some(previousID)
+    treeListLong.firstEntityId shouldBe Some(startNumber)
+    treeListLong.lastEntityId  shouldBe Some(previousID)
   }
 
 
@@ -207,8 +207,8 @@ class ZookeeperTreeListTest
     treeListLong.getNextNode(previousID - 1) shouldBe Some(previousID)
     treeListLong.getNextNode(previousID) shouldBe Some(nextID)
 
-    treeListLong.firstEntityID shouldBe Some(startNumber)
-    treeListLong.lastEntityID  shouldBe Some(maxNumbers)
+    treeListLong.firstEntityId shouldBe Some(startNumber)
+    treeListLong.lastEntityId  shouldBe Some(maxNumbers)
   }
 
   it should "delete nodes from [head, n], n - some positive number" in {
@@ -226,8 +226,8 @@ class ZookeeperTreeListTest
     val number = scala.util.Random.nextInt(maxNumbers)
     treeListLong.deleteLeftNodes(number)
 
-    treeListLong.firstEntityID shouldBe Some(number)
-    treeListLong.lastEntityID  shouldBe Some(maxNumbers)
+    treeListLong.firstEntityId shouldBe Some(number)
+    treeListLong.lastEntityId  shouldBe Some(maxNumbers)
   }
 
   it should "delete nodes from [head, n], n - some positive number, which is greater than number of nodes list contains" in {
@@ -245,7 +245,7 @@ class ZookeeperTreeListTest
     val number = maxNumbers + 1
     treeListLong.deleteLeftNodes(number)
 
-    treeListLong.firstEntityID shouldBe None
-    treeListLong.lastEntityID  shouldBe None
+    treeListLong.firstEntityId shouldBe None
+    treeListLong.lastEntityId  shouldBe None
   }
 }
