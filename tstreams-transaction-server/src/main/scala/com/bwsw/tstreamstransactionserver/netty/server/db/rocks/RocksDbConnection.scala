@@ -19,7 +19,9 @@
 package com.bwsw.tstreamstransactionserver.netty.server.db.rocks
 
 import java.io.{Closeable, File}
+import java.util.concurrent.TimeUnit
 
+import com.bwsw.tstreamstransactionserver.netty.server.storage.rocks.CompactionJob
 import com.bwsw.tstreamstransactionserver.options.SingleNodeServerOptions.RocksStorageOptions
 import org.apache.commons.io.FileUtils
 import org.rocksdb._
@@ -35,11 +37,22 @@ class RocksDbConnection(rocksStorageOpts: RocksStorageOptions,
   private val file = new File(absolutePath)
   private val client = {
     FileUtils.forceMkdir(file)
+
     TtlDB.open(options, file.getAbsolutePath, ttl, readOnly)
   }
 
+  private val maybeCompactionJob =
+    if (readOnly) None
+    else Some(new CompactionJob(
+      client,
+      Seq.empty,
+      rocksStorageOpts.compactionInterval,
+      TimeUnit.SECONDS))
 
-  def get(key: Array[Byte]) = client.get(key)
+  maybeCompactionJob.foreach(_.start())
+
+
+  def get(key: Array[Byte]): Array[Byte] = client.get(key)
 
   @throws[RocksDBException]
   def put(key: Array[Byte], data: Array[Byte]): Unit = client.put(key, data)
@@ -47,35 +60,36 @@ class RocksDbConnection(rocksStorageOpts: RocksStorageOptions,
   def getLastRecord: Option[(Array[Byte], Array[Byte])] = {
     val iterator = client.newIterator()
     iterator.seekToLast()
-    val record = if (iterator.isValid) {
-      val keyValue = (iterator.key(), iterator.value())
-      Some(keyValue)
-    }
-    else {
-      None
-    }
+    val record =
+      if (iterator.isValid)
+        Some((iterator.key(), iterator.value()))
+      else
+        None
     iterator.close()
+
     record
   }
 
   def iterator: RocksIterator = client.newIterator()
 
-  override def close(): Unit = client.close()
+  override def close(): Unit = {
+    maybeCompactionJob.foreach(_.close())
+    client.close()
+  }
 
   final def closeAndDeleteFolder(): Unit = {
     options.close()
-    client.close()
+    close()
     file.delete()
   }
 
   def newBatch = new Batch
 
-  class Batch() {
+
+  class Batch {
     private val batch = new WriteBatch()
 
-    def put(key: Array[Byte], data: Array[Byte]): Unit = {
-      batch.put(key, data)
-    }
+    def put(key: Array[Byte], data: Array[Byte]): Unit = batch.put(key, data)
 
     def remove(key: Array[Byte]): Unit = batch.remove(key)
 
@@ -89,27 +103,9 @@ class RocksDbConnection(rocksStorageOpts: RocksStorageOptions,
       }
       writeOptions.close()
       batch.close()
+
       status
     }
   }
 
-  //  def newFileWriter = new FileWriter
-  //  class FileWriter {
-  //    private val sstFileWriter = new SstFileWriter(new EnvOptions(), options, RocksDbConnection.comparator)
-  //    private val fileNew = new File(file.getAbsolutePath, "sst_file.sst")
-  //    sstFileWriter.open(fileNew.getAbsolutePath)
-  //
-  //    def putData(data: Array[Byte]): Unit = sstFileWriter.add(new Slice(data), new Slice(Array[Byte]()))
-  //    def finish(): Unit = {
-  //      sstFileWriter.finish()
-  //      client.compactRange()
-  //      client.addFileWithFilePath(fileNew.getAbsolutePath, true)
-  //    }
-  //  }
 }
-
-//private object RocksDbConnection extends App {
-//  RocksDB.loadLibrary()
-//  lazy val comparatorOptions = new ComparatorOptions()
-//  lazy val comparator = new org.rocksdb.util.BytewiseComparator(comparatorOptions)
-//}

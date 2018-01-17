@@ -106,22 +106,36 @@ object SingleNodeServerOptions {
     *                                   Used for [[com.bwsw.tstreamstransactionserver.netty.server.ServerHandler]]
     * @param readThreadPool             the number of threads of pool are used to do read operations from Rocksdb databases.
     *                                   Used for [[com.bwsw.tstreamstransactionserver.netty.server.ServerHandler]]
-    * @param transactionTtlAppendMs     the value to sum with a stream [[com.bwsw.tstreamstransactionserver.rpc.StreamValue.ttl]] attribute, to determine lifetime of all producer transactions data belonging to the stream.
-    * @param transactionExpungeDelayMin the lifetime of a producer transaction after persistence to database.(default: 6 months). If negative integer - transactions aren't deleted at all.
-    * @param maxBackgroundCompactions   the maximum number of concurrent background compactions. The default is 1, but to fully utilize your CPU and storage you might want to increase this to approximately number of cores in the system.
-    * @param compression                compression takes one of values: [NO_COMPRESSION, SNAPPY_COMPRESSION, ZLIB_COMPRESSION, BZLIB2_COMPRESSION, LZ4_COMPRESSION, LZ4HC_COMPRESSION].
+    * @param transactionTtlAppendSec    the value that is added to stream
+    *                                   [[com.bwsw.tstreamstransactionserver.rpc.StreamValue.ttl TTL]] in order
+    *                                   to determine data lifetime of producer transactions.This value is common for
+    *                                   all streams. As the stream TTL value could be different for each stream,
+    *                                   the data lifetime would be different for each stream too.
+    * @param transactionExpungeDelaySec the lifetime of a transaction metadata after persistence to database
+    *                                   (6 months by default). If negative integer - transactions aren't deleted at all.
+    *                                   You shouldn't set the stream TTL value more than this setting to avoid a case
+    *                                   when transactions metadata will have been deleted before transactions data.
+    * @param maxBackgroundCompactions   the maximum number of concurrent background compactions. The default is 1,
+    *                                   but to fully utilize your CPU and storage you might want to increase this
+    *                                   to approximately number of cores in the system.
+    * @param compression                compression takes one of values: [NO_COMPRESSION, SNAPPY_COMPRESSION,
+    *                                   ZLIB_COMPRESSION, BZLIB2_COMPRESSION, LZ4_COMPRESSION, LZ4HC_COMPRESSION].
     *                                   If it's unimportant use a LZ4_COMPRESSION as default value.
     * @param isFsync                    if true, then every store to stable storage will issue a fsync.
     *                                   If false, then every store to stable storage will issue a fdatasync.
-    *                                   This parameter should be set to true while storing data to filesystem like ext3 that can lose files after a reboot.
+    *                                   This parameter should be set to true while storing data to filesystem like ext3
+    *                                   that can lose files after a reboot.
+    * @param compactionInterval         seconds between RocksDB storage compaction. The compaction process is required
+    *                                   to delete expired entries from RocksDB (i.e. data and metadata of transactions).
     */
   final case class RocksStorageOptions(writeThreadPool: Int = 2,
                                        readThreadPool: Int = 2,
-                                       transactionTtlAppendMs: Int = 50,
-                                       transactionExpungeDelayMin: Int = TimeUnit.DAYS.toMinutes(180).toInt,
+                                       transactionTtlAppendSec: Int = 1,
+                                       transactionExpungeDelaySec: Int = TimeUnit.DAYS.toSeconds(180).toInt,
                                        maxBackgroundCompactions: Int = 1,
                                        compression: CompressionType = CompressionType.LZ4_COMPRESSION,
-                                       isFsync: Boolean = true) {
+                                       isFsync: Boolean = true,
+                                       compactionInterval: Long = TimeUnit.HOURS.toSeconds(1)) {
 
 
     def createDBOptions(maxBackgroundCompactions: Int = this.maxBackgroundCompactions,

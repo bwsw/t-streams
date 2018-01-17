@@ -33,11 +33,9 @@ import scala.collection.mutable.ArrayBuffer
 class TransactionDataService(storageOpts: StorageOptions,
                              rocksStorageOpts: RocksStorageOptions,
                              streamRepository: StreamRepository) {
-  private val logger =
-    LoggerFactory.getLogger(this.getClass)
+  private val logger = LoggerFactory.getLogger(this.getClass)
 
-  private val ttlToAdd: Int =
-    rocksStorageOpts.transactionTtlAppendMs
+  private val ttlToAdd: Int = rocksStorageOpts.transactionTtlAppendSec
   private val rocksDBStorageToStream =
     new java.util.concurrent.ConcurrentHashMap[StorageName, RocksDbConnection]()
 

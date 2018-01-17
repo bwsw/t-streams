@@ -111,10 +111,10 @@ object PropertyFileReader {
       loader.castCheck("rocksdb.read-thread-pool", prop => prop.toInt)
 
     val transactionTtlAppendMs =
-      loader.castCheck("rocksdb.transaction-ttl-append-ms", prop => prop.toInt)
+      loader.castCheck("rocksdb.transaction-ttl-append-sec", prop => prop.toInt)
 
-    val transactionExpungeDelayMin =
-      loader.castCheck("rocksdb.transaction-expunge-delay-min", prop => prop.toInt)
+    val transactionExpungeDelaySec =
+      loader.castCheck("rocksdb.transaction-expunge-delay-sec", prop => prop.toInt)
 
     val maxBackgroundCompactions =
       loader.castCheck("rocksdb.max-background-compactions", prop => prop.toInt)
@@ -125,14 +125,17 @@ object PropertyFileReader {
     val isFsync =
       loader.castCheck("rocksdb.is-fsync", prop => prop.toBoolean)
 
+    val compactionInterval = loader.castCheck("rocksdb.compaction-interval", _.toLong)
+
     RocksStorageOptions(
       writeThreadPool,
       readThreadPool,
       transactionTtlAppendMs,
-      transactionExpungeDelayMin,
+      transactionExpungeDelaySec,
       maxBackgroundCompactions,
       compressionType,
-      isFsync
+      isFsync,
+      compactionInterval
     )
   }
 

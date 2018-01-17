@@ -47,7 +47,8 @@ object Dependencies {
       "org.apache.curator" % "curator-recipes" % "2.12.0",
       "org.apache.curator" % "curator-test" % "2.12.0",
       "io.zipkin.reporter2" % "zipkin-sender-okhttp3" % "2.2.2",
-      "org.scalatest" %% "scalatest" % "3.0.4" % "test"
+      "org.scalatest" %% "scalatest" % "3.0.4" % "test",
+      "org.mockito" % "mockito-core" % "2.13.0" % "test"
     ))
 }
 
