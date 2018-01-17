@@ -20,10 +20,12 @@
 package com.bwsw.tstreamstransactionserver.netty.client
 
 import java.util.concurrent.atomic.{AtomicBoolean, AtomicLong, AtomicReference}
+import java.util.concurrent.locks.ReentrantLock
 import java.util.concurrent.{ConcurrentHashMap, CountDownLatch, TimeUnit}
 
 import com.bwsw.tstreamstransactionserver.exception.Throwable._
 import com.bwsw.tstreamstransactionserver.netty.client.zk.{ZKConnectionLostListener, ZKMasterPathMonitor}
+import com.bwsw.tstreamstransactionserver.netty.server.authService.AuthService
 import com.bwsw.tstreamstransactionserver.netty.{Protocol, RequestMessage, ResponseMessage, SocketHostPortPair}
 import com.bwsw.tstreamstransactionserver.options.ClientOptions.{AuthOptions, ConnectionOptions}
 import com.bwsw.tstreamstransactionserver.options.CommonOptions.{TracingOptions, ZookeeperOptions}
@@ -38,10 +40,10 @@ import org.apache.curator.framework.CuratorFramework
 import org.apache.curator.framework.state.ConnectionState
 import org.slf4j.LoggerFactory
 
+import scala.collection.JavaConverters._
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContextExecutorService, Future, Promise}
 import scala.util.{Failure, Success, Try}
-import scala.collection.JavaConverters._
 
 class InetClient(zookeeperOptions: ZookeeperOptions,
                  connectionOptions: ConnectionOptions,
@@ -59,11 +61,9 @@ class InetClient(zookeeperOptions: ZookeeperOptions,
 
   private val tracer = ClientTracer(tracingOptions)
 
-  private val logger =
-    LoggerFactory.getLogger(this.getClass)
+  private val logger = LoggerFactory.getLogger(getClass)
 
-  private val isAuthenticating =
-    new java.util.concurrent.atomic.AtomicBoolean(false)
+  private val authenticateLock = new ReentrantLock()
 
   private val zkConnectionLostListener = new ZKConnectionLostListener(
     zkConnection,
@@ -77,8 +77,7 @@ class InetClient(zookeeperOptions: ZookeeperOptions,
       connectionOptions.prefix
     )
 
-  commonServerPathMonitor
-    .startMonitoringMasterServerPath()
+  commonServerPathMonitor.startMonitoringMasterServerPath()
 
   private val connected = new AtomicBoolean(false)
   private val isStopped = new AtomicBoolean(false)
@@ -121,7 +120,7 @@ class InetClient(zookeeperOptions: ZookeeperOptions,
     }
   }
 
-  @volatile private var currentToken: Int = -1
+  @volatile private var currentToken: Option[Int] = None
   @volatile private var messageSizeValidator: MessageSizeValidator =
     new MessageSizeValidator(Int.MaxValue, Int.MaxValue)
 
@@ -130,7 +129,6 @@ class InetClient(zookeeperOptions: ZookeeperOptions,
     * @param descriptor look at [[com.bwsw.tstreamstransactionserver.netty.Protocol]].
     * @param request    a request that client would like to send.
     * @return a response from server(however, it may return an exception from server).
-    *
     */
   final def method[Req <: ThriftStruct, Rep <: ThriftStruct, A](descriptor: Protocol.Descriptor[Req, Rep],
                                                                 request: Req,
@@ -149,11 +147,13 @@ class InetClient(zookeeperOptions: ZookeeperOptions,
                                                      request: Req): Unit = {
     onNotConnectedThrowException()
 
-    if (getToken == -1)
+    if (getToken.isEmpty) {
       authenticate()
+    }
 
     val messageId = requestIDGen.getAndIncrement()
-    val message = descriptor.encodeRequestToMessage(request)(messageId, getToken, isFireAndForgetMethod = true)
+    val message = descriptor.encodeRequestToMessage(request)(
+      messageId, getToken.getOrElse(AuthService.UnauthenticatedToken), isFireAndForgetMethod = true)
 
     if (logger.isDebugEnabled) logger.debug(Protocol.methodWithArgsToString(messageId, request))
     messageSizeValidator.validateMessageSize(message)
@@ -264,8 +264,8 @@ class InetClient(zookeeperOptions: ZookeeperOptions,
         val messageId = requestIDGen.getAndIncrement()
         val newMessage = updatedMessage.copy(
           id = messageId,
-          token = getToken
-        )
+          token = getToken.getOrElse(updatedMessage.token))
+
         sendRequest(newMessage, descriptor, f, Some(currentException), counter)
       }
     }(methodContext)
@@ -275,16 +275,19 @@ class InetClient(zookeeperOptions: ZookeeperOptions,
                                                                                            request: Req,
                                                                                            f: Rep => A)
                                                                                           (implicit methodContext: concurrent.ExecutionContext): Future[A] = {
+
+
+    if (getToken.isEmpty) {
+      authenticate()
+    }
+
     val messageId = requestIDGen.getAndIncrement()
 
     val message = descriptor.encodeRequestToMessage(request)(
       messageId,
-      getToken,
+      getToken.getOrElse(AuthService.UnauthenticatedToken),
       isFireAndForgetMethod = false
     )
-
-    if (getToken == -1)
-      authenticate()
 
     messageSizeValidator.validateMessageSize(message)
 
@@ -299,7 +302,7 @@ class InetClient(zookeeperOptions: ZookeeperOptions,
 
     val message = descriptor.encodeRequestToMessage(request)(
       messageId,
-      getToken,
+      getToken.getOrElse(AuthService.UnauthenticatedToken),
       isFireAndForgetMethod = false
     )
 
@@ -337,7 +340,7 @@ class InetClient(zookeeperOptions: ZookeeperOptions,
     }
   }
 
-  private final def getToken: Int = {
+  private final def getToken: Option[Int] = {
     currentToken
   }
 
@@ -358,38 +361,30 @@ class InetClient(zookeeperOptions: ZookeeperOptions,
 
     onShutdownThrowException()
 
-    val needToAuthenticate =
-      isAuthenticating.compareAndSet(false, true)
+    authenticateLock.lock()
+    val authKey = authOpts.key
+    val latch = new CountDownLatch(1)
+    methodWithoutMessageSizeValidation[TransactionService.Authenticate.Args, TransactionService.Authenticate.Result, Unit](
+      Protocol.Authenticate,
+      TransactionService.Authenticate.Args(authKey),
+      x => {
+        currentToken = x.success
 
-    if (needToAuthenticate) {
-      val authKey = authOpts.key
-      val latch = new CountDownLatch(1)
-      methodWithoutMessageSizeValidation[TransactionService.Authenticate.Args, TransactionService.Authenticate.Result, Unit](
-        Protocol.Authenticate,
-        TransactionService.Authenticate.Args(authKey),
-        x => {
-          val tokenFromServer = x.success.get
-          currentToken = tokenFromServer
+        val packageSizes = getMaxPackagesSizes()
+        messageSizeValidator = new MessageSizeValidator(
+          packageSizes.maxMetadataPackageSize,
+          packageSizes.maxDataPackageSize
+        )
 
-          val packageSizes = getMaxPackagesSizes()
-          messageSizeValidator = new MessageSizeValidator(
-            packageSizes.maxMetadataPackageSize,
-            packageSizes.maxDataPackageSize
-          )
+        latch.countDown()
+      }
+    )(context)
 
-          latch.countDown()
-        }
-      )(context)
-
-      latch.await(
-        connectionOptions.requestTimeoutMs,
-        TimeUnit.MILLISECONDS
-      )
-
-      isAuthenticating.set(false)
-    } else {
-      while (isAuthenticating.get()) {}
-    }
+    latch.await(
+      connectionOptions.requestTimeoutMs,
+      TimeUnit.MILLISECONDS
+    )
+    authenticateLock.unlock()
   }
 
   private def getMaxPackagesSizes(): TransportOptionsInfo = {
