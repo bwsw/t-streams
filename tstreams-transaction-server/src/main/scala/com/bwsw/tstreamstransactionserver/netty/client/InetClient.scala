@@ -218,7 +218,7 @@ class InetClient(zookeeperOptions: ZookeeperOptions,
 
   private def onShutdownThrowException(): Unit = {
     if (isShutdown) {
-      throw new ClientIllegalOperationAfterShutdown
+      throw new ClientIllegalOperationAfterShutdownException
     }
   }
 
