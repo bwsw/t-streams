@@ -114,7 +114,8 @@ class CommonServer(authenticationOpts: AuthenticationOptions,
     new CommonBookkeeperWriter(
       zk.client,
       bookkeeperOptions,
-      commonPrefixesOptions
+      commonPrefixesOptions,
+      storageOpts.dataCompactionInterval
     )
 
   private val commonMasterElector =
@@ -298,6 +299,10 @@ class CommonServer(authenticationOpts: AuthenticationOptions,
 
       if (transactionDataService != null) {
         transactionDataService.closeTransactionDataDatabases()
+      }
+
+      if (bookkeeperToRocksWriter != null) {
+        bookkeeperToRocksWriter.close()
       }
     }
   }

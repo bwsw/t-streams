@@ -22,17 +22,18 @@ import java.io.File
 import java.util.concurrent.TimeUnit
 
 import com.bwsw.tstreamstransactionserver.netty.server.db.{DbMeta, KeyValueDbManager}
-import com.bwsw.tstreamstransactionserver.netty.server.storage.rocks.CompactionJob
+import com.bwsw.tstreamstransactionserver.netty.server.storage.rocks.RocksCompactionJob
 import com.bwsw.tstreamstransactionserver.options.SingleNodeServerOptions.RocksStorageOptions
 import org.apache.commons.io.FileUtils
 import org.rocksdb._
 
 import scala.collection.JavaConverters
 
-class RocksDbManager(absolutePath: String,
-                     rocksStorageOpts: RocksStorageOptions,
+class RocksDbManager(rocksStorageOpts: RocksStorageOptions,
+                     absolutePath: String,
                      descriptors: Seq[RocksDbDescriptor],
-                     readMode: Boolean = false)
+                     compactionInterval: Long,
+                     readOnly: Boolean = false)
   extends KeyValueDbManager {
   RocksDB.loadLibrary()
 
@@ -65,7 +66,7 @@ class RocksDbManager(absolutePath: String,
       JavaConverters.seqAsJavaList(columnFamilyDescriptors),
       databaseHandlers,
       JavaConverters.seqAsJavaList(ttls),
-      readMode
+      readOnly
     )
 
     val handlerToIndexMap: collection.immutable.Map[Int, ColumnFamilyHandle] =
@@ -83,12 +84,11 @@ class RocksDbManager(absolutePath: String,
 
 
   private val maybeCompactionJob =
-    if (readMode) None
-    else Some(new CompactionJob(
+    if (readOnly) None
+    else Some(new RocksCompactionJob(
       client,
       databaseHandlers.values.toSeq,
-      rocksStorageOpts.compactionInterval,
-      TimeUnit.SECONDS))
+      compactionInterval))
 
   maybeCompactionJob.foreach(_.start())
 

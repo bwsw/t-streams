@@ -21,7 +21,7 @@ package ut.multiNodeServer.ZkTreeListTest
 
 import java.util.concurrent.atomic.AtomicLong
 
-import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeperService.{LedgerHandle, LedgerManager}
+import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeeperService.{LedgerHandle, LedgerManager}
 
 class LedgerManagerInMemory
   extends LedgerManager{
@@ -51,6 +51,4 @@ class LedgerManagerInMemory
   override def deleteLedger(id: Long): Boolean = {
     Option(storage.remove(id)).isDefined
   }
-
-  override def isClosed(id: Long): Boolean = true
 }

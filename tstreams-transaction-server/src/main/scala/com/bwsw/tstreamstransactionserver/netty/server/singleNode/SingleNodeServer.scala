@@ -118,6 +118,7 @@ class SingleNodeServer(authenticationOpts: AuthenticationOptions,
   private val rocksDBCommitLog = new RocksDbConnection(
     rocksStorageOpts,
     s"${storageOpts.path}${java.io.File.separatorChar}${storageOpts.commitLogRocksDirectory}",
+    storageOpts.dataCompactionInterval,
     commitLogOptions.expungeDelaySec
   )
 

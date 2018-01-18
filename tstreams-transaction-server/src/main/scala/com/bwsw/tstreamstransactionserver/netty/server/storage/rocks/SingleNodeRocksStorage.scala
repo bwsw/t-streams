@@ -33,9 +33,10 @@ final class SingleNodeRocksStorage(storageOpts: StorageOptions,
     readOnly) {
 
   private val rocksMetaServiceDB: KeyValueDbManager = new RocksDbManager(
-    storageOpts.path + java.io.File.separatorChar + storageOpts.metadataDirectory,
     rocksOpts,
+    storageOpts.path + java.io.File.separatorChar + storageOpts.metadataDirectory,
     commonDescriptors :+ RocksDbDescriptor(Storage.commitLogStoreDescriptorInfo, columnFamilyOptions),
+    storageOpts.dataCompactionInterval,
     readOnly
   )
 

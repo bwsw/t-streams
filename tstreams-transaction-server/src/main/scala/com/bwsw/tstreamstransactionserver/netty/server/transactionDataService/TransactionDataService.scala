@@ -49,7 +49,10 @@ class TransactionDataService(storageOpts: StorageOptions,
       if (logger.isDebugEnabled())
         logger.debug(prefixName + s"Creating new database handler[stream: ${streamRecord.name}, ttl(in hrs): $calculatedTTL] " +
           s"for persisting and reading transactions data.")
-      new RocksDbConnection(rocksStorageOpts, s"$pathForData${key.toString}", calculatedTTL)
+      new RocksDbConnection(rocksStorageOpts,
+        s"$pathForData${key.toString}",
+        storageOpts.dataCompactionInterval,
+        calculatedTTL)
     })
   }
 

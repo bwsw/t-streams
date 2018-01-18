@@ -90,13 +90,16 @@ object PropertyFileReader {
     val commitLogRocksDirectory =
       loader.castCheck("storage-model.commit-log.rocks-directory", identity)
 
+    val compactionInterval = loader.castCheck("storage-model.data.compaction-interval", _.toLong)
+
     StorageOptions(
       path,
       streamZookeeperDirectory,
       dataDirectory,
       metadataDirectory,
       commitLogRawDirectory,
-      commitLogRocksDirectory
+      commitLogRocksDirectory,
+      compactionInterval
     )
   }
 
@@ -125,8 +128,6 @@ object PropertyFileReader {
     val isFsync =
       loader.castCheck("rocksdb.is-fsync", prop => prop.toBoolean)
 
-    val compactionInterval = loader.castCheck("rocksdb.compaction-interval", _.toLong)
-
     RocksStorageOptions(
       writeThreadPool,
       readThreadPool,
@@ -134,8 +135,7 @@ object PropertyFileReader {
       transactionExpungeDelaySec,
       maxBackgroundCompactions,
       compressionType,
-      isFsync,
-      compactionInterval
+      isFsync
     )
   }
 
@@ -240,11 +240,15 @@ object PropertyFileReader {
     val password =
       loader.castCheck("replicable.password", prop => prop.getBytes())
 
+    val expungeDelaySec =
+      loader.castCheck("replicable.expunge-delay-sec", prop => prop.toInt)
+
     BookkeeperOptions(
       ensembleNumber,
       writeQuorumNumber,
       ackQuorumNumber,
-      password
+      password,
+      expungeDelaySec
     )
   }
 

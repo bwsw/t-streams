@@ -19,7 +19,7 @@
 
 package ut.multiNodeServer.ZkTreeListTest
 
-import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeperService.hierarchy.LongZookeeperTreeList
+import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeeperService.hierarchy.LongZookeeperTreeList
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import util.Utils
 

@@ -21,13 +21,14 @@ package com.bwsw.tstreamstransactionserver.netty.server.db.rocks
 import java.io.{Closeable, File}
 import java.util.concurrent.TimeUnit
 
-import com.bwsw.tstreamstransactionserver.netty.server.storage.rocks.CompactionJob
-import com.bwsw.tstreamstransactionserver.options.SingleNodeServerOptions.RocksStorageOptions
+import com.bwsw.tstreamstransactionserver.netty.server.storage.rocks.RocksCompactionJob
+import com.bwsw.tstreamstransactionserver.options.SingleNodeServerOptions.{RocksStorageOptions, StorageOptions}
 import org.apache.commons.io.FileUtils
 import org.rocksdb._
 
 class RocksDbConnection(rocksStorageOpts: RocksStorageOptions,
                         absolutePath: String,
+                        compactionInterval: Long,
                         ttl: Int = -1,
                         readOnly: Boolean = false)
   extends Closeable {
@@ -43,11 +44,10 @@ class RocksDbConnection(rocksStorageOpts: RocksStorageOptions,
 
   private val maybeCompactionJob =
     if (readOnly) None
-    else Some(new CompactionJob(
+    else Some(new RocksCompactionJob(
       client,
       Seq.empty,
-      rocksStorageOpts.compactionInterval,
-      TimeUnit.SECONDS))
+      compactionInterval))
 
   maybeCompactionJob.foreach(_.start())
 

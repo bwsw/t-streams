@@ -19,15 +19,17 @@
 
 package com.bwsw.tstreamstransactionserver.netty.server.multiNode.cg
 
-import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeperService.hierarchy.LongZookeeperTreeList
-import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeperService.{BookkeeperMasterBundle, BookkeeperWriter}
+import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeeperService.hierarchy.LongZookeeperTreeList
+import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeeperService.storage.BookKeeperWrapper
+import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeeperService.{BookKeeperCompactionJob, BookkeeperMasterBundle, BookkeeperWriter}
 import com.bwsw.tstreamstransactionserver.netty.server.zk.{ZKIDGenerator, ZKMasterElector}
 import com.bwsw.tstreamstransactionserver.options.MultiNodeServerOptions.{BookkeeperOptions, CheckpointGroupPrefixesOptions}
 import org.apache.curator.framework.CuratorFramework
 
 class CheckpointGroupBookkeeperWriter(zookeeperClient: CuratorFramework,
                                       bookkeeperOptions: BookkeeperOptions,
-                                      checkpointGroupPrefixesOptions: CheckpointGroupPrefixesOptions)
+                                      checkpointGroupPrefixesOptions: CheckpointGroupPrefixesOptions,
+                                      compactionInterval: Long)
   extends BookkeeperWriter(
     zookeeperClient,
     bookkeeperOptions
@@ -38,6 +40,17 @@ class CheckpointGroupBookkeeperWriter(zookeeperClient: CuratorFramework,
       zookeeperClient,
       checkpointGroupPrefixesOptions.checkpointGroupZkTreeListPrefix
     )
+
+  private val maybeCompactionJob =
+    if (bookkeeperOptions.expungeDelaySec > 0)
+      Some(new BookKeeperCompactionJob(
+        Array(checkpointMasterZkTreeList),
+        new BookKeeperWrapper(bookKeeper, bookkeeperOptions),
+        bookkeeperOptions.expungeDelaySec,
+        compactionInterval))
+    else None
+
+  maybeCompactionJob.foreach(_.start())
 
   override def getLastConstructedLedger: Long = {
     checkpointMasterZkTreeList
@@ -55,4 +68,8 @@ class CheckpointGroupBookkeeperWriter(zookeeperClient: CuratorFramework,
     )
   }
 
+  override def close(): Unit = {
+    super.close()
+    maybeCompactionJob.foreach(_.close())
+  }
 }

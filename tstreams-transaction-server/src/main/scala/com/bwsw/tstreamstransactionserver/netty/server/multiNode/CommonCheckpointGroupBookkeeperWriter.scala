@@ -20,8 +20,9 @@
 package com.bwsw.tstreamstransactionserver.netty.server.multiNode
 
 import com.bwsw.tstreamstransactionserver.netty.server.RocksWriter
-import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeperService._
-import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeperService.hierarchy.{LongNodeCache, LongZookeeperTreeList}
+import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeeperService._
+import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeeperService.hierarchy.{LongNodeCache, LongZookeeperTreeList}
+import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeeperService.storage.BookKeeperWrapper
 import com.bwsw.tstreamstransactionserver.netty.server.multiNode.commitLogService.CommitLogService
 import com.bwsw.tstreamstransactionserver.netty.server.zk.{ZKIDGenerator, ZKMasterElector}
 import com.bwsw.tstreamstransactionserver.options.MultiNodeServerOptions.{BookkeeperOptions, CommonPrefixesOptions}
@@ -29,7 +30,8 @@ import org.apache.curator.framework.CuratorFramework
 
 class CommonCheckpointGroupBookkeeperWriter(zookeeperClient: CuratorFramework,
                                             bookkeeperOptions: BookkeeperOptions,
-                                            commonPrefixesOptions: CommonPrefixesOptions)
+                                            commonPrefixesOptions: CommonPrefixesOptions,
+                                            compactionInterval: Long)
   extends BookkeeperWriter(
     zookeeperClient,
     bookkeeperOptions) {
@@ -67,6 +69,17 @@ class CommonCheckpointGroupBookkeeperWriter(zookeeperClient: CuratorFramework,
   private val lastClosedLedgerHandlers =
     Array(commonMasterLastClosedLedger, checkpointMasterLastClosedLedger)
   lastClosedLedgerHandlers.foreach(_.startMonitor())
+
+  private val maybeCompactionJob =
+    if (bookkeeperOptions.expungeDelaySec > 0)
+      Some(new BookKeeperCompactionJob(
+        zkTreesList,
+        new BookKeeperWrapper(bookKeeper, bookkeeperOptions),
+        bookkeeperOptions.expungeDelaySec,
+        compactionInterval))
+    else None
+
+  maybeCompactionJob.foreach(_.start())
 
   override def getLastConstructedLedger: Long = {
     val ledgerIds =
@@ -133,4 +146,8 @@ class CommonCheckpointGroupBookkeeperWriter(zookeeperClient: CuratorFramework,
     )
   }
 
+  override def close(): Unit = {
+    super.close()
+    maybeCompactionJob.foreach(_.close())
+  }
 }

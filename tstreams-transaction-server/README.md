@@ -43,6 +43,7 @@ You should pass a file with properties in both cases. The file should contain th
 | storage-model.metadata.directory                  | The subfolder of 'storage-model.file-prefix' where rocksdb database is placed which contains producer and consumer transactions.  |string |transaction_metadata| |
 | storage-model.commit-log.raw-directory            | The subfolder of 'storage-model.file-prefix' where commit log files are placed.  |string |commmit_log| |
 | storage-model.commit-log.rocks-directory          | The subfolder of 'storage-model.file-prefix' where rocksdb database is placed which contains commit log files. |string |commit_log_rocks| |
+| storage-model.data.compaction-interval            | Seconds between data compaction. The compaction process is required to delete expired entries from: 1) RocksDB (i.e. data and metadata of transactions); 2) Bookkeeper (entry logs); 3) Zookeeper (ledgers meta) |integer|3600|positive integer|
 | rocksdb.write-thread-pool                         | The number of threads of pool are used to do write operations to Rocksdb databases.|int    | 4| [1,...]|
 | rocksdb.read-thread-pool                          | The number of threads of pool are used to do read operations from Rocksdb databases.|int    | 2| [1,...]|
 | rocksdb.transaction-ttl-append-sec                | The value that is added to stream TTL in order to determine data lifetime of producer transactions. This value is common for all streams. As the stream TTL value could be different for each stream, the data lifetime would be different for each stream too. |int    | 1| [1,...]|
@@ -50,7 +51,6 @@ You should pass a file with properties in both cases. The file should contain th
 | rocksdb.max-background-compactions                | The maximum number of concurrent background compactions. The default is 1, but to fully utilize your CPU and storage you might want to increase this to approximately number of cores in the system.  |int    | 1| [1,...]|
 | rocksdb.compression-type                          | Compression takes one of values: [NO_COMPRESSION, SNAPPY_COMPRESSION, ZLIB_COMPRESSION, BZLIB2_COMPRESSION, LZ4_COMPRESSION, LZ4HC_COMPRESSION]. If it's unimportant use a *LZ4_COMPRESSION* as default value.  |string |LZ4_COMPRESSION| |
 | rocksdb.is-fsync                                  | If true, then every store to stable storage will issue a fsync. If false, then every store to stable storage will issue a fdatasync. This parameter should be set to true while storing data to filesystem like ext3 that can lose files after a reboot.   |boolean| true| |
-| rocksdb.compaction-interval                       | Seconds between RocksDB storage compaction. The compaction process is required to delete expired entries from RocksDB (i.e. data and metadata of transactions). |integer|3600|positive integer|
 | zk.endpoints                                      | The socket address(es) of ZooKeeper servers.  |string |127.0.0.1:2181| |
 | zk.common.prefix                                  | The coordination path to retrieve/persist socket address of t-streams transaction server.  |string |/tts/master | |
 | zk.common.election-prefix | The coordination path is used for leader election among common servers. | string | /tts/election |  |
@@ -87,6 +87,7 @@ This properties is required for multinode server.
 | replicable.write-quorum-number | The number of bookies each entry is written to. | int | 3 |
 | replicable.ack-quorum-number | The number of bookies we must get a response from before we acknowledge the write to the client. | int | 2 |
 | replicable.password | The password to access constructed ledgers and create new ledgers. | string | bkpassword |
+| replicable.expunge-delay-sec | The lifetime of a ledger in seconds (6 months by default). If negative integer - ledgers aren't deleted at all. | int | 86400 |
 
 #### Tracing
 

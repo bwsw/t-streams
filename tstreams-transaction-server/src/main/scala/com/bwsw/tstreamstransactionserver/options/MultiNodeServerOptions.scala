@@ -47,10 +47,13 @@ object MultiNodeServerOptions {
     * @param writeQuorumNumber the number of bookies each entry is written to.
     * @param ackQuorumNumber   the number of bookies we must get a response from before we acknowledge the write to the client.
     * @param password          is used for accessing constructed ledgers and creating new ledgers.
+    * @param expungeDelaySec   the lifetime of a ledger in seconds (6 months by default).
+    *                          If negative integer - ledgers aren't deleted at all.
     */
   final case class BookkeeperOptions(ensembleNumber: Int = 3,
                                      writeQuorumNumber: Int = 3,
                                      ackQuorumNumber: Int = 2,
-                                     password: Array[Byte] = "ChangePassword".getBytes())
+                                     password: Array[Byte] = "ChangePassword".getBytes(),
+                                     expungeDelaySec: Int = 86400)
 
 }

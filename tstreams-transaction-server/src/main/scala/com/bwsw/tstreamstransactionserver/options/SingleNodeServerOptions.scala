@@ -84,19 +84,20 @@ object SingleNodeServerOptions {
     * @param dataDirectory            the subfolder of [[com.bwsw.tstreamstransactionserver.options.SingleNodeServerOptions.StorageOptions.path]] where rocksdb databases are placed which contain producer data.
     * @param metadataDirectory        the subfolder of [[com.bwsw.tstreamstransactionserver.options.SingleNodeServerOptions.StorageOptions.path]] where rocksdb database is placed which contains producer and consumer transactions.
     * @param commitLogRawDirectory    the subfolder of [[com.bwsw.tstreamstransactionserver.options.SingleNodeServerOptions.StorageOptions.path]] where commit log files are placed.
-    * @param commitLogRocksDirectory  The subfolder of [[com.bwsw.tstreamstransactionserver.options.SingleNodeServerOptions.StorageOptions.path]] where rocksdb database is placed which contains commit log files.
-    *
+    * @param commitLogRocksDirectory  the subfolder of [[com.bwsw.tstreamstransactionserver.options.SingleNodeServerOptions.StorageOptions.path]] where rocksdb database is placed which contains commit log files.
+    * @param dataCompactionInterval   seconds between data compaction. The compaction process is required
+    *                                 to delete expired entries from:
+    *                                 1) RocksDB (i.e. data and metadata of transactions)
+    *                                 2) Bookkeeper (entry logs)
+    *                                 3) Zookeeper (ledgers meta)
     */
   final case class StorageOptions(path: String = "/tmp",
                                   streamZookeeperDirectory: String = "/tts/streams",
                                   dataDirectory: String = "transaction_data",
                                   metadataDirectory: String = "transaction_metadata",
                                   commitLogRawDirectory: String = "commit_log",
-                                  commitLogRocksDirectory: String = "commit_log_rocks" //,
-                                  /** streamStorageName: String = "StreamStore", consumerStorageName: String = "ConsumerStore",
-                                    * metadataStorageName: String = "TransactionStore", openedTransactionsStorageName: String = "TransactionOpenStore",
-                                    * berkeleyReadThreadPool: Int = 2 */)
-
+                                  commitLogRocksDirectory: String = "commit_log_rocks",
+                                  dataCompactionInterval: Long = TimeUnit.HOURS.toSeconds(1))
 
   /** The options are applied on creation Rocksdb database.
     * For all rocksDB options look: https: //github.com/facebook/rocksdb/blob/master/include/rocksdb/options.h
@@ -125,8 +126,6 @@ object SingleNodeServerOptions {
     *                                   If false, then every store to stable storage will issue a fdatasync.
     *                                   This parameter should be set to true while storing data to filesystem like ext3
     *                                   that can lose files after a reboot.
-    * @param compactionInterval         seconds between RocksDB storage compaction. The compaction process is required
-    *                                   to delete expired entries from RocksDB (i.e. data and metadata of transactions).
     */
   final case class RocksStorageOptions(writeThreadPool: Int = 2,
                                        readThreadPool: Int = 2,
@@ -134,8 +133,7 @@ object SingleNodeServerOptions {
                                        transactionExpungeDelaySec: Int = TimeUnit.DAYS.toSeconds(180).toInt,
                                        maxBackgroundCompactions: Int = 1,
                                        compression: CompressionType = CompressionType.LZ4_COMPRESSION,
-                                       isFsync: Boolean = true,
-                                       compactionInterval: Long = TimeUnit.HOURS.toSeconds(1)) {
+                                       isFsync: Boolean = true) {
 
 
     def createDBOptions(maxBackgroundCompactions: Int = this.maxBackgroundCompactions,
