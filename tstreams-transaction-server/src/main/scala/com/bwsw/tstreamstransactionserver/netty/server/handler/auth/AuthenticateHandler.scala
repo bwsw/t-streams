@@ -51,7 +51,7 @@ class AuthenticateHandler(authService: AuthService)
     val args = descriptor.decodeRequest(requestBody)
     val authInfo = authService.authenticate(args.authKey)
     descriptor.encodeResponse(
-      TransactionService.Authenticate.Result(Some(authInfo))
+      TransactionService.Authenticate.Result(authInfo)
     )
   }
 

@@ -139,7 +139,6 @@ class TStreamsFactory() {
     val clientOptions = ConnectionOptions(
       connectionTimeoutMs = pAsInt(co.StorageClient.connectionTimeoutMs),
       requestTimeoutMs = pAsInt(co.StorageClient.requestTimeoutMs),
-      requestTimeoutRetryCount = pAsInt(co.StorageClient.requestTimeoutRetryCount),
       retryDelayMs = pAsInt(co.StorageClient.retryDelayMs),
       threadPool = pAsInt(co.StorageClient.threadPool),
       prefix = pAsString(co.Coordination.path))

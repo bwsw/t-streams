@@ -34,7 +34,6 @@ object ConfigurationOptions {
   object StorageClient {
     val connectionTimeoutMs = "storage-client.connection-timeout-ms"
     val requestTimeoutMs = "storage-client.request-timeout-ms"
-    val requestTimeoutRetryCount = "storage-client.request-timeout-retry-count"
     val retryDelayMs = "storage-client.retry-delay-ms"
     val threadPool = "storage-client.thread-pool"
     val tracingEnabled = "storage-client.tracing.enabled"
