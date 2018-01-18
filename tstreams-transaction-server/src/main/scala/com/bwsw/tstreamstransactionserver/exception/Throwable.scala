@@ -87,7 +87,7 @@ object Throwable {
   class PackageTooBigException(msg: String = "")
     extends Exception(msg)
 
-  class ClientIllegalOperationAfterShutdown
-    extends IllegalStateException("It's not allowed do any operations after client shutdown!")
+  class ClientIllegalOperationAfterShutdownException
+    extends IllegalStateException("Client had been shut down. No further operations available.")
 
 }
