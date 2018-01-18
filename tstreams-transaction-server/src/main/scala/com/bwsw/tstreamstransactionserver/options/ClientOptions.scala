@@ -23,16 +23,16 @@ object ClientOptions {
 
   /** The options are applied as filters on establishing connection to a server.
     *
-    * @param connectionTimeoutMs      the time to wait while trying to establish a connection to a server.
-    * @param requestTimeoutMs         the time to wait a request is completed and response is accepted. On setting option also take into consideration [[com.bwsw.tstreamstransactionserver.options.SingleNodeServerOptions.TransportOptions]].
-    * @param requestTimeoutRetryCount the number of attempts to complete requests before reconnection.
-    * @param retryDelayMs             delays between retry attempts.
-    * @param threadPool               the number of threads of thread pool to deserialize requests/responses.
-    * @param prefix                   the prefix is used for retrieving current master/leader transaction server.
+    * @param connectionTimeoutMs the time to wait while trying to establish a connection to a server.
+    * @param requestTimeoutMs    the time to wait a request is completed and response is accepted.
+    *                            On setting option also take into consideration
+    *                            [[com.bwsw.tstreamstransactionserver.options.SingleNodeServerOptions.TransportOptions]].
+    * @param retryDelayMs        delays between retry attempts.
+    * @param threadPool          the number of threads of thread pool to deserialize requests/responses.
+    * @param prefix              the prefix is used for retrieving current master/leader transaction server.
     */
   case class ConnectionOptions(connectionTimeoutMs: Int = 5000,
                                requestTimeoutMs: Int = 5000,
-                               requestTimeoutRetryCount: Int = 3,
                                retryDelayMs: Int = 200,
                                threadPool: Int = Runtime.getRuntime.availableProcessors(),
                                prefix: String = "/tts/common/master")

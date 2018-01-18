@@ -20,49 +20,98 @@
 package com.bwsw.tstreamstransactionserver.netty.server.authService
 
 import com.bwsw.tstreamstransactionserver.options.SingleNodeServerOptions.AuthenticationOptions
-import com.google.common.cache.CacheBuilder
+import com.google.common.cache.{CacheBuilder, RemovalNotification}
 import org.slf4j.{Logger, LoggerFactory}
 
+import scala.annotation.tailrec
 import scala.util.Random
 
 final class AuthService(authOpts: AuthenticationOptions) {
-  private val logger: Logger = LoggerFactory.getLogger(this.getClass)
+  private val logger: Logger = LoggerFactory.getLogger(getClass)
 
-  private val usersToken = CacheBuilder.newBuilder()
+  private val tokensCache = CacheBuilder.newBuilder()
     .maximumSize(authOpts.keyCacheSize)
-    .expireAfterAccess(
+    .expireAfterWrite(
       authOpts.keyCacheExpirationTimeSec,
-      java.util.concurrent.TimeUnit.SECONDS
-    )
-    .build[java.lang.Integer, String]()
+      java.util.concurrent.TimeUnit.SECONDS)
+    .removalListener((notification: RemovalNotification[Integer, String]) => invalidate(notification.getKey))
+    .build[Integer, String]()
 
-  private[server] def authenticate(authKey: String): Int = {
+
+  /** Authenticates client and creates new token if authKey is valid
+    *
+    * @param authKey authentication key
+    * @return Some(token) if authentication key is valid or None otherwise
+    */
+  private[server] def authenticate(authKey: String): Option[Int] = {
     if (authKey == authOpts.key) {
-      val token = Random.nextInt(Integer.MAX_VALUE)
-      usersToken.put(token, authKey)
-      if (logger.isDebugEnabled())
+      @tailrec
+      def generateToken(): Int = {
+        Random.nextInt() match {
+          case AuthService.UnauthenticatedToken => generateToken()
+          case generated => generated
+        }
+      }
+
+      val token = generateToken()
+      tokensCache.put(token, "")
+
+      if (logger.isDebugEnabled)
         logger.debug(s"Client with authkey $authKey is successfully authenticated and assigned token $token.")
-      token
+
+      Some(token)
     } else {
-      if (logger.isDebugEnabled())
-        logger.debug(s"Client with authkey $authKey isn't authenticated and assigned token -1.")
-      -1
+      if (logger.isDebugEnabled)
+        logger.debug(s"Client with authkey $authKey isn't authenticated.")
+
+      None
     }
   }
 
+  /** Validates client's token
+    *
+    * @param token client's token
+    * @return true if client's token is valid or false otherwise
+    */
   private[server] def isValid(token: Int): Boolean = {
-    val isValid = token != -1 &&
-      usersToken.getIfPresent(token) != null
+    val tokenValid = Option(tokensCache.getIfPresent(token)).isDefined
 
-    if (isValid)
-      if (logger.isDebugEnabled()) {
+    if (logger.isDebugEnabled) {
+      if (tokenValid)
         logger.debug(s"Client token $token is accepted.")
-      }
-    else
-      if (logger.isDebugEnabled()) {
+      else
         logger.debug(s"Client token $token is expired or doesn't exist.")
-      }
+    }
 
-    isValid
+    tokenValid
   }
+
+  /** Updates client's token
+    *
+    * @param token client's token
+    * @return true if client's token is valid or false otherwise
+    */
+  private[server] def update(token: Int): Boolean = {
+    val tokenValid = isValid(token)
+
+    if (tokenValid) {
+      logger.debug(s"Update client token $token.")
+      tokensCache.put(token, "")
+    }
+
+    tokenValid
+  }
+
+
+  /** Invokes when client's token removed from cache
+    *
+    * @param token client's token
+    */
+  private def invalidate(token: Int): Unit = {}
+}
+
+
+object AuthService {
+  // reserved for unauthenticated requests
+  val UnauthenticatedToken: Int = -1
 }

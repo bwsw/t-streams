@@ -19,11 +19,13 @@
 
 package com.bwsw.tstreamstransactionserver.netty.client
 
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.{AtomicBoolean, AtomicLong, AtomicReference}
-import java.util.concurrent.{ConcurrentHashMap, CountDownLatch, TimeUnit}
+import javax.naming.AuthenticationException
 
 import com.bwsw.tstreamstransactionserver.exception.Throwable._
 import com.bwsw.tstreamstransactionserver.netty.client.zk.{ZKConnectionLostListener, ZKMasterPathMonitor}
+import com.bwsw.tstreamstransactionserver.netty.server.authService.AuthService
 import com.bwsw.tstreamstransactionserver.netty.{Protocol, RequestMessage, ResponseMessage, SocketHostPortPair}
 import com.bwsw.tstreamstransactionserver.options.ClientOptions.{AuthOptions, ConnectionOptions}
 import com.bwsw.tstreamstransactionserver.options.CommonOptions.{TracingOptions, ZookeeperOptions}
@@ -38,10 +40,12 @@ import org.apache.curator.framework.CuratorFramework
 import org.apache.curator.framework.state.ConnectionState
 import org.slf4j.LoggerFactory
 
-import scala.concurrent.duration._
-import scala.concurrent.{ExecutionContextExecutorService, Future, Promise}
-import scala.util.{Failure, Success, Try}
+import scala.annotation.tailrec
 import scala.collection.JavaConverters._
+import scala.concurrent.duration._
+import scala.concurrent.{Await, ExecutionContextExecutorService, Future, Promise}
+import scala.util.{Failure, Success, Try}
+
 
 class InetClient(zookeeperOptions: ZookeeperOptions,
                  connectionOptions: ConnectionOptions,
@@ -59,11 +63,7 @@ class InetClient(zookeeperOptions: ZookeeperOptions,
 
   private val tracer = ClientTracer(tracingOptions)
 
-  private val logger =
-    LoggerFactory.getLogger(this.getClass)
-
-  private val isAuthenticating =
-    new java.util.concurrent.atomic.AtomicBoolean(false)
+  private val logger = LoggerFactory.getLogger(getClass)
 
   private val zkConnectionLostListener = new ZKConnectionLostListener(
     zkConnection,
@@ -77,8 +77,7 @@ class InetClient(zookeeperOptions: ZookeeperOptions,
       connectionOptions.prefix
     )
 
-  commonServerPathMonitor
-    .startMonitoringMasterServerPath()
+  commonServerPathMonitor.startMonitoringMasterServerPath()
 
   private val connected = new AtomicBoolean(false)
   private val isStopped = new AtomicBoolean(false)
@@ -113,7 +112,7 @@ class InetClient(zookeeperOptions: ZookeeperOptions,
             case Right(None) => new MasterLostException
             case Right(Some(socketHostPortPair)) => new MasterChangedException(socketHostPortPair)
           }
-          maybeFailCause.compareAndSet(None, Some(exception))
+          setFailCause(exception)
           throw exception
         }
 
@@ -121,16 +120,17 @@ class InetClient(zookeeperOptions: ZookeeperOptions,
     }
   }
 
-  @volatile private var currentToken: Int = -1
-  @volatile private var messageSizeValidator: MessageSizeValidator =
-    new MessageSizeValidator(Int.MaxValue, Int.MaxValue)
+  private val token = authenticate()
+  private val transportOptionsInfo = getMaxPackagesSizes()
+  private val messageSizeValidator = new MessageSizeValidator(
+    transportOptionsInfo.maxMetadataPackageSize,
+    transportOptionsInfo.maxDataPackageSize)
 
   /** A general method for sending requests to a server and getting a response back.
     *
     * @param descriptor look at [[com.bwsw.tstreamstransactionserver.netty.Protocol]].
     * @param request    a request that client would like to send.
     * @return a response from server(however, it may return an exception from server).
-    *
     */
   final def method[Req <: ThriftStruct, Rep <: ThriftStruct, A](descriptor: Protocol.Descriptor[Req, Rep],
                                                                 request: Req,
@@ -149,11 +149,8 @@ class InetClient(zookeeperOptions: ZookeeperOptions,
                                                      request: Req): Unit = {
     onNotConnectedThrowException()
 
-    if (getToken == -1)
-      authenticate()
-
     val messageId = requestIDGen.getAndIncrement()
-    val message = descriptor.encodeRequestToMessage(request)(messageId, getToken, isFireAndForgetMethod = true)
+    val message = descriptor.encodeRequestToMessage(request)(messageId, token, isFireAndForgetMethod = true)
 
     if (logger.isDebugEnabled) logger.debug(Protocol.methodWithArgsToString(messageId, request))
     messageSizeValidator.validateMessageSize(message)
@@ -209,8 +206,11 @@ class InetClient(zookeeperOptions: ZookeeperOptions,
     )
   }
 
-  private def onShutdownThrowException(): Unit =
-    if (isShutdown) throw new ClientIllegalOperationAfterShutdown
+  private def onShutdownThrowException(): Unit = {
+    if (isShutdown) {
+      throw new ClientIllegalOperationAfterShutdownException
+    }
+  }
 
   private def onNotConnectedThrowException(): Unit = {
     if (!isConnected) {
@@ -221,9 +221,7 @@ class InetClient(zookeeperOptions: ZookeeperOptions,
 
   private def sendRequest[Req <: ThriftStruct, Rep <: ThriftStruct, A](message: RequestMessage,
                                                                        descriptor: Protocol.Descriptor[Req, Rep],
-                                                                       f: Rep => A,
-                                                                       previousException: Option[Throwable] = None,
-                                                                       retryCount: Int = Int.MaxValue)
+                                                                       f: Rep => A)
                                                                       (implicit methodContext: concurrent.ExecutionContext): Future[A] = {
     onNotConnectedThrowException()
     val updatedMessage = tracer.clientSend(message)
@@ -231,8 +229,7 @@ class InetClient(zookeeperOptions: ZookeeperOptions,
     requestIdToResponseMap.put(updatedMessage.id, promise)
 
     val channel = nettyClient.getChannel()
-    val binaryResponse =
-      updatedMessage.toByteBuf(channel.alloc())
+    val binaryResponse = updatedMessage.toByteBuf(channel.alloc())
 
     val responseFuture = TimeoutScheduler.withTimeout(
       (updatedMessage.tracingInfo match {
@@ -253,21 +250,13 @@ class InetClient(zookeeperOptions: ZookeeperOptions,
       channel.writeAndFlush(binaryResponse, channel.voidPromise())
     )
 
-    responseFuture.recoverWith { case error =>
-      requestIdToResponseMap.remove(updatedMessage.id)
-      val (currentException, counter) =
-        checkError(error, previousException, retryCount)
-      if (counter == 0) {
-        Future.failed(currentException)
-      }
-      else {
-        val messageId = requestIDGen.getAndIncrement()
-        val newMessage = updatedMessage.copy(
-          id = messageId,
-          token = getToken
-        )
-        sendRequest(newMessage, descriptor, f, Some(currentException), counter)
-      }
+    responseFuture.recoverWith {
+      case error =>
+        requestIdToResponseMap.remove(updatedMessage.id)
+        Try(handleException(error))
+        setFailCause(error)
+
+        Future.failed(error)
     }(methodContext)
   }
 
@@ -275,16 +264,15 @@ class InetClient(zookeeperOptions: ZookeeperOptions,
                                                                                            request: Req,
                                                                                            f: Rep => A)
                                                                                           (implicit methodContext: concurrent.ExecutionContext): Future[A] = {
+
+
     val messageId = requestIDGen.getAndIncrement()
 
     val message = descriptor.encodeRequestToMessage(request)(
       messageId,
-      getToken,
+      token,
       isFireAndForgetMethod = false
     )
-
-    if (getToken == -1)
-      authenticate()
 
     messageSizeValidator.validateMessageSize(message)
 
@@ -299,96 +287,68 @@ class InetClient(zookeeperOptions: ZookeeperOptions,
 
     val message = descriptor.encodeRequestToMessage(request)(
       messageId,
-      getToken,
+      token,
       isFireAndForgetMethod = false
     )
 
     sendRequest(message, descriptor, f)
   }
 
-  private final def checkError(currentException: Throwable,
-                               previousException: Option[Throwable],
-                               retryCount: Int): (Throwable, Int) = {
-    currentException match {
-      case tokenException: TokenInvalidException =>
-        authenticate()
-        previousException match {
-          case Some(_: TokenInvalidException) =>
-            (tokenException, retryCount - 1)
-          case _ =>
-            (tokenException, connectionOptions.requestTimeoutRetryCount)
-        }
+  private final def handleException(exception: Throwable) = {
+    exception match {
+      case _: ServerUnreachableException =>
+        onServerConnectionLostDefaultBehaviour()
+        onServerConnectionLost
 
-      case concreteThrowable: ServerUnreachableException =>
-        Try(onServerConnectionLostDefaultBehaviour()) match {
-          case Failure(throwable) => (throwable, 0)
-          case Success(_) => (concreteThrowable, 0)
-        }
+      case _: RequestTimeoutException =>
+        onRequestTimeout
 
-      case concreteThrowable: RequestTimeoutException =>
-        maybeFailCause.compareAndSet(None, Some(concreteThrowable))
-        Try(onRequestTimeout) match {
-          case Failure(throwable) => (throwable, 0)
-          case Success(_) => (concreteThrowable, 0)
-        }
-
-      case otherThrowable =>
-        (otherThrowable, 0)
+      case _ =>
     }
-  }
-
-  private final def getToken: Int = {
-    currentToken
   }
 
   /** Retrieves a token for that allow a client send requests to server.
     *
-    * @return Future of authenticate operation that can be completed or not. If it is completed it returns:
-    *         1) token - for authorizing,
-    *         maxDataPackageSize - max size of package into putTransactionData method with its arguments wrapped,
-    *         maxMetadataPackageSize - max size of package into all kind of that operations with producer and consumer transactions methods with its arguments wrapped,
-    *         2) throwable [[com.bwsw.tstreamstransactionserver.exception.Throwable.ZkGetMasterException]], if, i.e. client had sent this request to a server, but suddenly server would have been shutdowned,
-    *         and, as a result, request din't reach the server, and client tried to get the new server from zooKeeper but there wasn't one on coordination path;
-    *         3) throwable [[com.bwsw.tstreamstransactionserver.exception.Throwable.ClientIllegalOperationAfterShutdown]] if client try to call this function after shutdown.
-    *         4) other kind of exceptions that mean there is a bug on a server, and it is should to be reported about this issue.
+    * @return retrieved token
     */
-  private def authenticate(): Unit = {
+  private def authenticate(): Int = {
     if (logger.isInfoEnabled)
       logger.info("authenticate method is invoked.")
 
     onShutdownThrowException()
 
-    val needToAuthenticate =
-      isAuthenticating.compareAndSet(false, true)
+    @tailrec
+    def inner(): Int = {
+      if (isConnected) {
+        val message = Protocol.Authenticate.encodeRequestToMessage(
+          TransactionService.Authenticate.Args(authOpts.key))(
+          requestIDGen.getAndIncrement(),
+          AuthService.UnauthenticatedToken,
+          isFireAndForgetMethod = false)
 
-    if (needToAuthenticate) {
-      val authKey = authOpts.key
-      val latch = new CountDownLatch(1)
-      methodWithoutMessageSizeValidation[TransactionService.Authenticate.Args, TransactionService.Authenticate.Result, Unit](
-        Protocol.Authenticate,
-        TransactionService.Authenticate.Args(authKey),
-        x => {
-          val tokenFromServer = x.success.get
-          currentToken = tokenFromServer
-
-          val packageSizes = getMaxPackagesSizes()
-          messageSizeValidator = new MessageSizeValidator(
-            packageSizes.maxMetadataPackageSize,
-            packageSizes.maxDataPackageSize
-          )
-
-          latch.countDown()
+        Await.result(
+          sendRequest[TransactionService.Authenticate.Args, TransactionService.Authenticate.Result, Int](
+            message,
+            Protocol.Authenticate,
+            _.success.getOrElse(throw new AuthenticationException("Authentication key is incorrect.")))(context),
+          connectionOptions.connectionTimeoutMs.millis)
+      } else {
+        maybeFailCause.get match {
+          case Some(exception) => throw exception
+          case None =>
+            Thread.sleep(connectionOptions.connectionTimeoutMs)
+            inner()
         }
-      )(context)
+      }
+    }
 
-      latch.await(
-        connectionOptions.requestTimeoutMs,
-        TimeUnit.MILLISECONDS
-      )
+    Try(inner()) match {
+      case Success(i) => i
+      case Failure(exception) =>
+        setFailCause(exception)
+        shutdown()
 
-      isAuthenticating.set(false)
-    } else {
-      while (isAuthenticating.get()) {}
+        throw exception
     }
   }
 
@@ -398,22 +358,12 @@ class InetClient(zookeeperOptions: ZookeeperOptions,
 
     onShutdownThrowException()
 
-    val latch = new CountDownLatch(1)
-    var transportOptionsInfo: TransportOptionsInfo = null
-    methodWithoutMessageSizeValidation[TransactionService.GetMaxPackagesSizes.Args, TransactionService.GetMaxPackagesSizes.Result, Unit](
-      Protocol.GetMaxPackagesSizes,
-      TransactionService.GetMaxPackagesSizes.Args(),
-      x => {
-        transportOptionsInfo = x.success.get
-        latch.countDown()
-      }
-    )(context)
-
-    latch.await(
-      connectionOptions.requestTimeoutMs,
-      TimeUnit.MILLISECONDS
-    )
-    transportOptionsInfo
+    Await.result(
+      methodWithoutMessageSizeValidation[TransactionService.GetMaxPackagesSizes.Args, TransactionService.GetMaxPackagesSizes.Result, TransportOptionsInfo](
+        Protocol.GetMaxPackagesSizes,
+        TransactionService.GetMaxPackagesSizes.Args(),
+        _.success.get)(context),
+      connectionOptions.requestTimeoutMs.millis)
   }
 
   def shutdown(): Unit = {
@@ -427,4 +377,7 @@ class InetClient(zookeeperOptions: ZookeeperOptions,
   }
 
   def isConnected: Boolean = connected.get()
+
+  private def setFailCause(exception: Throwable): Unit =
+    maybeFailCause.compareAndSet(None, Some(exception))
 }

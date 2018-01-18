@@ -48,7 +48,6 @@ object TStreamsFactoryStorageClientDefaults {
     m(co.threadPool) = StorageClient.threadPool.default
     m(co.connectionTimeoutMs) = StorageClient.connectionTimeoutMs.default
     m(co.requestTimeoutMs) = StorageClient.requestTimeoutMs.default
-    m(co.requestTimeoutRetryCount) = StorageClient.requestTimeoutRetryCount.default
     m(co.retryDelayMs) = StorageClient.retryDelayMs.default
     m(co.tracingEnabled) = StorageClient.tracingEnabled
     m(co.tracingAddress) = StorageClient.tracingAddress
