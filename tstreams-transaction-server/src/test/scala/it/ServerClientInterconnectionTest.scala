@@ -19,6 +19,7 @@
 
 package it
 
+import java.net.Socket
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.{AtomicLong, LongAdder}
 
@@ -27,6 +28,7 @@ import com.bwsw.tstreamstransactionserver.exception.Throwable.ServerConnectionEx
 import com.bwsw.tstreamstransactionserver.netty.client.zk.ZKClient
 import com.bwsw.tstreamstransactionserver.netty.client.{ClientBuilder, InetClient}
 import com.bwsw.tstreamstransactionserver.netty.server.singleNode.SingleNodeServerBuilder
+import com.bwsw.tstreamstransactionserver.netty.{Protocol, ResponseMessage}
 import com.bwsw.tstreamstransactionserver.options._
 import com.bwsw.tstreamstransactionserver.rpc._
 import io.netty.buffer.ByteBuf
@@ -745,5 +747,76 @@ class ServerClientInterconnectionTest
 
       res.producerTransactions.size shouldBe transactions1.size
     }
+  }
+
+  it should "update client's token TTL until client is disconnect" in {
+    val ttlSec = 2
+    val ttlMs = ttlSec * 1000
+    val keepAliveThreshold = 3
+    val keepAliveIntervalMs = ttlMs / keepAliveThreshold
+    val authenticationOptions = serverBuilder.getAuthenticationOptions.copy(
+      keyCacheExpirationTimeSec = ttlSec)
+    val connectionOptions = clientBuilder.getConnectionOptions.copy(
+      keepAliveIntervalMs = keepAliveIntervalMs,
+      keepAliveThreshold = keepAliveThreshold)
+
+    // TODO: find other way to retrieve client token
+    val seed = 0
+    Random.setSeed(seed)
+    Random.nextInt()
+    val token = Random.nextInt()
+    Random.setSeed(seed)
+
+    val bundle = Utils.startTransactionServerAndClient(
+      zkClient,
+      serverBuilder.withAuthenticationOptions(authenticationOptions),
+      clientBuilder.withConnectionOptions(connectionOptions))
+
+    bundle.operate { _ =>
+      val bootstrapOptions = bundle.serverBuilder.getBootstrapOptions
+      tokenIsValid(token, bootstrapOptions.bindHost, bootstrapOptions.bindPort) shouldBe true
+      Thread.sleep(ttlMs)
+      tokenIsValid(token, bootstrapOptions.bindHost, bootstrapOptions.bindPort) shouldBe true
+      bundle.client.shutdown()
+      tokenIsValid(token, bootstrapOptions.bindHost, bootstrapOptions.bindPort) shouldBe true
+      Thread.sleep(ttlMs)
+      tokenIsValid(token, bootstrapOptions.bindHost, bootstrapOptions.bindPort) shouldBe false
+    }
+  }
+
+
+  private def tokenIsValid(token: Int, host: String, port: Int): Boolean = {
+    val request = Protocol.IsValid.encodeRequestToMessage(
+      TransactionService.IsValid.Args(token))(
+      1L,
+      token,
+      isFireAndForgetMethod = false)
+
+    val bytes = request.toByteArray
+    val socket = new Socket(host, port)
+    val inputStream = socket.getInputStream
+    val outputStream = socket.getOutputStream
+    outputStream.write(bytes)
+    outputStream.flush()
+
+    def loop(lost: Int): Unit = {
+      if (lost > 0 && inputStream.available() == 0) {
+        Thread.sleep(100)
+        loop(lost - 1)
+      }
+    }
+
+    loop(10)
+
+    val responseBytes = new Array[Byte](inputStream.available())
+    inputStream.read(responseBytes)
+    socket.close()
+
+    val response = ResponseMessage.fromByteArray(responseBytes)
+    val result = Protocol.IsValid.decodeResponse(response)
+
+    result.success shouldBe defined
+
+    result.success.get
   }
 }

@@ -141,7 +141,9 @@ class TStreamsFactory() {
       requestTimeoutMs = pAsInt(co.StorageClient.requestTimeoutMs),
       retryDelayMs = pAsInt(co.StorageClient.retryDelayMs),
       threadPool = pAsInt(co.StorageClient.threadPool),
-      prefix = pAsString(co.Coordination.path))
+      prefix = pAsString(co.Coordination.path),
+      keepAliveIntervalMs = pAsInt(co.StorageClient.keepAliveIntervalMs),
+      keepAliveThreshold = pAsInt(co.StorageClient.keepAliveThreshold))
 
     val authOptions = AuthOptions(key = pAsString(co.Common.authenticationKey))
 

@@ -347,6 +347,8 @@ class ClientSingleNodeServerZookeeperTest
       val client = bundle.client
       val stream = getRandomStream
       zkServer.close()
+      Thread.sleep(1000) // wait until zkClient disconnects
+
 
       val producerTransactions = Array.fill(100)(getRandomProducerTransaction(1, stream))
       val consumerTransactions = Array.fill(100)(getRandomConsumerTransaction(1, stream))

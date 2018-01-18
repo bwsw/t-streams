@@ -65,6 +65,14 @@ class InetClient(zookeeperOptions: ZookeeperOptions,
 
   private val logger = LoggerFactory.getLogger(getClass)
 
+  private val keepAliveJob = new KeepAliveJob(
+    connectionOptions,
+    this,
+    exception => {
+      setFailCause(exception)
+      shutdown()
+    })(context)
+
   private val zkConnectionLostListener = new ZKConnectionLostListener(
     zkConnection,
     onZKConnectionStateChanged
@@ -126,16 +134,18 @@ class InetClient(zookeeperOptions: ZookeeperOptions,
     transportOptionsInfo.maxMetadataPackageSize,
     transportOptionsInfo.maxDataPackageSize)
 
+  keepAliveJob.start()
+
   /** A general method for sending requests to a server and getting a response back.
     *
     * @param descriptor look at [[com.bwsw.tstreamstransactionserver.netty.Protocol]].
     * @param request    a request that client would like to send.
     * @return a response from server(however, it may return an exception from server).
     */
-  final def method[Req <: ThriftStruct, Rep <: ThriftStruct, A](descriptor: Protocol.Descriptor[Req, Rep],
-                                                                request: Req,
-                                                                f: Rep => A
-                                                               )(implicit methodContext: concurrent.ExecutionContext): Future[A] = {
+  def method[Req <: ThriftStruct, Rep <: ThriftStruct, A](descriptor: Protocol.Descriptor[Req, Rep],
+                                                          request: Req,
+                                                          f: Rep => A
+                                                         )(implicit methodContext: concurrent.ExecutionContext): Future[A] = {
     methodWithMessageSizeValidation(
       descriptor,
       request,
@@ -145,8 +155,8 @@ class InetClient(zookeeperOptions: ZookeeperOptions,
 
   @throws[TokenInvalidException]
   @throws[PackageTooBigException]
-  final def methodFireAndForget[Req <: ThriftStruct](descriptor: Protocol.Descriptor[Req, _],
-                                                     request: Req): Unit = {
+  def methodFireAndForget[Req <: ThriftStruct](descriptor: Protocol.Descriptor[Req, _],
+                                               request: Req): Unit = {
     onNotConnectedThrowException()
 
     val messageId = requestIDGen.getAndIncrement()
@@ -163,10 +173,10 @@ class InetClient(zookeeperOptions: ZookeeperOptions,
     )
   }
 
-  final def currentConnectionSocketAddress: Either[Throwable, Option[SocketHostPortPair]] =
+  def currentConnectionSocketAddress: Either[Throwable, Option[SocketHostPortPair]] =
     commonServerPathMonitor.getCurrentMaster
 
-  final def getZKCheckpointGroupServerPrefix(): Future[String] = {
+  def getZKCheckpointGroupServerPrefix(): Future[String] = {
     if (logger.isInfoEnabled)
       logger.info("getMaxPackagesSizes method is invoked.")
 
@@ -179,7 +189,7 @@ class InetClient(zookeeperOptions: ZookeeperOptions,
     )(context)
   }
 
-  private final def onServerConnectionLostDefaultBehaviour(): Unit = {
+  private def onServerConnectionLostDefaultBehaviour(): Unit = {
     val exception = maybeFailCause.get().getOrElse {
       val connectionSocket = commonServerPathMonitor.getCurrentMaster
         .toOption
@@ -294,7 +304,7 @@ class InetClient(zookeeperOptions: ZookeeperOptions,
     sendRequest(message, descriptor, f)
   }
 
-  private final def handleException(exception: Throwable) = {
+  private def handleException(exception: Throwable) = {
     exception match {
       case _: ServerUnreachableException =>
         onServerConnectionLostDefaultBehaviour()
@@ -368,6 +378,7 @@ class InetClient(zookeeperOptions: ZookeeperOptions,
 
   def shutdown(): Unit = {
     if (!isStopped.getAndSet(true)) {
+      keepAliveJob.stop()
       commonServerPathMonitor.stopMonitoringMasterServerPath()
       if (connected.getAndSet(false))
         nettyClient.stop()
