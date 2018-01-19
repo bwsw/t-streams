@@ -42,6 +42,7 @@ import org.apache.zookeeper.data.ACL
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import util.Utils
 import util.Utils.{getRandomConsumerTransaction, getRandomProducerTransaction, getRandomStream, startZkServerAndGetIt}
+import util.multiNode.Util
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
@@ -347,6 +348,7 @@ class ClientSingleNodeServerZookeeperTest
       val client = bundle.client
       val stream = getRandomStream
       zkServer.close()
+      Thread.sleep(1000) // wait until zkClient disconnects
 
       val producerTransactions = Array.fill(100)(getRandomProducerTransaction(1, stream))
       val consumerTransactions = Array.fill(100)(getRandomConsumerTransaction(1, stream))
@@ -371,10 +373,7 @@ class ClientSingleNodeServerZookeeperTest
       serverBuilder.build()
     }
 
-    FileUtils.deleteDirectory(new File(storageOptions.path + java.io.File.separatorChar + storageOptions.metadataDirectory))
-    FileUtils.deleteDirectory(new File(storageOptions.path + java.io.File.separatorChar + storageOptions.dataDirectory))
-    FileUtils.deleteDirectory(new File(storageOptions.path + java.io.File.separatorChar + storageOptions.commitLogRocksDirectory))
-    FileUtils.deleteDirectory(new File(storageOptions.path + java.io.File.separatorChar + storageOptions.commitLogRawDirectory))
+    Util.deleteDirectories(storageOptions)
   }
 
   it should "not start on wrong inet address" in {
@@ -387,10 +386,8 @@ class ClientSingleNodeServerZookeeperTest
     assertThrows[InvalidSocketAddress] {
       serverBuilder.build()
     }
-    FileUtils.deleteDirectory(new File(storageOptions.path + java.io.File.separatorChar + storageOptions.metadataDirectory))
-    FileUtils.deleteDirectory(new File(storageOptions.path + java.io.File.separatorChar + storageOptions.dataDirectory))
-    FileUtils.deleteDirectory(new File(storageOptions.path + java.io.File.separatorChar + storageOptions.commitLogRocksDirectory))
-    FileUtils.deleteDirectory(new File(storageOptions.path + java.io.File.separatorChar + storageOptions.commitLogRawDirectory))
+
+    Util.deleteDirectories(storageOptions)
   }
 
   it should "not start on negative port value" in {
@@ -404,10 +401,7 @@ class ClientSingleNodeServerZookeeperTest
       serverBuilder.build()
     }
 
-    FileUtils.deleteDirectory(new File(storageOptions.path + java.io.File.separatorChar + storageOptions.metadataDirectory))
-    FileUtils.deleteDirectory(new File(storageOptions.path + java.io.File.separatorChar + storageOptions.dataDirectory))
-    FileUtils.deleteDirectory(new File(storageOptions.path + java.io.File.separatorChar + storageOptions.commitLogRocksDirectory))
-    FileUtils.deleteDirectory(new File(storageOptions.path + java.io.File.separatorChar + storageOptions.commitLogRawDirectory))
+    Util.deleteDirectories(storageOptions)
   }
 
   it should "not start on port value exceeds 65535" in {
@@ -420,10 +414,8 @@ class ClientSingleNodeServerZookeeperTest
     assertThrows[InvalidSocketAddress] {
       serverBuilder.build()
     }
-    FileUtils.deleteDirectory(new File(storageOptions.path + java.io.File.separatorChar + storageOptions.metadataDirectory))
-    FileUtils.deleteDirectory(new File(storageOptions.path + java.io.File.separatorChar + storageOptions.dataDirectory))
-    FileUtils.deleteDirectory(new File(storageOptions.path + java.io.File.separatorChar + storageOptions.commitLogRocksDirectory))
-    FileUtils.deleteDirectory(new File(storageOptions.path + java.io.File.separatorChar + storageOptions.commitLogRawDirectory))
+
+    Util.deleteDirectories(storageOptions)
   }
 
 }

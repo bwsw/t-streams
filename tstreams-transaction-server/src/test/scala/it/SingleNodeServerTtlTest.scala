@@ -20,6 +20,7 @@
 package it
 
 import java.io.File
+import java.nio.file.Paths
 
 import com.bwsw.tstreamstransactionserver.netty.client.ClientBuilder
 import com.bwsw.tstreamstransactionserver.netty.server.db.rocks.RocksDbConnection
@@ -127,9 +128,10 @@ class SingleNodeServerTtlTest extends FlatSpec with Matchers with BeforeAndAfter
 
   private def transactionDataExistsInStorage(bundle: ZkSeverTxnServerTxnClient, streamID: Int) = {
     val storageOptions = bundle.serverBuilder.getStorageOptions
+    val path = Paths.get(storageOptions.path, storageOptions.dataDirectory, streamID.toString).toString
     val connection = new RocksDbConnection(
       rocksStorageOpts = bundle.serverBuilder.getRocksStorageOptions,
-      absolutePath = Seq(storageOptions.path, storageOptions.dataDirectory, streamID).mkString(File.separator),
+      path,
       storageOptions.dataCompactionInterval,
       readOnly = true)
 

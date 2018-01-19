@@ -51,7 +51,7 @@ class LongZookeeperTreeList(client: CuratorFramework, rootPath: String)
     splitLongToHexes
   }
 
-  override def entityIdToBytes(entity: Long): Array[Byte] = {
+  override def toBytes(entity: Long): Array[Byte] = {
     val size = java.lang.Long.BYTES
     val buffer = java.nio.ByteBuffer.allocate(size)
 
@@ -63,7 +63,7 @@ class LongZookeeperTreeList(client: CuratorFramework, rootPath: String)
     bytes
   }
 
-  override def bytesToEntityId(bytes: Array[Byte]): Long = {
+  override def toEntityId(bytes: Array[Byte]): Long = {
     val buffer = java.nio.ByteBuffer.wrap(bytes)
     buffer.getLong()
   }

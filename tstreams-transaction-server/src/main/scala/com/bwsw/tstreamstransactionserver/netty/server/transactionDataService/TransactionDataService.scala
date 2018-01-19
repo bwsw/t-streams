@@ -19,6 +19,7 @@
 package com.bwsw.tstreamstransactionserver.netty.server.transactionDataService
 
 import java.nio.ByteBuffer
+import java.nio.file.Paths
 
 import com.bwsw.tstreamstransactionserver.`implicit`.Implicits._
 import com.bwsw.tstreamstransactionserver.exception.Throwable.StreamDoesNotExist
@@ -39,18 +40,16 @@ class TransactionDataService(storageOpts: StorageOptions,
   private val rocksDBStorageToStream =
     new java.util.concurrent.ConcurrentHashMap[StorageName, RocksDbConnection]()
 
-  private val pathForData =
-    s"${storageOpts.path}${java.io.File.separatorChar}${storageOpts.dataDirectory}${java.io.File.separatorChar}"
-
   private def getStorageOrCreateIt(streamRecord: StreamRecord) = {
     val key = StorageName(streamRecord.key.id.toString)
     rocksDBStorageToStream.computeIfAbsent(key, (t: StorageName) => {
+      val path = Paths.get(storageOpts.path, storageOpts.dataDirectory, key.toString).toString
       val calculatedTTL = calculateTTL(streamRecord.ttl)
       if (logger.isDebugEnabled())
         logger.debug(prefixName + s"Creating new database handler[stream: ${streamRecord.name}, ttl(in hrs): $calculatedTTL] " +
           s"for persisting and reading transactions data.")
       new RocksDbConnection(rocksStorageOpts,
-        s"$pathForData${key.toString}",
+        path,
         storageOpts.dataCompactionInterval,
         calculatedTTL)
     })

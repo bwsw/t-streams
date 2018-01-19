@@ -19,23 +19,24 @@
 package com.bwsw.tstreamstransactionserver.netty.server.db.rocks
 
 import java.io.{Closeable, File}
-import java.util.concurrent.TimeUnit
-
 import com.bwsw.tstreamstransactionserver.netty.server.storage.rocks.RocksCompactionJob
 import com.bwsw.tstreamstransactionserver.options.SingleNodeServerOptions.{RocksStorageOptions, StorageOptions}
 import org.apache.commons.io.FileUtils
 import org.rocksdb._
 
 class RocksDbConnection(rocksStorageOpts: RocksStorageOptions,
-                        absolutePath: String,
+                        path: String,
                         compactionInterval: Long,
                         ttl: Int = -1,
                         readOnly: Boolean = false)
   extends Closeable {
+  private val file = new File(path)
+  require(file.isAbsolute, "A parameter 'path' is incorrect. Path should be absolute. " +
+    "For more info see storage settings description.")
+
   RocksDB.loadLibrary()
 
   private val options = rocksStorageOpts.createOptions()
-  private val file = new File(absolutePath)
   private val client = {
     FileUtils.forceMkdir(file)
 

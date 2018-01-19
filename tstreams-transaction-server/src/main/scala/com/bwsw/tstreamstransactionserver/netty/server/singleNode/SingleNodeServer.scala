@@ -18,6 +18,7 @@
  */
 package com.bwsw.tstreamstransactionserver.netty.server.singleNode
 
+import java.nio.file.Paths
 import java.util
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.{Executors, PriorityBlockingQueue, TimeUnit}
@@ -115,17 +116,19 @@ class SingleNodeServer(authenticationOpts: AuthenticationOptions,
       storage.getStorageManager
     )
 
+  private val path = Paths.get(storageOpts.path, storageOpts.commitLogRocksDirectory).toString
   private val rocksDBCommitLog = new RocksDbConnection(
     rocksStorageOpts,
-    s"${storageOpts.path}${java.io.File.separatorChar}${storageOpts.commitLogRocksDirectory}",
+    path,
     storageOpts.dataCompactionInterval,
     commitLogOptions.expungeDelaySec
   )
 
   private val commitLogQueue = {
+    val path = Paths.get(storageOpts.path, storageOpts.commitLogRawDirectory).toString
     val queue = new CommitLogQueueBootstrap(
       30,
-      new CommitLogCatalogue(storageOpts.path + java.io.File.separatorChar + storageOpts.commitLogRawDirectory),
+      new CommitLogCatalogue(path),
       oneNodeCommitLogService
     )
     val priorityQueue = queue.fillQueue()

@@ -18,12 +18,14 @@
  */
 package com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeeperService
 
+import java.nio.file.{Path, Paths}
 import java.util.concurrent.TimeUnit
 
 import com.bwsw.tstreamstransactionserver.netty.server.CompactionJob
 import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeeperService.hierarchy.LongZookeeperTreeList
 import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeeperService.storage.BookKeeperWrapper
 import com.bwsw.tstreamstransactionserver.options.CommonOptions
+
 
 /**
   * Periodically runs BokKeeper compaction.
@@ -55,13 +57,13 @@ class BookKeeperCompactionJob(trees: Array[LongZookeeperTreeList],
 
   private def deleteExpiredLedgers(tree: LongZookeeperTreeList, firstLedger: Long): Unit = {
 
-    def inner(previousLedger: Long): Unit = {
-      if (logger.isDebugEnabled) logger.debug(s"Try to delete a ledger (id = $previousLedger)")
-      bookKeeper.openLedger(previousLedger) match {
+    def inner(currentLedger: Long): Unit = {
+      if (logger.isDebugEnabled) logger.debug(s"Try to delete a ledger (id = $currentLedger)")
+      bookKeeper.openLedger(currentLedger) match {
         case Some(ledger) if toSeconds(ledger.getCreationTime) + ttl < toSeconds(System.currentTimeMillis()) =>
-          tree.deleteNode(previousLedger)
-          bookKeeper.deleteLedger(previousLedger)
-          if (logger.isDebugEnabled) logger.debug(s"A ledger (id = $previousLedger) has been deleted")
+          bookKeeper.deleteLedger(currentLedger)
+          tree.deleteNode(currentLedger)
+          if (logger.isDebugEnabled) logger.debug(s"A ledger (id = $currentLedger) has been deleted")
           tree.firstEntityId match {
             case Some(nextLedger) =>
               inner(nextLedger)
@@ -69,10 +71,12 @@ class BookKeeperCompactionJob(trees: Array[LongZookeeperTreeList],
               if (logger.isDebugEnabled) logger.debug("Finished the deletion process of expired ledgers")
           }
         case Some(_) =>
-          if (logger.isDebugEnabled) logger.debug(s"A ledger (id = $previousLedger) is not expired. " +
+          if (logger.isDebugEnabled) logger.debug(s"A ledger (id = $currentLedger) is not expired. " +
             s"Finished the deletion process of expired ledgers")
         case None =>
-          logger.warn(s"There is a ledger (id = $previousLedger) in ZookeeperTreeList that doesn't exist in bookkeeper")
+          tree.deleteNode(currentLedger)
+          logger.warn(s"There is a ledger (id = $currentLedger) in ZookeeperTreeList that doesn't exist in bookkeeper. " +
+            s"Delete only znode")
       }
     }
 

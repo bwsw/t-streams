@@ -37,7 +37,7 @@ import scala.annotation.tailrec
 abstract class ZookeeperTreeList[T](client: CuratorFramework,
                                     rootPath: String)
   extends EntityPathConverter[T]
-    with EntityIdSerializable[T] {
+    with SerializableEntityId[T] {
   private val rootNode = new RootNode(client, rootPath)
 
   def firstEntityId: Option[T] = {
@@ -46,11 +46,11 @@ abstract class ZookeeperTreeList[T](client: CuratorFramework,
     if (binaryId.isEmpty)
       None
     else
-      Some(bytesToEntityId(binaryId))
+      Some(toEntityId(binaryId))
   }
 
   def createNode(entity: T): Unit = {
-    val lastId = entityIdToBytes(entity)
+    val lastId = toBytes(entity)
     val path = buildPath(entity)
 
     def persistNode() = {
@@ -69,7 +69,7 @@ abstract class ZookeeperTreeList[T](client: CuratorFramework,
         lastId, lastId
       )
     }
-    else if (bytesToEntityId(rootNodeData.lastId) != entity) {
+    else if (toEntityId(rootNodeData.lastId) != entity) {
       persistNode()
 
       traverseToLastNode.foreach { id =>
@@ -110,7 +110,7 @@ abstract class ZookeeperTreeList[T](client: CuratorFramework,
     if (binaryId.isEmpty)
       None
     else
-      Some(bytesToEntityId(binaryId))
+      Some(toEntityId(binaryId))
   }
 
   def getNextNode(entity: T): Option[T] = {
@@ -121,7 +121,7 @@ abstract class ZookeeperTreeList[T](client: CuratorFramework,
     if (data.isEmpty)
       None
     else
-      Some(bytesToEntityId(data))
+      Some(toEntityId(data))
   }
 
   private def buildPath(entity: T) = {
@@ -199,7 +199,7 @@ abstract class ZookeeperTreeList[T](client: CuratorFramework,
   }
 
   private def deleteFirstNode(firstEntityId: T, nextEntityId: T): Boolean = {
-    val newFirstId = entityIdToBytes(nextEntityId)
+    val newFirstId = toBytes(nextEntityId)
 
     val rootNodeData = rootNode.getData()
     val lastId = rootNodeData.lastId
@@ -214,7 +214,7 @@ abstract class ZookeeperTreeList[T](client: CuratorFramework,
   }
 
   private def deleteLastNode(lastEntityId: T, previousEntityId: T): Boolean = {
-    val newLastId = entityIdToBytes(previousEntityId)
+    val newLastId = toBytes(previousEntityId)
 
     val rootNodeData = rootNode.getData()
     val firstId = rootNodeData.firstId
@@ -241,7 +241,7 @@ abstract class ZookeeperTreeList[T](client: CuratorFramework,
     scala.util.Try(client.setData()
       .forPath(
         buildPath(nodeId),
-        entityIdToBytes(nextNodeId)
+        toBytes(nextNodeId)
       )
     ).isSuccess
   }

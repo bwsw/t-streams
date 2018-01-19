@@ -19,8 +19,8 @@
 
 package com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeeperService.hierarchy
 
-trait EntityIdSerializable[T] {
-  def entityIdToBytes(entity: T): Array[Byte]
+trait SerializableEntityId[T] {
+  def toBytes(entity: T): Array[Byte]
 
-  def bytesToEntityId(bytes: Array[Byte]): T
+  def toEntityId(bytes: Array[Byte]): T
 }

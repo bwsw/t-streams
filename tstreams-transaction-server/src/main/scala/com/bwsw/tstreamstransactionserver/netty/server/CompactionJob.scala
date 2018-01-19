@@ -21,9 +21,11 @@ package com.bwsw.tstreamstransactionserver.netty.server
 import java.io.Closeable
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
+
 import org.slf4j.{Logger, LoggerFactory}
 
 import scala.concurrent.duration.TimeUnit
+import scala.util.Try
 
 /**
   * Periodically runs compaction process.
@@ -35,10 +37,10 @@ import scala.concurrent.duration.TimeUnit
 
 abstract class CompactionJob(interval: Long, timeUnit: TimeUnit) extends Closeable {
 
-  require(interval > 0, "parameter interval in CompactionJob should be positive")
+  require(interval > 0, "A parameter 'interval' in CompactionJob should be positive")
 
   private val isStarted = new AtomicBoolean(false)
-  private val isStopped = new AtomicBoolean(false)
+  private val isClosed = new AtomicBoolean(false)
   private val executor = Executors.newScheduledThreadPool(0)
   protected val logger: Logger = LoggerFactory.getLogger(this.getClass)
 
@@ -53,8 +55,8 @@ abstract class CompactionJob(interval: Long, timeUnit: TimeUnit) extends Closeab
     * @throws IllegalStateException if this job already started or closed
     */
   def start(): Unit = {
-    if (isStopped.get()) {
-      throw new IllegalStateException("Cannot start already closed job")
+    if (isClosed.get()) {
+      throw new IllegalStateException("Cannot start already closed job.")
     } else if (!isStarted.getAndSet(true)) {
       executor.scheduleWithFixedDelay(
         () => compact(),
@@ -62,15 +64,15 @@ abstract class CompactionJob(interval: Long, timeUnit: TimeUnit) extends Closeab
         interval,
         timeUnit)
     } else {
-      throw new IllegalStateException("Cannot start already started job")
+      throw new IllegalStateException("Cannot start already started job.")
     }
   }
 
   /**
-    * Stop compaction process
+    * Stops compaction process
     */
   override def close(): Unit = {
-    if (!isStopped.getAndSet(true)) {
+    if (!isClosed.getAndSet(true)) {
       isStarted.set(false)
       executor.shutdown()
     }

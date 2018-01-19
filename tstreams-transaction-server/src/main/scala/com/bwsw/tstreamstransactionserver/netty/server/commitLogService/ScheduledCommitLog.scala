@@ -18,6 +18,7 @@
  */
 package com.bwsw.tstreamstransactionserver.netty.server.commitLogService
 
+import java.nio.file.Paths
 import java.util.concurrent.PriorityBlockingQueue
 
 import com.bwsw.commitlog.CommitLogFlushPolicy.{OnCountInterval, OnRotation, OnTimeInterval}
@@ -54,13 +55,14 @@ class ScheduledCommitLog(pathsToClosedCommitLogFiles: PriorityBlockingQueue[Comm
   }
 
   private def createCommitLog() = {
+    val path = Paths.get(storageOptions.path, storageOptions.commitLogRawDirectory).toString
     val policy = commitLogOptions.syncPolicy match {
       case EveryNth => OnCountInterval(commitLogOptions.syncValue)
       case EveryNewFile => OnRotation
       case EveryNSeconds => OnTimeInterval(commitLogOptions.syncValue)
     }
     new CommitLog(Int.MaxValue,
-      s"${storageOptions.path}${java.io.File.separatorChar}${storageOptions.commitLogRawDirectory}",
+      path,
       policy,
       iDGenerator
     )

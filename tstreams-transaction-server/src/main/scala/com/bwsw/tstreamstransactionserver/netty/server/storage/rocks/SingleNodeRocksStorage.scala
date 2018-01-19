@@ -19,6 +19,8 @@
 
 package com.bwsw.tstreamstransactionserver.netty.server.storage.rocks
 
+import java.nio.file.Paths
+
 import com.bwsw.tstreamstransactionserver.netty.server.db.KeyValueDbManager
 import com.bwsw.tstreamstransactionserver.netty.server.db.rocks.{RocksDbDescriptor, RocksDbManager}
 import com.bwsw.tstreamstransactionserver.netty.server.storage.Storage
@@ -33,10 +35,9 @@ final class SingleNodeRocksStorage(storageOpts: StorageOptions,
     readOnly) {
 
   private val rocksMetaServiceDB: KeyValueDbManager = new RocksDbManager(
+    storageOpts,
     rocksOpts,
-    storageOpts.path + java.io.File.separatorChar + storageOpts.metadataDirectory,
     commonDescriptors :+ RocksDbDescriptor(Storage.commitLogStoreDescriptorInfo, columnFamilyOptions),
-    storageOpts.dataCompactionInterval,
     readOnly
   )
 

@@ -124,4 +124,22 @@ class BookKeeperCompactionJobTest extends FlatSpec with Matchers with MockitoSug
     verify(treeList, times(1)).deleteNode(secondId)
     verify(bk, times(1)).deleteLedger(secondId)
   }
+
+  it should "work properly if there is one ledger in zk tree but this ledger doesn't exist in bookkeeper " +
+    "(no matter it's expired or not)" in new Mocks {
+    val ttl: Long = waitTimeMillis * 2
+    val id: Long = Random.nextInt(10)
+    when(bk.openLedger(id)).thenReturn(None)
+    when(treeList.firstEntityId).thenReturn(Some(id), None)
+    val compactionJob = new BookKeeperCompactionJob(Array(treeList), bk, ttl, intervalMillis, TimeUnit.MILLISECONDS)
+
+    compactionJob.start()
+    Thread.sleep(waitTimeMillis)
+    compactionJob.close()
+
+    verify(treeList, times(cycles)).firstEntityId
+    verify(bk, times(1)).openLedger(id)
+    verify(treeList, times(1)).deleteNode(id)
+    verify(bk, never()).deleteLedger(id)
+  }
 }
