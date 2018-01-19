@@ -54,6 +54,7 @@ object Protocol {
   val getTransactionIDByTimestamp = "getTransactionIDByTimestamp"
   val getMaxPackagesSizes = "getMaxPackagesSizes"
   val getZKCheckpointGroupServerPrefix = "getZKCheckpointGroupServerPrefix"
+  val keepAliveMethod = "keepAlive"
   private val protocolTCompactFactory = new TCompactProtocol.Factory
   private val protocolTBinaryFactory = new TBinaryProtocol.Factory
   private val protocolJsonFactory = new TJSONProtocol.Factory
@@ -212,10 +213,7 @@ object Protocol {
       * @return a request
       */
     @inline
-    final def decodeRequest(message: RequestMessage): Request = {
-      val iprot = protocolReq.getProtocol(new TMemoryInputTransport(message.body))
-      codecReq.decode(iprot)
-    }
+    final def decodeRequest(message: RequestMessage): Request = decodeRequest(message.body)
 
 
     @inline
@@ -243,24 +241,7 @@ object Protocol {
       * @return a response
       */
     @inline
-    final def decodeResponse(message: ResponseMessage): Response = {
-      val iprot = protocolRep.getProtocol(new TMemoryInputTransport(message.body))
-      codecRep.decode(iprot)
-    }
-
-    @inline
-    final def responseFromByteArray(bytes: Array[Byte],
-                                    protocol: TProtocolFactory): Response = {
-      val iprot = protocol.getProtocol(new TMemoryInputTransport(bytes))
-      codecRep.decode(iprot)
-    }
-
-    @inline
-    final def requestFromByteArray(bytes: Array[Byte],
-                                   protocol: TProtocolFactory): Request = {
-      val iprot = protocol.getProtocol(new TMemoryInputTransport(bytes))
-      codecReq.decode(iprot)
-    }
+    final def decodeResponse(message: ResponseMessage): Response = decodeResponse(message.body)
   }
 
   case object GetCommitLogOffsets extends
@@ -331,6 +312,9 @@ object Protocol {
 
   case object GetZKCheckpointGroupServerPrefix extends
     Descriptor(getZKCheckpointGroupServerPrefix, 22: Byte, TransactionService.GetZKCheckpointGroupServerPrefix.Args, TransactionService.GetZKCheckpointGroupServerPrefix.Result, protocolTBinaryFactory, protocolTBinaryFactory)
+
+  case object KeepAlive extends
+    Descriptor(keepAliveMethod, 23: Byte, TransactionService.KeepAlive.Args, TransactionService.KeepAlive.Result, protocolTBinaryFactory, protocolTBinaryFactory)
 
 
   def encode(entity: ThriftStruct): Array[Byte] =

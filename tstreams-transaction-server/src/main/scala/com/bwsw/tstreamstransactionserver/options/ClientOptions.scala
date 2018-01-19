@@ -30,12 +30,16 @@ object ClientOptions {
     * @param retryDelayMs        delays between retry attempts.
     * @param threadPool          the number of threads of thread pool to deserialize requests/responses.
     * @param prefix              the prefix is used for retrieving current master/leader transaction server.
+    * @param keepAliveIntervalMs milliseconds between keep-alive requests
+    * @param keepAliveThreshold  count of keep-alive request's failures after which client will be disconnected
     */
   case class ConnectionOptions(connectionTimeoutMs: Int = 5000,
                                requestTimeoutMs: Int = 5000,
                                retryDelayMs: Int = 200,
                                threadPool: Int = Runtime.getRuntime.availableProcessors(),
-                               prefix: String = "/tts/common/master")
+                               prefix: String = "/tts/common/master",
+                               keepAliveIntervalMs: Int = 1000,
+                               keepAliveThreshold: Int = 3)
 
   /** The options are used to validate client requests by a server.
     *
