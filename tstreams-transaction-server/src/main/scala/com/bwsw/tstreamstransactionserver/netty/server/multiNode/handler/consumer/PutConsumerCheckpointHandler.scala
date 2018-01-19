@@ -80,7 +80,7 @@ class PutConsumerCheckpointHandler(bookkeeperMaster: BookkeeperMaster,
 
             case Right(ledgerHandler) =>
               val record = new Record(
-                Frame.PutConsumerCheckpointType.id.toByte,
+                Frame.PutConsumerCheckpointType,
                 System.currentTimeMillis(),
                 message.body
               ).toByteArray

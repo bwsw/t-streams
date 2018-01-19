@@ -22,13 +22,13 @@ import com.bwsw.tstreamstransactionserver.netty.server.TransactionServer
 import com.bwsw.tstreamstransactionserver.netty.server.batch.Frame
 import com.bwsw.tstreamstransactionserver.netty.server.commitLogService.ScheduledCommitLog
 import com.bwsw.tstreamstransactionserver.netty.server.handler.PredefinedContextHandler
+import com.bwsw.tstreamstransactionserver.netty.server.singleNode.hanlder.consumer.PutConsumerCheckpointHandler._
 import com.bwsw.tstreamstransactionserver.netty.{Protocol, RequestMessage}
 import com.bwsw.tstreamstransactionserver.rpc.{ServerException, TransactionService}
+import com.bwsw.tstreamstransactionserver.tracing.ServerTracer.tracer
 import io.netty.channel.ChannelHandlerContext
 
 import scala.concurrent.ExecutionContext
-import com.bwsw.tstreamstransactionserver.netty.server.singleNode.hanlder.consumer.PutConsumerCheckpointHandler._
-import com.bwsw.tstreamstransactionserver.tracing.ServerTracer.tracer
 
 private object PutConsumerCheckpointHandler {
   val descriptor = Protocol.PutConsumerCheckpoint
@@ -57,7 +57,7 @@ class PutConsumerCheckpointHandler(server: TransactionServer,
 
   private def process(requestBody: Array[Byte]): Boolean = {
     scheduledCommitLog.putData(
-      Frame.PutConsumerCheckpointType.id.toByte,
+      Frame.PutConsumerCheckpointType,
       requestBody
     )
   }

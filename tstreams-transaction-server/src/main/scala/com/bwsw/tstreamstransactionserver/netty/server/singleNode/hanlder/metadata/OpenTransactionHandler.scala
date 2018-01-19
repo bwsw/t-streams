@@ -145,7 +145,7 @@ class OpenTransactionHandler(server: TransactionServer,
       )
 
       scheduledCommitLog.putData(
-        Frame.PutTransactionType.id.toByte,
+        Frame.PutTransactionType,
         binaryTransaction
       )
     }

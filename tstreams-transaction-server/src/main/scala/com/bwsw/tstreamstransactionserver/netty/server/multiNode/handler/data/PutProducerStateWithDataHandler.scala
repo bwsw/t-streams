@@ -72,7 +72,7 @@ class PutProducerStateWithDataHandler(bookkeeperMaster: BookkeeperMaster,
 
         case Right(ledgerHandler) =>
           val record = new Record(
-            Frame.PutProducerStateWithDataType.id.toByte,
+            Frame.PutProducerStateWithDataType,
             System.currentTimeMillis(),
             requestBody
           ).toByteArray

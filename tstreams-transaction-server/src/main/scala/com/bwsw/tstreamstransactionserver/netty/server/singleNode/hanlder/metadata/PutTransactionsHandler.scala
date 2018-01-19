@@ -76,7 +76,7 @@ class PutTransactionsHandler(server: TransactionServer,
 
   private def process(requestBody: Array[Byte]) = {
     scheduledCommitLog.putData(
-      Frame.PutTransactionsType.id.toByte,
+      Frame.PutTransactionsType,
       requestBody
     )
   }

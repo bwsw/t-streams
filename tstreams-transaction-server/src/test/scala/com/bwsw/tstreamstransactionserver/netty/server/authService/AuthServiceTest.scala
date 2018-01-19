@@ -20,45 +20,53 @@
 package com.bwsw.tstreamstransactionserver.netty.server.authService
 
 import com.bwsw.tstreamstransactionserver.options.SingleNodeServerOptions.AuthenticationOptions
-import org.scalatest.{FlatSpec, Matchers}
+import org.mockito.ArgumentMatchers.anyInt
+import org.mockito.Mockito.{never, reset, verify}
+import org.scalatest.mockito.MockitoSugar
+import org.scalatest.{BeforeAndAfterEach, FlatSpec, Matchers}
 
 /** Tests for [[AuthService]]
   *
   * @author Pavel Tomskikh
   */
-class AuthServiceTest extends FlatSpec with Matchers {
+class AuthServiceTest extends FlatSpec with Matchers with MockitoSugar with BeforeAndAfterEach {
 
   private val ttlSec = 1
   private val ttlMs = ttlSec * 1000
   private val waitingInterval = ttlMs / 2 + 100
+  private val tokenWriter = mock[TokenWriter]
   private val authenticationOptions = AuthenticationOptions(
     key = "valid-key",
-    keyCacheSize = 3,
     keyCacheExpirationTimeSec = ttlSec)
+
+  override protected def beforeEach(): Unit = reset(tokenWriter)
 
 
   "AuthService" should "authenticate a client if key is correct" in {
-    val authService = new AuthService(authenticationOptions)
+    val authService = new AuthService(authenticationOptions, tokenWriter)
 
-    authService.authenticate(authenticationOptions.key) shouldBe defined
+    val maybeToken = authService.authenticate(authenticationOptions.key)
+    maybeToken shouldBe defined
+    verify(tokenWriter).tokenCreated(maybeToken.get)
   }
 
   it should "not authenticate a client if key is correct" in {
-    val authService = new AuthService(authenticationOptions)
+    val authService = new AuthService(authenticationOptions, tokenWriter)
 
     authService.authenticate("wrong-key") shouldBe empty
+    verify(tokenWriter, never()).tokenCreated(anyInt())
   }
 
 
   it should "validate token if it exists in a cache" in {
-    val authService = new AuthService(authenticationOptions)
+    val authService = new AuthService(authenticationOptions, tokenWriter)
     val token = authService.authenticate(authenticationOptions.key).get
 
     authService.isValid(token) shouldBe true
   }
 
   it should "not validate token if it doesn't exists in a cache" in {
-    val authService = new AuthService(authenticationOptions)
+    val authService = new AuthService(authenticationOptions, tokenWriter)
     val token = authService.authenticate(authenticationOptions.key).get
     val wrongToken = token + 1
 
@@ -67,22 +75,24 @@ class AuthServiceTest extends FlatSpec with Matchers {
 
 
   it should "update token if it exists in a cache" in {
-    val authService = new AuthService(authenticationOptions)
+    val authService = new AuthService(authenticationOptions, tokenWriter)
     val token = authService.authenticate(authenticationOptions.key).get
 
     authService.update(token) shouldBe true
+    verify(tokenWriter).tokenUpdated(token)
   }
 
   it should "not update token if it doesn't exists in a cache" in {
-    val authService = new AuthService(authenticationOptions)
+    val authService = new AuthService(authenticationOptions, tokenWriter)
     val token = authService.authenticate(authenticationOptions.key).get
     val wrongToken = token + 1
 
     authService.update(wrongToken) shouldBe false
+    verify(tokenWriter, never()).tokenUpdated(anyInt())
   }
 
   it should "not validate expired token" in {
-    val authService = new AuthService(authenticationOptions)
+    val authService = new AuthService(authenticationOptions, tokenWriter)
     val token = authService.authenticate(authenticationOptions.key).get
 
     authService.isValid(token) shouldBe true
@@ -90,10 +100,12 @@ class AuthServiceTest extends FlatSpec with Matchers {
     Thread.sleep(ttlMs)
 
     authService.isValid(token) shouldBe false
+    // https://github.com/google/guava/issues/2110
+    //verify(tokenWriter).tokenExpired(token)
   }
 
   it should "update token's TTL by update(token) method" in {
-    val authService = new AuthService(authenticationOptions)
+    val authService = new AuthService(authenticationOptions, tokenWriter)
     val token = authService.authenticate(authenticationOptions.key).get
 
     authService.isValid(token) shouldBe true
@@ -108,7 +120,7 @@ class AuthServiceTest extends FlatSpec with Matchers {
   }
 
   it should "not update token's TTL by isValid(token) method" in {
-    val authService = new AuthService(authenticationOptions)
+    val authService = new AuthService(authenticationOptions, tokenWriter)
     val token = authService.authenticate(authenticationOptions.key).get
 
     authService.isValid(token) shouldBe true
@@ -120,16 +132,7 @@ class AuthServiceTest extends FlatSpec with Matchers {
     Thread.sleep(waitingInterval)
 
     authService.isValid(token) shouldBe false
-  }
-
-  it should "expire LRU token if cache is full" in {
-    val authService = new AuthService(authenticationOptions.copy(keyCacheExpirationTimeSec = 60))
-    val firstToken = authService.authenticate(authenticationOptions.key).get
-
-    for (_ <- 1 to authenticationOptions.keyCacheSize) {
-      authService.authenticate(authenticationOptions.key) shouldBe defined
-    }
-
-    authService.isValid(firstToken) shouldBe false
+    // https://github.com/google/guava/issues/2110
+    //verify(tokenWriter).tokenExpired(token)
   }
 }

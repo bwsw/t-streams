@@ -177,7 +177,7 @@ class PutSimpleTransactionAndDataHandler(server: TransactionServer,
             )
 
             val record = new Record(
-              Frame.PutSimpleTransactionAndDataType.id.toByte,
+              Frame.PutSimpleTransactionAndDataType,
               System.currentTimeMillis(),
               requestBody
             ).toByteArray
@@ -214,7 +214,7 @@ class PutSimpleTransactionAndDataHandler(server: TransactionServer,
             )
 
             val record = new Record(
-              Frame.PutSimpleTransactionAndDataType.id.toByte,
+              Frame.PutSimpleTransactionAndDataType,
               System.currentTimeMillis(),
               requestBody
             ).toByteArray

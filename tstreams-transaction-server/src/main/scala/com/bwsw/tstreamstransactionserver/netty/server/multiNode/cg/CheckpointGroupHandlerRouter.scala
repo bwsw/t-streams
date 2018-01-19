@@ -19,7 +19,7 @@
 
 package com.bwsw.tstreamstransactionserver.netty.server.multiNode.cg
 
-import com.bwsw.tstreamstransactionserver.netty.server.authService.AuthService
+import com.bwsw.tstreamstransactionserver.netty.server.authService.{AuthService, TokenBookKeeperWriter}
 import com.bwsw.tstreamstransactionserver.netty.server.handler.RequestRouter.{handlerAuthMetadata, handlerId}
 import com.bwsw.tstreamstransactionserver.netty.server.handler.auth.{AuthenticateHandler, IsValidHandler, KeepAliveHandler}
 import com.bwsw.tstreamstransactionserver.netty.server.handler.transport.GetMaxPackagesSizesHandler
@@ -37,7 +37,8 @@ class CheckpointGroupHandlerRouter(checkpointMaster: BookkeeperMaster,
                                    authOptions: AuthenticationOptions)
   extends RequestRouter {
 
-  private implicit val authService = new AuthService(authOptions)
+  private val tokenWriter = new TokenBookKeeperWriter(checkpointMaster, commitLogContext)
+  private implicit val authService = new AuthService(authOptions, tokenWriter)
   private implicit val transportValidator = new TransportValidator(packageTransmissionOpts)
 
   override protected val handlers: Map[Byte, RequestHandler] = Seq(

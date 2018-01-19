@@ -26,15 +26,18 @@ import org.slf4j.{Logger, LoggerFactory}
 import scala.annotation.tailrec
 import scala.util.Random
 
-final class AuthService(authOpts: AuthenticationOptions) {
+final class AuthService(authOpts: AuthenticationOptions, tokenWriter: TokenWriter) {
   private val logger: Logger = LoggerFactory.getLogger(getClass)
 
   private val tokensCache = CacheBuilder.newBuilder()
-    .maximumSize(authOpts.keyCacheSize)
     .expireAfterWrite(
       authOpts.keyCacheExpirationTimeSec,
       java.util.concurrent.TimeUnit.SECONDS)
-    .removalListener((notification: RemovalNotification[Integer, String]) => invalidate(notification.getKey))
+    .removalListener((notification: RemovalNotification[Integer, String]) => {
+      if (notification.wasEvicted()) {
+        invalidate(notification.getKey)
+      }
+    })
     .build[Integer, String]()
 
 
@@ -55,6 +58,7 @@ final class AuthService(authOpts: AuthenticationOptions) {
 
       val token = generateToken()
       tokensCache.put(token, "")
+      tokenWriter.tokenCreated(token)
 
       if (logger.isDebugEnabled)
         logger.debug(s"Client with authkey $authKey is successfully authenticated and assigned token $token.")
@@ -95,8 +99,12 @@ final class AuthService(authOpts: AuthenticationOptions) {
     val tokenValid = isValid(token)
 
     if (tokenValid) {
-      logger.debug(s"Update client token $token.")
+      if (logger.isDebugEnabled) {
+        logger.debug(s"Update client token $token.")
+      }
+
       tokensCache.put(token, "")
+      tokenWriter.tokenUpdated(token)
     }
 
     tokenValid
@@ -107,7 +115,13 @@ final class AuthService(authOpts: AuthenticationOptions) {
     *
     * @param token client's token
     */
-  private def invalidate(token: Int): Unit = {}
+  private def invalidate(token: Int): Unit = {
+    if (logger.isDebugEnabled) {
+      logger.debug(s"Client token is expired $token.")
+    }
+
+    tokenWriter.tokenExpired(token)
+  }
 }
 
 

@@ -61,12 +61,10 @@ object PropertyFileReader {
 
     val key =
       loader.castCheck("authentication.key", identity)
-    val keyCacheSize =
-      loader.castCheck("authentication.key-cache-size", prop => prop.toInt)
     val keyCacheExpirationTimeSec =
       loader.castCheck("authentication.key-cache-expiration-time-sec", prop => prop.toInt)
 
-    SingleNodeServerOptions.AuthenticationOptions(key, keyCacheSize, keyCacheExpirationTimeSec)
+    SingleNodeServerOptions.AuthenticationOptions(key, keyCacheExpirationTimeSec)
   }
 
   final def loadServerStorageOptions(loader: PropertyFileLoader): StorageOptions = {

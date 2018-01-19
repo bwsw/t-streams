@@ -17,10 +17,20 @@
  * under the License.
  */
 
-package com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeperService.data
+package com.bwsw.tstreamstransactionserver.netty.server.authService
 
 import com.bwsw.tstreamstransactionserver.netty.server.batch.Frame
+import com.bwsw.tstreamstransactionserver.netty.server.commitLogService.ScheduledCommitLog
 
-class TimestampRecord(override val timestamp: Long)
-  extends Record(Frame.Timestamp, timestamp, Array.emptyByteArray) {
+import scala.util.Try
+
+/** Writes in Commit Log token events
+  *
+  * @author Pavel Tomskikh
+  */
+class TokenCommitLogWriter(scheduledCommitLog: ScheduledCommitLog) extends TokenWriter {
+  override protected def writeRecord(typeId: Byte, token: Int): Unit = {
+    val serializedToken = Frame.serializeToken(token)
+    Try(scheduledCommitLog.putData(typeId, serializedToken))
+  }
 }

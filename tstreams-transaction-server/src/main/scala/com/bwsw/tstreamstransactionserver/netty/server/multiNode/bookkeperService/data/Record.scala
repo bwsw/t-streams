@@ -27,12 +27,6 @@ class Record(val recordType: Byte,
              val body: Array[Byte])
   extends Ordered[Record] {
 
-  def this(recordType: Frame.Value,
-           timestamp: Long,
-           body: Array[Byte]) = {
-    this(recordType.id.toByte, timestamp, body)
-  }
-
   def toByteArray: Array[Byte] = {
     val size = Record.recordTypeSizeField +
       Record.timestampSizeField +
@@ -87,12 +81,12 @@ object Record {
     val buffer = java.nio.ByteBuffer.wrap(bytes)
 
     val recordType = buffer.get
-    val timestamp  = buffer.getLong
+    val timestamp = buffer.getLong
 
     val body = new Array[Byte](buffer.remaining())
     buffer.get(body)
 
-    val timestampId = Frame.Timestamp.id.toByte
+    val timestampId = Frame.Timestamp
     recordType match {
       case `timestampId` => new TimestampRecord(timestamp)
       case _ => new Record(recordType, timestamp, body)

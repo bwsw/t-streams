@@ -17,10 +17,23 @@
  * under the License.
  */
 
-package com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeperService.data
+package com.bwsw.tstreamstransactionserver.netty.server.authService
 
 import com.bwsw.tstreamstransactionserver.netty.server.batch.Frame
 
-class TimestampRecord(override val timestamp: Long)
-  extends Record(Frame.Timestamp, timestamp, Array.emptyByteArray) {
+/** Writes token events in some log
+  *
+  * @author Pavel Tomskikh
+  */
+trait TokenWriter {
+  def tokenCreated(token: Int): Unit =
+    writeRecord(Frame.TokenCreatedType, token)
+
+  def tokenUpdated(token: Int): Unit =
+    writeRecord(Frame.TokenUpdatedType, token)
+
+  def tokenExpired(token: Int): Unit =
+    writeRecord(Frame.TokenExpiredType, token)
+
+  protected def writeRecord(typeId: Byte, token: Int): Unit
 }
