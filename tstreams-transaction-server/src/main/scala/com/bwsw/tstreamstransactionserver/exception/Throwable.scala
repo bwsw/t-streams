@@ -90,4 +90,6 @@ object Throwable {
   class ClientIllegalOperationAfterShutdownException
     extends IllegalStateException("Client had been shut down. No further operations available.")
 
+  class KeepAliveFailedException extends Exception("Keep-alive job failed")
+
 }

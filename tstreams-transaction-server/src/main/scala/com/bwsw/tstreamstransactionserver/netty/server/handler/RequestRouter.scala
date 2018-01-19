@@ -25,21 +25,17 @@ import com.bwsw.tstreamstransactionserver.netty.server.transportService.Transpor
 import io.netty.channel.ChannelHandlerContext
 
 object RequestRouter {
-  final def handlerId(clientRequestHandler: ClientRequestHandler): (Byte, RequestHandler) = {
-    val id = clientRequestHandler.id
-    id -> clientRequestHandler
-  }
+  final def handlerId(clientRequestHandler: ClientRequestHandler): (Byte, RequestHandler) =
+    clientRequestHandler.id -> clientRequestHandler
 
   final def handlerAuthData(clientRequestHandler: ClientRequestHandler)
                            (implicit
                             authService: AuthService,
                             transportValidator: TransportValidator): (Byte, RequestHandler) = {
-    val id = clientRequestHandler.id
-    id -> new AuthHandler(
+    clientRequestHandler.id -> new AuthHandler(
       new DataPackageSizeValidationHandler(
         clientRequestHandler,
-        transportValidator
-      ),
+        transportValidator),
       authService
     )
   }
@@ -48,12 +44,10 @@ object RequestRouter {
                                (implicit
                                 authService: AuthService,
                                 transportValidator: TransportValidator): (Byte, RequestHandler) = {
-    val id = clientRequestHandler.id
-    id -> new AuthHandler(
+    clientRequestHandler.id -> new AuthHandler(
       new MetadataPackageSizeValidationHandler(
         clientRequestHandler,
-        transportValidator
-      ),
+        transportValidator),
       authService
     )
   }
@@ -61,15 +55,18 @@ object RequestRouter {
   final def handlerAuth(clientRequestHandler: ClientRequestHandler)
                        (implicit
                         authService: AuthService): (Byte, RequestHandler) = {
-    val id = clientRequestHandler.id
-    id -> new AuthHandler(
+    clientRequestHandler.id -> new AuthHandler(
       clientRequestHandler,
       authService
     )
   }
 }
 
+
 trait RequestRouter {
-  def route(message: RequestMessage,
-            ctx: ChannelHandlerContext): Unit
+
+  protected val handlers: Map[Byte, RequestHandler]
+
+  def route(message: RequestMessage, ctx: ChannelHandlerContext): Unit =
+    handlers.get(message.methodId).foreach(_.handle(message, ctx, None))
 }

@@ -153,13 +153,6 @@ service ConsumerService {
 }
 
 
-service authService {
-
-  tokenType authenticate(1: string authKey),
-
-  bool isValid(1: tokenType token)
-}
-
 service transportService {
 
   TransportOptionsInfo getMaxPackagesSizes(),
@@ -214,5 +207,7 @@ service TransactionService {
 
   TransportOptionsInfo getMaxPackagesSizes(),
 
-  string getZKCheckpointGroupServerPrefix()
+  string getZKCheckpointGroupServerPrefix(),
+
+  bool keepAlive()
 }
