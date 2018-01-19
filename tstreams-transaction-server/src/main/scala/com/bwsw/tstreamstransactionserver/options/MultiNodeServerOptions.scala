@@ -19,6 +19,8 @@
 
 package com.bwsw.tstreamstransactionserver.options
 
+import java.util.concurrent.TimeUnit
+
 object MultiNodeServerOptions {
 
   /** The options are used to access/modifying zookeeper tree list, where ledgers for checkpoint group are stored.
@@ -54,6 +56,6 @@ object MultiNodeServerOptions {
                                      writeQuorumNumber: Int = 3,
                                      ackQuorumNumber: Int = 2,
                                      password: Array[Byte] = "ChangePassword".getBytes(),
-                                     expungeDelaySec: Int = 86400)
+                                     expungeDelaySec: Int = TimeUnit.DAYS.toSeconds(180).toInt)
 
 }

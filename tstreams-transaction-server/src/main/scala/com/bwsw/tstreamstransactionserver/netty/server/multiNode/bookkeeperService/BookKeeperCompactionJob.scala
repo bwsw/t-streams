@@ -28,7 +28,7 @@ import com.bwsw.tstreamstransactionserver.options.CommonOptions
 
 
 /**
-  * Periodically runs BokKeeper compaction.
+  * Periodically runs BookKeeper compaction.
   * It's need to delete expired entries from BookKeeper (entry logs) and Zookeeper (ledgers meta).
   *
   * @param trees      contains ledgers meta

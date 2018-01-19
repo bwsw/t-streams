@@ -147,7 +147,7 @@ class CommonCheckpointGroupBookkeeperWriter(zookeeperClient: CuratorFramework,
   }
 
   override def close(): Unit = {
-    super.close()
     maybeCompactionJob.foreach(_.close())
+    super.close()
   }
 }

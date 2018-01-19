@@ -50,7 +50,7 @@ abstract class ZookeeperTreeList[T](client: CuratorFramework,
   }
 
   def createNode(entity: T): Unit = {
-    val lastId = toBytes(entity)
+    val newLastId = toBytes(entity)
     val path = buildPath(entity)
 
     def persistNode() = {
@@ -66,42 +66,26 @@ abstract class ZookeeperTreeList[T](client: CuratorFramework,
     if (rootNodeData.firstId.isEmpty) {
       persistNode()
       rootNode.setData(
-        lastId, lastId
+        newLastId, newLastId
       )
     }
-    else if (toEntityId(rootNodeData.lastId) != entity) {
-      persistNode()
+    else {
+      val lastEntity = toEntityId(rootNodeData.lastId)
+      if (lastEntity != entity) {
+        persistNode()
 
-      traverseToLastNode.foreach { id =>
-        val pathPreviousNode = buildPath(id)
+        val previousLastEntityPath = buildPath(lastEntity)
         client.setData()
           .forPath(
-            pathPreviousNode,
-            lastId
+            previousLastEntityPath,
+            newLastId
           )
+
+        rootNode.setData(
+          rootNodeData.firstId, newLastId
+        )
       }
-
-      rootNode.setData(
-        rootNodeData.firstId, lastId
-      )
     }
-  }
-
-
-  private def traverseToLastNode: Option[T] = {
-    @tailrec
-    def go(node: Option[T]): Option[T] = {
-      val nodeId = node.flatMap(id =>
-        getNextNode(id)
-      )
-
-      if (nodeId.isDefined)
-        go(nodeId)
-      else
-        node
-    }
-
-    go(lastEntityId)
   }
 
   def lastEntityId: Option[T] = {
