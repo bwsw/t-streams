@@ -25,7 +25,6 @@ import com.bwsw.tstreams.agents.consumer.{ConsumerTransaction, Offset, Transacti
 import com.bwsw.tstreams.agents.producer.NewProducerTransactionPolicy
 import com.bwsw.tstreams.env.ConfigurationOptions
 import com.bwsw.tstreams.testutils.{TestStorageServer, TestUtils}
-import com.bwsw.tstreamstransactionserver.options.SingleNodeServerOptions.AuthenticationOptions
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 
 import scala.util.Try
@@ -60,6 +59,7 @@ class ServerInvalidatesOpenTransactionWhenProducerTokenExpires
   private val partitionsCount = 1
   private val partitions = (0 until partitionsCount).toSet
   private val tokenTtlSec = 5
+  private val transactionTtlMs = 60 * 1000
   private val keepAliveIntervalMs = 1000
   private val keepAliveThreshold = 3
   private val awaitTimeout = 5
@@ -76,7 +76,7 @@ class ServerInvalidatesOpenTransactionWhenProducerTokenExpires
     factory.setProperty(ConfigurationOptions.StorageClient.keepAliveThreshold, keepAliveThreshold)
     factory.setProperty(ConfigurationOptions.Stream.partitionsCount, partitionsCount)
     factory.setProperty(ConfigurationOptions.Stream.ttlSec, 60)
-    factory.setProperty(ConfigurationOptions.Producer.Transaction.ttlMs, 60 * 1000)
+    factory.setProperty(ConfigurationOptions.Producer.Transaction.ttlMs, transactionTtlMs)
     factory.setProperty(ConfigurationOptions.Producer.Transaction.keepAliveMs, 10 * 1000)
   }
 
@@ -85,28 +85,30 @@ class ServerInvalidatesOpenTransactionWhenProducerTokenExpires
   }
 
 
-  "Subscriber" should "get second transaction if first transaction's producer is broken and it's token is expired " +
+  "Subscriber" should "get second transaction if first transaction's producer is broken and its token is expired " +
     "but first transaction's ttl isn't expired" in {
 
-    val producer1ThreadGroup = new ThreadGroup("producer1_tg")
+    val firstProducerThreadGroup = new ThreadGroup("producer_1_thread_group")
 
-    val createTransaction1Latch = new CountDownLatch(1)
-    val transaction1OpenedLatch = new CountDownLatch(1)
+    val createFirstTransactionLatch = new CountDownLatch(1)
+    val firstTransactionOpenedLatch = new CountDownLatch(1)
     new Thread(
-      producer1ThreadGroup,
+      firstProducerThreadGroup,
       () => {
         val producer1 = factory.getProducer("test_producer_1", partitions)
-        createTransaction1Latch.await()
-        val transaction1 = producer1.newTransaction(NewProducerTransactionPolicy.ErrorIfOpened)
+        createFirstTransactionLatch.await()
+        val transaction1 = producer1.newTransaction(NewProducerTransactionPolicy.ErrorIfOpened) // ts1
+
         transaction1.send("data")
-        transaction1OpenedLatch.countDown()
+        firstTransactionOpenedLatch.countDown()
         Thread.sleep(60 * 1000)
       }).start()
 
-    val producer2 = factory.getProducer("test_producer_2", partitions)
+    val secondProducer = factory.getProducer("test_producer_2", partitions)
 
     val subscriberLatch = new CountDownLatch(1)
     var consumedTransactionId: Option[Long] = None
+    var consumedTransactionTime: Long = 0 // ts6
     val subscriber = factory.getSubscriber(
       "test_subscriber",
       partitions,
@@ -114,6 +116,7 @@ class ServerInvalidatesOpenTransactionWhenProducerTokenExpires
         if (consumedTransactionId.isEmpty) {
           subscriberLatch.countDown()
           consumedTransactionId = Some(transaction.getTransactionID)
+          consumedTransactionTime = System.currentTimeMillis()
         }
       },
       Offset.Newest)
@@ -121,21 +124,24 @@ class ServerInvalidatesOpenTransactionWhenProducerTokenExpires
     val testResult = Try {
       subscriber.start()
 
-      createTransaction1Latch.countDown()
-      transaction1OpenedLatch.await(awaitTimeout, TimeUnit.SECONDS)
+      createFirstTransactionLatch.countDown()
+      firstTransactionOpenedLatch.await(awaitTimeout, TimeUnit.SECONDS) // ts1
+      val firstTransactionExpirationTime = System.currentTimeMillis() + transactionTtlMs // ts7
 
-      val transaction2 = producer2.newTransaction(NewProducerTransactionPolicy.ErrorIfOpened)
-      transaction2.send("data")
-      producer2.checkpoint()
+      val secondTransaction = secondProducer.newTransaction(NewProducerTransactionPolicy.ErrorIfOpened) // ts2
+      secondTransaction.send("data")
+      secondProducer.checkpoint() // ts3
 
-      producer1ThreadGroup.interrupt()
+      firstProducerThreadGroup.interrupt() //ts4
 
-      subscriberLatch.await(tokenTtlSec * 2, TimeUnit.SECONDS) shouldBe true
-      consumedTransactionId shouldEqual Some(transaction2.getTransactionID)
+      subscriberLatch.await(tokenTtlSec * 2, TimeUnit.SECONDS) shouldBe true // ts5
+      consumedTransactionId shouldEqual Some(secondTransaction.getTransactionID)
+      consumedTransactionTime should be > 0L
+      consumedTransactionTime should be < firstTransactionExpirationTime
     }
 
     subscriber.close()
-    producer2.close()
+    secondProducer.close()
 
     testResult.get
   }
