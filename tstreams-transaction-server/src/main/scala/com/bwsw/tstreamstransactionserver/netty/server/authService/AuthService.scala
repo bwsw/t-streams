@@ -33,12 +33,12 @@ final class AuthService(authOpts: AuthenticationOptions, tokenWriter: TokenWrite
     .expireAfterWrite(
       authOpts.keyCacheExpirationTimeSec,
       java.util.concurrent.TimeUnit.SECONDS)
-    .removalListener((notification: RemovalNotification[Integer, String]) => {
+    .removalListener((notification: RemovalNotification[Integer, java.lang.Long]) => {
       if (notification.wasEvicted()) {
         invalidate(notification.getKey)
       }
     })
-    .build[Integer, String]()
+    .build[Integer, java.lang.Long]()
 
 
   /** Authenticates client and creates new token if authKey is valid
@@ -57,7 +57,7 @@ final class AuthService(authOpts: AuthenticationOptions, tokenWriter: TokenWrite
       }
 
       val token = generateToken()
-      tokensCache.put(token, "")
+      tokensCache.put(token, System.currentTimeMillis())
       tokenWriter.tokenCreated(token)
 
       if (logger.isDebugEnabled)
@@ -103,7 +103,7 @@ final class AuthService(authOpts: AuthenticationOptions, tokenWriter: TokenWrite
         logger.debug(s"Update client token $token.")
       }
 
-      tokensCache.put(token, "")
+      tokensCache.put(token, System.currentTimeMillis())
       tokenWriter.tokenUpdated(token)
     }
 

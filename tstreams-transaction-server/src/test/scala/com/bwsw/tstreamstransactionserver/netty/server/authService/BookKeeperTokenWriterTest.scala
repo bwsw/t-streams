@@ -33,11 +33,11 @@ import org.scalatest.{FlatSpec, Matchers}
 import scala.concurrent.ExecutionContext
 import scala.util.Random
 
-/** Tests for [[TokenBookKeeperWriter]]
+/** Tests for [[BookKeeperTokenWriter]]
   *
   * @author Pavel Tomskikh
   */
-class TokenBookKeeperWriterTest
+class BookKeeperTokenWriterTest
   extends FlatSpec
     with Matchers
     with MockitoSugar
@@ -56,7 +56,7 @@ class TokenBookKeeperWriterTest
         method(Right(ledgerHandle))
       })
 
-    val tokenWriter = new TokenBookKeeperWriter(bookKeeperMaster, executionContext)
+    val tokenWriter = new BookKeeperTokenWriter(bookKeeperMaster, executionContext)
 
     forAll(Table[Byte, Int => Unit](
       ("recordTypeId", "method"),

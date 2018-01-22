@@ -21,19 +21,38 @@ package com.bwsw.tstreamstransactionserver.netty.server.authService
 
 import com.bwsw.tstreamstransactionserver.netty.server.batch.Frame
 
-/** Writes token events in some log
+/** Writes token events into some log
   *
   * @author Pavel Tomskikh
   */
 trait TokenWriter {
+
+  /** Writes that token created
+    *
+    * @param token client's token
+    */
   def tokenCreated(token: Int): Unit =
-    writeRecord(Frame.TokenCreatedType, token)
+    write(Frame.TokenCreatedType, token)
 
+  /** Writes that token updated
+    *
+    * @param token client's token
+    */
   def tokenUpdated(token: Int): Unit =
-    writeRecord(Frame.TokenUpdatedType, token)
+    write(Frame.TokenUpdatedType, token)
 
+  /** Writes that token expired
+    *
+    * @param token client's token
+    */
   def tokenExpired(token: Int): Unit =
-    writeRecord(Frame.TokenExpiredType, token)
+    write(Frame.TokenExpiredType, token)
 
-  protected def writeRecord(typeId: Byte, token: Int): Unit
+  /** Writes token event into log
+    *
+    * @param eventType event type (can be [[Frame.TokenCreatedType]], [[Frame.TokenUpdatedType]]
+    *                  or [[Frame.TokenExpiredType]])
+    * @param token     client's token
+    */
+  protected def write(eventType: Byte, token: Int): Unit
 }

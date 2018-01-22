@@ -25,20 +25,28 @@ import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeperServic
 
 import scala.concurrent.{ExecutionContext, Future}
 
-/** Writes in BookKeeper token events
+/** Writes token events into BookKeeper
   *
+  * @param bookkeeperMaster BookKeeper writer
+  * @param context          execution context (require for [[Future]])
   * @author Pavel Tomskikh
   */
-class TokenBookKeeperWriter(bookkeeperMaster: BookkeeperMaster,
+class BookKeeperTokenWriter(bookkeeperMaster: BookkeeperMaster,
                             context: ExecutionContext) extends TokenWriter {
 
-  override protected def writeRecord(typeId: Byte, token: Int): Unit = {
+  /** Writes token event into BookKeeper
+    *
+    * @param eventType event type (can be [[Frame.TokenCreatedType]], [[Frame.TokenUpdatedType]]
+    *                  or [[Frame.TokenExpiredType]])
+    * @param token     client's token
+    */
+  override protected def write(eventType: Byte, token: Int): Unit = {
     val timestamp = System.currentTimeMillis()
     Future {
       bookkeeperMaster.doOperationWithCurrentWriteLedger {
         case Right(ledgerHandle) =>
           val serializedToken = Frame.serializeToken(token)
-          val record = new Record(typeId, timestamp, serializedToken)
+          val record = new Record(eventType, timestamp, serializedToken)
           ledgerHandle.addEntry(record.toByteArray)
         case Left(_) =>
       }

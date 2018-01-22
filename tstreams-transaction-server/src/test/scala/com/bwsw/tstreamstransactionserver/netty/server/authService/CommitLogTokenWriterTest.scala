@@ -30,11 +30,11 @@ import org.scalatest.{FlatSpec, Matchers}
 
 import scala.util.Random
 
-/** Tests for [[TokenCommitLogWriter]]
+/** Tests for [[CommitLogTokenWriter]]
   *
   * @author Pavel Tomskikh
   */
-class TokenCommitLogWriterTest
+class CommitLogTokenWriterTest
   extends FlatSpec
     with Matchers
     with MockitoSugar
@@ -42,7 +42,7 @@ class TokenCommitLogWriterTest
 
   "TokenCommitLogWriter" should "write token in CommitLog correctly" in {
     val commitLog = mock[ScheduledCommitLog]
-    val tokenWriter = new TokenCommitLogWriter(commitLog)
+    val tokenWriter = new CommitLogTokenWriter(commitLog)
 
     forAll(Table[Byte, Int => Unit](
       ("recordTypeId", "method"),

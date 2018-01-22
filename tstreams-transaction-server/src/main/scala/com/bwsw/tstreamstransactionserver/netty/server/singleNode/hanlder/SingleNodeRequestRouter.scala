@@ -19,7 +19,7 @@
 package com.bwsw.tstreamstransactionserver.netty.server.singleNode.hanlder
 
 import com.bwsw.tstreamstransactionserver.configProperties.ServerExecutionContextGrids
-import com.bwsw.tstreamstransactionserver.netty.server.authService.{AuthService, TokenCommitLogWriter}
+import com.bwsw.tstreamstransactionserver.netty.server.authService.{AuthService, CommitLogTokenWriter}
 import com.bwsw.tstreamstransactionserver.netty.server.commitLogService.ScheduledCommitLog
 import com.bwsw.tstreamstransactionserver.netty.server.handler.RequestRouter._
 import com.bwsw.tstreamstransactionserver.netty.server.handler._
@@ -54,7 +54,7 @@ final class SingleNodeRequestRouter(server: TransactionServer,
                                     commitLogContext: ExecutionContext)
   extends RequestRouter {
 
-  private val tokenWriter = new TokenCommitLogWriter(scheduledCommitLog)
+  private val tokenWriter = new CommitLogTokenWriter(scheduledCommitLog)
   private implicit val authService = new AuthService(authOptions, tokenWriter)
   private implicit val transportValidator = new TransportValidator(packageTransmissionOpts)
 

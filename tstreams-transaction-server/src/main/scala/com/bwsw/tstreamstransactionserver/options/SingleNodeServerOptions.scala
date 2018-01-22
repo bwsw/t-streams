@@ -70,10 +70,10 @@ object SingleNodeServerOptions {
   /** The options are used to validate client requests by a server.
     *
     * @param key                       the key to authorize server's clients.
-    * @param keyCacheExpirationTimeSec The lifetime of token after last access before expiration..
+    * @param keyCacheExpirationTimeSec the lifetime of token after last updating before expiration.
     */
   final case class AuthenticationOptions(key: String = "",
-                                         keyCacheExpirationTimeSec: Int = 600)
+                                         keyCacheExpirationTimeSec: Int = 30)
 
   /** The options are used to define folders for databases.
     *

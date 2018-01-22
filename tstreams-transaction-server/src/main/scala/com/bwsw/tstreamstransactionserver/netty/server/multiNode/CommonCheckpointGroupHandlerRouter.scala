@@ -20,7 +20,7 @@
 package com.bwsw.tstreamstransactionserver.netty.server.multiNode
 
 import com.bwsw.tstreamstransactionserver.configProperties.ServerExecutionContextGrids
-import com.bwsw.tstreamstransactionserver.netty.server.authService.{AuthService, TokenBookKeeperWriter}
+import com.bwsw.tstreamstransactionserver.netty.server.authService.{AuthService, BookKeeperTokenWriter}
 import com.bwsw.tstreamstransactionserver.netty.server.handler.RequestRouter._
 import com.bwsw.tstreamstransactionserver.netty.server.handler.auth.{AuthenticateHandler, IsValidHandler, KeepAliveHandler}
 import com.bwsw.tstreamstransactionserver.netty.server.handler.consumer.GetConsumerStateHandler
@@ -59,7 +59,7 @@ class CommonCheckpointGroupHandlerRouter(server: TransactionServer,
                                          commitLogContext: ExecutionContext)
   extends RequestRouter {
 
-  private val tokenWriter = new TokenBookKeeperWriter(checkpointMaster, commitLogContext)
+  private val tokenWriter = new BookKeeperTokenWriter(checkpointMaster, commitLogContext)
   private implicit val authService: AuthService = new AuthService(authOptions, tokenWriter)
 
   private implicit val transportValidator: TransportValidator = new TransportValidator(packageTransmissionOpts)

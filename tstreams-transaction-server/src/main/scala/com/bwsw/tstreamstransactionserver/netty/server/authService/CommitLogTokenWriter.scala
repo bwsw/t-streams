@@ -24,13 +24,21 @@ import com.bwsw.tstreamstransactionserver.netty.server.commitLogService.Schedule
 
 import scala.util.Try
 
-/** Writes in Commit Log token events
+/** Writes token events into Commit Log
   *
+  * @param scheduledCommitLog Commit Log
   * @author Pavel Tomskikh
   */
-class TokenCommitLogWriter(scheduledCommitLog: ScheduledCommitLog) extends TokenWriter {
-  override protected def writeRecord(typeId: Byte, token: Int): Unit = {
+class CommitLogTokenWriter(scheduledCommitLog: ScheduledCommitLog) extends TokenWriter {
+
+  /** Writes token event into Commit Log
+    *
+    * @param eventType event type (can be [[Frame.TokenCreatedType]], [[Frame.TokenUpdatedType]]
+    *                  or [[Frame.TokenExpiredType]])
+    * @param token     client's token
+    */
+  override protected def write(eventType: Byte, token: Int): Unit = {
     val serializedToken = Frame.serializeToken(token)
-    Try(scheduledCommitLog.putData(typeId, serializedToken))
+    Try(scheduledCommitLog.putData(eventType, serializedToken))
   }
 }
