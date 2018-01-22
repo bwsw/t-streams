@@ -37,7 +37,7 @@ class AuthServiceTest extends FlatSpec with Matchers with MockitoSugar with Befo
   private val tokenWriter = mock[TokenWriter]
   private val authenticationOptions = AuthenticationOptions(
     key = "valid-key",
-    keyCacheExpirationTimeSec = ttlSec)
+    tokenTtlSec = ttlSec)
 
   override protected def beforeEach(): Unit = reset(tokenWriter)
 

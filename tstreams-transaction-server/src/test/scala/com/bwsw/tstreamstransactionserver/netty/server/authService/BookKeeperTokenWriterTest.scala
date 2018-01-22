@@ -67,7 +67,7 @@ class BookKeeperTokenWriterTest
       val startTime = System.currentTimeMillis()
       method(token)
 
-      Thread.sleep(100) // wait until record written
+      Thread.sleep(100) // wait until a record has been written
 
       verify(ledgerHandle)
         .addEntry(argThat[Array[Byte]](bytes => {

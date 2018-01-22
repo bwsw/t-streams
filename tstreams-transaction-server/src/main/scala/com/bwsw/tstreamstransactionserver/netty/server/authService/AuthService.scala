@@ -31,7 +31,7 @@ final class AuthService(authOpts: AuthenticationOptions, tokenWriter: TokenWrite
 
   private val tokensCache = CacheBuilder.newBuilder()
     .expireAfterWrite(
-      authOpts.keyCacheExpirationTimeSec,
+      authOpts.tokenTtlSec,
       java.util.concurrent.TimeUnit.SECONDS)
     .removalListener((notification: RemovalNotification[Integer, java.lang.Long]) => {
       if (notification.wasEvicted()) {
