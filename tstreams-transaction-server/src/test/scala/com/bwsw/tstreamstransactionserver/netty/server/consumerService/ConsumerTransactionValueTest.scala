@@ -17,15 +17,22 @@
  * under the License.
  */
 
-package com.bwsw.tstreams.testutils
+package com.bwsw.tstreamstransactionserver.netty.server.consumerService
 
-import java.util.concurrent.atomic.AtomicLong
+import org.scalatest.{FlatSpec, Matchers}
 
-/**
-  * Created by ivan on 09.06.17.
-  */
-object IncreasingGenerator {
-  val id = new AtomicLong(0)
+class ConsumerTransactionValueTest extends FlatSpec with Matchers {
 
-  def get: Long = id.incrementAndGet()
+  "ConsumerTransactionValue" should "be serialized/deserialized" in {
+    val consumerTransaction = ConsumerTransactionValue(1L, Long.MaxValue)
+    ConsumerTransactionValue.fromByteArray(consumerTransaction.toByteArray) shouldBe consumerTransaction
+  }
+
+  it should "be serialized/deserialized with negative transaction" in {
+    val consumerTransaction = ConsumerTransactionValue(1L, Long.MaxValue)
+    ConsumerTransactionValue.fromByteArray(consumerTransaction.toByteArray) shouldBe consumerTransaction
+  }
 }
+
+
+

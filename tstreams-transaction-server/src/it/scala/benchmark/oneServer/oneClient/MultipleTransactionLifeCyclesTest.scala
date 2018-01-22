@@ -17,15 +17,26 @@
  * under the License.
  */
 
-package com.bwsw.tstreams.testutils
+package benchmark.oneServer.oneClient
 
-import java.util.concurrent.atomic.AtomicLong
+import benchmark.utils.Launcher
+import benchmark.utils.writer.TransactionLifeCycleWriter
 
-/**
-  * Created by ivan on 09.06.17.
-  */
-object IncreasingGenerator {
-  val id = new AtomicLong(0)
+import scala.util.Random
 
-  def get: Long = id.incrementAndGet()
+object MultipleTransactionLifeCyclesTest extends Launcher {
+  override val streamName = "stream"
+  override val clients = 1
+  private val txnCount = 1000000
+  private val dataSize = 1
+
+  def main(args: Array[String]) {
+    launch()
+    System.exit(0)
+  }
+
+  override def launchClients(streamID: Int): Unit = {
+    val filename = s"${Random.nextInt(100)}_${txnCount}TransactionLifeCycleWriterOSOC.csv"
+    new TransactionLifeCycleWriter(streamID).run(txnCount, dataSize, filename)
+  }
 }

@@ -17,15 +17,27 @@
  * under the License.
  */
 
-package com.bwsw.tstreams.testutils
+package com.bwsw.tstreamstransactionserver.netty.server.consumerService
 
-import java.util.concurrent.atomic.AtomicLong
+import org.scalatest.{FlatSpec, Matchers}
 
-/**
-  * Created by ivan on 09.06.17.
-  */
-object IncreasingGenerator {
-  val id = new AtomicLong(0)
+class ConsumerTransactionKeyTest extends FlatSpec with Matchers {
 
-  def get: Long = id.incrementAndGet()
+  "ConsumerTransactionKey" should "be serialized/deserialized" in {
+    val key = ConsumerTransactionKey("testCheckpoint", 1, 5)
+    ConsumerTransactionKey.fromByteArray(key.toByteArray) shouldBe key
+  }
+
+  it should "be serialized/deserialized with negative stream" in {
+    val key = ConsumerTransactionKey("testCheckpoint", -1, 5)
+    ConsumerTransactionKey.fromByteArray(key.toByteArray) shouldBe key
+  }
+
+  it should "be serialized/deserialized with negative partition" in {
+    val key = ConsumerTransactionKey("testCheckpoint", -1, -5)
+    ConsumerTransactionKey.fromByteArray(key.toByteArray) shouldBe key
+  }
 }
+
+
+

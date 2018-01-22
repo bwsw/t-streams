@@ -17,15 +17,20 @@
  * under the License.
  */
 
-package com.bwsw.tstreams.testutils
+package util
 
-import java.util.concurrent.atomic.AtomicLong
+import com.bwsw.tstreamstransactionserver.netty.server.singleNode.SingleNodeServer
+import org.apache.curator.test.TestingServer
 
-/**
-  * Created by ivan on 09.06.17.
-  */
-object IncreasingGenerator {
-  val id = new AtomicLong(0)
+final class ZkSeverAndTransactionServer(val zkServer: TestingServer,
+                                        val transactionServer: SingleNodeServer) {
+  def close(): Unit = {
+    transactionServer.shutdown()
+    zkServer.close()
+  }
+}
 
-  def get: Long = id.incrementAndGet()
+object ZkSeverAndTransactionServer {
+  def apply(zkServer: TestingServer, transactionServer: SingleNodeServer): ZkSeverAndTransactionServer =
+    new ZkSeverAndTransactionServer(zkServer, transactionServer)
 }

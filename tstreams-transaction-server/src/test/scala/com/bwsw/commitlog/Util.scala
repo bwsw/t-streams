@@ -17,15 +17,25 @@
  * under the License.
  */
 
-package com.bwsw.tstreams.testutils
+package com.bwsw.commitlog
 
 import java.util.concurrent.atomic.AtomicLong
 
-/**
-  * Created by ivan on 09.06.17.
-  */
-object IncreasingGenerator {
-  val id = new AtomicLong(0)
+private[commitlog] object Util {
 
-  def get: Long = id.incrementAndGet()
+  final class IDGeneratorInMemory
+    extends IDGenerator[Long] {
+
+    private val iDGenerator =
+      new AtomicLong(0L)
+
+    override def nextID: Long =
+      iDGenerator.getAndIncrement()
+
+    override def currentID: Long =
+      iDGenerator.get()
+  }
+
+  def createIDGenerator =
+    new IDGeneratorInMemory
 }

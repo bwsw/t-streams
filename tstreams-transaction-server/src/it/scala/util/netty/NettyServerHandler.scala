@@ -17,15 +17,13 @@
  * under the License.
  */
 
-package com.bwsw.tstreams.testutils
+package util.netty
 
-import java.util.concurrent.atomic.AtomicLong
+import io.netty.channel.{ChannelHandlerContext, SimpleChannelInboundHandler}
 
-/**
-  * Created by ivan on 09.06.17.
-  */
-object IncreasingGenerator {
-  val id = new AtomicLong(0)
+class NettyServerHandler
+  extends SimpleChannelInboundHandler[Array[Byte]] {
 
-  def get: Long = id.incrementAndGet()
+  override def channelRead0(ctx: ChannelHandlerContext,
+                            msg: Array[Byte]): Unit = {}
 }

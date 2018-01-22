@@ -17,15 +17,21 @@
  * under the License.
  */
 
-package com.bwsw.tstreams.testutils
+package com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeperService.hierarchy
 
-import java.util.concurrent.atomic.AtomicLong
+import org.scalatest.{FlatSpec, Matchers}
 
-/**
-  * Created by ivan on 09.06.17.
-  */
-object IncreasingGenerator {
-  val id = new AtomicLong(0)
+class RootNodeDataTest
+  extends FlatSpec
+    with Matchers {
 
-  def get: Long = id.incrementAndGet()
+  "RootNodeData" should "be serialized/deserialized correctly" in {
+    val first = "Tests"
+    val second = "Good for you"
+
+    val rootNodeData =
+      RootNodeData(first.getBytes(), second.getBytes())
+
+    RootNodeData.fromByteArray(rootNodeData.toByteArray) shouldBe rootNodeData
+  }
 }

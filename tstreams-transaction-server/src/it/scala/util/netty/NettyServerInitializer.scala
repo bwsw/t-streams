@@ -17,15 +17,17 @@
  * under the License.
  */
 
-package com.bwsw.tstreams.testutils
+package util.netty
 
-import java.util.concurrent.atomic.AtomicLong
+import io.netty.channel.ChannelInitializer
+import io.netty.channel.socket.SocketChannel
+import io.netty.handler.codec.bytes.ByteArrayEncoder
 
-/**
-  * Created by ivan on 09.06.17.
-  */
-object IncreasingGenerator {
-  val id = new AtomicLong(0)
-
-  def get: Long = id.incrementAndGet()
+class NettyServerInitializer
+  extends ChannelInitializer[SocketChannel] {
+  override def initChannel(ch: SocketChannel): Unit = {
+    ch.pipeline()
+      .addLast(new ByteArrayEncoder())
+      .addLast(new NettyServerHandler())
+  }
 }

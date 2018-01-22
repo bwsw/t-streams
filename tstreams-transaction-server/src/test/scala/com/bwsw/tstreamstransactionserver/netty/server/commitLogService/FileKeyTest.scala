@@ -17,15 +17,22 @@
  * under the License.
  */
 
-package com.bwsw.tstreams.testutils
+package com.bwsw.tstreamstransactionserver.netty.server.commitLogService
 
-import java.util.concurrent.atomic.AtomicLong
+import org.scalatest.{FlatSpec, Matchers}
 
-/**
-  * Created by ivan on 09.06.17.
-  */
-object IncreasingGenerator {
-  val id = new AtomicLong(0)
+class FileKeyTest
+  extends FlatSpec
+    with Matchers {
 
-  def get: Long = id.incrementAndGet()
+  "FileKey" should "be serialized/deserialized" in {
+    val key1 = FileKey(5L)
+    FileKey.fromByteArray(key1.toByteArray()) shouldBe key1
+
+    val key2 = FileKey(Long.MinValue)
+    FileKey.fromByteArray(key2.toByteArray()) shouldBe key2
+
+    val key3 = FileKey(Long.MaxValue)
+    FileKey.fromByteArray(key3.toByteArray()) shouldBe key3
+  }
 }

@@ -19,13 +19,27 @@
 
 package com.bwsw.tstreams.testutils
 
-import java.util.concurrent.atomic.AtomicLong
-
 /**
-  * Created by ivan on 09.06.17.
+  * Random string generator
   */
-object IncreasingGenerator {
-  val id = new AtomicLong(0)
+object RandomStringCreator {
+  private val random = new scala.util.Random
 
-  def get: Long = id.incrementAndGet()
+  /**
+    * Random string creator
+    *
+    * @param alphabet base string for creating random string
+    * @param n        length of random string
+    * @return random string
+    */
+  private def randomString(alphabet: String)(n: Int): String =
+    Stream.continually(random.nextInt(alphabet.length)).map(alphabet).take(n).mkString
+
+  /**
+    * Wrapper for random string creation
+    *
+    * @param n length of string
+    * @return random string
+    */
+  def randomAlphaString(n: Int): String = randomString("abcdefghijklmnopqrstuvwxyz")(n)
 }

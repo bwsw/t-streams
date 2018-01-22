@@ -17,15 +17,14 @@
  * under the License.
  */
 
-package com.bwsw.tstreams.testutils
+package benchmark.utils
 
-import java.util.concurrent.atomic.AtomicLong
+trait TimeMeasure {
+  def time(block: => Unit): Long = {
+    val t0 = System.currentTimeMillis()
+    block
+    val t1 = System.currentTimeMillis()
 
-/**
-  * Created by ivan on 09.06.17.
-  */
-object IncreasingGenerator {
-  val id = new AtomicLong(0)
-
-  def get: Long = id.incrementAndGet()
+    t1 - t0
+  }
 }

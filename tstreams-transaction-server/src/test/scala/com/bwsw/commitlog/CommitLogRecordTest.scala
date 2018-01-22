@@ -17,15 +17,18 @@
  * under the License.
  */
 
-package com.bwsw.tstreams.testutils
+package com.bwsw.commitlog
 
-import java.util.concurrent.atomic.AtomicLong
+import org.scalatest.{FlatSpec, Matchers}
 
-/**
-  * Created by ivan on 09.06.17.
-  */
-object IncreasingGenerator {
-  val id = new AtomicLong(0)
+class CommitLogRecordTest extends FlatSpec with Matchers {
 
-  def get: Long = id.incrementAndGet()
+  "CommitLogRecord" should "be serialized/deserialized" in {
+    val record1 = new CommitLogRecord(0: Byte, "test_data".getBytes())
+    CommitLogRecord.fromByteArray(record1.toByteArray).right.get shouldBe record1
+
+    val record2 = new CommitLogRecord(-5: Byte, "".getBytes())
+    CommitLogRecord.fromByteArray(record2.toByteArray).right.get shouldBe record2
+  }
+
 }

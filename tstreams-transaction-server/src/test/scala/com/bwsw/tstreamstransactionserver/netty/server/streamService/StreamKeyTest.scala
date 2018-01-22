@@ -17,15 +17,21 @@
  * under the License.
  */
 
-package com.bwsw.tstreams.testutils
+package com.bwsw.tstreamstransactionserver.netty.server.streamService
 
-import java.util.concurrent.atomic.AtomicLong
+import org.scalatest.{FlatSpec, Matchers}
 
-/**
-  * Created by ivan on 09.06.17.
-  */
-object IncreasingGenerator {
-  val id = new AtomicLong(0)
+class StreamKeyTest
+  extends FlatSpec
+    with Matchers {
 
-  def get: Long = id.incrementAndGet()
+  "StreamKey" should "be serialized/deserialized" in {
+    val key = StreamKey(1)
+    StreamKey.fromByteArray(key.toByteArray) shouldBe key
+  }
+
+  it should "be serialized/deserialized with negative transaction" in {
+    val key = StreamKey(-1)
+    StreamKey.fromByteArray(key.toByteArray) shouldBe key
+  }
 }

@@ -17,15 +17,19 @@
  * under the License.
  */
 
-package com.bwsw.tstreams.testutils
+package benchmark.utils
 
-import java.util.concurrent.atomic.AtomicLong
+trait Launcher extends Installer {
+  protected val streamName: String
+  protected val clients: Int
 
-/**
-  * Created by ivan on 09.06.17.
-  */
-object IncreasingGenerator {
-  val id = new AtomicLong(0)
+  def launch(): Unit = {
+    clearDB()
+    startTransactionServer()
+    val streamID = createStream(streamName, clients)
+    launchClients(streamID)
+    deleteStream(streamName)
+  }
 
-  def get: Long = id.incrementAndGet()
+  protected def launchClients(streamID: Int): Unit
 }
