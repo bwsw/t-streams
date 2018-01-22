@@ -32,7 +32,6 @@ import com.bwsw.tstreamstransactionserver.netty.server.singleNode.{SingleNodeSer
 import com.bwsw.tstreamstransactionserver.netty.server.storage.rocks.MultiAndSingleNodeRockStorage
 import com.bwsw.tstreamstransactionserver.netty.server.transactionDataService.TransactionDataService
 import com.bwsw.tstreamstransactionserver.netty.server.{RocksReader, RocksWriter, TransactionServer, singleNode}
-import com.bwsw.tstreamstransactionserver.options.ClientOptions.ConnectionOptions
 import com.bwsw.tstreamstransactionserver.options.CommonOptions.ZookeeperOptions
 import com.bwsw.tstreamstransactionserver.options.SingleNodeServerOptions.{RocksStorageOptions, StorageOptions}
 import com.bwsw.tstreamstransactionserver.rpc
@@ -325,13 +324,13 @@ object Utils {
     if (!latch.await(5000, TimeUnit.SECONDS))
       throw new IllegalStateException()
 
-    val client = new ClientBuilder()
-      .withConnectionOptions(ConnectionOptions(prefix = zKCommonMasterPrefix))
-      .withZookeeperOptions(
-        ZookeeperOptions(
-          endpoints = zkClient.getZookeeperClient.getCurrentConnectionString
-        )
-      )
+    val connectionOptions = clientBuilder.getConnectionOptions
+      .copy(prefix = zKCommonMasterPrefix)
+    val zookeeperOptions = clientBuilder.getZookeeperOptions
+      .copy(endpoints = zkClient.getZookeeperClient.getCurrentConnectionString)
+    val client = clientBuilder
+      .withConnectionOptions(connectionOptions)
+      .withZookeeperOptions(zookeeperOptions)
       .build()
 
     new ZkSeverTxnServerTxnClient(transactionServer, client, updatedBuilder)
