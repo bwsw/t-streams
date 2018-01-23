@@ -92,17 +92,21 @@ class ServerInvalidatesOpenTransactionWhenProducerTokenExpires
 
     val createFirstTransactionLatch = new CountDownLatch(1)
     val firstTransactionOpenedLatch = new CountDownLatch(1)
-    new Thread(
+    val testDoneLatch = new CountDownLatch(1)
+    val firstProducerThread = new Thread(
       firstProducerThreadGroup,
       () => {
-        val producer1 = factory.getProducer("test_producer_1", partitions)
+        val firstProducer = factory.getProducer("test_producer_1", partitions)
         createFirstTransactionLatch.await()
-        val transaction1 = producer1.newTransaction(NewProducerTransactionPolicy.ErrorIfOpened) // ts1
+        val firstTransaction = firstProducer.newTransaction(NewProducerTransactionPolicy.ErrorIfOpened) // ts1
 
-        transaction1.send("data")
+        firstTransaction.send("data")
         firstTransactionOpenedLatch.countDown()
-        Thread.sleep(60 * 1000)
-      }).start()
+        testDoneLatch.await(transactionTtlMs, TimeUnit.MILLISECONDS)
+        firstProducer.close()
+      })
+
+    firstProducerThread.start()
 
     val secondProducer = factory.getProducer("test_producer_2", partitions)
 
@@ -139,6 +143,9 @@ class ServerInvalidatesOpenTransactionWhenProducerTokenExpires
       consumedTransactionTime should be > 0L
       consumedTransactionTime should be < firstTransactionExpirationTime
     }
+
+    testDoneLatch.countDown()
+    firstProducerThread.join()
 
     subscriber.close()
     secondProducer.close()
