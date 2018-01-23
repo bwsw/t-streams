@@ -35,6 +35,7 @@ import com.bwsw.tstreamstransactionserver.options.MultiNodeServerOptions.{Bookke
 import com.bwsw.tstreamstransactionserver.options.SingleNodeServerOptions.{RocksStorageOptions, StorageOptions}
 import org.apache.commons.io.FileUtils
 import org.apache.curator.framework.CuratorFramework
+import util.Utils
 import util.Utils.getRandomPort
 
 object Util {
@@ -195,10 +196,12 @@ object Util {
   }
 
   def deleteDirectories(storageOptions: StorageOptions): Unit = {
-    FileUtils.deleteDirectory(new File(Paths.get(storageOptions.path ,storageOptions.metadataDirectory).toString))
-    FileUtils.deleteDirectory(new File(Paths.get(storageOptions.path ,storageOptions.dataDirectory).toString))
-    FileUtils.deleteDirectory(new File(Paths.get(storageOptions.path ,storageOptions.commitLogRawDirectory).toString))
-    FileUtils.deleteDirectory(new File(Paths.get(storageOptions.path ,storageOptions.commitLogRocksDirectory).toString))
+    Utils.bookieTmpDirs.foreach(dir => FileUtils.deleteDirectory(new File(dir)))
+    Utils.bookieTmpDirs.clear()
+    FileUtils.deleteDirectory(new File(Paths.get(storageOptions.path, storageOptions.metadataDirectory).toString))
+    FileUtils.deleteDirectory(new File(Paths.get(storageOptions.path, storageOptions.dataDirectory).toString))
+    FileUtils.deleteDirectory(new File(Paths.get(storageOptions.path, storageOptions.commitLogRawDirectory).toString))
+    FileUtils.deleteDirectory(new File(Paths.get(storageOptions.path, storageOptions.commitLogRocksDirectory).toString))
     new File(storageOptions.path).delete()
   }
 }
