@@ -41,13 +41,13 @@ class CommonCheckpointGroupServerTest
     with Matchers {
 
   private val ensembleNumber = 3
-  private val writeQourumNumber = 3
+  private val writeQuorumNumber = 3
   private val ackQuorumNumber = 2
 
   private val bookkeeperOptions =
     BookkeeperOptions(
       ensembleNumber,
-      writeQourumNumber,
+      writeQuorumNumber,
       ackQuorumNumber,
       "test".getBytes()
     )
@@ -58,7 +58,7 @@ class CommonCheckpointGroupServerTest
 
 
   private val bookiesNumber =
-    ensembleNumber max writeQourumNumber max ackQuorumNumber
+    ensembleNumber max writeQuorumNumber max ackQuorumNumber
 
 
   private lazy val (zkServer, zkClient, bookieServers) =

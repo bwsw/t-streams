@@ -21,8 +21,8 @@ package com.bwsw.tstreamstransactionserver.netty.server.authService
 
 import com.bwsw.tstreamstransactionserver.exception.Throwable.ServerIsSlaveException
 import com.bwsw.tstreamstransactionserver.netty.server.batch.Frame
-import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeperService.BookkeeperMaster
-import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeperService.data.Record
+import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeeperService.BookkeeperMaster
+import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeeperService.data.Record
 import org.apache.bookkeeper.client.LedgerHandle
 import org.mockito.ArgumentMatchers.{any, argThat}
 import org.mockito.Mockito.{verify, when}
