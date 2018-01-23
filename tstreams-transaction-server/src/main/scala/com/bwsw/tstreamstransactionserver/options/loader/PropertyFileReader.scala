@@ -69,22 +69,24 @@ object PropertyFileReader {
     implicit val typeTag: Class[StorageOptions] = classOf[StorageOptions]
 
     val path =
-      loader.castCheck("storage-model.file-prefix", identity)
+      loader.castCheck("storage.file-prefix", identity)
 
     val streamZookeeperDirectory =
-      loader.castCheck("storage-model.streams.zk-directory", identity)
+      loader.castCheck("storage.streams.zk-directory", identity)
 
     val dataDirectory =
-      loader.castCheck("storage-model.data.directory", identity)
+      loader.castCheck("storage.data.directory", identity)
 
     val metadataDirectory =
-      loader.castCheck("storage-model.metadata.directory", identity)
+      loader.castCheck("storage.metadata.directory", identity)
 
     val commitLogRawDirectory =
-      loader.castCheck("storage-model.commit-log.raw-directory", identity)
+      loader.castCheck("storage.commit-log.raw-directory", identity)
 
     val commitLogRocksDirectory =
-      loader.castCheck("storage-model.commit-log.rocks-directory", identity)
+      loader.castCheck("storage.commit-log.rocks-directory", identity)
+
+    val compactionInterval = loader.castCheck("storage.data.compaction-interval", _.toLong)
 
     StorageOptions(
       path,
@@ -92,7 +94,8 @@ object PropertyFileReader {
       dataDirectory,
       metadataDirectory,
       commitLogRawDirectory,
-      commitLogRocksDirectory
+      commitLogRocksDirectory,
+      compactionInterval
     )
   }
 
@@ -121,8 +124,6 @@ object PropertyFileReader {
     val isFsync =
       loader.castCheck("rocksdb.is-fsync", prop => prop.toBoolean)
 
-    val compactionInterval = loader.castCheck("rocksdb.compaction-interval", _.toLong)
-
     RocksStorageOptions(
       writeThreadPool,
       readThreadPool,
@@ -130,8 +131,7 @@ object PropertyFileReader {
       transactionExpungeDelaySec,
       maxBackgroundCompactions,
       compressionType,
-      isFsync,
-      compactionInterval
+      isFsync
     )
   }
 
@@ -225,22 +225,26 @@ object PropertyFileReader {
     implicit val typeTag: Class[BookkeeperOptions] = classOf[BookkeeperOptions]
 
     val ensembleNumber =
-      loader.castCheck("replicable.ensemble-number", prop => prop.toInt)
+      loader.castCheck("ha.ensemble-number", prop => prop.toInt)
 
     val writeQuorumNumber =
-      loader.castCheck("replicable.write-quorum-number", prop => prop.toInt)
+      loader.castCheck("ha.write-quorum-number", prop => prop.toInt)
 
     val ackQuorumNumber =
-      loader.castCheck("replicable.ack-quorum-number", prop => prop.toInt)
+      loader.castCheck("ha.ack-quorum-number", prop => prop.toInt)
 
     val password =
-      loader.castCheck("replicable.password", prop => prop.getBytes())
+      loader.castCheck("ha.password", prop => prop.getBytes())
+
+    val expungeDelaySec =
+      loader.castCheck("ha.expunge-delay-sec", prop => prop.toInt)
 
     BookkeeperOptions(
       ensembleNumber,
       writeQuorumNumber,
       ackQuorumNumber,
-      password
+      password,
+      expungeDelaySec
     )
   }
 
@@ -248,13 +252,13 @@ object PropertyFileReader {
     implicit val typeTag: Class[CheckpointGroupPrefixesOptions] = classOf[CheckpointGroupPrefixesOptions]
 
     val checkpointMasterZkTreeListPrefix =
-      loader.castCheck("replicable.cg.zk.path", identity)
+      loader.castCheck("ha.cg.zk.path", identity)
 
     val checkpointGroupLastClosedLedger =
-      loader.castCheck("replicable.cg.last-closed-ledger", identity)
+      loader.castCheck("ha.cg.last-closed-ledger", identity)
 
     val timeBetweenCreationOfLedgersMs =
-      loader.castCheck("replicable.cg.close-delay-ms", prop => prop.toInt)
+      loader.castCheck("ha.cg.close-delay-ms", prop => prop.toInt)
 
     CheckpointGroupPrefixesOptions(
       checkpointMasterZkTreeListPrefix,
@@ -267,13 +271,13 @@ object PropertyFileReader {
     implicit val typeTag: Class[CommonPrefixesOptions] = classOf[CommonPrefixesOptions]
 
     val commonMasterZkTreeListPrefix =
-      loader.castCheck("replicable.common.zk.path", identity)
+      loader.castCheck("ha.common.zk.path", identity)
 
     val commonMasterLastClosedLedger =
-      loader.castCheck("replicable.common.last-closed-ledger", identity)
+      loader.castCheck("ha.common.last-closed-ledger", identity)
 
     val timeBetweenCreationOfLedgersMs =
-      loader.castCheck("replicable.common.close-delay-ms", prop => prop.toInt)
+      loader.castCheck("ha.common.close-delay-ms", prop => prop.toInt)
 
     CommonPrefixesOptions(
       commonMasterZkTreeListPrefix,

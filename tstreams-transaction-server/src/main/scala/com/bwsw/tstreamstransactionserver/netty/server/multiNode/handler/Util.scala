@@ -21,7 +21,7 @@ package com.bwsw.tstreamstransactionserver.netty.server.multiNode.handler
 
 import com.bwsw.tstreamstransactionserver.netty.server.authService.AuthService
 import com.bwsw.tstreamstransactionserver.netty.server.handler._
-import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeperService.BookkeeperWriter
+import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeeperService.BookkeeperWriter
 import com.bwsw.tstreamstransactionserver.netty.server.multiNode.commitLogService.CommitLogService
 import com.bwsw.tstreamstransactionserver.netty.server.transportService.TransportValidator
 import com.bwsw.tstreamstransactionserver.netty.server.zk.ZKMasterElector

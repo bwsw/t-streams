@@ -19,6 +19,7 @@
 
 package ut
 
+import java.nio.file.Paths
 import java.util.concurrent.PriorityBlockingQueue
 
 import com.bwsw.commitlog.filesystem.{CommitLogCatalogue, CommitLogStorage}
@@ -32,30 +33,15 @@ class CommitLogQueueBootstrapTestSuite
   extends FlatSpec
     with Matchers
     with BeforeAndAfterAll {
+
   //arrange
-
-
-  private lazy val (zkServer, zkClient) =
-    startZkServerAndGetIt
-
-
+  private lazy val (zkServer, zkClient) = startZkServerAndGetIt
   private lazy val bundle = util.Utils.getTransactionServerBundle(zkClient)
-  private lazy val transactionServer = bundle.transactionServer
-
   private lazy val storageOptions = bundle.storageOptions
-
-
-  private lazy val commitLogCatalogue =
-    new CommitLogCatalogue(storageOptions.path + java.io.File.separatorChar + storageOptions.commitLogRawDirectory)
+  private lazy val path = Paths.get(storageOptions.path, storageOptions.commitLogRawDirectory).toString
+  private lazy val commitLogCatalogue = new CommitLogCatalogue(path)
   private lazy val commitLogQueueBootstrap =
-    new CommitLogQueueBootstrap(10, commitLogCatalogue, bundle.signleNodeCommitLogService)
-
-
-  override def beforeAll(): Unit = {
-    zkServer
-    zkClient
-  }
-
+    new CommitLogQueueBootstrap(10, commitLogCatalogue, bundle.singleNodeCommitLogService)
 
   "fillQueue" should "return an empty queue if there are no commit log files in a storage directory" in {
     //act
@@ -65,7 +51,7 @@ class CommitLogQueueBootstrapTestSuite
     emptyQueue shouldBe empty
   }
 
-  "fillQueue" should "return a queue of a size that equals to a number of commit log files are in a storage directory" in {
+  it should "return a queue of a size that equals to a number of commit log files are in a storage directory" in {
     //arrange
     val numberOfFiles = 10
     createCommitLogFiles(numberOfFiles)
@@ -77,7 +63,7 @@ class CommitLogQueueBootstrapTestSuite
     nonemptyQueue should have size numberOfFiles
   }
 
-  "fillQueue" should "return a queue with the time ordered commit log files" in {
+  it should "return a queue with the time ordered commit log files" in {
     //arrange
     val numberOfFiles = 1
     createCommitLogFiles(numberOfFiles)
@@ -92,17 +78,15 @@ class CommitLogQueueBootstrapTestSuite
     orderedFiles shouldBe sorted
   }
 
-  override def afterAll() = {
+  override def afterAll(): Unit = {
     zkClient.close()
     zkServer.close()
     bundle.closeDbsAndDeleteDirectories()
   }
 
-  private def createCommitLogFiles(number: Int) = {
-    val commitLogCatalogueByDate = new CommitLogCatalogue(storageOptions.path + java.io.File.separatorChar + storageOptions.commitLogRawDirectory)
-
+  private def createCommitLogFiles(number: Int): Unit = {
     (0 until number).foreach(fileNamePrefix => {
-      commitLogCatalogueByDate.createFile(fileNamePrefix.toString)
+      commitLogCatalogue.createFile(fileNamePrefix.toString)
     })
   }
 

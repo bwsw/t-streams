@@ -1,7 +1,18 @@
 .idea
-/target/*
+target/
 *.log
 *.log.*
-/project/project/*
-/project/target/*
-/path
+/project/project/
+/project/target/
+
+#t-streams
+t-streams/target/
+
+# tstreams-transaction-server
+tstreams-transaction-server/src/main/protobuf/
+tstreams-transaction-server/src/main/thrift/gen/
+tstreams-transaction-server/target/
+
+# sbt specific
+src/main/protobuf/gen
+src/main/thrift/gen
