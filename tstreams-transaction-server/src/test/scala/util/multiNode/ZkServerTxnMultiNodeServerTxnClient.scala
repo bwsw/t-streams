@@ -20,6 +20,7 @@
 package util.multiNode
 
 import java.io.File
+import java.nio.file.Paths
 
 import com.bwsw.tstreamstransactionserver.netty.client.api.TTSInetClient
 import com.bwsw.tstreamstransactionserver.netty.server.multiNode.{CommonCheckpointGroupServerBuilder, TestCommonCheckpointGroupServer}
@@ -46,12 +47,7 @@ class ZkServerTxnMultiNodeServerTxnClient(val transactionServer: TestCommonCheck
     client.shutdown()
 
     val storageOptions = serverBuilder.getStorageOptions
-
-    FileUtils.deleteDirectory(new File(storageOptions.path + java.io.File.separatorChar + storageOptions.metadataDirectory))
-    FileUtils.deleteDirectory(new File(storageOptions.path + java.io.File.separatorChar + storageOptions.dataDirectory))
-    FileUtils.deleteDirectory(new File(storageOptions.path + java.io.File.separatorChar + storageOptions.commitLogRocksDirectory))
-    FileUtils.deleteDirectory(new File(storageOptions.path + java.io.File.separatorChar + storageOptions.commitLogRawDirectory))
-    new File(storageOptions.path).delete()
+    Util.deleteDirectories(storageOptions)
   }
 }
 

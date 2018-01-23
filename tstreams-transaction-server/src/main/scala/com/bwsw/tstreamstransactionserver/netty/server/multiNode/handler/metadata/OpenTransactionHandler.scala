@@ -20,8 +20,8 @@
 package com.bwsw.tstreamstransactionserver.netty.server.multiNode.handler.metadata
 
 import com.bwsw.tstreamstransactionserver.netty.server.batch.Frame
-import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeperService.BookkeeperMaster
-import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeperService.data.Record
+import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeeperService.BookkeeperMaster
+import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeeperService.data.Record
 import com.bwsw.tstreamstransactionserver.netty.server.multiNode.handler.MultiNodeArgsDependentContextHandler
 import com.bwsw.tstreamstransactionserver.netty.server.multiNode.handler.metadata.OpenTransactionHandler._
 import com.bwsw.tstreamstransactionserver.netty.server.subscriber.OpenedTransactionNotifier

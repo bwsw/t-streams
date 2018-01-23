@@ -19,9 +19,11 @@
 
 package com.bwsw.tstreamstransactionserver.options
 
+import java.util.concurrent.TimeUnit
 
 object CommonOptions {
   val PROPERTY_FILE_NAME = "config"
+  val COMPACTION_TIME_UNIT: TimeUnit = TimeUnit.SECONDS
 
   /** The options are applied on establishing connection to a ZooKeeper server(cluster).
     *

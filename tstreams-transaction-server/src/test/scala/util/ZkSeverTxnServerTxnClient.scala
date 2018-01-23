@@ -25,6 +25,7 @@ import java.io.File
 import com.bwsw.tstreamstransactionserver.netty.client.api.TTSInetClient
 import com.bwsw.tstreamstransactionserver.netty.server.singleNode.{SingleNodeServerBuilder, TestSingleNodeServer}
 import org.apache.commons.io.FileUtils
+import util.multiNode.Util
 
 class ZkSeverTxnServerTxnClient(val transactionServer: TestSingleNodeServer,
                                 val client: TTSInetClient,
@@ -49,10 +50,6 @@ class ZkSeverTxnServerTxnClient(val transactionServer: TestSingleNodeServer,
 
     val storageOptions = serverBuilder.getStorageOptions
 
-    FileUtils.deleteDirectory(new File(storageOptions.path + java.io.File.separatorChar + storageOptions.metadataDirectory))
-    FileUtils.deleteDirectory(new File(storageOptions.path + java.io.File.separatorChar + storageOptions.dataDirectory))
-    FileUtils.deleteDirectory(new File(storageOptions.path + java.io.File.separatorChar + storageOptions.commitLogRocksDirectory))
-    FileUtils.deleteDirectory(new File(storageOptions.path + java.io.File.separatorChar + storageOptions.commitLogRawDirectory))
-    new File(storageOptions.path).delete()
+    Util.deleteDirectories(storageOptions)
   }
 }

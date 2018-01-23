@@ -19,21 +19,27 @@
 package com.bwsw.tstreamstransactionserver.netty.server.db.rocks
 
 import java.io.File
+import java.nio.file.Paths
 import java.util.concurrent.TimeUnit
 
 import com.bwsw.tstreamstransactionserver.netty.server.db.{DbMeta, KeyValueDbManager}
-import com.bwsw.tstreamstransactionserver.netty.server.storage.rocks.CompactionJob
-import com.bwsw.tstreamstransactionserver.options.SingleNodeServerOptions.RocksStorageOptions
+import com.bwsw.tstreamstransactionserver.netty.server.storage.rocks.RocksCompactionJob
+import com.bwsw.tstreamstransactionserver.options.SingleNodeServerOptions.{RocksStorageOptions, StorageOptions}
 import org.apache.commons.io.FileUtils
 import org.rocksdb._
 
 import scala.collection.JavaConverters
 
-class RocksDbManager(absolutePath: String,
+class RocksDbManager(storageOpts: StorageOptions,
                      rocksStorageOpts: RocksStorageOptions,
                      descriptors: Seq[RocksDbDescriptor],
-                     readMode: Boolean = false)
+                     readOnly: Boolean = false)
   extends KeyValueDbManager {
+  private val path = Paths.get(storageOpts.path, storageOpts.metadataDirectory).toString
+  private val file = new File(path)
+  require(file.isAbsolute, "A parameter 'path' is incorrect. Path should be absolute. " +
+    "For more info see storage settings description.")
+
   RocksDB.loadLibrary()
 
   private val options = rocksStorageOpts.createDBOptions()
@@ -56,7 +62,7 @@ class RocksDbManager(absolutePath: String,
     val databaseHandlers =
       new java.util.ArrayList[ColumnFamilyHandle](columnFamilyDescriptors.length)
 
-    val file = new File(absolutePath)
+
     FileUtils.forceMkdir(file)
 
     val connection = TtlDB.open(
@@ -65,7 +71,7 @@ class RocksDbManager(absolutePath: String,
       JavaConverters.seqAsJavaList(columnFamilyDescriptors),
       databaseHandlers,
       JavaConverters.seqAsJavaList(ttls),
-      readMode
+      readOnly
     )
 
     val handlerToIndexMap: collection.immutable.Map[Int, ColumnFamilyHandle] =
@@ -83,12 +89,11 @@ class RocksDbManager(absolutePath: String,
 
 
   private val maybeCompactionJob =
-    if (readMode) None
-    else Some(new CompactionJob(
+    if (readOnly) None
+    else Some(new RocksCompactionJob(
       client,
       databaseHandlers.values.toSeq,
-      rocksStorageOpts.compactionInterval,
-      TimeUnit.SECONDS))
+      storageOpts.dataCompactionInterval))
 
   maybeCompactionJob.foreach(_.start())
 

@@ -20,6 +20,7 @@
 package it
 
 import java.io.File
+import java.nio.file.Paths
 
 import com.bwsw.tstreamstransactionserver.netty.client.ClientBuilder
 import com.bwsw.tstreamstransactionserver.netty.server.db.rocks.RocksDbConnection
@@ -53,11 +54,12 @@ class SingleNodeServerTtlTest extends FlatSpec with Matchers with BeforeAndAfter
 
   "SingleNodeServer" should "remove expired transactions" in {
     val rocksStorageOptions = serverBuilder.getRocksStorageOptions.copy(
-      transactionExpungeDelaySec = ttl,
-      compactionInterval = compactionInterval)
+      transactionExpungeDelaySec = ttl)
+    val storageOptions = serverBuilder.getStorageOptions.copy(
+      dataCompactionInterval = compactionInterval)
     val bundle = Utils.startTransactionServerAndClient(
       zkClient,
-      serverBuilder.withServerRocksStorageOptions(rocksStorageOptions),
+      serverBuilder.withServerRocksStorageOptions(rocksStorageOptions).withServerStorageOptions(storageOptions),
       clientBuilder)
 
     bundle.operate { _ =>
@@ -126,9 +128,11 @@ class SingleNodeServerTtlTest extends FlatSpec with Matchers with BeforeAndAfter
 
   private def transactionDataExistsInStorage(bundle: ZkSeverTxnServerTxnClient, streamID: Int) = {
     val storageOptions = bundle.serverBuilder.getStorageOptions
+    val path = Paths.get(storageOptions.path, storageOptions.dataDirectory, streamID.toString).toString
     val connection = new RocksDbConnection(
       rocksStorageOpts = bundle.serverBuilder.getRocksStorageOptions,
-      absolutePath = Seq(storageOptions.path, storageOptions.dataDirectory, streamID).mkString(File.separator),
+      path,
+      storageOptions.dataCompactionInterval,
       readOnly = true)
 
     val iterator = connection.iterator

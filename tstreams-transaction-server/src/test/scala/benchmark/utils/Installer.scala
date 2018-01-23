@@ -20,6 +20,7 @@
 package benchmark.utils
 
 import java.io.File
+import java.nio.file.Paths
 import java.util.concurrent.{CountDownLatch, TimeUnit}
 
 import benchmark.Options._
@@ -33,10 +34,10 @@ trait Installer {
   private val storageOptions = serverBuilder.getStorageOptions
 
   def clearDB() = {
-    FileUtils.deleteDirectory(new File(storageOptions.path + java.io.File.separatorChar + storageOptions.metadataDirectory))
-    FileUtils.deleteDirectory(new File(storageOptions.path + java.io.File.separatorChar + storageOptions.dataDirectory))
-    FileUtils.deleteDirectory(new File(storageOptions.path + java.io.File.separatorChar + storageOptions.commitLogRawDirectory))
-    FileUtils.deleteDirectory(new File(storageOptions.path + java.io.File.separatorChar + storageOptions.commitLogRocksDirectory))
+    FileUtils.deleteDirectory(new File(Paths.get(storageOptions.path ,storageOptions.metadataDirectory).toString))
+    FileUtils.deleteDirectory(new File(Paths.get(storageOptions.path ,storageOptions.dataDirectory).toString))
+    FileUtils.deleteDirectory(new File(Paths.get(storageOptions.path ,storageOptions.commitLogRawDirectory).toString))
+    FileUtils.deleteDirectory(new File(Paths.get(storageOptions.path ,storageOptions.commitLogRocksDirectory).toString))
   }
 
   def startTransactionServer() = {

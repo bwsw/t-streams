@@ -20,7 +20,7 @@
 package util.multiNode
 
 import java.io.File
-import java.nio.file.Files
+import java.nio.file.{Files, Paths}
 import java.util.concurrent.{CountDownLatch, TimeUnit}
 
 import com.bwsw.tstreamstransactionserver.netty.client.ClientBuilder
@@ -33,6 +33,7 @@ import com.bwsw.tstreamstransactionserver.options.ClientOptions.ConnectionOption
 import com.bwsw.tstreamstransactionserver.options.CommonOptions.ZookeeperOptions
 import com.bwsw.tstreamstransactionserver.options.MultiNodeServerOptions.{BookkeeperOptions, CheckpointGroupPrefixesOptions}
 import com.bwsw.tstreamstransactionserver.options.SingleNodeServerOptions.{RocksStorageOptions, StorageOptions}
+import org.apache.commons.io.FileUtils
 import org.apache.curator.framework.CuratorFramework
 import util.Utils.getRandomPort
 
@@ -193,4 +194,11 @@ object Util {
 
   }
 
+  def deleteDirectories(storageOptions: StorageOptions): Unit = {
+    FileUtils.deleteDirectory(new File(Paths.get(storageOptions.path ,storageOptions.metadataDirectory).toString))
+    FileUtils.deleteDirectory(new File(Paths.get(storageOptions.path ,storageOptions.dataDirectory).toString))
+    FileUtils.deleteDirectory(new File(Paths.get(storageOptions.path ,storageOptions.commitLogRawDirectory).toString))
+    FileUtils.deleteDirectory(new File(Paths.get(storageOptions.path ,storageOptions.commitLogRocksDirectory).toString))
+    new File(storageOptions.path).delete()
+  }
 }

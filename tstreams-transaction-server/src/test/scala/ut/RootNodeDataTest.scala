@@ -19,7 +19,7 @@
 
 package ut
 
-import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeperService.hierarchy.RootNodeData
+import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeeperService.hierarchy.RootNodeData
 import org.scalatest.{FlatSpec, Matchers}
 
 class RootNodeDataTest
