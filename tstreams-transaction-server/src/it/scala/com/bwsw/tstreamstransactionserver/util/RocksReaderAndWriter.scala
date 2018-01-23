@@ -19,8 +19,6 @@
 
 package com.bwsw.tstreamstransactionserver.util
 
-import java.io.File
-
 import com.bwsw.tstreamstransactionserver.netty.server.db.KeyValueDbBatch
 import com.bwsw.tstreamstransactionserver.netty.server.db.zk.ZookeeperStreamRepository
 import com.bwsw.tstreamstransactionserver.netty.server.storage.rocks.MultiAndSingleNodeRockStorage
@@ -28,6 +26,7 @@ import com.bwsw.tstreamstransactionserver.netty.server.streamService.StreamServi
 import com.bwsw.tstreamstransactionserver.netty.server.transactionDataService.TransactionDataService
 import com.bwsw.tstreamstransactionserver.netty.server.{RocksReader, RocksWriter}
 import com.bwsw.tstreamstransactionserver.options.SingleNodeServerOptions.{RocksStorageOptions, StorageOptions}
+import com.bwsw.tstreamstransactionserver.util.multiNode.Util
 import org.apache.curator.framework.CuratorFramework
 
 
@@ -71,13 +70,6 @@ class RocksReaderAndWriter(zkClient: CuratorFramework,
   def closeDBAndDeleteFolder(): Unit = {
     rocksStorage.getStorageManager.closeDatabases()
     transactionDataService.closeTransactionDataDatabases()
-
-    Utils.deleteDirectories(
-      storageOptions.path,
-      storageOptions.metadataDirectory,
-      storageOptions.dataDirectory,
-      storageOptions.commitLogRocksDirectory,
-      storageOptions.commitLogRawDirectory)
-    new File(storageOptions.path).delete()
+    Util.deleteDirectories(storageOptions)
   }
 }

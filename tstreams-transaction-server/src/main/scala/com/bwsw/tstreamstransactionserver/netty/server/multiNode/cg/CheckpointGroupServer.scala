@@ -92,7 +92,8 @@ class CheckpointGroupServer(authenticationOpts: AuthenticationOptions,
     new CheckpointGroupBookkeeperWriter(
       zk.client,
       bookkeeperOptions,
-      checkpointGroupPrefixesOptions
+      checkpointGroupPrefixesOptions,
+      storageOpts.dataCompactionInterval
     )
 
   private val checkpointGroupMasterElector =
@@ -203,6 +204,10 @@ class CheckpointGroupServer(authenticationOpts: AuthenticationOptions,
 
       if (transactionDataService != null) {
         transactionDataService.closeTransactionDataDatabases()
+      }
+
+      if (bookkeeperToRocksWriter != null) {
+        bookkeeperToRocksWriter.close()
       }
     }
   }

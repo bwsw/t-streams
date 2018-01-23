@@ -23,10 +23,11 @@ import java.util.concurrent.atomic.AtomicLong
 
 import com.bwsw.tstreamstransactionserver.netty.Protocol
 import com.bwsw.tstreamstransactionserver.netty.server.batch.Frame
-import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeperService.LedgerManager
-import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeperService.data.Record
-import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeperService.metadata.{IsOkayStatus, LedgerMetadata, MoveToNextLedgerStatus}
-import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeperService.storage.BookkeeperWrapper
+import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeeperService.LedgerManager
+import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeeperService.data.Record
+import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeeperService.hierarchy.{LongNodeCache, LongZookeeperTreeList, ZkMultipleTreeListReader}
+import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeeperService.metadata.{IsOkayStatus, LedgerMetadata, MoveToNextLedgerStatus}
+import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeeperService.storage.BookKeeperWrapper
 import com.bwsw.tstreamstransactionserver.options.MultiNodeServerOptions.BookkeeperOptions
 import com.bwsw.tstreamstransactionserver.rpc.TransactionStates.{Checkpointed, Opened}
 import com.bwsw.tstreamstransactionserver.rpc._
@@ -377,7 +378,7 @@ class ZkMultipleTreeListReaderTest
 
   it should "retrieve records from database because ZkTreeListLong objects called 'treeList1' and 'treeList2' have ledgers ids and a storage contains records within the ledgers," +
     " ledgers are closed at the same time" in {
-    val bookKeeperStorage = new BookkeeperWrapper(
+    val bookKeeperStorage = new BookKeeperWrapper(
       bookKeeper,
       bookkeeperOptions
     )
@@ -534,7 +535,7 @@ class ZkMultipleTreeListReaderTest
 
   it should "retrieve records from database ZkTreeListLong objects called 'treeList1' and 'treeList2' have ledgers ids and a storage contains records within the ledgers," +
     " first ledger(belongs to 'treeList1') is closed earlier than second ledger(belongs to 'treeList2')" in {
-    val bookKeeperStorage = new BookkeeperWrapper(
+    val bookKeeperStorage = new BookKeeperWrapper(
       bookKeeper,
       bookkeeperOptions
     )

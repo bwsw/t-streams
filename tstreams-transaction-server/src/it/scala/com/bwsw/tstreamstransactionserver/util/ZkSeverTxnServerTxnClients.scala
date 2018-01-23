@@ -19,10 +19,9 @@
 
 package com.bwsw.tstreamstransactionserver.util
 
-import java.io.File
-
 import com.bwsw.tstreamstransactionserver.netty.client.api.TTSClient
 import com.bwsw.tstreamstransactionserver.netty.server.singleNode.{SingleNodeServerBuilder, TestSingleNodeServer}
+import com.bwsw.tstreamstransactionserver.util.multiNode.Util
 
 import scala.util.{Failure, Try}
 
@@ -45,13 +44,6 @@ class ZkSeverTxnServerTxnClients(val transactionServer: TestSingleNodeServer,
     clients.foreach(client => client.shutdown())
 
     val storageOptions = serverBuilder.getStorageOptions
-
-    Utils.deleteDirectories(
-      storageOptions.path,
-      storageOptions.metadataDirectory,
-      storageOptions.dataDirectory,
-      storageOptions.commitLogRocksDirectory,
-      storageOptions.commitLogRawDirectory)
-    new File(storageOptions.path).delete()
+    Util.deleteDirectories(storageOptions)
   }
 }

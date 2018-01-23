@@ -19,14 +19,11 @@
 
 package com.bwsw.tstreamstransactionserver.util.multiNode
 
-import java.io.File
-
 import com.bwsw.tstreamstransactionserver.netty.server.multiNode.commitLogService.CommitLogService
 import com.bwsw.tstreamstransactionserver.netty.server.storage.Storage
 import com.bwsw.tstreamstransactionserver.netty.server.transactionDataService.TransactionDataService
 import com.bwsw.tstreamstransactionserver.netty.server.{RocksReader, RocksWriter, TransactionServer}
 import com.bwsw.tstreamstransactionserver.options.SingleNodeServerOptions
-import com.bwsw.tstreamstransactionserver.util.Utils
 
 import scala.util.{Failure, Try}
 
@@ -50,13 +47,7 @@ class MultiNodeBundle(val transactionServer: TransactionServer,
   def closeDbsAndDeleteDirectories(): Unit = {
     storage.getStorageManager.closeDatabases()
     transactionDataService.closeTransactionDataDatabases()
-    Utils.deleteDirectories(
-      storageOptions.path,
-      storageOptions.metadataDirectory,
-      storageOptions.dataDirectory,
-      storageOptions.commitLogRocksDirectory,
-      storageOptions.commitLogRawDirectory)
-    new File(storageOptions.path).delete()
+    Util.deleteDirectories(storageOptions)
   }
 }
 

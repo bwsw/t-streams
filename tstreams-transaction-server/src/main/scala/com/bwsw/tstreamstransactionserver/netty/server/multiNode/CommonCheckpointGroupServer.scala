@@ -114,7 +114,8 @@ class CommonCheckpointGroupServer(authenticationOpts: AuthenticationOptions,
     new CommonCheckpointGroupBookkeeperWriter(
       zk.client,
       bookkeeperOptions,
-      commonPrefixesOptions
+      commonPrefixesOptions,
+      storageOpts.dataCompactionInterval
     )
 
   private val commonMasterElector =
@@ -329,6 +330,9 @@ class CommonCheckpointGroupServer(authenticationOpts: AuthenticationOptions,
         rocksStorage.getStorageManager.closeDatabases()
       }
 
+      if (bookkeeperToRocksWriter != null) {
+        bookkeeperToRocksWriter.close()
+      }
     }
   }
 

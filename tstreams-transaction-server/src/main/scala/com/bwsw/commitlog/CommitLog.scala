@@ -19,6 +19,7 @@
 package com.bwsw.commitlog
 
 import java.io._
+import java.nio.file.Paths
 import java.security.{DigestOutputStream, MessageDigest}
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.{AtomicInteger, AtomicLong, AtomicReference}
@@ -48,13 +49,12 @@ class CommitLog(seconds: Int,
   private val chunkWriteCount: AtomicInteger = new AtomicInteger(0)
   private val chunkOpenTime: AtomicLong = new AtomicLong(0L)
 
-  private val pathWithSeparator =
-    s"$path${java.io.File.separatorChar}"
-
   private val currentCommitLogFileToPut =
     new AtomicReference[CommitLogFile](
       new CommitLogFile(iDGenerator.nextID)
     )
+
+  private def getPathWith(id: Long) = Paths.get(path, id.toString).toString
 
   /** Puts record and its type to an appropriate file.
     *
@@ -85,14 +85,14 @@ class CommitLog(seconds: Int,
     currentFile.put(messageType, message)
     chunkWriteCount.incrementAndGet()
 
-    currentFile.absolutePath
+    currentFile.outputFileName
   }
 
   /** Finishes work with current file. */
   def close(createNewFile: Boolean = true, withMD5: Boolean = true): String = this.synchronized {
     val currentCommitLogFile = currentCommitLogFileToPut.get()
 
-    val path = currentCommitLogFile.absolutePath
+    val path = currentCommitLogFile.outputFileName
     if (createNewFile) {
       currentCommitLogFileToPut.set(
         new CommitLogFile(
@@ -117,19 +117,13 @@ class CommitLog(seconds: Int,
   final def currentFileID: Long = currentCommitLogFileToPut.get().id
 
   private class CommitLogFile(val id: Long) {
-    private[CommitLog] val absolutePath: String =
-      new StringBuilder(pathWithSeparator)
-        .append(id)
-        .append(FilePathManager.DATAEXTENSION)
-        .toString
-
-    private val recordIDGen =
-      new AtomicLong(0L)
+    private[CommitLog] val outputFileName: String =
+      new StringBuilder(getPathWith(id)).append(FilePathManager.DATAEXTENSION).toString
 
     private val md5: MessageDigest =
       MessageDigest.getInstance("MD5")
     private val fileStream =
-      new FileOutputStream(absolutePath)
+      new FileOutputStream(outputFileName)
     private val outputStream =
       new BufferedOutputStream(fileStream)
     private val digestOutputStream =
@@ -171,8 +165,7 @@ class CommitLog(seconds: Int,
         .printHexBinary(md5.digest())
         .getBytes
 
-      val fileName = new StringBuilder(pathWithSeparator)
-        .append(id).append(FilePathManager.MD5EXTENSION).toString
+      val fileName = new StringBuilder(getPathWith(id)).append(FilePathManager.MD5EXTENSION).toString
 
       new FileOutputStream(fileName) {
         write(fileMD5)

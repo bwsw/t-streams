@@ -21,7 +21,7 @@ package com.bwsw.tstreamstransactionserver.netty.server.multiNode.commitLogServi
 
 import com.bwsw.tstreamstransactionserver.netty.server.batch.BigCommit
 import com.bwsw.tstreamstransactionserver.netty.server.db.KeyValueDbManager
-import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeperService.metadata.{LedgerMetadata, MetadataRecord}
+import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeeperService.metadata.{LedgerMetadata, MetadataRecord}
 import com.bwsw.tstreamstransactionserver.netty.server.storage.Storage
 
 final class CommitLogService(rocksDB: KeyValueDbManager) {

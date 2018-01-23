@@ -19,6 +19,7 @@
 
 package com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeperService.metadata
 
+import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeeperService.metadata.{LedgerMetadata, MetadataRecord, NoRecordReadStatus}
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 
 class MetadataRecordTest

@@ -19,16 +19,14 @@
 
 package com.bwsw.tstreamstransactionserver.util
 
-import java.io.File
-
 import com.bwsw.tstreamstransactionserver.netty.server.TransactionServer
 import com.bwsw.tstreamstransactionserver.netty.server.singleNode.commitLogService.CommitLogService
 import com.bwsw.tstreamstransactionserver.netty.server.storage.Storage
 import com.bwsw.tstreamstransactionserver.netty.server.transactionDataService.TransactionDataService
 import com.bwsw.tstreamstransactionserver.options.SingleNodeServerOptions
+import com.bwsw.tstreamstransactionserver.util.multiNode.Util
 
 import scala.util.{Failure, Try}
-
 
 final class TransactionServerBundle(val transactionServer: TransactionServer,
                                     val singleNodeCommitLogService: CommitLogService,
@@ -49,13 +47,6 @@ final class TransactionServerBundle(val transactionServer: TransactionServer,
   def closeDbsAndDeleteDirectories(): Unit = {
     storage.getStorageManager.closeDatabases()
     transactionDataService.closeTransactionDataDatabases()
-
-    Utils.deleteDirectories(
-      storageOptions.path,
-      storageOptions.metadataDirectory,
-      storageOptions.dataDirectory,
-      storageOptions.commitLogRocksDirectory,
-      storageOptions.commitLogRawDirectory)
-    new File(storageOptions.path).delete()
+    Util.deleteDirectories(storageOptions)
   }
 }

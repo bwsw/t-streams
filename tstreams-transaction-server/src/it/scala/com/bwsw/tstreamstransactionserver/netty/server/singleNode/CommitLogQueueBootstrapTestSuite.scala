@@ -33,19 +33,13 @@ class CommitLogQueueBootstrapTestSuite
   extends FlatSpec
     with Matchers
     with BeforeAndAfterAll {
+
   //arrange
-
-
-  private lazy val (zkServer, zkClient) =
-    startZkServerAndGetIt
-
-
+  private lazy val (zkServer, zkClient) = startZkServerAndGetIt
   private lazy val bundle = util.Utils.getTransactionServerBundle(zkClient)
   private lazy val storageOptions = bundle.storageOptions
-
-
-  private lazy val commitLogCatalogue =
-    new CommitLogCatalogue(Paths.get(storageOptions.path, storageOptions.commitLogRawDirectory).toString)
+  private lazy val path = Paths.get(storageOptions.path, storageOptions.commitLogRawDirectory).toString
+  private lazy val commitLogCatalogue = new CommitLogCatalogue(path)
   private lazy val commitLogQueueBootstrap =
     new CommitLogQueueBootstrap(10, commitLogCatalogue, bundle.singleNodeCommitLogService)
 
@@ -64,7 +58,7 @@ class CommitLogQueueBootstrapTestSuite
     emptyQueue shouldBe empty
   }
 
-  "fillQueue" should "return a queue of a size that equals to a number of commit log files are in a storage directory" in {
+  it should "return a queue of a size that equals to a number of commit log files are in a storage directory" in {
     //arrange
     val numberOfFiles = 10
     createCommitLogFiles(numberOfFiles)
@@ -76,7 +70,7 @@ class CommitLogQueueBootstrapTestSuite
     nonemptyQueue should have size numberOfFiles
   }
 
-  "fillQueue" should "return a queue with the time ordered commit log files" in {
+  it should "return a queue with the time ordered commit log files" in {
     //arrange
     val numberOfFiles = 1
     createCommitLogFiles(numberOfFiles)
@@ -97,13 +91,10 @@ class CommitLogQueueBootstrapTestSuite
     bundle.closeDbsAndDeleteDirectories()
   }
 
-  private def createCommitLogFiles(number: Int) = {
-    val commitLogCatalogueByDate =
-      new CommitLogCatalogue(Paths.get(storageOptions.path, storageOptions.commitLogRawDirectory).toString)
-
-    (0 until number)
-      .map(_.toString)
-      .foreach(commitLogCatalogueByDate.createFile)
+  private def createCommitLogFiles(number: Int): Unit = {
+    (0 until number).foreach(fileNamePrefix => {
+      commitLogCatalogue.createFile(fileNamePrefix.toString)
+    })
   }
 
   private def getOrderedFiles(orderedQueue: PriorityBlockingQueue[CommitLogStorage]) = {

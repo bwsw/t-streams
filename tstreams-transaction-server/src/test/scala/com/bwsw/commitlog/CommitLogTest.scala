@@ -33,7 +33,7 @@ class CommitLogTest
     with BeforeAndAfterAll {
 
   private val directory = Paths.get("target", "clt").toString
-  private val record = "sample record".map(_.toByte).toArray
+  private val record = "sample record".getBytes
   private val recordSize = record.length + CommitLogRecord.headerSize
 
   private val fileIDGen = Util.createIDGenerator

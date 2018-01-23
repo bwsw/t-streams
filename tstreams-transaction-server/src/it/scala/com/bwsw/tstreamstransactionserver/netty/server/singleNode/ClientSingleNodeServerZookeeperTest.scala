@@ -32,7 +32,8 @@ import com.bwsw.tstreamstransactionserver.options.SingleNodeServerOptions
 import com.bwsw.tstreamstransactionserver.options.SingleNodeServerOptions.{BootstrapOptions, StorageOptions}
 import com.bwsw.tstreamstransactionserver.util
 import com.bwsw.tstreamstransactionserver.util.Utils
-import com.bwsw.tstreamstransactionserver.util.Utils._
+import com.bwsw.tstreamstransactionserver.util.Utils.{getRandomConsumerTransaction, getRandomProducerTransaction, getRandomStream, startZkServerAndGetIt, _}
+import com.bwsw.tstreamstransactionserver.util.multiNode.Util
 import org.apache.curator.framework.CuratorFrameworkFactory
 import org.apache.curator.retry.RetryForever
 import org.apache.curator.test.TestingServer
@@ -345,7 +346,6 @@ class ClientSingleNodeServerZookeeperTest
       zkServer.close()
       Thread.sleep(1000) // wait until zkClient disconnects
 
-
       val producerTransactions = Array.fill(100)(getRandomProducerTransaction(1, stream))
       val consumerTransactions = Array.fill(100)(getRandomConsumerTransaction(1, stream))
 
@@ -369,12 +369,7 @@ class ClientSingleNodeServerZookeeperTest
       serverBuilder.build()
     }
 
-    deleteDirectories(
-      storageOptions.path,
-      storageOptions.metadataDirectory,
-      storageOptions.dataDirectory,
-      storageOptions.commitLogRocksDirectory,
-      storageOptions.commitLogRawDirectory)
+    Util.deleteDirectories(storageOptions)
   }
 
   it should "not start on wrong inet address" in {
@@ -388,12 +383,7 @@ class ClientSingleNodeServerZookeeperTest
       serverBuilder.build()
     }
 
-    deleteDirectories(
-      storageOptions.path,
-      storageOptions.metadataDirectory,
-      storageOptions.dataDirectory,
-      storageOptions.commitLogRocksDirectory,
-      storageOptions.commitLogRawDirectory)
+    Util.deleteDirectories(storageOptions)
   }
 
   it should "not start on negative port value" in {
@@ -407,12 +397,7 @@ class ClientSingleNodeServerZookeeperTest
       serverBuilder.build()
     }
 
-    deleteDirectories(
-      storageOptions.path,
-      storageOptions.metadataDirectory,
-      storageOptions.dataDirectory,
-      storageOptions.commitLogRocksDirectory,
-      storageOptions.commitLogRawDirectory)
+    Util.deleteDirectories(storageOptions)
   }
 
   it should "not start on port value exceeds 65535" in {
@@ -426,12 +411,7 @@ class ClientSingleNodeServerZookeeperTest
       serverBuilder.build()
     }
 
-    deleteDirectories(
-      storageOptions.path,
-      storageOptions.metadataDirectory,
-      storageOptions.dataDirectory,
-      storageOptions.commitLogRocksDirectory,
-      storageOptions.commitLogRawDirectory)
+    Util.deleteDirectories(storageOptions)
   }
 
 }

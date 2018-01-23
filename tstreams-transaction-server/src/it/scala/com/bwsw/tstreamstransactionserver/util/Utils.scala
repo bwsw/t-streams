@@ -48,10 +48,12 @@ import org.apache.zookeeper.CreateMode
 import org.apache.zookeeper.ZooDefs.Ids
 import org.apache.zookeeper.data.ACL
 
+import scala.collection.mutable.ArrayBuffer
 import scala.util.{Random, Try}
 
 
 object Utils {
+  val bookieTmpDirs = ArrayBuffer[String]()
   def uuid: String = java.util.UUID.randomUUID.toString
 
   private val sessionTimeoutMillis = 1000
@@ -78,21 +80,17 @@ object Utils {
   private val zkLedgersRootPath = "/ledgers"
   private val zkBookiesAvailablePath = s"$zkLedgersRootPath/available"
 
-  def startBookieServer(zkEndpoints: String, bookieNumber: Int): BookieServer = {
+  def startBookieServer(zkEndpoints: String, bookieNumber: Int, gcWaitTime: Long): (BookieServer, ServerConfiguration) = {
 
     def createBookieFolder() = {
       val path = Files.createTempDirectory(s"bookie")
 
-      val bookieFolder =
-        new File(path.toFile.getPath, "current")
-
-      bookieFolder.mkdir()
-
-      bookieFolder.getPath
+      path.toFile.getPath
     }
 
-    def startBookie(): BookieServer = {
+    def startBookie(): (BookieServer, ServerConfiguration) = {
       val bookieFolder = createBookieFolder()
+      bookieTmpDirs += bookieFolder
 
       val serverConfig = new ServerConfiguration()
         .setBookiePort(Utils.getRandomPort)
@@ -101,6 +99,7 @@ object Utils {
         .setLedgerDirNames(Array(bookieFolder))
         .setAllowLoopback(true)
         .setJournalFlushWhenQueueEmpty(true)
+        .setGcWaitTime(gcWaitTime)
 
       serverConfig
         .setZkLedgersRootPath(zkLedgersRootPath)
@@ -111,13 +110,15 @@ object Utils {
 
       val server = new BookieServer(serverConfig)
       server.start()
-      server
+      (server, serverConfig)
     }
 
     startBookie()
   }
 
-  def startZkServerBookieServerZkClient(serverNumber: Int): (TestingServer, CuratorFramework, Array[BookieServer]) = {
+  def startZkServerBookieServerZkClient(serverNumber: Int,
+                                        gcWaitTime: Long = 600000):
+  (TestingServer, CuratorFramework, Array[BookieServer]) = {
     val (zkServer, zkClient) = startZkServerAndGetIt
 
     zkClient.create()
@@ -134,7 +135,35 @@ object Utils {
     val bookies = (0 until serverNumber).map(serverIndex =>
       startBookieServer(
         zkClient.getZookeeperClient.getCurrentConnectionString,
-        serverIndex
+        serverIndex,
+        gcWaitTime
+      )._1
+    ).toArray
+
+    (zkServer, zkClient, bookies)
+  }
+
+  def startZkAndBookieServerWithConfig(serverNumber: Int,
+                                       gcWaitTime: Long = 600000):
+  (TestingServer, CuratorFramework, Array[(BookieServer, ServerConfiguration)]) = {
+    val (zkServer, zkClient) = startZkServerAndGetIt
+
+    zkClient.create()
+      .creatingParentsIfNeeded()
+      .withMode(CreateMode.PERSISTENT)
+      .withACL(new util.ArrayList[ACL](Ids.OPEN_ACL_UNSAFE))
+      .forPath(zkLedgersRootPath)
+
+    zkClient.create()
+      .withMode(CreateMode.PERSISTENT)
+      .withACL(new util.ArrayList[ACL](Ids.OPEN_ACL_UNSAFE))
+      .forPath(zkBookiesAvailablePath)
+
+    val bookies = (0 until serverNumber).map(serverIndex =>
+      startBookieServer(
+        zkClient.getZookeeperClient.getCurrentConnectionString,
+        serverIndex,
+        gcWaitTime
       )
     ).toArray
 
