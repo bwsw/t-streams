@@ -23,8 +23,8 @@ import java.util.concurrent.TimeUnit
 
 import com.bwsw.tstreamstransactionserver.netty.server.db.zk.ZookeeperStreamRepository
 import com.bwsw.tstreamstransactionserver.netty.server.streamService.{StreamKey, StreamValue}
+import com.bwsw.tstreamstransactionserver.util.{SubscriberUtils, Utils}
 import org.scalatest.{FlatSpec, Matchers}
-import util.{SubscriberUtils, Utils}
 
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer

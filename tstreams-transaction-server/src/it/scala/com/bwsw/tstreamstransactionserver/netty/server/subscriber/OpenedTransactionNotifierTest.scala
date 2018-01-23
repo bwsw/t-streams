@@ -23,8 +23,8 @@ import com.bwsw.tstreamstransactionserver.netty.Protocol
 import com.bwsw.tstreamstransactionserver.netty.server.db.zk.ZookeeperStreamRepository
 import com.bwsw.tstreamstransactionserver.netty.server.streamService.StreamValue
 import com.bwsw.tstreamstransactionserver.rpc.{TransactionState, TransactionStates}
+import com.bwsw.tstreamstransactionserver.util.{SubscriberUtils, UdpServer, Utils}
 import org.scalatest.{FlatSpec, Matchers}
-import util.{SubscriberUtils, UdpServer, Utils}
 
 class OpenedTransactionNotifierTest
   extends FlatSpec

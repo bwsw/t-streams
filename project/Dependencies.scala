@@ -28,8 +28,7 @@ object Dependencies {
       "org.mockito" % "mockito-core" % "2.13.0" % "it,test",
       "org.scalamock" %% "scalamock-scalatest-support" % "3.5.0" % "it,test",
       "org.rogach" %% "scallop" % "3.1.1" % "it,test",
-      "org.apache.commons" % "commons-math3" % "3.6.1" % "it,test",
-      "org.mockito" % "mockito-core" % "2.13.0" % "it,test"
+      "org.apache.commons" % "commons-math3" % "3.6.1" % "it,test"
     ))
 
   val TStreamsTransactionServer = Seq(
