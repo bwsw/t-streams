@@ -76,13 +76,6 @@ class BigCommitWithFrameParser(bigCommit: BigCommit) {
   }
 
   def commit(): Boolean = {
-//    if (producerRecords.nonEmpty)
-//      println(producerRecords.sorted.mkString("[\n  ","\n  ","\n]"))
-
-//    if (producerRecords.nonEmpty)
-//      println(producerRecords.sorted.map(_.timestamp).mkString("[\n  ","\n  ","\n]"))
-//
-
     bigCommit.putProducerTransactions(
       producerRecords.sorted
     )
@@ -91,9 +84,6 @@ class BigCommitWithFrameParser(bigCommit: BigCommit) {
       consumerRecords.values.toIndexedSeq
     )
 
-//    if (consumerRecords.nonEmpty)
-//      println(consumerRecords.mkString("[\n  ","\n  ","\n]"))
-
     producerRecords.clear()
     consumerRecords.clear()
 
@@ -101,113 +91,86 @@ class BigCommitWithFrameParser(bigCommit: BigCommit) {
   }
 
   def addFrames(frames: Seq[Frame]): Unit = {
-    val recordsByType = frames.groupBy(frame => Frame(frame.typeId))
-
-    recordsByType.get(Frame.PutTransactionDataType)
-      .foreach(records =>
-        records.foreach { record =>
-          val producerData =
-            Frame.deserializePutTransactionData(record.body)
+    frames.foreach { frame =>
+      frame.typeId match {
+        case Frame.PutTransactionDataType =>
+          val producerData = Frame.deserializePutTransactionData(frame.body)
 
           bigCommit.putProducerData(
             producerData.streamID,
             producerData.partition,
             producerData.transaction,
             producerData.data,
-            producerData.from
-          )
-        })
+            producerData.from)
 
-    recordsByType.get(Frame.PutSimpleTransactionAndDataType)
-      .foreach(records =>
-        records.foreach { record =>
-          val producerTransactionsAndData =
-            Frame.deserializePutSimpleTransactionAndData(record.body)
 
-          val producerTransactionRecords =
-            producerTransactionsAndData.producerTransactions.map(producerTransaction =>
+        case Frame.PutSimpleTransactionAndDataType =>
+          val producerTransactionsAndData = Frame.deserializePutSimpleTransactionAndData(frame.body)
+
+          val producerTransactionRecords = producerTransactionsAndData.producerTransactions
+            .map(producerTransaction =>
               ProducerTransactionRecord(
                 producerTransaction,
-                record.timestamp
-              )
-            )
+                frame.timestamp))
 
           val producerTransactionRecord =
             producerTransactionRecords.head
-
 
           bigCommit.putProducerData(
             producerTransactionRecord.stream,
             producerTransactionRecord.partition,
             producerTransactionRecord.transactionID,
             producerTransactionsAndData.data,
-            0
-          )
+            0)
 
-          producerTransactionRecords.foreach(producerTransactionRecord =>
-            putProducerTransaction(producerRecords, producerTransactionRecord)
-          )
-        })
+          producerTransactionRecords.foreach(
+            producerTransactionRecord => putProducerTransaction(producerRecords, producerTransactionRecord))
 
 
-    recordsByType.get(Frame.PutProducerStateWithDataType)
-      .foreach(records =>
-        records.foreach { record =>
-          val producerTransactionAndData =
-            Frame.deserializePutProducerStateWithData(record.body)
+        case Frame.PutProducerStateWithDataType =>
+          val producerTransactionAndData = Frame.deserializePutProducerStateWithData(frame.body)
 
-          val producerTransactionRecord =
-            ProducerTransactionRecord(
-              producerTransactionAndData.transaction,
-              record.timestamp
-            )
+          val producerTransactionRecord = ProducerTransactionRecord(
+            producerTransactionAndData.transaction,
+            frame.timestamp)
 
           bigCommit.putProducerData(
             producerTransactionRecord.stream,
             producerTransactionRecord.partition,
             producerTransactionRecord.transactionID,
             producerTransactionAndData.data,
-            producerTransactionAndData.from
-          )
+            producerTransactionAndData.from)
 
           putProducerTransaction(producerRecords, producerTransactionRecord)
-        })
 
-    recordsByType.get(Frame.PutConsumerCheckpointType)
-      .foreach(records =>
-        records.foreach { record =>
-          val consumerTransactionArgs = Frame.deserializePutConsumerCheckpoint(record.body)
+
+        case Frame.PutConsumerCheckpointType =>
+          val consumerTransactionArgs = Frame.deserializePutConsumerCheckpoint(frame.body)
           val consumerTransactionRecord = {
             import consumerTransactionArgs._
-            ConsumerTransactionRecord(name,
+            ConsumerTransactionRecord(
+              name,
               streamID,
               partition,
               transaction,
-              record.timestamp
-            )
+              frame.timestamp)
           }
           putConsumerTransaction(consumerRecords, consumerTransactionRecord)
-        })
 
 
-    recordsByType.get(Frame.PutTransactionType)
-      .foreach { records =>
-        records.foreach { record =>
-          val transaction = Frame.deserializePutTransaction(record.body)
-            .transaction
-          decomposeTransaction(producerRecords, consumerRecords, transaction, record.timestamp)
-        }
-      }
+        case Frame.PutTransactionType =>
+          val transaction = Frame.deserializePutTransaction(frame.body).transaction
+          decomposeTransaction(producerRecords, consumerRecords, transaction, frame.timestamp)
 
-    recordsByType.get(Frame.PutTransactionsType)
-      .foreach(records =>
-        records.foreach { record =>
-          val transactions = Frame.deserializePutTransactions(record.body)
-            .transactions
+
+        case Frame.PutTransactionsType =>
+          val transactions = Frame.deserializePutTransactions(frame.body).transactions
 
           transactions.foreach(transaction =>
-            decomposeTransaction(producerRecords, consumerRecords, transaction, record.timestamp)
-          )
-        })
+            decomposeTransaction(producerRecords, consumerRecords, transaction, frame.timestamp))
+
+        case _ =>
+      }
+    }
   }
 }

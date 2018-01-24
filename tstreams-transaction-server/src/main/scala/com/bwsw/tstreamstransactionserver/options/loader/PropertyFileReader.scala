@@ -59,14 +59,10 @@ object PropertyFileReader {
   final def loadServerAuthenticationOptions(loader: PropertyFileLoader): AuthenticationOptions = {
     implicit val typeTag: Class[AuthenticationOptions] = classOf[SingleNodeServerOptions.AuthenticationOptions]
 
-    val key =
-      loader.castCheck("authentication.key", identity)
-    val keyCacheSize =
-      loader.castCheck("authentication.key-cache-size", prop => prop.toInt)
-    val keyCacheExpirationTimeSec =
-      loader.castCheck("authentication.key-cache-expiration-time-sec", prop => prop.toInt)
+    val key = loader.castCheck("authentication.key", identity)
+    val tokenTtlSec = loader.castCheck("authentication.token-ttl-sec", _.toInt)
 
-    SingleNodeServerOptions.AuthenticationOptions(key, keyCacheSize, keyCacheExpirationTimeSec)
+    SingleNodeServerOptions.AuthenticationOptions(key, tokenTtlSec)
   }
 
   final def loadServerStorageOptions(loader: PropertyFileLoader): StorageOptions = {

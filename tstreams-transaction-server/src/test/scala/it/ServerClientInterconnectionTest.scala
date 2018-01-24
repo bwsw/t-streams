@@ -755,7 +755,7 @@ class ServerClientInterconnectionTest
     val keepAliveThreshold = 3
     val keepAliveIntervalMs = ttlMs / keepAliveThreshold
     val authenticationOptions = serverBuilder.getAuthenticationOptions.copy(
-      keyCacheExpirationTimeSec = ttlSec)
+      tokenTtlSec = ttlSec)
     val connectionOptions = clientBuilder.getConnectionOptions.copy(
       keepAliveIntervalMs = keepAliveIntervalMs,
       keepAliveThreshold = keepAliveThreshold)

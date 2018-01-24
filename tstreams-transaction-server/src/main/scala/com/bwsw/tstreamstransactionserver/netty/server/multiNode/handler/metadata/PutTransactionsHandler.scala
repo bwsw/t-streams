@@ -78,7 +78,7 @@ class PutTransactionsHandler(bookkeeperMaster: BookkeeperMaster,
               promise.failure(throwable)
             case Right(ledgerHandler) =>
               val record = new Record(
-                Frame.PutTransactionsType.id.toByte,
+                Frame.PutTransactionsType,
                 System.currentTimeMillis(),
                 message.body
               ).toByteArray

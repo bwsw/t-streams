@@ -21,6 +21,7 @@ package com.bwsw.tstreamstransactionserver
 
 import java.io.File
 
+import com.bwsw.commitlog
 import com.bwsw.commitlog.filesystem.CommitLogBinary
 import com.bwsw.tstreamstransactionserver.netty.Protocol
 import com.bwsw.tstreamstransactionserver.netty.server.batch.Frame
@@ -37,9 +38,20 @@ object DumpProcessedCommitLogUtility {
   RocksDB.loadLibrary()
 
   sealed trait Transaction
-  case class ProducerTransaction(stream: Int, partition: Int, transactionID: Long, state: String, ttl: Long) extends Transaction
-  case class ConsumerTransaction(stream: Int, partition: Int, transactionID: Long, name: String) extends Transaction
+
+  case class ProducerTransaction(stream: Int,
+                                 partition: Int,
+                                 transactionID: Long,
+                                 state: String,
+                                 ttl: Long) extends Transaction
+
+  case class ConsumerTransaction(stream: Int,
+                                 partition: Int,
+                                 transactionID: Long,
+                                 name: String) extends Transaction
+
   case class CommitLogRecord(timestamp: Long, transactions: Seq[Transaction])
+
   case class CommitLogFile(id: Long, md5: Option[Seq[Byte]], transactions: Seq[CommitLogRecord])
 
   private implicit val formatsTransaction = Serialization.formats(ShortTypeHints(List(classOf[Transaction])))
@@ -72,28 +84,37 @@ object DumpProcessedCommitLogUtility {
 
   private def deserializePutTransaction(message: Array[Byte]) =
     Protocol.PutTransaction.decodeRequest(message)
+
   private def deserializePutTransactions(message: Array[Byte]) =
     Protocol.PutTransactions.decodeRequest(message)
+
   private def deserializeSetConsumerState(message: Array[Byte]) =
     Protocol.PutConsumerCheckpoint.decodeRequest(message)
 
-  private def retrieveTransactions(record: com.bwsw.commitlog.CommitLogRecord): Seq[(com.bwsw.tstreamstransactionserver.rpc.Transaction, Long)] =
-    Frame(record.messageType.toInt) match {
+  private def retrieveTransactions(record: commitlog.CommitLogRecord): Seq[(rpc.Transaction, Long)] =
+    record.messageType match {
       case Frame.PutTransactionType =>
         val txn = deserializePutTransaction(record.message)
+
         Seq((txn.transaction, record.timestamp))
+
       case Frame.PutTransactionsType =>
         val txns = deserializePutTransactions(record.message)
+
         txns.transactions.map(txn => (txn, record.timestamp))
+
       case Frame.PutConsumerCheckpointType =>
         val args = deserializeSetConsumerState(record.message)
-        val consumerTransaction = com.bwsw.tstreamstransactionserver.rpc.ConsumerTransaction(args.streamID, args.partition, args.transaction, args.name)
-        Seq((com.bwsw.tstreamstransactionserver.rpc.Transaction(None, Some(consumerTransaction)), record.timestamp))
-      case _ => throw new IllegalArgumentException("Undefined method type for retrieving message from commit log record")
+        val consumerTransaction = rpc.ConsumerTransaction(args.streamID, args.partition, args.transaction, args.name)
+
+        Seq((rpc.Transaction(None, Some(consumerTransaction)), record.timestamp))
+
+      case _ =>
+        throw new IllegalArgumentException("Undefined method type for retrieving message from commit log record")
     }
 
 
-  def RecordToProducerOrConsumerTransaction(key: Array[Byte], value:Array[Byte]): CommitLogFile = {
+  def RecordToProducerOrConsumerTransaction(key: Array[Byte], value: Array[Byte]): CommitLogFile = {
     val fileKey = FileKey.fromByteArray(key)
     val fileValue = FileValue.fromByteArray(value)
     val binaryFile = new CommitLogBinary(fileKey.id, fileValue.fileContent, fileValue.fileMD5Content)
@@ -101,7 +122,7 @@ object DumpProcessedCommitLogUtility {
     val recordsBuffer = new ArrayBuffer[CommitLogRecord]()
     val iterator = binaryFile.getIterator
     while (iterator.hasNext()) {
-      iterator.next().right.foreach{record =>
+      iterator.next().right.foreach { record =>
         val transactions = retrieveTransactions(record)
         val transactionsJson = transactions.map { transaction =>
           val txn = transaction._1
