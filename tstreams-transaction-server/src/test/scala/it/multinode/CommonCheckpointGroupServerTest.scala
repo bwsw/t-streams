@@ -26,6 +26,7 @@ import com.bwsw.tstreamstransactionserver.exception.Throwable.{MasterChangedExce
 import com.bwsw.tstreamstransactionserver.netty.client.ClientBuilder
 import com.bwsw.tstreamstransactionserver.netty.server.multiNode.CommonCheckpointGroupServerBuilder
 import com.bwsw.tstreamstransactionserver.options.MultiNodeServerOptions.BookkeeperOptions
+import com.bwsw.tstreamstransactionserver.options.SingleNodeServerOptions.AuthenticationOptions
 import com.bwsw.tstreamstransactionserver.rpc.{TransactionInfo, TransactionStates}
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import util.Implicit.ProducerTransactionSortable
@@ -54,6 +55,7 @@ class CommonCheckpointGroupServerTest
 
   private val maxIdleTimeBetweenRecordsMs = 1000
   private lazy val serverBuilder = new CommonCheckpointGroupServerBuilder()
+    .withAuthenticationOptions(AuthenticationOptions(tokenTtlSec = 60))
   private lazy val clientBuilder = new ClientBuilder()
 
 

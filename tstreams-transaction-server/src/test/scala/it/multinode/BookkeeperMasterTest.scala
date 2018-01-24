@@ -20,23 +20,16 @@
 package it.multinode
 
 
-import java.util.concurrent.atomic.AtomicLong
-
-import com.bwsw.tstreamstransactionserver.netty.Protocol
-import com.bwsw.tstreamstransactionserver.netty.server.batch.Frame
-import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeeperService.data.Record
-import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeeperService.hierarchy.LongZookeeperTreeList
 import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeeperService._
+import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeeperService.hierarchy.LongZookeeperTreeList
 import com.bwsw.tstreamstransactionserver.netty.server.zk.ZKIDGenerator
 import com.bwsw.tstreamstransactionserver.options.MultiNodeServerOptions.BookkeeperOptions
-import com.bwsw.tstreamstransactionserver.rpc.{ProducerTransaction, Transaction, TransactionService, TransactionStates}
 import org.apache.bookkeeper.client.BookKeeper
 import org.apache.bookkeeper.conf.ClientConfiguration
 import org.apache.bookkeeper.meta.LongHierarchicalLedgerManagerFactory
 import org.apache.curator.retry.RetryForever
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import util.Utils
-
 
 
 class BookkeeperMasterTest
@@ -71,46 +64,6 @@ class BookkeeperMasterTest
 
   private def uuid = java.util.UUID.randomUUID.toString
 
-  private def buildProducerTransaction(streamID: Int,
-                                       partition: Int,
-                                       state: TransactionStates,
-                                       txnID: Long,
-                                       ttlTxn: Long) =
-    ProducerTransaction(
-      stream = streamID,
-      partition = partition,
-      transactionID = txnID,
-      state = state,
-      quantity = -1,
-      ttl = ttlTxn
-    )
-
-
-  private def genProducerTransactionsWrappedInRecords(transactionIDGen: AtomicLong,
-                                                      transactionNumber: Int,
-                                                      streamID: Int,
-                                                      partition: Int,
-                                                      state: TransactionStates,
-                                                      ttlTxn: Long) = {
-    (0 until transactionNumber)
-      .map(txnID => buildProducerTransaction(
-        streamID,
-        partition,
-        state,
-        txnID,
-        ttlTxn
-      ))
-      .map { txn =>
-        val binaryTransaction = Protocol.PutTransaction.encodeRequest(
-          TransactionService.PutTransaction.Args(Transaction(Some(txn), None))
-        )
-        new Record(
-          Frame.PutTransactionType,
-          transactionIDGen.getAndIncrement(),
-          binaryTransaction
-        )
-      }
-  }
 
   private lazy val (zkServer, zkClient, bookies) =
     Utils.startZkServerBookieServerZkClient(bookiesNumber)
@@ -218,93 +171,4 @@ class BookkeeperMasterTest
       bookkeeperMasterBundle.stop()
     }
   }
-
-//  it should "create ledger, put producer records and through the while read them" in {
-//    val bundle = util.multiNodeServer
-//          bookkeeperOptions,
-//          zkTree1,
-//          createNewLedgerEveryTimeMs
-//        )
-//
-//      val bookkeeperMasterBundle =
-//        new BookkeeperMasterBundle(
-//          bookkeeperMaster,
-//          createNewLedgerEveryTimeMs
-//        )
-//
-//      val bookkeeperSlave =
-//        new BookkeeperSlave(
-//          bookkeeper,
-//          bookkeeperOptions,
-//          zkTrees,
-//          bundle.multiNodeCommitLogService,
-//          bundle.rocksWriter
-//        )
-//
-//      val bookkeeperSlaveBundle =
-//        new BookkeeperSlaveBundle(
-//          bookkeeperSlave,
-//          createNewLedgerEveryTimeMs
-//        )
-//
-//      bookkeeperMasterBundle.start()
-//
-//      val initialTxnID = 0L
-//      val transactionIDGen = new AtomicLong(initialTxnID)
-//
-//      val streamID =
-//        transactionServer.putStream(uuid, 100, None, 1000L)
-//
-//      bookkeeperSlaveBundle.start()
-//
-//      var currentLedgerOuterRef1: Long = -1L
-//      val promise = Promise.successful(())
-//      bookkeeperMaster.doOperationWithCurrentWriteLedger { currentLedgerOrError =>
-//
-//        val currentLedger = currentLedgerOrError.right.get
-//        transactionIDGen.set(System.currentTimeMillis())
-//        currentLedgerOuterRef1 = currentLedger.getId
-//        val records = genProducerTransactionsWrappedInRecords(
-//          transactionIDGen,
-//          transactionNumber,
-//          streamID,
-//          partition,
-//          TransactionStates.Opened,
-//          10000L
-//        )
-//        records.foreach(record => currentLedger.addEntry(record.toByteArray))
-//        promise
-//      }
-//
-//      Thread.sleep(createNewLedgerEveryTimeMs * 2)
-//
-//
-//      var currentLedgerOuterRef2: Long = -1L
-//      bookkeeperMaster.doOperationWithCurrentWriteLedger { currentLedger =>
-//        currentLedgerOuterRef2 = currentLedger.right.get.getId
-//        promise
-//      }
-//
-//      zkTree2.createNode(currentLedgerOuterRef2)
-//
-//      Thread.sleep(createNewLedgerEveryTimeMs * 6)
-//      val result = transactionServer.scanTransactions(
-//        streamID,
-//        partition,
-//        initialTxnID,
-//        transactionIDGen.incrementAndGet(),
-//        transactionNumber,
-//        Set()
-//      )
-//
-//      val producerTransactions =
-//        result.producerTransactions
-//
-//      bookkeeperMasterBundle.stop()
-//      bookkeeperSlaveBundle.stop()
-//
-//      producerTransactions.length shouldBe transactionNumber
-//      producerTransactions.foreach(_.state shouldBe TransactionStates.Opened)
-//    }
-//  }
 }

@@ -59,20 +59,19 @@ object Frame {
     Protocol.PutProducerStateWithData.decodeRequest(message)
 
   def deserializeToken(bytes: Array[Byte]): Int = ByteBuffer.wrap(bytes).getInt
-
-  def serializeToken(token: Int): Array[Byte] =
-    ByteBuffer.allocate(Integer.BYTES).putInt(token).array()
 }
 
-abstract class Frame(val typeId: Byte,
-                     val timestamp: Long,
-                     val body: Array[Byte])
+class Frame(val typeId: Byte,
+            val timestamp: Long,
+            val token: Int,
+            val body: Array[Byte])
   extends Ordered[Frame] {
 
   override def equals(obj: scala.Any): Boolean = obj match {
     case that: Frame =>
       typeId == that.typeId &&
         timestamp == that.timestamp &&
+        token == that.token &&
         body.sameElements(that.body)
     case _ =>
       false
@@ -81,7 +80,9 @@ abstract class Frame(val typeId: Byte,
   override def hashCode(): Int = {
     31 * (
       31 * (
-        31 + timestamp.hashCode()
+        31 * (
+          31 + token.hashCode()
+          ) + timestamp.hashCode()
         ) + typeId.hashCode()
       ) + java.util.Arrays.hashCode(body)
   }

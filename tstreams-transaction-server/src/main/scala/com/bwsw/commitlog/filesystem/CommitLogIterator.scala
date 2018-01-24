@@ -20,43 +20,41 @@ package com.bwsw.commitlog.filesystem
 
 import java.io.BufferedInputStream
 
-import com.bwsw.commitlog.filesystem.CommitLogIterator.EOF
-import com.bwsw.commitlog.{CommitLogRecord, CommitLogRecordHeader}
+import com.bwsw.commitlog.{CommitLog, CommitLogRecord}
+
 
 private object CommitLogIterator {
-  val EOF: Int = -1
+  private val errorMessage = "There is no next commit log record!"
 }
 
 abstract class CommitLogIterator
-  extends Iterator[Either[NoSuchElementException, CommitLogRecord]] {
+  extends Iterator[Either[Exception, CommitLogRecord]] {
+
+  import CommitLogIterator.errorMessage
 
   protected val stream: BufferedInputStream
+
   def close(): Unit = {
     stream.close()
   }
 
-  override def next(): Either[NoSuchElementException, CommitLogRecord] = {
-    if (!hasNext()) Left(new NoSuchElementException("There is no next commit log record!"))
+  override def next(): Either[Exception, CommitLogRecord] = {
+    if (!hasNext()) Left(new NoSuchElementException(errorMessage))
     else {
-      val recordWithoutMessage = new Array[Byte](CommitLogRecord.headerSize)
-      var byte = stream.read(recordWithoutMessage)
-      if (byte != EOF && byte == CommitLogRecord.headerSize) {
-        val header = CommitLogRecordHeader.fromByteArray(recordWithoutMessage)
-        val message = new Array[Byte](header.messageLength)
-        byte = stream.read(message)
-        if (byte != EOF && byte == header.messageLength) {
-          Right(CommitLogRecord(header.messageType, message, header.timestamp))
+      val lengthBytes = new Array[Byte](Integer.BYTES)
+      if (stream.read(lengthBytes) == Integer.BYTES) {
+        val length = CommitLog.bytesToInt(lengthBytes)
+        val recordBytes = new Array[Byte](length)
+        if (stream.read(recordBytes) == length) {
+          CommitLogRecord.fromByteArray(recordBytes)
         } else {
-          Left(new NoSuchElementException("There is no next commit log record!"))
+          Left(new NoSuchElementException(errorMessage))
         }
       } else {
-        Left(new NoSuchElementException("There is no next commit log record!"))
+        Left(new NoSuchElementException(errorMessage))
       }
     }
   }
 
-  override def hasNext(): Boolean = {
-    if (stream.available() > 0) true
-    else false
-  }
+  override def hasNext(): Boolean = stream.available > 0
 }

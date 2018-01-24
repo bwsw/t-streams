@@ -17,27 +17,31 @@
  * under the License.
  */
 
-package commitlog
+package com.bwsw.commitlog
 
 import java.io.{File, IOException}
 import java.nio.file._
 import java.nio.file.attribute.BasicFileAttributes
-import java.util.concurrent.atomic.AtomicLong
 
-import com.bwsw.commitlog.{CommitLog, CommitLogRecord}
 import com.bwsw.commitlog.CommitLogFlushPolicy.{OnCountInterval, OnRotation, OnTimeInterval}
+import commitlog.Util
+import org.scalatest.prop.TableDrivenPropertyChecks
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
+
+import scala.util.Random
 
 
 class CommitLogTest
   extends FlatSpec
     with Matchers
-    with BeforeAndAfterAll {
+    with BeforeAndAfterAll
+    with TableDrivenPropertyChecks {
 
   private val dir = Paths.get("target", "clt").toString
-  private val rec = "sample record".map(_.toByte).toArray
-  private val recordSize = rec.length + CommitLogRecord.headerSize
+  private val record = "sample record".getBytes
+  private val recordSize = Integer.BYTES + CommitLogRecord.headerSize + record.length
   private val fileIDGen = Util.createIDGenerator
+  private val token = 54231651
 
   override def beforeAll(): Unit = {
     new File(dir).mkdirs()
@@ -45,76 +49,76 @@ class CommitLogTest
 
   it should "write correctly (OnRotation policy)" in {
     val cl = new CommitLog(1, dir, OnRotation, fileIDGen)
-    val f1 = cl.putRec(rec, 0)
+    val f1 = cl.putRec(record, 0, token)
     val fileF1 = new File(f1)
     fileF1.exists() shouldBe true
-    fileF1.length() == 0 shouldBe true
+    fileF1.length() shouldBe 0
     Thread.sleep(1100)
 
-    val f21 = cl.putRec(rec, 0)
-    fileF1.length() == recordSize * 1 shouldBe true
+    val f21 = cl.putRec(record, 0, token)
+    fileF1.length() shouldBe recordSize * 1
     val fileF21 = new File(f21)
     fileF21.exists() shouldBe true
-    fileF21.length() == recordSize * 0 shouldBe true
-    val f22 = cl.putRec(rec, 0)
-    fileF21.length() == recordSize * 0 shouldBe true
+    fileF21.length() shouldBe recordSize * 0
+    val f22 = cl.putRec(record, 0, token)
+    fileF21.length() shouldBe recordSize * 0
 
-    val f3 = cl.putRec(rec, 0, startNew = true)
-    fileF21.length() == recordSize * 2 shouldBe true
+    val f3 = cl.putRec(record, 0, token, startNew = true)
+    fileF21.length() shouldBe recordSize * 2
     val fileF3 = new File(f3)
     fileF3.exists() shouldBe true
-    fileF3.length() == recordSize * 0 shouldBe true
+    fileF3.length() shouldBe recordSize * 0
     cl.close()
-    fileF3.length() == recordSize * 1 shouldBe true
+    fileF3.length() shouldBe recordSize * 1
 
     f1 == f21 shouldBe false
-    f21 == f22 shouldBe true
+    f21 shouldBe f22
     f21 == f3 shouldBe false
     f1 == f3 shouldBe false
   }
 
   it should "write correctly (OnTimeInterval policy) when startNewFileSeconds > policy seconds" in {
     val cl = new CommitLog(4, dir, OnTimeInterval(2), fileIDGen)
-    val f11 = cl.putRec(rec, 0)
+    val f11 = cl.putRec(record, 0, token)
     val fileF1 = new File(f11)
     fileF1.exists() shouldBe true
-    fileF1.length() == recordSize * 0 shouldBe true
+    fileF1.length() shouldBe recordSize * 0
     Thread.sleep(2100)
-    fileF1.length() == recordSize * 0 shouldBe true
-    val f12 = cl.putRec(rec, 0)
-    fileF1.length() == recordSize * 1 shouldBe true
+    fileF1.length() shouldBe recordSize * 0
+    val f12 = cl.putRec(record, 0, token)
+    fileF1.length() shouldBe recordSize * 1
     Thread.sleep(2100)
-    fileF1.length() == recordSize * 1 shouldBe true
+    fileF1.length() shouldBe recordSize * 1
 
-    val f2 = cl.putRec(rec, 0)
-    fileF1.length() == recordSize * 2 shouldBe true
+    val f2 = cl.putRec(record, 0, token)
+    fileF1.length() shouldBe recordSize * 2
     val fileF2 = new File(f2)
     fileF2.exists() shouldBe true
-    fileF2.length() == recordSize * 0 shouldBe true
+    fileF2.length() shouldBe recordSize * 0
     cl.close()
-    fileF2.length() == recordSize * 1 shouldBe true
-    val f3 = cl.putRec(rec, 0)
-    fileF2.length() == recordSize * 1 shouldBe true
+    fileF2.length() shouldBe recordSize * 1
+    val f3 = cl.putRec(record, 0, token)
+    fileF2.length() shouldBe recordSize * 1
     val fileF3 = new File(f3)
     fileF3.exists() shouldBe true
-    fileF3.length() == recordSize * 0 shouldBe true
+    fileF3.length() shouldBe recordSize * 0
     Thread.sleep(2100)
-    fileF3.length() == recordSize * 0 shouldBe true
+    fileF3.length() shouldBe recordSize * 0
     Thread.sleep(2100)
-    val f4 = cl.putRec(rec, 0)
-    fileF3.length() == recordSize * 1 shouldBe true
+    val f4 = cl.putRec(record, 0, token)
+    fileF3.length() shouldBe recordSize * 1
     val fileF4 = new File(f4)
     fileF4.exists() shouldBe true
-    fileF4.length() == recordSize * 0 shouldBe true
-    val f5 = cl.putRec(rec, 0, startNew = true)
-    fileF4.length() == recordSize * 1 shouldBe true
+    fileF4.length() shouldBe recordSize * 0
+    val f5 = cl.putRec(record, 0, token, startNew = true)
+    fileF4.length() shouldBe recordSize * 1
     val fileF5 = new File(f5)
     fileF5.exists() shouldBe true
-    fileF5.length() == recordSize * 0 shouldBe true
+    fileF5.length() shouldBe recordSize * 0
     cl.close()
-    fileF5.length() == recordSize * 1 shouldBe true
+    fileF5.length() shouldBe recordSize * 1
 
-    f11 == f12 shouldBe true
+    f11 shouldBe f12
     f11 == f2 shouldBe false
     f2 == f3 shouldBe false
     f3 == f4 shouldBe false
@@ -123,43 +127,66 @@ class CommitLogTest
 
   it should "write correctly (OnTimeInterval policy) when startNewFileSeconds < policy seconds" in {
     val cl = new CommitLog(2, dir, OnTimeInterval(4), fileIDGen)
-    val f11 = cl.putRec(rec, 0)
+    val f11 = cl.putRec(record, 0, token)
     val fileF1 = new File(f11)
     fileF1.exists() shouldBe true
-    fileF1.length() == recordSize * 0 shouldBe true
+    fileF1.length() shouldBe recordSize * 0
     Thread.sleep(2100)
-    val f2 = cl.putRec(rec, 0)
-    fileF1.length() == recordSize * 1 shouldBe true
+    val f2 = cl.putRec(record, 0, token)
+    fileF1.length() shouldBe recordSize * 1
     f11 == f2 shouldBe false
     val fileF2 = new File(f2)
     fileF2.exists() shouldBe true
-    fileF2.length() == recordSize * 0 shouldBe true
+    fileF2.length() shouldBe recordSize * 0
     cl.close()
-    fileF2.length() == recordSize * 1 shouldBe true
+    fileF2.length() shouldBe recordSize * 1
   }
 
   it should "write correctly (OnCountInterval policy)" in {
     val cl = new CommitLog(2, dir, OnCountInterval(2), fileIDGen)
-    val f11 = cl.putRec(rec, 0)
-    val f12 = cl.putRec(rec, 0)
-    f11 == f12 shouldBe true
+    val f11 = cl.putRec(record, 0, token)
+    val f12 = cl.putRec(record, 0, token)
+    f11 shouldBe f12
     val fileF1 = new File(f11)
     fileF1.exists() shouldBe true
-    fileF1.length() == 0 shouldBe true
-    val f13 = cl.putRec(rec, 0)
-    f11 == f13 shouldBe true
+    fileF1.length() shouldBe 0
+    val f13 = cl.putRec(record, 0, token)
+    f11 shouldBe f13
     fileF1.exists() shouldBe true
-    fileF1.length() == recordSize * 2 shouldBe true
+    fileF1.length() shouldBe recordSize * 2
     Thread.sleep(2100)
-    fileF1.length() == recordSize * 2 shouldBe true
-    val f2 = cl.putRec(rec, 0)
-    fileF1.length() == recordSize * 3 shouldBe true
+    fileF1.length() shouldBe recordSize * 2
+    val f2 = cl.putRec(record, 0, token)
+    fileF1.length() shouldBe recordSize * 3
     f11 == f2 shouldBe false
     val fileF2 = new File(f2)
     fileF2.exists() shouldBe true
-    fileF2.length() == recordSize * 0 shouldBe true
+    fileF2.length() shouldBe recordSize * 0
     cl.close()
-    fileF2.length() == recordSize * 1 shouldBe true
+    fileF2.length() shouldBe recordSize * 1
+  }
+
+  it should "convert Int to Array[Byte] correctly" in {
+    for (_ <- 1 to 100) {
+      val i = Random.nextInt()
+      val bytes = CommitLog.intToBytes(i)
+
+      CommitLog.bytesToInt(bytes) shouldBe i
+    }
+
+    forAll(Table(
+      ("i", "bytes"),
+      (111929672, Array(0x06, 0xab, 0xe9, 0x48)),
+      (-71144835, Array(0xfb, 0xc2, 0x6a, 0x7d)),
+      (1193751489, Array(0x47, 0x27, 0x33, 0xc1)),
+      (-608806, Array(0xff, 0xf6, 0xb5, 0xda)),
+      (-2072998014, Array(0x84, 0x70, 0x8f, 0x82)),
+      (2126452693, Array(0x7e, 0xbf, 0x17, 0xd5)),
+      (730360143, Array(0x2b, 0x88, 0x69, 0x4f)),
+      (-1008452659, Array(0xc3, 0xe4, 0x3b, 0xcd)))) { (i, bytes) =>
+      CommitLog.intToBytes(i) shouldEqual bytes.map(_.toByte)
+      CommitLog.bytesToInt(bytes.map(_.toByte)) shouldBe i
+    }
   }
 
   override def afterAll(): Unit = {

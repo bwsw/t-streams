@@ -48,7 +48,7 @@ class ManyClientsSingleNodeServerInterconnectionTest
 
     def resetTimer(): Unit = currentTime = initialTime
 
-    def updateTime(newTime: Long) = currentTime = newTime
+    def updateTime(newTime: Long): Unit = currentTime = newTime
   }
 
   private val maxIdleTimeBetweenRecordsMs = 10000
@@ -123,7 +123,7 @@ class ManyClientsSingleNodeServerInterconnectionTest
       val secondClient = clients(1)
 
       val streamID = Await.result(firstClient.putStream(stream), secondsWait.seconds)
-      streamID shouldNot be (-1)
+      streamID shouldNot be(-1)
       val producerTransactions = Array.fill(100)(getRandomProducerTransaction(streamID, stream))
         .filter(_.state == TransactionStates.Opened)
       val consumerTransactions = Array.fill(100)(getRandomConsumerTransaction(streamID, stream))
@@ -166,7 +166,7 @@ class ManyClientsSingleNodeServerInterconnectionTest
       val secondClient = clients(1)
 
       val streamID = Await.result(firstClient.putStream(stream), secondsWait.seconds)
-      streamID shouldNot be (-1)
+      streamID shouldNot be(-1)
       val producerTransactions = Array.fill(txnNumber)(getRandomProducerTransaction(streamID, stream, TransactionStates.Opened))
       val consumerTransactions = Array.fill(100)(getRandomConsumerTransaction(streamID, stream))
 
@@ -284,7 +284,7 @@ class ManyClientsSingleNodeServerInterconnectionTest
     }
   }
 
-  "One client" should "put producer transaction: Opened; the second one: Invalid. The Result is opened transaction." in {
+  "One client" should "put producer transaction: Opened; the second one: Invalid. The Result is invalid transaction." in {
     val bundle = Utils.startTransactionServerAndClient(
       zkClient, serverBuilder, clientBuilder, clientsNum
     )
@@ -322,8 +322,14 @@ class ManyClientsSingleNodeServerInterconnectionTest
       transactionServer.scheduledCommitLog.run()
       transactionServer.commitLogToRocksWriter.run()
 
-      Await.result(firstClient.getTransaction(streamID, stream.partitions, producerTransaction1.transactionID), secondsWait.seconds).transaction.get shouldBe producerTransaction1
-      Await.result(secondClient.getTransaction(streamID, stream.partitions, producerTransaction1.transactionID), secondsWait.seconds).transaction.get shouldBe producerTransaction1
+      val expected = invalidTransaction.copy(ttl = 0, quantity = 0)
+
+      Await.result(
+        firstClient.getTransaction(streamID, stream.partitions, producerTransaction1.transactionID),
+        secondsWait.seconds).transaction.get shouldBe expected
+      Await.result(
+        secondClient.getTransaction(streamID, stream.partitions, producerTransaction1.transactionID),
+        secondsWait.seconds).transaction.get shouldBe expected
     }
   }
 

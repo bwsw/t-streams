@@ -82,6 +82,7 @@ class PutTransactionHandler(bookkeeperMaster: BookkeeperMaster,
               val record = new Record(
                 Frame.PutTransactionType,
                 System.currentTimeMillis(),
+                message.token,
                 message.body
               ).toByteArray
 
@@ -90,6 +91,7 @@ class PutTransactionHandler(bookkeeperMaster: BookkeeperMaster,
           }
         }
       }(context)
+
       promise.future
     }
   }

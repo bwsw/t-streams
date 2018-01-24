@@ -316,7 +316,7 @@ class ServerClientInterconnectionTest
     val transactionServer = bundle.transactionServer
 
     val stream = getRandomStream
-    val producerTransactions = Array.fill(10000)(getRandomProducerTransaction(1, stream))
+    val producerTransactions = Array.fill(1000)(getRandomProducerTransaction(1, stream))
     val consumerTransactions = Array.fill(100)(getRandomConsumerTransaction(1, stream))
 
 

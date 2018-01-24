@@ -22,13 +22,13 @@ import com.bwsw.tstreamstransactionserver.netty.server.TransactionServer
 import com.bwsw.tstreamstransactionserver.netty.server.batch.Frame
 import com.bwsw.tstreamstransactionserver.netty.server.commitLogService.ScheduledCommitLog
 import com.bwsw.tstreamstransactionserver.netty.server.handler.PredefinedContextHandler
+import com.bwsw.tstreamstransactionserver.netty.server.singleNode.hanlder.metadata.PutTransactionsHandler._
 import com.bwsw.tstreamstransactionserver.netty.{Protocol, RequestMessage}
 import com.bwsw.tstreamstransactionserver.rpc.{ServerException, TransactionService}
+import com.bwsw.tstreamstransactionserver.tracing.ServerTracer.tracer
 import io.netty.channel.ChannelHandlerContext
 
 import scala.concurrent.ExecutionContext
-import com.bwsw.tstreamstransactionserver.netty.server.singleNode.hanlder.metadata.PutTransactionsHandler._
-import com.bwsw.tstreamstransactionserver.tracing.ServerTracer.tracer
 
 private object PutTransactionsHandler {
   val descriptor = Protocol.PutTransactions
@@ -58,12 +58,12 @@ class PutTransactionsHandler(server: TransactionServer,
   }
 
   override protected def fireAndForget(message: RequestMessage): Unit =
-    tracer.withTracing(message, getClass.getName + ".fireAndForget")(process(message.body))
+    tracer.withTracing(message, getClass.getName + ".fireAndForget")(process(message))
 
   override protected def getResponse(message: RequestMessage, ctx: ChannelHandlerContext): Array[Byte] = {
     tracer.withTracing(message, getClass.getName + ".getResponse") {
       val response = {
-        val isPutted = process(message.body)
+        val isPutted = process(message)
         if (isPutted)
           isPuttedResponse
         else
@@ -74,10 +74,10 @@ class PutTransactionsHandler(server: TransactionServer,
     }
   }
 
-  private def process(requestBody: Array[Byte]) = {
+  private def process(message: RequestMessage) = {
     scheduledCommitLog.putData(
       Frame.PutTransactionsType,
-      requestBody
-    )
+      message.body,
+      message.token)
   }
 }

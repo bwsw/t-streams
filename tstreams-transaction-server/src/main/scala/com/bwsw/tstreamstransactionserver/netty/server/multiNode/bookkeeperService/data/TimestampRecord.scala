@@ -19,8 +19,13 @@
 
 package com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeeperService.data
 
+import com.bwsw.tstreamstransactionserver.netty.server.authService.AuthService
 import com.bwsw.tstreamstransactionserver.netty.server.batch.Frame
 
 class TimestampRecord(override val timestamp: Long)
-  extends Record(Frame.Timestamp, timestamp, Array.emptyByteArray) {
+  extends Record(
+    Frame.Timestamp,
+    timestamp,
+    AuthService.UnauthenticatedToken,
+    Array.emptyByteArray) {
 }

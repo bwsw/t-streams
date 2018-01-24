@@ -22,10 +22,11 @@ package it.multinode
 import java.util.concurrent.atomic.AtomicLong
 
 import com.bwsw.tstreamstransactionserver.netty.Protocol
+import com.bwsw.tstreamstransactionserver.netty.server.authService.AuthService
 import com.bwsw.tstreamstransactionserver.netty.server.batch.Frame
-import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeeperService.hierarchy.{BookkeeperToRocksWriter, LongNodeCache, LongZookeeperTreeList, ZkMultipleTreeListReader}
 import com.bwsw.tstreamstransactionserver.netty.server.consumerService.{ConsumerTransactionKey, ConsumerTransactionRecord}
-import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeeperService.data.{Record, TimestampRecord}
+import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeeperService.data.Record
+import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeeperService.hierarchy.{BookkeeperToRocksWriter, LongNodeCache, LongZookeeperTreeList, ZkMultipleTreeListReader}
 import com.bwsw.tstreamstransactionserver.rpc.TransactionStates.{Checkpointed, Opened}
 import com.bwsw.tstreamstransactionserver.rpc._
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
@@ -33,6 +34,7 @@ import ut.multiNodeServer.ZkTreeListTest.LedgerManagerInMemory
 import util.Utils
 
 import scala.collection.mutable
+import scala.util.Random
 
 class BookkeeperToRocksWriterTest
   extends FlatSpec
@@ -45,6 +47,7 @@ class BookkeeperToRocksWriterTest
   private val rand = scala.util.Random
   private val streamIDGen = new java.util.concurrent.atomic.AtomicInteger(0)
   private val partitionsNumber = 100
+  private val token = 846487864
 
   private def generateStream =
     Stream(
@@ -83,11 +86,12 @@ class BookkeeperToRocksWriterTest
 
 
   private def genProducerTransactionsWrappedInRecords(transactionIDGen: AtomicLong,
-                                                     transactionNumber: Int,
-                                                     streamID: Int,
-                                                     partition: Int,
-                                                     state: TransactionStates,
-                                                     ttlTxn: Long) = {
+                                                      transactionNumber: Int,
+                                                      streamID: Int,
+                                                      partition: Int,
+                                                      state: TransactionStates,
+                                                      ttlTxn: Long,
+                                                      token: Int = AuthService.UnauthenticatedToken) = {
     (0 until transactionNumber)
       .map(txnID => buildProducerTransaction(
         streamID,
@@ -103,6 +107,7 @@ class BookkeeperToRocksWriterTest
         new Record(
           Frame.PutTransactionType,
           transactionIDGen.getAndIncrement(),
+          token,
           binaryTransaction
         )
       }
@@ -129,6 +134,7 @@ class BookkeeperToRocksWriterTest
         val record = new Record(
           Frame.PutTransactionType,
           transactionIDGen.getAndIncrement(),
+          token,
           binaryTransaction
         )
 
@@ -191,13 +197,13 @@ class BookkeeperToRocksWriterTest
     atomicLong.set(initialTime)
 
     val secondTreeRecords =
-       genProducerTransactionsWrappedInRecords(
-         atomicLong,
-         producerTransactionsNumber,
-         stream.id,
-         partition,
-         Checkpointed,
-         50000L
+      genProducerTransactionsWrappedInRecords(
+        atomicLong,
+        producerTransactionsNumber,
+        stream.id,
+        partition,
+        Checkpointed,
+        50000L
       )
 
     val secondTimestamp =
@@ -240,16 +246,16 @@ class BookkeeperToRocksWriterTest
       )
 
     val commonMasterLastClosedLedger =
-    new LongNodeCache(
-      zkClient,
-      zkTreeListLastClosedLedgerPrefix1
-    )
+      new LongNodeCache(
+        zkClient,
+        zkTreeListLastClosedLedgerPrefix1
+      )
 
     val checkpointMasterLastClosedLedger =
-    new LongNodeCache(
-      zkClient,
-      zkTreeListLastClosedLedgerPrefix2
-    )
+      new LongNodeCache(
+        zkClient,
+        zkTreeListLastClosedLedgerPrefix2
+      )
 
     val lastClosedLedgerHandlers =
       Array(commonMasterLastClosedLedger, checkpointMasterLastClosedLedger)
@@ -265,7 +271,7 @@ class BookkeeperToRocksWriterTest
     val bundle = util.multiNode
       .Util.getTransactionServerBundle(zkClient)
 
-    bundle.operate {transactionServer =>
+    bundle.operate { transactionServer =>
 
       val commitLogService =
         bundle.multiNodeCommitLogService
@@ -306,6 +312,7 @@ class BookkeeperToRocksWriterTest
 
 
   it should "return checkpointed transactions and process entirely 1-st ledger records and half of records of 2-nd ledgers" in {
+    val token = Random.nextInt()
     val stream = generateStream
     val partition = 1
 
@@ -316,14 +323,15 @@ class BookkeeperToRocksWriterTest
     val firstTimestamp =
       atomicLong.get()
 
-    val firstTreeRecords =
+    val firstTreeRecords = new Record(Frame.TokenCreatedType, firstTimestamp, token, Array.emptyByteArray) +:
       genProducerTransactionsWrappedInRecords(
         atomicLong,
         producerTransactionsNumber,
         stream.id,
         partition,
         Opened,
-        50000L
+        50000L,
+        token
       )
 
 
@@ -333,7 +341,6 @@ class BookkeeperToRocksWriterTest
       atomicLong.get()
 
 
-
     val secondTreeRecords =
       genProducerTransactionsWrappedInRecords(
         atomicLong,
@@ -341,9 +348,9 @@ class BookkeeperToRocksWriterTest
         stream.id,
         partition,
         Checkpointed,
-        50000L
+        50000L,
+        token
       )
-
 
 
     val storage = new LedgerManagerInMemory

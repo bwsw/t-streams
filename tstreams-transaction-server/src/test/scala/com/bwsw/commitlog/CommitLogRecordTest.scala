@@ -16,18 +16,19 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+
 package com.bwsw.commitlog
 
-import java.nio.ByteBuffer
+import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 
-private[commitlog] case class CommitLogRecordHeader(messageType: Byte, messageLength: Int, timestamp: Long)
+class CommitLogRecordTest extends FlatSpec with Matchers with BeforeAndAfterAll {
 
-object CommitLogRecordHeader {
-  private[commitlog] def fromByteArray(binaryHeader: Array[Byte]) = {
-    val buffer = ByteBuffer.wrap(binaryHeader)
-    val messageType   = buffer.get()
-    val messageLength = buffer.getInt()
-    val timestamp     = buffer.getLong()
-    CommitLogRecordHeader(messageType, messageLength, timestamp)
+  "CommitLogRecord" should "be serialized/deserialized" in {
+    val record1 = CommitLogRecord(0, System.currentTimeMillis(), 12345, "test_data".getBytes())
+    CommitLogRecord.fromByteArray(record1.toByteArray).right.get shouldBe record1
+
+    val record2 = CommitLogRecord(-5, System.currentTimeMillis(), 762234, "".getBytes())
+    CommitLogRecord.fromByteArray(record2.toByteArray).right.get shouldBe record2
   }
+
 }

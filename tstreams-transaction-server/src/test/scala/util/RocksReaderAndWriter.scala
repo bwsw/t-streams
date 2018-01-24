@@ -20,8 +20,7 @@
 package util
 
 
-import java.io.File
-
+import com.bwsw.tstreamstransactionserver.netty.server.authService.OpenedTransactions
 import com.bwsw.tstreamstransactionserver.netty.server.db.KeyValueDbBatch
 import com.bwsw.tstreamstransactionserver.netty.server.db.zk.ZookeeperStreamRepository
 import com.bwsw.tstreamstransactionserver.netty.server.storage.rocks.MultiAndSingleNodeRockStorage
@@ -29,16 +28,14 @@ import com.bwsw.tstreamstransactionserver.netty.server.streamService.StreamServi
 import com.bwsw.tstreamstransactionserver.netty.server.transactionDataService.TransactionDataService
 import com.bwsw.tstreamstransactionserver.netty.server.{RocksReader, RocksWriter}
 import com.bwsw.tstreamstransactionserver.options.SingleNodeServerOptions.{RocksStorageOptions, StorageOptions}
-import org.apache.commons.io.FileUtils
 import org.apache.curator.framework.CuratorFramework
 import util.multiNode.Util
 
 
-
 class RocksReaderAndWriter(zkClient: CuratorFramework,
                            val storageOptions: StorageOptions,
-                           rocksStorageOpts: RocksStorageOptions)
-{
+                           rocksStorageOpts: RocksStorageOptions,
+                           tokenTtlSec: Int) {
 
   private val rocksStorage =
     new MultiAndSingleNodeRockStorage(
@@ -56,9 +53,12 @@ class RocksReaderAndWriter(zkClient: CuratorFramework,
       streamRepository
     )
 
+  val openedTransactions = OpenedTransactions(tokenTtlSec)
+
   val rocksWriter = new RocksWriter(
     rocksStorage,
-    transactionDataService
+    transactionDataService,
+    openedTransactions
   )
 
   val rocksReader = new RocksReader(

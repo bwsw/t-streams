@@ -23,13 +23,12 @@ import com.bwsw.tstreamstransactionserver.netty.server.TransactionServer
 import com.bwsw.tstreamstransactionserver.netty.server.batch.Frame
 import com.bwsw.tstreamstransactionserver.netty.server.commitLogService.ScheduledCommitLog
 import com.bwsw.tstreamstransactionserver.netty.server.handler.PredefinedContextHandler
+import com.bwsw.tstreamstransactionserver.netty.server.singleNode.hanlder.data.PutProducerStateWithDataHandler._
 import com.bwsw.tstreamstransactionserver.netty.{Protocol, RequestMessage}
 import com.bwsw.tstreamstransactionserver.rpc._
 import io.netty.channel.ChannelHandlerContext
 
 import scala.concurrent.ExecutionContext
-
-import com.bwsw.tstreamstransactionserver.netty.server.singleNode.hanlder.data.PutProducerStateWithDataHandler._
 
 private object PutProducerStateWithDataHandler {
   val descriptor = Protocol.PutProducerStateWithData
@@ -53,12 +52,10 @@ class PutProducerStateWithDataHandler(server: TransactionServer,
     )
   }
 
-  override protected def fireAndForget(message: RequestMessage): Unit = {
-    process(message.body)
-  }
+  override protected def fireAndForget(message: RequestMessage): Unit = process(message)
 
-  private def process(requestBody: Array[Byte]): Boolean = {
-    val transactionAndData = descriptor.decodeRequest(requestBody)
+  private def process(message: RequestMessage): Boolean = {
+    val transactionAndData = descriptor.decodeRequest(message.body)
     val txn = transactionAndData.transaction
     val data = transactionAndData.data
     val from = transactionAndData.from
@@ -90,15 +87,15 @@ class PutProducerStateWithDataHandler(server: TransactionServer,
 
     scheduledCommitLog.putData(
       Frame.PutTransactionType,
-      binaryTransaction
-    )
+      binaryTransaction,
+      message.token)
   }
 
   override protected def getResponse(message: RequestMessage,
                                      ctx: ChannelHandlerContext): Array[Byte] = {
     val response = descriptor.encodeResponse(
       TransactionService.PutProducerStateWithData.Result(
-        Some(process(message.body))
+        Some(process(message))
       )
     )
     response

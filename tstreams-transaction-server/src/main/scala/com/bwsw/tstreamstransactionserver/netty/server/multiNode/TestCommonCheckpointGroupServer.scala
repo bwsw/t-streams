@@ -58,12 +58,11 @@ class TestCommonCheckpointGroupServer(authenticationOpts: AuthenticationOptions,
       rocksStorage,
       transactionDataService,
       producerNotifier,
-      consumerNotifier
-    )
-  private lazy val producerNotifier =
-    new Notifier[ProducerTransaction]
-  private lazy val consumerNotifier =
-    new Notifier[ConsumerTransaction]
+      consumerNotifier,
+      openedTransactions)
+
+  private lazy val producerNotifier = new Notifier[ProducerTransaction]
+  private lazy val consumerNotifier = new Notifier[ConsumerTransaction]
 
   final def notifyProducerTransactionCompleted(onNotificationCompleted: ProducerTransaction => Boolean,
                                                func: => Unit): Long =

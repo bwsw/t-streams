@@ -27,6 +27,7 @@ import java.util.concurrent.{CountDownLatch, TimeUnit}
 
 import com.bwsw.tstreamstransactionserver.netty.client.ClientBuilder
 import com.bwsw.tstreamstransactionserver.netty.client.api.TTSClient
+import com.bwsw.tstreamstransactionserver.netty.server.authService.OpenedTransactions
 import com.bwsw.tstreamstransactionserver.netty.server.db.zk.ZookeeperStreamRepository
 import com.bwsw.tstreamstransactionserver.netty.server.singleNode.{SingleNodeServerBuilder, TestSingleNodeServer}
 import com.bwsw.tstreamstransactionserver.netty.server.storage.rocks.MultiAndSingleNodeRockStorage
@@ -52,6 +53,7 @@ import scala.util.{Random, Try}
 
 object Utils {
   val bookieTmpDirs = ArrayBuffer[String]()
+
   def uuid: String = java.util.UUID.randomUUID.toString
 
   private val sessionTimeoutMillis = 1000
@@ -215,15 +217,15 @@ object Utils {
   private def tempFolder() =
     Files.createTempDirectory("tts").toFile
 
-  def getRocksReaderAndRocksWriter(zkClient: CuratorFramework): RocksReaderAndWriter = {
+  def getRocksReaderAndRocksWriter(zkClient: CuratorFramework, tokenTtlSec: Int = 60): RocksReaderAndWriter = {
     val dbPath = tempFolder()
     val storageOptions = testStorageOptions(dbPath)
     val rocksStorageOptions = RocksStorageOptions()
 
-    new RocksReaderAndWriter(zkClient, storageOptions, rocksStorageOptions)
+    new RocksReaderAndWriter(zkClient, storageOptions, rocksStorageOptions, tokenTtlSec)
   }
 
-  def getTransactionServerBundle(zkClient: CuratorFramework): TransactionServerBundle = {
+  def getTransactionServerBundle(zkClient: CuratorFramework, tokenTtlSec: Int = 60): TransactionServerBundle = {
     val dbPath = tempFolder()
 
     val storageOptions = testStorageOptions(dbPath)
@@ -249,11 +251,13 @@ object Utils {
         zkStreamRepository
       )
 
+    val openedTransactionsCache = OpenedTransactions(tokenTtlSec)
+
     val rocksWriter =
       new RocksWriter(
         rocksStorage,
-        transactionDataService
-      )
+        transactionDataService,
+        openedTransactionsCache)
 
     val rocksReader =
       new RocksReader(

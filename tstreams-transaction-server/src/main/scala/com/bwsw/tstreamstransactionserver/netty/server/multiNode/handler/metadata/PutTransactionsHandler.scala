@@ -80,6 +80,7 @@ class PutTransactionsHandler(bookkeeperMaster: BookkeeperMaster,
               val record = new Record(
                 Frame.PutTransactionsType,
                 System.currentTimeMillis(),
+                message.token,
                 message.body
               ).toByteArray
 

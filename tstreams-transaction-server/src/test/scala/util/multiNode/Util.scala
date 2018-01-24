@@ -24,6 +24,7 @@ import java.nio.file.{Files, Paths}
 import java.util.concurrent.{CountDownLatch, TimeUnit}
 
 import com.bwsw.tstreamstransactionserver.netty.client.ClientBuilder
+import com.bwsw.tstreamstransactionserver.netty.server.authService.OpenedTransactions
 import com.bwsw.tstreamstransactionserver.netty.server.db.zk.ZookeeperStreamRepository
 import com.bwsw.tstreamstransactionserver.netty.server.multiNode.{CommonCheckpointGroupServerBuilder, TestCommonCheckpointGroupServer}
 import com.bwsw.tstreamstransactionserver.netty.server.storage.rocks.MultiAndSingleNodeRockStorage
@@ -52,7 +53,7 @@ object Util {
 
   def uuid: String = java.util.UUID.randomUUID.toString
 
-  def getTransactionServerBundle(zkClient: CuratorFramework): MultiNodeBundle = {
+  def getTransactionServerBundle(zkClient: CuratorFramework, tokenTtlSec: Int = 60): MultiNodeBundle = {
     val dbPath = tempFolder()
 
     val storageOptions =
@@ -80,11 +81,13 @@ object Util {
         zkStreamRepository
       )
 
+    val openedTransactionsCache = OpenedTransactions(tokenTtlSec)
+
     val rocksWriter =
       new RocksWriter(
         rocksStorage,
-        transactionDataService
-      )
+        transactionDataService,
+        openedTransactionsCache)
 
     val rocksReader =
       new RocksReader(
@@ -120,7 +123,7 @@ object Util {
                                            bookkeeperOptions: BookkeeperOptions,
                                            serverBuilder: CommonCheckpointGroupServerBuilder,
                                            clientBuilder: ClientBuilder,
-                                           timeBetweenCreationOfLedgesMs: Int = 200) = {
+                                           timeBetweenCreationOfLedgesMs: Int = 200): ZkServerTxnMultiNodeServerTxnClient = {
     val dbPath = Files.createTempDirectory("tts").toFile
     val zKCommonMasterPrefix = s"/$uuid"
 

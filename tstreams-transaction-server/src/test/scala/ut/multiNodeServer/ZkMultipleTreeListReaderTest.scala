@@ -23,9 +23,9 @@ import java.util.concurrent.atomic.AtomicLong
 
 import com.bwsw.tstreamstransactionserver.netty.Protocol
 import com.bwsw.tstreamstransactionserver.netty.server.batch.Frame
-import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeeperService.hierarchy.{LongNodeCache, LongZookeeperTreeList, ZkMultipleTreeListReader}
 import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeeperService.LedgerManager
-import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeeperService.data.{Record, TimestampRecord}
+import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeeperService.data.Record
+import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeeperService.hierarchy.{LongNodeCache, LongZookeeperTreeList, ZkMultipleTreeListReader}
 import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeeperService.metadata.{IsOkayStatus, LedgerMetadata, MoveToNextLedgerStatus}
 import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeeperService.storage.BookKeeperWrapper
 import com.bwsw.tstreamstransactionserver.options.MultiNodeServerOptions.BookkeeperOptions
@@ -49,6 +49,7 @@ class ZkMultipleTreeListReaderTest
   private val ensembleNumber = 4
   private val writeQourumNumber = 3
   private val ackQuorumNumber = 2
+  private val token = 6512463
 
   private val bookkeeperOptions = BookkeeperOptions(
     ensembleNumber,
@@ -260,6 +261,7 @@ class ZkMultipleTreeListReaderTest
           new Record(
             Frame.PutTransactionType,
             atomicLong.getAndIncrement(),
+            token,
             binaryTransaction
           )
         }
@@ -287,6 +289,7 @@ class ZkMultipleTreeListReaderTest
           new Record(
             Frame.PutTransactionType,
             atomicLong.getAndIncrement(),
+            token,
             binaryTransaction
           )
         }
@@ -416,6 +419,7 @@ class ZkMultipleTreeListReaderTest
           new Record(
             Frame.PutTransactionType,
             atomicLong.getAndIncrement(),
+            token,
             binaryTransaction
           )
         }
@@ -443,6 +447,7 @@ class ZkMultipleTreeListReaderTest
           new Record(
             Frame.PutTransactionType,
             atomicLong.getAndIncrement(),
+            token,
             binaryTransaction
           )
         }
@@ -572,6 +577,7 @@ class ZkMultipleTreeListReaderTest
           new Record(
             Frame.PutTransactionType,
             atomicLong.getAndIncrement(),
+            token,
             binaryTransaction
           )
         }
@@ -597,6 +603,7 @@ class ZkMultipleTreeListReaderTest
           new Record(
             Frame.PutTransactionType,
             atomicLong.getAndIncrement(),
+            token,
             binaryTransaction
           )
         }
@@ -623,6 +630,7 @@ class ZkMultipleTreeListReaderTest
           new Record(
             Frame.PutTransactionType,
             atomicLong.getAndIncrement(),
+            token,
             binaryTransaction
           )
         }
@@ -758,6 +766,7 @@ class ZkMultipleTreeListReaderTest
           new Record(
             Frame.PutTransactionType,
             atomicLong.getAndIncrement(),
+            token,
             binaryTransaction
           )
         }
@@ -785,6 +794,7 @@ class ZkMultipleTreeListReaderTest
           new Record(
             Frame.PutTransactionType,
             atomicLong.getAndIncrement(),
+            token,
             binaryTransaction
           )
         }

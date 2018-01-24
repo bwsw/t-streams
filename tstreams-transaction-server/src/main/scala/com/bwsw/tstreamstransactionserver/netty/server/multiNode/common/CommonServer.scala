@@ -24,6 +24,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 
 import com.bwsw.tstreamstransactionserver.configProperties.ServerExecutionContextGrids
 import com.bwsw.tstreamstransactionserver.netty.server._
+import com.bwsw.tstreamstransactionserver.netty.server.authService.OpenedTransactions
 import com.bwsw.tstreamstransactionserver.netty.server.db.zk.ZookeeperStreamRepository
 import com.bwsw.tstreamstransactionserver.netty.server.multiNode.commitLogService.CommitLogService
 import com.bwsw.tstreamstransactionserver.netty.server.storage.rocks.MultiNodeRockStorage
@@ -89,10 +90,12 @@ class CommonServer(authenticationOpts: AuthenticationOptions,
       zkStreamRepository
     )
 
+  private val openedTransactions = OpenedTransactions(authenticationOpts.tokenTtlSec)
+
   protected lazy val rocksWriter: RocksWriter = new RocksWriter(
     rocksStorage,
-    transactionDataService
-  )
+    transactionDataService,
+    openedTransactions)
 
   private val rocksReader = new RocksReader(
     rocksStorage,

@@ -176,6 +176,7 @@ class OpenTransactionHandler(server: TransactionServer,
                 val record = new Record(
                   Frame.PutTransactionType,
                   System.currentTimeMillis(),
+                  message.token,
                   binaryTransaction
                 ).toByteArray
 
@@ -235,6 +236,7 @@ class OpenTransactionHandler(server: TransactionServer,
                 val record = new Record(
                   Frame.PutTransactionType,
                   System.currentTimeMillis(),
+                  message.token,
                   binaryTransaction
                 ).toByteArray
 

@@ -19,6 +19,7 @@
 
 package com.bwsw.tstreamstransactionserver.netty.server
 
+import com.bwsw.tstreamstransactionserver.netty.server.authService.OpenedTransactions
 import com.bwsw.tstreamstransactionserver.netty.server.consumerService.ConsumerServiceWriter
 import com.bwsw.tstreamstransactionserver.netty.server.consumerService.test.TestConsumerServiceWriter
 import com.bwsw.tstreamstransactionserver.netty.server.storage.Storage
@@ -30,10 +31,12 @@ import com.bwsw.tstreamstransactionserver.rpc.{ConsumerTransaction, ProducerTran
 class TestRocksWriter(storage: Storage,
                       transactionDataService: TransactionDataService,
                       producerTransactionNotifier: Notifier[ProducerTransaction],
-                      consumerTransactionNotifier: Notifier[ConsumerTransaction])
+                      consumerTransactionNotifier: Notifier[ConsumerTransaction],
+                      openedTransactions: OpenedTransactions)
   extends RocksWriter(
     storage,
-    transactionDataService) {
+    transactionDataService,
+    openedTransactions) {
 
   override protected val consumerService: ConsumerServiceWriter =
     new TestConsumerServiceWriter(
@@ -44,8 +47,8 @@ class TestRocksWriter(storage: Storage,
   override protected val producerTransactionsCleaner: ProducerTransactionsCleaner =
     new TestProducerTransactionsCleaner(
       storage.getStorageManager,
-      producerTransactionNotifier
-    )
+      producerTransactionNotifier,
+      openedTransactions)
 
   override protected val transactionMetaServiceWriter: TransactionMetaServiceWriter =
     new TestTransactionMetaServiceWriter(

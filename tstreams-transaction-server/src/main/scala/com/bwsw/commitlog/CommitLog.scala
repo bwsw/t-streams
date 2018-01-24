@@ -19,6 +19,7 @@
 package com.bwsw.commitlog
 
 import java.io._
+import java.nio.ByteBuffer
 import java.nio.file.Paths
 import java.security.{DigestOutputStream, MessageDigest}
 import java.util.concurrent.TimeUnit
@@ -64,9 +65,13 @@ class CommitLog(seconds: Int,
     * @param message     message to store
     * @param messageType type of message to store
     * @param startNew    start new file if true
+    * @param token       client's token
     * @return name of file record was saved in
     */
-  def putRec(message: Array[Byte], messageType: Byte, startNew: Boolean = false): String = this.synchronized {
+  def putRec(message: Array[Byte],
+             messageType: Byte,
+             token: Int,
+             startNew: Boolean = false): String = this.synchronized {
     val now: Long = System.currentTimeMillis()
     policy match {
       case interval: OnTimeInterval if interval.seconds * 1000 + chunkOpenTime.get() < now =>
@@ -82,7 +87,7 @@ class CommitLog(seconds: Int,
     if (startNew || timeExceeded()) close()
 
     val currentFile = currentCommitLogFileToPut.get()
-    currentFile.put(messageType, message)
+    currentFile.put(messageType, message, token)
     chunkWriteCount.incrementAndGet()
 
     currentFile.outputFileName
@@ -131,17 +136,20 @@ class CommitLog(seconds: Int,
     private[CommitLog] val creationTime: Long =
       System.currentTimeMillis()
 
-    private[CommitLog] def put(messageType: Byte, message: Array[Byte]): Unit = {
+    private[CommitLog] def put(messageType: Byte,
+                               message: Array[Byte],
+                               token: Int): Unit = {
       val commitLogRecord =
         CommitLogRecord(
-          messageType, message,
-          System.currentTimeMillis()
-        )
+          messageType,
+          System.currentTimeMillis(),
+          token,
+          message)
 
-      val recordToBinary =
-        commitLogRecord.toByteArray
+      val recordToBinary = commitLogRecord.toByteArray
+      val length = CommitLog.intToBytes(recordToBinary.length)
 
-      digestOutputStream.write(recordToBinary)
+      digestOutputStream.write(length ++ recordToBinary)
     }
 
     private[CommitLog] def flush(): Unit = {
@@ -173,4 +181,14 @@ class CommitLog(seconds: Int,
       }
     }
   }
+
+}
+
+
+object CommitLog {
+  def intToBytes(i: Int): Array[Byte] =
+    ByteBuffer.allocate(Integer.BYTES).putInt(i).array()
+
+  def bytesToInt(bytes: Array[Byte]): Int =
+    ByteBuffer.wrap(bytes).getInt()
 }

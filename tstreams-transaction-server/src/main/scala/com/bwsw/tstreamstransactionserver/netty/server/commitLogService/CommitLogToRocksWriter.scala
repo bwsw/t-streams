@@ -23,7 +23,7 @@ import java.util
 import java.util.concurrent.BlockingQueue
 
 import com.bwsw.commitlog.filesystem.{CommitLogIterator, CommitLogStorage}
-import com.bwsw.tstreamstransactionserver.netty.server.batch.{BigCommit, BigCommitWithFrameParser}
+import com.bwsw.tstreamstransactionserver.netty.server.batch.{BigCommit, BigCommitWithFrameParser, Frame}
 import com.bwsw.tstreamstransactionserver.netty.server.db.rocks.RocksDbConnection
 import com.bwsw.tstreamstransactionserver.netty.server.storage.Storage
 import com.bwsw.tstreamstransactionserver.netty.server.transactionMetadataService.CommitLogKey
@@ -102,18 +102,20 @@ class CommitLogToRocksWriter(rocksDb: RocksDbConnection,
       CommitLogKey(fileID).toByteArray
     val bigCommit =
       new BigCommit(rocksWriter, Storage.COMMIT_LOG_STORE, BigCommit.commitLogKey, value)
-    new BigCommitWithFrameParser(bigCommit)
+
+    new BigCommitWithFrameParser(bigCommit, rocksWriter.openedTransactions)
   }
 
   private def readRecordsFromCommitLogFile(iter: CommitLogIterator,
-                                           recordsToReadNumber: Int): (ArrayBuffer[CommitLogRecordFrame], CommitLogIterator) = {
-    val buffer = ArrayBuffer.empty[CommitLogRecordFrame]
+                                           recordsToReadNumber: Int): (ArrayBuffer[Frame], CommitLogIterator) = {
+    val buffer = ArrayBuffer.empty[Frame]
     var recordsToRead = recordsToReadNumber
     while (iter.hasNext() && recordsToRead > 0) {
       val record = iter.next()
-      record.right.foreach(buffer += new CommitLogRecordFrame(_))
+      record.right.foreach(r => buffer += r.toFrame)
       recordsToRead = recordsToRead - 1
     }
+
     (buffer, iter)
   }
 

@@ -82,6 +82,7 @@ class PutConsumerCheckpointHandler(bookkeeperMaster: BookkeeperMaster,
               val record = new Record(
                 Frame.PutConsumerCheckpointType,
                 System.currentTimeMillis(),
+                message.token,
                 message.body
               ).toByteArray
 
@@ -90,6 +91,7 @@ class PutConsumerCheckpointHandler(bookkeeperMaster: BookkeeperMaster,
           }
         }
       }(context)
+
       promise.future
     }
   }

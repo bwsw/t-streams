@@ -37,8 +37,6 @@ class CommitLogTokenWriter(scheduledCommitLog: ScheduledCommitLog) extends Token
     *                  or [[Frame.TokenExpiredType]])
     * @param token     client's token
     */
-  override protected def write(eventType: Byte, token: Int): Unit = {
-    val serializedToken = Frame.serializeToken(token)
-    Try(scheduledCommitLog.putData(eventType, serializedToken))
-  }
+  override protected def write(eventType: Byte, token: Int): Unit =
+    Try(scheduledCommitLog.putData(eventType, Array.emptyByteArray, token))
 }

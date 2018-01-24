@@ -24,6 +24,7 @@ import com.bwsw.tstreamstransactionserver.netty.server.commitLogService.Schedule
 import com.bwsw.tstreamstransactionserver.netty.server.handler.PredefinedContextHandler
 import com.bwsw.tstreamstransactionserver.netty.server.singleNode.hanlder.consumer.PutConsumerCheckpointHandler._
 import com.bwsw.tstreamstransactionserver.netty.{Protocol, RequestMessage}
+import com.bwsw.tstreamstransactionserver.rpc.TransactionService.PutConsumerCheckpoint
 import com.bwsw.tstreamstransactionserver.rpc.{ServerException, TransactionService}
 import com.bwsw.tstreamstransactionserver.tracing.ServerTracer.tracer
 import io.netty.channel.ChannelHandlerContext
@@ -53,27 +54,23 @@ class PutConsumerCheckpointHandler(server: TransactionServer,
   }
 
   override protected def fireAndForget(message: RequestMessage): Unit =
-    tracer.withTracing(message, getClass.getName + ".fireAndForget")(process(message.body))
+    tracer.withTracing(message, getClass.getName + ".fireAndForget")(process(message))
 
-  private def process(requestBody: Array[Byte]): Boolean = {
+  private def process(message: RequestMessage): Boolean = {
     scheduledCommitLog.putData(
       Frame.PutConsumerCheckpointType,
-      requestBody
+      message.body,
+      message.token
     )
   }
 
   override protected def getResponse(message: RequestMessage,
                                      ctx: ChannelHandlerContext): Array[Byte] = {
     tracer.withTracing(message, getClass.getName + ".getResponse") {
-      val result = process(message.body)
+      val result = process(message)
 
-      val response = descriptor.encodeResponse(
-        TransactionService.PutConsumerCheckpoint.Result(
-          Some(result)
-        )
-      )
-
-      response
+      descriptor.encodeResponse(
+        PutConsumerCheckpoint.Result(Some(result)))
     }
   }
 }

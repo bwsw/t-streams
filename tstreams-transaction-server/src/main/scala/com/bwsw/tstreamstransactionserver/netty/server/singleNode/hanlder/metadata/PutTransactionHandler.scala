@@ -58,12 +58,12 @@ class PutTransactionHandler(server: TransactionServer,
   }
 
   override protected def fireAndForget(message: RequestMessage): Unit =
-    tracer.withTracing(message, getClass.getName + ".fireAndForget")(process(message.body))
+    tracer.withTracing(message, getClass.getName + ".fireAndForget")(process(message))
 
   override protected def getResponse(message: RequestMessage, ctx: ChannelHandlerContext): Array[Byte] = {
     tracer.withTracing(message, getClass.getName + ".getResponse") {
       val response = {
-        val isPutted = process(message.body)
+        val isPutted = process(message)
         if (isPutted)
           isPuttedResponse
         else
@@ -74,10 +74,10 @@ class PutTransactionHandler(server: TransactionServer,
     }
   }
 
-  private def process(requestBody: Array[Byte]) = {
+  private def process(message: RequestMessage) = {
     scheduledCommitLog.putData(
       Frame.PutTransactionType,
-      requestBody
-    )
+      message.body,
+      message.token)
   }
 }

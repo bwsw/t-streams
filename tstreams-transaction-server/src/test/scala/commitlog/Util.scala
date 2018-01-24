@@ -23,7 +23,7 @@ import java.util.concurrent.atomic.AtomicLong
 
 import com.bwsw.commitlog.IDGenerator
 
-private[commitlog] object Util {
+object Util {
 
   final class IDGeneratorInMemory
     extends IDGenerator[Long] {
