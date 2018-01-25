@@ -25,7 +25,7 @@ import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeeperServi
 import com.bwsw.tstreamstransactionserver.options.MultiNodeServerOptions.BookkeeperOptions
 import com.bwsw.tstreamstransactionserver.options.SingleNodeServerOptions.StorageOptions
 import com.bwsw.tstreamstransactionserver.util.Utils
-import com.bwsw.tstreamstransactionserver.util.multiNode.{Util, ZkServerTxnMultiNodeServerTxnClient}
+import com.bwsw.tstreamstransactionserver.util.multiNode.{MultiNudeUtils, ZkServerTxnMultiNodeServerTxnClient}
 import org.apache.bookkeeper.meta.LedgerManagerFactory
 import org.apache.bookkeeper.zookeeper.ZooKeeperClient
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
@@ -84,7 +84,7 @@ class CommonCheckpointGroupServerTtlTest
   }
 
   "Expired ledgers" should "be deleted according to settings if a server works in a stable way" in {
-    val bundle: ZkServerTxnMultiNodeServerTxnClient = Util.getCommonCheckpointGroupServerBundle(
+    val bundle: ZkServerTxnMultiNodeServerTxnClient = MultiNudeUtils.getCommonCheckpointGroupServerBundle(
       zkClient, bookkeeperOptions, serverBuilder, clientBuilder, toMs(maxIdleTimeBetweenRecords)
     )
     val cgPath = bundle.serverBuilder.getCommonPrefixesOptions.checkpointGroupPrefixesOptions.checkpointGroupZkTreeListPrefix

@@ -65,7 +65,6 @@ class ProducerCancelPartitionTest extends FlatSpec with Matchers with BeforeAndA
     producer.cancel(0)
 
     (0 until TOTAL_CHECKPOINT).foreach(_ => producer.newTransaction().send("test"))
-    (0 until TOTAL_CHECKPOINT).foreach(_ => producer.newTransaction().send("test"))
     producer.checkpoint(0)
 
     latch.await(f.getProperty(ConfigurationOptions.Producer.Transaction.ttlMs).asInstanceOf[Int] / 2, TimeUnit.MILLISECONDS) shouldBe true

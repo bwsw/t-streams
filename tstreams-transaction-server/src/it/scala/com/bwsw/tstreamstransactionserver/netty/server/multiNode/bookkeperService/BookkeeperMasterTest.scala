@@ -23,9 +23,9 @@ import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeeperServi
 import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeeperService.{BookkeeperMaster, BookkeeperMasterBundle, LeaderSelectorInterface}
 import com.bwsw.tstreamstransactionserver.netty.server.zk.ZKIDGenerator
 import com.bwsw.tstreamstransactionserver.options.MultiNodeServerOptions.BookkeeperOptions
+import com.bwsw.tstreamstransactionserver.util.Utils
 import com.bwsw.tstreamstransactionserver.util.Utils.uuid
-import com.bwsw.tstreamstransactionserver.util.multiNode.Util
-import com.bwsw.tstreamstransactionserver.util.{Utils, multiNode}
+import com.bwsw.tstreamstransactionserver.util.multiNode.MultiNudeUtils
 import org.apache.bookkeeper.client.BookKeeper
 import org.apache.bookkeeper.conf.ClientConfiguration
 import org.apache.bookkeeper.meta.LongHierarchicalLedgerManagerFactory
@@ -95,7 +95,7 @@ class BookkeeperMasterTest
 
 
   "Bookkeeper master" should "return the first created ledger." in {
-    val bundle = Util.getTransactionServerBundle(zkClient)
+    val bundle = MultiNudeUtils.getTransactionServerBundle(zkClient)
 
     bundle.operate { _ =>
       val zkTree1 = new LongZookeeperTreeList(zkClient, s"/$uuid")
@@ -132,7 +132,7 @@ class BookkeeperMasterTest
   }
 
   it should "return new ledger for write operations as previous is closed" in {
-    val bundle = multiNode.Util.getTransactionServerBundle(zkClient)
+    val bundle = MultiNudeUtils.getTransactionServerBundle(zkClient)
 
     bundle.operate { _ =>
 

@@ -23,13 +23,13 @@ import java.io.{BufferedOutputStream, File, FileOutputStream, IOException}
 import java.nio.file._
 import java.nio.file.attribute.BasicFileAttributes
 
-import com.bwsw.commitlog.{CommitLog, Util}
+import com.bwsw.commitlog.{CommitLog, CommitLogUtils}
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 
 
 class CommitLogFileIteratorTest extends FlatSpec with Matchers with BeforeAndAfterAll {
   val dir = "target/clfi"
-  private val fileIDGenerator = Util.createIDGenerator
+  private val fileIDGenerator = CommitLogUtils.createIDGenerator
 
   override def beforeAll(): Unit = new File(dir).mkdirs()
 

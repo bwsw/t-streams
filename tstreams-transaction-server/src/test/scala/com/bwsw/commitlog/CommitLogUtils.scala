@@ -21,7 +21,7 @@ package com.bwsw.commitlog
 
 import java.util.concurrent.atomic.AtomicLong
 
-private[commitlog] object Util {
+private[commitlog] object CommitLogUtils {
 
   final class IDGeneratorInMemory
     extends IDGenerator[Long] {

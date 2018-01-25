@@ -26,7 +26,7 @@ import com.bwsw.tstreamstransactionserver.netty.server.multiNode.commitLogServic
 import com.bwsw.tstreamstransactionserver.netty.server.transportService.TransportValidator
 import com.bwsw.tstreamstransactionserver.netty.server.zk.ZKMasterElector
 
-object Util {
+object Utils {
   final def handlerReadAuthData(clientRequestHandler: ClientRequestHandler,
                                 zKMasterElectors: Seq[ZKMasterElector])
                                (implicit

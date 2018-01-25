@@ -38,7 +38,7 @@ import com.bwsw.tstreamstransactionserver.util.Utils.{getRandomPort, uuid}
 import org.apache.commons.io.FileUtils
 import org.apache.curator.framework.CuratorFramework
 
-object Util {
+object MultiNudeUtils {
   private def testStorageOptions(dbPath: File) = {
     StorageOptions().copy(
       path = dbPath.getPath,

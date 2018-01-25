@@ -27,7 +27,7 @@ import io.netty.channel.nio.NioEventLoopGroup
 import io.netty.channel.socket.ServerSocketChannel
 import io.netty.channel.socket.nio.NioServerSocketChannel
 
-object Util {
+object Utils {
 
   @throws[InvalidSocketAddress]
   final def createTransactionServerExternalSocket(host: String,

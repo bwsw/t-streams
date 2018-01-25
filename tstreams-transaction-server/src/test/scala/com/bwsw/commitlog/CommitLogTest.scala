@@ -36,7 +36,7 @@ class CommitLogTest
   private val record = "sample record".getBytes
   private val recordSize = record.length + CommitLogRecord.headerSize
 
-  private val fileIDGen = Util.createIDGenerator
+  private val fileIDGen = CommitLogUtils.createIDGenerator
 
   override def beforeAll(): Unit = new File(directory).mkdirs()
 

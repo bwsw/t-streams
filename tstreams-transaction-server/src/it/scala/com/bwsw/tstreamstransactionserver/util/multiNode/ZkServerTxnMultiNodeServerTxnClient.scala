@@ -42,6 +42,6 @@ class ZkServerTxnMultiNodeServerTxnClient(val transactionServer: TestCommonCheck
     client.shutdown()
 
     val storageOptions = serverBuilder.getStorageOptions
-    Util.deleteDirectories(storageOptions)
+    MultiNudeUtils.deleteDirectories(storageOptions)
   }
 }

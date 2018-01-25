@@ -47,7 +47,7 @@ class MultiNodeBundle(val transactionServer: TransactionServer,
   def closeDbsAndDeleteDirectories(): Unit = {
     storage.getStorageManager.closeDatabases()
     transactionDataService.closeTransactionDataDatabases()
-    Util.deleteDirectories(storageOptions)
+    MultiNudeUtils.deleteDirectories(storageOptions)
   }
 }
 

@@ -29,7 +29,7 @@ import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeeperServi
 import com.bwsw.tstreamstransactionserver.rpc.TransactionStates.{Checkpointed, Opened}
 import com.bwsw.tstreamstransactionserver.rpc._
 import com.bwsw.tstreamstransactionserver.util.Utils.uuid
-import com.bwsw.tstreamstransactionserver.util.multiNode.Util
+import com.bwsw.tstreamstransactionserver.util.multiNode.MultiNudeUtils
 import com.bwsw.tstreamstransactionserver.util.{Utils, multiNode}
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 
@@ -260,7 +260,7 @@ class BookkeeperToRocksWriterTest
       storage
     )
 
-    val bundle = Util.getTransactionServerBundle(zkClient)
+    val bundle = MultiNudeUtils.getTransactionServerBundle(zkClient)
 
     bundle.operate { transactionServer =>
 
@@ -399,7 +399,7 @@ class BookkeeperToRocksWriterTest
       storage
     )
 
-    val bundle = multiNode.Util.getTransactionServerBundle(zkClient)
+    val bundle = MultiNudeUtils.getTransactionServerBundle(zkClient)
 
     bundle.operate { transactionServer =>
 
@@ -546,7 +546,7 @@ class BookkeeperToRocksWriterTest
       lastClosedLedgerHandlers,
       storage
     )
-    val bundle = multiNode.Util.getTransactionServerBundle(zkClient)
+    val bundle = MultiNudeUtils.getTransactionServerBundle(zkClient)
 
     bundle.operate { transactionServer =>
 

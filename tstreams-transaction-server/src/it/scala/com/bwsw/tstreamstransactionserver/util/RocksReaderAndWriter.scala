@@ -26,7 +26,7 @@ import com.bwsw.tstreamstransactionserver.netty.server.streamService.StreamServi
 import com.bwsw.tstreamstransactionserver.netty.server.transactionDataService.TransactionDataService
 import com.bwsw.tstreamstransactionserver.netty.server.{RocksReader, RocksWriter}
 import com.bwsw.tstreamstransactionserver.options.SingleNodeServerOptions.{RocksStorageOptions, StorageOptions}
-import com.bwsw.tstreamstransactionserver.util.multiNode.Util
+import com.bwsw.tstreamstransactionserver.util.multiNode.MultiNudeUtils
 import org.apache.curator.framework.CuratorFramework
 
 
@@ -70,6 +70,6 @@ class RocksReaderAndWriter(zkClient: CuratorFramework,
   def closeDBAndDeleteFolder(): Unit = {
     rocksStorage.getStorageManager.closeDatabases()
     transactionDataService.closeTransactionDataDatabases()
-    Util.deleteDirectories(storageOptions)
+    MultiNudeUtils.deleteDirectories(storageOptions)
   }
 }

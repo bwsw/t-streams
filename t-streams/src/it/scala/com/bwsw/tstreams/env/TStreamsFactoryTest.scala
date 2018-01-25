@@ -38,23 +38,20 @@ class TStreamsFactoryTest extends FlatSpec with Matchers with BeforeAndAfterAll 
   storageClient.createStream("test-stream", 2, 24 * 3600, "")
 
   "If copied" should "contain same data" in {
-    val n1 = f.copy()
-    n1.setProperty(ConfigurationOptions.Stream.name, "cloned-stream")
-    val n2 = n1.copy()
-    n2.getProperty(ConfigurationOptions.Stream.name) shouldBe "cloned-stream"
+    val clonedStream = "cloned-stream"
+    val factory1 = f.copy()
+    factory1.setProperty(ConfigurationOptions.Stream.name, clonedStream)
+    val factory2 = factory1.copy()
+    factory2.getProperty(ConfigurationOptions.Stream.name) shouldBe clonedStream
   }
 
   "If locked" should "raise IllegalStateException exception" in {
-    val n1 = f.copy()
-    n1.lock()
-    val res = try {
-      n1.setProperty(ConfigurationOptions.Stream.name, "cloned-stream")
-      false
-    } catch {
-      case _: IllegalStateException =>
-        true
+    val factory = f.copy()
+    factory.lock()
+
+    an[IllegalStateException] shouldBe thrownBy {
+      factory.setProperty(ConfigurationOptions.Stream.name, "cloned-stream")
     }
-    res shouldBe true
   }
 
   "UniversalFactory.getProducer" should "return producer object" in {
@@ -62,10 +59,9 @@ class TStreamsFactoryTest extends FlatSpec with Matchers with BeforeAndAfterAll 
       name = "test-producer-1",
       partitions = Set(0))
 
-    p != null shouldEqual true
+    p shouldNot be(null)
 
     p.stop()
-
   }
 
   "UniversalFactory.getConsumer" should "return consumer object" in {
@@ -77,8 +73,7 @@ class TStreamsFactoryTest extends FlatSpec with Matchers with BeforeAndAfterAll 
     c.start()
     c.stop()
 
-    c != null shouldEqual true
-
+    c shouldNot be(null)
   }
 
   "UniversalFactory.getSubscriber" should "return subscriber object" in {
@@ -89,8 +84,7 @@ class TStreamsFactoryTest extends FlatSpec with Matchers with BeforeAndAfterAll 
       offset = Oldest,
       callback = (_: TransactionOperator, _: ConsumerTransaction) => {})
 
-
-    sub != null shouldEqual true
+    sub shouldNot be(null)
 
     sub.start()
     sub.stop()

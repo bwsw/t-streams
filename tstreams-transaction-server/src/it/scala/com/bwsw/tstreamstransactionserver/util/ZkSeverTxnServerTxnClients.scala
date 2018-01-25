@@ -21,7 +21,7 @@ package com.bwsw.tstreamstransactionserver.util
 
 import com.bwsw.tstreamstransactionserver.netty.client.api.TTSClient
 import com.bwsw.tstreamstransactionserver.netty.server.singleNode.{SingleNodeServerBuilder, TestSingleNodeServer}
-import com.bwsw.tstreamstransactionserver.util.multiNode.Util
+import com.bwsw.tstreamstransactionserver.util.multiNode.MultiNudeUtils
 
 import scala.util.{Failure, Try}
 
@@ -44,6 +44,6 @@ class ZkSeverTxnServerTxnClients(val transactionServer: TestSingleNodeServer,
     clients.foreach(client => client.shutdown())
 
     val storageOptions = serverBuilder.getStorageOptions
-    Util.deleteDirectories(storageOptions)
+    MultiNudeUtils.deleteDirectories(storageOptions)
   }
 }
