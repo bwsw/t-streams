@@ -59,7 +59,7 @@ class CommonServer(authenticationOpts: AuthenticationOptions,
   ServerTracer.init(tracingOptions, "TTS-C")
 
   private val transactionServerSocketAddress =
-    Util.createTransactionServerExternalSocket(
+    Utils.createTransactionServerExternalSocket(
       serverOpts.bindHost,
       serverOpts.bindPort
     )
@@ -146,7 +146,7 @@ class CommonServer(authenticationOpts: AuthenticationOptions,
     bossGroup: EventLoopGroup,
     workerGroup: EventLoopGroup,
     channelType: Class[ServerSocketChannel]
-    ) = Util.getBossGroupAndWorkerGroupAndChannel
+    ) = Utils.getBossGroupAndWorkerGroupAndChannel
 
 
   private val orderedExecutionPool =

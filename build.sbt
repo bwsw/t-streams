@@ -27,10 +27,12 @@ lazy val root = (project in file("."))
 lazy val tStreams = Project(
   id = "t-streams",
   base = file("./t-streams"))
-  .settings(Common.projectSettings ++ Dependencies.TStreams: _*)
+  .configs(IntegrationTest)
+  .settings(Common.projectSettings)
   .dependsOn(tStreamsTransactionServer)
 
 lazy val tStreamsTransactionServer = Project(
   id = "tstreams-transaction-server",
   base = file("./tstreams-transaction-server"))
+  .configs(IntegrationTest)
   .settings(TStreamsTransactionServer.projectSettings: _*)
