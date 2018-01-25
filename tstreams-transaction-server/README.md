@@ -35,8 +35,7 @@ You should pass a file with properties in both cases. The file should contain th
 | subscribers.update-period-ms                      | Delay in milliseconds between updates of current subscribers online. | int | 1000| positive integer|
 | subscribers.monitoring-zk-endpoints               | The ZooKeeper server(s) connect to |string| 127.0.0.1:2181,127.0.0.1:2182 |[ipv4 or ivp6]:[port],[ipv4 or ivp6]:[port]* |
 | authentication.key                                | The key to authorize server's clients.  |string |key| |
-| authentication.key-cache-size                     | The number of active tokens a server can handle over time.  |int    |10000| [1,...]|
-| authentication.key-cache-expiration-time-sec      | The lifetime of token after last access before expiration.  |int    | 600| [1,...]|
+| authentication.token-ttl-sec                      | The lifetime of token after last updating before expiration.  |int    | 30| [1,...]|
 | storage.file-prefix                               | The path where folders of Commit log and rocksdb databases would be placed. Should be absolute |string |/tmp| |
 | storage.streams.zk-directory                      | The zooKeeper path for stream entities. | string | /tts/streams | all path starts with '/' and separated with the same character |
 | storage.data.directory                            | The subfolder of 'storage.file-prefix' where rocksdb databases are placed which contain producer data.  |string |transaction_data| |

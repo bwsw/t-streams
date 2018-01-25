@@ -80,7 +80,7 @@ class PutTransactionHandler(bookkeeperMaster: BookkeeperMaster,
 
             case Right(ledgerHandler) =>
               val record = new Record(
-                Frame.PutTransactionType.id.toByte,
+                Frame.PutTransactionType,
                 System.currentTimeMillis(),
                 message.body
               ).toByteArray
