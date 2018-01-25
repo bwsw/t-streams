@@ -26,5 +26,5 @@ Storage Sever
 
 The Storage Server is an external process which keeps transactions and their data safe and replicates them for providing high availability. Agents discover the Storage Server via Apache Zookeeper.
 
-.. figure:: _static/Architecture-Server.png
+.. figure:: _static/Architecture-Server1.png
 
