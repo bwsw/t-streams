@@ -18,7 +18,7 @@ T-streams includes the following components:
 #. **Apache ZooKeeper** that is responsible for coordination and syncronization of processes.
 #. **Apache BookKeeper** used as a destributed commit log. It is a service that provides persistent storage of streams of log elements. BookKeeper is an optional part useful in multy-node implementation. It replicates stored entries across multiple nodes.
 
-.. figure:: _static/Architechture-General.png
+.. figure:: _static/Architecture-General.png
 
 
 Storage Sever
@@ -26,5 +26,5 @@ Storage Sever
 
 The Storage Server is an external process which keeps transactions and their data safe and replicates them for providing high availability. Agents discover the Storage Server via Apache Zookeeper.
 
-Netty
-Protocol handler
+.. figure:: _static/Architecture-Server.png
+
