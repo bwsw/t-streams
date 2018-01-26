@@ -65,7 +65,7 @@ class ServerInvalidatesOpenTransactionWhenProducerTokenExpires
   private val awaitTimeout = 5
   private val factory = f.copy()
   private val authenticationOptions = TestStorageServer.Builder.Defaults.authenticationOptions
-    .copy(keyCacheExpirationTimeSec = tokenTtlSec)
+    .copy(tokenTtlSec = tokenTtlSec)
   private val serverBuilder = TestStorageServer.Builder(authenticationOptions = authenticationOptions)
   private lazy val server = TestStorageServer.getNewClean(serverBuilder)
 
