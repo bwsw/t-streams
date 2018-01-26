@@ -5,12 +5,13 @@
 T-streams Architecture
 ============================
 
-At this page, we will dive into the T-streams architecture which helps to understand the data model and basic operations. This part is theoretical and does not include code examples. 
+At this page, we will dive into the T-streams architecture which helps to understand the basic operations. This part will give you a general idea of operation flow and handling.
 
 Overview
 ------------------
 
-The T-streams architecture is quite simple. Its design is inspired by Apache Kafka. Though the implementation allows us to fulfill the basic aspects of the project - fault-tolerance, scalability, consistency, offering competitive performance in transactional messaging.
+The T-streams architecture is quite simple. Its design is inspired by Apache Kafka. Though the implementation allows us to fulfill the basic aspects of the project - fault-tolerance, scalability, eventual consistency -
+offering competitive performance in transactional messaging.
 
 T-streams includes the following components:
 
@@ -20,16 +21,18 @@ T-streams includes the following components:
 #. **Apache ZooKeeper** that is responsible for coordination and synchronization of processes.
 #. **Apache BookKeeper** used as a distributed commit log. It is a service that provides persistent storage of streams of log elements. BookKeeper is an optional part used in the multi-node implementation. It orderly stores elements and replicates them across multiple nodes to synchronize the servers' states.
 
-.. figure:: _static/Architecture-General.png
+.. figure:: _static/Architecture-General1.png
 
-Thus, Producers get Server's address from ZooKeeper and write transactions with data to it. The Server writes the data and meta-data to the internal commit log and stores data to Server's local storage. Consumers and Subscribers read these data from the Server. That is the most simple implementation of T-streams.
+Thus, Producers get Server's address from ZooKeeper and write transactions with data to it. The Server writes the data and meta-data to the internal commit log and stores data to Server's local storage. Consumers and Subscribers read these data from the Server. 
+
+This is a simplified description of T-streams.
 
 Storage Server
 -----------------
 
 The Storage Server is an external process which keeps transactions and their data safe and replicates them for providing high availability. Its structure overview can be displayed in the following way:
 
-.. figure:: _static/Architecture-Server1.png
+.. figure:: _static/Architecture-Server2.png
 
 The Server consists of two parts: Master and Slave. All operations that include state change (i.e. create, update, delete a transaction) are performed on Master. They are orderly written to Server's internal commit log. If any data exist in the operations, they are saved to the Server local storage.
 
