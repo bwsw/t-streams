@@ -1,5 +1,7 @@
 .. _Architecture:
 
+.. Contents::
+
 T-streams Architecture
 ============================
 
@@ -15,16 +17,23 @@ T-streams includes the following components:
 1. **Storage Server** that is responsible for all operations performed with the data. More than one server can be involved in the process. 
 #. **Producers** who write data into transactions on the Server.
 #. **Consumers**, **Subscribers** who read the data from the Server.
-#. **Apache ZooKeeper** that is responsible for coordination and syncronization of processes.
-#. **Apache BookKeeper** used as a destributed commit log. It is a service that provides persistent storage of streams of log elements. BookKeeper is an optional part useful in multy-node implementation. It replicates stored entries across multiple nodes.
+#. **Apache ZooKeeper** that is responsible for coordination and synchronization of processes.
+#. **Apache BookKeeper** used as a destributed commit log. It is a service that provides persistent storage of streams of log elements. BookKeeper is an optional part useful in multi-node implementation. It replicates stored elements across multiple nodes.
 
 .. figure:: _static/Architecture-General.png
 
 
-Storage Sever
+Storage Server
 -----------------
 
-The Storage Server is an external process which keeps transactions and their data safe and replicates them for providing high availability. Agents discover the Storage Server via Apache Zookeeper.
+The Storage Server is an external process which keeps transactions and their data safe and replicates them for providing high availability. 
 
 .. figure:: _static/Architecture-Server1.png
 
+Agents discover the Storage Server via Apache ZooKeeper.
+
+Single-node Mode
+---------------------
+
+Multi-node Mode
+--------------------
