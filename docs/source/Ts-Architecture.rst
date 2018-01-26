@@ -34,7 +34,7 @@ The Storage Server is an external process which keeps transactions and their dat
 
 .. figure:: _static/Architecture-Server2.png
 
-The Server consists of two parts: Master and Slave. All operations that include state change (i.e. create, update, delete a transaction) are performed on Master. They are orderly written to Server's internal commit log. If any data exist in the operations, they are saved to the Server local storage.
+The Server consists of two parts: Master and Slave. All operations that include state change (i.e. create, update, delete a transaction) are performed on Master. They are orderly written to Server's internal commit log. 
 
 Slave reads the operations from the commit log and stores them to a database (RocksDB). RocksDB has a very important feature – an atomic batch operation which allows implementing atomic and reliable commit logs processing. Slave performs all operations for data retrieving. It reads data from RocksDB to send it to Consumer/Subscriber.
 
