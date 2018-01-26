@@ -20,8 +20,9 @@
 package com.bwsw.commitlog
 
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
+import org.scalatest.{FlatSpec, Matchers}
 
-class CommitLogRecordTest extends FlatSpec with Matchers with BeforeAndAfterAll {
+class CommitLogRecordTest extends FlatSpec with Matchers {
 
   "CommitLogRecord" should "be serialized/deserialized" in {
     val record1 = CommitLogRecord(0, System.currentTimeMillis(), 12345, "test_data".getBytes())

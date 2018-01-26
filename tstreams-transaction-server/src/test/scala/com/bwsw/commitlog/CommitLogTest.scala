@@ -24,7 +24,6 @@ import java.nio.file._
 import java.nio.file.attribute.BasicFileAttributes
 
 import com.bwsw.commitlog.CommitLogFlushPolicy.{OnCountInterval, OnRotation, OnTimeInterval}
-import commitlog.Util
 import org.scalatest.prop.TableDrivenPropertyChecks
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 
@@ -37,18 +36,16 @@ class CommitLogTest
     with BeforeAndAfterAll
     with TableDrivenPropertyChecks {
 
-  private val dir = Paths.get("target", "clt").toString
+  private val directory = Paths.get("target", "clt").toString
   private val record = "sample record".getBytes
   private val recordSize = Integer.BYTES + CommitLogRecord.headerSize + record.length
-  private val fileIDGen = Util.createIDGenerator
   private val token = 54231651
+  private val fileIDGen = CommitLogUtils.createIDGenerator
 
-  override def beforeAll(): Unit = {
-    new File(dir).mkdirs()
-  }
+  override def beforeAll(): Unit = new File(directory).mkdirs()
 
-  it should "write correctly (OnRotation policy)" in {
-    val cl = new CommitLog(1, dir, OnRotation, fileIDGen)
+  "CommitLog" should "write correctly (OnRotation policy)" in {
+    val cl = new CommitLog(1, directory, OnRotation, fileIDGen)
     val f1 = cl.putRec(record, 0, token)
     val fileF1 = new File(f1)
     fileF1.exists() shouldBe true
@@ -78,7 +75,7 @@ class CommitLogTest
   }
 
   it should "write correctly (OnTimeInterval policy) when startNewFileSeconds > policy seconds" in {
-    val cl = new CommitLog(4, dir, OnTimeInterval(2), fileIDGen)
+    val cl = new CommitLog(4, directory, OnTimeInterval(2), fileIDGen)
     val f11 = cl.putRec(record, 0, token)
     val fileF1 = new File(f11)
     fileF1.exists() shouldBe true
@@ -126,7 +123,7 @@ class CommitLogTest
   }
 
   it should "write correctly (OnTimeInterval policy) when startNewFileSeconds < policy seconds" in {
-    val cl = new CommitLog(2, dir, OnTimeInterval(4), fileIDGen)
+    val cl = new CommitLog(2, directory, OnTimeInterval(4), fileIDGen)
     val f11 = cl.putRec(record, 0, token)
     val fileF1 = new File(f11)
     fileF1.exists() shouldBe true
@@ -143,7 +140,7 @@ class CommitLogTest
   }
 
   it should "write correctly (OnCountInterval policy)" in {
-    val cl = new CommitLog(2, dir, OnCountInterval(2), fileIDGen)
+    val cl = new CommitLog(2, directory, OnCountInterval(2), fileIDGen)
     val f11 = cl.putRec(record, 0, token)
     val f12 = cl.putRec(record, 0, token)
     f11 shouldBe f12
@@ -189,8 +186,8 @@ class CommitLogTest
     }
   }
 
-  override def afterAll(): Unit = {
-    List(dir).foreach(dir =>
+  override def afterAll: Unit = {
+    List(directory).foreach(dir =>
       Files.walkFileTree(Paths.get(dir), new SimpleFileVisitor[Path]() {
         override def visitFile(file: Path, attrs: BasicFileAttributes): FileVisitResult = {
           Files.delete(file)
