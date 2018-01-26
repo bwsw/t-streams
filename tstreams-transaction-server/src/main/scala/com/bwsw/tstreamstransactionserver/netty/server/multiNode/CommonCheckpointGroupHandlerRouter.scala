@@ -31,7 +31,7 @@ import com.bwsw.tstreamstransactionserver.netty.server.handler.transport.{GetMax
 import com.bwsw.tstreamstransactionserver.netty.server.handler.{RequestHandler, RequestRouter}
 import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeeperService.{BookkeeperMaster, BookkeeperWriter}
 import com.bwsw.tstreamstransactionserver.netty.server.multiNode.commitLogService.CommitLogService
-import com.bwsw.tstreamstransactionserver.netty.server.multiNode.handler.Util._
+import com.bwsw.tstreamstransactionserver.netty.server.multiNode.handler.Utils._
 import com.bwsw.tstreamstransactionserver.netty.server.multiNode.handler.commitLog.GetCommitLogOffsetsHandler
 import com.bwsw.tstreamstransactionserver.netty.server.multiNode.handler.consumer.PutConsumerCheckpointHandler
 import com.bwsw.tstreamstransactionserver.netty.server.multiNode.handler.data.{PutProducerStateWithDataHandler, PutSimpleTransactionAndDataHandler, PutTransactionDataHandler}

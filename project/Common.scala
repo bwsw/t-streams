@@ -70,5 +70,9 @@ object Common {
 
     connectInput in run := true,
     outputStrategy := Some(StdoutOutput) // to suppress logging prefixes in sbt runMain
-  ) ++ assemblyStrategySettings ++ publishSettings
+  ) ++
+    assemblyStrategySettings ++
+    publishSettings ++
+    Defaults.itSettings ++
+    Dependencies.Test
 }

@@ -54,7 +54,7 @@ class CheckpointGroupServer(authenticationOpts: AuthenticationOptions,
   ServerTracer.init(tracingOptions, "TTS-CG")
 
   private val transactionServerSocketAddress =
-    Util.createTransactionServerExternalSocket(
+    Utils.createTransactionServerExternalSocket(
       bootstrapOpts.bindHost,
       bootstrapOpts.bindPort
     )
@@ -117,7 +117,7 @@ class CheckpointGroupServer(authenticationOpts: AuthenticationOptions,
     bossGroup: EventLoopGroup,
     workerGroup: EventLoopGroup,
     channelType: Class[ServerSocketChannel]
-    ) = Util.getBossGroupAndWorkerGroupAndChannel
+    ) = Utils.getBossGroupAndWorkerGroupAndChannel
 
   private val commitLogContext: SinglePoolExecutionContextGrid =
     ExecutionContextGrid("CommitLogExecutionContextGrid-%d")

@@ -66,7 +66,7 @@ class SingleNodeServer(authenticationOpts: AuthenticationOptions,
   ServerTracer.init(tracingOptions, "TTS-S")
 
   private val transactionServerSocketAddress =
-    Util.createTransactionServerExternalSocket(
+    Utils.createTransactionServerExternalSocket(
       serverOpts.bindHost,
       serverOpts.bindPort
     )
@@ -172,7 +172,7 @@ class SingleNodeServer(authenticationOpts: AuthenticationOptions,
     bossGroup: EventLoopGroup,
     workerGroup: EventLoopGroup,
     channelType: Class[ServerSocketChannel]
-    ) = Util.getBossGroupAndWorkerGroupAndChannel
+    ) = Utils.getBossGroupAndWorkerGroupAndChannel
 
   private val orderedExecutionPool =
     new OrderedExecutionContextPool(serverOpts.openOperationsPoolSize)
