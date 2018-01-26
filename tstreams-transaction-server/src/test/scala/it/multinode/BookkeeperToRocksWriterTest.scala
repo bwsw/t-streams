@@ -165,7 +165,7 @@ class BookkeeperToRocksWriterTest
     zkServer.close()
   }
 
-  it should "return opened and checkpointed transactions and process entirely 2 ledgers as they are opened at the same time and closed too" in {
+  "BookkeeperToRocksWriter" should "return opened and checkpointed transactions and process entirely 2 ledgers as they are opened at the same time and closed too" in {
     val stream = generateStream
     val partition = 1
 

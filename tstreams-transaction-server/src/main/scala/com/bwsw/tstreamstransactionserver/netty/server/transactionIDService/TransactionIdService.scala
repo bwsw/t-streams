@@ -50,6 +50,6 @@ object TransactionIdService
   }
 
   override def getTransaction(timestamp: Long): Long = {
-    timestamp * TransactionIdService.SCALE
+    timestamp * SCALE
   }
 }

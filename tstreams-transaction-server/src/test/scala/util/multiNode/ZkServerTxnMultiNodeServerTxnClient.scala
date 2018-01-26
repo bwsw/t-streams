@@ -19,26 +19,21 @@
 
 package util.multiNode
 
-import java.io.File
-import java.nio.file.Paths
-
 import com.bwsw.tstreamstransactionserver.netty.client.api.TTSInetClient
 import com.bwsw.tstreamstransactionserver.netty.server.multiNode.{CommonCheckpointGroupServerBuilder, TestCommonCheckpointGroupServer}
-import org.apache.commons.io.FileUtils
+
+import scala.util.{Failure, Success, Try}
 
 class ZkServerTxnMultiNodeServerTxnClient(val transactionServer: TestCommonCheckpointGroupServer,
                                           val client: TTSInetClient,
                                           val serverBuilder: CommonCheckpointGroupServerBuilder) {
   def operate(operation: TestCommonCheckpointGroupServer => Unit): Unit = {
-    try {
-      operation(transactionServer)
-    }
-    catch {
-      case throwable: Throwable =>
-        throw throwable
-    }
-    finally {
-      closeDbsAndDeleteDirectories()
+    Try(operation(transactionServer)) match {
+      case Success(_) =>
+        closeDbsAndDeleteDirectories()
+      case Failure(exception) =>
+        closeDbsAndDeleteDirectories()
+        throw exception
     }
   }
 

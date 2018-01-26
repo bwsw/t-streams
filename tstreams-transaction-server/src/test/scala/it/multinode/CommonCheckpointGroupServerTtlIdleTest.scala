@@ -18,31 +18,31 @@
  */
 package it.multinode
 
-import java.util.concurrent.TimeUnit
-
 import com.bwsw.tstreamstransactionserver.netty.client.ClientBuilder
 import com.bwsw.tstreamstransactionserver.netty.server.multiNode.CommonCheckpointGroupServerBuilder
 import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeeperService.hierarchy.LongZookeeperTreeList
 import com.bwsw.tstreamstransactionserver.options.MultiNodeServerOptions.BookkeeperOptions
 import com.bwsw.tstreamstransactionserver.options.SingleNodeServerOptions.StorageOptions
-import org.apache.bookkeeper.meta.LedgerManagerFactory
+import org.apache.bookkeeper.meta.{LedgerManager, LedgerManagerFactory}
 import org.apache.bookkeeper.zookeeper.ZooKeeperClient
-import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
+import org.apache.curator.framework.CuratorFramework
+import org.scalatest.{Matchers, Outcome, fixture}
 import util.multiNode.ZkServerTxnMultiNodeServerTxnClient
+import util.multiNode.CommonCheckpointGroupServerTtlUtils._
+import scala.util.{Failure, Success, Try}
 
-import scala.collection.mutable
-
-class CommonCheckpointGroupServerTtlTest
-  extends FlatSpec
-    with BeforeAndAfterAll
-    with Matchers {
+class CommonCheckpointGroupServerTtlIdleTest extends fixture.FlatSpec with Matchers {
 
   private val ensembleNumber = 3
   private val writeQuorumNumber = 3
   private val ackQuorumNumber = 2
 
+  /**
+    * because we use CommonCheckpointGroupServer that has two zk trees so creates two times more ledgers
+    */
   private val treeFactor = 2
   private val waitMs = 200
+  private val entryLogSizeLimit = 1024 * 1024
   private val maxIdleTimeBetweenRecords = 1
   private val dataCompactionInterval = maxIdleTimeBetweenRecords * 3
   private val ttl = dataCompactionInterval * 2
@@ -61,87 +61,62 @@ class CommonCheckpointGroupServerTtlTest
   private val bookiesNumber =
     ensembleNumber max writeQuorumNumber max ackQuorumNumber
 
-  private lazy val (zkServer, zkClient, bookieServers) =
-    util.Utils.startZkAndBookieServerWithConfig(bookiesNumber, waitMs)
+  case class FixtureParam(zkClient: CuratorFramework,
+                          ledgerManager: LedgerManager)
 
-  private lazy val zk = ZooKeeperClient.newBuilder.connectString(zkClient.getZookeeperClient.getCurrentConnectionString).build
-  //doesn't matter which one's conf because zk is a common part
-  private lazy val ledgerManagerFactory = LedgerManagerFactory.newLedgerManagerFactory(bookieServers.head._2, zk)
-  private lazy val ledgerManager = ledgerManagerFactory.newLedgerManager
+  def withFixture(test: OneArgTest): Outcome = {
+    val (zkServer, zkClient, bookieServers) =
+      util.Utils.startZkAndBookieServerWithConfig(bookiesNumber, waitMs, entryLogSizeLimit)
 
-  override def beforeAll(): Unit = {
-    zkServer
-    zkClient
-    bookieServers
-    ledgerManager
+    val zk = ZooKeeperClient.newBuilder.connectString(zkClient.getZookeeperClient.getCurrentConnectionString).build
+    //doesn't matter which one's conf because zk is a common part
+    val ledgerManagerFactory = LedgerManagerFactory.newLedgerManagerFactory(bookieServers.head._2, zk)
+    val ledgerManager = ledgerManagerFactory.newLedgerManager
+
+    val fixtureParam = FixtureParam(zkClient, ledgerManager)
+
+    Try {
+      withFixture(test.toNoArgTest(fixtureParam))
+    } match {
+      case Success(x) =>
+        ledgerManager.close()
+        bookieServers.foreach(_._1.shutdown())
+        zkClient.close()
+        zkServer.close()
+        x
+      case Failure(e: Throwable) =>
+        ledgerManager.close()
+        bookieServers.foreach(_._1.shutdown())
+        zkClient.close()
+        zkServer.close()
+        throw e
+    }
   }
 
-  override def afterAll(): Unit = {
-    ledgerManager.close()
-    bookieServers.foreach(_._1.shutdown())
-    zkClient.close()
-    zkServer.close()
-  }
-
-  "Expired ledgers" should "be deleted according to settings if a server works in a stable way" in {
+  "Expired ledgers" should "be deleted according to settings if a server works in a stable way" in { fixture =>
     val bundle: ZkServerTxnMultiNodeServerTxnClient = util.multiNode.Util.getCommonCheckpointGroupServerBundle(
-      zkClient, bookkeeperOptions, serverBuilder, clientBuilder, toMs(maxIdleTimeBetweenRecords)
+      fixture.zkClient, bookkeeperOptions, serverBuilder, clientBuilder, toMs(maxIdleTimeBetweenRecords)
     )
     val cgPath = bundle.serverBuilder.getCommonPrefixesOptions.checkpointGroupPrefixesOptions.checkpointGroupZkTreeListPrefix
-    val cgTree = new LongZookeeperTreeList(zkClient, cgPath)
+    val cgTree = new LongZookeeperTreeList(fixture.zkClient, cgPath)
 
     val commonPath = bundle.serverBuilder.getCommonPrefixesOptions.commonMasterZkTreeListPrefix
-    val commonTree = new LongZookeeperTreeList(zkClient, commonPath)
+    val commonTree = new LongZookeeperTreeList(fixture.zkClient, commonPath)
 
     val trees = Set(cgTree, commonTree)
 
-    bundle.operate(x => {
+    bundle.operate(_ => {
       Thread.sleep(toMs(dataCompactionInterval) + waitMs)
 
-      val createdLedgers = (dataCompactionInterval / maxIdleTimeBetweenRecords) * treeFactor
-      ledgersExistInBookKeeper(createdLedgers) shouldBe true //because we use CommonCheckpointGroupServer
+      val createdLedgers = (dataCompactionInterval / maxIdleTimeBetweenRecords) * treeFactor //because we use CommonCheckpointGroupServer
       // that has two zk trees so creates two times more ledgers
+      ledgersExistInBookKeeper(fixture.ledgerManager, createdLedgers) shouldBe true
       ledgersExistInZkTree(trees, createdLedgers) shouldBe true
 
       Thread.sleep(toMs(ttl) + waitMs)
 
-      ledgersExistInBookKeeper((ttl / maxIdleTimeBetweenRecords) * treeFactor + createdLedgers) shouldBe false
+      ledgersExistInBookKeeper(fixture.ledgerManager, (ttl / maxIdleTimeBetweenRecords) * treeFactor + createdLedgers) shouldBe false
       ledgersExistInZkTree(trees, (ttl / maxIdleTimeBetweenRecords) * treeFactor + createdLedgers) shouldBe false
     })
   }
-
-  import scala.collection.JavaConverters._
-
-  private def ledgersExistInBookKeeper(numberOfExistingLedgers: Int): Boolean = {
-    val ledgers = mutable.Set[Long]()
-    val ledgerRangeIterator = ledgerManager.getLedgerRanges
-    while (ledgerRangeIterator.hasNext) {
-      ledgerRangeIterator.next.getLedgers.asScala.foreach(e => ledgers.add(e))
-    }
-
-    ledgers.size > numberOfExistingLedgers //there is no such time in which all ledgers closed (so size ~ size + 1 at least)
-  }
-
-  private def ledgersExistInZkTree(trees: Set[LongZookeeperTreeList], numberOfExistingLedgers: Int): Boolean = {
-    val nodes = mutable.Set[Long]()
-
-    trees.foreach(tree => {
-      addNodes(tree.firstEntityId, nodes, tree)
-    })
-
-    nodes.size > numberOfExistingLedgers
-  }
-
-  private def addNodes(node: Option[Long], nodes: mutable.Set[Long], tree: LongZookeeperTreeList): Unit = {
-    node match {
-      case Some(id) =>
-        val nextNode = tree.getNextNode(id)
-        nodes.add(id)
-        addNodes(nextNode, nodes, tree)
-      case None => //do nothing
-    }
-  }
-
-  private def toMs(seconds: Int): Int = TimeUnit.SECONDS.toMillis(seconds).toInt
 }
-

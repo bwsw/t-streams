@@ -38,10 +38,10 @@ class SingleNodeServerProducerTransactionNotificationTest
   extends FlatSpec
     with Matchers
     with BeforeAndAfterAll {
-  private val commitLogToBerkeleyDBTaskDelayMs = 100
+  private val closeDelayMs = 100
   private lazy val serverBuilder = new SingleNodeServerBuilder()
     .withCommitLogOptions(SingleNodeServerOptions.CommitLogOptions(
-      closeDelayMs = commitLogToBerkeleyDBTaskDelayMs
+      closeDelayMs = closeDelayMs
     ))
 
   private lazy val clientBuilder = new ClientBuilder()

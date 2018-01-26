@@ -267,7 +267,7 @@ class ServerClientInterconnectionTest
 
       Await.result(client.putTransactions(producerTransactions, consumerTransactions), secondsWait.seconds)
 
-      //it's required to a CommitLogToBerkeleyWriter writes the producer transactions to db
+      //it's required to a CommitLogToRocksWriter writes the producer transactions to db
       transactionServer.scheduledCommitLog.run()
       transactionServer.commitLogToRocksWriter.run()
 
@@ -398,7 +398,7 @@ class ServerClientInterconnectionTest
       val to = 2 * from
       Await.result(client.putProducerStateWithData(openedProducerTransaction, data, from), secondsWait.seconds)
 
-      //it's required to a CommitLogToBerkeleyWriter writes the producer transactions to db
+      //it's required to a CommitLogToRocksWriter writes the producer transactions to db
       transactionServer.scheduledCommitLog.run()
       transactionServer.commitLogToRocksWriter.run()
 
@@ -531,7 +531,7 @@ class ServerClientInterconnectionTest
       //act
       Await.result(client.putProducerState(openedProducerTransaction), secondsWait.seconds)
 
-      //it's required to a CommitLogToBerkeleyWriter writes the producer transactions to db
+      //it's required to a CommitLogToRocksWriter writes the producer transactions to db
       transactionServer.scheduledCommitLog.run()
       transactionServer.commitLogToRocksWriter.run()
 
@@ -563,7 +563,7 @@ class ServerClientInterconnectionTest
       //act)
       Await.result(client.putProducerState(openedProducerTransaction), secondsWait.seconds)
 
-      //it's required to a CommitLogToBerkeleyWriter writes the producer transactions to db
+      //it's required to a CommitLogToRocksWriter writes the producer transactions to db
       transactionServer.scheduledCommitLog.run()
       transactionServer.commitLogToRocksWriter.run()
 
@@ -607,7 +607,7 @@ class ServerClientInterconnectionTest
       //act
       Await.result(client.putProducerState(openedProducerTransaction), secondsWait.seconds)
 
-      //it's required to a CommitLogToBerkeleyWriter writes the producer transactions to db
+      //it's required to a CommitLogToRocksWriter writes the producer transactions to db
       transactionServer.scheduledCommitLog.run()
       transactionServer.commitLogToRocksWriter.run()
 

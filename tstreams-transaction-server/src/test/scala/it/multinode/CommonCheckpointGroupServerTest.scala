@@ -79,7 +79,7 @@ class CommonCheckpointGroupServerTest
 
   val secondsWait = 15
 
-  it should "[scanTransactions] put transactions and get them back" in {
+  "CommonCheckpointGroupServer" should "[scanTransactions] put transactions and get them back" in {
     val bundle = util.multiNode.Util.getCommonCheckpointGroupServerBundle(
       zkClient, bookkeeperOptions, serverBuilder, clientBuilder, maxIdleTimeBetweenRecordsMs
     )

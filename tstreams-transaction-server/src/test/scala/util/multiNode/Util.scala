@@ -20,7 +20,7 @@
 package util.multiNode
 
 import java.io.File
-import java.nio.file.{Files, Paths}
+import java.nio.file.{Files, Path, Paths}
 import java.util.concurrent.{CountDownLatch, TimeUnit}
 
 import com.bwsw.tstreamstransactionserver.netty.client.ClientBuilder
@@ -35,7 +35,7 @@ import com.bwsw.tstreamstransactionserver.options.MultiNodeServerOptions.{Bookke
 import com.bwsw.tstreamstransactionserver.options.SingleNodeServerOptions.{RocksStorageOptions, StorageOptions}
 import org.apache.commons.io.FileUtils
 import org.apache.curator.framework.CuratorFramework
-import util.Utils
+import util.Utils.{createTtsTempFolder, createTempDirectory, deleteTempDirectories}
 import util.Utils.getRandomPort
 
 object Util {
@@ -46,14 +46,10 @@ object Util {
     )
   }
 
-  private def tempFolder() = {
-    Files.createTempDirectory("tts").toFile
-  }
-
   def uuid: String = java.util.UUID.randomUUID.toString
 
   def getTransactionServerBundle(zkClient: CuratorFramework): MultiNodeBundle = {
-    val dbPath = tempFolder()
+    val dbPath = createTtsTempFolder()
 
     val storageOptions =
       testStorageOptions(dbPath)
@@ -120,8 +116,8 @@ object Util {
                                            bookkeeperOptions: BookkeeperOptions,
                                            serverBuilder: CommonCheckpointGroupServerBuilder,
                                            clientBuilder: ClientBuilder,
-                                           timeBetweenCreationOfLedgesMs: Int = 200) = {
-    val dbPath = Files.createTempDirectory("tts").toFile
+                                           timeBetweenCreationOfLedgesMs: Int = 200): ZkServerTxnMultiNodeServerTxnClient = {
+    val dbPath = createTtsTempFolder()
     val zKCommonMasterPrefix = s"/$uuid"
 
     val updatedBuilder = serverBuilder
@@ -196,8 +192,7 @@ object Util {
   }
 
   def deleteDirectories(storageOptions: StorageOptions): Unit = {
-    Utils.bookieTmpDirs.foreach(dir => FileUtils.deleteDirectory(new File(dir)))
-    Utils.bookieTmpDirs.clear()
+    deleteTempDirectories()
     FileUtils.deleteDirectory(new File(Paths.get(storageOptions.path, storageOptions.metadataDirectory).toString))
     FileUtils.deleteDirectory(new File(Paths.get(storageOptions.path, storageOptions.dataDirectory).toString))
     FileUtils.deleteDirectory(new File(Paths.get(storageOptions.path, storageOptions.commitLogRawDirectory).toString))

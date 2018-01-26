@@ -42,10 +42,10 @@ class OpenTransactionTest
   private lazy val (zkServer, zkClient) =
     startZkServerAndGetIt
 
-  private val commitLogToBerkeleyDBTaskDelayMs = 100
+  private val closeDelayMs = 100
   private lazy val serverBuilder = new SingleNodeServerBuilder()
     .withCommitLogOptions(SingleNodeServerOptions.CommitLogOptions(
-      closeDelayMs = commitLogToBerkeleyDBTaskDelayMs
+      closeDelayMs = closeDelayMs
     ))
 
   private lazy val clientBuilder = new ClientBuilder()
