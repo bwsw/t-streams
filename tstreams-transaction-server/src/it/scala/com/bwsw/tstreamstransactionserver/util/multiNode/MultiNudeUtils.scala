@@ -51,7 +51,7 @@ object MultiNudeUtils {
     Files.createTempDirectory("tts").toFile
   }
 
-  def getTransactionServerBundle(zkClient: CuratorFramework): MultiNodeBundle = {
+  def getTransactionServerBundle(zkClient: CuratorFramework, tokenTtlSec: Int = 60): MultiNodeBundle = {
     val dbPath = tempFolder()
 
     val storageOptions =

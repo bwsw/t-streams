@@ -36,7 +36,7 @@ class CommitLogFileIteratorTest extends FlatSpec with Matchers with BeforeAndAft
 
   "CommitLogFileIterator" should "read record from file" in {
     val commitLog = new CommitLog(1, dir, iDGenerator = fileIDGenerator)
-    val fileName = commitLog.putRec(Array[Byte](2, 3, 4), 1, startNew = false)
+    val fileName = commitLog.putRec(Array[Byte](2, 3, 4), 1, token, startNew = false)
     commitLog.close()
     val commitLogFileIterator = new CommitLogFileIterator(fileName)
     if (commitLogFileIterator.hasNext()) {
