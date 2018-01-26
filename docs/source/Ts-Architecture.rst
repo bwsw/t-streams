@@ -51,8 +51,7 @@ In the fault-tolerant mode implementation, one Master and one or more Slave node
 
 The Storage Server is a separate project which can be found on `GitHub <https://github.com/bwsw/tstreams-transaction-server>`_.
 
-Single-node Mode
+Scalable Mode
 ---------------------
 
-Multi-node Mode
---------------------
+
