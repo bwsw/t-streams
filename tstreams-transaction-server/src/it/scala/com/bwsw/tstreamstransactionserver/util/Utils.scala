@@ -29,7 +29,7 @@ import com.bwsw.tstreamstransactionserver.netty.client.ClientBuilder
 import com.bwsw.tstreamstransactionserver.netty.client.api.TTSClient
 import com.bwsw.tstreamstransactionserver.netty.server.authService.OpenedTransactions
 import com.bwsw.tstreamstransactionserver.netty.server.db.zk.ZookeeperStreamRepository
-import com.bwsw.tstreamstransactionserver.netty.server.singleNode.{SingleNodeServerBuilder, TestSingleNodeServer}
+import com.bwsw.tstreamstransactionserver.netty.server.singleNode.{SingleNodeServerBuilder, SingleNodeTestingServer}
 import com.bwsw.tstreamstransactionserver.netty.server.storage.rocks.MultiAndSingleNodeRockStorage
 import com.bwsw.tstreamstransactionserver.netty.server.transactionDataService.TransactionDataService
 import com.bwsw.tstreamstransactionserver.netty.server.{RocksReader, RocksWriter, TransactionServer, singleNode}
@@ -311,7 +311,7 @@ object Utils {
 
   def startTransactionServerAndClient(zkClient: CuratorFramework,
                                       serverBuilder: SingleNodeServerBuilder,
-                                      clientBuilder: ClientBuilder): ZkSeverTxnServerTxnClient = {
+                                      clientBuilder: ClientBuilder): SingleNodeServerWithClient = {
     val dbPath = Files.createTempDirectory("tts").toFile
     val zKCommonMasterPrefix = s"/$uuid"
 
@@ -336,7 +336,7 @@ object Utils {
         serverBuilder.getBootstrapOptions.copy(bindPort = getRandomPort)
       )
 
-    val transactionServer = new TestSingleNodeServer(
+    val transactionServer = new SingleNodeTestingServer(
       updatedBuilder.getAuthenticationOptions,
       updatedBuilder.getZookeeperOptions,
       updatedBuilder.getBootstrapOptions,
@@ -367,13 +367,13 @@ object Utils {
       .withZookeeperOptions(zookeeperOptions)
       .build()
 
-    new ZkSeverTxnServerTxnClient(transactionServer, client, updatedBuilder)
+    new SingleNodeServerWithClient(transactionServer, client, updatedBuilder)
   }
 
   def startTransactionServerAndClient(zkClient: CuratorFramework,
                                       serverBuilder: SingleNodeServerBuilder,
                                       clientBuilder: ClientBuilder,
-                                      clientsNumber: Int): ZkSeverTxnServerTxnClients = {
+                                      clientsNumber: Int): SingleNodeServerWithClients = {
     val dbPath = Files.createTempDirectory("tts").toFile
 
     val streamRepositoryPath = s"/$uuid"
@@ -398,7 +398,7 @@ object Utils {
       )
 
 
-    val transactionServer = new TestSingleNodeServer(
+    val transactionServer = new SingleNodeTestingServer(
       updatedBuilder.getAuthenticationOptions,
       updatedBuilder.getZookeeperOptions,
       updatedBuilder.getBootstrapOptions,
@@ -430,7 +430,7 @@ object Utils {
         ).build()
     }
 
-    new ZkSeverTxnServerTxnClients(transactionServer, clients, updatedBuilder)
+    new SingleNodeServerWithClients(transactionServer, clients, updatedBuilder)
   }
 
 
@@ -440,5 +440,18 @@ object Utils {
       .map(_.toString)
       .map(new File(_))
       .foreach(FileUtils.deleteDirectory)
+  }
+
+  def deleteDirectories(storageOptions: StorageOptions): Unit = {
+    Utils.bookieTmpDirs.foreach(dir => FileUtils.deleteDirectory(new File(dir)))
+    Utils.bookieTmpDirs.clear()
+    Utils.deleteDirectories(
+      storageOptions.path,
+      storageOptions.metadataDirectory,
+      storageOptions.dataDirectory,
+      storageOptions.commitLogRawDirectory,
+      storageOptions.commitLogRocksDirectory)
+
+    new File(storageOptions.path).delete()
   }
 }

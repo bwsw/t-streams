@@ -19,21 +19,16 @@
 
 package com.bwsw.tstreamstransactionserver.util
 
-import com.bwsw.tstreamstransactionserver.netty.server.TransactionServer
-import com.bwsw.tstreamstransactionserver.netty.server.singleNode.commitLogService.CommitLogService
-import com.bwsw.tstreamstransactionserver.netty.server.storage.Storage
-import com.bwsw.tstreamstransactionserver.netty.server.transactionDataService.TransactionDataService
-import com.bwsw.tstreamstransactionserver.options.SingleNodeServerOptions
+import com.bwsw.tstreamstransactionserver.netty.client.api.TTSClient
+import com.bwsw.tstreamstransactionserver.netty.server.singleNode.{SingleNodeServerBuilder, SingleNodeTestingServer}
 
 import scala.util.{Failure, Try}
 
-final class TransactionServerBundle(val transactionServer: TransactionServer,
-                                    val singleNodeCommitLogService: CommitLogService,
-                                    storage: Storage,
-                                    transactionDataService: TransactionDataService,
-                                    val storageOptions: SingleNodeServerOptions.StorageOptions,
-                                    rocksOptions: SingleNodeServerOptions.RocksStorageOptions) {
-  def operate(operation: TransactionServer => Unit): Unit = {
+class SingleNodeServerWithClients(val transactionServer: SingleNodeTestingServer,
+                                  val clients: Seq[TTSClient],
+                                  val serverBuilder: SingleNodeServerBuilder) {
+
+  def operate(operation: SingleNodeTestingServer => Unit): Unit = {
     val tried = Try(operation(transactionServer))
     closeDbsAndDeleteDirectories()
 
@@ -44,8 +39,10 @@ final class TransactionServerBundle(val transactionServer: TransactionServer,
   }
 
   def closeDbsAndDeleteDirectories(): Unit = {
-    storage.getStorageManager.closeDatabases()
-    transactionDataService.closeTransactionDataDatabases()
+    transactionServer.shutdown()
+    clients.foreach(client => client.shutdown())
+
+    val storageOptions = serverBuilder.getStorageOptions
     Utils.deleteDirectories(storageOptions)
   }
 }

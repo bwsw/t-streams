@@ -40,7 +40,6 @@ import io.netty.channel.nio.NioEventLoopGroup
 import org.apache.curator.retry.RetryForever
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 
-import scala.collection.mutable
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future, Promise}
@@ -661,7 +660,7 @@ class ServerClientInterconnectionTest
       def getDataLength(streamID: Int, partition: Int) = dataCounter.get((streamID, partition)).intValue()
 
 
-      val res: Future[mutable.ArraySeq[Boolean]] = Future.sequence(clients map { client =>
+      val response: Future[Seq[Boolean]] = Future.sequence(clients map { client =>
         val streamFake = getRandomStream
         client.putStream(streamFake).flatMap { streamID =>
           val producerTransactions = Array.fill(100)(getRandomProducerTransaction(streamID, streamFake))
@@ -677,7 +676,7 @@ class ServerClientInterconnectionTest
         }
       })
 
-      all(Await.result(res, (secondsWait * clientsNum).seconds)) shouldBe true
+      all(Await.result(response, (secondsWait * clientsNum).seconds)) shouldBe true
       clients.foreach(_.shutdown())
     }
   }

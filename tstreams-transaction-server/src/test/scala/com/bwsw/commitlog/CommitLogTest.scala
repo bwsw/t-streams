@@ -22,6 +22,7 @@ package com.bwsw.commitlog
 import java.io.{File, IOException}
 import java.nio.file._
 import java.nio.file.attribute.BasicFileAttributes
+import java.util.concurrent.TimeUnit
 
 import com.bwsw.commitlog.CommitLogFlushPolicy.{OnCountInterval, OnRotation, OnTimeInterval}
 import org.scalatest.prop.TableDrivenPropertyChecks
@@ -41,126 +42,147 @@ class CommitLogTest
   private val recordSize = Integer.BYTES + CommitLogRecord.headerSize + record.length
   private val token = 54231651
   private val fileIDGen = CommitLogUtils.createIDGenerator
+  private val writeFileInterval: Long = 50
 
   override def beforeAll(): Unit = new File(directory).mkdirs()
 
   "CommitLog" should "write correctly (OnRotation policy)" in {
-    val cl = new CommitLog(1, directory, OnRotation, fileIDGen)
-    val f1 = cl.putRec(record, 0, token)
-    val fileF1 = new File(f1)
-    fileF1.exists() shouldBe true
-    fileF1.length() shouldBe 0
-    Thread.sleep(1100)
+    val flushIntervalSeconds = 1
 
-    val f21 = cl.putRec(record, 0, token)
-    fileF1.length() shouldBe recordSize * 1
-    val fileF21 = new File(f21)
-    fileF21.exists() shouldBe true
-    fileF21.length() shouldBe recordSize * 0
-    val f22 = cl.putRec(record, 0, token)
-    fileF21.length() shouldBe recordSize * 0
+    // interval to wait until commitLog wrote data into a file and open next file
+    val waitingInterval = TimeUnit.SECONDS.toMillis(flushIntervalSeconds) + writeFileInterval
 
-    val f3 = cl.putRec(record, 0, token, startNew = true)
-    fileF21.length() shouldBe recordSize * 2
-    val fileF3 = new File(f3)
-    fileF3.exists() shouldBe true
-    fileF3.length() shouldBe recordSize * 0
-    cl.close()
-    fileF3.length() shouldBe recordSize * 1
+    val commitLog = new CommitLog(flushIntervalSeconds, directory, OnRotation, fileIDGen)
+    val fileName1 = commitLog.putRec(record, 0, token)
+    val file1 = new File(fileName1)
+    file1.exists() shouldBe true
+    file1.length() shouldBe 0
+    Thread.sleep(waitingInterval)
 
-    f1 == f21 shouldBe false
-    f21 shouldBe f22
-    f21 == f3 shouldBe false
-    f1 == f3 shouldBe false
+    val fileName2_1 = commitLog.putRec(record, 0, token)
+    file1.length() shouldBe recordSize
+    val file2_1 = new File(fileName2_1)
+    file2_1.exists() shouldBe true
+    file2_1.length() shouldBe 0
+    val fileName2_2 = commitLog.putRec(record, 0, token)
+    file2_1.length() shouldBe 0
+
+    val fileName3 = commitLog.putRec(record, 0, token, startNew = true)
+    file2_1.length() shouldBe recordSize * 2
+    val file3 = new File(fileName3)
+    file3.exists() shouldBe true
+    file3.length() shouldBe 0
+    commitLog.close()
+    file3.length() shouldBe recordSize
+
+    fileName1 shouldNot be(fileName2_1)
+    fileName2_1 shouldBe fileName2_2
+    fileName2_1 shouldNot be(fileName3)
+    fileName1 shouldNot be(fileName3)
   }
 
-  it should "write correctly (OnTimeInterval policy) when startNewFileSeconds > policy seconds" in {
-    val cl = new CommitLog(4, directory, OnTimeInterval(2), fileIDGen)
-    val f11 = cl.putRec(record, 0, token)
-    val fileF1 = new File(f11)
-    fileF1.exists() shouldBe true
-    fileF1.length() shouldBe recordSize * 0
-    Thread.sleep(2100)
-    fileF1.length() shouldBe recordSize * 0
-    val f12 = cl.putRec(record, 0, token)
-    fileF1.length() shouldBe recordSize * 1
-    Thread.sleep(2100)
-    fileF1.length() shouldBe recordSize * 1
+  it should "write correctly (OnTimeInterval policy) when startNewFileSeconds > policy flushIntervalSeconds" in {
+    val flushPolicyInterval = 1
+    val flushIntervalSeconds = flushPolicyInterval * 2
 
-    val f2 = cl.putRec(record, 0, token)
-    fileF1.length() shouldBe recordSize * 2
-    val fileF2 = new File(f2)
-    fileF2.exists() shouldBe true
-    fileF2.length() shouldBe recordSize * 0
-    cl.close()
-    fileF2.length() shouldBe recordSize * 1
-    val f3 = cl.putRec(record, 0, token)
-    fileF2.length() shouldBe recordSize * 1
-    val fileF3 = new File(f3)
-    fileF3.exists() shouldBe true
-    fileF3.length() shouldBe recordSize * 0
-    Thread.sleep(2100)
-    fileF3.length() shouldBe recordSize * 0
-    Thread.sleep(2100)
-    val f4 = cl.putRec(record, 0, token)
-    fileF3.length() shouldBe recordSize * 1
-    val fileF4 = new File(f4)
-    fileF4.exists() shouldBe true
-    fileF4.length() shouldBe recordSize * 0
-    val f5 = cl.putRec(record, 0, token, startNew = true)
-    fileF4.length() shouldBe recordSize * 1
-    val fileF5 = new File(f5)
-    fileF5.exists() shouldBe true
-    fileF5.length() shouldBe recordSize * 0
-    cl.close()
-    fileF5.length() shouldBe recordSize * 1
+    // interval to wait until commitLog wrote data into a file and open next file
+    val waitingInterval = TimeUnit.SECONDS.toMillis(flushPolicyInterval) + writeFileInterval
+    val commitLog = new CommitLog(flushIntervalSeconds, directory, OnTimeInterval(flushPolicyInterval), fileIDGen)
+    val fileName1_1 = commitLog.putRec(record, 0, token)
+    val file1 = new File(fileName1_1)
+    file1.exists() shouldBe true
+    file1.length() shouldBe 0
+    Thread.sleep(waitingInterval)
+    file1.length() shouldBe 0
+    val fileName1_2 = commitLog.putRec(record, 0, token)
+    file1.length() shouldBe recordSize
+    Thread.sleep(waitingInterval)
+    file1.length() shouldBe recordSize
 
-    f11 shouldBe f12
-    f11 == f2 shouldBe false
-    f2 == f3 shouldBe false
-    f3 == f4 shouldBe false
-    f4 == f5 shouldBe false
+    val fileName2 = commitLog.putRec(record, 0, token)
+    file1.length() shouldBe recordSize * 2
+    val file2 = new File(fileName2)
+    file2.exists() shouldBe true
+    file2.length() shouldBe 0
+    commitLog.close()
+    file2.length() shouldBe recordSize
+    val fileName3 = commitLog.putRec(record, 0, token)
+    file2.length() shouldBe recordSize
+    val file3 = new File(fileName3)
+    file3.exists() shouldBe true
+    file3.length() shouldBe 0
+    Thread.sleep(waitingInterval)
+    file3.length() shouldBe 0
+    Thread.sleep(waitingInterval)
+    val fileName4 = commitLog.putRec(record, 0, token)
+    file3.length() shouldBe recordSize
+    val file4 = new File(fileName4)
+    file4.exists() shouldBe true
+    file4.length() shouldBe 0
+    val fileName5 = commitLog.putRec(record, 0, token, startNew = true)
+    file4.length() shouldBe recordSize
+    val file5 = new File(fileName5)
+    file5.exists() shouldBe true
+    file5.length() shouldBe 0
+    commitLog.close()
+    file5.length() shouldBe recordSize
+
+    fileName1_1 shouldBe fileName1_2
+    fileName1_1 shouldNot be(fileName2)
+    fileName2 shouldNot be(fileName3)
+    fileName3 shouldNot be(fileName4)
+    fileName4 shouldNot be(fileName5)
   }
 
-  it should "write correctly (OnTimeInterval policy) when startNewFileSeconds < policy seconds" in {
-    val cl = new CommitLog(2, directory, OnTimeInterval(4), fileIDGen)
-    val f11 = cl.putRec(record, 0, token)
-    val fileF1 = new File(f11)
-    fileF1.exists() shouldBe true
-    fileF1.length() shouldBe recordSize * 0
-    Thread.sleep(2100)
-    val f2 = cl.putRec(record, 0, token)
-    fileF1.length() shouldBe recordSize * 1
-    f11 == f2 shouldBe false
-    val fileF2 = new File(f2)
-    fileF2.exists() shouldBe true
-    fileF2.length() shouldBe recordSize * 0
-    cl.close()
-    fileF2.length() shouldBe recordSize * 1
+  it should "write correctly (OnTimeInterval policy) when startNewFileSeconds < policy flushIntervalSeconds" in {
+    val flushIntervalSeconds = 1
+    val flushPolicyInterval = flushIntervalSeconds * 2
+
+    // interval to wait until commitLog wrote data into a file and open next file
+    val waitingInterval = TimeUnit.SECONDS.toMillis(flushIntervalSeconds) + writeFileInterval
+
+    val commitLog = new CommitLog(flushIntervalSeconds, directory, OnTimeInterval(flushPolicyInterval), fileIDGen)
+    val fileName1_1 = commitLog.putRec(record, 0, token)
+    val file1 = new File(fileName1_1)
+    file1.exists() shouldBe true
+    file1.length() shouldBe 0
+    Thread.sleep(waitingInterval)
+    val fileName2 = commitLog.putRec(record, 0, token)
+    file1.length() shouldBe recordSize
+    fileName1_1 shouldNot be(fileName2)
+    val file2 = new File(fileName2)
+    file2.exists() shouldBe true
+    file2.length() shouldBe 0
+    commitLog.close()
+    file2.length() shouldBe recordSize
   }
 
   it should "write correctly (OnCountInterval policy)" in {
-    val cl = new CommitLog(2, directory, OnCountInterval(2), fileIDGen)
-    val f11 = cl.putRec(record, 0, token)
-    val f12 = cl.putRec(record, 0, token)
-    f11 shouldBe f12
-    val fileF1 = new File(f11)
-    fileF1.exists() shouldBe true
-    fileF1.length() shouldBe 0
-    val f13 = cl.putRec(record, 0, token)
-    f11 shouldBe f13
-    fileF1.exists() shouldBe true
-    fileF1.length() shouldBe recordSize * 2
-    Thread.sleep(2100)
-    fileF1.length() shouldBe recordSize * 2
-    val f2 = cl.putRec(record, 0, token)
-    fileF1.length() shouldBe recordSize * 3
-    f11 == f2 shouldBe false
-    val fileF2 = new File(f2)
-    fileF2.exists() shouldBe true
-    fileF2.length() shouldBe recordSize * 0
-    cl.close()
-    fileF2.length() shouldBe recordSize * 1
+    val flushIntervalSeconds = 1
+
+    // interval to wait until commitLog wrote data into a file and open next file
+    val waitingInterval = TimeUnit.SECONDS.toMillis(flushIntervalSeconds) + writeFileInterval
+    val commitLog = new CommitLog(flushIntervalSeconds, directory, OnCountInterval(2), fileIDGen)
+    val fileName1_1 = commitLog.putRec(record, 0, token)
+    val fileName1_2 = commitLog.putRec(record, 0, token)
+    fileName1_1 shouldBe fileName1_2
+    val file1 = new File(fileName1_1)
+    file1.exists() shouldBe true
+    file1.length() shouldBe 0
+    val fileName1_3 = commitLog.putRec(record, 0, token)
+    fileName1_1 shouldBe fileName1_3
+    file1.exists() shouldBe true
+    file1.length() shouldBe recordSize * 2
+    Thread.sleep(waitingInterval)
+    file1.length() shouldBe recordSize * 2
+    val fileName2 = commitLog.putRec(record, 0, token)
+    file1.length() shouldBe recordSize * 3
+    fileName1_1 shouldNot be(fileName2)
+    val file2 = new File(fileName2)
+    file2.exists() shouldBe true
+    file2.length() shouldBe 0
+    commitLog.close()
+    file2.length() shouldBe recordSize
   }
 
   it should "convert Int to Array[Byte] correctly" in {

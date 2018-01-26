@@ -19,26 +19,19 @@
 
 package com.bwsw.tstreamstransactionserver.util.multiNode
 
-import com.bwsw.tstreamstransactionserver.netty.server.multiNode.commitLogService.CommitLogService
-import com.bwsw.tstreamstransactionserver.netty.server.storage.Storage
-import com.bwsw.tstreamstransactionserver.netty.server.transactionDataService.TransactionDataService
-import com.bwsw.tstreamstransactionserver.netty.server.{RocksReader, RocksWriter, TransactionServer}
-import com.bwsw.tstreamstransactionserver.options.SingleNodeServerOptions
+import com.bwsw.tstreamstransactionserver.netty.client.api.TTSInetClient
+import com.bwsw.tstreamstransactionserver.netty.server.multiNode.{CommonCheckpointGroupServerBuilder, CommonCheckpointGroupTestingServer}
 import com.bwsw.tstreamstransactionserver.util.Utils
 
 import scala.util.{Failure, Try}
 
-class MultiNodeBundle(val transactionServer: TransactionServer,
-                      val rocksWriter: RocksWriter,
-                      val rocksReader: RocksReader,
-                      val multiNodeCommitLogService: CommitLogService,
-                      storage: Storage,
-                      transactionDataService: TransactionDataService,
-                      val storageOptions: SingleNodeServerOptions.StorageOptions,
-                      rocksOptions: SingleNodeServerOptions.RocksStorageOptions) {
-  def operate(operation: TransactionServer => Unit): Unit = {
+class CommonCheckpointGroupServerWithClient(val transactionServer: CommonCheckpointGroupTestingServer,
+                                            val client: TTSInetClient,
+                                            val serverBuilder: CommonCheckpointGroupServerBuilder) {
+  def operate(operation: CommonCheckpointGroupTestingServer => Unit): Unit = {
     val tried = Try(operation(transactionServer))
     closeDbsAndDeleteDirectories()
+
     tried match {
       case Failure(throwable) => throw throwable
       case _ =>
@@ -46,8 +39,10 @@ class MultiNodeBundle(val transactionServer: TransactionServer,
   }
 
   def closeDbsAndDeleteDirectories(): Unit = {
-    storage.getStorageManager.closeDatabases()
-    transactionDataService.closeTransactionDataDatabases()
+    transactionServer.shutdown()
+    client.shutdown()
+
+    val storageOptions = serverBuilder.getStorageOptions
     Utils.deleteDirectories(storageOptions)
   }
 }

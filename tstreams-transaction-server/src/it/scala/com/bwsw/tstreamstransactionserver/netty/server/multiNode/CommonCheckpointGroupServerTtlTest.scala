@@ -25,7 +25,7 @@ import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeeperServi
 import com.bwsw.tstreamstransactionserver.options.MultiNodeServerOptions.BookkeeperOptions
 import com.bwsw.tstreamstransactionserver.options.SingleNodeServerOptions.StorageOptions
 import com.bwsw.tstreamstransactionserver.util.Utils
-import com.bwsw.tstreamstransactionserver.util.multiNode.{MultiNudeUtils, ZkServerTxnMultiNodeServerTxnClient}
+import com.bwsw.tstreamstransactionserver.util.multiNode.{CommonCheckpointGroupServerWithClient, MultiNodeUtils}
 import org.apache.bookkeeper.meta.LedgerManagerFactory
 import org.apache.bookkeeper.zookeeper.ZooKeeperClient
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
@@ -84,8 +84,8 @@ class CommonCheckpointGroupServerTtlTest
   }
 
   "Expired ledgers" should "be deleted according to settings if a server works in a stable way" in {
-    val bundle: ZkServerTxnMultiNodeServerTxnClient = MultiNudeUtils.getCommonCheckpointGroupServerBundle(
-      zkClient, bookkeeperOptions, serverBuilder, clientBuilder, toMs(maxIdleTimeBetweenRecords)
+    val bundle: CommonCheckpointGroupServerWithClient = MultiNodeUtils.getCommonCheckpointGroupServerBundle(
+      zkClient, bookkeeperOptions, serverBuilder, clientBuilder, toMillis(maxIdleTimeBetweenRecords)
     )
     val cgPath = bundle.serverBuilder.getCommonPrefixesOptions.checkpointGroupPrefixesOptions.checkpointGroupZkTreeListPrefix
     val cgTree = new LongZookeeperTreeList(zkClient, cgPath)
@@ -95,15 +95,15 @@ class CommonCheckpointGroupServerTtlTest
 
     val trees = Set(cgTree, commonTree)
 
-    bundle.operate(x => {
-      Thread.sleep(toMs(dataCompactionInterval) + waitMs)
+    bundle.operate(_ => {
+      Thread.sleep(toMillis(dataCompactionInterval) + waitMs)
 
       val createdLedgers = (dataCompactionInterval / maxIdleTimeBetweenRecords) * treeFactor
       ledgersExistInBookKeeper(createdLedgers) shouldBe true //because we use CommonCheckpointGroupServer
       // that has two zk trees so creates two times more ledgers
       ledgersExistInZkTree(trees, createdLedgers) shouldBe true
 
-      Thread.sleep(toMs(ttl) + waitMs)
+      Thread.sleep(toMillis(ttl) + waitMs)
 
       ledgersExistInBookKeeper((ttl / maxIdleTimeBetweenRecords) * treeFactor + createdLedgers) shouldBe false
       ledgersExistInZkTree(trees, (ttl / maxIdleTimeBetweenRecords) * treeFactor + createdLedgers) shouldBe false
@@ -142,6 +142,6 @@ class CommonCheckpointGroupServerTtlTest
     }
   }
 
-  private def toMs(seconds: Int): Int = TimeUnit.SECONDS.toMillis(seconds).toInt
-}
 
+  private def toMillis(seconds: Int): Int = TimeUnit.SECONDS.toMillis(seconds).toInt
+}

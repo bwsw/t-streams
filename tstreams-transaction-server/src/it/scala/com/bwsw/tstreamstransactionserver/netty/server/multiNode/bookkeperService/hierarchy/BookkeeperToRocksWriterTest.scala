@@ -29,9 +29,9 @@ import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeeperServi
 import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeeperService.hierarchy.{BookkeeperToRocksWriter, LongNodeCache, LongZookeeperTreeList, ZkMultipleTreeListReader}
 import com.bwsw.tstreamstransactionserver.rpc.TransactionStates.{Checkpointed, Opened}
 import com.bwsw.tstreamstransactionserver.rpc._
+import com.bwsw.tstreamstransactionserver.util.Utils
 import com.bwsw.tstreamstransactionserver.util.Utils.uuid
-import com.bwsw.tstreamstransactionserver.util.multiNode.MultiNudeUtils
-import com.bwsw.tstreamstransactionserver.util.{Utils, multiNode}
+import com.bwsw.tstreamstransactionserver.util.multiNode.MultiNodeUtils
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 
 import scala.collection.mutable
@@ -45,6 +45,7 @@ class BookkeeperToRocksWriterTest
   private val streamIDGen = new java.util.concurrent.atomic.AtomicInteger(0)
   private val partitionsNumber = 100
   private val token = 846487864
+  private val transactionTtl: Long = 50000
 
   private def generateStream =
     Stream(
@@ -184,7 +185,7 @@ class BookkeeperToRocksWriterTest
         stream.id,
         partition,
         Opened,
-        50000L
+        transactionTtl
       )
 
     val firstTimestamp =
@@ -200,7 +201,7 @@ class BookkeeperToRocksWriterTest
         stream.id,
         partition,
         Checkpointed,
-        50000L
+        transactionTtl
       )
 
     val secondTimestamp =
@@ -265,7 +266,7 @@ class BookkeeperToRocksWriterTest
       storage
     )
 
-    val bundle = MultiNudeUtils.getTransactionServerBundle(zkClient)
+    val bundle = MultiNodeUtils.getTransactionServerBundle(zkClient)
 
     bundle.operate { transactionServer =>
 
@@ -326,7 +327,7 @@ class BookkeeperToRocksWriterTest
         stream.id,
         partition,
         Opened,
-        50000L,
+        transactionTtl,
         token
       )
 
@@ -344,7 +345,7 @@ class BookkeeperToRocksWriterTest
         stream.id,
         partition,
         Checkpointed,
-        50000L,
+        transactionTtl,
         token
       )
 
@@ -406,7 +407,7 @@ class BookkeeperToRocksWriterTest
       storage
     )
 
-    val bundle = MultiNudeUtils.getTransactionServerBundle(zkClient)
+    val bundle = MultiNodeUtils.getTransactionServerBundle(zkClient)
 
     bundle.operate { transactionServer =>
 
@@ -553,7 +554,7 @@ class BookkeeperToRocksWriterTest
       lastClosedLedgerHandlers,
       storage
     )
-    val bundle = MultiNudeUtils.getTransactionServerBundle(zkClient)
+    val bundle = MultiNodeUtils.getTransactionServerBundle(zkClient)
 
     bundle.operate { transactionServer =>
 

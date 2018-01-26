@@ -21,7 +21,7 @@ package com.bwsw.tstreams.testutils
 
 import java.util.concurrent.CountDownLatch
 
-import com.bwsw.tstreamstransactionserver.netty.server.singleNode.TestSingleNodeServer
+import com.bwsw.tstreamstransactionserver.netty.server.singleNode.SingleNodeTestingServer
 import com.bwsw.tstreamstransactionserver.options.CommonOptions.ZookeeperOptions
 import com.bwsw.tstreamstransactionserver.options.SingleNodeServerOptions._
 
@@ -32,14 +32,14 @@ object TestStorageServer {
 
   private var tempDir: String = TestUtils.getTmpDir()
 
-  def getNewClean(): TestSingleNodeServer = {
+  def getNewClean(): SingleNodeTestingServer = {
     tempDir = TestUtils.getTmpDir()
 
     get()
   }
 
-  def get(): TestSingleNodeServer = {
-    val transactionServer = new TestSingleNodeServer(
+  def get(): SingleNodeTestingServer = {
+    val transactionServer = new SingleNodeTestingServer(
       authenticationOpts = AuthenticationOptions(key = TestUtils.AUTH_KEY),
       zookeeperOpts = ZookeeperOptions(endpoints = s"127.0.0.1:${TestUtils.ZOOKEEPER_PORT}"),
       serverOpts = BootstrapOptions(),
@@ -57,6 +57,6 @@ object TestStorageServer {
     transactionServer
   }
 
-  def dispose(transactionServer: TestSingleNodeServer): Unit =
+  def dispose(transactionServer: SingleNodeTestingServer): Unit =
     transactionServer.shutdown()
 }
