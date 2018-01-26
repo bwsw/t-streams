@@ -26,7 +26,7 @@ import com.bwsw.tstreams.agents.consumer.{Consumer, ConsumerTransaction, Transac
 import com.bwsw.tstreams.common.FirstFailLockableTaskExecutor
 import com.bwsw.tstreams.storage.StorageClient
 import com.bwsw.tstreams.streams.Stream
-import com.bwsw.tstreams.testutils.IncreasingGenerator
+import com.bwsw.tstreams.IncreasingGenerator
 import com.bwsw.tstreamstransactionserver.rpc.{TransactionState, TransactionStates}
 import org.mockito.Mockito
 import org.scalatest.mockito.MockitoSugar

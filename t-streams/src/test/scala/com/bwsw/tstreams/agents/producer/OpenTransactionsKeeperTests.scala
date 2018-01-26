@@ -21,7 +21,7 @@ package com.bwsw.tstreams.agents.producer
 
 
 import com.bwsw.tstreams.agents.group.ProducerTransactionState
-import com.bwsw.tstreams.testutils.IncreasingGenerator
+import com.bwsw.tstreams.IncreasingGenerator
 import com.bwsw.tstreamstransactionserver.rpc
 import com.bwsw.tstreamstransactionserver.rpc.TransactionStates
 import org.scalatest.{FlatSpec, Matchers}

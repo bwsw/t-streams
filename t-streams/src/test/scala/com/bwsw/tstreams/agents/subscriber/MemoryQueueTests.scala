@@ -22,7 +22,7 @@ package com.bwsw.tstreams.agents.subscriber
 import java.util.concurrent.TimeUnit
 
 import com.bwsw.tstreams.common.MemoryQueue
-import com.bwsw.tstreams.testutils.IncreasingGenerator
+import com.bwsw.tstreams.IncreasingGenerator
 import com.bwsw.tstreamstransactionserver.rpc.{TransactionState, TransactionStates}
 import org.scalatest.{FlatSpec, Matchers}
 

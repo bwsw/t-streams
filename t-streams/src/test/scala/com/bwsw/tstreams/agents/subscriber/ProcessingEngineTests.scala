@@ -22,7 +22,7 @@ package com.bwsw.tstreams.agents.subscriber
 import com.bwsw.tstreams.agents.consumer.subscriber.{Callback, ProcessingEngine, QueueBuilder}
 import com.bwsw.tstreams.agents.consumer.{Consumer, ConsumerTransaction, TransactionOperator}
 import com.bwsw.tstreams.storage.StorageClient
-import com.bwsw.tstreams.testutils.IncreasingGenerator
+import com.bwsw.tstreams.IncreasingGenerator
 import com.bwsw.tstreamstransactionserver.rpc.TransactionStates
 import com.bwsw.tstreams.streams.Stream
 import org.mockito.Mockito
