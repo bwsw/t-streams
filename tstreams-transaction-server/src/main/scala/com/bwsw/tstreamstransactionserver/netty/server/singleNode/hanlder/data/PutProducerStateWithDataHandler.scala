@@ -89,7 +89,7 @@ class PutProducerStateWithDataHandler(server: TransactionServer,
     )
 
     scheduledCommitLog.putData(
-      Frame.PutTransactionType.id.toByte,
+      Frame.PutTransactionType,
       binaryTransaction
     )
   }

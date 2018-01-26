@@ -21,8 +21,8 @@ package com.bwsw.tstreamstransactionserver.netty.server.multiNode.handler.consum
 
 import com.bwsw.tstreamstransactionserver.netty.{Protocol, RequestMessage}
 import com.bwsw.tstreamstransactionserver.netty.server.batch.Frame
-import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeperService.BookkeeperMaster
-import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeperService.data.Record
+import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeeperService.BookkeeperMaster
+import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeeperService.data.Record
 import com.bwsw.tstreamstransactionserver.netty.server.multiNode.handler.MultiNodePredefinedContextHandler
 import com.bwsw.tstreamstransactionserver.netty.server.multiNode.handler.consumer.PutConsumerCheckpointHandler._
 import com.bwsw.tstreamstransactionserver.rpc.{ServerException, TransactionService}
@@ -80,7 +80,7 @@ class PutConsumerCheckpointHandler(bookkeeperMaster: BookkeeperMaster,
 
             case Right(ledgerHandler) =>
               val record = new Record(
-                Frame.PutConsumerCheckpointType.id.toByte,
+                Frame.PutConsumerCheckpointType,
                 System.currentTimeMillis(),
                 message.body
               ).toByteArray

@@ -201,7 +201,7 @@ service TransactionService {
 
   transactionIDType getConsumerState(1: string name, 2: StreamIDType streamID, 3: PartitionType partition) throws (1:ServerException error),
 
-  tokenType authenticate(1: string authKey),
+  tokenType authenticate(1: string authKey) throws (1:ServerException error),
 
   bool isValid(1: tokenType token),
 
@@ -209,5 +209,5 @@ service TransactionService {
 
   string getZKCheckpointGroupServerPrefix(),
 
-  bool keepAlive()
+  bool keepAlive() throws (1:ServerException error)
 }

@@ -35,7 +35,7 @@ object TStreamsFactoryStorageClientDefaults {
     val requestTimeoutMs = IntMinMaxDefault(100, 5000, 5000)
     val requestTimeoutRetryCount = IntMinMaxDefault(1, 20, 5)
     val retryDelayMs = IntMinMaxDefault(50, 5000, 1000)
-    val keepAliveIntervalMs = IntMinMaxDefault(100, 10000, 1000)
+    val keepAliveIntervalMs = IntMinMaxDefault(100, 10000, 5000)
     val keepAliveThreshold = IntMinMaxDefault(1, 10, 3)
     val tracingEnabled = false
     val tracingAddress = "localhost:9411"
@@ -43,7 +43,7 @@ object TStreamsFactoryStorageClientDefaults {
 
   }
 
-  def get = {
+  def get: mutable.Map[String, Any] = {
     val m = mutable.HashMap[String, Any]()
     val co = ConfigurationOptions.StorageClient
 

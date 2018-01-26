@@ -18,6 +18,7 @@
  */
 package com.bwsw.tstreamstransactionserver.netty.server.singleNode
 
+import java.nio.file.Paths
 import java.util
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.{Executors, PriorityBlockingQueue, TimeUnit}
@@ -65,7 +66,7 @@ class SingleNodeServer(authenticationOpts: AuthenticationOptions,
   ServerTracer.init(tracingOptions, "TTS-S")
 
   private val transactionServerSocketAddress =
-    Util.createTransactionServerExternalSocket(
+    Utils.createTransactionServerExternalSocket(
       serverOpts.bindHost,
       serverOpts.bindPort
     )
@@ -115,16 +116,19 @@ class SingleNodeServer(authenticationOpts: AuthenticationOptions,
       storage.getStorageManager
     )
 
+  private val path = Paths.get(storageOpts.path, storageOpts.commitLogRocksDirectory).toString
   private val rocksDBCommitLog = new RocksDbConnection(
     rocksStorageOpts,
-    s"${storageOpts.path}${java.io.File.separatorChar}${storageOpts.commitLogRocksDirectory}",
+    path,
+    storageOpts.dataCompactionInterval,
     commitLogOptions.expungeDelaySec
   )
 
   private val commitLogQueue = {
+    val path = Paths.get(storageOpts.path, storageOpts.commitLogRawDirectory).toString
     val queue = new CommitLogQueueBootstrap(
       30,
-      new CommitLogCatalogue(storageOpts.path + java.io.File.separatorChar + storageOpts.commitLogRawDirectory),
+      new CommitLogCatalogue(path),
       oneNodeCommitLogService
     )
     val priorityQueue = queue.fillQueue()
@@ -168,7 +172,7 @@ class SingleNodeServer(authenticationOpts: AuthenticationOptions,
     bossGroup: EventLoopGroup,
     workerGroup: EventLoopGroup,
     channelType: Class[ServerSocketChannel]
-    ) = Util.getBossGroupAndWorkerGroupAndChannel
+    ) = Utils.getBossGroupAndWorkerGroupAndChannel
 
   private val orderedExecutionPool =
     new OrderedExecutionContextPool(serverOpts.openOperationsPoolSize)

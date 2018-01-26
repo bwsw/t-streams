@@ -116,7 +116,7 @@ class PutSimpleTransactionAndDataHandler(server: TransactionServer,
       )
 
     scheduledCommitLog.putData(
-      Frame.PutTransactionsType.id.toByte,
+      Frame.PutTransactionsType,
       messageForPutTransactions
     )
   }

@@ -20,7 +20,7 @@
 package com.bwsw.tstreamstransactionserver.netty.server.multiNode
 
 import com.bwsw.tstreamstransactionserver.configProperties.ServerExecutionContextGrids
-import com.bwsw.tstreamstransactionserver.netty.server.authService.AuthService
+import com.bwsw.tstreamstransactionserver.netty.server.authService.{AuthService, BookKeeperTokenWriter}
 import com.bwsw.tstreamstransactionserver.netty.server.handler.RequestRouter._
 import com.bwsw.tstreamstransactionserver.netty.server.handler.auth.{AuthenticateHandler, IsValidHandler, KeepAliveHandler}
 import com.bwsw.tstreamstransactionserver.netty.server.handler.consumer.GetConsumerStateHandler
@@ -29,9 +29,9 @@ import com.bwsw.tstreamstransactionserver.netty.server.handler.metadata._
 import com.bwsw.tstreamstransactionserver.netty.server.handler.stream.{CheckStreamExistsHandler, DelStreamHandler, GetStreamHandler, PutStreamHandler}
 import com.bwsw.tstreamstransactionserver.netty.server.handler.transport.{GetMaxPackagesSizesHandler, GetZKCheckpointGroupServerPrefixHandler}
 import com.bwsw.tstreamstransactionserver.netty.server.handler.{RequestHandler, RequestRouter}
-import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeperService.{BookkeeperMaster, BookkeeperWriter}
+import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeeperService.{BookkeeperMaster, BookkeeperWriter}
 import com.bwsw.tstreamstransactionserver.netty.server.multiNode.commitLogService.CommitLogService
-import com.bwsw.tstreamstransactionserver.netty.server.multiNode.handler.Util._
+import com.bwsw.tstreamstransactionserver.netty.server.multiNode.handler.Utils._
 import com.bwsw.tstreamstransactionserver.netty.server.multiNode.handler.commitLog.GetCommitLogOffsetsHandler
 import com.bwsw.tstreamstransactionserver.netty.server.multiNode.handler.consumer.PutConsumerCheckpointHandler
 import com.bwsw.tstreamstransactionserver.netty.server.multiNode.handler.data.{PutProducerStateWithDataHandler, PutSimpleTransactionAndDataHandler, PutTransactionDataHandler}
@@ -59,16 +59,13 @@ class CommonCheckpointGroupHandlerRouter(server: TransactionServer,
                                          commitLogContext: ExecutionContext)
   extends RequestRouter {
 
-  private implicit val authService: AuthService =
-    new AuthService(authOptions)
+  private val tokenWriter = new BookKeeperTokenWriter(checkpointMaster, commitLogContext)
+  private implicit val authService: AuthService = new AuthService(authOptions, tokenWriter)
 
-  private implicit val transportValidator: TransportValidator =
-    new TransportValidator(packageTransmissionOpts)
+  private implicit val transportValidator: TransportValidator = new TransportValidator(packageTransmissionOpts)
 
-  private val serverWriteContext: ExecutionContext =
-    executionContext.serverWriteContext
-  private val serverReadContext: ExecutionContext =
-    executionContext.serverReadContext
+  private val serverWriteContext: ExecutionContext = executionContext.serverWriteContext
+  private val serverReadContext: ExecutionContext = executionContext.serverReadContext
 
 
   override protected val handlers: Map[Byte, RequestHandler] = Seq(

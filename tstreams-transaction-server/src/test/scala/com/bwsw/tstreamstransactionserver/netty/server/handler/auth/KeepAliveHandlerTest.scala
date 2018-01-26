@@ -21,7 +21,7 @@ package com.bwsw.tstreamstransactionserver.netty.server.handler.auth
 
 import java.util.concurrent.{CountDownLatch, TimeUnit}
 
-import com.bwsw.tstreamstransactionserver.netty.server.authService.AuthService
+import com.bwsw.tstreamstransactionserver.netty.server.authService.{AuthService, TokenWriter}
 import com.bwsw.tstreamstransactionserver.netty.{Protocol, ResponseMessage}
 import com.bwsw.tstreamstransactionserver.options.SingleNodeServerOptions.AuthenticationOptions
 import com.bwsw.tstreamstransactionserver.rpc.TransactionService
@@ -43,7 +43,8 @@ class KeepAliveHandlerTest extends FlatSpec with Matchers with MockitoSugar {
 
   "KeepAliveHandler" should "handle requests properly" in {
     val key = "key"
-    val authService = new AuthService(AuthenticationOptions(key, 100, 10))
+    val tokenWriter = mock[TokenWriter]
+    val authService = new AuthService(AuthenticationOptions(key, 10), tokenWriter)
     val updatingResults = Map(
       authService.authenticate(key).get -> true,
       Random.nextInt() -> false)

@@ -59,7 +59,7 @@ class CommonServer(authenticationOpts: AuthenticationOptions,
   ServerTracer.init(tracingOptions, "TTS-C")
 
   private val transactionServerSocketAddress =
-    Util.createTransactionServerExternalSocket(
+    Utils.createTransactionServerExternalSocket(
       serverOpts.bindHost,
       serverOpts.bindPort
     )
@@ -114,7 +114,8 @@ class CommonServer(authenticationOpts: AuthenticationOptions,
     new CommonBookkeeperWriter(
       zk.client,
       bookkeeperOptions,
-      commonPrefixesOptions
+      commonPrefixesOptions,
+      storageOpts.dataCompactionInterval
     )
 
   private val commonMasterElector =
@@ -145,7 +146,7 @@ class CommonServer(authenticationOpts: AuthenticationOptions,
     bossGroup: EventLoopGroup,
     workerGroup: EventLoopGroup,
     channelType: Class[ServerSocketChannel]
-    ) = Util.getBossGroupAndWorkerGroupAndChannel
+    ) = Utils.getBossGroupAndWorkerGroupAndChannel
 
 
   private val orderedExecutionPool =
@@ -298,6 +299,10 @@ class CommonServer(authenticationOpts: AuthenticationOptions,
 
       if (transactionDataService != null) {
         transactionDataService.closeTransactionDataDatabases()
+      }
+
+      if (bookkeeperToRocksWriter != null) {
+        bookkeeperToRocksWriter.close()
       }
     }
   }

@@ -19,21 +19,25 @@
 
 package com.bwsw.tstreamstransactionserver.netty.server.batch
 
+import java.nio.ByteBuffer
+
 import com.bwsw.tstreamstransactionserver.netty.Protocol
 import com.bwsw.tstreamstransactionserver.netty.server.multiNode.Structure
 import com.bwsw.tstreamstransactionserver.rpc.ProducerTransactionsAndData
 import com.bwsw.tstreamstransactionserver.rpc.TransactionService._
 
-object Frame
-  extends Enumeration {
+object Frame {
 
-  val Timestamp = Value(0)
-  val PutTransactionDataType = Value(1)
-  val PutSimpleTransactionAndDataType = Value(2)
-  val PutProducerStateWithDataType = Value(3)
-  val PutTransactionType = Value(4)
-  val PutTransactionsType = Value(5)
-  val PutConsumerCheckpointType = Value(6)
+  val Timestamp: Byte = 0
+  val PutTransactionDataType: Byte = 1
+  val PutSimpleTransactionAndDataType: Byte = 2
+  val PutProducerStateWithDataType: Byte = 3
+  val PutTransactionType: Byte = 4
+  val PutTransactionsType: Byte = 5
+  val PutConsumerCheckpointType: Byte = 6
+  val TokenCreatedType: Byte = 7
+  val TokenUpdatedType: Byte = 8
+  val TokenExpiredType: Byte = 9
 
 
   def deserializePutTransactionData(message: Array[Byte]): PutTransactionData.Args =
@@ -53,6 +57,11 @@ object Frame
 
   def deserializePutProducerStateWithData(message: Array[Byte]): PutProducerStateWithData.Args =
     Protocol.PutProducerStateWithData.decodeRequest(message)
+
+  def deserializeToken(bytes: Array[Byte]): Int = ByteBuffer.wrap(bytes).getInt
+
+  def serializeToken(token: Int): Array[Byte] =
+    ByteBuffer.allocate(Integer.BYTES).putInt(token).array()
 }
 
 abstract class Frame(val typeId: Byte,
