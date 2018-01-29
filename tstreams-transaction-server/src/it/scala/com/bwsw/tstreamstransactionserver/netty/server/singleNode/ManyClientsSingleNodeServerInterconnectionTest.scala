@@ -287,7 +287,7 @@ class ManyClientsSingleNodeServerInterconnectionTest
     }
   }
 
-  "One client" should "put producer transaction: Opened; the second one: Invalid. The Result is invalid transaction." in {
+  "One client" should "put producer transaction: Opened; the second one: Invalid. The Result is opened transaction." in {
     val bundle = Utils.startTransactionServerAndClient(
       zkClient, serverBuilder, clientBuilder, clientsNum
     )
@@ -326,14 +326,12 @@ class ManyClientsSingleNodeServerInterconnectionTest
       transactionServer.scheduledCommitLog.run()
       transactionServer.commitLogToRocksWriter.run()
 
-      val expected = invalidTransaction.copy(ttl = 0, quantity = 0)
-
       Await.result(
         firstClient.getTransaction(streamID, stream.partitions, producerTransaction1.transactionID),
-        secondsWait.seconds).transaction.get shouldBe expected
+        secondsWait.seconds).transaction.get shouldBe producerTransaction1
       Await.result(
         secondClient.getTransaction(streamID, stream.partitions, producerTransaction1.transactionID),
-        secondsWait.seconds).transaction.get shouldBe expected
+        secondsWait.seconds).transaction.get shouldBe producerTransaction1
     }
   }
 

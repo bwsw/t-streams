@@ -62,9 +62,9 @@ class BigCommitWithFrameParser(bigCommit: BigCommit, openedTransactionsCache: Op
     producerTransactionRecord.state match {
       case TransactionStates.Opened =>
         openedTransactionsCache.add(producerTransactionRecord.transactionID, token)
-      case TransactionStates.Updated =>
-      case _ =>
+      case TransactionStates.Checkpointed | TransactionStates.Cancel =>
         openedTransactionsCache.remove(producerTransactionRecord.transactionID)
+      case _ =>
     }
   }
 
