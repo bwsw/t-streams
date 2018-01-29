@@ -58,7 +58,7 @@ import scala.concurrent.Await
 import scala.concurrent.duration._
 import scala.util.{Failure, Random, Success, Try}
 
-class ClientCommonCheckpointGroupServerTtlInterconnectionTest extends fixture.FlatSpec with Matchers {
+class TransactionLifecycleCommonCheckpointGroupServerTtlTest extends fixture.FlatSpec with Matchers {
 
   private val ensembleNumber = 3
   private val writeQuorumNumber = 3
@@ -68,11 +68,12 @@ class ClientCommonCheckpointGroupServerTtlInterconnectionTest extends fixture.Fl
     * because we use CommonCheckpointGroupServer that has two zk trees so creates two times more ledgers
     */
   private val treeFactor = 2
-  private val waitMs = 200
+  private val gcWaitTimeMs = 200
   private val maxIdleTimeBetweenRecords = 1
   private val dataCompactionInterval = maxIdleTimeBetweenRecords * 4
   private val ttl = dataCompactionInterval * 2
-  private val secondsWait = 5
+  private val secondsWait = ttl / 2
+  private val timeToWaitEntitiesDeletion = ttl + dataCompactionInterval * treeFactor
 
   private val bookkeeperOptions = BookkeeperOptions(
     ensembleNumber,
@@ -93,7 +94,7 @@ class ClientCommonCheckpointGroupServerTtlInterconnectionTest extends fixture.Fl
 
   def withFixture(test: OneArgTest): Outcome = {
     val (zkServer, zkClient, bookieServers) =
-      startZkAndBookieServerWithConfig(bookiesNumber, waitMs)
+      startZkAndBookieServerWithConfig(bookiesNumber, gcWaitTimeMs)
 
     val zk = ZooKeeperClient.newBuilder.connectString(zkClient.getZookeeperClient.getCurrentConnectionString).build
     //doesn't matter which one's conf because zk is a common part
@@ -150,7 +151,7 @@ class ClientCommonCheckpointGroupServerTtlInterconnectionTest extends fixture.Fl
 
       Await.result(client.putProducerStateWithData(openedTransaction, data, 0), secondsWait.seconds)
 
-      latch1.await(maxIdleTimeBetweenRecords * 2, TimeUnit.SECONDS) shouldBe true
+      latch1.await(secondsWait, TimeUnit.SECONDS) shouldBe true
 
       //verify that the first transaction has been opened and has data
       Await.result(
@@ -162,15 +163,15 @@ class ClientCommonCheckpointGroupServerTtlInterconnectionTest extends fixture.Fl
         ), secondsWait.seconds) should contain theSameElementsInOrderAs data
 
       //verify that a compaction job works properly
-      Thread.sleep(toMs(dataCompactionInterval))
+      Thread.sleep(toMs(dataCompactionInterval) + gcWaitTimeMs)
       val createdLedgers = (dataCompactionInterval / maxIdleTimeBetweenRecords) * treeFactor
-      ledgersExistInBookKeeper(fixture.ledgerManager, createdLedgers) shouldBe true
       ledgersExistInZkTree(trees, createdLedgers) shouldBe true
+      ledgersExistInBookKeeper(fixture.ledgerManager, createdLedgers) shouldBe true
 
-      Thread.sleep(toMs(ttl) + waitMs)
-
-      ledgersExistInBookKeeper(fixture.ledgerManager, (ttl / maxIdleTimeBetweenRecords) * treeFactor + createdLedgers) shouldBe false
-      ledgersExistInZkTree(trees, (ttl / maxIdleTimeBetweenRecords) * treeFactor + createdLedgers) shouldBe false
+      Thread.sleep(toMs(timeToWaitEntitiesDeletion) + gcWaitTimeMs)
+      val secondPartOfCreatedLedgers = timeToWaitEntitiesDeletion / maxIdleTimeBetweenRecords * treeFactor
+      ledgersExistInZkTree(trees, secondPartOfCreatedLedgers + createdLedgers) shouldBe false
+      ledgersExistInBookKeeper(fixture.ledgerManager, secondPartOfCreatedLedgers + createdLedgers) shouldBe false
 
       //checkpoint the first transaction
       val checkpointedTransaction = openedTransaction.copy(state = TransactionStates.Checkpointed)
@@ -182,7 +183,7 @@ class ClientCommonCheckpointGroupServerTtlInterconnectionTest extends fixture.Fl
         latch2.countDown()
       )
       Await.result(client.putProducerState(checkpointedTransaction), secondsWait.seconds) shouldBe true
-      latch2.await(maxIdleTimeBetweenRecords * 2, TimeUnit.SECONDS) shouldBe true
+      latch2.await(secondsWait, TimeUnit.SECONDS) shouldBe true
       Await.result(
         client.getTransaction(streamId, partitions, openedTransaction.transactionID
         ), secondsWait.seconds) shouldBe TransactionInfo(exists = true, Some(checkpointedTransaction))
@@ -195,7 +196,7 @@ class ClientCommonCheckpointGroupServerTtlInterconnectionTest extends fixture.Fl
       val simpleTransactionId = Await.result(client.putSimpleTransactionAndData(streamId, partitions, data), secondsWait.seconds)
 
       //verify that the second transaction is checkpointed and has data
-      Thread.sleep(toMs(maxIdleTimeBetweenRecords) * 2)
+      Thread.sleep(toMs(secondsWait))
       Await.result(
         client.getTransaction(streamId, partitions, simpleTransactionId),
         secondsWait.second) should matchPattern {

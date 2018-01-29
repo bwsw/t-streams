@@ -32,7 +32,7 @@ import com.bwsw.tstreamstransactionserver.util.multiNode.ZkServerTxnMultiNodeSer
 import com.bwsw.tstreamstransactionserver.util.multiNode.MultiNodeUtils._
 import scala.util.{Failure, Success, Try}
 
-class CommonCheckpointGroupServerTtlIdleTest extends fixture.FlatSpec with Matchers {
+class IdleCommonCheckpointGroupServerTtlTest extends fixture.FlatSpec with Matchers {
 
   private val ensembleNumber = 3
   private val writeQuorumNumber = 3
@@ -42,11 +42,12 @@ class CommonCheckpointGroupServerTtlIdleTest extends fixture.FlatSpec with Match
     * because we use CommonCheckpointGroupServer that has two zk trees so creates two times more ledgers
     */
   private val treeFactor = 2
-  private val waitMs = 200
+  private val gcWaitTimeMs = 500
   private val entryLogSizeLimit = 1024 * 1024
   private val maxIdleTimeBetweenRecords = 1
-  private val dataCompactionInterval = maxIdleTimeBetweenRecords * 3
+  private val dataCompactionInterval = maxIdleTimeBetweenRecords * 2
   private val ttl = dataCompactionInterval * 2
+  private val timeToWaitEntitiesDeletion = ttl + dataCompactionInterval * treeFactor
 
   private val bookkeeperOptions = BookkeeperOptions(
     ensembleNumber,
@@ -67,7 +68,7 @@ class CommonCheckpointGroupServerTtlIdleTest extends fixture.FlatSpec with Match
 
   def withFixture(test: OneArgTest): Outcome = {
     val (zkServer, zkClient, bookieServers) =
-      startZkAndBookieServerWithConfig(bookiesNumber, waitMs, entryLogSizeLimit)
+      startZkAndBookieServerWithConfig(bookiesNumber, gcWaitTimeMs, entryLogSizeLimit)
 
     val zk = ZooKeeperClient.newBuilder.connectString(zkClient.getZookeeperClient.getCurrentConnectionString).build
     //doesn't matter which one's conf because zk is a common part
@@ -107,17 +108,18 @@ class CommonCheckpointGroupServerTtlIdleTest extends fixture.FlatSpec with Match
     val trees = Set(cgTree, commonTree)
 
     bundle.operate(_ => {
-      Thread.sleep(toMs(dataCompactionInterval) + waitMs)
+      Thread.sleep(toMs(dataCompactionInterval))
 
       val createdLedgers = (dataCompactionInterval / maxIdleTimeBetweenRecords) * treeFactor //because we use CommonCheckpointGroupServer
       // that has two zk trees so creates two times more ledgers
       ledgersExistInBookKeeper(fixture.ledgerManager, createdLedgers) shouldBe true
       ledgersExistInZkTree(trees, createdLedgers) shouldBe true
 
-      Thread.sleep(toMs(ttl) + waitMs)
+      Thread.sleep(toMs(timeToWaitEntitiesDeletion) + gcWaitTimeMs)
 
-      ledgersExistInBookKeeper(fixture.ledgerManager, (ttl / maxIdleTimeBetweenRecords) * treeFactor + createdLedgers) shouldBe false
-      ledgersExistInZkTree(trees, (ttl / maxIdleTimeBetweenRecords) * treeFactor + createdLedgers) shouldBe false
+      val secondPartOfCreatedLedgers = timeToWaitEntitiesDeletion / maxIdleTimeBetweenRecords * treeFactor
+      ledgersExistInBookKeeper(fixture.ledgerManager, secondPartOfCreatedLedgers + createdLedgers) shouldBe false
+      ledgersExistInZkTree(trees, secondPartOfCreatedLedgers + createdLedgers) shouldBe false
     })
   }
 }

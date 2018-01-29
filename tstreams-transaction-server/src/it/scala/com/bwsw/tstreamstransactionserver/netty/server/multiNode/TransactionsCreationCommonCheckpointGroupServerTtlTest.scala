@@ -37,7 +37,7 @@ import com.bwsw.tstreamstransactionserver.util.Utils._
 import com.bwsw.tstreamstransactionserver.util.multiNode.MultiNodeUtils._
 import com.bwsw.tstreamstransactionserver.util.multiNode.ZkServerTxnMultiNodeServerTxnClient
 
-class CommonCheckpointGroupServerTtlTransactionsCreationTest extends fixture.FlatSpec with Matchers {
+class TransactionsCreationCommonCheckpointGroupServerTtlTest extends fixture.FlatSpec with Matchers {
 
   private val ensembleNumber = 3
   private val writeQuorumNumber = 3
@@ -47,11 +47,12 @@ class CommonCheckpointGroupServerTtlTransactionsCreationTest extends fixture.Fla
     * because we use CommonCheckpointGroupServer that has two zk trees so creates two times more ledgers
     */
   private val treeFactor = 2
-  private val waitMs = 200
+  private val gcWaitTimeMs = 500
   private val entryLogSizeLimit = 1024 * 1024
   private val maxIdleTimeBetweenRecords = 1
-  private val dataCompactionInterval = maxIdleTimeBetweenRecords * 3
+  private val dataCompactionInterval = maxIdleTimeBetweenRecords * 2
   private val ttl = dataCompactionInterval * 2
+  private val timeToWaitEntitiesDeletion = ttl + dataCompactionInterval * treeFactor
 
   private val bookkeeperOptions = BookkeeperOptions(
     ensembleNumber,
@@ -73,7 +74,7 @@ class CommonCheckpointGroupServerTtlTransactionsCreationTest extends fixture.Fla
 
   def withFixture(test: OneArgTest): Outcome = {
     val (zkServer, zkClient, bookieServers) =
-      startZkAndBookieServerWithConfig(bookiesNumber, waitMs, entryLogSizeLimit)
+      startZkAndBookieServerWithConfig(bookiesNumber, gcWaitTimeMs, entryLogSizeLimit)
 
     val zk = ZooKeeperClient.newBuilder.connectString(zkClient.getZookeeperClient.getCurrentConnectionString).build
     //doesn't matter which one's conf because zk is a common part
@@ -126,14 +127,15 @@ class CommonCheckpointGroupServerTtlTransactionsCreationTest extends fixture.Fla
       } else throw new TimeLimitExceededException("Decrease time of entry logs creation " +
         "because entry logs files will be deleted if the creation time is greater than ttl")
 
-      ledgersExistInBookKeeper(fixture.ledgerManager, createdLedgers) shouldBe true
       ledgersExistInZkTree(trees, createdLedgers) shouldBe true
+      ledgersExistInBookKeeper(fixture.ledgerManager, createdLedgers) shouldBe true
       entryLogsExistInBookKeeper(fixture.bookieServers.map(_._1), numberOfEntryLogs) shouldBe true
 
-      Thread.sleep(toMs(ttl) + waitMs)
+      Thread.sleep(toMs(timeToWaitEntitiesDeletion) + gcWaitTimeMs)
 
-      ledgersExistInBookKeeper(fixture.ledgerManager, ttl / maxIdleTimeBetweenRecords * treeFactor + createdLedgers) shouldBe false
-      ledgersExistInZkTree(trees, ttl / maxIdleTimeBetweenRecords * treeFactor + createdLedgers) shouldBe false
+      val secondPartOfCreatedLedgers = timeToWaitEntitiesDeletion / maxIdleTimeBetweenRecords * treeFactor
+      ledgersExistInZkTree(trees, secondPartOfCreatedLedgers + createdLedgers) shouldBe false
+      ledgersExistInBookKeeper(fixture.ledgerManager, secondPartOfCreatedLedgers + createdLedgers) shouldBe false
       entryLogsExistInBookKeeper(fixture.bookieServers.map(_._1), numberOfEntryLogs) shouldBe false
     })
   }
