@@ -30,7 +30,7 @@ class OpenedTransactions(val tokenCache: TokenCache) {
 
   private val transactions = TrieMap.empty[Long, Int]
 
-  /** Adds transaction with specific token if it absent and token is valid
+  /** Adds transaction with specific token if it is absent and token is valid
     *
     * @param transaction transaction ID
     * @param token       token
@@ -50,7 +50,7 @@ class OpenedTransactions(val tokenCache: TokenCache) {
   /** Checks that transaction is valid
     *
     * @param transaction transaction ID
-    * @return true, if transaction is present and it has valid token, false otherwise
+    * @return true, if transaction is presented and it has valid token, false otherwise
     */
   def isValid(transaction: Long): Boolean = {
     transactions.get(transaction) match {

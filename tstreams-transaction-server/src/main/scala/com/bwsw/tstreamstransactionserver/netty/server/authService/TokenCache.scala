@@ -24,7 +24,7 @@ import java.util.concurrent.TimeUnit
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.duration.TimeUnit
 
-/** Contains valid tokens with it's creation time. Used to handle tokens on a slave.
+/** Contains valid tokens with their creation time. Used to handle tokens on a slave.
   *
   * @param tokenTtl token TTL
   * @param timeUnit time unit for tokenTtl
@@ -59,7 +59,7 @@ class TokenCache(tokenTtl: Int, timeUnit: TimeUnit = TimeUnit.SECONDS) {
   /** Checks that token is valid
     *
     * @param token token
-    * @return true, if token is present in cache, false otherwise
+    * @return true, if token is presented in a cache, false otherwise
     */
   def isValid(token: Int): Boolean = tokens.contains(token)
 }
