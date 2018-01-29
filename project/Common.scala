@@ -56,6 +56,12 @@ object Common {
       "-Dsun.net.maxDatagramSockets=1000"
     ),
 
+    testOptions in Global += Tests.Argument(
+      TestFrameworks.ScalaTest,
+      "-oFD", // to show full stack traces and durations
+      "-W", "120", "60" // to notify when some test is running longer than a specified amount of time
+    ),
+
     resolvers ++= Seq(
       "Sonatype OSS" at "https://oss.sonatype.org/service/local/staging/deploy/maven2",
       "Sonatype OSS snapshots" at "https://oss.sonatype.org/content/repositories/snapshots",
