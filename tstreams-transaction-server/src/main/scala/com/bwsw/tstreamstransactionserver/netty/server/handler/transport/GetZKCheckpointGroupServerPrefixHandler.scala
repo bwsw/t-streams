@@ -20,20 +20,21 @@
 package com.bwsw.tstreamstransactionserver.netty.server.handler.transport
 
 import com.bwsw.tstreamstransactionserver.netty.server.handler.SyncReadHandler
-import com.bwsw.tstreamstransactionserver.netty.server.handler.transport.ZKCheckpointGroupServerPrefixGetHandler.descriptor
+import com.bwsw.tstreamstransactionserver.netty.server.handler.transport.GetZKCheckpointGroupServerPrefixHandler.descriptor
 import com.bwsw.tstreamstransactionserver.netty.{Protocol, RequestMessage}
 import com.bwsw.tstreamstransactionserver.options.SingleNodeServerOptions.CheckpointGroupRoleOptions
 import com.bwsw.tstreamstransactionserver.rpc.TransactionService
 import io.netty.channel.ChannelHandlerContext
 
-private object ZKCheckpointGroupServerPrefixGetHandler {
+private object GetZKCheckpointGroupServerPrefixHandler {
   val descriptor = Protocol.GetZKCheckpointGroupServerPrefix
 }
 
-class ZKCheckpointGroupServerPrefixGetHandler(serverRoleOptions: CheckpointGroupRoleOptions)
+class GetZKCheckpointGroupServerPrefixHandler(serverRoleOptions: CheckpointGroupRoleOptions)
   extends SyncReadHandler(
     descriptor.methodID,
-    descriptor.name  ) {
+    descriptor.name
+  ) {
 
   private val encodedResponse = descriptor.encodeResponse(
     TransactionService.GetZKCheckpointGroupServerPrefix.Result(

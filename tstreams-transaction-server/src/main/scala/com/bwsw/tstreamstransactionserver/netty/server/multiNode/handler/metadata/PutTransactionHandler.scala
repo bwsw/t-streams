@@ -17,13 +17,14 @@
  * under the License.
  */
 
-package com.bwsw.tstreamstransactionserver.netty.server.multiNode.handler.data
+package com.bwsw.tstreamstransactionserver.netty.server.multiNode.handler.metadata
 
 import com.bwsw.tstreamstransactionserver.netty.server.batch.Frame
 import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeeperService.BookkeeperMaster
 import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeeperService.data.Record
 import com.bwsw.tstreamstransactionserver.netty.server.multiNode.handler.MultiNodePredefinedContextHandler
-import com.bwsw.tstreamstransactionserver.netty.server.multiNode.handler.data.TransactionDataPutHandler._
+import com.bwsw.tstreamstransactionserver.netty.server.multiNode.handler.metadata.PutTransactionHandler._
+import com.bwsw.tstreamstransactionserver.netty.server.multiNode.handler.metadata.PutTransactionsHandler.isPuttedResponse
 import com.bwsw.tstreamstransactionserver.netty.{Protocol, RequestMessage}
 import com.bwsw.tstreamstransactionserver.rpc.{ServerException, TransactionService}
 import com.bwsw.tstreamstransactionserver.tracing.ServerTracer.tracer
@@ -32,20 +33,19 @@ import org.apache.bookkeeper.client.{AsyncCallback, BKException, LedgerHandle}
 
 import scala.concurrent.{ExecutionContext, Future, Promise}
 
-private object TransactionDataPutHandler {
-  val descriptor = Protocol.PutTransactionData
-
+private object PutTransactionHandler {
+  val descriptor = Protocol.PutTransaction
   val isPuttedResponse: Array[Byte] = descriptor.encodeResponse(
-    TransactionService.PutTransactionData.Result(Some(true))
+    TransactionService.PutTransaction.Result(Some(true))
   )
   val isNotPuttedResponse: Array[Byte] = descriptor.encodeResponse(
-    TransactionService.PutTransactionData.Result(Some(false))
+    TransactionService.PutTransaction.Result(Some(false))
   )
 }
 
 
-class TransactionDataPutHandler(bookkeeperMaster: BookkeeperMaster,
-                                context: ExecutionContext)
+class PutTransactionHandler(bookkeeperMaster: BookkeeperMaster,
+                            context: ExecutionContext)
   extends MultiNodePredefinedContextHandler(
     descriptor.methodID,
     descriptor.name,
@@ -61,7 +61,6 @@ class TransactionDataPutHandler(bookkeeperMaster: BookkeeperMaster,
       tracer.finish(message, processLedger)
       tracer.withTracing(message, getClass.getName + ".addComplete") {
         val promise = obj.asInstanceOf[Promise[Array[Byte]]]
-
         if (Code.OK == bkCode)
           promise.success(isPuttedResponse)
         else
@@ -78,11 +77,10 @@ class TransactionDataPutHandler(bookkeeperMaster: BookkeeperMaster,
           bookkeeperMaster.doOperationWithCurrentWriteLedger {
             case Left(throwable) =>
               promise.failure(throwable)
-            //          throw throwable
 
             case Right(ledgerHandler) =>
               val record = new Record(
-                Frame.PutTransactionDataType,
+                Frame.PutTransactionType,
                 System.currentTimeMillis(),
                 message.token,
                 message.body
@@ -98,13 +96,18 @@ class TransactionDataPutHandler(bookkeeperMaster: BookkeeperMaster,
     }
   }
 
-
   override protected def fireAndForget(message: RequestMessage): Unit = process(message)
 
   override protected def getResponse(message: RequestMessage): Future[Array[Byte]] = process(message)
 
   override def createErrorResponse(message: String): Array[Byte] = {
     descriptor.encodeResponse(
-      TransactionService.PutTransactionData.Result(None, Some(ServerException(message))))
+      TransactionService.PutTransaction.Result(
+        None,
+        Some(ServerException(message)
+        )
+      )
+    )
   }
+
 }

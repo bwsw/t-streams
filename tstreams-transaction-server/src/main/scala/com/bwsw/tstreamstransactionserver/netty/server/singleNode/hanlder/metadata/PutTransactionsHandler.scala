@@ -22,7 +22,7 @@ import com.bwsw.tstreamstransactionserver.netty.server.TransactionServer
 import com.bwsw.tstreamstransactionserver.netty.server.batch.Frame
 import com.bwsw.tstreamstransactionserver.netty.server.commitLogService.ScheduledCommitLog
 import com.bwsw.tstreamstransactionserver.netty.server.handler.PredefinedContextHandler
-import com.bwsw.tstreamstransactionserver.netty.server.singleNode.hanlder.metadata.TransactionsPutHandler._
+import com.bwsw.tstreamstransactionserver.netty.server.singleNode.hanlder.metadata.PutTransactionsHandler._
 import com.bwsw.tstreamstransactionserver.netty.{Protocol, RequestMessage}
 import com.bwsw.tstreamstransactionserver.rpc.{ServerException, TransactionService}
 import com.bwsw.tstreamstransactionserver.tracing.ServerTracer.tracer
@@ -30,7 +30,7 @@ import io.netty.channel.ChannelHandlerContext
 
 import scala.concurrent.ExecutionContext
 
-private object TransactionsPutHandler {
+private object PutTransactionsHandler {
   val descriptor = Protocol.PutTransactions
   val isPuttedResponse: Array[Byte] = descriptor.encodeResponse(
     TransactionService.PutTransactions.Result(Some(true))
@@ -40,7 +40,7 @@ private object TransactionsPutHandler {
   )
 }
 
-class TransactionsPutHandler(server: TransactionServer,
+class PutTransactionsHandler(server: TransactionServer,
                              scheduledCommitLog: ScheduledCommitLog,
                              context: ExecutionContext)
   extends PredefinedContextHandler(
@@ -62,12 +62,15 @@ class TransactionsPutHandler(server: TransactionServer,
 
   override protected def getResponse(message: RequestMessage, ctx: ChannelHandlerContext): Array[Byte] = {
     tracer.withTracing(message, getClass.getName + ".getResponse") {
-      val isPutted = process(message)
+      val response = {
+        val isPutted = process(message)
+        if (isPutted)
+          isPuttedResponse
+        else
+          isNotPuttedResponse
+      }
 
-      if (isPutted)
-        isPuttedResponse
-      else
-        isNotPuttedResponse
+      response
     }
   }
 

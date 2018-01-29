@@ -21,11 +21,11 @@ package com.bwsw.tstreamstransactionserver.netty.server.multiNode.cg
 
 import com.bwsw.tstreamstransactionserver.netty.server.authService.{AuthService, BookKeeperTokenWriter}
 import com.bwsw.tstreamstransactionserver.netty.server.handler.RequestRouter.{handlerAuthMetadata, handlerId}
-import com.bwsw.tstreamstransactionserver.netty.server.handler.auth.{AuthenticateHandler, KeepAliveHandler, TokenIsValidHandler}
-import com.bwsw.tstreamstransactionserver.netty.server.handler.transport.MaxPackagesSizesGetHandler
+import com.bwsw.tstreamstransactionserver.netty.server.handler.auth.{AuthenticateHandler, IsValidHandler, KeepAliveHandler}
+import com.bwsw.tstreamstransactionserver.netty.server.handler.transport.GetMaxPackagesSizesHandler
 import com.bwsw.tstreamstransactionserver.netty.server.handler.{RequestHandler, RequestRouter}
 import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeeperService.BookkeeperMaster
-import com.bwsw.tstreamstransactionserver.netty.server.multiNode.handler.metadata.TransactionsPutHandler
+import com.bwsw.tstreamstransactionserver.netty.server.multiNode.handler.metadata.PutTransactionsHandler
 import com.bwsw.tstreamstransactionserver.netty.server.transportService.TransportValidator
 import com.bwsw.tstreamstransactionserver.options.SingleNodeServerOptions.{AuthenticationOptions, TransportOptions}
 
@@ -43,13 +43,13 @@ class CheckpointGroupHandlerRouter(checkpointMaster: BookkeeperMaster,
 
   override protected val handlers: Map[Byte, RequestHandler] = Seq(
     Seq(
-      new TransactionsPutHandler(checkpointMaster, commitLogContext))
+      new PutTransactionsHandler(checkpointMaster, commitLogContext))
       .map(handlerAuthMetadata),
 
     Seq(
       new AuthenticateHandler(authService),
-      new TokenIsValidHandler(authService),
-      new MaxPackagesSizesGetHandler(packageTransmissionOpts),
+      new IsValidHandler(authService),
+      new GetMaxPackagesSizesHandler(packageTransmissionOpts),
       new KeepAliveHandler(authService))
       .map(handlerId))
     .flatten

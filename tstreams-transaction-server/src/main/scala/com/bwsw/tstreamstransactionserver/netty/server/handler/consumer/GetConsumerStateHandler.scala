@@ -16,32 +16,32 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package com.bwsw.tstreamstransactionserver.netty.server.handler.metadata
+package com.bwsw.tstreamstransactionserver.netty.server.handler.consumer
 
 import com.bwsw.tstreamstransactionserver.netty.server.TransactionServer
 import com.bwsw.tstreamstransactionserver.netty.server.handler.PredefinedContextHandler
-import com.bwsw.tstreamstransactionserver.netty.server.handler.metadata.TransactionsScanHandler.descriptor
+import com.bwsw.tstreamstransactionserver.netty.server.handler.consumer.GetConsumerStateHandler.descriptor
 import com.bwsw.tstreamstransactionserver.netty.{Protocol, RequestMessage}
 import com.bwsw.tstreamstransactionserver.rpc.{ServerException, TransactionService}
 import io.netty.channel.ChannelHandlerContext
 
 import scala.concurrent.ExecutionContext
 
-private object TransactionsScanHandler {
-  val descriptor = Protocol.ScanTransactions
+private object GetConsumerStateHandler {
+  val descriptor = Protocol.GetConsumerState
 }
 
-
-class TransactionsScanHandler(server: TransactionServer,
+class GetConsumerStateHandler(server: TransactionServer,
                               context: ExecutionContext)
   extends PredefinedContextHandler(
     descriptor.methodID,
     descriptor.name,
     context) {
 
+
   override def createErrorResponse(message: String): Array[Byte] = {
     descriptor.encodeResponse(
-      TransactionService.ScanTransactions.Result(
+      TransactionService.GetConsumerState.Result(
         None,
         Some(ServerException(message)
         )
@@ -51,24 +51,22 @@ class TransactionsScanHandler(server: TransactionServer,
 
   override protected def fireAndForget(message: RequestMessage): Unit = {}
 
-  override protected def getResponse(message: RequestMessage, ctx: ChannelHandlerContext): Array[Byte] = {
-    descriptor.encodeResponse(
-      TransactionService.ScanTransactions.Result(
+  override protected def getResponse(message: RequestMessage,
+                                     ctx: ChannelHandlerContext): Array[Byte] = {
+    val response = descriptor.encodeResponse(
+      TransactionService.GetConsumerState.Result(
         Some(process(message.body))
       )
     )
+    response
   }
 
-  private def process(requestBody: Array[Byte]) = {
+  private def process(requestBody: Array[Byte]): Long = {
     val args = descriptor.decodeRequest(requestBody)
-
-    server.scanTransactions(
+    server.getConsumerState(
+      args.name,
       args.streamID,
-      args.partition,
-      args.from,
-      args.to,
-      args.count,
-      args.states
+      args.partition
     )
   }
 }

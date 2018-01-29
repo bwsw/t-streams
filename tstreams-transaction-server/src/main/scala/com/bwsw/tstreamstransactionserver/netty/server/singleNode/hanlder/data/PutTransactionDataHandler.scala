@@ -16,23 +16,25 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package com.bwsw.tstreamstransactionserver.netty.server.handler.stream
+package com.bwsw.tstreamstransactionserver.netty.server.singleNode.hanlder.data
 
 import com.bwsw.tstreamstransactionserver.netty.server.TransactionServer
 import com.bwsw.tstreamstransactionserver.netty.server.handler.PredefinedContextHandler
-import com.bwsw.tstreamstransactionserver.netty.server.handler.stream.StreamGetHandler.descriptor
+import com.bwsw.tstreamstransactionserver.netty.server.singleNode.hanlder.data.PutTransactionDataHandler._
 import com.bwsw.tstreamstransactionserver.netty.{Protocol, RequestMessage}
 import com.bwsw.tstreamstransactionserver.rpc.{ServerException, TransactionService}
+import com.bwsw.tstreamstransactionserver.tracing.ServerTracer.tracer
 import io.netty.channel.ChannelHandlerContext
 
 import scala.concurrent.ExecutionContext
 
-private object StreamGetHandler {
-  val descriptor = Protocol.GetStream
+
+private object PutTransactionDataHandler {
+  val descriptor = Protocol.PutTransactionData
 }
 
-class StreamGetHandler(server: TransactionServer,
-                       context: ExecutionContext)
+class PutTransactionDataHandler(server: TransactionServer,
+                                context: ExecutionContext)
   extends PredefinedContextHandler(
     descriptor.methodID,
     descriptor.name,
@@ -40,7 +42,7 @@ class StreamGetHandler(server: TransactionServer,
 
   override def createErrorResponse(message: String): Array[Byte] = {
     descriptor.encodeResponse(
-      TransactionService.GetStream.Result(
+      TransactionService.PutTransactionData.Result(
         None,
         Some(ServerException(message)
         )
@@ -48,20 +50,28 @@ class StreamGetHandler(server: TransactionServer,
     )
   }
 
-  override protected def fireAndForget(message: RequestMessage): Unit = {}
+  override protected def fireAndForget(message: RequestMessage): Unit =
+    tracer.withTracing(message, name = getClass.getName + ".fireAndForget")(process(message))
+
+  private def process(message: RequestMessage) = {
+    tracer.withTracing(message, name = getClass.getName + ".process") {
+      val args = descriptor.decodeRequest(message.body)
+      server.putTransactionData(
+        args.streamID,
+        args.partition,
+        args.transaction,
+        args.data,
+        args.from
+      )
+    }
+  }
 
   override protected def getResponse(message: RequestMessage,
                                      ctx: ChannelHandlerContext): Array[Byte] = {
-    descriptor.encodeResponse(
-      TransactionService.GetStream.Result(
-        process(message.body)
-      )
-    )
-  }
-
-  private def process(requestBody: Array[Byte]) = {
-    val args = descriptor.decodeRequest(requestBody)
-
-    server.getStream(args.name)
+    tracer.withTracing(message, name = getClass.getName + ".getResponse") {
+      descriptor.encodeResponse(
+        TransactionService.PutTransactionData.Result(
+          Some(process(message))))
+    }
   }
 }

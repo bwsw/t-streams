@@ -22,20 +22,20 @@ package com.bwsw.tstreamstransactionserver.netty.server.multiNode
 import com.bwsw.tstreamstransactionserver.configProperties.ServerExecutionContextGrids
 import com.bwsw.tstreamstransactionserver.netty.server.authService.{AuthService, BookKeeperTokenWriter}
 import com.bwsw.tstreamstransactionserver.netty.server.handler.RequestRouter._
-import com.bwsw.tstreamstransactionserver.netty.server.handler.auth.{AuthenticateHandler, KeepAliveHandler, TokenIsValidHandler}
-import com.bwsw.tstreamstransactionserver.netty.server.handler.consumer.ConsumerStateGetHandler
-import com.bwsw.tstreamstransactionserver.netty.server.handler.data.TransactionDataGetHandler
+import com.bwsw.tstreamstransactionserver.netty.server.handler.auth.{AuthenticateHandler, IsValidHandler, KeepAliveHandler}
+import com.bwsw.tstreamstransactionserver.netty.server.handler.consumer.GetConsumerStateHandler
+import com.bwsw.tstreamstransactionserver.netty.server.handler.data.GetTransactionDataHandler
 import com.bwsw.tstreamstransactionserver.netty.server.handler.metadata._
-import com.bwsw.tstreamstransactionserver.netty.server.handler.stream.{StreamDeleteHandler, StreamExistsCheckHandler, StreamGetHandler, StreamPutHandler}
-import com.bwsw.tstreamstransactionserver.netty.server.handler.transport.{MaxPackagesSizesGetHandler, ZKCheckpointGroupServerPrefixGetHandler}
+import com.bwsw.tstreamstransactionserver.netty.server.handler.stream.{CheckStreamExistsHandler, DelStreamHandler, GetStreamHandler, PutStreamHandler}
+import com.bwsw.tstreamstransactionserver.netty.server.handler.transport.{GetMaxPackagesSizesHandler, GetZKCheckpointGroupServerPrefixHandler}
 import com.bwsw.tstreamstransactionserver.netty.server.handler.{RequestHandler, RequestRouter}
 import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeeperService.{BookkeeperMaster, BookkeeperWriter}
 import com.bwsw.tstreamstransactionserver.netty.server.multiNode.commitLogService.CommitLogService
 import com.bwsw.tstreamstransactionserver.netty.server.multiNode.handler.Utils._
-import com.bwsw.tstreamstransactionserver.netty.server.multiNode.handler.commitLog.CommitLogOffsetsGetHandler
-import com.bwsw.tstreamstransactionserver.netty.server.multiNode.handler.consumer.ConsumerCheckpointPutHandler
-import com.bwsw.tstreamstransactionserver.netty.server.multiNode.handler.data.{ProducerStateWithDataPutHandler, SimpleTransactionAndDataPutHandler, TransactionDataPutHandler}
-import com.bwsw.tstreamstransactionserver.netty.server.multiNode.handler.metadata.{TransactionOpenHandler, TransactionPutHandler, TransactionsPutHandler}
+import com.bwsw.tstreamstransactionserver.netty.server.multiNode.handler.commitLog.GetCommitLogOffsetsHandler
+import com.bwsw.tstreamstransactionserver.netty.server.multiNode.handler.consumer.PutConsumerCheckpointHandler
+import com.bwsw.tstreamstransactionserver.netty.server.multiNode.handler.data.{PutProducerStateWithDataHandler, PutSimpleTransactionAndDataHandler, PutTransactionDataHandler}
+import com.bwsw.tstreamstransactionserver.netty.server.multiNode.handler.metadata.{OpenTransactionHandler, PutTransactionHandler, PutTransactionsHandler}
 import com.bwsw.tstreamstransactionserver.netty.server.subscriber.OpenedTransactionNotifier
 import com.bwsw.tstreamstransactionserver.netty.server.transportService.TransportValidator
 import com.bwsw.tstreamstransactionserver.netty.server.zk.ZKMasterElector
@@ -70,46 +70,46 @@ class CommonCheckpointGroupHandlerRouter(server: TransactionServer,
 
   override protected val handlers: Map[Byte, RequestHandler] = Seq(
     Seq(
-      new CommitLogOffsetsGetHandler(multiNodeCommitLogService, bookkeeperWriter, serverReadContext),
-      new StreamPutHandler(server, serverReadContext),
-      new StreamExistsCheckHandler(server, serverReadContext),
-      new StreamGetHandler(server, serverReadContext),
-      new StreamDeleteHandler(server, serverWriteContext),
-      new TransactionIDGetHandler(server),
-      new TransactionIDByTimestampGetHandler(server))
+      new GetCommitLogOffsetsHandler(multiNodeCommitLogService, bookkeeperWriter, serverReadContext),
+      new PutStreamHandler(server, serverReadContext),
+      new CheckStreamExistsHandler(server, serverReadContext),
+      new GetStreamHandler(server, serverReadContext),
+      new DelStreamHandler(server, serverWriteContext),
+      new GetTransactionIDHandler(server),
+      new GetTransactionIDByTimestampHandler(server))
       .map(handlerAuth),
 
     Seq(
-      new TransactionPutHandler(commonMaster, commitLogContext),
-      new TransactionsPutHandler(checkpointMaster, commitLogContext),
-      new ConsumerCheckpointPutHandler(commonMaster, commitLogContext))
+      new PutTransactionHandler(commonMaster, commitLogContext),
+      new PutTransactionsHandler(checkpointMaster, commitLogContext),
+      new PutConsumerCheckpointHandler(commonMaster, commitLogContext))
       .map(handlerAuthMetadata),
 
     Seq(
-      new TransactionOpenHandler(server, commonMaster, notifier, authOptions, orderedExecutionPool, commitLogContext),
-      new ProducerStateWithDataPutHandler(commonMaster, commitLogContext),
-      new SimpleTransactionAndDataPutHandler(
+      new OpenTransactionHandler(server, commonMaster, notifier, authOptions, orderedExecutionPool, commitLogContext),
+      new PutProducerStateWithDataHandler(commonMaster, commitLogContext),
+      new PutSimpleTransactionAndDataHandler(
         server, commonMaster, notifier, authOptions, orderedExecutionPool, commitLogContext),
-      new TransactionDataPutHandler(commonMaster, serverWriteContext))
+      new PutTransactionDataHandler(commonMaster, serverWriteContext))
       .map(handlerAuthData),
 
     Seq(
-      new TransactionGetHandler(server, serverReadContext),
-      new TransactionsScanHandler(server, serverReadContext),
-      new TransactionDataGetHandler(server, serverReadContext),
-      new ConsumerStateGetHandler(server, serverReadContext))
+      new GetTransactionHandler(server, serverReadContext),
+      new ScanTransactionsHandler(server, serverReadContext),
+      new GetTransactionDataHandler(server, serverReadContext),
+      new GetConsumerStateHandler(server, serverReadContext))
       .map(handlerReadAuth(_, masterElectors)),
 
     Seq(
       new AuthenticateHandler(authService),
-      new TokenIsValidHandler(authService),
-      new MaxPackagesSizesGetHandler(packageTransmissionOpts),
-      new ZKCheckpointGroupServerPrefixGetHandler(serverRoleOptions),
+      new IsValidHandler(authService),
+      new GetMaxPackagesSizesHandler(packageTransmissionOpts),
+      new GetZKCheckpointGroupServerPrefixHandler(serverRoleOptions),
       new KeepAliveHandler(authService))
       .map(handlerId),
 
     Seq(
-      new LastCheckpointedTransactionGetHandler(server, serverReadContext))
+      new GetLastCheckpointedTransactionHandler(server, serverReadContext))
       .map(handlerReadAuthData(_, masterElectors)))
     .flatten
     .toMap

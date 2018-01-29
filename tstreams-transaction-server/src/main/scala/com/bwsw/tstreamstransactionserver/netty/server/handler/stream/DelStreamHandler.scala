@@ -16,23 +16,23 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package com.bwsw.tstreamstransactionserver.netty.server.handler.metadata
+package com.bwsw.tstreamstransactionserver.netty.server.handler.stream
 
 import com.bwsw.tstreamstransactionserver.netty.server.TransactionServer
 import com.bwsw.tstreamstransactionserver.netty.server.handler.PredefinedContextHandler
-import com.bwsw.tstreamstransactionserver.netty.server.handler.metadata.TransactionGetHandler.descriptor
+import com.bwsw.tstreamstransactionserver.netty.server.handler.stream.DelStreamHandler.descriptor
 import com.bwsw.tstreamstransactionserver.netty.{Protocol, RequestMessage}
 import com.bwsw.tstreamstransactionserver.rpc.{ServerException, TransactionService}
 import io.netty.channel.ChannelHandlerContext
 
 import scala.concurrent.ExecutionContext
 
-private object TransactionGetHandler {
-  val descriptor = Protocol.GetTransaction
+private object DelStreamHandler {
+  val descriptor = Protocol.DelStream
 }
 
-class TransactionGetHandler(server: TransactionServer,
-                            context: ExecutionContext)
+class DelStreamHandler(server: TransactionServer,
+                       context: ExecutionContext)
   extends PredefinedContextHandler(
     descriptor.methodID,
     descriptor.name,
@@ -40,27 +40,30 @@ class TransactionGetHandler(server: TransactionServer,
 
   override def createErrorResponse(message: String): Array[Byte] = {
     descriptor.encodeResponse(
-      TransactionService.GetTransaction.Result(
+      TransactionService.DelStream.Result(
         None,
-        Some(ServerException(message)
-        )
+        Some(ServerException(message))
       )
     )
+
   }
 
-  override protected def fireAndForget(message: RequestMessage): Unit = {}
-
-  override protected def getResponse(message: RequestMessage, ctx: ChannelHandlerContext): Array[Byte] = {
-    descriptor.encodeResponse(
-      TransactionService.GetTransaction.Result(
-        Some(process(message.body))
-      )
-    )
+  override protected def fireAndForget(message: RequestMessage): Unit = {
+    process(message.body)
   }
 
   private def process(requestBody: Array[Byte]) = {
     val args = descriptor.decodeRequest(requestBody)
+    server.delStream(args.name)
+  }
 
-    server.getTransaction(args.streamID, args.partition, args.transaction)
+  override protected def getResponse(message: RequestMessage,
+                                     ctx: ChannelHandlerContext): Array[Byte] = {
+    val response = descriptor.encodeResponse(
+      TransactionService.DelStream.Result(
+        Some(process(message.body))
+      )
+    )
+    response
   }
 }

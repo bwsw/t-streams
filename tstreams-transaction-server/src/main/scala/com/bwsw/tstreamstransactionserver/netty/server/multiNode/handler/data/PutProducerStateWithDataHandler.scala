@@ -23,7 +23,7 @@ import com.bwsw.tstreamstransactionserver.netty.server.batch.Frame
 import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeeperService.BookkeeperMaster
 import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeeperService.data.Record
 import com.bwsw.tstreamstransactionserver.netty.server.multiNode.handler.MultiNodePredefinedContextHandler
-import com.bwsw.tstreamstransactionserver.netty.server.multiNode.handler.data.ProducerStateWithDataPutHandler._
+import com.bwsw.tstreamstransactionserver.netty.server.multiNode.handler.data.PutProducerStateWithDataHandler._
 import com.bwsw.tstreamstransactionserver.netty.{Protocol, RequestMessage}
 import com.bwsw.tstreamstransactionserver.rpc.{ServerException, TransactionService}
 import org.apache.bookkeeper.client.BKException.Code
@@ -31,7 +31,7 @@ import org.apache.bookkeeper.client.{AsyncCallback, BKException, LedgerHandle}
 
 import scala.concurrent.{ExecutionContext, Future, Promise}
 
-private object ProducerStateWithDataPutHandler {
+private object PutProducerStateWithDataHandler {
   val descriptor = Protocol.PutProducerStateWithData
 
   val isPuttedResponse: Array[Byte] = descriptor.encodeResponse(
@@ -42,7 +42,7 @@ private object ProducerStateWithDataPutHandler {
   )
 }
 
-class ProducerStateWithDataPutHandler(bookkeeperMaster: BookkeeperMaster,
+class PutProducerStateWithDataHandler(bookkeeperMaster: BookkeeperMaster,
                                       context: ExecutionContext)
   extends MultiNodePredefinedContextHandler(
     descriptor.methodID,
@@ -55,7 +55,6 @@ class ProducerStateWithDataPutHandler(bookkeeperMaster: BookkeeperMaster,
                              entryId: Long,
                              obj: scala.Any): Unit = {
       val promise = obj.asInstanceOf[Promise[Array[Byte]]]
-
       if (Code.OK == bkCode)
         promise.success(isPuttedResponse)
       else

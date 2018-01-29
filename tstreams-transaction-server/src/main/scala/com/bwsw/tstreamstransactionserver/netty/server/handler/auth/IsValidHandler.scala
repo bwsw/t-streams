@@ -20,16 +20,16 @@ package com.bwsw.tstreamstransactionserver.netty.server.handler.auth
 
 import com.bwsw.tstreamstransactionserver.netty.server.authService.AuthService
 import com.bwsw.tstreamstransactionserver.netty.server.handler.SyncReadHandler
-import com.bwsw.tstreamstransactionserver.netty.server.handler.auth.TokenIsValidHandler.descriptor
+import com.bwsw.tstreamstransactionserver.netty.server.handler.auth.IsValidHandler.descriptor
 import com.bwsw.tstreamstransactionserver.netty.{Protocol, RequestMessage}
 import com.bwsw.tstreamstransactionserver.rpc.TransactionService
 import io.netty.channel.ChannelHandlerContext
 
-private object TokenIsValidHandler {
+private object IsValidHandler {
   val descriptor = Protocol.IsValid
 }
 
-class TokenIsValidHandler(authService: AuthService)
+class IsValidHandler(authService: AuthService)
   extends SyncReadHandler(
     descriptor.methodID,
     descriptor.name

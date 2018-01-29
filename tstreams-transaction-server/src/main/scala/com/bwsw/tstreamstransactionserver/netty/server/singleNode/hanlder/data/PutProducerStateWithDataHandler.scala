@@ -23,18 +23,18 @@ import com.bwsw.tstreamstransactionserver.netty.server.TransactionServer
 import com.bwsw.tstreamstransactionserver.netty.server.batch.Frame
 import com.bwsw.tstreamstransactionserver.netty.server.commitLogService.ScheduledCommitLog
 import com.bwsw.tstreamstransactionserver.netty.server.handler.PredefinedContextHandler
-import com.bwsw.tstreamstransactionserver.netty.server.singleNode.hanlder.data.ProducerStateWithDataPutHandler._
+import com.bwsw.tstreamstransactionserver.netty.server.singleNode.hanlder.data.PutProducerStateWithDataHandler._
 import com.bwsw.tstreamstransactionserver.netty.{Protocol, RequestMessage}
 import com.bwsw.tstreamstransactionserver.rpc._
 import io.netty.channel.ChannelHandlerContext
 
 import scala.concurrent.ExecutionContext
 
-private object ProducerStateWithDataPutHandler {
+private object PutProducerStateWithDataHandler {
   val descriptor = Protocol.PutProducerStateWithData
 }
 
-class ProducerStateWithDataPutHandler(server: TransactionServer,
+class PutProducerStateWithDataHandler(server: TransactionServer,
                                       scheduledCommitLog: ScheduledCommitLog,
                                       context: ExecutionContext)
   extends PredefinedContextHandler(
@@ -93,10 +93,11 @@ class ProducerStateWithDataPutHandler(server: TransactionServer,
 
   override protected def getResponse(message: RequestMessage,
                                      ctx: ChannelHandlerContext): Array[Byte] = {
-    descriptor.encodeResponse(
+    val response = descriptor.encodeResponse(
       TransactionService.PutProducerStateWithData.Result(
         Some(process(message))
       )
     )
+    response
   }
 }

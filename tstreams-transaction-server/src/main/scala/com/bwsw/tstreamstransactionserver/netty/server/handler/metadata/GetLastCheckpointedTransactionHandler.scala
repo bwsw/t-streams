@@ -16,65 +16,52 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package com.bwsw.tstreamstransactionserver.netty.server.singleNode.hanlder.metadata
+package com.bwsw.tstreamstransactionserver.netty.server.handler.metadata
 
 import com.bwsw.tstreamstransactionserver.netty.server.TransactionServer
-import com.bwsw.tstreamstransactionserver.netty.server.batch.Frame
-import com.bwsw.tstreamstransactionserver.netty.server.commitLogService.ScheduledCommitLog
 import com.bwsw.tstreamstransactionserver.netty.server.handler.PredefinedContextHandler
-import com.bwsw.tstreamstransactionserver.netty.server.singleNode.hanlder.metadata.TransactionPutHandler._
+import com.bwsw.tstreamstransactionserver.netty.server.handler.metadata.GetLastCheckpointedTransactionHandler.descriptor
 import com.bwsw.tstreamstransactionserver.netty.{Protocol, RequestMessage}
 import com.bwsw.tstreamstransactionserver.rpc.{ServerException, TransactionService}
-import com.bwsw.tstreamstransactionserver.tracing.ServerTracer.tracer
 import io.netty.channel.ChannelHandlerContext
 
 import scala.concurrent.ExecutionContext
 
-private object TransactionPutHandler {
-  val descriptor = Protocol.PutTransaction
-  val isPuttedResponse: Array[Byte] = descriptor.encodeResponse(
-    TransactionService.PutTransaction.Result(Some(true))
-  )
-  val isNotPuttedResponse: Array[Byte] = descriptor.encodeResponse(
-    TransactionService.PutTransaction.Result(Some(false))
-  )
+private object GetLastCheckpointedTransactionHandler {
+  val descriptor = Protocol.GetLastCheckpointedTransaction
 }
 
-class TransactionPutHandler(server: TransactionServer,
-                            scheduledCommitLog: ScheduledCommitLog,
-                            context: ExecutionContext)
+class GetLastCheckpointedTransactionHandler(server: TransactionServer,
+                                            context: ExecutionContext)
   extends PredefinedContextHandler(
     descriptor.methodID,
     descriptor.name,
     context) {
 
+
   override def createErrorResponse(message: String): Array[Byte] = {
     descriptor.encodeResponse(
-      TransactionService.PutTransaction.Result(
+      TransactionService.GetLastCheckpointedTransaction.Result(
         None,
-        Some(ServerException(message))
+        Some(ServerException(message)
+        )
       )
     )
   }
 
-  override protected def fireAndForget(message: RequestMessage): Unit =
-    tracer.withTracing(message, getClass.getName + ".fireAndForget")(process(message))
+  override protected def fireAndForget(message: RequestMessage): Unit = {}
 
   override protected def getResponse(message: RequestMessage, ctx: ChannelHandlerContext): Array[Byte] = {
-    tracer.withTracing(message, getClass.getName + ".getResponse") {
-      val isPutted = process(message)
-
-      if (isPutted)
-        isPuttedResponse
-      else
-        isNotPuttedResponse
-    }
+    val response = descriptor.encodeResponse(
+      TransactionService.GetLastCheckpointedTransaction.Result(
+        process(message.body)
+      )
+    )
+    response
   }
 
-  private def process(message: RequestMessage) = {
-    scheduledCommitLog.putData(
-      Frame.PutTransactionType,
-      message.body,
-      message.token)
+  private def process(requestBody: Array[Byte]) = {
+    val args = descriptor.decodeRequest(requestBody)
+    server.getLastCheckpointedTransaction(args.streamID, args.partition)
   }
 }

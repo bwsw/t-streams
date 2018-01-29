@@ -20,17 +20,17 @@ package com.bwsw.tstreamstransactionserver.netty.server.handler.metadata
 
 import com.bwsw.tstreamstransactionserver.netty.server.TransactionServer
 import com.bwsw.tstreamstransactionserver.netty.server.handler.SyncReadHandler
-import com.bwsw.tstreamstransactionserver.netty.server.handler.metadata.TransactionIDGetHandler.descriptor
+import com.bwsw.tstreamstransactionserver.netty.server.handler.metadata.GetTransactionIDByTimestampHandler.descriptor
 import com.bwsw.tstreamstransactionserver.netty.{Protocol, RequestMessage}
 import com.bwsw.tstreamstransactionserver.rpc.{ServerException, TransactionService}
 import io.netty.channel.ChannelHandlerContext
 
 
-private object TransactionIDGetHandler {
-  val descriptor = Protocol.GetTransactionID
+private object GetTransactionIDByTimestampHandler {
+  val descriptor = Protocol.GetTransactionIDByTimestamp
 }
 
-class TransactionIDGetHandler(server: TransactionServer)
+class GetTransactionIDByTimestampHandler(server: TransactionServer)
   extends SyncReadHandler(
     descriptor.methodID,
     descriptor.name
@@ -39,28 +39,28 @@ class TransactionIDGetHandler(server: TransactionServer)
   override protected def getResponse(message: RequestMessage,
                                      ctx: ChannelHandlerContext,
                                      acc: Option[Throwable]): Array[Byte] = {
-    acc match {
-      case None =>
-        descriptor.encodeResponse(
-          TransactionService.GetTransactionID.Result(
-            Some(process(message.body))
-          )
+    if (acc.isEmpty) {
+      val response = descriptor.encodeResponse(
+        TransactionService.GetTransactionIDByTimestamp.Result(
+          Some(process(message.body))
         )
-
-      case Some(error) =>
-        logUnsuccessfulProcessing(name, error, message, ctx)
-
-        createErrorResponse(error.getMessage)
+      )
+      response
+    } else {
+      val error = acc.get
+      logUnsuccessfulProcessing(name, error, message, ctx)
+      createErrorResponse(error.getMessage)
     }
   }
 
   private def process(requestBody: Array[Byte]) = {
-    server.getTransactionID
+    val args = descriptor.decodeRequest(requestBody)
+    server.getTransactionIDByTimestamp(args.timestamp)
   }
 
   override def createErrorResponse(message: String): Array[Byte] = {
     descriptor.encodeResponse(
-      TransactionService.GetTransactionID.Result(
+      TransactionService.GetTransactionIDByTimestamp.Result(
         None,
         Some(ServerException(message)
         )

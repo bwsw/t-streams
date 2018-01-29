@@ -16,32 +16,31 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package com.bwsw.tstreamstransactionserver.netty.server.handler.data
+package com.bwsw.tstreamstransactionserver.netty.server.handler.metadata
 
 import com.bwsw.tstreamstransactionserver.netty.server.TransactionServer
 import com.bwsw.tstreamstransactionserver.netty.server.handler.PredefinedContextHandler
-import com.bwsw.tstreamstransactionserver.netty.server.handler.data.TransactionDataGetHandler.descriptor
+import com.bwsw.tstreamstransactionserver.netty.server.handler.metadata.GetTransactionHandler.descriptor
 import com.bwsw.tstreamstransactionserver.netty.{Protocol, RequestMessage}
 import com.bwsw.tstreamstransactionserver.rpc.{ServerException, TransactionService}
 import io.netty.channel.ChannelHandlerContext
 
 import scala.concurrent.ExecutionContext
 
-private object TransactionDataGetHandler {
-  val descriptor = Protocol.GetTransactionData
+private object GetTransactionHandler {
+  val descriptor = Protocol.GetTransaction
 }
 
-class TransactionDataGetHandler(server: TransactionServer,
-                                context: ExecutionContext)
+class GetTransactionHandler(server: TransactionServer,
+                            context: ExecutionContext)
   extends PredefinedContextHandler(
     descriptor.methodID,
     descriptor.name,
     context) {
 
-
   override def createErrorResponse(message: String): Array[Byte] = {
     descriptor.encodeResponse(
-      TransactionService.GetTransactionData.Result(
+      TransactionService.GetTransaction.Result(
         None,
         Some(ServerException(message)
         )
@@ -51,24 +50,17 @@ class TransactionDataGetHandler(server: TransactionServer,
 
   override protected def fireAndForget(message: RequestMessage): Unit = {}
 
-  override protected def getResponse(message: RequestMessage,
-                                     ctx: ChannelHandlerContext): Array[Byte] = {
-    descriptor.encodeResponse(
-      TransactionService.GetTransactionData.Result(
+  override protected def getResponse(message: RequestMessage, ctx: ChannelHandlerContext): Array[Byte] = {
+    val response = descriptor.encodeResponse(
+      TransactionService.GetTransaction.Result(
         Some(process(message.body))
       )
     )
+    response
   }
 
   private def process(requestBody: Array[Byte]) = {
     val args = descriptor.decodeRequest(requestBody)
-
-    server.getTransactionData(
-      args.streamID,
-      args.partition,
-      args.transaction,
-      args.from,
-      args.to
-    )
+    server.getTransaction(args.streamID, args.partition, args.transaction)
   }
 }

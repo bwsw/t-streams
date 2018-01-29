@@ -16,25 +16,24 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package com.bwsw.tstreamstransactionserver.netty.server.singleNode.hanlder.commitLog
+package com.bwsw.tstreamstransactionserver.netty.server.handler.metadata
 
-import com.bwsw.tstreamstransactionserver.netty.server.commitLogService.ScheduledCommitLog
+import com.bwsw.tstreamstransactionserver.netty.server.TransactionServer
 import com.bwsw.tstreamstransactionserver.netty.server.handler.PredefinedContextHandler
-import com.bwsw.tstreamstransactionserver.netty.server.singleNode.commitLogService.CommitLogService
-import com.bwsw.tstreamstransactionserver.netty.server.singleNode.hanlder.commitLog.CommitLogOffsetsGetHandler._
+import com.bwsw.tstreamstransactionserver.netty.server.handler.metadata.ScanTransactionsHandler.descriptor
 import com.bwsw.tstreamstransactionserver.netty.{Protocol, RequestMessage}
-import com.bwsw.tstreamstransactionserver.rpc.{CommitLogInfo, ServerException, TransactionService}
+import com.bwsw.tstreamstransactionserver.rpc.{ServerException, TransactionService}
 import io.netty.channel.ChannelHandlerContext
 
 import scala.concurrent.ExecutionContext
 
-private object CommitLogOffsetsGetHandler {
-  val descriptor = Protocol.GetCommitLogOffsets
+private object ScanTransactionsHandler {
+  val descriptor = Protocol.ScanTransactions
 }
 
-class CommitLogOffsetsGetHandler(commitLogService: CommitLogService,
-                                 scheduledCommitLog: ScheduledCommitLog,
-                                 context: ExecutionContext)
+
+class ScanTransactionsHandler(server: TransactionServer,
+                              context: ExecutionContext)
   extends PredefinedContextHandler(
     descriptor.methodID,
     descriptor.name,
@@ -42,28 +41,34 @@ class CommitLogOffsetsGetHandler(commitLogService: CommitLogService,
 
   override def createErrorResponse(message: String): Array[Byte] = {
     descriptor.encodeResponse(
-      TransactionService.GetCommitLogOffsets.Result(
+      TransactionService.ScanTransactions.Result(
         None,
-        Some(ServerException(message))
+        Some(ServerException(message)
+        )
       )
     )
   }
 
   override protected def fireAndForget(message: RequestMessage): Unit = {}
 
-  override protected def getResponse(message: RequestMessage,
-                                     ctx: ChannelHandlerContext): Array[Byte] = {
-    descriptor.encodeResponse(
-      TransactionService.GetCommitLogOffsets.Result(
+  override protected def getResponse(message: RequestMessage, ctx: ChannelHandlerContext): Array[Byte] = {
+    val response = descriptor.encodeResponse(
+      TransactionService.ScanTransactions.Result(
         Some(process(message.body))
       )
     )
+    response
   }
 
   private def process(requestBody: Array[Byte]) = {
-    CommitLogInfo(
-      commitLogService.getLastProcessedCommitLogFileID,
-      scheduledCommitLog.currentCommitLogFile
+    val args = descriptor.decodeRequest(requestBody)
+    server.scanTransactions(
+      args.streamID,
+      args.partition,
+      args.from,
+      args.to,
+      args.count,
+      args.states
     )
   }
 }

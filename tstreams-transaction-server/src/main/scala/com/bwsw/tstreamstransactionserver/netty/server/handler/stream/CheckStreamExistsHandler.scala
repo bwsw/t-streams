@@ -16,23 +16,23 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package com.bwsw.tstreamstransactionserver.netty.server.handler.consumer
+package com.bwsw.tstreamstransactionserver.netty.server.handler.stream
 
 import com.bwsw.tstreamstransactionserver.netty.server.TransactionServer
 import com.bwsw.tstreamstransactionserver.netty.server.handler.PredefinedContextHandler
-import com.bwsw.tstreamstransactionserver.netty.server.handler.consumer.ConsumerStateGetHandler.descriptor
+import com.bwsw.tstreamstransactionserver.netty.server.handler.stream.CheckStreamExistsHandler.descriptor
 import com.bwsw.tstreamstransactionserver.netty.{Protocol, RequestMessage}
 import com.bwsw.tstreamstransactionserver.rpc.{ServerException, TransactionService}
 import io.netty.channel.ChannelHandlerContext
 
 import scala.concurrent.ExecutionContext
 
-private object ConsumerStateGetHandler {
-  val descriptor = Protocol.GetConsumerState
+private object CheckStreamExistsHandler {
+  val descriptor = Protocol.CheckStreamExists
 }
 
-class ConsumerStateGetHandler(server: TransactionServer,
-                              context: ExecutionContext)
+class CheckStreamExistsHandler(server: TransactionServer,
+                               context: ExecutionContext)
   extends PredefinedContextHandler(
     descriptor.methodID,
     descriptor.name,
@@ -41,10 +41,9 @@ class ConsumerStateGetHandler(server: TransactionServer,
 
   override def createErrorResponse(message: String): Array[Byte] = {
     descriptor.encodeResponse(
-      TransactionService.GetConsumerState.Result(
+      TransactionService.CheckStreamExists.Result(
         None,
-        Some(ServerException(message)
-        )
+        Some(ServerException(message))
       )
     )
   }
@@ -53,20 +52,16 @@ class ConsumerStateGetHandler(server: TransactionServer,
 
   override protected def getResponse(message: RequestMessage,
                                      ctx: ChannelHandlerContext): Array[Byte] = {
-    descriptor.encodeResponse(
-      TransactionService.GetConsumerState.Result(
+    val response = descriptor.encodeResponse(
+      TransactionService.CheckStreamExists.Result(
         Some(process(message.body))
       )
     )
+    response
   }
 
-  private def process(requestBody: Array[Byte]): Long = {
+  private def process(requestBody: Array[Byte]) = {
     val args = descriptor.decodeRequest(requestBody)
-
-    server.getConsumerState(
-      args.name,
-      args.streamID,
-      args.partition
-    )
+    server.checkStreamExists(args.name)
   }
 }

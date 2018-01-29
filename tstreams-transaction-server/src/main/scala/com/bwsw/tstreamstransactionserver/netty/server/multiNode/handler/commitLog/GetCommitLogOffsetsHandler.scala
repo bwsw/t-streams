@@ -16,23 +16,26 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package com.bwsw.tstreamstransactionserver.netty.server.handler.stream
 
-import com.bwsw.tstreamstransactionserver.netty.server.TransactionServer
-import com.bwsw.tstreamstransactionserver.netty.server.handler.PredefinedContextHandler
-import com.bwsw.tstreamstransactionserver.netty.server.handler.stream.StreamDeleteHandler.descriptor
+package com.bwsw.tstreamstransactionserver.netty.server.multiNode.handler.commitLog
+
 import com.bwsw.tstreamstransactionserver.netty.{Protocol, RequestMessage}
-import com.bwsw.tstreamstransactionserver.rpc.{ServerException, TransactionService}
+import com.bwsw.tstreamstransactionserver.netty.server.handler.PredefinedContextHandler
+import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeeperService.BookkeeperWriter
+import com.bwsw.tstreamstransactionserver.netty.server.multiNode.handler.commitLog.GetCommitLogOffsetsHandler._
+import com.bwsw.tstreamstransactionserver.netty.server.multiNode.commitLogService.CommitLogService
+import com.bwsw.tstreamstransactionserver.rpc.{CommitLogInfo, ServerException, TransactionService}
 import io.netty.channel.ChannelHandlerContext
 
 import scala.concurrent.ExecutionContext
 
-private object StreamDeleteHandler {
-  val descriptor = Protocol.DelStream
+private object GetCommitLogOffsetsHandler {
+  val descriptor = Protocol.GetCommitLogOffsets
 }
 
-class StreamDeleteHandler(server: TransactionServer,
-                          context: ExecutionContext)
+class GetCommitLogOffsetsHandler(commitLogService: CommitLogService,
+                                 bookkeeperWriter: BookkeeperWriter,
+                                 context: ExecutionContext)
   extends PredefinedContextHandler(
     descriptor.methodID,
     descriptor.name,
@@ -40,30 +43,32 @@ class StreamDeleteHandler(server: TransactionServer,
 
   override def createErrorResponse(message: String): Array[Byte] = {
     descriptor.encodeResponse(
-      TransactionService.DelStream.Result(
+      TransactionService.GetCommitLogOffsets.Result(
         None,
         Some(ServerException(message))
       )
     )
-
   }
 
-  override protected def fireAndForget(message: RequestMessage): Unit = {
-    process(message.body)
-  }
-
-  private def process(requestBody: Array[Byte]) = {
-    val args = descriptor.decodeRequest(requestBody)
-
-    server.delStream(args.name)
-  }
+  override protected def fireAndForget(message: RequestMessage): Unit = {}
 
   override protected def getResponse(message: RequestMessage,
                                      ctx: ChannelHandlerContext): Array[Byte] = {
-    descriptor.encodeResponse(
-      TransactionService.DelStream.Result(
+    val response = descriptor.encodeResponse(
+      TransactionService.GetCommitLogOffsets.Result(
         Some(process(message.body))
       )
+    )
+    response
+  }
+
+  private def process(requestBody: Array[Byte]) = {
+    val ledgers =
+      commitLogService.getMinMaxLedgersIds
+
+    CommitLogInfo(
+      ledgers.minLedgerId,
+      bookkeeperWriter.getLastConstructedLedger
     )
   }
 }

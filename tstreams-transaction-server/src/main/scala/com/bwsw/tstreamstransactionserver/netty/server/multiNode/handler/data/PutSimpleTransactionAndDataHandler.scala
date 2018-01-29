@@ -25,7 +25,7 @@ import com.bwsw.tstreamstransactionserver.netty.server.multiNode.Structure.PutTr
 import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeeperService.BookkeeperMaster
 import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeeperService.data.Record
 import com.bwsw.tstreamstransactionserver.netty.server.multiNode.handler.MultiNodeArgsDependentContextHandler
-import com.bwsw.tstreamstransactionserver.netty.server.multiNode.handler.data.SimpleTransactionAndDataPutHandler._
+import com.bwsw.tstreamstransactionserver.netty.server.multiNode.handler.data.PutSimpleTransactionAndDataHandler._
 import com.bwsw.tstreamstransactionserver.netty.server.subscriber.OpenedTransactionNotifier
 import com.bwsw.tstreamstransactionserver.netty.server.{OrderedExecutionContextPool, TransactionServer}
 import com.bwsw.tstreamstransactionserver.netty.{Protocol, RequestMessage}
@@ -38,12 +38,11 @@ import org.apache.bookkeeper.client.{AsyncCallback, BKException, LedgerHandle}
 
 import scala.concurrent.{ExecutionContext, Future, Promise}
 
-private object SimpleTransactionAndDataPutHandler {
+private object PutSimpleTransactionAndDataHandler {
   val descriptor = Protocol.PutSimpleTransactionAndData
-  private val transactionTtl: Long = 3000
 }
 
-class SimpleTransactionAndDataPutHandler(server: TransactionServer,
+class PutSimpleTransactionAndDataHandler(server: TransactionServer,
                                          bookkeeperMaster: BookkeeperMaster,
                                          notifier: OpenedTransactionNotifier,
                                          authOptions: AuthenticationOptions,
@@ -133,7 +132,7 @@ class SimpleTransactionAndDataPutHandler(server: TransactionServer,
         transactionID,
         TransactionStates.Opened,
         txn.data.size,
-        SimpleTransactionAndDataPutHandler.transactionTtl
+        3000L
       ),
       ProducerTransaction(
         txn.streamID,

@@ -16,23 +16,28 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package com.bwsw.tstreamstransactionserver.netty.server.handler.stream
+package com.bwsw.tstreamstransactionserver.netty.server.singleNode.hanlder.consumer
 
 import com.bwsw.tstreamstransactionserver.netty.server.TransactionServer
+import com.bwsw.tstreamstransactionserver.netty.server.batch.Frame
+import com.bwsw.tstreamstransactionserver.netty.server.commitLogService.ScheduledCommitLog
 import com.bwsw.tstreamstransactionserver.netty.server.handler.PredefinedContextHandler
-import com.bwsw.tstreamstransactionserver.netty.server.handler.stream.StreamPutHandler.descriptor
+import com.bwsw.tstreamstransactionserver.netty.server.singleNode.hanlder.consumer.PutConsumerCheckpointHandler._
 import com.bwsw.tstreamstransactionserver.netty.{Protocol, RequestMessage}
+import com.bwsw.tstreamstransactionserver.rpc.TransactionService.PutConsumerCheckpoint
 import com.bwsw.tstreamstransactionserver.rpc.{ServerException, TransactionService}
+import com.bwsw.tstreamstransactionserver.tracing.ServerTracer.tracer
 import io.netty.channel.ChannelHandlerContext
 
 import scala.concurrent.ExecutionContext
 
-private object StreamPutHandler {
-  val descriptor = Protocol.PutStream
+private object PutConsumerCheckpointHandler {
+  val descriptor = Protocol.PutConsumerCheckpoint
 }
 
-class StreamPutHandler(server: TransactionServer,
-                       context: ExecutionContext)
+class PutConsumerCheckpointHandler(server: TransactionServer,
+                                   scheduledCommitLog: ScheduledCommitLog,
+                                   context: ExecutionContext)
   extends PredefinedContextHandler(
     descriptor.methodID,
     descriptor.name,
@@ -40,7 +45,7 @@ class StreamPutHandler(server: TransactionServer,
 
   override def createErrorResponse(message: String): Array[Byte] = {
     descriptor.encodeResponse(
-      TransactionService.PutStream.Result(
+      TransactionService.PutConsumerCheckpoint.Result(
         None,
         Some(ServerException(message)
         )
@@ -48,22 +53,24 @@ class StreamPutHandler(server: TransactionServer,
     )
   }
 
-  override protected def fireAndForget(message: RequestMessage): Unit = {
-    process(message.body)
+  override protected def fireAndForget(message: RequestMessage): Unit =
+    tracer.withTracing(message, getClass.getName + ".fireAndForget")(process(message))
+
+  private def process(message: RequestMessage): Boolean = {
+    scheduledCommitLog.putData(
+      Frame.PutConsumerCheckpointType,
+      message.body,
+      message.token
+    )
   }
 
   override protected def getResponse(message: RequestMessage,
                                      ctx: ChannelHandlerContext): Array[Byte] = {
-    descriptor.encodeResponse(
-      TransactionService.PutStream.Result(
-        Some(process(message.body))
-      )
-    )
-  }
+    tracer.withTracing(message, getClass.getName + ".getResponse") {
+      val result = process(message)
 
-  private def process(requestBody: Array[Byte]) = {
-    val args = descriptor.decodeRequest(requestBody)
-
-    server.putStream(args.name, args.partitions, args.description, args.ttl)
+      descriptor.encodeResponse(
+        PutConsumerCheckpoint.Result(Some(result)))
+    }
   }
 }

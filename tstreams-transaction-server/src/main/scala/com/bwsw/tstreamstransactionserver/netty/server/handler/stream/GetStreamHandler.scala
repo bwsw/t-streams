@@ -16,32 +16,31 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package com.bwsw.tstreamstransactionserver.netty.server.handler.metadata
+package com.bwsw.tstreamstransactionserver.netty.server.handler.stream
 
 import com.bwsw.tstreamstransactionserver.netty.server.TransactionServer
 import com.bwsw.tstreamstransactionserver.netty.server.handler.PredefinedContextHandler
-import com.bwsw.tstreamstransactionserver.netty.server.handler.metadata.LastCheckpointedTransactionGetHandler.descriptor
+import com.bwsw.tstreamstransactionserver.netty.server.handler.stream.GetStreamHandler.descriptor
 import com.bwsw.tstreamstransactionserver.netty.{Protocol, RequestMessage}
 import com.bwsw.tstreamstransactionserver.rpc.{ServerException, TransactionService}
 import io.netty.channel.ChannelHandlerContext
 
 import scala.concurrent.ExecutionContext
 
-private object LastCheckpointedTransactionGetHandler {
-  val descriptor = Protocol.GetLastCheckpointedTransaction
+private object GetStreamHandler {
+  val descriptor = Protocol.GetStream
 }
 
-class LastCheckpointedTransactionGetHandler(server: TransactionServer,
-                                            context: ExecutionContext)
+class GetStreamHandler(server: TransactionServer,
+                       context: ExecutionContext)
   extends PredefinedContextHandler(
     descriptor.methodID,
     descriptor.name,
     context) {
 
-
   override def createErrorResponse(message: String): Array[Byte] = {
     descriptor.encodeResponse(
-      TransactionService.GetLastCheckpointedTransaction.Result(
+      TransactionService.GetStream.Result(
         None,
         Some(ServerException(message)
         )
@@ -51,17 +50,18 @@ class LastCheckpointedTransactionGetHandler(server: TransactionServer,
 
   override protected def fireAndForget(message: RequestMessage): Unit = {}
 
-  override protected def getResponse(message: RequestMessage, ctx: ChannelHandlerContext): Array[Byte] = {
-    descriptor.encodeResponse(
-      TransactionService.GetLastCheckpointedTransaction.Result(
+  override protected def getResponse(message: RequestMessage,
+                                     ctx: ChannelHandlerContext): Array[Byte] = {
+    val response = descriptor.encodeResponse(
+      TransactionService.GetStream.Result(
         process(message.body)
       )
     )
+    response
   }
 
   private def process(requestBody: Array[Byte]) = {
     val args = descriptor.decodeRequest(requestBody)
-
-    server.getLastCheckpointedTransaction(args.streamID, args.partition)
+    server.getStream(args.name)
   }
 }

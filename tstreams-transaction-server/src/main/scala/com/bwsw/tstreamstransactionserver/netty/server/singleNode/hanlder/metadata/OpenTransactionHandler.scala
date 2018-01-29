@@ -21,7 +21,7 @@ package com.bwsw.tstreamstransactionserver.netty.server.singleNode.hanlder.metad
 import com.bwsw.tstreamstransactionserver.netty.server.batch.Frame
 import com.bwsw.tstreamstransactionserver.netty.server.commitLogService.ScheduledCommitLog
 import com.bwsw.tstreamstransactionserver.netty.server.handler.ArgsDependentContextHandler
-import com.bwsw.tstreamstransactionserver.netty.server.singleNode.hanlder.metadata.TransactionOpenHandler._
+import com.bwsw.tstreamstransactionserver.netty.server.singleNode.hanlder.metadata.OpenTransactionHandler._
 import com.bwsw.tstreamstransactionserver.netty.server.subscriber.OpenedTransactionNotifier
 import com.bwsw.tstreamstransactionserver.netty.server.{OrderedExecutionContextPool, TransactionServer}
 import com.bwsw.tstreamstransactionserver.netty.{Protocol, RequestMessage}
@@ -34,11 +34,11 @@ import io.netty.channel.ChannelHandlerContext
 import scala.concurrent.{ExecutionContext, Future}
 
 
-private object TransactionOpenHandler {
+private object OpenTransactionHandler {
   val descriptor = Protocol.OpenTransaction
 }
 
-class TransactionOpenHandler(server: TransactionServer,
+class OpenTransactionHandler(server: TransactionServer,
                              scheduledCommitLog: ScheduledCommitLog,
                              notifier: OpenedTransactionNotifier,
                              authOptions: AuthenticationOptions,

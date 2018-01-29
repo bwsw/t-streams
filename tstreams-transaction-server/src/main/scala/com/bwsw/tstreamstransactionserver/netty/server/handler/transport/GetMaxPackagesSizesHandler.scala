@@ -20,43 +20,44 @@
 package com.bwsw.tstreamstransactionserver.netty.server.handler.transport
 
 import com.bwsw.tstreamstransactionserver.netty.server.handler.SyncReadHandler
-import com.bwsw.tstreamstransactionserver.netty.server.handler.transport.MaxPackagesSizesGetHandler._
+import com.bwsw.tstreamstransactionserver.netty.server.handler.transport.GetMaxPackagesSizesHandler._
 import com.bwsw.tstreamstransactionserver.netty.{Protocol, RequestMessage}
 import com.bwsw.tstreamstransactionserver.options.SingleNodeServerOptions.TransportOptions
 import com.bwsw.tstreamstransactionserver.rpc.{TransactionService, TransportOptionsInfo}
 import io.netty.channel.ChannelHandlerContext
 
-import scala.util.{Failure, Success, Try}
 
-
-private object MaxPackagesSizesGetHandler {
+private object GetMaxPackagesSizesHandler {
   val descriptor = Protocol.GetMaxPackagesSizes
 }
 
-class MaxPackagesSizesGetHandler(packageTransmissionOpts: TransportOptions)
+class GetMaxPackagesSizesHandler(packageTransmissionOpts: TransportOptions)
   extends SyncReadHandler(
     descriptor.methodID,
-    descriptor.name) {
+    descriptor.name
+  ) {
 
   override protected def getResponse(message: RequestMessage,
                                      ctx: ChannelHandlerContext,
                                      error: Option[Throwable]): Array[Byte] = {
-    Try(process(message.body)) match {
-      case Success(result) =>
-        descriptor.encodeResponse(
+    scala.util.Try(process(message.body)) match {
+      case scala.util.Success(result) =>
+        val response = descriptor.encodeResponse(
           TransactionService.GetMaxPackagesSizes.Result(Some(result))
         )
-
-      case Failure(throwable) =>
-        createErrorResponse(throwable.getMessage)
+        response
+      case scala.util.Failure(throwable) =>
+        val response = createErrorResponse(throwable.getMessage)
+        response
     }
   }
 
   private def process(requestBody: Array[Byte]) = {
-    TransportOptionsInfo(
+    val response = TransportOptionsInfo(
       packageTransmissionOpts.maxMetadataPackageSize,
       packageTransmissionOpts.maxDataPackageSize
     )
+    response
   }
 
   override def createErrorResponse(message: String): Array[Byte] = {

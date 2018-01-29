@@ -23,7 +23,7 @@ import com.bwsw.tstreamstransactionserver.netty.server.batch.Frame
 import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeeperService.BookkeeperMaster
 import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeeperService.data.Record
 import com.bwsw.tstreamstransactionserver.netty.server.multiNode.handler.MultiNodeArgsDependentContextHandler
-import com.bwsw.tstreamstransactionserver.netty.server.multiNode.handler.metadata.TransactionOpenHandler._
+import com.bwsw.tstreamstransactionserver.netty.server.multiNode.handler.metadata.OpenTransactionHandler._
 import com.bwsw.tstreamstransactionserver.netty.server.subscriber.OpenedTransactionNotifier
 import com.bwsw.tstreamstransactionserver.netty.server.{OrderedExecutionContextPool, TransactionServer}
 import com.bwsw.tstreamstransactionserver.netty.{Protocol, RequestMessage}
@@ -36,11 +36,11 @@ import org.apache.bookkeeper.client.{AsyncCallback, BKException, LedgerHandle}
 
 import scala.concurrent.{ExecutionContext, Future, Promise}
 
-private object TransactionOpenHandler {
+private object OpenTransactionHandler {
   val descriptor = Protocol.OpenTransaction
 }
 
-class TransactionOpenHandler(server: TransactionServer,
+class OpenTransactionHandler(server: TransactionServer,
                              bookkeeperMaster: BookkeeperMaster,
                              notifier: OpenedTransactionNotifier,
                              authOptions: AuthenticationOptions,

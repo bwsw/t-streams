@@ -16,33 +16,35 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package com.bwsw.tstreamstransactionserver.netty.server.handler.stream
+package com.bwsw.tstreamstransactionserver.netty.server.handler.data
 
 import com.bwsw.tstreamstransactionserver.netty.server.TransactionServer
 import com.bwsw.tstreamstransactionserver.netty.server.handler.PredefinedContextHandler
-import com.bwsw.tstreamstransactionserver.netty.server.handler.stream.StreamExistsCheckHandler.descriptor
+import com.bwsw.tstreamstransactionserver.netty.server.handler.data.GetTransactionDataHandler.descriptor
 import com.bwsw.tstreamstransactionserver.netty.{Protocol, RequestMessage}
 import com.bwsw.tstreamstransactionserver.rpc.{ServerException, TransactionService}
 import io.netty.channel.ChannelHandlerContext
 
 import scala.concurrent.ExecutionContext
 
-private object StreamExistsCheckHandler {
-  val descriptor = Protocol.CheckStreamExists
+private object GetTransactionDataHandler {
+  val descriptor = Protocol.GetTransactionData
 }
 
-class StreamExistsCheckHandler(server: TransactionServer,
-                               context: ExecutionContext)
+class GetTransactionDataHandler(server: TransactionServer,
+                                context: ExecutionContext)
   extends PredefinedContextHandler(
     descriptor.methodID,
     descriptor.name,
     context) {
 
+
   override def createErrorResponse(message: String): Array[Byte] = {
     descriptor.encodeResponse(
-      TransactionService.CheckStreamExists.Result(
+      TransactionService.GetTransactionData.Result(
         None,
-        Some(ServerException(message))
+        Some(ServerException(message)
+        )
       )
     )
   }
@@ -51,16 +53,22 @@ class StreamExistsCheckHandler(server: TransactionServer,
 
   override protected def getResponse(message: RequestMessage,
                                      ctx: ChannelHandlerContext): Array[Byte] = {
-    descriptor.encodeResponse(
-      TransactionService.CheckStreamExists.Result(
+    val response = descriptor.encodeResponse(
+      TransactionService.GetTransactionData.Result(
         Some(process(message.body))
       )
     )
+    response
   }
 
   private def process(requestBody: Array[Byte]) = {
     val args = descriptor.decodeRequest(requestBody)
-
-    server.checkStreamExists(args.name)
+    server.getTransactionData(
+      args.streamID,
+      args.partition,
+      args.transaction,
+      args.from,
+      args.to
+    )
   }
 }
