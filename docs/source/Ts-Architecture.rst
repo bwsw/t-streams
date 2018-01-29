@@ -40,7 +40,7 @@ Slave reads the operations from the commit log and stores them to a database (Ro
 
 Agents discover Master Server via Apache ZooKeeper. ZooKeeper returns Server's IP address and agents connect to it to perform the operations.
 
-.. figure:: _static/Architecture-Server1Node.png
+.. figure:: _static/Architecture-ServerOneNode.png
 
 In the fault-tolerant mode implementation, ZooKeeper returns the address of the Master server to agents. Producers write operations to Master that registers them in BookKeeper commit log and stores data to the storage. Slaves read from BookKeeper to synchronize their state with Master. 
 
