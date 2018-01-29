@@ -34,15 +34,15 @@ The Storage Server is an external process which keeps transactions and their dat
 
 .. figure:: _static/Architecture-Server2.png
 
-The Server consists of two parts: Master and Slave. All operations that include state change (i.e. create, update, delete a transaction) are performed on Master. They are orderly written to Server's internal commit log. 
+The Server consists of two parts: Master and Slave. All operations that include the state change (i.e. create, update, delete a transaction) are performed on Master. They are orderly written to Server's internal commit log. 
 
-Slave reads the operations from the commit log and stores them to a database (RocksDB). RocksDB has a very important feature – an atomic batch operation which allows implementing atomic and reliable commit logs processing. Slave performs all operations for data retrieving. It reads data from RocksDB to send it to Consumer/Subscriber.
+Slave reads the operations from the commit log and stores them to a database (RocksDB). RocksDB has a very important feature – an atomic batch operation which allows implementing atomic and reliable commit logs processing. Slave performs all operations for data retrieving, i.e. operations that do not cause the state change. Slave reads data from RocksDB to return them to a Consumer/Subscriber.
 
-Agents discover Master Server via Apache ZooKeeper. ZooKeeper returns Server's IP address and agents connect to it to perform the operations.
+Agents discover Master Server via Apache ZooKeeper. ZooKeeper returns Server's IP address. Using it, agents connect to the Server to perform the operations.
 
 .. figure:: _static/Architecture-ServerOneNode.png
 
-In the fault-tolerant mode implementation, ZooKeeper returns the address of the Master server to agents. Producers write operations to Master that registers them in BookKeeper commit log and stores data to the storage. Slaves read from BookKeeper to synchronize their state with Master. 
+In the fault-tolerant mode implementation, ZooKeeper returns the address of the Master server to agents. Agents perform operations on Master that registers them in BookKeeper commit log and stores data to the storage. Slaves read from BookKeeper to synchronize their state with Master. 
 
 .. figure:: _static/Architecture-ServerMaster.png
 
@@ -50,11 +50,15 @@ In case Master is down or unavailable, one of the Slaves becomes a Master server
 
 .. figure:: _static/Architecture-ServerSlave.png
 
-In the fault-tolerant mode implementation, one Master and one or more Slave nodes can be deployed. In a most common scenario, one Master and one Slave are in cluster. 
+In the fault-tolerant mode implementation, one Master and one or more Slave nodes can be deployed. In a most common scenario, one Master and one Slave are in cluster. More than one Master server can be included in the cluster. In this case we will speak about a scalable mode that is described below.
 
-The Storage Server is a separate project which can be found on `GitHub <https://github.com/bwsw/tstreams-transaction-server>`_.
+The Storage Server is a sub-project which can be found on `GitHub <https://github.com/bwsw/t-streams/tree/develop/tstreams-transaction-server>`_.
 
 Scalable Mode
 ---------------------
 
+T-streams allows operating in a scalable mode. It is possible if data processing is implemented via more than one stream. A Master server is assigned to each stream. This server has a Common role. All operations for the stream specified for the server will be sent to this server.
 
+For example, there are 3 streams in the process - Stream 1, Stream 2 and Stream 3. Each of the streams is assigned to a Server it sends operations to. So we involve 3 servers with a Common role into the process. Producer 1 working with Stream 1 connects to Server 1. Producer 2 working with Stream 2 connects to Server 2. Producer 3 working with Stream 3 connects to Server 3. 
+
+One more server with a CheckpointGgroup role should be added to the cluster to perform all operations for a Checkpoint Group in the process. So all producers in the runtime will connect to the CheckointGroup server and will send to it all operations common for all streams in the process.
