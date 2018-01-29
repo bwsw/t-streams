@@ -25,9 +25,8 @@ import com.bwsw.tstreamstransactionserver.exception.Throwable.{MasterDataIsIlleg
 import com.bwsw.tstreamstransactionserver.netty.SocketHostPortPair
 import com.bwsw.tstreamstransactionserver.netty.client.MasterReelectionListener
 import org.apache.curator.framework.CuratorFramework
-import org.apache.curator.framework.api.{CuratorEvent, CuratorListener}
 import org.apache.curator.framework.recipes.cache.{ChildData, NodeCache, NodeCacheListener}
-import org.apache.zookeeper.Watcher.Event.KeeperState
+import org.apache.curator.framework.state.{ConnectionState, ConnectionStateListener}
 import org.slf4j.LoggerFactory
 
 import scala.annotation.tailrec
@@ -40,7 +39,7 @@ class ZKMasterPathMonitor(connection: CuratorFramework,
                           retryDelayMs: Int,
                           prefix: String)
   extends NodeCacheListener
-    with CuratorListener {
+    with ConnectionStateListener {
   private val logger = LoggerFactory.getLogger(this.getClass)
   private val isClosed = new AtomicBoolean(true)
 
@@ -116,10 +115,9 @@ class ZKMasterPathMonitor(connection: CuratorFramework,
     listeners.forEach(_.masterChanged(newMaster))
   }
 
-  override def eventReceived(client: CuratorFramework,
-                             event: CuratorEvent): Unit = {
-    event.getWatchedEvent.getState match {
-      case KeeperState.Disconnected =>
+  override def stateChanged(client: CuratorFramework, newState: ConnectionState): Unit = {
+    newState match {
+      case ConnectionState.LOST =>
         val newMaster = Left(
           new ZkNoConnectionException(client.getZookeeperClient.getCurrentConnectionString))
 
@@ -137,7 +135,7 @@ class ZKMasterPathMonitor(connection: CuratorFramework,
   def startMonitoringMasterServerPath(): Unit = {
     if (isClosed.getAndSet(false)) {
       nodeToWatch.getListenable.addListener(this)
-      connection.getCuratorListenable.addListener(this)
+      connection.getConnectionStateListenable.addListener(this)
       nodeToWatch.start()
     }
   }
@@ -145,7 +143,7 @@ class ZKMasterPathMonitor(connection: CuratorFramework,
   def stopMonitoringMasterServerPath(): Unit = {
     if (!isClosed.getAndSet(true)) {
       nodeToWatch.getListenable.removeListener(this)
-      connection.getCuratorListenable.removeListener(this)
+      connection.getConnectionStateListenable.removeListener(this)
       nodeToWatch.close()
     }
   }

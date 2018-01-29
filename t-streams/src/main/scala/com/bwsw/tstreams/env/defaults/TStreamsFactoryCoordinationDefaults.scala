@@ -32,7 +32,7 @@ object TStreamsFactoryCoordinationDefaults {
   object Coordination {
     val endpoints = "localhost:2181"
     val path = "/tts/master"
-    val sessionTimeoutMs = IntMinMaxDefault(1000, 10000, 5000)
+    val sessionTimeoutMs = IntMinMaxDefault(1000, 60000, 30000)
     val connectionTimeoutMs = IntMinMaxDefault(1000, 10000, 5000)
     val retryDelayMs = IntMinMaxDefault(50, 2000, 1000)
     val retryCount = IntMinMaxDefault(1, 29, 10)
