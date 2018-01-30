@@ -27,18 +27,18 @@ import com.bwsw.tstreamstransactionserver.options.MultiNodeServerOptions.{Bookke
 import com.bwsw.tstreamstransactionserver.options.SingleNodeServerOptions._
 import com.bwsw.tstreamstransactionserver.rpc.{ConsumerTransaction, ProducerTransaction}
 
-class TestCommonCheckpointGroupServer(authenticationOpts: AuthenticationOptions,
-                                      packageTransmissionOpts: TransportOptions,
-                                      zookeeperOpts: CommonOptions.ZookeeperOptions,
-                                      serverOpts: BootstrapOptions,
-                                      commonRoleOptions: CommonRoleOptions,
-                                      commonPrefixesOptions: CommonPrefixesOptions,
-                                      checkpointGroupRoleOptions: CheckpointGroupRoleOptions,
-                                      bookkeeperOptions: BookkeeperOptions,
-                                      storageOpts: StorageOptions,
-                                      rocksStorageOpts: RocksStorageOptions,
-                                      subscribersUpdateOptions: SubscriberUpdateOptions,
-                                      tracingOptions: TracingOptions = TracingOptions())
+class CommonCheckpointGroupTestingServer(authenticationOpts: AuthenticationOptions,
+                                         packageTransmissionOpts: TransportOptions,
+                                         zookeeperOpts: CommonOptions.ZookeeperOptions,
+                                         serverOpts: BootstrapOptions,
+                                         commonRoleOptions: CommonRoleOptions,
+                                         commonPrefixesOptions: CommonPrefixesOptions,
+                                         checkpointGroupRoleOptions: CheckpointGroupRoleOptions,
+                                         bookkeeperOptions: BookkeeperOptions,
+                                         storageOpts: StorageOptions,
+                                         rocksStorageOpts: RocksStorageOptions,
+                                         subscribersUpdateOptions: SubscriberUpdateOptions,
+                                         tracingOptions: TracingOptions = TracingOptions())
   extends CommonCheckpointGroupServer(
     authenticationOpts,
     packageTransmissionOpts,
@@ -81,11 +81,7 @@ class TestCommonCheckpointGroupServer(authenticationOpts: AuthenticationOptions,
 
   override def shutdown(): Unit = {
     super.shutdown()
-    if (producerNotifier != null) {
-      producerNotifier.close()
-    }
-    if (consumerNotifier != null) {
-      producerNotifier.close()
-    }
+    producerNotifier.close()
+    producerNotifier.close()
   }
 }

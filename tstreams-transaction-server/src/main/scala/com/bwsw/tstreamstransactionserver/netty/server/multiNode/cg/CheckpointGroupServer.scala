@@ -39,6 +39,8 @@ import io.netty.channel.{ChannelOption, EventLoopGroup}
 import io.netty.handler.logging.{LogLevel, LoggingHandler}
 import org.apache.curator.retry.RetryForever
 
+import scala.util.Try
+
 class CheckpointGroupServer(authenticationOpts: AuthenticationOptions,
                             packageTransmissionOpts: TransportOptions,
                             zookeeperOpts: CommonOptions.ZookeeperOptions,
@@ -159,56 +161,31 @@ class CheckpointGroupServer(authenticationOpts: AuthenticationOptions,
   }
 
   def shutdown(): Unit = {
-    val isNotShutdown =
-      isShutdown.compareAndSet(false, true)
+    if (!isShutdown.getAndSet(true)) {
+      checkpointMaster.stop()
+      checkpointGroupMasterElector.stop()
 
-    if (isNotShutdown) {
-      if (checkpointMaster != null) {
-        checkpointMaster.stop()
+      Try {
+        bossGroup.shutdownGracefully(
+          0L,
+          0L,
+          TimeUnit.NANOSECONDS)
+          .cancel(true)
+      }
+      Try {
+        workerGroup.shutdownGracefully(
+          0L,
+          0L,
+          TimeUnit.NANOSECONDS)
+          .cancel(true)
       }
 
-      if (checkpointGroupMasterElector != null)
-        checkpointGroupMasterElector.stop()
-
-      if (bossGroup != null) {
-        scala.util.Try {
-          bossGroup.shutdownGracefully(
-            0L,
-            0L,
-            TimeUnit.NANOSECONDS
-          ).cancel(true)
-        }
-      }
-      if (workerGroup != null) {
-        scala.util.Try {
-          workerGroup.shutdownGracefully(
-            0L,
-            0L,
-            TimeUnit.NANOSECONDS
-          ).cancel(true)
-        }
-      }
-
-      if (zk != null) {
-        zk.close()
-      }
-
-      if (commitLogContext != null) {
-        commitLogContext.stopAccessNewTasks()
-        commitLogContext.awaitAllCurrentTasksAreCompleted()
-      }
-
-      if (rocksStorage != null) {
-        rocksStorage.getStorageManager.closeDatabases()
-      }
-
-      if (transactionDataService != null) {
-        transactionDataService.closeTransactionDataDatabases()
-      }
-
-      if (bookkeeperToRocksWriter != null) {
-        bookkeeperToRocksWriter.close()
-      }
+      zk.close()
+      commitLogContext.stopAccessNewTasks()
+      commitLogContext.awaitAllCurrentTasksAreCompleted()
+      rocksStorage.getStorageManager.closeDatabases()
+      transactionDataService.closeTransactionDataDatabases()
+      bookkeeperToRocksWriter.close()
     }
   }
 

@@ -43,7 +43,7 @@ import org.apache.curator.retry.ExponentialBackoffRetry
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.{Future, Promise}
-import scala.util.{Failure, Success}
+import scala.util.{Failure, Success, Try}
 
 
 class InetClientProxy(connectionOptions: ConnectionOptions,
@@ -763,28 +763,23 @@ class InetClientProxy(connectionOptions: ConnectionOptions,
   def shutdown(): Unit =
     this.synchronized {
       if (!isShutdown.get()) {
-        if (workerGroup != null) {
-          scala.util.Try(
-            workerGroup.shutdownGracefully(
-              0L,
-              0L,
-              TimeUnit.NANOSECONDS
-            ).cancel(true))
-        }
-        if (commonInetClient != null)
-          commonInetClient.shutdown()
+        Try(
+          workerGroup.shutdownGracefully(
+            0L,
+            0L,
+            TimeUnit.NANOSECONDS)
+            .cancel(true))
+        commonInetClient.shutdown()
+        checkpointGroupInetClient.foreach(_.shutdown())(context)
 
-        if (checkpointGroupInetClient != null)
-          checkpointGroupInetClient.foreach(_.shutdown())(context)
-
-        if (isZKClientExternal && zkConnection != null)
+        if (isZKClientExternal) {
           zkConnection.close()
+        }
 
         processTransactionsPutOperationPool
           .stopAccessNewTasks()
         processTransactionsPutOperationPool
           .awaitAllCurrentTasksAreCompleted()
-
         executionContext
           .stopAccessNewTasksAndAwaitCurrentTasksToBeCompleted()
 

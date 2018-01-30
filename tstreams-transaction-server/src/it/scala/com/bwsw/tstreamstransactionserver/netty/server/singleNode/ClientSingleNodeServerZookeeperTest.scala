@@ -33,7 +33,7 @@ import com.bwsw.tstreamstransactionserver.options.SingleNodeServerOptions.{Boots
 import com.bwsw.tstreamstransactionserver.util
 import com.bwsw.tstreamstransactionserver.util.Utils
 import com.bwsw.tstreamstransactionserver.util.Utils.{getRandomConsumerTransaction, getRandomProducerTransaction, getRandomStream, startZkServerAndGetIt, _}
-import com.bwsw.tstreamstransactionserver.util.multiNode.MultiNudeUtils
+import com.bwsw.tstreamstransactionserver.util.multiNode.MultiNodeUtils
 import org.apache.curator.framework.CuratorFrameworkFactory
 import org.apache.curator.retry.RetryForever
 import org.apache.curator.test.TestingServer
@@ -374,7 +374,7 @@ class ClientSingleNodeServerZookeeperTest
       serverBuilder.build()
     }
 
-    MultiNudeUtils.deleteDirectories(storageOptions)
+    MultiNodeUtils.deleteDirectories(storageOptions)
   }
 
   it should "not start on wrong inet address" in {
@@ -388,7 +388,7 @@ class ClientSingleNodeServerZookeeperTest
       serverBuilder.build()
     }
 
-    MultiNudeUtils.deleteDirectories(storageOptions)
+    MultiNodeUtils.deleteDirectories(storageOptions)
   }
 
   it should "not start on negative port value" in {
@@ -402,7 +402,7 @@ class ClientSingleNodeServerZookeeperTest
       serverBuilder.build()
     }
 
-    MultiNudeUtils.deleteDirectories(storageOptions)
+    MultiNodeUtils.deleteDirectories(storageOptions)
   }
 
   it should "not start on port value exceeds 65535" in {
@@ -416,7 +416,7 @@ class ClientSingleNodeServerZookeeperTest
       serverBuilder.build()
     }
 
-    MultiNudeUtils.deleteDirectories(storageOptions)
+    MultiNodeUtils.deleteDirectories(storageOptions)
   }
 
 }

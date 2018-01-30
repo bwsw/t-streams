@@ -25,7 +25,7 @@ import java.util.concurrent.{CountDownLatch, TimeUnit}
 
 import com.bwsw.tstreamstransactionserver.netty.client.ClientBuilder
 import com.bwsw.tstreamstransactionserver.netty.server.db.zk.ZookeeperStreamRepository
-import com.bwsw.tstreamstransactionserver.netty.server.multiNode.{CommonCheckpointGroupServerBuilder, TestCommonCheckpointGroupServer}
+import com.bwsw.tstreamstransactionserver.netty.server.multiNode.{CommonCheckpointGroupServerBuilder, CommonCheckpointGroupTestingServer}
 import com.bwsw.tstreamstransactionserver.netty.server.storage.rocks.MultiAndSingleNodeRockStorage
 import com.bwsw.tstreamstransactionserver.netty.server.transactionDataService.TransactionDataService
 import com.bwsw.tstreamstransactionserver.netty.server.{RocksReader, RocksWriter, TransactionServer, multiNode}
@@ -38,7 +38,7 @@ import com.bwsw.tstreamstransactionserver.util.Utils.{getRandomPort, uuid}
 import org.apache.commons.io.FileUtils
 import org.apache.curator.framework.CuratorFramework
 
-object MultiNudeUtils {
+object MultiNodeUtils {
   private def testStorageOptions(dbPath: File) = {
     StorageOptions().copy(
       path = dbPath.getPath,
@@ -157,7 +157,7 @@ object MultiNudeUtils {
 
 
     val transactionServer =
-      new TestCommonCheckpointGroupServer(
+      new CommonCheckpointGroupTestingServer(
         updatedBuilder.getAuthenticationOptions,
         updatedBuilder.getPackageTransmissionOptions,
         updatedBuilder.getZookeeperOptions,
