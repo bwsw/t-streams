@@ -39,7 +39,7 @@ import io.netty.channel.epoll.{Epoll, EpollEventLoopGroup}
 import io.netty.channel.nio.NioEventLoopGroup
 import org.apache.curator.framework.CuratorFramework
 import org.apache.curator.framework.state.ConnectionState
-import org.apache.curator.retry.RetryForever
+import org.apache.curator.retry.ExponentialBackoffRetry
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.{Future, Promise}
@@ -106,7 +106,7 @@ class InetClientProxy(connectionOptions: ConnectionOptions,
         zookeeperOptions.endpoints,
         zookeeperOptions.sessionTimeoutMs,
         zookeeperOptions.connectionTimeoutMs,
-        new RetryForever(zookeeperOptions.retryDelayMs),
+        new ExponentialBackoffRetry(zookeeperOptions.retryDelayMs, InetClientProxy.ZooKeeperRetryCount),
         connectionOptions.prefix
       ).client
     }
@@ -807,4 +807,9 @@ class InetClientProxy(connectionOptions: ConnectionOptions,
       case _ => false
     })
   }
+}
+
+
+object InetClientProxy {
+  val ZooKeeperRetryCount = 3
 }
