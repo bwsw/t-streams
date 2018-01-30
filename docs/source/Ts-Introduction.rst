@@ -178,8 +178,8 @@ Guarantees
 
 T-streams gives the following guarantees:
 
-- Consumers/Subscribers process transactions in a strict order according to transaction open time. A transaction which is opened later but closed earlier the previous one will not be processed until the previous transaction is closed and processed.
-- Consumers/Subscribers read and process all data elements within a transaction in the order Producers have recorded them.  
+- Consumers/Subscribers process transactions in a strict order according to transaction open time. The first opened transaction blocks the processing of following transactions until it is checkpointed.
+- Consumers/Subscribers read data elements in a transaction in the order Producers have recorded them.  
 - All events are written to a stream exactly-once. The checkpoint operation ensures duplicate check rejecting duplicate transactions and records.
 
 The current status of T-streams is Technical release 2.5.0. We assume issues may occur, and if you face any bugs you are warmly welcome to contact the team and contribute to the project. 
@@ -191,6 +191,6 @@ The stream processing velocity depends on a number of transactions in a partitio
 
 Since a transaction is not equal to a data element and it can include a lot of data elements, then when data elements can be batched it can give 1M of data elements per second only with 1000 of transactions of 1000 data elements each. So, to achieve *higher throughput* we suggest trying to minimize transaction amount and maximize the transaction payload.
 
-The checkpoint operation allows fixing a lot of transactions as a single operation. Frequent checkpointing leads to a slowdown in performance, so it is preferable to call the checkpoint method depending on the need. Use Producer or Checkpoint Group (but not Transaction object) methods for the checkpoint. 
+The *checkpoint operation* allows fixing a lot of transactions as a single operation. Frequent checkpointing leads to a slowdown in performance, so it is preferable to call the checkpoint method as required, using Producer or Checkpoint Group (but not Transaction object) methods. 
 
 T-streams single stream is not scalable. One stream is handled on one server. In this case, the processing is limited by the server performance. If the processing flow you develop allows scalability, you can handle each stream on a separate server observing all the guarantees mentioned above. *Scalability* allows processing high throughputs of data with very low latency. 
