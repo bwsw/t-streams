@@ -25,7 +25,7 @@ import com.bwsw.tstreams.agents.consumer.Consumer
 import com.bwsw.tstreams.agents.consumer.Offset.Oldest
 import com.bwsw.tstreams.agents.producer.{NewProducerTransactionPolicy, Producer}
 import com.bwsw.tstreams.testutils.{TestStorageServer, TestUtils}
-import com.bwsw.tstreamstransactionserver.netty.server.singleNode.TestSingleNodeServer
+import com.bwsw.tstreamstransactionserver.netty.server.singleNode.SingleNodeTestingServer
 import com.bwsw.tstreamstransactionserver.rpc.TransactionStates.{Checkpointed, Invalid}
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, FlatSpec, Matchers}
 
@@ -42,7 +42,7 @@ class CheckpointGroupCheckpointTest
   private val partitions: Set[Int] = (0 until partitionsCount).toSet
   private val waitingTimeout = 5000
 
-  private var server: TestSingleNodeServer = _
+  private var server: SingleNodeTestingServer = _
 
   private def createProducer(): Producer = f.getProducer(
     name = s"test_producer-${Random.nextInt}",

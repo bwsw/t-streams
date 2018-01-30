@@ -25,7 +25,7 @@ import com.bwsw.tstreams.agents.consumer.Offset
 import com.bwsw.tstreams.agents.producer.{NewProducerTransactionPolicy, Producer, ProducerTransactionImpl}
 import com.bwsw.tstreams.env.ConfigurationOptions
 import com.bwsw.tstreams.testutils.{TestStorageServer, TestUtils}
-import com.bwsw.tstreamstransactionserver.netty.server.singleNode.TestSingleNodeServer
+import com.bwsw.tstreamstransactionserver.netty.server.singleNode.SingleNodeTestingServer
 import com.bwsw.tstreamstransactionserver.rpc.TransactionStates.{Checkpointed, Invalid}
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, FlatSpec, Matchers}
 
@@ -40,7 +40,7 @@ class ProducerTest
   private val partitions: Set[Int] = (0 until partitionsCount).toSet
   private val waitingTimeout = 5000
 
-  private var server: TestSingleNodeServer = _
+  private var server: SingleNodeTestingServer = _
   private var producer: Producer = _
 
   f.setProperty(ConfigurationOptions.Stream.partitionsCount, partitionsCount)

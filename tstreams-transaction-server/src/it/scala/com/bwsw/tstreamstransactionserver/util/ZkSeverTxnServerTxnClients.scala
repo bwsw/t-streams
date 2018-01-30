@@ -20,16 +20,16 @@
 package com.bwsw.tstreamstransactionserver.util
 
 import com.bwsw.tstreamstransactionserver.netty.client.api.TTSClient
-import com.bwsw.tstreamstransactionserver.netty.server.singleNode.{SingleNodeServerBuilder, TestSingleNodeServer}
-import com.bwsw.tstreamstransactionserver.util.multiNode.MultiNudeUtils
+import com.bwsw.tstreamstransactionserver.netty.server.singleNode.{SingleNodeServerBuilder, SingleNodeTestingServer}
+import com.bwsw.tstreamstransactionserver.util.multiNode.MultiNodeUtils.deleteDirectories
 
 import scala.util.{Failure, Try}
 
-class ZkSeverTxnServerTxnClients(val transactionServer: TestSingleNodeServer,
+class ZkSeverTxnServerTxnClients(val transactionServer: SingleNodeTestingServer,
                                  val clients: Array[TTSClient],
                                  val serverBuilder: SingleNodeServerBuilder) {
 
-  def operate(operation: TestSingleNodeServer => Unit): Unit = {
+  def operate(operation: SingleNodeTestingServer => Unit): Unit = {
     val tried = Try(operation(transactionServer))
     closeDbsAndDeleteDirectories()
 
@@ -44,6 +44,6 @@ class ZkSeverTxnServerTxnClients(val transactionServer: TestSingleNodeServer,
     clients.foreach(client => client.shutdown())
 
     val storageOptions = serverBuilder.getStorageOptions
-    MultiNudeUtils.deleteDirectories(storageOptions)
+    deleteDirectories(storageOptions)
   }
 }
