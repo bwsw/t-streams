@@ -19,10 +19,9 @@
 
 package com.bwsw.tstreams.common
 
-import java.io.IOException
 import java.net.{InetAddress, ServerSocket}
 
-import scala.util.Random
+import scala.util.{Failure, Random, Success, Try}
 
 /**
   * Created by Ivan Kudryavtsev on 05.09.16.
@@ -30,19 +29,20 @@ import scala.util.Random
 object SpareServerSocketLookupUtility {
 
   private def checkIfAvailable(hostOrIp: String, port: Int): Boolean = {
-    var ss: ServerSocket = null
+    var serverSocket: Option[ServerSocket] = None
 
-    try {
-      ss = new ServerSocket(port, 1, InetAddress.getByName(hostOrIp))
-      ss.setReuseAddress(true)
-      ss.close()
-      return true
-    } catch {
-      case e: IOException =>
-    } finally {
-      if (ss != null) ss.close()
+    val result = Try {
+      serverSocket = Some(new ServerSocket(port, 1, InetAddress.getByName(hostOrIp)))
+      serverSocket.foreach(_.setReuseAddress(true))
+      serverSocket.foreach(_.close())
     }
-    false
+
+    result match {
+      case Success(_) => true
+      case Failure(_) =>
+        serverSocket.foreach(_.close())
+        false
+    }
   }
 
   def findSparePort(hostOrIp: String, fromPort: Int, toPort: Int): Option[Int] = synchronized {

@@ -47,11 +47,8 @@ class ConsumerTransaction(partition: Int,
   def consumer: Consumer =
     _consumer.getOrElse(throw new IllegalStateException("The transaction is not yet attached to consumer"))
 
-  def attach(c: Consumer) = {
-    if (c == null)
-      throw new IllegalArgumentException("Argument must be not null.")
-
-    if (_consumer.isEmpty)
+  def attach(c: Consumer): Unit = {
+    if (!isAttached)
       _consumer = Some(c)
     else
       throw new IllegalStateException("The transaction is already attached to consumer")
@@ -80,9 +77,9 @@ class ConsumerTransaction(partition: Int,
   /**
     * @return Next piece of data from current transaction
     */
-  def next() = this.synchronized {
+  def next(): Array[Byte] = this.synchronized {
 
-    if (consumer == null)
+    if (!isAttached)
       throw new IllegalArgumentException("Transaction is not yet attached to consumer. Attach it first.")
 
     if (!hasNext)
@@ -118,8 +115,8 @@ class ConsumerTransaction(partition: Int,
   /**
     * @return All consumed transaction
     */
-  def getAll = this.synchronized {
-    if (consumer == null)
+  def getAll: mutable.Queue[Array[Byte]] = this.synchronized {
+    if (!isAttached)
       throw new IllegalArgumentException("Transaction is not yet attached to consumer. Attach it first.")
     val r = consumer.stream.client.getTransactionData(consumer.stream.id, partition, transactionID, cnt, count)
 
@@ -129,7 +126,9 @@ class ConsumerTransaction(partition: Int,
     }
 
     mutable.Queue[Array[Byte]]() ++ r
-
   }
+
+
+  private def isAttached = _consumer.isDefined
 
 }

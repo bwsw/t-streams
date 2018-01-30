@@ -42,6 +42,8 @@ import io.netty.channel.{ChannelOption, EventLoopGroup}
 import io.netty.handler.logging.{LogLevel, LoggingHandler}
 import org.apache.curator.retry.RetryForever
 
+import scala.util.Try
+
 class CommonServer(authenticationOpts: AuthenticationOptions,
                    packageTransmissionOpts: TransportOptions,
                    zookeeperOpts: CommonOptions.ZookeeperOptions,
@@ -235,75 +237,39 @@ class CommonServer(authenticationOpts: AuthenticationOptions,
   }
 
   def shutdown(): Unit = {
-    val isNotShutdown =
-      isShutdown.compareAndSet(false, true)
+    if (!isShutdown.getAndSet(true)) {
+      commonMaster.stop()
+      commonMasterElector.stop()
 
-    if (isNotShutdown) {
-      if (commonMaster != null) {
-        commonMaster.stop()
+      Try {
+        bossGroup.shutdownGracefully(
+          0L,
+          0L,
+          TimeUnit.NANOSECONDS)
+          .cancel(true)
+      }
+      Try {
+        workerGroup.shutdownGracefully(
+          0L,
+          0L,
+          TimeUnit.NANOSECONDS)
+          .cancel(true)
       }
 
-      if (commonMasterElector != null)
-        commonMasterElector.stop()
-
-      if (bossGroup != null) {
-        scala.util.Try {
-          bossGroup.shutdownGracefully(
-            0L,
-            0L,
-            TimeUnit.NANOSECONDS
-          ).cancel(true)
-        }
-      }
-      if (workerGroup != null) {
-        scala.util.Try {
-          workerGroup.shutdownGracefully(
-            0L,
-            0L,
-            TimeUnit.NANOSECONDS
-          ).cancel(true)
-        }
+      zk.close()
+      if (zk != curatorSubscriberClient) {
+        curatorSubscriberClient.close()
       }
 
-      if (zk != null && curatorSubscriberClient != null) {
-        if (zk == curatorSubscriberClient) {
-          zk.close()
-        }
-        else {
-          zk.close()
-          curatorSubscriberClient.close()
-        }
-      }
-
-      if (slave != null) {
-        slave.stop()
-      }
-
-      if (orderedExecutionPool != null) {
-        orderedExecutionPool.close()
-      }
-
-      if (commitLogContext != null) {
-        commitLogContext.stopAccessNewTasks()
-        commitLogContext.awaitAllCurrentTasksAreCompleted()
-      }
-
-      if (executionContext != null) {
-        executionContext
-          .stopAccessNewTasksAndAwaitAllCurrentTasksAreCompleted()
-      }
-
-      if (rocksStorage != null) {
-        rocksStorage.getStorageManager.closeDatabases()
-      }
-
-      if (transactionDataService != null) {
-        transactionDataService.closeTransactionDataDatabases()
-      }
-
-      if (bookkeeperToRocksWriter != null) {
-        bookkeeperToRocksWriter.close()
-      }
+      slave.stop()
+      orderedExecutionPool.close()
+      commitLogContext.stopAccessNewTasks()
+      commitLogContext.awaitAllCurrentTasksAreCompleted()
+      executionContext
+        .stopAccessNewTasksAndAwaitAllCurrentTasksAreCompleted()
+      rocksStorage.getStorageManager.closeDatabases()
+      transactionDataService.closeTransactionDataDatabases()
+      bookkeeperToRocksWriter.close()
     }
   }
 

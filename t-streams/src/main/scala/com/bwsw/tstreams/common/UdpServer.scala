@@ -44,7 +44,7 @@ abstract class UdpServer(host: String, port: Int, threads: Int) extends UdpProce
     partitionCounter.getAndIncrement() % threads
   }
 
-  (0 until executors.size).foreach(idx => {
+  executors.indices.foreach(idx => {
     executors(idx) = Executors.newSingleThreadExecutor(new ThreadFactoryBuilder().setNameFormat(s"UdpServer-$idx").build())
     executorCounterMap.put(idx, new AtomicLong(0))
     executorTaskTimeMap.put(idx, new AtomicLong(0))
@@ -62,7 +62,7 @@ abstract class UdpServer(host: String, port: Int, threads: Int) extends UdpProce
 
   def getKey(objAny: AnyRef): Int
 
-  def respond(client: SocketAddress, response: Array[Byte]) = {
+  def respond(client: SocketAddress, response: Array[Byte]): Unit = {
     socket.send(new DatagramPacket(response, response.size, client))
   }
 
@@ -70,7 +70,7 @@ abstract class UdpServer(host: String, port: Int, threads: Int) extends UdpProce
 
     Try(getObjectFromDatagramPacket(packet)).toOption.flatten.foreach(obj => {
       val objKey = getKey(obj)
-      if (keyCounterMap.getOrDefault(objKey, null) == null) keyCounterMap.put(objKey, new AtomicLong(0))
+      keyCounterMap.putIfAbsent(objKey, new AtomicLong(0))
 
       val execNoOpt = Option(keyExecutorMapping.getOrDefault(objKey, -1))
         .map(execNo => {
@@ -88,7 +88,7 @@ abstract class UdpServer(host: String, port: Int, threads: Int) extends UdpProce
         override def run(): Unit = {
           try {
             val begin = System.nanoTime()
-            handleRequest(packet.getSocketAddress(), obj)
+            handleRequest(packet.getSocketAddress, obj)
             val end = System.nanoTime()
             executorTaskTimeMap.get(execNoOpt.get).addAndGet(end - begin)
           } catch {
@@ -100,26 +100,29 @@ abstract class UdpServer(host: String, port: Int, threads: Int) extends UdpProce
       executorCounterMap.get(execNoOpt.get).incrementAndGet()
       keyCounterMap.get(objKey).incrementAndGet()
 
-      execNoOpt.map(execNo => executors(execNo).execute(task))
+      execNoOpt.foreach(execNo => executors(execNo).execute(task))
     })
   }
 
-  override def start() = super.start().asInstanceOf[UdpServer]
+  override def start(): UdpServer = super.start().asInstanceOf[UdpServer]
 
-  override def stop() = {
+  override def stop(): Unit = {
     super.stop()
-    (0 until executors.size).foreach(ex => executors(ex).shutdown())
+    executors.foreach(_.shutdown())
 
     // dump counters
-    for (k <- executorCounterMap.keys().asScala)
-      if (executorCounterMap.get(k).get() > 0)
-        logger.info(s"Executor ${k} processed ${executorCounterMap.get(k).get()} messages. " +
-          s" Total time spent ${executorTaskTimeMap.get(k).get() / 1000000} ms, avg per query ${executorTaskTimeMap.get(k).get() * 1.0f / executorCounterMap.get(k).get() / 1000000}")
+    for (k <- executorCounterMap.keys().asScala) {
+      if (executorCounterMap.get(k).get() > 0) {
+        logger.info(s"Executor $k processed ${executorCounterMap.get(k).get()} messages. " +
+          s" Total time spent ${executorTaskTimeMap.get(k).get() / 1000000} ms, avg per query " +
+          s"${executorTaskTimeMap.get(k).get() * 1.0f / executorCounterMap.get(k).get() / 1000000}")
+      }
+    }
 
-    for (k <- keyCounterMap.keys().asScala)
+    for (k <- keyCounterMap.keys().asScala) {
       if (keyCounterMap.get(k).get() > 0)
-        logger.info(s"Key ${k} (Executor ${keyExecutorMapping.get(k)}) received ${keyCounterMap.get(k).get()} messages.")
-
+        logger.info(s"Key $k (Executor ${keyExecutorMapping.get(k)}) received ${keyCounterMap.get(k).get()} messages.")
+    }
   }
 
 }
