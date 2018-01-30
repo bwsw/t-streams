@@ -5,6 +5,9 @@ Introduction
 
 .. Contents::
 
+Overview
+------------------
+
 T-streams (transactional streams) is a Scala library and infrastructure components which implement transactional messaging, important for many practical applications including CEP (complex event processing), financial and business-critical systems that must process events exactly-once, at-least-once or at-most-once depending on a chosen processing way. 
 
 T-streams library implements transactional persistent queues for exactly-once, batch message exchange in PUB-SUB mode. It allows storing streams of records in a fault-tolerant way. 
@@ -173,28 +176,21 @@ The **Checkpoint** operation is atomic for:
 Guaranties
 ------------
 
-T-streams gives the following guarantees:
+T-streams gives the following guaranties:
 
-- All data elements in the transaction will be handled together.
-- Data elements in transactions are read in the order transactions are opened.
-- All events are handled exactly-once.
+- Consumers/Subscribers process transactions in a strict order according to transaction open time. A transaction which is opened later but closed earlier the previous one will not be processed until the previous transaction is closed and processed.
+- Consumers/Subscribers read and process all data elements within a transaction in the order Producers have recorded them.  
+- All events are written to a stream exactly-once. The checkpoint operation ensures duplicate check rejecting duplicate transactions and records.
 
 The current status of T-streams is Technical release 2.5.0. We assume issues may occur, and if you face any bugs you are warmly welcome to contact the team and contribute to the project. 
 
 Performance Tips
 ------------------
 
-T-streams *single stream* performance is limited by the storage server instance (which is a HA component but not scalable horizontally). So in that respect, the performance is limited by the next constraints:
-
-- A single storage server is able to serve about 100K TPS on top-level hardware (Dual Xeon E5 CPUs);
-
-- A single Producer can push about 2000 TPS to a single partition;
-
-- A partition master can handle about 8000 open operations per second.
-
-Thus, to *improve performance* you should use a performant server as a storage and create streams with many partitions.
+The stream processing velocity depends on a number of transactions in a partition and a number of data elements within a transaction. 
 
 Since a transaction is not equal to a data element and it can include a lot of data elements, then when data elements can be batched it can give 1M of data elements per second only with 1000 of transactions of 1000 data elements each. So, to achieve *higher throughput* we suggest trying to minimize transaction amount and maximize the transaction payload.
 
+The checkpoint operation allows fixing a lot of transactions as a single operation. Frequent checkpointing leads to a slowdown in performance, so it is preferable to call the checkpoint method depending on the need. Use Producer or Checkpoint Group (but not Transaction object) methods for the checkpoint. 
 
-
+T-streams *single stream* is not scalable. One stream is handled on one server. In this case, the processing is limited by the server performance. If the processing flow you develop allows scalability, you can handle each stream on a separate server observing all the guaranties mentioned above. Scalability allows processing high throughputs of data with very low latency. 
