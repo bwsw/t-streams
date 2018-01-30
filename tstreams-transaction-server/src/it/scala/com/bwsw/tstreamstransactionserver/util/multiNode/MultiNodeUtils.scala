@@ -25,7 +25,7 @@ import java.util.concurrent.{CountDownLatch, TimeUnit}
 
 import com.bwsw.tstreamstransactionserver.netty.client.ClientBuilder
 import com.bwsw.tstreamstransactionserver.netty.server.db.zk.ZookeeperStreamRepository
-import com.bwsw.tstreamstransactionserver.netty.server.multiNode.{CommonCheckpointGroupServerBuilder, TestCommonCheckpointGroupServer}
+import com.bwsw.tstreamstransactionserver.netty.server.multiNode.{CommonCheckpointGroupServerBuilder, CommonCheckpointGroupTestingServer}
 import com.bwsw.tstreamstransactionserver.netty.server.storage.rocks.MultiAndSingleNodeRockStorage
 import com.bwsw.tstreamstransactionserver.netty.server.transactionDataService.TransactionDataService
 import com.bwsw.tstreamstransactionserver.netty.server.{RocksReader, RocksWriter, TransactionServer, multiNode}
@@ -155,7 +155,7 @@ object MultiNodeUtils {
 
 
     val transactionServer =
-      new TestCommonCheckpointGroupServer(
+      new CommonCheckpointGroupTestingServer(
         updatedBuilder.getAuthenticationOptions,
         updatedBuilder.getPackageTransmissionOptions,
         updatedBuilder.getZookeeperOptions,

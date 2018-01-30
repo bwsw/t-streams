@@ -44,23 +44,7 @@ object Utils {
 
     SocketHostPortPair
       .fromString(s"$externalHost:$externalPort")
-      .orElse(
-        SocketHostPortPair.validateAndCreate(
-          host,
-          port
-        )
-      )
-      .getOrElse {
-        if (externalHost == null || externalPort == null)
-          throw new InvalidSocketAddress(
-            s"Socket $host:$port is not valid for external access."
-          )
-        else
-          throw new InvalidSocketAddress(
-            s"Environment parameters 'HOST':'PORT0' " +
-              s"$externalHost:$externalPort are not valid for a socket."
-          )
-      }
+      .getOrElse(SocketHostPortPair(host, port))
   }
 
   private def determineChannelType(workerGroup: EventLoopGroup): Class[_ <: ServerSocketChannel] = {

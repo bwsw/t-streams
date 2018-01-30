@@ -27,17 +27,17 @@ import com.bwsw.tstreamstransactionserver.options.SingleNodeServerOptions._
 import com.bwsw.tstreamstransactionserver.rpc.{ConsumerTransaction, ProducerTransaction}
 
 
-class TestSingleNodeServer(authenticationOpts: AuthenticationOptions,
-                           zookeeperOpts: CommonOptions.ZookeeperOptions,
-                           serverOpts: BootstrapOptions,
-                           commonRoleOptions: CommonRoleOptions,
-                           checkpointGroupRoleOptions: CheckpointGroupRoleOptions,
-                           storageOpts: StorageOptions,
-                           rocksStorageOpts: RocksStorageOptions,
-                           commitLogOptions: CommitLogOptions,
-                           packageTransmissionOpts: TransportOptions,
-                           subscribersUpdateOptions: SubscriberUpdateOptions,
-                           tracingOptions: TracingOptions = TracingOptions())
+class SingleNodeTestingServer(authenticationOpts: AuthenticationOptions,
+                              zookeeperOpts: CommonOptions.ZookeeperOptions,
+                              serverOpts: BootstrapOptions,
+                              commonRoleOptions: CommonRoleOptions,
+                              checkpointGroupRoleOptions: CheckpointGroupRoleOptions,
+                              storageOpts: StorageOptions,
+                              rocksStorageOpts: RocksStorageOptions,
+                              commitLogOptions: CommitLogOptions,
+                              packageTransmissionOpts: TransportOptions,
+                              subscribersUpdateOptions: SubscriberUpdateOptions,
+                              tracingOptions: TracingOptions = TracingOptions())
   extends SingleNodeServer(
     authenticationOpts,
     zookeeperOpts,
@@ -79,11 +79,7 @@ class TestSingleNodeServer(authenticationOpts: AuthenticationOptions,
 
   override def shutdown(): Unit = {
     super.shutdown()
-    if (producerNotifier != null) {
-      producerNotifier.close()
-    }
-    if (consumerNotifier != null) {
-      producerNotifier.close()
-    }
+    producerNotifier.close()
+    producerNotifier.close()
   }
 }

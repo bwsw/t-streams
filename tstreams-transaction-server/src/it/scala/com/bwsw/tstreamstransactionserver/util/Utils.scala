@@ -27,10 +27,10 @@ import java.util.concurrent.{CountDownLatch, TimeUnit}
 
 import com.bwsw.tstreamstransactionserver.netty.client.ClientBuilder
 import com.bwsw.tstreamstransactionserver.netty.client.api.TTSClient
+import com.bwsw.tstreamstransactionserver.netty.server.{RocksReader, RocksWriter, TransactionServer}
 import com.bwsw.tstreamstransactionserver.netty.server.db.zk.ZookeeperStreamRepository
 import com.bwsw.tstreamstransactionserver.netty.server.singleNode.commitLogService.CommitLogService
-import com.bwsw.tstreamstransactionserver.netty.server.{RocksReader, RocksWriter, TransactionServer}
-import com.bwsw.tstreamstransactionserver.netty.server.singleNode.{SingleNodeServerBuilder, TestSingleNodeServer}
+import com.bwsw.tstreamstransactionserver.netty.server.singleNode.{SingleNodeServerBuilder, SingleNodeTestingServer}
 import com.bwsw.tstreamstransactionserver.netty.server.storage.rocks.MultiAndSingleNodeRockStorage
 import com.bwsw.tstreamstransactionserver.netty.server.transactionDataService.TransactionDataService
 import com.bwsw.tstreamstransactionserver.options.CommonOptions.ZookeeperOptions
@@ -356,7 +356,7 @@ object Utils {
         serverBuilder.getBootstrapOptions.copy(bindPort = getRandomPort)
       )
 
-    val transactionServer = new TestSingleNodeServer(
+    val transactionServer = new SingleNodeTestingServer(
       updatedBuilder.getAuthenticationOptions,
       updatedBuilder.getZookeeperOptions,
       updatedBuilder.getBootstrapOptions,
@@ -418,7 +418,7 @@ object Utils {
       )
 
 
-    val transactionServer = new TestSingleNodeServer(
+    val transactionServer = new SingleNodeTestingServer(
       updatedBuilder.getAuthenticationOptions,
       updatedBuilder.getZookeeperOptions,
       updatedBuilder.getBootstrapOptions,

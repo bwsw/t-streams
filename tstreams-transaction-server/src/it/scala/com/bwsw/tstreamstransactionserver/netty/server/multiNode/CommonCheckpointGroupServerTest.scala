@@ -28,7 +28,8 @@ import com.bwsw.tstreamstransactionserver.options.MultiNodeServerOptions.Bookkee
 import com.bwsw.tstreamstransactionserver.rpc.{TransactionInfo, TransactionStates}
 import com.bwsw.tstreamstransactionserver.util.Implicit.ProducerTransactionSortable
 import com.bwsw.tstreamstransactionserver.util.Utils._
-import com.bwsw.tstreamstransactionserver.util.multiNode.MultiNodeUtils._
+import com.bwsw.tstreamstransactionserver.util.Utils.{getRandomConsumerTransaction, getRandomProducerTransaction, getRandomStream}
+import com.bwsw.tstreamstransactionserver.util.multiNode.MultiNodeUtils
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 
 import scala.concurrent.Await
@@ -80,7 +81,7 @@ class CommonCheckpointGroupServerTest
   val secondsWait = 15
 
   "CommonCheckpointGroupServer" should "[scanTransactions] put transactions and get them back" in {
-    val bundle = getCommonCheckpointGroupServerBundle(
+    val bundle = MultiNodeUtils.getCommonCheckpointGroupServerBundle(
       zkClient, bookkeeperOptions, serverBuilder, clientBuilder, maxIdleTimeBetweenRecordsMs
     )
 
@@ -136,7 +137,7 @@ class CommonCheckpointGroupServerTest
   }
 
   it should "put producer and consumer transactions" in {
-    val bundle = getCommonCheckpointGroupServerBundle(
+    val bundle = MultiNodeUtils.getCommonCheckpointGroupServerBundle(
       zkClient, bookkeeperOptions, serverBuilder, clientBuilder, maxIdleTimeBetweenRecordsMs
     )
 
@@ -156,7 +157,7 @@ class CommonCheckpointGroupServerTest
   }
 
   it should "put any kind of binary data and get it back" in {
-    val bundle = getCommonCheckpointGroupServerBundle(
+    val bundle = MultiNodeUtils.getCommonCheckpointGroupServerBundle(
       zkClient, bookkeeperOptions, serverBuilder, clientBuilder, maxIdleTimeBetweenRecordsMs
     )
 
@@ -194,7 +195,7 @@ class CommonCheckpointGroupServerTest
   }
 
   it should "[putProducerStateWithData] put a producer transaction (Opened) with data, and server should persist data." in {
-    val bundle = getCommonCheckpointGroupServerBundle(
+    val bundle = MultiNodeUtils.getCommonCheckpointGroupServerBundle(
       zkClient, bookkeeperOptions, serverBuilder, clientBuilder, maxIdleTimeBetweenRecordsMs
     )
 
@@ -248,7 +249,7 @@ class CommonCheckpointGroupServerTest
   }
 
   "Client" should "throw MasterChangedException when a master changed" in {
-    val bundle1 = getCommonCheckpointGroupServerBundle(
+    val bundle1 = MultiNodeUtils.getCommonCheckpointGroupServerBundle(
       zkClient, bookkeeperOptions, serverBuilder, clientBuilder, maxIdleTimeBetweenRecordsMs
     )
 
@@ -258,7 +259,7 @@ class CommonCheckpointGroupServerTest
       val storageOptions = serverBuilder.getStorageOptions.copy(path = s"/tmp/tts-${UUID.randomUUID().toString}")
       val serverBuilder2 = serverBuilder.withServerStorageOptions(storageOptions)
 
-      val bundle2 = getCommonCheckpointGroupServerBundle(
+      val bundle2 = MultiNodeUtils.getCommonCheckpointGroupServerBundle(
         zkClient, bookkeeperOptions, serverBuilder2, clientBuilder, maxIdleTimeBetweenRecordsMs)
 
       bundle2.operate { _ =>
@@ -295,7 +296,7 @@ class CommonCheckpointGroupServerTest
   }
 
   it should "disconnect from server when it is off" in {
-    val bundle = getCommonCheckpointGroupServerBundle(
+    val bundle = MultiNodeUtils.getCommonCheckpointGroupServerBundle(
       zkClient, bookkeeperOptions, serverBuilder, clientBuilder, maxIdleTimeBetweenRecordsMs)
 
     bundle.operate { server =>
@@ -312,7 +313,7 @@ class CommonCheckpointGroupServerTest
   }
 
   it should "disconnect from server when master is changed" in {
-    val bundle1 = getCommonCheckpointGroupServerBundle(
+    val bundle1 = MultiNodeUtils.getCommonCheckpointGroupServerBundle(
       zkClient, bookkeeperOptions, serverBuilder, clientBuilder, maxIdleTimeBetweenRecordsMs)
 
     bundle1.operate { server1 =>
@@ -321,7 +322,7 @@ class CommonCheckpointGroupServerTest
       val storageOptions = serverBuilder.getStorageOptions.copy(path = s"/tmp/tts-${UUID.randomUUID().toString}")
       val serverBuilder2 = serverBuilder.withServerStorageOptions(storageOptions)
 
-      val bundle2 = getCommonCheckpointGroupServerBundle(
+      val bundle2 = MultiNodeUtils.getCommonCheckpointGroupServerBundle(
         zkClient, bookkeeperOptions, serverBuilder2, clientBuilder, maxIdleTimeBetweenRecordsMs)
 
       bundle2.operate { _ =>

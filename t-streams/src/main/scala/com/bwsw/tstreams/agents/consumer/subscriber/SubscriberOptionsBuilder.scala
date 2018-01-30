@@ -43,6 +43,7 @@ object SubscriberOptionsBuilder {
       processingEngineWorkersThreadAmount = processingEngineWorkersThreadSize,
       pollingFrequencyDelayMs = pollingFrequencyDelayMs,
       transactionQueueMaxLengthThreshold = transactionQueueMaxLengthThreshold,
-      transactionsQueueBuilder = transactionsQueueBuilder)
+      transactionsQueueBuilder = transactionsQueueBuilder,
+      rememberFirstStartOffset = consumerOpts.checkpointAtStart)
 }
 

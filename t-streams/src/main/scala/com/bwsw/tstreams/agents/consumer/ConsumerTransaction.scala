@@ -47,25 +47,22 @@ class ConsumerTransaction(partition: Int,
   def consumer: Consumer =
     _consumer.getOrElse(throw new IllegalStateException("The transaction is not yet attached to consumer"))
 
-  def attach(c: Consumer) = {
-    if (c == null)
-      throw new IllegalArgumentException("Argument must be not null.")
-
+  def attach(c: Consumer): Unit = {
     if (_consumer.isEmpty)
       _consumer = Some(c)
     else
       throw new IllegalStateException("The transaction is already attached to consumer")
   }
 
-  def getTransactionID = transactionID
+  def getTransactionID: Long = transactionID
 
-  def getPartition = partition
+  def getPartition: Int = partition
 
-  def getCount = count
+  def getCount: Int = count
 
-  def getTTL = ttl
+  def getTTL: Long = ttl
 
-  def getState = state
+  def getState: TransactionStates = state
 
   /**
     * Transaction data pointer
@@ -80,10 +77,8 @@ class ConsumerTransaction(partition: Int,
   /**
     * @return Next piece of data from current transaction
     */
-  def next() = this.synchronized {
-
-    if (consumer == null)
-      throw new IllegalArgumentException("Transaction is not yet attached to consumer. Attach it first.")
+  def next(): Array[Byte] = this.synchronized {
+    checkAttachedToConsumer()
 
     if (!hasNext)
       throw new IllegalStateException("There is no data to receive from data storage")
@@ -118,9 +113,8 @@ class ConsumerTransaction(partition: Int,
   /**
     * @return All consumed transaction
     */
-  def getAll = this.synchronized {
-    if (consumer == null)
-      throw new IllegalArgumentException("Transaction is not yet attached to consumer. Attach it first.")
+  def getAll: mutable.Queue[Array[Byte]] = this.synchronized {
+    checkAttachedToConsumer()
     val r = consumer.stream.client.getTransactionData(consumer.stream.id, partition, transactionID, cnt, count)
 
     if (Consumer.logger.isDebugEnabled()) {
@@ -129,7 +123,12 @@ class ConsumerTransaction(partition: Int,
     }
 
     mutable.Queue[Array[Byte]]() ++ r
-
   }
 
+
+  private def checkAttachedToConsumer() = {
+    if (_consumer.isEmpty) {
+      throw new IllegalStateException("Transaction is not yet attached to consumer. Attach it first")
+    }
+  }
 }
