@@ -56,7 +56,7 @@ object Common {
       "-Dsun.net.maxDatagramSockets=1000"
     ),
 
-    testOptions in Global += Tests.Argument(
+    testOptions += Tests.Argument(
       TestFrameworks.ScalaTest,
       "-oFD", // to show full stack traces and durations
       "-W", "120", "60" // to notify when some test is running longer than a specified amount of time
