@@ -19,7 +19,6 @@
 
 package com.bwsw.tstreamstransactionserver.netty.server.singleNode
 
-import java.io.File
 import java.nio.file.Paths
 
 import com.bwsw.tstreamstransactionserver.netty.client.ClientBuilder
@@ -45,10 +44,10 @@ class SingleNodeServerTtlTest extends FlatSpec with Matchers with BeforeAndAfter
   private val compactionInterval = 1
   private val ttl = 10
   private val secondsWait = 5
-  private lazy val serverBuilder = new SingleNodeServerBuilder()
+  private val serverBuilder = new SingleNodeServerBuilder()
 
-  private lazy val clientBuilder = new ClientBuilder()
-  private lazy val (zkServer, zkClient) = startZkServerAndGetIt
+  private val clientBuilder = new ClientBuilder()
+  private val (zkServer, zkClient) = startZkServerAndGetIt
 
 
   "SingleNodeServer" should "remove expired transactions" in {
