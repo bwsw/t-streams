@@ -21,7 +21,7 @@ package com.bwsw.tstreams.common
 
 import java.net.{InetAddress, ServerSocket}
 
-import scala.util.{Failure, Random, Success, Try}
+import scala.util.{Random, Try}
 
 /**
   * Created by Ivan Kudryavtsev on 05.09.16.
@@ -34,15 +34,11 @@ object SpareServerSocketLookupUtility {
     val result = Try {
       serverSocket = Some(new ServerSocket(port, 1, InetAddress.getByName(hostOrIp)))
       serverSocket.foreach(_.setReuseAddress(true))
-      serverSocket.foreach(_.close())
     }
 
-    result match {
-      case Success(_) => true
-      case Failure(_) =>
-        serverSocket.foreach(_.close())
-        false
-    }
+    Try(serverSocket.foreach(_.close()))
+
+    result.isSuccess
   }
 
   def findSparePort(hostOrIp: String, fromPort: Int, toPort: Int): Option[Int] = synchronized {
