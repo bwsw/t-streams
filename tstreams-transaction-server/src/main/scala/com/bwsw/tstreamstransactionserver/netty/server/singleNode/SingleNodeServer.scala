@@ -48,6 +48,8 @@ import io.netty.channel.{ChannelOption, EventLoopGroup}
 import io.netty.handler.logging.{LogLevel, LoggingHandler}
 import org.apache.curator.retry.RetryForever
 
+import scala.util.Try
+
 
 class SingleNodeServer(authenticationOpts: AuthenticationOptions,
                        zookeeperOpts: CommonOptions.ZookeeperOptions,
@@ -293,91 +295,50 @@ class SingleNodeServer(authenticationOpts: AuthenticationOptions,
   }
 
   def shutdown(): Unit = {
-    val isNotShutdown =
-      isShutdown.compareAndSet(false, true)
+    if (!isShutdown.getAndSet(true)) {
+      commonMasterElector.stop()
+      checkpointGroupMasterElector.stop()
 
-    if (isNotShutdown) {
-      if (commonMasterElector != null)
-        commonMasterElector.stop()
-
-      if (checkpointGroupMasterElector != null)
-        checkpointGroupMasterElector.stop()
-
-      if (bossGroup != null) {
-        scala.util.Try {
-          bossGroup.shutdownGracefully(
-            0L,
-            0L,
-            TimeUnit.NANOSECONDS
-          ).cancel(true)
-        }
+      Try {
+        bossGroup.shutdownGracefully(
+          0L,
+          0L,
+          TimeUnit.NANOSECONDS)
+          .cancel(true)
       }
-      if (workerGroup != null) {
-        scala.util.Try {
-          workerGroup.shutdownGracefully(
-            0L,
-            0L,
-            TimeUnit.NANOSECONDS
-          ).cancel(true)
-        }
+      Try {
+        workerGroup.shutdownGracefully(
+          0L,
+          0L,
+          TimeUnit.NANOSECONDS)
+          .cancel(true)
       }
 
-      if (zk != null && curatorSubscriberClient != null) {
-        if (zk == curatorSubscriberClient) {
-          zk.close()
-        }
-        else {
-          zk.close()
-          curatorSubscriberClient.close()
-        }
+      zk.close()
+      if (zk != curatorSubscriberClient) {
+        curatorSubscriberClient.close()
       }
 
-      if (rocksWriterExecutor != null) {
-        commitLogToRocksWriterTask.cancel(true)
-        rocksWriterExecutor.shutdown()
-        rocksWriterExecutor.awaitTermination(
-          commitLogOptions.closeDelayMs * 5,
-          TimeUnit.MILLISECONDS
-        )
-      }
-
-      if (scheduledCommitLog != null)
-        scheduledCommitLog.closeWithoutCreationNewFile()
-
-      if (commitLogCloseExecutor != null) {
-        commitLogCloseTask.cancel(true)
-        commitLogCloseExecutor.shutdown()
-        commitLogCloseExecutor.awaitTermination(
-          commitLogOptions.closeDelayMs * 5,
-          TimeUnit.MILLISECONDS
-        )
-      }
-
-      if (commitLogToRocksWriter != null) {
-        rocksDBCommitLog.close()
-      }
-
-      if (orderedExecutionPool != null) {
-        orderedExecutionPool.close()
-      }
-
-      if (commitLogContext != null) {
-        commitLogContext.stopAccessNewTasks()
-        commitLogContext.awaitAllCurrentTasksAreCompleted()
-      }
-
-      if (executionContext != null) {
-        executionContext
-          .stopAccessNewTasksAndAwaitAllCurrentTasksAreCompleted()
-      }
-
-      if (storage != null) {
-        storage.getStorageManager.closeDatabases()
-      }
-
-      if (transactionDataService != null) {
-        transactionDataService.closeTransactionDataDatabases()
-      }
+      val executorTerminationTimeout = commitLogOptions.closeDelayMs * 5
+      commitLogToRocksWriterTask.cancel(true)
+      rocksWriterExecutor.shutdown()
+      rocksWriterExecutor.awaitTermination(
+        executorTerminationTimeout,
+        TimeUnit.MILLISECONDS)
+      scheduledCommitLog.closeWithoutCreationNewFile()
+      commitLogCloseTask.cancel(true)
+      commitLogCloseExecutor.shutdown()
+      commitLogCloseExecutor.awaitTermination(
+        executorTerminationTimeout,
+        TimeUnit.MILLISECONDS)
+      rocksDBCommitLog.close()
+      orderedExecutionPool.close()
+      commitLogContext.stopAccessNewTasks()
+      commitLogContext.awaitAllCurrentTasksAreCompleted()
+      executionContext
+        .stopAccessNewTasksAndAwaitAllCurrentTasksAreCompleted()
+      storage.getStorageManager.closeDatabases()
+      transactionDataService.closeTransactionDataDatabases()
     }
   }
 }

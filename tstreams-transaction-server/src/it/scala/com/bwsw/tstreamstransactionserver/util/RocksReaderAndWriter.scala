@@ -27,6 +27,7 @@ import com.bwsw.tstreamstransactionserver.netty.server.streamService.StreamServi
 import com.bwsw.tstreamstransactionserver.netty.server.transactionDataService.TransactionDataService
 import com.bwsw.tstreamstransactionserver.netty.server.{RocksReader, RocksWriter}
 import com.bwsw.tstreamstransactionserver.options.SingleNodeServerOptions.{RocksStorageOptions, StorageOptions}
+import com.bwsw.tstreamstransactionserver.util.multiNode.MultiNodeUtils
 import org.apache.curator.framework.CuratorFramework
 
 class RocksReaderAndWriter(zkClient: CuratorFramework,

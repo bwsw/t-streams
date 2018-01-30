@@ -24,13 +24,13 @@ import java.util.concurrent.atomic.AtomicBoolean
 import com.bwsw.tstreams.agents.group.ProducerTransactionState
 import com.bwsw.tstreamstransactionserver.rpc
 import com.bwsw.tstreamstransactionserver.rpc.{TransactionState, TransactionStates}
-import org.slf4j.LoggerFactory
+import org.slf4j.{Logger, LoggerFactory}
 
 import scala.collection.mutable.ListBuffer
 import scala.util.{Failure, Success, Try}
 
 object ProducerTransactionImpl {
-  val logger = LoggerFactory.getLogger(this.getClass)
+  val logger: Logger = LoggerFactory.getLogger(this.getClass)
 }
 
 /**
@@ -52,7 +52,7 @@ class ProducerTransactionImpl(partition: Int,
     *
     * @return Closed transaction or not
     */
-  def isClosed = isTransactionClosed.get
+  def isClosed: Boolean = isTransactionClosed.get
 
   /**
     * BasicProducerTransaction logger for logging
@@ -62,7 +62,7 @@ class ProducerTransactionImpl(partition: Int,
   /**
     *
     */
-  def markAsClosed() = isTransactionClosed.set(true)
+  def markAsClosed(): Unit = isTransactionClosed.set(true)
 
   /**
     * Return transaction partition
@@ -70,7 +70,8 @@ class ProducerTransactionImpl(partition: Int,
   def getPartition: Int = partition
 
 
-  override def toString: String = s"producer.Transaction(ID=$transactionID, partition=$partition, count=$getDataItemsCount)"
+  override def toString: String =
+    s"producer.Transaction(ID=$transactionID, partition=$partition, count=$getDataItemsCount)"
 
   /**
     * Return transaction ID
@@ -80,12 +81,12 @@ class ProducerTransactionImpl(partition: Int,
   /**
     * Return current transaction amount of data
     */
-  def getDataItemsCount = data.lastOffset + data.items.size
+  def getDataItemsCount: Int = data.lastOffset + data.items.size
 
   /**
     * Returns Transaction owner
     */
-  def getProducer = producer
+  def getProducer: Producer = producer
 
   /**
     * All inserts (can be async) in storage (must be waited before closing this transaction)
@@ -106,18 +107,16 @@ class ProducerTransactionImpl(partition: Int,
       throw new IllegalStateException(s"Transaction $transactionID is closed. New data items are prohibited.")
 
     val number = data.put(obj)
-    val job = {
-      if (number % producer.producerOptions.batchSize == 0) {
+    if (number % producer.producerOptions.batchSize == 0) {
+      val job = {
         if (ProducerTransactionImpl.logger.isDebugEnabled) {
           ProducerTransactionImpl.logger.debug(s"call data save $number / ${producer.producerOptions.batchSize}")
         }
         data.save()
       }
-      else {
-        null
-      }
+      jobs += job
     }
-    if (job != null) jobs += job
+
     this
   }
 
@@ -131,7 +130,7 @@ class ProducerTransactionImpl(partition: Int,
       throw new IllegalStateException(s"Transaction $transactionID is already closed. Further operations are denied.")
 
     val job = data.save()
-    if (job != null) jobs += job
+    jobs += job
   }
 
   private[tstreams] def notifyCancelEvent() = {
@@ -147,7 +146,7 @@ class ProducerTransactionImpl(partition: Int,
   }
 
   private def cancelTransaction() = {
-    producer.stream.client.putTransactionSync(getCancelInfoAndClose.get)
+    producer.stream.client.putTransactionSync(getCancelInfoAndClose().get)
     notifyCancelEvent()
   }
 

@@ -43,6 +43,8 @@ import io.netty.channel.{ChannelOption, EventLoopGroup}
 import io.netty.handler.logging.{LogLevel, LoggingHandler}
 import org.apache.curator.retry.RetryForever
 
+import scala.util.Try
+
 class CommonCheckpointGroupServer(authenticationOpts: AuthenticationOptions,
                                   packageTransmissionOpts: TransportOptions,
                                   zookeeperOpts: CommonOptions.ZookeeperOptions,
@@ -260,82 +262,41 @@ class CommonCheckpointGroupServer(authenticationOpts: AuthenticationOptions,
   }
 
   def shutdown(): Unit = {
-    val isNotShutdown =
-      isShutdown.compareAndSet(false, true)
+    if (!isShutdown.getAndSet(true)) {
+      commonMaster.stop()
+      checkpointMaster.stop()
+      commonMasterElector.stop()
+      checkpointGroupMasterElector.stop()
 
-    if (isNotShutdown) {
-      if (commonMaster != null) {
-        commonMaster.stop()
+      Try {
+        bossGroup.shutdownGracefully(
+          0L,
+          0L,
+          TimeUnit.NANOSECONDS)
+          .cancel(true)
+      }
+      Try {
+        workerGroup.shutdownGracefully(
+          0L,
+          0L,
+          TimeUnit.NANOSECONDS)
+          .cancel(true)
       }
 
-      if (checkpointMaster != null) {
-        checkpointMaster.stop()
+      zk.close()
+      if (zk != curatorSubscriberClient) {
+        curatorSubscriberClient.close()
       }
 
-      if (commonMasterElector != null)
-        commonMasterElector.stop()
-
-      if (checkpointGroupMasterElector != null)
-        checkpointGroupMasterElector.stop()
-
-      if (bossGroup != null) {
-        scala.util.Try {
-          bossGroup.shutdownGracefully(
-            0L,
-            0L,
-            TimeUnit.NANOSECONDS
-          ).cancel(true)
-        }
-      }
-      if (workerGroup != null) {
-        scala.util.Try {
-          workerGroup.shutdownGracefully(
-            0L,
-            0L,
-            TimeUnit.NANOSECONDS
-          ).cancel(true)
-        }
-      }
-
-      if (zk != null && curatorSubscriberClient != null) {
-        if (zk == curatorSubscriberClient) {
-          zk.close()
-        }
-        else {
-          zk.close()
-          curatorSubscriberClient.close()
-        }
-      }
-
-      if (slave != null) {
-        slave.stop()
-      }
-
-      if (orderedExecutionPool != null) {
-        orderedExecutionPool.close()
-      }
-
-      if (commitLogContext != null) {
-        commitLogContext.stopAccessNewTasks()
-        commitLogContext.awaitAllCurrentTasksAreCompleted()
-      }
-
-      if (executionContext != null) {
-        executionContext
-          .stopAccessNewTasksAndAwaitAllCurrentTasksAreCompleted()
-      }
-
-      if (transactionDataService != null) {
-        transactionDataService.closeTransactionDataDatabases()
-      }
-
-      if (rocksStorage != null) {
-        rocksStorage.getStorageManager.closeDatabases()
-      }
-
-      if (bookkeeperToRocksWriter != null) {
-        bookkeeperToRocksWriter.close()
-      }
+      slave.stop()
+      orderedExecutionPool.close()
+      commitLogContext.stopAccessNewTasks()
+      commitLogContext.awaitAllCurrentTasksAreCompleted()
+      executionContext
+        .stopAccessNewTasksAndAwaitAllCurrentTasksAreCompleted()
+      transactionDataService.closeTransactionDataDatabases()
+      rocksStorage.getStorageManager.closeDatabases()
+      bookkeeperToRocksWriter.close()
     }
   }
 

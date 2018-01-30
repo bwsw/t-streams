@@ -127,7 +127,15 @@ class CheckpointGroup private[tstreams](val executors: Int = 1) {
 
     //check stateInfoList update timeout
     val availTime = checkUpdateFailure(checkpointRequests)
-    storageClient.putTransactions(producerRequests, consumerRequests, availTime)
+
+    val notConnectedAgents = agents.filterNot { case (_, agent) => agent.isConnected }
+    if (notConnectedAgents.isEmpty)
+      storageClient.putTransactions(producerRequests, consumerRequests, availTime)
+    else {
+      throw new IllegalStateException(
+        "Cannot do group checkpoint() - some agents isn't connected: " +
+          notConnectedAgents.keys.map(name => s"'$name'").mkString(", ") + ".")
+    }
   }
 
   private def doGroupCancel(storageClient: StorageClient, checkpointRequests: Array[State]): Unit = {
@@ -240,4 +248,3 @@ class CheckpointGroup private[tstreams](val executors: Int = 1) {
       throw new IllegalStateException("Group is stopped. No longer operations are possible.")
   }
 }
-

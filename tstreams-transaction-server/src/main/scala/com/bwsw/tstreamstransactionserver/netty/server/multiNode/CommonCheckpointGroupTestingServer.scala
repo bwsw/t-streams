@@ -80,11 +80,7 @@ class CommonCheckpointGroupTestingServer(authenticationOpts: AuthenticationOptio
 
   override def shutdown(): Unit = {
     super.shutdown()
-    if (producerNotifier != null) {
-      producerNotifier.close()
-    }
-    if (consumerNotifier != null) {
-      producerNotifier.close()
-    }
+    producerNotifier.close()
+    producerNotifier.close()
   }
 }
