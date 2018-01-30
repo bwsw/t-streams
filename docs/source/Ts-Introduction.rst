@@ -165,7 +165,7 @@ Checkpoint Group
 """"""""""""""""""""
 **Checkpoint Group** is the key object guaranteeing exactly-once processing of data. It is implemented to perform the atomic checkpoint for a group of producers and consumers in one process.
 
-.. figure:: _static/CheckpointGroup.png
+.. figure:: _static/CheckpointGroup1.png
 
 The **Checkpoint** operation is atomic for:
 
