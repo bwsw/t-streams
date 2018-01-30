@@ -26,7 +26,7 @@ import com.bwsw.tstreamstransactionserver.netty.client.ClientBuilder
 import com.bwsw.tstreamstransactionserver.options.SingleNodeServerOptions.TransportOptions
 import com.bwsw.tstreamstransactionserver.rpc.{ProducerTransaction, TransactionStates}
 import com.bwsw.tstreamstransactionserver.util.Utils
-import com.bwsw.tstreamstransactionserver.util.Utils.startZkServerAndGetIt
+import com.bwsw.tstreamstransactionserver.util.Utils.startZookeeperServer
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 
 import scala.concurrent.Await
@@ -47,7 +47,7 @@ class SingleNodeServerPackageTooBigTest
   private lazy val clientBuilder = new ClientBuilder()
 
   private lazy val (zkServer, zkClient) =
-    startZkServerAndGetIt
+    startZookeeperServer
 
   override def beforeAll(): Unit = {
     zkServer

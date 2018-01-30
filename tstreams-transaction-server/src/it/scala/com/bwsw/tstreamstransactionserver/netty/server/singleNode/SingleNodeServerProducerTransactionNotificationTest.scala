@@ -26,7 +26,7 @@ import com.bwsw.tstreamstransactionserver.netty.server.transactionIDService.Tran
 import com.bwsw.tstreamstransactionserver.options.SingleNodeServerOptions
 import com.bwsw.tstreamstransactionserver.rpc.{ProducerTransaction, TransactionStates}
 import com.bwsw.tstreamstransactionserver.util.Utils
-import com.bwsw.tstreamstransactionserver.util.Utils.{getRandomStream, startZkServerAndGetIt}
+import com.bwsw.tstreamstransactionserver.util.Utils.{getRandomStream, startZookeeperServer}
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 
 import scala.concurrent.Await
@@ -46,7 +46,7 @@ class SingleNodeServerProducerTransactionNotificationTest
   private lazy val clientBuilder = new ClientBuilder()
 
   private lazy val (zkServer, zkClient) =
-    startZkServerAndGetIt
+    startZookeeperServer
 
   val secondsWait = 10
 

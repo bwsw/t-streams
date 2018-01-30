@@ -74,7 +74,7 @@ object Utils {
 
   def uuid: String = java.util.UUID.randomUUID.toString
 
-  def startZkServerAndGetIt: (TestingServer, CuratorFramework) = {
+  def startZookeeperServer: (TestingServer, CuratorFramework) = {
     val zkServer = new TestingServer(true)
 
     val zkClient = CuratorFrameworkFactory.builder
@@ -143,7 +143,7 @@ object Utils {
 
   def startZkServerBookieServerZkClient(serverNumber: Int):
   (TestingServer, CuratorFramework, Array[BookieServer]) = {
-    val (zkServer, zkClient) = startZkServerAndGetIt
+    val (zkServer, zkClient) = startZookeeperServer
 
     zkClient.create()
       .creatingParentsIfNeeded()
@@ -170,7 +170,7 @@ object Utils {
                                        gcWaitTime: Long = defaultBookKeeperServerConf.getGcWaitTime,
                                        entryLogSizeLimit: Long = defaultBookKeeperServerConf.getEntryLogSizeLimit):
   (TestingServer, CuratorFramework, Array[(BookieServer, ServerConfiguration)]) = {
-    val (zkServer, zkClient) = startZkServerAndGetIt
+    val (zkServer, zkClient) = startZookeeperServer
 
     zkClient.create()
       .creatingParentsIfNeeded()

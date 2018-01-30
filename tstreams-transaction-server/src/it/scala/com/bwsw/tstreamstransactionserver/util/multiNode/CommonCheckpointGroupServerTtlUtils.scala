@@ -62,6 +62,7 @@ object CommonCheckpointGroupServerTtlUtils {
   def addNodes(node: Option[Long], nodes: mutable.Set[Long], tree: LongZookeeperTreeList): Unit = {
     node match {
       case Some(id) =>
+        println(s"getNextNode id = $id")
         val nextNode = tree.getNextNode(id)
         nodes.add(id)
         addNodes(nextNode, nodes, tree)
@@ -94,17 +95,17 @@ object CommonCheckpointGroupServerTtlUtils {
   }
 
   def hasLogFiles(ledgerDirectory: File, numberOfFiles: Int): Boolean = {
-    val logs = ArrayBuffer[Integer]()
+    var currentNumberOfFiles = 0
     ledgerDirectory.listFiles().foreach(file => {
       if (file.isFile) {
         val name: String = file.getName
         if (name.endsWith(".log")) {
-          logs += name.split("\\.")(0).toInt
+          currentNumberOfFiles += 1
         }
       }
     })
 
-    logs.size > numberOfFiles //there is no such time in which all entry logs closed (so size ~ size + 1 at least)
+    currentNumberOfFiles > numberOfFiles //there is no such time in which all entry logs closed (so size ~ size + 1 at least)
   }
 
   def getSize(txns: Array[ProducerTransaction]): Int = {

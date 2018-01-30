@@ -31,7 +31,7 @@ import com.bwsw.tstreamstransactionserver.netty.{Protocol, ResponseMessage}
 import com.bwsw.tstreamstransactionserver.options._
 import com.bwsw.tstreamstransactionserver.rpc._
 import com.bwsw.tstreamstransactionserver.util.Implicit.ProducerTransactionSortable
-import com.bwsw.tstreamstransactionserver.util.Utils.{getRandomConsumerTransaction, getRandomProducerTransaction, getRandomStream, startZkServerAndGetIt}
+import com.bwsw.tstreamstransactionserver.util.Utils.{getRandomConsumerTransaction, getRandomProducerTransaction, getRandomStream, startZookeeperServer}
 import com.bwsw.tstreamstransactionserver.util.{Time, Utils}
 import io.netty.buffer.ByteBuf
 import io.netty.channel.EventLoopGroup
@@ -73,7 +73,7 @@ class ServerClientInterconnectionTest
   }
 
   private lazy val (zkServer, zkClient) =
-    startZkServerAndGetIt
+    startZookeeperServer
 
   override def beforeAll(): Unit = {
     zkServer

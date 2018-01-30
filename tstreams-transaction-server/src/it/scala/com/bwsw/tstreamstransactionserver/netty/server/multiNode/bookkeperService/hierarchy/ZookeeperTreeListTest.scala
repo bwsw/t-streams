@@ -29,7 +29,7 @@ class ZookeeperTreeListTest
     with BeforeAndAfterAll
     with Matchers {
 
-  private lazy val (zkServer, zkClient) = Utils.startZkServerAndGetIt
+  private lazy val (zkServer, zkClient) = Utils.startZookeeperServer
 
   override def afterAll(): Unit = {
     zkClient.close()

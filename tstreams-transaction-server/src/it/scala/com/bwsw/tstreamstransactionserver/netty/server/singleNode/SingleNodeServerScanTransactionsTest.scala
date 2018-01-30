@@ -24,7 +24,7 @@ import java.util.concurrent.atomic.AtomicLong
 import com.bwsw.tstreamstransactionserver.netty.server.transactionMetadataService.ProducerTransactionRecord
 import com.bwsw.tstreamstransactionserver.rpc.{ProducerTransaction, StreamValue, TransactionStates}
 import com.bwsw.tstreamstransactionserver.util
-import com.bwsw.tstreamstransactionserver.util.Utils.{getRandomStream, startZkServerAndGetIt}
+import com.bwsw.tstreamstransactionserver.util.Utils.{getRandomStream, startZookeeperServer}
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 
 
@@ -43,7 +43,7 @@ class SingleNodeServerScanTransactionsTest
   )
 
   private lazy val (zkServer, zkClient) =
-    startZkServerAndGetIt
+    startZookeeperServer
 
   override def beforeAll(): Unit = {
     zkServer

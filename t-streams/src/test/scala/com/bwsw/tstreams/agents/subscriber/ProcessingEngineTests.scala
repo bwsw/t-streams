@@ -22,7 +22,7 @@ package com.bwsw.tstreams.agents.subscriber
 import com.bwsw.tstreams.agents.consumer.subscriber.{Callback, ProcessingEngine, QueueBuilder}
 import com.bwsw.tstreams.agents.consumer.{Consumer, ConsumerTransaction, TransactionOperator}
 import com.bwsw.tstreams.storage.StorageClient
-import com.bwsw.tstreams.IncreasingGenerator
+import com.bwsw.tstreams.IncreasingIdGenerator
 import com.bwsw.tstreamstransactionserver.rpc.TransactionStates
 import com.bwsw.tstreams.streams.Stream
 import org.mockito.Mockito
@@ -40,7 +40,7 @@ class ProcessingEngineOperatorTestImpl extends TransactionOperator {
 
   val TOTAL = 10
   val transactions: ListBuffer[ConsumerTransaction] = (0 until TOTAL)
-    .map(_ => new ConsumerTransaction(0, IncreasingGenerator.get, 1, TransactionStates.Checkpointed, -1))
+    .map(_ => new ConsumerTransaction(0, IncreasingIdGenerator.get, 1, TransactionStates.Checkpointed, -1))
     .to[ListBuffer]
 
   transactions.foreach(_.attach(ProcessingEngineTests.Mocks.consumer))
@@ -59,13 +59,13 @@ class ProcessingEngineOperatorTestImpl extends TransactionOperator {
 
   override def getPartitions(): Set[Int] = Set[Int](0)
 
-  override def getCurrentOffset(partition: Int): Long = IncreasingGenerator.get
+  override def getCurrentOffset(partition: Int): Long = IncreasingIdGenerator.get
 
   override def buildTransactionObject(partition: Int, id: Long, state: TransactionStates, count: Int): Option[ConsumerTransaction] = None
 
   override def getTransactionsFromTo(partition: Int, from: Long, to: Long): ListBuffer[ConsumerTransaction] = transactions
 
-  override def getProposedTransactionId(): Long = IncreasingGenerator.get
+  override def getProposedTransactionId(): Long = IncreasingIdGenerator.get
 }
 
 class ProcessingEngineTests extends FlatSpec with Matchers with MockitoSugar {
@@ -95,7 +95,7 @@ class ProcessingEngineTests extends FlatSpec with Matchers with MockitoSugar {
     val c = new ProcessingEngineOperatorTestImpl()
     val pe = new ProcessingEngine(c, Set[Int](0), qb, cb, 100, authKey)
 
-    val consumerTransaction = new ConsumerTransaction(0, IncreasingGenerator.get, 1, TransactionStates.Checkpointed, -1)
+    val consumerTransaction = new ConsumerTransaction(0, IncreasingIdGenerator.get, 1, TransactionStates.Checkpointed, -1)
     consumerTransaction.attach(ProcessingEngineTests.Mocks.consumer)
 
     c.lastTransaction = Option[ConsumerTransaction](consumerTransaction)

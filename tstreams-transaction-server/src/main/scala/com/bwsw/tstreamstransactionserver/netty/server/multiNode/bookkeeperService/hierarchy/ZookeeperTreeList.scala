@@ -20,6 +20,8 @@
 package com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeeperService.hierarchy
 
 
+import java.nio.ByteBuffer
+
 import org.apache.curator.framework.CuratorFramework
 
 import scala.annotation.tailrec
@@ -192,9 +194,13 @@ abstract class ZookeeperTreeList[T](client: CuratorFramework,
       lastId
     )
 
-    scala.util.Try(
+    val result = scala.util.Try(
       client.delete().forPath(buildPath(firstEntityId))
     ).isSuccess
+
+    println(s"delete id = $firstEntityId? $result; newFirstId = ${toEntityId(rootNode.getData().firstId)}")
+
+    result
   }
 
   private def deleteLastNode(lastEntityId: T, previousEntityId: T): Boolean = {

@@ -34,7 +34,7 @@ class CommitLogQueueBootstrapTestSuite
     with BeforeAndAfterAll {
 
   //arrange
-  private lazy val (zkServer, zkClient) = startZkServerAndGetIt
+  private lazy val (zkServer, zkClient) = startZookeeperServer
   private lazy val bundle = getTransactionServerBundle(zkClient)
   private lazy val storageOptions = bundle.storageOptions
   private lazy val path = Paths.get(storageOptions.path, storageOptions.commitLogRawDirectory).toString

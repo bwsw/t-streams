@@ -32,7 +32,7 @@ import com.bwsw.tstreamstransactionserver.options.SingleNodeServerOptions
 import com.bwsw.tstreamstransactionserver.options.SingleNodeServerOptions.{BootstrapOptions, StorageOptions}
 import com.bwsw.tstreamstransactionserver.util
 import com.bwsw.tstreamstransactionserver.util.Utils
-import com.bwsw.tstreamstransactionserver.util.Utils.{getRandomConsumerTransaction, getRandomProducerTransaction, getRandomStream, startZkServerAndGetIt, _}
+import com.bwsw.tstreamstransactionserver.util.Utils.{getRandomConsumerTransaction, getRandomProducerTransaction, getRandomStream, startZookeeperServer, _}
 import com.bwsw.tstreamstransactionserver.util.multiNode.MultiNodeUtils
 import org.apache.curator.framework.CuratorFrameworkFactory
 import org.apache.curator.retry.RetryForever
@@ -333,7 +333,7 @@ class ClientSingleNodeServerZookeeperTest
   it should "throw a ZkNoConnectionException when client lost connection with ZooKeeper" in {
     val connectionTimeoutMs = 1000
     val sessionTimeoutMs = 10000
-    val (zkServer, zkClient) = startZkServerAndGetIt
+    val (zkServer, zkClient) = startZookeeperServer
     val serverBuilder = new SingleNodeServerBuilder()
       .withCommitLogOptions(SingleNodeServerOptions.CommitLogOptions(closeDelayMs = Int.MaxValue))
 

@@ -45,6 +45,7 @@ class BookKeeperCompactionJob(trees: Array[LongZookeeperTreeList],
   extends CompactionJob(interval, timeUnit) {
 
   override def compact(): Unit = {
+    println("run compaction")
     trees.foreach(tree => {
       tree.firstEntityId match {
         case Some(firstLedger) =>
@@ -63,6 +64,7 @@ class BookKeeperCompactionJob(trees: Array[LongZookeeperTreeList],
         case Some(ledger) if toSeconds(ledger.getCreationTime) + ttl < toSeconds(System.currentTimeMillis()) =>
           bookKeeper.deleteLedger(currentLedger)
           tree.deleteNode(currentLedger)
+          println(s"delete node id = $currentLedger")
           if (logger.isDebugEnabled) logger.debug(s"A ledger (id = $currentLedger) has been deleted")
           tree.firstEntityId match {
             case Some(nextLedger) =>

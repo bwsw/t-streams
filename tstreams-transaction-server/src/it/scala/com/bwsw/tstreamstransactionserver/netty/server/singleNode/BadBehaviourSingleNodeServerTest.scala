@@ -27,7 +27,7 @@ import com.bwsw.tstreamstransactionserver.netty.server.zk.{ZKMasterElector, Zook
 import com.bwsw.tstreamstransactionserver.options.ClientOptions.{AuthOptions, ConnectionOptions}
 import com.bwsw.tstreamstransactionserver.options.CommonOptions.ZookeeperOptions
 import com.bwsw.tstreamstransactionserver.options.{ClientOptions, CommonOptions}
-import com.bwsw.tstreamstransactionserver.util.Utils.{getRandomPort, startZkServerAndGetIt, uuid}
+import com.bwsw.tstreamstransactionserver.util.Utils.{getRandomPort, startZookeeperServer, uuid}
 import com.bwsw.tstreamstransactionserver.util.netty.NettyServer
 import io.netty.channel.socket.SocketChannel
 import io.netty.channel.{ChannelHandlerContext, ChannelInboundHandlerAdapter}
@@ -43,7 +43,7 @@ class BadBehaviourSingleNodeServerTest
     with Matchers
     with BeforeAndAfterAll {
 
-  private lazy val (zkServer, zkClient) = startZkServerAndGetIt
+  private lazy val (zkServer, zkClient) = startZookeeperServer
 
   private val host = "127.0.0.1"
   private val requestTimeoutMs = 500

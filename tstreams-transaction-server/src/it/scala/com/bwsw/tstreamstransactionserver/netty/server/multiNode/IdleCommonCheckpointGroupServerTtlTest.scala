@@ -77,49 +77,43 @@ class IdleCommonCheckpointGroupServerTtlTest extends fixture.FlatSpec with Match
 
     val fixtureParam = FixtureParam(zkClient, ledgerManager)
 
-    Try {
-      withFixture(test.toNoArgTest(fixtureParam))
-    } match {
-      case Success(x) =>
-        ledgerManager.close()
-        bookieServers.foreach(_._1.shutdown())
-        zkClient.close()
-        zkServer.close()
-        x
-      case Failure(e: Throwable) =>
-        ledgerManager.close()
-        bookieServers.foreach(_._1.shutdown())
-        zkClient.close()
-        zkServer.close()
-        throw e
-    }
+    val testResult = Try(withFixture(test.toNoArgTest(fixtureParam)))
+
+    ledgerManager.close()
+    zk.close()
+    bookieServers.foreach(_._1.shutdown())
+    zkClient.close()
+    zkServer.close()
+
+    testResult.get
   }
 
-  "Expired ledgers" should "be deleted according to settings if a server works in a stable way" in { fixture =>
-    val bundle: ZkServerTxnMultiNodeServerTxnClient = getCommonCheckpointGroupServerBundle(
-      fixture.zkClient, bookkeeperOptions, serverBuilder, clientBuilder, toMs(maxIdleTimeBetweenRecords)
-    )
-    val cgPath = bundle.serverBuilder.getCommonPrefixesOptions.checkpointGroupPrefixesOptions.checkpointGroupZkTreeListPrefix
-    val cgTree = new LongZookeeperTreeList(fixture.zkClient, cgPath)
+  "Expired ledgers" should "be deleted according to settings if a server works in a stable way" in {
+    fixture =>
+      val bundle: ZkServerTxnMultiNodeServerTxnClient = getCommonCheckpointGroupServerBundle(
+        fixture.zkClient, bookkeeperOptions, serverBuilder, clientBuilder, toMs(maxIdleTimeBetweenRecords)
+      )
+      val cgPath = bundle.serverBuilder.getCommonPrefixesOptions.checkpointGroupPrefixesOptions.checkpointGroupZkTreeListPrefix
+      val cgTree = new LongZookeeperTreeList(fixture.zkClient, cgPath)
 
-    val commonPath = bundle.serverBuilder.getCommonPrefixesOptions.commonMasterZkTreeListPrefix
-    val commonTree = new LongZookeeperTreeList(fixture.zkClient, commonPath)
+      val commonPath = bundle.serverBuilder.getCommonPrefixesOptions.commonMasterZkTreeListPrefix
+      val commonTree = new LongZookeeperTreeList(fixture.zkClient, commonPath)
 
-    val trees = Set(cgTree, commonTree)
+      val trees = Set(cgTree, commonTree)
 
-    bundle.operate(_ => {
-      Thread.sleep(toMs(dataCompactionInterval))
+      bundle.operate(_ => {
+        Thread.sleep(toMs(dataCompactionInterval))
 
-      val createdLedgers = (dataCompactionInterval / maxIdleTimeBetweenRecords) * treeFactor //because we use CommonCheckpointGroupServer
-      // that has two zk trees so creates two times more ledgers
-      ledgersExistInBookKeeper(fixture.ledgerManager, createdLedgers) shouldBe true
-      ledgersExistInZkTree(trees, createdLedgers) shouldBe true
+        val createdLedgers = (dataCompactionInterval / maxIdleTimeBetweenRecords) * treeFactor //because we use CommonCheckpointGroupServer
+        // that has two zk trees so creates two times more ledgers
+        ledgersExistInBookKeeper(fixture.ledgerManager, createdLedgers) shouldBe true
+        ledgersExistInZkTree(trees, createdLedgers) shouldBe true
 
-      Thread.sleep(toMs(timeToWaitEntitiesDeletion) + gcWaitTimeMs)
+        Thread.sleep(toMs(timeToWaitEntitiesDeletion) + gcWaitTimeMs)
 
-      val secondPartOfCreatedLedgers = timeToWaitEntitiesDeletion / maxIdleTimeBetweenRecords * treeFactor
-      ledgersExistInBookKeeper(fixture.ledgerManager, secondPartOfCreatedLedgers + createdLedgers) shouldBe false
-      ledgersExistInZkTree(trees, secondPartOfCreatedLedgers + createdLedgers) shouldBe false
-    })
+        val secondPartOfCreatedLedgers = timeToWaitEntitiesDeletion / maxIdleTimeBetweenRecords * treeFactor
+        ledgersExistInBookKeeper(fixture.ledgerManager, secondPartOfCreatedLedgers + createdLedgers) shouldBe false
+        ledgersExistInZkTree(trees, secondPartOfCreatedLedgers + createdLedgers) shouldBe false
+      })
   }
 }

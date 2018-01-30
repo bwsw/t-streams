@@ -25,7 +25,7 @@ import com.bwsw.tstreamstransactionserver.netty.server.transactionMetadataServic
 import com.bwsw.tstreamstransactionserver.netty.server.{RocksReader, RocksWriter}
 import com.bwsw.tstreamstransactionserver.rpc.{ProducerTransaction, TransactionStates}
 import com.bwsw.tstreamstransactionserver.util
-import com.bwsw.tstreamstransactionserver.util.Utils.startZkServerAndGetIt
+import com.bwsw.tstreamstransactionserver.util.Utils.startZookeeperServer
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 
 class SingleNodeServerClientInterconnectionLifecycleTest
@@ -34,7 +34,7 @@ class SingleNodeServerClientInterconnectionLifecycleTest
     with BeforeAndAfterAll {
 
   private lazy val (zkServer, zkClient) =
-    startZkServerAndGetIt
+    startZookeeperServer
 
   override def beforeAll(): Unit = {
     zkServer

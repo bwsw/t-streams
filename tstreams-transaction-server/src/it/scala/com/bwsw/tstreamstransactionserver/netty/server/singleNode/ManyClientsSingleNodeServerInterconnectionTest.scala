@@ -24,7 +24,7 @@ import java.util.concurrent.TimeUnit
 import com.bwsw.tstreamstransactionserver.netty.client.ClientBuilder
 import com.bwsw.tstreamstransactionserver.options.SingleNodeServerOptions
 import com.bwsw.tstreamstransactionserver.rpc.{ConsumerTransaction, ProducerTransaction, TransactionStates}
-import com.bwsw.tstreamstransactionserver.util.Utils.{getRandomStream, startZkServerAndGetIt}
+import com.bwsw.tstreamstransactionserver.util.Utils.{getRandomStream, startZookeeperServer}
 import com.bwsw.tstreamstransactionserver.util.{Time, Utils}
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 
@@ -83,7 +83,7 @@ class ManyClientsSingleNodeServerInterconnectionTest
 
 
   private lazy val (zkServer, zkClient) =
-    startZkServerAndGetIt
+    startZookeeperServer
 
   override def beforeAll(): Unit = {
     zkServer

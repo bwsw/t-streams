@@ -151,7 +151,7 @@ class BookkeeperToRocksWriterTest
       }
   }
 
-  private lazy val (zkServer, zkClient) = Utils.startZkServerAndGetIt
+  private lazy val (zkServer, zkClient) = Utils.startZookeeperServer
 
   override def beforeAll(): Unit = {
     zkServer

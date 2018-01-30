@@ -28,7 +28,7 @@ import com.bwsw.tstreamstransactionserver.netty.server.storage.Storage
 import com.bwsw.tstreamstransactionserver.netty.server.storage.rocks.MultiAndSingleNodeRockStorage
 import com.bwsw.tstreamstransactionserver.rpc.TransactionStates.Checkpointed
 import com.bwsw.tstreamstransactionserver.rpc.{ProducerTransaction, TransactionInfo}
-import com.bwsw.tstreamstransactionserver.util.Utils.startZkServerAndGetIt
+import com.bwsw.tstreamstransactionserver.util.Utils.startZookeeperServer
 import com.bwsw.tstreamstransactionserver.util.{Utils, ZkSeverTxnServerTxnClient}
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 
@@ -48,7 +48,7 @@ class SingleNodeServerTtlTest extends FlatSpec with Matchers with BeforeAndAfter
   private lazy val serverBuilder = new SingleNodeServerBuilder()
 
   private lazy val clientBuilder = new ClientBuilder()
-  private lazy val (zkServer, zkClient) = startZkServerAndGetIt
+  private lazy val (zkServer, zkClient) = startZookeeperServer
 
 
   "SingleNodeServer" should "remove expired transactions" in {

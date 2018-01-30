@@ -22,7 +22,7 @@ package com.bwsw.tstreams.agents.subscriber
 import java.util.concurrent.TimeUnit
 
 import com.bwsw.tstreams.common.MemoryQueue
-import com.bwsw.tstreams.IncreasingGenerator
+import com.bwsw.tstreams.IncreasingIdGenerator
 import com.bwsw.tstreamstransactionserver.rpc.{TransactionState, TransactionStates}
 import org.scalatest.{FlatSpec, Matchers}
 
@@ -40,7 +40,7 @@ class MemoryQueueTests extends FlatSpec with Matchers {
   it should "allow to put/get list" in {
     val queue = new MemoryQueue[List[TransactionState]]()
     val state = TransactionState(
-      transactionID = IncreasingGenerator.get,
+      transactionID = IncreasingIdGenerator.get,
       partition = 0,
       masterID = 1,
       orderID = 1,
