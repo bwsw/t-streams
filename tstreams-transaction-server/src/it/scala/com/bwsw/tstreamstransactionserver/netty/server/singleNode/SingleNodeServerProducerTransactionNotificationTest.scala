@@ -471,29 +471,31 @@ class SingleNodeServerProducerTransactionNotificationTest
       val rootTransaction1 = ProducerTransaction(streamID, 1, firstTransaction1, TransactionStates.Opened, 1, 120L)
       val rootTransaction2 = ProducerTransaction(streamID, 2, firstTransaction2, TransactionStates.Opened, 1, 120L)
 
-      bundle.client.putProducerState(rootTransaction1)
-      bundle.client.putProducerState(rootTransaction2)
-
       val putCounter1 = new CountDownLatch(1)
       transactionServer.notifyProducerTransactionCompleted(t =>
-        t.partition == 1 && t.transactionID ==
-          firstTransaction1 && t.state ==
-          TransactionStates.Checkpointed,
+        t.partition == 1 &&
+          t.transactionID == firstTransaction1 &&
+          t.state == TransactionStates.Checkpointed,
         putCounter1.countDown()
       )
 
       val putCounter2 = new CountDownLatch(1)
       transactionServer.notifyProducerTransactionCompleted(t =>
-        t.partition == 2 && t.transactionID ==
-          firstTransaction2 && t.state ==
-          TransactionStates.Checkpointed,
+        t.partition == 2 &&
+          t.transactionID == firstTransaction2 &&
+          t.state == TransactionStates.Checkpointed,
         putCounter2.countDown()
       )
 
-      val ALL = 4000
-      (0 to ALL) foreach { _ =>
+      bundle.client.putProducerState(rootTransaction1)
+      bundle.client.putProducerState(rootTransaction2)
+
+      val updatingCount = 10
+      val updatingInterval = 10
+      (0 to updatingCount) foreach { _ =>
         bundle.client.putProducerState(ProducerTransaction(streamID, 1, firstTransaction1, TransactionStates.Updated, 1, 120L))
         bundle.client.putProducerState(ProducerTransaction(streamID, 2, firstTransaction2, TransactionStates.Updated, 1, 120L))
+        Thread.sleep(updatingInterval)
       }
 
       bundle.client.putProducerState(ProducerTransaction(streamID, 1, firstTransaction1, TransactionStates.Checkpointed, 1, 120L))
@@ -512,13 +514,15 @@ class SingleNodeServerProducerTransactionNotificationTest
       bundle.client.putProducerState(rootTransaction00)
       bundle.client.putProducerState(rootTransaction22)
 
-      val ALL1 = 4000
-      (0 to ALL1) foreach { _ =>
+      (0 to updatingCount) foreach { _ =>
         bundle.client.putProducerState(ProducerTransaction(streamID, 0, firstTransaction00, TransactionStates.Updated, 1, 120L))
         bundle.client.putProducerState(ProducerTransaction(streamID, 2, firstTransaction22, TransactionStates.Updated, 1, 120L))
+        Thread.sleep(updatingInterval)
       }
 
-      val res = Await.result(bundle.client.scanTransactions(streamID, 1, firstTransaction1 - 45L, firstTransaction1, Int.MaxValue, Set(TransactionStates.Opened)), secondsWait.seconds)
+      val res = Await.result(
+        bundle.client.scanTransactions(streamID, 1, firstTransaction1 - 45L, firstTransaction1,
+          Int.MaxValue, Set(TransactionStates.Opened)), secondsWait.seconds)
 
       res.producerTransactions.head shouldBe ProducerTransaction(streamID, 1, firstTransaction1, TransactionStates.Checkpointed, 1, 120L)
     }
