@@ -173,10 +173,10 @@ The **Checkpoint** operation is atomic for:
 - for all opened transactions of a Producer when it is called for a Producer object;
 - for all Producers, Consumers and Subscribers which are participants of a Checkpoint Group when it is called for a CheckpointGroup object.
 
-Guaranties
+Guarantees
 ------------
 
-T-streams gives the following guaranties:
+T-streams gives the following guarantees:
 
 - Consumers/Subscribers process transactions in a strict order according to transaction open time. A transaction which is opened later but closed earlier the previous one will not be processed until the previous transaction is closed and processed.
 - Consumers/Subscribers read and process all data elements within a transaction in the order Producers have recorded them.  
@@ -193,4 +193,4 @@ Since a transaction is not equal to a data element and it can include a lot of d
 
 The checkpoint operation allows fixing a lot of transactions as a single operation. Frequent checkpointing leads to a slowdown in performance, so it is preferable to call the checkpoint method depending on the need. Use Producer or Checkpoint Group (but not Transaction object) methods for the checkpoint. 
 
-T-streams *single stream* is not scalable. One stream is handled on one server. In this case, the processing is limited by the server performance. If the processing flow you develop allows scalability, you can handle each stream on a separate server observing all the guaranties mentioned above. Scalability allows processing high throughputs of data with very low latency. 
+T-streams *single stream* is not scalable. One stream is handled on one server. In this case, the processing is limited by the server performance. If the processing flow you develop allows scalability, you can handle each stream on a separate server observing all the guarantees mentioned above. Scalability allows processing high throughputs of data with very low latency. 
