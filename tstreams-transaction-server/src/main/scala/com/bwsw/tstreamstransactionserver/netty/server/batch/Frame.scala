@@ -34,7 +34,6 @@ object Frame {
   val PutProducerStateWithDataType: Byte = 3
   val PutTransactionType: Byte = 4
   val PutTransactionsType: Byte = 5
-  val PutConsumerCheckpointType: Byte = 6
   val TokenCreatedType: Byte = 7
   val TokenUpdatedType: Byte = 8
   val TokenExpiredType: Byte = 9
@@ -51,9 +50,6 @@ object Frame {
 
   def deserializePutSimpleTransactionAndData(message: Array[Byte]): ProducerTransactionsAndData =
     Structure.PutTransactionsAndData.decode(message)
-
-  def deserializePutConsumerCheckpoint(message: Array[Byte]): PutConsumerCheckpoint.Args =
-    Protocol.PutConsumerCheckpoint.decodeRequest(message)
 
   def deserializePutProducerStateWithData(message: Array[Byte]): PutProducerStateWithData.Args =
     Protocol.PutProducerStateWithData.decodeRequest(message)

@@ -31,7 +31,6 @@ import com.bwsw.tstreamstransactionserver.netty.server.handler.stream.{CheckStre
 import com.bwsw.tstreamstransactionserver.netty.server.handler.transport.{GetMaxPackagesSizesHandler, GetZKCheckpointGroupServerPrefixHandler}
 import com.bwsw.tstreamstransactionserver.netty.server.singleNode.commitLogService.CommitLogService
 import com.bwsw.tstreamstransactionserver.netty.server.singleNode.hanlder.commitLog.GetCommitLogOffsetsHandler
-import com.bwsw.tstreamstransactionserver.netty.server.singleNode.hanlder.consumer.PutConsumerCheckpointHandler
 import com.bwsw.tstreamstransactionserver.netty.server.singleNode.hanlder.data.{PutProducerStateWithDataHandler, PutSimpleTransactionAndDataHandler, PutTransactionDataHandler}
 import com.bwsw.tstreamstransactionserver.netty.server.singleNode.hanlder.metadata.{OpenTransactionHandler, PutTransactionHandler, PutTransactionsHandler}
 import com.bwsw.tstreamstransactionserver.netty.server.subscriber.OpenedTransactionNotifier
@@ -81,7 +80,7 @@ final class SingleNodeRequestRouter(server: TransactionServer,
     Seq(
       new PutTransactionHandler(server, scheduledCommitLog, commitLogContext),
       new PutTransactionsHandler(server, scheduledCommitLog, commitLogContext),
-      new PutConsumerCheckpointHandler(server, scheduledCommitLog, commitLogContext))
+    )
       .map(handlerAuthMetadata),
 
     Seq(

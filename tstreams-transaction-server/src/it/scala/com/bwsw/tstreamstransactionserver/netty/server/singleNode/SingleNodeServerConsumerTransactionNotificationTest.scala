@@ -59,7 +59,7 @@ class SingleNodeServerConsumerTransactionNotificationTest
 
   private val secondsWait = 10
 
-  "Client" should "put consumerCheckpoint and get a transaction id back." in {
+  "Client" should "put consumer checkpoint and get a transaction id back." in {
     val bundle = Utils.startTransactionServerAndClient(
       zkClient, serverBuilder, clientBuilder
     )
@@ -80,7 +80,7 @@ class SingleNodeServerConsumerTransactionNotificationTest
       )
 
       val consumerTransactionOuter = ConsumerTransaction(streamID, 1, transactionId, checkpointName)
-      client.putConsumerCheckpoint(consumerTransactionOuter)
+      client.putTransaction(consumerTransactionOuter)
 
       latch.await(1, TimeUnit.SECONDS) shouldBe true
     }

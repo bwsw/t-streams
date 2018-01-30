@@ -57,7 +57,7 @@ abstract class AsyncTracer(zipkinAddress: String,
     PutTransactionData,
     PutTransactions,
     PutTransaction,
-    PutConsumerCheckpoint)
+  )
     .map(method => method.methodID -> method.name)
     .toMap
 

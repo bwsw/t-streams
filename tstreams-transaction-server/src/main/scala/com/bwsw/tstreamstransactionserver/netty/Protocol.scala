@@ -46,7 +46,6 @@ object Protocol {
   val scanTransactionsMethod = "scanTransactions"
   val putTransactionDataMethod = "putTransactionData"
   val getTransactionDataMethod = "getTransactionData"
-  val putConsumerCheckpointMethod = "putConsumerCheckpoint"
   val getConsumerStateMethod = "getConsumerState"
   val authenticateMethod = "authenticate"
   val isValidMethod = "isValid"
@@ -110,8 +109,6 @@ object Protocol {
         toString(PutTransactionData.name, struct.productIterator, TransactionService.PutTransactionData.Args.fieldInfos.map(_.tfield.name))
       case struct: TransactionService.GetTransactionData.Args =>
         toString(GetTransactionData.name, struct.productIterator, TransactionService.GetTransactionData.Args.fieldInfos.map(_.tfield.name))
-      case struct: TransactionService.PutConsumerCheckpoint.Args =>
-        toString(PutConsumerCheckpoint.name, struct.productIterator, TransactionService.PutConsumerCheckpoint.Args.fieldInfos.map(_.tfield.name))
       case struct: TransactionService.GetConsumerState.Args =>
         toString(GetConsumerState.name, struct.productIterator, TransactionService.GetConsumerState.Args.fieldInfos.map(_.tfield.name))
       case struct: TransactionService.Authenticate.Args =>
@@ -282,9 +279,6 @@ object Protocol {
 
   case object GetTransactionData extends
     Descriptor(getTransactionDataMethod, 12: Byte, TransactionService.GetTransactionData.Args, TransactionService.GetTransactionData.Result, protocolTBinaryFactory, protocolTCompactFactory)
-
-  case object PutConsumerCheckpoint extends
-    Descriptor(putConsumerCheckpointMethod, 13: Byte, TransactionService.PutConsumerCheckpoint.Args, TransactionService.PutConsumerCheckpoint.Result, protocolTBinaryFactory, protocolTBinaryFactory)
 
   case object GetConsumerState extends
     Descriptor(getConsumerStateMethod, 14: Byte, TransactionService.GetConsumerState.Args, TransactionService.GetConsumerState.Result, protocolTBinaryFactory, protocolTBinaryFactory)

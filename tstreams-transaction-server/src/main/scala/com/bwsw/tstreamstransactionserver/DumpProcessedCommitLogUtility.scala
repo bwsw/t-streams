@@ -88,9 +88,6 @@ object DumpProcessedCommitLogUtility {
   private def deserializePutTransactions(message: Array[Byte]) =
     Protocol.PutTransactions.decodeRequest(message)
 
-  private def deserializeSetConsumerState(message: Array[Byte]) =
-    Protocol.PutConsumerCheckpoint.decodeRequest(message)
-
   private def retrieveTransactions(record: commitlog.CommitLogRecord): Seq[(rpc.Transaction, Long)] =
     record.messageType match {
       case Frame.PutTransactionType =>
@@ -102,12 +99,6 @@ object DumpProcessedCommitLogUtility {
         val txns = deserializePutTransactions(record.message)
 
         txns.transactions.map(txn => (txn, record.timestamp))
-
-      case Frame.PutConsumerCheckpointType =>
-        val args = deserializeSetConsumerState(record.message)
-        val consumerTransaction = rpc.ConsumerTransaction(args.streamID, args.partition, args.transaction, args.name)
-
-        Seq((rpc.Transaction(None, Some(consumerTransaction)), record.timestamp))
 
       case _ =>
         throw new IllegalArgumentException("Undefined method type for retrieving message from commit log record")

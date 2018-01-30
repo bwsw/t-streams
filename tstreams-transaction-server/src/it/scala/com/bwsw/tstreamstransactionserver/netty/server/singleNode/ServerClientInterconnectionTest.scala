@@ -444,7 +444,7 @@ class ServerClientInterconnectionTest
       )
 
 
-      Await.result(client.putConsumerCheckpoint(getRandomConsumerTransaction(streamID, stream)), secondsWait.seconds)
+      Await.result(client.putTransaction(getRandomConsumerTransaction(streamID, stream)), secondsWait.seconds)
       transactionServer.scheduledCommitLog.run()
       transactionServer.commitLogToRocksWriter.run()
 
@@ -616,7 +616,7 @@ class ServerClientInterconnectionTest
     }
   }
 
-  it should "put consumerCheckpoint and get a transaction id back" in {
+  it should "put consumer checkpoint and get a transaction id back" in {
     val bundle = Utils.startTransactionServerAndClient(
       zkClient, serverBuilder, clientBuilder
     )
@@ -628,7 +628,7 @@ class ServerClientInterconnectionTest
 
       val consumerTransaction = getRandomConsumerTransaction(streamID, stream)
 
-      Await.result(client.putConsumerCheckpoint(consumerTransaction), secondsWait.seconds)
+      Await.result(client.putTransaction(consumerTransaction), secondsWait.seconds)
       transactionServer.scheduledCommitLog.run()
       transactionServer.commitLogToRocksWriter.run()
 
@@ -709,7 +709,7 @@ class ServerClientInterconnectionTest
       }, Seq()), secondsWait.seconds)
 
       TestTimer.updateTime(TestTimer.getCurrentTime + maxIdleTimeBetweenRecordsMs)
-      Await.result(client.putConsumerCheckpoint(getRandomConsumerTransaction(streamID, stream)), secondsWait.seconds)
+      Await.result(client.putTransaction(getRandomConsumerTransaction(streamID, stream)), secondsWait.seconds)
       transactionServer.scheduledCommitLog.run()
       transactionServer.commitLogToRocksWriter.run()
 
@@ -717,7 +717,7 @@ class ServerClientInterconnectionTest
       Await.result(client.putProducerState(ProducerTransaction(streamID, partition, TestTimer.getCurrentTime, TransactionStates.Opened, 1, 120L)), secondsWait.seconds)
 
       TestTimer.updateTime(TestTimer.getCurrentTime + maxIdleTimeBetweenRecordsMs)
-      Await.result(client.putConsumerCheckpoint(getRandomConsumerTransaction(streamID, stream)), secondsWait.seconds)
+      Await.result(client.putTransaction(getRandomConsumerTransaction(streamID, stream)), secondsWait.seconds)
       transactionServer.scheduledCommitLog.run()
       transactionServer.commitLogToRocksWriter.run()
 
@@ -734,7 +734,7 @@ class ServerClientInterconnectionTest
       }, Seq()), secondsWait.seconds)
 
       TestTimer.updateTime(TestTimer.getCurrentTime + maxIdleTimeBetweenRecordsMs)
-      Await.result(client.putConsumerCheckpoint(getRandomConsumerTransaction(streamID, stream)), secondsWait.seconds)
+      Await.result(client.putTransaction(getRandomConsumerTransaction(streamID, stream)), secondsWait.seconds)
       transactionServer.commitLogToRocksWriter.run()
 
       val transactions = transactions1 ++ transactions2

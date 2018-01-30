@@ -155,20 +155,6 @@ class BigCommitWithFrameParser(bigCommit: BigCommit, openedTransactionsCache: Op
           putProducerTransaction(producerRecords, producerTransactionRecord, frame.token)
 
 
-        case Frame.PutConsumerCheckpointType =>
-          val consumerTransactionArgs = Frame.deserializePutConsumerCheckpoint(frame.body)
-          val consumerTransactionRecord = {
-            import consumerTransactionArgs._
-            ConsumerTransactionRecord(
-              name,
-              streamID,
-              partition,
-              transaction,
-              frame.timestamp)
-          }
-          putConsumerTransaction(consumerRecords, consumerTransactionRecord)
-
-
         case Frame.PutTransactionType =>
           val transaction = Frame.deserializePutTransaction(frame.body).transaction
           decomposeTransaction(producerRecords, consumerRecords, transaction, frame.timestamp, frame.token)
