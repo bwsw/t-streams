@@ -229,7 +229,8 @@ class CheckpointGroupCheckpointTest
   }
 
 
-  it should "throw exception instead checkpoint when one of agents or them all isn't connected to server" in {
+  it should "throw an exception instead of checkpoint when one of the agents isn't connected or all of them are not " +
+    "connected to a server" in {
     val agentsCount = 5
     val storageClient = f.getStorageClient()
     val checkingConsumer = createConsumer().start()
