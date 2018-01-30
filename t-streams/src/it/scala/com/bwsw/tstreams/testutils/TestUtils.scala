@@ -47,7 +47,8 @@ trait TestUtils extends Matchers with TableDrivenPropertyChecks {
     *
     * @return Alpha string
     */
-  val id: Int = TestUtils.moveId()
+  def id: Int = TestUtils.moveId()
+
   val randomKeyspace: String = TestUtils.getKeyspace(id)
 
   val zookeeperPort: Int = TestUtils.ZOOKEEPER_PORT

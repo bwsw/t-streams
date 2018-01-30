@@ -23,13 +23,14 @@ import java.util.concurrent.{CountDownLatch, TimeUnit}
 
 import com.bwsw.tstreams.agents.consumer.Consumer
 import com.bwsw.tstreams.agents.consumer.Offset.Oldest
+import com.bwsw.tstreams.agents.consumer.subscriber.Callback
 import com.bwsw.tstreams.agents.producer.{NewProducerTransactionPolicy, Producer}
 import com.bwsw.tstreams.testutils.{TestStorageServer, TestUtils}
 import com.bwsw.tstreamstransactionserver.netty.server.singleNode.TestSingleNodeServer
-import com.bwsw.tstreamstransactionserver.rpc.TransactionStates.{Checkpointed, Invalid}
+import com.bwsw.tstreamstransactionserver.rpc.TransactionStates.{Checkpointed, Invalid, Opened}
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, FlatSpec, Matchers}
 
-import scala.util.Random
+import scala.util.Try
 
 class CheckpointGroupCheckpointTest
   extends FlatSpec
@@ -45,7 +46,7 @@ class CheckpointGroupCheckpointTest
   private var server: TestSingleNodeServer = _
 
   private def createProducer(): Producer = f.getProducer(
-    name = s"test_producer-${Random.nextInt}",
+    name = s"test_producer-$id",
     partitions = partitions)
 
   private def createConsumer(): Consumer = f.getConsumer(
@@ -53,6 +54,12 @@ class CheckpointGroupCheckpointTest
     partitions = partitions,
     offset = Oldest,
     useLastOffset = true)
+
+  private def createSubscriber(callback: Callback) = f.getSubscriber(
+    name = s"test_subscriber-$id",
+    partitions = partitions,
+    callback = callback,
+    offset = Oldest)
 
   override protected def beforeEach(): Unit = {
     server = TestStorageServer.getNewClean()
@@ -219,6 +226,78 @@ class CheckpointGroupCheckpointTest
     producer.close()
     producer2.close()
     consumer.close()
+  }
+
+
+  it should "throw an exception instead of checkpoint when one of the agents isn't connected or all of them are not " +
+    "connected to a server" in {
+    val agentsCount = 5
+    val storageClient = f.getStorageClient()
+    val checkingConsumer = createConsumer().start()
+
+    def test(disconnectedAgentId: Option[Int]) = {
+      val partition = 0
+      val producer1 = createProducer()
+      val producer2 = createProducer()
+      val consumer1 = createConsumer().start()
+      val consumer2 = createConsumer().start()
+      val subscriber = createSubscriber((_, _) => {}).start()
+
+      val stream = producer1.stream.id
+      val consumerNames = Seq(consumer1, consumer2, subscriber).map(_.getAgentName())
+      val producers = Seq(producer1, producer2)
+      producers.foreach(_.newTransaction(NewProducerTransactionPolicy.ErrorIfOpened, partition).send("data"))
+      producers.foreach(_.checkpoint())
+
+      Seq(consumer1, consumer2).foreach(_.getTransaction(partition))
+
+      val checkpointGroup = f.getCheckpointGroup()
+      val agents = IndexedSeq(
+        producer1,
+        producer2,
+        consumer1,
+        consumer2,
+        subscriber)
+
+      agents.length shouldBe agentsCount
+      agents.foreach(checkpointGroup.add)
+
+      val transaction1 = producer1.newTransaction(NewProducerTransactionPolicy.ErrorIfOpened, partition)
+      transaction1.send("data")
+
+      val transaction2 = producer2.newTransaction(NewProducerTransactionPolicy.ErrorIfOpened, partition)
+      transaction2.send("data")
+
+      disconnectedAgentId match {
+        case Some(j) => agents(j).getStorageClient().shutdown()
+        case None => agents.foreach(_.getStorageClient().shutdown())
+      }
+
+      an[IllegalStateException] shouldBe thrownBy {
+        checkpointGroup.checkpoint()
+      }
+
+      checkTransactions(
+        checkingConsumer,
+        partition,
+        Table(
+          ("transaction", "state"),
+          (transaction1, Opened),
+          (transaction2, Opened)))
+
+      consumerNames.foreach { name =>
+        storageClient.getLastSavedConsumerOffset(name, stream, partition) shouldBe -1
+      }
+
+      agents.foreach(agent => Try(agent.close()))
+      checkpointGroup.stop()
+    }
+
+    forAll(Table("agentId", 0 until agentsCount: _*))(agentId => test(Some(agentId)))
+    test(None)
+
+    checkingConsumer.close()
+    storageClient.shutdown()
   }
 
 
