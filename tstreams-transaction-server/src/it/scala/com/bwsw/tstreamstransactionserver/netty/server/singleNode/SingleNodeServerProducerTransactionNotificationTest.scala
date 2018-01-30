@@ -490,10 +490,12 @@ class SingleNodeServerProducerTransactionNotificationTest
       bundle.client.putProducerState(rootTransaction1)
       bundle.client.putProducerState(rootTransaction2)
 
-      val ALL = 4000
-      (0 to ALL) foreach { _ =>
+      val updatingCount = 10
+      val updatingInterval = 10
+      (0 to updatingCount) foreach { _ =>
         bundle.client.putProducerState(ProducerTransaction(streamID, 1, firstTransaction1, TransactionStates.Updated, 1, 120L))
         bundle.client.putProducerState(ProducerTransaction(streamID, 2, firstTransaction2, TransactionStates.Updated, 1, 120L))
+        Thread.sleep(updatingInterval)
       }
 
       bundle.client.putProducerState(ProducerTransaction(streamID, 1, firstTransaction1, TransactionStates.Checkpointed, 1, 120L))
@@ -512,13 +514,15 @@ class SingleNodeServerProducerTransactionNotificationTest
       bundle.client.putProducerState(rootTransaction00)
       bundle.client.putProducerState(rootTransaction22)
 
-      val ALL1 = 4000
-      (0 to ALL1) foreach { _ =>
+      (0 to updatingCount) foreach { _ =>
         bundle.client.putProducerState(ProducerTransaction(streamID, 0, firstTransaction00, TransactionStates.Updated, 1, 120L))
         bundle.client.putProducerState(ProducerTransaction(streamID, 2, firstTransaction22, TransactionStates.Updated, 1, 120L))
+        Thread.sleep(updatingInterval)
       }
 
-      val res = Await.result(bundle.client.scanTransactions(streamID, 1, firstTransaction1 - 45L, firstTransaction1, Int.MaxValue, Set(TransactionStates.Opened)), secondsWait.seconds)
+      val res = Await.result(
+        bundle.client.scanTransactions(streamID, 1, firstTransaction1 - 45L, firstTransaction1,
+          Int.MaxValue, Set(TransactionStates.Opened)), secondsWait.seconds)
 
       res.producerTransactions.head shouldBe ProducerTransaction(streamID, 1, firstTransaction1, TransactionStates.Checkpointed, 1, 120L)
     }
