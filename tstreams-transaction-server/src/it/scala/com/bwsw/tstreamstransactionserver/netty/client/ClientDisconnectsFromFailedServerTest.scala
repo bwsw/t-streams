@@ -76,8 +76,10 @@ class ClientDisconnectsFromFailedServerTest
 
   it should "throw an exception when the server restarted" in {
     val transactionsCount = 10000
+    val connectionOptions =
+      clientBuilder.getConnectionOptions.copy(requestTimeoutMs = responseTimeout.toMillis.toInt)
     val bundle = startTransactionServerAndClient(
-      zkClient, serverBuilder, clientBuilder
+      zkClient, serverBuilder, clientBuilder.withConnectionOptions(connectionOptions)
     )
 
     val client = bundle.client
