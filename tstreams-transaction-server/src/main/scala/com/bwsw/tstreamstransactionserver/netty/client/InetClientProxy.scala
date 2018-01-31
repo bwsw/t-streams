@@ -369,8 +369,6 @@ class InetClientProxy(connectionOptions: ConnectionOptions,
     if (transactions.isEmpty) {
       Future.successful(true)
     } else {
-      //      println("***[client] Put transactions " ++ transactions.mkString("{\n  ", "\n  ", "\n}"))
-
       if (logger.isDebugEnabled)
         logger.debug(s"putTransactions method is invoked: $transactions.")
 
@@ -468,7 +466,6 @@ class InetClientProxy(connectionOptions: ConnectionOptions,
     if (logger.isDebugEnabled) logger.debug(s"Putting 'lightweight' producer transaction to stream $streamID, partition $partition with data: $data")
     onShutdownThrowException()
 
-    //    println(s"***[client] Producer checkpointed transaction: $streamID, $partition")
     commonInetClient.method[TransactionService.PutSimpleTransactionAndData.Args, TransactionService.PutSimpleTransactionAndData.Result, Long](
       Protocol.PutSimpleTransactionAndData,
       TransactionService.PutSimpleTransactionAndData.Args(streamID, partition, data.map(java.nio.ByteBuffer.wrap)),
@@ -510,8 +507,6 @@ class InetClientProxy(connectionOptions: ConnectionOptions,
     if (logger.isDebugEnabled)
       logger.debug(s"Putting 'lightweight' producer transaction to stream $streamID, partition $partitionID with TTL: $transactionTTLMs")
     onShutdownThrowException()
-
-    //    println(s"***[client] Producer opened transaction: $streamID, $partitionID, $transactionTTLMs")
 
     commonInetClient.method[TransactionService.OpenTransaction.Args, TransactionService.OpenTransaction.Result, Long](
       Protocol.OpenTransaction,

@@ -21,22 +21,26 @@ package com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeeperServ
 
 import org.apache.curator.framework.CuratorFramework
 import org.apache.curator.framework.recipes.cache.NodeCache
+import org.apache.zookeeper.data.Stat
+
+import scala.util.Try
 
 /**
   * Class allows managing data of znode. Data consists of two elements, each of which is set of bytes
-  * @param client zookeeper client
+  *
+  * @param client   zookeeper client
   * @param rootPath node path
+  * @param create   the flag argument specifies whether a znode with rootPath will be created or not (true by default)
   */
 class RootNode(client: CuratorFramework,
-               rootPath: String) {
+               rootPath: String,
+               create: Boolean = true) {
 
-  private val nodeCache = new NodeCache(client, rootPath, false)
-  nodeCache.start()
+  if (create) client.create.creatingParentsIfNeeded().forPath(rootPath, RootNodeData().toByteArray)
 
   final def getData(): RootNodeData = {
-    nodeCache.rebuild()
-    Option(nodeCache.getCurrentData)
-      .map(node => RootNodeData.fromByteArray(node.getData))
+    Option(client.getData.forPath(rootPath))
+      .map(RootNodeData.fromByteArray)
       .getOrElse(RootNodeData())
   }
 

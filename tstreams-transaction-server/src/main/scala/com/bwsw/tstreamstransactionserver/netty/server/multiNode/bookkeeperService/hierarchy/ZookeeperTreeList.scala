@@ -32,13 +32,16 @@ import scala.annotation.tailrec
   *
   * @param client   zookeeper client
   * @param rootPath node path
+  * @param create   the flag argument specifies whether a znode with rootPath will be created or not (true by default)
   * @tparam T id type
   */
 abstract class ZookeeperTreeList[T](client: CuratorFramework,
-                                    rootPath: String)
+                                    rootPath: String,
+                                    create: Boolean = true)
   extends EntityPathConverter[T]
     with SerializableEntityId[T] {
-  private val rootNode = new RootNode(client, rootPath)
+
+  private val rootNode = new RootNode(client, rootPath, create)
 
   def firstEntityId: Option[T] = {
     val rootNodeData = rootNode.getData()
@@ -62,28 +65,30 @@ abstract class ZookeeperTreeList[T](client: CuratorFramework,
         )
     }
 
-    val rootNodeData = rootNode.getData()
-    if (rootNodeData.firstId.isEmpty) {
-      persistNode()
-      rootNode.setData(
-        newLastId, newLastId
-      )
-    }
-    else {
-      val lastEntity = toEntityId(rootNodeData.lastId)
-      if (lastEntity != entity) {
+    this.synchronized {
+      val rootNodeData = rootNode.getData()
+      if (rootNodeData.firstId.isEmpty) {
         persistNode()
-
-        val previousLastEntityPath = buildPath(lastEntity)
-        client.setData()
-          .forPath(
-            previousLastEntityPath,
-            newLastId
-          )
-
         rootNode.setData(
-          rootNodeData.firstId, newLastId
+          newLastId, newLastId
         )
+      }
+      else {
+        val lastEntity = toEntityId(rootNodeData.lastId)
+        if (lastEntity != entity) {
+          persistNode()
+
+          val previousLastEntityPath = buildPath(lastEntity)
+          client.setData()
+            .forPath(
+              previousLastEntityPath,
+              newLastId
+            )
+
+          rootNode.setData(
+            rootNodeData.firstId, newLastId
+          )
+        }
       }
     }
   }
@@ -112,7 +117,7 @@ abstract class ZookeeperTreeList[T](client: CuratorFramework,
     s"$rootPath/${entityToPath(entity).mkString("/")}"
   }
 
-  def deleteNode(id: T): Boolean = {
+  def deleteNode(id: T): Boolean = this.synchronized {
     val firstIdOpt = firstEntityId
     val lastIdOpt = lastEntityId
 

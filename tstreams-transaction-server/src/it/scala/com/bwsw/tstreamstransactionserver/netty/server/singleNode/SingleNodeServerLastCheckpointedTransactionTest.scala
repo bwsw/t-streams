@@ -24,7 +24,7 @@ import java.util.concurrent.TimeUnit
 import com.bwsw.tstreamstransactionserver.netty.client.ClientBuilder
 import com.bwsw.tstreamstransactionserver.options.SingleNodeServerOptions.CommitLogOptions
 import com.bwsw.tstreamstransactionserver.rpc.{ConsumerTransaction, ProducerTransaction, TransactionStates}
-import com.bwsw.tstreamstransactionserver.util.Utils.startZkServerAndGetIt
+import com.bwsw.tstreamstransactionserver.util.Utils.startZookeeperServer
 import com.bwsw.tstreamstransactionserver.util.{Time, Utils}
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 
@@ -38,7 +38,7 @@ class SingleNodeServerLastCheckpointedTransactionTest
     with BeforeAndAfterAll {
 
   private lazy val (zkServer, zkClient) =
-    startZkServerAndGetIt
+    startZookeeperServer
 
   private val clientsNum = 2
 
@@ -125,8 +125,10 @@ class SingleNodeServerLastCheckpointedTransactionTest
 
       //it's required to close a current commit log file
       TestTimer.updateTime(TestTimer.getCurrentTime + maxIdleTimeBetweenRecordsMs)
+
       Await.result(firstClient.putTransaction(getRandomConsumerTransaction(streamID, stream)), secondsWait.seconds)
       //it's required to a CommitLogToBerkeleyWriter writes the producer transactions to db
+
       transactionServer.scheduledCommitLog.run()
       transactionServer.commitLogToRocksWriter.run()
 
@@ -144,8 +146,10 @@ class SingleNodeServerLastCheckpointedTransactionTest
 
       //it's required to close a current commit log file
       TestTimer.updateTime(TestTimer.getCurrentTime + maxIdleTimeBetweenRecordsMs)
+
       Await.result(firstClient.putTransaction(getRandomConsumerTransaction(streamID, stream)), secondsWait.seconds)
       //it's required to a CommitLogToBerkeleyWriter writes the producer transactions to db
+
       transactionServer.scheduledCommitLog.run()
       transactionServer.commitLogToRocksWriter.run()
 
@@ -185,8 +189,10 @@ class SingleNodeServerLastCheckpointedTransactionTest
 
       //it's required to close a current commit log file
       TestTimer.updateTime(TestTimer.getCurrentTime + maxIdleTimeBetweenRecordsMs)
+
       Await.result(client.putTransaction(getRandomConsumerTransaction(streamID, stream)), secondsWait.seconds)
       //it's required to a CommitLogToBerkeleyWriter writes the producer transactions to db
+
       transactionServer.scheduledCommitLog.run()
       transactionServer.commitLogToRocksWriter.run()
 

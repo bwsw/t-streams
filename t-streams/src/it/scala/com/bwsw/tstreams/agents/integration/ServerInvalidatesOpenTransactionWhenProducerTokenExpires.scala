@@ -118,9 +118,9 @@ class ServerInvalidatesOpenTransactionWhenProducerTokenExpires
       partitions,
       (_: TransactionOperator, transaction: ConsumerTransaction) => synchronized {
         if (consumedTransactionId.isEmpty) {
-          subscriberLatch.countDown()
           consumedTransactionId = Some(transaction.getTransactionID)
           consumedTransactionTime = System.currentTimeMillis()
+          subscriberLatch.countDown()
         }
       },
       Offset.Newest)

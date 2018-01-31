@@ -26,7 +26,7 @@ import com.bwsw.tstreamstransactionserver.netty.{Protocol, ResponseMessage}
 import com.bwsw.tstreamstransactionserver.options._
 import com.bwsw.tstreamstransactionserver.rpc._
 import com.bwsw.tstreamstransactionserver.util.Utils
-import com.bwsw.tstreamstransactionserver.util.Utils.startZkServerAndGetIt
+import com.bwsw.tstreamstransactionserver.util.Utils.startZookeeperServer
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 
 import scala.util.Random
@@ -42,7 +42,7 @@ class ServerUpdatesTokenTtlTest
         closeDelayMs = Int.MaxValue))
 
   private val clientBuilder = new ClientBuilder()
-  private val (zkServer, zkClient) = startZkServerAndGetIt
+  private val (zkServer, zkClient) = startZookeeperServer
 
   override def afterAll(): Unit = {
     zkClient.close()

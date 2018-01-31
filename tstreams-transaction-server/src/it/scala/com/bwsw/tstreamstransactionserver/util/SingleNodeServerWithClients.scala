@@ -22,6 +22,7 @@ package com.bwsw.tstreamstransactionserver.util
 import com.bwsw.tstreamstransactionserver.netty.client.api.TTSClient
 import com.bwsw.tstreamstransactionserver.netty.server.singleNode.{SingleNodeServerBuilder, SingleNodeTestingServer}
 
+
 import scala.util.{Failure, Try}
 
 class SingleNodeServerWithClients(val transactionServer: SingleNodeTestingServer,

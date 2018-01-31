@@ -157,7 +157,7 @@ class BookkeeperToRocksWriterTest
       }
   }
 
-  private lazy val (zkServer, zkClient) = Utils.startZkServerAndGetIt
+  private lazy val (zkServer, zkClient) = Utils.startZookeeperServer
 
   override def beforeAll(): Unit = {
     zkServer
@@ -169,7 +169,7 @@ class BookkeeperToRocksWriterTest
     zkServer.close()
   }
 
-  it should "return opened and checkpointed transactions and process entirely 2 ledgers as they are opened at the same time and closed too" in {
+  "BookkeeperToRocksWriter" should "return opened and checkpointed transactions and process entirely 2 ledgers as they are opened at the same time and closed too" in {
     val stream = generateStream
     val partition = 1
 

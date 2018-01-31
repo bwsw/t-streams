@@ -21,8 +21,8 @@ package com.bwsw.tstreamstransactionserver.netty.server.singleNode
 
 import com.bwsw.tstreamstransactionserver.netty.client.ClientBuilder
 import com.bwsw.tstreamstransactionserver.rpc.TransactionInfo
-import com.bwsw.tstreamstransactionserver.util.Utils
-import com.bwsw.tstreamstransactionserver.util.Utils.{getRandomStream, startZkServerAndGetIt}
+import com.bwsw.tstreamstransactionserver.util.Utils.{getRandomStream, startZookeeperServer, _}
+
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 
 import scala.concurrent.Await
@@ -42,7 +42,7 @@ class SingleNodeServerGetTransactionTest
 
 
   private lazy val (zkServer, zkClient) =
-    startZkServerAndGetIt
+    startZookeeperServer
 
   override def beforeAll(): Unit = {
     zkServer
@@ -55,7 +55,7 @@ class SingleNodeServerGetTransactionTest
   }
 
   "Client" should "get transaction ID that not less that current time" in {
-    val bundle = Utils.startTransactionServerAndClient(
+    val bundle = startTransactionServerAndClient(
       zkClient, serverBuilder, clientBuilder
     )
 
@@ -72,7 +72,7 @@ class SingleNodeServerGetTransactionTest
   }
 
   it should "get transaction ID by timestamp" in {
-    val bundle = Utils.startTransactionServerAndClient(
+    val bundle = startTransactionServerAndClient(
       zkClient, serverBuilder, clientBuilder
     )
 
@@ -87,7 +87,7 @@ class SingleNodeServerGetTransactionTest
   }
 
   it should "not get a transaction if it does not exists" in {
-    val bundle = Utils.startTransactionServerAndClient(
+    val bundle = startTransactionServerAndClient(
       zkClient, serverBuilder, clientBuilder
     )
 

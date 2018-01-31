@@ -24,7 +24,7 @@ import java.util.concurrent.atomic.AtomicLong
 import com.bwsw.tstreamstransactionserver.netty.server.transactionMetadataService.ProducerTransactionRecord
 import com.bwsw.tstreamstransactionserver.rpc.{ProducerTransaction, TransactionStates}
 import com.bwsw.tstreamstransactionserver.util
-import com.bwsw.tstreamstransactionserver.util.Utils.startZkServerAndGetIt
+import com.bwsw.tstreamstransactionserver.util.Utils.startZookeeperServer
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 
 import scala.annotation.tailrec
@@ -36,7 +36,7 @@ class ServerLastTransactionTestSuite
     with BeforeAndAfterAll {
 
   private lazy val (zkServer, zkClient) =
-    startZkServerAndGetIt
+    startZookeeperServer
 
   private val nameGen = new AtomicLong(1L)
 

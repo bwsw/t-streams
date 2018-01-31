@@ -30,9 +30,7 @@ import com.bwsw.tstreamstransactionserver.options.ClientOptions.ConnectionOption
 import com.bwsw.tstreamstransactionserver.options.CommonOptions.ZookeeperOptions
 import com.bwsw.tstreamstransactionserver.options.SingleNodeServerOptions
 import com.bwsw.tstreamstransactionserver.options.SingleNodeServerOptions.{BootstrapOptions, StorageOptions}
-import com.bwsw.tstreamstransactionserver.util
-import com.bwsw.tstreamstransactionserver.util.Utils
-import com.bwsw.tstreamstransactionserver.util.Utils.{getRandomConsumerTransaction, getRandomProducerTransaction, getRandomStream, startZkServerAndGetIt, _}
+import com.bwsw.tstreamstransactionserver.util.Utils.{getRandomConsumerTransaction, getRandomProducerTransaction, _}
 import org.apache.curator.framework.CuratorFrameworkFactory
 import org.apache.curator.retry.RetryForever
 import org.apache.curator.test.TestingServer
@@ -264,11 +262,11 @@ class ClientSingleNodeServerZookeeperTest
     )
 
     val host = "127.0.0.1"
-    val port1 = util.Utils.getRandomPort
+    val port1 = getRandomPort
     val address1 = SocketHostPortPair
       .fromString(s"$host:$port1")
       .get
-    val port2 = util.Utils.getRandomPort
+    val port2 = getRandomPort
     val address2 = SocketHostPortPair
       .fromString(s"$host:$port2")
       .get
@@ -332,7 +330,7 @@ class ClientSingleNodeServerZookeeperTest
   it should "throw a ZkNoConnectionException when client lost connection with ZooKeeper" in {
     val connectionTimeoutMs = 1000
     val sessionTimeoutMs = 10000
-    val (zkServer, zkClient) = startZkServerAndGetIt
+    val (zkServer, zkClient) = startZookeeperServer
     val serverBuilder = new SingleNodeServerBuilder()
       .withCommitLogOptions(SingleNodeServerOptions.CommitLogOptions(closeDelayMs = Int.MaxValue))
 
@@ -341,7 +339,7 @@ class ClientSingleNodeServerZookeeperTest
         sessionTimeoutMs = sessionTimeoutMs,
         connectionTimeoutMs = connectionTimeoutMs))
 
-    val bundle = Utils.startTransactionServerAndClient(
+    val bundle = startTransactionServerAndClient(
       zkClient, serverBuilder, clientBuilder)
 
     bundle.operate { _ =>
@@ -364,7 +362,7 @@ class ClientSingleNodeServerZookeeperTest
 
   "Server" should "not connect to zookeeper server that isn't running" in {
     val storageOptions = StorageOptions()
-    val port = util.Utils.getRandomPort
+    val port = getRandomPort
     val serverBuilder = new SingleNodeServerBuilder()
       .withServerStorageOptions(storageOptions)
       .withZookeeperOptions(ZookeeperOptions(endpoints = s"127.0.0.1:$port", connectionTimeoutMs = 2000))
@@ -373,7 +371,7 @@ class ClientSingleNodeServerZookeeperTest
       serverBuilder.build()
     }
 
-    Utils.deleteDirectories(storageOptions)
+    deleteDirectories(storageOptions)
   }
 
   it should "not start on wrong inet address" in {
@@ -387,7 +385,7 @@ class ClientSingleNodeServerZookeeperTest
       serverBuilder.build()
     }
 
-    Utils.deleteDirectories(storageOptions)
+    deleteDirectories(storageOptions)
   }
 
   it should "not start on negative port value" in {
@@ -401,7 +399,7 @@ class ClientSingleNodeServerZookeeperTest
       serverBuilder.build()
     }
 
-    Utils.deleteDirectories(storageOptions)
+    deleteDirectories(storageOptions)
   }
 
   it should "not start on port value exceeds 65535" in {
@@ -415,7 +413,7 @@ class ClientSingleNodeServerZookeeperTest
       serverBuilder.build()
     }
 
-    Utils.deleteDirectories(storageOptions)
+    deleteDirectories(storageOptions)
   }
 
 }

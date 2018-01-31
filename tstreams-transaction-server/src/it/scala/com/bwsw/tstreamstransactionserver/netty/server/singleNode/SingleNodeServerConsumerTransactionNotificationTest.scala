@@ -25,7 +25,7 @@ import com.bwsw.tstreamstransactionserver.netty.client.ClientBuilder
 import com.bwsw.tstreamstransactionserver.options.SingleNodeServerOptions
 import com.bwsw.tstreamstransactionserver.rpc.ConsumerTransaction
 import com.bwsw.tstreamstransactionserver.util.Utils
-import com.bwsw.tstreamstransactionserver.util.Utils.{getRandomStream, startZkServerAndGetIt}
+import com.bwsw.tstreamstransactionserver.util.Utils.{getRandomStream, startZookeeperServer}
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 
 import scala.concurrent.Await
@@ -36,14 +36,14 @@ class SingleNodeServerConsumerTransactionNotificationTest
     with Matchers
     with BeforeAndAfterAll {
 
-  private val commitLogToBerkeleyDBTaskDelayMs = 100
+  private val closeDelayMs = 100
   private lazy val serverBuilder = new SingleNodeServerBuilder()
     .withCommitLogOptions(SingleNodeServerOptions.CommitLogOptions(
-      closeDelayMs = commitLogToBerkeleyDBTaskDelayMs
+      closeDelayMs = closeDelayMs
     ))
 
   private lazy val (zkServer, zkClient) =
-    startZkServerAndGetIt
+    startZookeeperServer
 
   private lazy val clientBuilder = new ClientBuilder()
 

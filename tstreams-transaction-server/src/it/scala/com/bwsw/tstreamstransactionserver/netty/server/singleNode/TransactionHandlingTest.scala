@@ -69,7 +69,7 @@ class TransactionHandlingTest
   }
 
   private lazy val (zkServer, zkClient) =
-    startZkServerAndGetIt
+    startZookeeperServer
 
   override def beforeAll(): Unit = {
     zkServer
@@ -249,7 +249,7 @@ class TransactionHandlingTest
       val to = 2 * from
       Await.result(client.putProducerStateWithData(openedProducerTransaction, data, from), secondsWait.seconds)
 
-      //it's required to a CommitLogToBerkeleyWriter writes the producer transactions to db
+      //it's required to a CommitLogToRocksWriter writes the producer transactions to db
       transactionServer.scheduledCommitLog.run()
       transactionServer.commitLogToRocksWriter.run()
 
@@ -341,7 +341,7 @@ class TransactionHandlingTest
       //act
       Await.result(client.putProducerState(openedProducerTransaction), secondsWait.seconds)
 
-      //it's required to a CommitLogToBerkeleyWriter writes the producer transactions to db
+      //it's required to a CommitLogToRocksWriter writes the producer transactions to db
       transactionServer.scheduledCommitLog.run()
       transactionServer.commitLogToRocksWriter.run()
 
@@ -373,7 +373,7 @@ class TransactionHandlingTest
       //act)
       Await.result(client.putProducerState(openedProducerTransaction), secondsWait.seconds)
 
-      //it's required to a CommitLogToBerkeleyWriter writes the producer transactions to db
+      //it's required to a CommitLogToRocksWriter writes the producer transactions to db
       transactionServer.scheduledCommitLog.run()
       transactionServer.commitLogToRocksWriter.run()
 
@@ -417,7 +417,7 @@ class TransactionHandlingTest
       //act
       Await.result(client.putProducerState(openedProducerTransaction), secondsWait.seconds)
 
-      //it's required to a CommitLogToBerkeleyWriter writes the producer transactions to db
+      //it's required to a CommitLogToRocksWriter writes the producer transactions to db
       transactionServer.scheduledCommitLog.run()
       transactionServer.commitLogToRocksWriter.run()
 
