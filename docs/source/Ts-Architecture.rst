@@ -10,33 +10,49 @@ At this page, we will dive into the T-streams architecture which helps to unders
 Overview
 ------------------
 
-The T-streams architecture is quite simple. Its design is inspired by Apache Kafka. Though the implementation allows us to fulfill the basic aspects of the project - fault-tolerance, scalability, eventual consistency -
+The T-streams architecture is quite simple. Its design is inspired by Apache Kafka. Though the implementation enables us to fulfill the requirements - fault-tolerance, scalability, eventual consistency -
 offering competitive performance in transactional messaging.
 
 T-streams includes the following components:
 
-1. **Storage Server** that is responsible for all operations performed with the data. More than one server can be involved in the process to enable a fault-tolerant and scalable processing mode.
-#. **Producers** that write data into transactions on the Server.
-#. **Consumers**, **Subscribers** that read the data from the Server.
-#. **Apache ZooKeeper** that is responsible for coordination and synchronization of processes.
-#. **Apache BookKeeper** used as a distributed commit log. It is a service that provides persistent storage of streams of log elements. BookKeeper is an optional part used in the multi-node implementation. It orderly stores elements and replicates them across multiple nodes to synchronize the servers' states.
+1. **Storage Server** that is responsible for all operations performed with transactions and their data. 
+#. **Producers** that create transactions with data.
+#. **Consumers**, **Subscribers** that read the transactions.
 
-.. figure:: _static/Architecture-General1.png
+.. figure:: _static/Architecture-General11.png
 
-Thus, Producers get Server's address from ZooKeeper and write transactions with data to it. The Server writes the data and meta-data to the internal commit log and stores data to Server's local storage. Consumers and Subscribers read these data from the Server. 
+T-streams can be configured in two modes:
 
-This is a simplified description of T-streams.
+1) In a single-node mode providing non-fault tolerant processing;
+2) In a multi-node mode providing 
+     
+     - fault-tolerant processing by backing up servers,
+     - scalability implemented with sharded servers.
+
+Infrastructure Components
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+The following infrastructure components are required in T-streams:
+
+1. **Apache ZooKeeper** that is responsible for coordination and synchronization of processes.
+#. **RocksDB** that is a local storage fulfilling a very important feature – an atomic batch operation which allows implementing atomic and reliable commit logs processing. 
+#. **Apache BookKeeper** used as a distributed commit log. It is a service that provides a persistent, fault-tolerant log-structured storage. BookKeeper is an optional part used in the fault-tolerant configuration. It orderly stores elements and replicates them across multiple nodes to synchronize the servers' states.
+
+.. figure:: _static/Architecture_General2.png
+
+Thus, Server publishes an endpoint to ZooKeeper. Agents (eg. Producers and Consumers) read the endpoint, discover Server and connect to it to create/read transactions with data. The Server writes the operations, transactions with data and meta-data to the internal commit log and stores data to Server's local storage. Consumers and Subscribers read these transactions and their data from the Server. 
+
+This is a simplified description of T-streams architecture.
 
 Storage Server
 -----------------
 
-The Storage Server is an external process which keeps transactions and their data safe and replicates them for providing high availability. Its structure overview can be displayed in the following way:
+The Storage Server is an external process which keeps transactions and their data safe. Its abstract architecture can be represented in the following way:
 
 .. figure:: _static/Architecture-PutData1.png
 
-The Server consists of two parts: Master and Slave. All operations (i.e. create, retrieve, update, delete a transaction) are performed on Master. 
+The Server consists of two internal parts: Master and Slave. All operations (i.e. create, retrieve, update, delete a transaction) are performed on Master. 
 
-Master orderly writes the operations to Server's internal commit log or BookKeeper. In the single-node mode Master stores metadata to the commit log, and data (if any exist) directly to the storage (RocksDB). Then Slave reads the operations from the commit log and stores them to RocksDB. RocksDB has a very important feature – an atomic batch operation which allows implementing atomic and reliable commit logs processing. 
+Master orderly writes the operations to Server's internal commit log or BookKeeper. In the single-node mode Master stores metadata to the commit log, and data (if any exist in an operation) directly to the storage (RocksDB). Then Slave reads the operations from the commit log and stores them to RocksDB. 
 
 Receiving data request, Master takes data from RocksDB to return them to an agent (Consumer or Subscriber):
 
@@ -78,7 +94,7 @@ The checkpoint operation allows fixing a lot of transactions as a single operati
 Data Flow
 -------------------
 
-Now having a general idea on the T-streams architecture you can easily understand the data flow in T-streams. 
+Now having a general idea of the T-streams architecture you can easily understand the data flow in T-streams. 
 
 Look at the figure below. It demonstrates the data flow between a Producer and a Subscriber. 
 
