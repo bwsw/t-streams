@@ -115,7 +115,7 @@ class ZkMultipleTreeListReaderTest
 
 
   "ZkMultipleTreeListReader" should "not retrieve records from database ZkTreeListLong objects don't have entities" in {
-    val storage = new LedgerManagerInMemory
+    val storage = new InMemoryLedgerManager
 
     val zkTreeList1 = new LongZookeeperTreeList(zkClient, s"/$uuid")
     val zkTreeList2 = new LongZookeeperTreeList(zkClient, s"/$uuid")
@@ -175,7 +175,7 @@ class ZkMultipleTreeListReaderTest
 
 
   it should "not retrieve records as one of ZkTreeListLong objects doesn't have entities" in {
-    val storage = new LedgerManagerInMemory
+    val storage = new InMemoryLedgerManager
 
     val firstLedger = storage.createLedger(System.currentTimeMillis())
 
@@ -386,7 +386,7 @@ class ZkMultipleTreeListReaderTest
       bookkeeperOptions
     )
 
-    val storage = new LedgerManagerInMemory
+    val storage = new InMemoryLedgerManager
 
     test1(storage)
     test1(bookKeeperStorage)
@@ -545,7 +545,7 @@ class ZkMultipleTreeListReaderTest
       bookkeeperOptions
     )
 
-    val storage = new LedgerManagerInMemory
+    val storage = new InMemoryLedgerManager
 
     test2(storage)
     test2(bookKeeperStorage)
@@ -636,7 +636,7 @@ class ZkMultipleTreeListReaderTest
         }
     }
 
-    val storage = new LedgerManagerInMemory
+    val storage = new InMemoryLedgerManager
 
     val firstLedger = storage.createLedger(firstTimestamp)
     firstLedgerRecords.foreach(record => firstLedger.addRecord(record))
@@ -801,7 +801,7 @@ class ZkMultipleTreeListReaderTest
     }
 
 
-    val storage = new LedgerManagerInMemory
+    val storage = new InMemoryLedgerManager
 
     val firstLedger = storage.createLedger(firstTimestamp)
     firstTreeRecords.foreach(record => firstLedger.addRecord(record))
@@ -906,7 +906,7 @@ class ZkMultipleTreeListReaderTest
       atomicLong.getAndSet(400L)
 
 
-    val storage = new LedgerManagerInMemory
+    val storage = new InMemoryLedgerManager
 
     val firstLedger = storage.createLedger(firstTimestamp)
     firstLedger.close()

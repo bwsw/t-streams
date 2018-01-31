@@ -59,7 +59,7 @@ class BookKeeperWrapper(bookKeeper: BookKeeper,
       bookkeeperOptions.password,
       metadata
     )
-    new BookKeeperLedgerHandleWrapper(ledgerHandle)
+    new BookKeeperLedgerHandle(ledgerHandle)
   }
 
   override def openLedger(id: Long): Option[LedgerHandle] = {
@@ -69,7 +69,7 @@ class BookKeeperWrapper(bookKeeper: BookKeeper,
       bookkeeperOptions.password
     ))
     ledgerHandleTry.map(ledgerHandle =>
-      new BookKeeperLedgerHandleWrapper(ledgerHandle)
+      new BookKeeperLedgerHandle(ledgerHandle)
     ).toOption
   }
 

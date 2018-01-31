@@ -208,7 +208,7 @@ class BookkeeperToRocksWriterTest
       atomicLong.getAndIncrement()
 
 
-    val storage = new LedgerManagerInMemory
+    val storage = new InMemoryLedgerManager
 
     val firstLedger = storage.createLedger(firstTimestamp)
     firstTreeRecords.foreach(record => firstLedger.addRecord(record))
@@ -349,7 +349,7 @@ class BookkeeperToRocksWriterTest
         token
       )
 
-    val storage = new LedgerManagerInMemory
+    val storage = new InMemoryLedgerManager
 
     val firstLedger = storage.createLedger(firstTimestamp)
     firstTreeRecords.foreach(record => firstLedger.addRecord(record))
@@ -496,7 +496,7 @@ class BookkeeperToRocksWriterTest
       atomicLong.getAndIncrement()
 
 
-    val storage = new LedgerManagerInMemory
+    val storage = new InMemoryLedgerManager
 
     val firstLedger = storage.createLedger(firstTimestamp)
     firstTreeRecords.foreach(record => firstLedger.addRecord(record))

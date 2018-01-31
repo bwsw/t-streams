@@ -26,7 +26,7 @@ import org.apache.bookkeeper.client.AsyncCallback
 
 import scala.concurrent.Promise
 
-class BookKeeperLedgerHandleWrapper(ledgerHandler: org.apache.bookkeeper.client.LedgerHandle)
+class BookKeeperLedgerHandle(ledgerHandler: org.apache.bookkeeper.client.LedgerHandle)
   extends LedgerHandle(ledgerHandler.getId) {
 
   override def addRecord(data: Record): Long = {

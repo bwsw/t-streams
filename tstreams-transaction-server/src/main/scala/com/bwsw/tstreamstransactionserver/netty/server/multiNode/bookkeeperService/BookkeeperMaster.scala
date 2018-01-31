@@ -28,7 +28,7 @@ import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeeperServi
 import com.bwsw.tstreamstransactionserver.netty.server.zk.ZKIDGenerator
 
 import scala.annotation.tailrec
-import scala.util.Try
+import scala.util.{Failure, Success, Try}
 
 
 class BookkeeperMaster(bookKeeper: BookKeeperWrapper,
@@ -80,12 +80,8 @@ class BookkeeperMaster(bookKeeper: BookKeeperWrapper,
             )
             val maybePreviousOpenedLedger = currentOpenedLedger
             lock.writeLock().lock()
-            try {
-              currentOpenedLedger = Some(ledgerHandle)
-            }
-            finally {
-              lock.writeLock().unlock()
-            }
+            currentOpenedLedger = Some(ledgerHandle)
+            lock.writeLock().unlock()
 
             maybePreviousOpenedLedger.foreach { previousOpenedLedger =>
               while (
@@ -132,24 +128,20 @@ class BookkeeperMaster(bookKeeper: BookKeeperWrapper,
 
     if (master.hasLeadership) {
       lock.readLock().lock()
-      try {
+      val result = Try {
         val ledgerHandle = retryToGetLedger
         operate(ledgerHandle)
       }
-      catch {
-        case throwable: Throwable =>
-          throw throwable
-      }
-      finally {
-        lock.readLock().unlock()
-      }
+      lock.readLock().unlock()
+
+      result.get
     } else {
       operate(Left(new ServerIsSlaveException))
     }
   }
 
   override def run(): Unit = {
-    try {
+    Try {
       while (true) {
         if (master.hasLeadership)
           lead()
@@ -162,10 +154,12 @@ class BookkeeperMaster(bookKeeper: BookKeeperWrapper,
           }
         }
       }
-    }
-    catch {
-      case _: java.lang.InterruptedException =>
+    } match {
+      case Success(_) =>
+      case Failure(_: InterruptedException) =>
         Thread.currentThread().interrupt()
+      case Failure(exception: Throwable) =>
+        throw exception
     }
   }
 }

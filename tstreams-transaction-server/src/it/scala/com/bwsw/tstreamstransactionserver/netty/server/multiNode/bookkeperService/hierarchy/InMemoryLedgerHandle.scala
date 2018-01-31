@@ -29,7 +29,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{Future, Promise}
 import scala.util.{Failure, Success, Try}
 
-class LedgerHandleInMemory(id: Long,
+class InMemoryLedgerHandle(id: Long,
                            time: Long)
   extends LedgerHandle(id) {
   @volatile private var isClosed = false
