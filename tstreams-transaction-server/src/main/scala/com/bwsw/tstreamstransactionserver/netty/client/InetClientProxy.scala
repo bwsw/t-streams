@@ -39,11 +39,11 @@ import io.netty.channel.epoll.{Epoll, EpollEventLoopGroup}
 import io.netty.channel.nio.NioEventLoopGroup
 import org.apache.curator.framework.CuratorFramework
 import org.apache.curator.framework.state.ConnectionState
-import org.apache.curator.retry.RetryForever
+import org.apache.curator.retry.ExponentialBackoffRetry
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.{Future, Promise}
-import scala.util.{Failure, Success}
+import scala.util.{Failure, Success, Try}
 
 
 class InetClientProxy(connectionOptions: ConnectionOptions,
@@ -106,7 +106,7 @@ class InetClientProxy(connectionOptions: ConnectionOptions,
         zookeeperOptions.endpoints,
         zookeeperOptions.sessionTimeoutMs,
         zookeeperOptions.connectionTimeoutMs,
-        new RetryForever(zookeeperOptions.retryDelayMs),
+        new ExponentialBackoffRetry(zookeeperOptions.retryDelayMs, InetClientProxy.ZooKeeperRetryCount),
         connectionOptions.prefix
       ).client
     }
@@ -710,30 +710,6 @@ class InetClientProxy(connectionOptions: ConnectionOptions,
     }
   }
 
-  /** Puts/Updates a consumer state on a specific stream, partition, transaction id on a server.
-    *
-    * @param consumerTransaction a consumer transaction contains all necessary information for putting/updating it's state.
-    * @return Future of putConsumerCheckpoint operation that can be completed or not. If it is completed it returns:
-    *         1) TRUE if server put consumer transaction to commit log for next processing, otherwise FALSE;
-    *         2) throwable [[com.bwsw.tstreamstransactionserver.exception.Throwable.TokenInvalidException]], if token key isn't valid;
-    *         3) throwable [[com.bwsw.tstreamstransactionserver.exception.Throwable.PackageTooBigException]], if, i.e. a request package has size in bytes more than defined by a server;
-    *         4) throwable [[com.bwsw.tstreamstransactionserver.exception.Throwable.ZkGetMasterException]], if, i.e. client had sent this request to a server, but suddenly server would have been shutdowned,
-    *         and, as a result, request din't reach the server, and client tried to get the new server from zooKeeper but there wasn't one on coordination path;
-    *         5) throwable [[com.bwsw.tstreamstransactionserver.exception.Throwable.ClientIllegalOperationAfterShutdownException]] if client try to call this function after shutdown.
-    *         6) other kind of exceptions that mean there is a bug on a server, and it is should to be reported about this issue.
-    */
-  def putConsumerCheckpoint(consumerTransaction: com.bwsw.tstreamstransactionserver.rpc.ConsumerTransaction): Future[Boolean] = {
-    onShutdownThrowException()
-    if (logger.isDebugEnabled())
-      logger.debug(s"Setting consumer state ${consumerTransaction.name} on stream ${consumerTransaction.stream}, partition ${consumerTransaction.partition}, transaction ${consumerTransaction.transactionID}.")
-
-    commonInetClient.method[TransactionService.PutConsumerCheckpoint.Args, TransactionService.PutConsumerCheckpoint.Result, Boolean](
-      Protocol.PutConsumerCheckpoint,
-      TransactionService.PutConsumerCheckpoint.Args(consumerTransaction.name, consumerTransaction.stream, consumerTransaction.partition, consumerTransaction.transactionID),
-      x => if (x.error.isDefined) throw Throwable.byText(x.error.get.message) else x.success.get
-    )(contextForProducerTransactions)
-  }
-
   /** Retrieves a consumer state on a specific consumer transaction name, stream, partition from a server; If the result is -1 it will mean there is no checkpoint at all.
     *
     * @param name      a consumer transaction name.
@@ -763,28 +739,23 @@ class InetClientProxy(connectionOptions: ConnectionOptions,
   def shutdown(): Unit =
     this.synchronized {
       if (!isShutdown.get()) {
-        if (workerGroup != null) {
-          scala.util.Try(
-            workerGroup.shutdownGracefully(
-              0L,
-              0L,
-              TimeUnit.NANOSECONDS
-            ).cancel(true))
-        }
-        if (commonInetClient != null)
-          commonInetClient.shutdown()
+        Try(
+          workerGroup.shutdownGracefully(
+            0L,
+            0L,
+            TimeUnit.NANOSECONDS)
+            .cancel(true))
+        commonInetClient.shutdown()
+        checkpointGroupInetClient.foreach(_.shutdown())(context)
 
-        if (checkpointGroupInetClient != null)
-          checkpointGroupInetClient.foreach(_.shutdown())(context)
-
-        if (isZKClientExternal && zkConnection != null)
+        if (isZKClientExternal) {
           zkConnection.close()
+        }
 
         processTransactionsPutOperationPool
           .stopAccessNewTasks()
         processTransactionsPutOperationPool
           .awaitAllCurrentTasksAreCompleted()
-
         executionContext
           .stopAccessNewTasksAndAwaitCurrentTasksToBeCompleted()
 
@@ -807,4 +778,9 @@ class InetClientProxy(connectionOptions: ConnectionOptions,
       case _ => false
     })
   }
+}
+
+
+object InetClientProxy {
+  val ZooKeeperRetryCount = 3
 }

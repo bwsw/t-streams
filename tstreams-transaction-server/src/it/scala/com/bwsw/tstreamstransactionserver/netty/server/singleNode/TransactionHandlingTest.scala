@@ -19,20 +19,17 @@
 
 package com.bwsw.tstreamstransactionserver.netty.server.singleNode
 
-import java.net.Socket
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.{AtomicLong, LongAdder}
 
 import com.bwsw.tstreamstransactionserver.configProperties.ClientExecutionContextGrid
-import com.bwsw.tstreamstransactionserver.exception.Throwable.ServerConnectionException
 import com.bwsw.tstreamstransactionserver.netty.client.zk.ZKClient
 import com.bwsw.tstreamstransactionserver.netty.client.{ClientBuilder, InetClient}
-import com.bwsw.tstreamstransactionserver.netty.{Protocol, ResponseMessage}
 import com.bwsw.tstreamstransactionserver.options._
 import com.bwsw.tstreamstransactionserver.rpc._
 import com.bwsw.tstreamstransactionserver.util.Implicit.ProducerTransactionSortable
-import com.bwsw.tstreamstransactionserver.util.Utils.{getRandomConsumerTransaction, getRandomProducerTransaction, getRandomStream, startZkServerAndGetIt}
-import com.bwsw.tstreamstransactionserver.util.{Time, Utils}
+import com.bwsw.tstreamstransactionserver.util.Time
+import com.bwsw.tstreamstransactionserver.util.Utils._
 import io.netty.buffer.ByteBuf
 import io.netty.channel.EventLoopGroup
 import io.netty.channel.epoll.{Epoll, EpollEventLoopGroup}
@@ -40,13 +37,12 @@ import io.netty.channel.nio.NioEventLoopGroup
 import org.apache.curator.retry.RetryForever
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 
-import scala.collection.mutable
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future, Promise}
 import scala.util.Random
 
-class ServerClientInterconnectionTest
+class TransactionHandlingTest
   extends FlatSpec
     with Matchers
     with BeforeAndAfterAll {
@@ -55,9 +51,9 @@ class ServerClientInterconnectionTest
   private val clientsNum = 2
 
   private lazy val serverBuilder = new SingleNodeServerBuilder()
-    .withCommitLogOptions(SingleNodeServerOptions.CommitLogOptions(
-      closeDelayMs = Int.MaxValue
-    ))
+    .withCommitLogOptions(
+      SingleNodeServerOptions.CommitLogOptions(
+        closeDelayMs = Int.MaxValue))
 
   private lazy val clientBuilder = new ClientBuilder()
 
@@ -91,7 +87,7 @@ class ServerClientInterconnectionTest
 
 
   "Client" should "not send requests to the server if it is shutdown" in {
-    val bundle = Utils.startTransactionServerAndClient(
+    val bundle = startTransactionServerAndClient(
       zkClient, serverBuilder, clientBuilder
     )
 
@@ -106,7 +102,7 @@ class ServerClientInterconnectionTest
   }
 
   it should "retrieve prefix of checkpoint group server" in {
-    val bundle = Utils.startTransactionServerAndClient(
+    val bundle = startTransactionServerAndClient(
       zkClient, serverBuilder, clientBuilder
     )
 
@@ -184,7 +180,7 @@ class ServerClientInterconnectionTest
   }
 
   it should "put producer and consumer transactions" in {
-    val bundle = Utils.startTransactionServerAndClient(
+    val bundle = startTransactionServerAndClient(
       zkClient, serverBuilder, clientBuilder
     )
 
@@ -203,152 +199,8 @@ class ServerClientInterconnectionTest
     }
   }
 
-
-  it should "delete stream, that doesn't exist in database on the server and get result" in {
-    val bundle = Utils.startTransactionServerAndClient(
-      zkClient, serverBuilder, clientBuilder
-    )
-
-    bundle.operate { _ =>
-      val client = bundle.client
-
-      Await.result(client.delStream("test_stream"), secondsWait.seconds) shouldBe false
-    }
-  }
-
-  it should "put stream, then delete that stream and check it doesn't exist" in {
-    val bundle = Utils.startTransactionServerAndClient(
-      zkClient, serverBuilder, clientBuilder
-    )
-
-    bundle.operate { _ =>
-      val client = bundle.client
-
-      val stream = getRandomStream
-
-      val streamID = Await.result(client.putStream(stream), secondsWait.seconds)
-      streamID shouldBe 0
-      Await.result(client.checkStreamExists(stream.name), secondsWait.seconds) shouldBe true
-      Await.result(client.delStream(stream.name), secondsWait.seconds) shouldBe true
-      Await.result(client.checkStreamExists(stream.name), secondsWait.seconds) shouldBe false
-    }
-  }
-
-  it should "put stream, then delete that stream, then again delete this stream and get that operation isn't successful" in {
-    val bundle = Utils.startTransactionServerAndClient(
-      zkClient, serverBuilder, clientBuilder
-    )
-
-    bundle.operate { _ =>
-      val client = bundle.client
-      val stream = getRandomStream
-
-      val streamID = Await.result(client.putStream(stream), secondsWait.seconds)
-      streamID shouldBe 0
-      Await.result(client.delStream(stream.name), secondsWait.seconds) shouldBe true
-      Await.result(client.checkStreamExists(stream.name), secondsWait.seconds) shouldBe false
-      Await.result(client.delStream(stream.name), secondsWait.seconds) shouldBe false
-    }
-  }
-
-  it should "put stream, then delete this stream, and server should save producer and consumer transactions on putting them by client" in {
-    val bundle = Utils.startTransactionServerAndClient(
-      zkClient, serverBuilder, clientBuilder
-    )
-
-    bundle.operate { transactionServer =>
-      val client = bundle.client
-
-      val stream = getRandomStream
-      val streamID = Await.result(client.putStream(stream), secondsWait.seconds)
-      val producerTransactions = Array.fill(100)(getRandomProducerTransaction(streamID, stream)).filter(_.state == TransactionStates.Opened)
-      val consumerTransactions = Array.fill(100)(getRandomConsumerTransaction(streamID, stream))
-
-      Await.result(client.putTransactions(producerTransactions, consumerTransactions), secondsWait.seconds)
-
-      //it's required to a CommitLogToBerkeleyWriter writes the producer transactions to db
-      transactionServer.scheduledCommitLog.run()
-      transactionServer.commitLogToRocksWriter.run()
-
-      val fromID = producerTransactions.minBy(_.transactionID).transactionID
-      val toID = producerTransactions.maxBy(_.transactionID).transactionID
-
-      val resultBeforeDeleting = Await.result(client.scanTransactions(streamID, stream.partitions, fromID, toID, Int.MaxValue, Set()), secondsWait.seconds).producerTransactions
-      resultBeforeDeleting should not be empty
-
-      Await.result(client.delStream(stream.name), secondsWait.seconds)
-      Await.result(client.scanTransactions(streamID, stream.partitions, fromID, toID, Int.MaxValue, Set()), secondsWait.seconds)
-        .producerTransactions should contain theSameElementsInOrderAs resultBeforeDeleting
-    }
-  }
-
-  it should "throw an exception when the server isn't available" in {
-    val bundle = Utils.startTransactionServerAndClient(
-      zkClient, serverBuilder, clientBuilder
-    )
-
-    bundle.operate { transactionServer =>
-      val client = bundle.client
-
-      val stream = getRandomStream
-      val streamID = Await.result(client.putStream(stream), secondsWait.seconds)
-
-      val producerTransactions = Array.fill(100000)(getRandomProducerTransaction(streamID, stream))
-      val consumerTransactions = Array.fill(100)(getRandomConsumerTransaction(streamID, stream))
-
-      val resultInFuture = client.putTransactions(producerTransactions, consumerTransactions)
-
-      transactionServer.shutdown()
-
-      a[ServerConnectionException] shouldBe thrownBy {
-        Await.result(resultInFuture, secondsWait.seconds)
-      }
-    }
-  }
-
-  it should "throw an exception when the server restarted" in {
-    val bundle = Utils.startTransactionServerAndClient(
-      zkClient, serverBuilder, clientBuilder
-    )
-
-    val client = bundle.client
-    val transactionServer = bundle.transactionServer
-
-    val stream = getRandomStream
-    val producerTransactions = Array.fill(10000)(getRandomProducerTransaction(1, stream))
-    val consumerTransactions = Array.fill(100)(getRandomConsumerTransaction(1, stream))
-
-
-    val resultInFuture = client.putTransactions(producerTransactions, consumerTransactions)
-
-
-    transactionServer.shutdown()
-    val secondServer = bundle.serverBuilder
-      .withBootstrapOptions(SingleNodeServerOptions.BootstrapOptions(bindPort = Utils.getRandomPort))
-      .build()
-
-    val task = new Thread(
-      () => secondServer.start()
-    )
-
-    task.start()
-
-    /*
-     * The type of this exception can be either MasterLostException or ServerUnreachableException,
-     * depends what happens earlier: updation of master node in ZooKeeper or
-     * invocation InetClient.onServerConnectionLostDefaultBehaviour() from NettyConnectionHandler
-     */
-    a[ServerConnectionException] shouldBe thrownBy {
-      Await.result(resultInFuture, 10000.seconds)
-    }
-
-    secondServer.shutdown()
-    task.interrupt()
-    bundle.closeDbsAndDeleteDirectories()
-  }
-
   it should "put any kind of binary data and get it back" in {
-    val bundle = Utils.startTransactionServerAndClient(
+    val bundle = startTransactionServerAndClient(
       zkClient, serverBuilder, clientBuilder
     )
 
@@ -373,7 +225,7 @@ class ServerClientInterconnectionTest
   }
 
   it should "[putProducerStateWithData] put a producer transaction (Opened) with data, and server should persist data." in {
-    val bundle = Utils.startTransactionServerAndClient(
+    val bundle = startTransactionServerAndClient(
       zkClient, serverBuilder, clientBuilder
     )
 
@@ -422,7 +274,7 @@ class ServerClientInterconnectionTest
   }
 
   it should "[scanTransactions] put transactions and get them back" in {
-    val bundle = Utils.startTransactionServerAndClient(
+    val bundle = startTransactionServerAndClient(
       zkClient, serverBuilder, clientBuilder
     )
 
@@ -445,7 +297,7 @@ class ServerClientInterconnectionTest
       )
 
 
-      Await.result(client.putConsumerCheckpoint(getRandomConsumerTransaction(streamID, stream)), secondsWait.seconds)
+      Await.result(client.putTransaction(getRandomConsumerTransaction(streamID, stream)), secondsWait.seconds)
       transactionServer.scheduledCommitLog.run()
       transactionServer.commitLogToRocksWriter.run()
 
@@ -473,49 +325,8 @@ class ServerClientInterconnectionTest
     }
   }
 
-  it should "disconnect from the server when it is off" in {
-    val bundle = Utils.startTransactionServerAndClient(
-      zkClient, serverBuilder, clientBuilder
-    )
-
-    bundle.operate { server =>
-      val client = bundle.client
-
-      Thread.sleep(1000) // wait until client connected to server
-      client.isConnected shouldBe true
-
-      server.shutdown()
-      Thread.sleep(1000) // wait until client disconnected from server
-
-      client.isConnected shouldBe false
-    }
-  }
-
-
-  "getTransaction" should "not get a producer transaction if there's no transaction" in {
-    val bundle = Utils.startTransactionServerAndClient(
-      zkClient, serverBuilder, clientBuilder
-    )
-
-    bundle.operate { _ =>
-      val client = bundle.client
-
-      //arrange
-      val stream = getRandomStream
-      val fakeTransactionID = System.nanoTime()
-
-      //act
-      val streamID = Await.result(client.putStream(stream), secondsWait.seconds)
-      val response = Await.result(client.getTransaction(streamID, stream.partitions, fakeTransactionID), secondsWait.seconds)
-
-      //assert
-      response shouldBe TransactionInfo(exists = false, None)
-    }
-  }
-
-
   it should "put a producer transaction (Opened), return it and shouldn't return a producer transaction which id is greater (getTransaction)" in {
-    val bundle = Utils.startTransactionServerAndClient(
+    val bundle = startTransactionServerAndClient(
       zkClient, serverBuilder, clientBuilder
     )
 
@@ -544,7 +355,7 @@ class ServerClientInterconnectionTest
   }
 
   it should "put a producer transaction (Opened), return it and shouldn't return a non-existent producer transaction (getTransaction)" in {
-    val bundle = Utils.startTransactionServerAndClient(
+    val bundle = startTransactionServerAndClient(
       zkClient, serverBuilder, clientBuilder
     )
 
@@ -592,7 +403,7 @@ class ServerClientInterconnectionTest
   }
 
   it should "put a producer transaction (Opened) and get it back (getTransaction)" in {
-    val bundle = Utils.startTransactionServerAndClient(
+    val bundle = startTransactionServerAndClient(
       zkClient, serverBuilder, clientBuilder
     )
 
@@ -618,7 +429,7 @@ class ServerClientInterconnectionTest
   }
 
   it should "put consumerCheckpoint and get a transaction id back" in {
-    val bundle = Utils.startTransactionServerAndClient(
+    val bundle = startTransactionServerAndClient(
       zkClient, serverBuilder, clientBuilder
     )
 
@@ -629,7 +440,7 @@ class ServerClientInterconnectionTest
 
       val consumerTransaction = getRandomConsumerTransaction(streamID, stream)
 
-      Await.result(client.putConsumerCheckpoint(consumerTransaction), secondsWait.seconds)
+      Await.result(client.putTransaction(consumerTransaction), secondsWait.seconds)
       transactionServer.scheduledCommitLog.run()
       transactionServer.commitLogToRocksWriter.run()
 
@@ -640,7 +451,7 @@ class ServerClientInterconnectionTest
   }
 
   "Server" should "not have any problems with many clients" in {
-    val bundle = Utils.startTransactionServerAndClient(
+    val bundle = startTransactionServerAndClient(
       zkClient, serverBuilder, clientBuilder, clientsNum
     )
 
@@ -661,7 +472,7 @@ class ServerClientInterconnectionTest
       def getDataLength(streamID: Int, partition: Int) = dataCounter.get((streamID, partition)).intValue()
 
 
-      val res: Future[mutable.ArraySeq[Boolean]] = Future.sequence(clients map { client =>
+      val res: Future[Seq[Boolean]] = Future.sequence(clients map { client =>
         val streamFake = getRandomStream
         client.putStream(streamFake).flatMap { streamID =>
           val producerTransactions = Array.fill(100)(getRandomProducerTransaction(streamID, streamFake))
@@ -682,8 +493,8 @@ class ServerClientInterconnectionTest
     }
   }
 
-  "Server" should "return only transactions up to 1st incomplete(transaction after Opened one)" in {
-    val bundle = Utils.startTransactionServerAndClient(
+  it should "return only transactions up to 1st incomplete(transaction after Opened one)" in {
+    val bundle = startTransactionServerAndClient(
       zkClient, serverBuilder, clientBuilder
     )
 
@@ -710,7 +521,7 @@ class ServerClientInterconnectionTest
       }, Seq()), secondsWait.seconds)
 
       TestTimer.updateTime(TestTimer.getCurrentTime + maxIdleTimeBetweenRecordsMs)
-      Await.result(client.putConsumerCheckpoint(getRandomConsumerTransaction(streamID, stream)), secondsWait.seconds)
+      Await.result(client.putTransaction(getRandomConsumerTransaction(streamID, stream)), secondsWait.seconds)
       transactionServer.scheduledCommitLog.run()
       transactionServer.commitLogToRocksWriter.run()
 
@@ -718,7 +529,7 @@ class ServerClientInterconnectionTest
       Await.result(client.putProducerState(ProducerTransaction(streamID, partition, TestTimer.getCurrentTime, TransactionStates.Opened, 1, 120L)), secondsWait.seconds)
 
       TestTimer.updateTime(TestTimer.getCurrentTime + maxIdleTimeBetweenRecordsMs)
-      Await.result(client.putConsumerCheckpoint(getRandomConsumerTransaction(streamID, stream)), secondsWait.seconds)
+      Await.result(client.putTransaction(getRandomConsumerTransaction(streamID, stream)), secondsWait.seconds)
       transactionServer.scheduledCommitLog.run()
       transactionServer.commitLogToRocksWriter.run()
 
@@ -735,7 +546,7 @@ class ServerClientInterconnectionTest
       }, Seq()), secondsWait.seconds)
 
       TestTimer.updateTime(TestTimer.getCurrentTime + maxIdleTimeBetweenRecordsMs)
-      Await.result(client.putConsumerCheckpoint(getRandomConsumerTransaction(streamID, stream)), secondsWait.seconds)
+      Await.result(client.putTransaction(getRandomConsumerTransaction(streamID, stream)), secondsWait.seconds)
       transactionServer.commitLogToRocksWriter.run()
 
       val transactions = transactions1 ++ transactions2
@@ -746,76 +557,5 @@ class ServerClientInterconnectionTest
 
       res.producerTransactions.size shouldBe transactions1.size
     }
-  }
-
-  it should "update client's token TTL until client is disconnect" in {
-    val ttlSec = 2
-    val ttlMs = ttlSec * 1000
-    val keepAliveThreshold = 3
-    val keepAliveIntervalMs = ttlMs / keepAliveThreshold
-    val authenticationOptions = serverBuilder.getAuthenticationOptions.copy(
-      tokenTtlSec = ttlSec)
-    val connectionOptions = clientBuilder.getConnectionOptions.copy(
-      keepAliveIntervalMs = keepAliveIntervalMs,
-      keepAliveThreshold = keepAliveThreshold)
-
-    // TODO: find other way to retrieve client token
-    val seed = 0
-    Random.setSeed(seed)
-    Random.nextInt()
-    val token = Random.nextInt()
-    Random.setSeed(seed)
-
-    val bundle = Utils.startTransactionServerAndClient(
-      zkClient,
-      serverBuilder.withAuthenticationOptions(authenticationOptions),
-      clientBuilder.withConnectionOptions(connectionOptions))
-
-    bundle.operate { _ =>
-      val bootstrapOptions = bundle.serverBuilder.getBootstrapOptions
-      tokenIsValid(token, bootstrapOptions.bindHost, bootstrapOptions.bindPort) shouldBe true
-      Thread.sleep(ttlMs)
-      tokenIsValid(token, bootstrapOptions.bindHost, bootstrapOptions.bindPort) shouldBe true
-      bundle.client.shutdown()
-      tokenIsValid(token, bootstrapOptions.bindHost, bootstrapOptions.bindPort) shouldBe true
-      Thread.sleep(ttlMs)
-      tokenIsValid(token, bootstrapOptions.bindHost, bootstrapOptions.bindPort) shouldBe false
-    }
-  }
-
-
-  private def tokenIsValid(token: Int, host: String, port: Int): Boolean = {
-    val request = Protocol.IsValid.encodeRequestToMessage(
-      TransactionService.IsValid.Args(token))(
-      1L,
-      token,
-      isFireAndForgetMethod = false)
-
-    val bytes = request.toByteArray
-    val socket = new Socket(host, port)
-    val inputStream = socket.getInputStream
-    val outputStream = socket.getOutputStream
-    outputStream.write(bytes)
-    outputStream.flush()
-
-    def loop(lost: Int): Unit = {
-      if (lost > 0 && inputStream.available() == 0) {
-        Thread.sleep(100)
-        loop(lost - 1)
-      }
-    }
-
-    loop(10)
-
-    val responseBytes = new Array[Byte](inputStream.available())
-    inputStream.read(responseBytes)
-    socket.close()
-
-    val response = ResponseMessage.fromByteArray(responseBytes)
-    val result = Protocol.IsValid.decodeResponse(response)
-
-    result.success shouldBe defined
-
-    result.success.get
   }
 }

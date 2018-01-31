@@ -125,7 +125,7 @@ class SingleNodeServerLastCheckpointedTransactionTest
 
       //it's required to close a current commit log file
       TestTimer.updateTime(TestTimer.getCurrentTime + maxIdleTimeBetweenRecordsMs)
-      Await.result(firstClient.putConsumerCheckpoint(getRandomConsumerTransaction(streamID, stream)), secondsWait.seconds)
+      Await.result(firstClient.putTransaction(getRandomConsumerTransaction(streamID, stream)), secondsWait.seconds)
       //it's required to a CommitLogToBerkeleyWriter writes the producer transactions to db
       transactionServer.scheduledCommitLog.run()
       transactionServer.commitLogToRocksWriter.run()
@@ -144,7 +144,7 @@ class SingleNodeServerLastCheckpointedTransactionTest
 
       //it's required to close a current commit log file
       TestTimer.updateTime(TestTimer.getCurrentTime + maxIdleTimeBetweenRecordsMs)
-      Await.result(firstClient.putConsumerCheckpoint(getRandomConsumerTransaction(streamID, stream)), secondsWait.seconds)
+      Await.result(firstClient.putTransaction(getRandomConsumerTransaction(streamID, stream)), secondsWait.seconds)
       //it's required to a CommitLogToBerkeleyWriter writes the producer transactions to db
       transactionServer.scheduledCommitLog.run()
       transactionServer.commitLogToRocksWriter.run()
@@ -185,7 +185,7 @@ class SingleNodeServerLastCheckpointedTransactionTest
 
       //it's required to close a current commit log file
       TestTimer.updateTime(TestTimer.getCurrentTime + maxIdleTimeBetweenRecordsMs)
-      Await.result(client.putConsumerCheckpoint(getRandomConsumerTransaction(streamID, stream)), secondsWait.seconds)
+      Await.result(client.putTransaction(getRandomConsumerTransaction(streamID, stream)), secondsWait.seconds)
       //it's required to a CommitLogToBerkeleyWriter writes the producer transactions to db
       transactionServer.scheduledCommitLog.run()
       transactionServer.commitLogToRocksWriter.run()

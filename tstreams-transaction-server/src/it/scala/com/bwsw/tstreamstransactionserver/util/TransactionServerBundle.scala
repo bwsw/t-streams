@@ -24,7 +24,6 @@ import com.bwsw.tstreamstransactionserver.netty.server.singleNode.commitLogServi
 import com.bwsw.tstreamstransactionserver.netty.server.storage.Storage
 import com.bwsw.tstreamstransactionserver.netty.server.transactionDataService.TransactionDataService
 import com.bwsw.tstreamstransactionserver.options.SingleNodeServerOptions
-import com.bwsw.tstreamstransactionserver.util.multiNode.MultiNudeUtils
 
 import scala.util.{Failure, Try}
 
@@ -47,6 +46,6 @@ final class TransactionServerBundle(val transactionServer: TransactionServer,
   def closeDbsAndDeleteDirectories(): Unit = {
     storage.getStorageManager.closeDatabases()
     transactionDataService.closeTransactionDataDatabases()
-    MultiNudeUtils.deleteDirectories(storageOptions)
+    Utils.deleteDirectories(storageOptions)
   }
 }

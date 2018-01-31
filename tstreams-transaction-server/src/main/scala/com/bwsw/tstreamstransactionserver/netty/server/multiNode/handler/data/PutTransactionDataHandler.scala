@@ -83,14 +83,12 @@ class PutTransactionDataHandler(bookkeeperMaster: BookkeeperMaster,
               val record = new Record(
                 Frame.PutTransactionDataType,
                 System.currentTimeMillis(),
+                message.token,
                 message.body
               ).toByteArray
 
-              //          ledgerHandler.addEntry(record)
-              //          isPuttedResponse
               tracer.invoke(message, processLedger)
               ledgerHandler.asyncAddEntry(record, callback(message), promise)
-            //          promise
           }
         }
       }(context)

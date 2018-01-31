@@ -24,17 +24,17 @@ import com.bwsw.tstreamstransactionserver.netty.server.batch.Frame
 
 class Record(val recordType: Byte,
              val timestamp: Long,
+             val token: Int,
              val body: Array[Byte])
   extends Ordered[Record] {
 
   def toByteArray: Array[Byte] = {
-    val size = Record.recordTypeSizeField +
-      Record.timestampSizeField +
-      body.length
+    val size = Record.BYTES + body.length
 
     val buffer = java.nio.ByteBuffer.allocate(size)
       .put(recordType)
       .putLong(timestamp)
+      .putInt(token)
       .put(body)
     buffer.flip()
 
@@ -51,6 +51,7 @@ class Record(val recordType: Byte,
     case that: Record =>
       recordType == that.recordType &&
         timestamp == that.timestamp &&
+        token == that.token &&
         body.sameElements(that.body)
     case _ =>
       false
@@ -59,7 +60,9 @@ class Record(val recordType: Byte,
   override def hashCode(): Int = {
     31 * (
       31 * (
-        31 + timestamp.hashCode()
+        31 * (
+          31 + timestamp.hashCode()
+          ) + token.hashCode()
         ) + recordType.hashCode()
       ) + java.util.Arrays.hashCode(body)
   }
@@ -71,25 +74,35 @@ class Record(val recordType: Byte,
     else if (this.recordType > that.recordType) 1
     else 0
   }
+
+  def toFrame: Frame = {
+    new Frame(
+      recordType,
+      timestamp,
+      token,
+      body)
+  }
 }
 
 object Record {
-  private val recordTypeSizeField = java.lang.Byte.BYTES
-  private val timestampSizeField = java.lang.Long.BYTES
+  private val BYTES =
+    java.lang.Byte.BYTES + // record type
+      java.lang.Long.BYTES + // timestamp
+      java.lang.Integer.BYTES // token
 
   def fromByteArray(bytes: Array[Byte]): Record = {
     val buffer = java.nio.ByteBuffer.wrap(bytes)
 
-    val recordType = buffer.get
-    val timestamp = buffer.getLong
+    val recordType = buffer.get()
+    val timestamp = buffer.getLong()
+    val token = buffer.getInt()
 
     val body = new Array[Byte](buffer.remaining())
     buffer.get(body)
 
-    val timestampId = Frame.Timestamp
     recordType match {
-      case `timestampId` => new TimestampRecord(timestamp)
-      case _ => new Record(recordType, timestamp, body)
+      case Frame.Timestamp => new TimestampRecord(timestamp)
+      case _ => new Record(recordType, timestamp, token, body)
     }
   }
 }

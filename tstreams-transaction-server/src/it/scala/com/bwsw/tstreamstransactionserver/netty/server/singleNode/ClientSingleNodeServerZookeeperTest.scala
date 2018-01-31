@@ -33,7 +33,6 @@ import com.bwsw.tstreamstransactionserver.options.SingleNodeServerOptions.{Boots
 import com.bwsw.tstreamstransactionserver.util
 import com.bwsw.tstreamstransactionserver.util.Utils
 import com.bwsw.tstreamstransactionserver.util.Utils.{getRandomConsumerTransaction, getRandomProducerTransaction, getRandomStream, startZkServerAndGetIt, _}
-import com.bwsw.tstreamstransactionserver.util.multiNode.MultiNudeUtils
 import org.apache.curator.framework.CuratorFrameworkFactory
 import org.apache.curator.retry.RetryForever
 import org.apache.curator.test.TestingServer
@@ -331,11 +330,16 @@ class ClientSingleNodeServerZookeeperTest
   }
 
   it should "throw a ZkNoConnectionException when client lost connection with ZooKeeper" in {
+    val connectionTimeoutMs = 1000
+    val sessionTimeoutMs = 10000
     val (zkServer, zkClient) = startZkServerAndGetIt
     val serverBuilder = new SingleNodeServerBuilder()
       .withCommitLogOptions(SingleNodeServerOptions.CommitLogOptions(closeDelayMs = Int.MaxValue))
 
     val clientBuilder = new ClientBuilder()
+      .withZookeeperOptions(ZookeeperOptions(
+        sessionTimeoutMs = sessionTimeoutMs,
+        connectionTimeoutMs = connectionTimeoutMs))
 
     val bundle = Utils.startTransactionServerAndClient(
       zkClient, serverBuilder, clientBuilder)
@@ -344,7 +348,7 @@ class ClientSingleNodeServerZookeeperTest
       val client = bundle.client
       val stream = getRandomStream
       zkServer.close()
-      Thread.sleep(1000) // wait until zkClient disconnects
+      Thread.sleep(sessionTimeoutMs) // wait until ZooKeeper session expires
 
       val producerTransactions = Array.fill(100)(getRandomProducerTransaction(1, stream))
       val consumerTransactions = Array.fill(100)(getRandomConsumerTransaction(1, stream))
@@ -369,7 +373,7 @@ class ClientSingleNodeServerZookeeperTest
       serverBuilder.build()
     }
 
-    MultiNudeUtils.deleteDirectories(storageOptions)
+    Utils.deleteDirectories(storageOptions)
   }
 
   it should "not start on wrong inet address" in {
@@ -383,7 +387,7 @@ class ClientSingleNodeServerZookeeperTest
       serverBuilder.build()
     }
 
-    MultiNudeUtils.deleteDirectories(storageOptions)
+    Utils.deleteDirectories(storageOptions)
   }
 
   it should "not start on negative port value" in {
@@ -397,7 +401,7 @@ class ClientSingleNodeServerZookeeperTest
       serverBuilder.build()
     }
 
-    MultiNudeUtils.deleteDirectories(storageOptions)
+    Utils.deleteDirectories(storageOptions)
   }
 
   it should "not start on port value exceeds 65535" in {
@@ -411,7 +415,7 @@ class ClientSingleNodeServerZookeeperTest
       serverBuilder.build()
     }
 
-    MultiNudeUtils.deleteDirectories(storageOptions)
+    Utils.deleteDirectories(storageOptions)
   }
 
 }

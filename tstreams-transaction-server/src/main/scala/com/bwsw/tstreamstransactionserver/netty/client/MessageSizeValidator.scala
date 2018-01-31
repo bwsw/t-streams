@@ -45,7 +45,6 @@ private object MessageSizeValidator {
       Protocol.PutTransactions.methodID,
       Protocol.ScanTransactions.methodID,
 
-      Protocol.PutConsumerCheckpoint.methodID,
       Protocol.GetConsumerState.methodID
     ).sorted
 

@@ -16,18 +16,16 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package com.bwsw.commitlog
 
-import java.nio.ByteBuffer
+package com.bwsw.tstreamstransactionserver.util
 
-private[commitlog] case class CommitLogRecordHeader(messageType: Byte, messageLength: Int, timestamp: Long)
+import com.bwsw.tstreamstransactionserver.netty.client.api.TTSInetClient
+import com.bwsw.tstreamstransactionserver.netty.server.singleNode.{SingleNodeServerBuilder, SingleNodeTestingServer}
 
-object CommitLogRecordHeader {
-  private[commitlog] def fromByteArray(binaryHeader: Array[Byte]) = {
-    val buffer = ByteBuffer.wrap(binaryHeader)
-    val messageType   = buffer.get()
-    val messageLength = buffer.getInt()
-    val timestamp     = buffer.getLong()
-    CommitLogRecordHeader(messageType, messageLength, timestamp)
-  }
-}
+class SingleNodeServerWithClient(transactionServer: SingleNodeTestingServer,
+                                 val client: TTSInetClient,
+                                 serverBuilder: SingleNodeServerBuilder)
+  extends SingleNodeServerWithClients(
+    transactionServer,
+    Seq(client),
+    serverBuilder)

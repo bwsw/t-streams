@@ -20,14 +20,15 @@
 package com.bwsw.tstreamstransactionserver.util.multiNode
 
 import com.bwsw.tstreamstransactionserver.netty.client.api.TTSInetClient
-import com.bwsw.tstreamstransactionserver.netty.server.multiNode.{CommonCheckpointGroupServerBuilder, TestCommonCheckpointGroupServer}
+import com.bwsw.tstreamstransactionserver.netty.server.multiNode.{CommonCheckpointGroupServerBuilder, CommonCheckpointGroupTestingServer}
+import com.bwsw.tstreamstransactionserver.util.Utils
 
 import scala.util.{Failure, Try}
 
-class ZkServerTxnMultiNodeServerTxnClient(val transactionServer: TestCommonCheckpointGroupServer,
-                                          val client: TTSInetClient,
-                                          val serverBuilder: CommonCheckpointGroupServerBuilder) {
-  def operate(operation: TestCommonCheckpointGroupServer => Unit): Unit = {
+class CommonCheckpointGroupServerWithClient(val transactionServer: CommonCheckpointGroupTestingServer,
+                                            val client: TTSInetClient,
+                                            val serverBuilder: CommonCheckpointGroupServerBuilder) {
+  def operate(operation: CommonCheckpointGroupTestingServer => Unit): Unit = {
     val tried = Try(operation(transactionServer))
     closeDbsAndDeleteDirectories()
 
@@ -42,6 +43,6 @@ class ZkServerTxnMultiNodeServerTxnClient(val transactionServer: TestCommonCheck
     client.shutdown()
 
     val storageOptions = serverBuilder.getStorageOptions
-    MultiNudeUtils.deleteDirectories(storageOptions)
+    Utils.deleteDirectories(storageOptions)
   }
 }

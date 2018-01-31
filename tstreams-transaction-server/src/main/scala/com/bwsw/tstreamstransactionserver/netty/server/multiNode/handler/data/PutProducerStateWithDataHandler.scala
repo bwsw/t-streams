@@ -19,12 +19,12 @@
 
 package com.bwsw.tstreamstransactionserver.netty.server.multiNode.handler.data
 
-import com.bwsw.tstreamstransactionserver.netty.{Protocol, RequestMessage}
 import com.bwsw.tstreamstransactionserver.netty.server.batch.Frame
 import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeeperService.BookkeeperMaster
 import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeeperService.data.Record
 import com.bwsw.tstreamstransactionserver.netty.server.multiNode.handler.MultiNodePredefinedContextHandler
 import com.bwsw.tstreamstransactionserver.netty.server.multiNode.handler.data.PutProducerStateWithDataHandler._
+import com.bwsw.tstreamstransactionserver.netty.{Protocol, RequestMessage}
 import com.bwsw.tstreamstransactionserver.rpc.{ServerException, TransactionService}
 import org.apache.bookkeeper.client.BKException.Code
 import org.apache.bookkeeper.client.{AsyncCallback, BKException, LedgerHandle}
@@ -57,13 +57,12 @@ class PutProducerStateWithDataHandler(bookkeeperMaster: BookkeeperMaster,
       val promise = obj.asInstanceOf[Promise[Array[Byte]]]
       if (Code.OK == bkCode)
         promise.success(isPuttedResponse)
-      else {
+      else
         promise.failure(BKException.create(bkCode).fillInStackTrace())
-      }
     }
   }
 
-  private def process(requestBody: Array[Byte]): Future[Array[Byte]] = {
+  private def process(message: RequestMessage): Future[Array[Byte]] = {
     val promise = Promise[Array[Byte]]()
     Future {
       bookkeeperMaster.doOperationWithCurrentWriteLedger {
@@ -74,22 +73,20 @@ class PutProducerStateWithDataHandler(bookkeeperMaster: BookkeeperMaster,
           val record = new Record(
             Frame.PutProducerStateWithDataType,
             System.currentTimeMillis(),
-            requestBody
+            message.token,
+            message.body
           ).toByteArray
 
           ledgerHandler.asyncAddEntry(record, callback, promise)
       }
     }(context)
+
     promise.future
   }
 
-  override protected def fireAndForget(message: RequestMessage): Unit = {
-    process(message.body)
-  }
+  override protected def fireAndForget(message: RequestMessage): Unit = process(message)
 
-  override protected def getResponse(message: RequestMessage): Future[Array[Byte]] = {
-    process(message.body)
-  }
+  override protected def getResponse(message: RequestMessage): Future[Array[Byte]] = process(message)
 
   override def createErrorResponse(message: String): Array[Byte] = {
     descriptor.encodeResponse(

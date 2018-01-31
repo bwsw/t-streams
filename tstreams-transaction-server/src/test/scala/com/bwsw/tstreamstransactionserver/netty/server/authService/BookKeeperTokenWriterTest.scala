@@ -43,7 +43,7 @@ class BookKeeperTokenWriterTest
     with MockitoSugar
     with TableDrivenPropertyChecks {
 
-  "TokenBookKeeperWriter" should "write token in BookKeeper correctly" in {
+  "BookKeeperTokenWriter" should "write token in BookKeeper correctly" in {
     val executionContext = ExecutionContext.Implicits.global
     val ledgerHandle = mock[LedgerHandle]
     val bookKeeperMaster = mock[BookkeeperMaster]
@@ -74,9 +74,10 @@ class BookKeeperTokenWriterTest
           val record = Record.fromByteArray(bytes)
           val endTime = System.currentTimeMillis()
           record.recordType == recordTypeId &&
-            Frame.deserializeToken(record.body) == token &&
+            record.token == token &&
             record.timestamp >= startTime &&
-            record.timestamp <= endTime
+            record.timestamp <= endTime &&
+            record.body.isEmpty
         }))
     }
   }

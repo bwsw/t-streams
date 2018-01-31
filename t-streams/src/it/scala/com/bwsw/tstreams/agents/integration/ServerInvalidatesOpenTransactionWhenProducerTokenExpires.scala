@@ -88,13 +88,11 @@ class ServerInvalidatesOpenTransactionWhenProducerTokenExpires
   "Subscriber" should "get second transaction if first transaction's producer is broken and its token is expired " +
     "but first transaction's ttl isn't expired" in {
 
-    val firstProducerThreadGroup = new ThreadGroup("producer_1_thread_group")
-
     val createFirstTransactionLatch = new CountDownLatch(1)
     val firstTransactionOpenedLatch = new CountDownLatch(1)
+    val secondTransactionCheckpointedLatch = new CountDownLatch(1)
     val testDoneLatch = new CountDownLatch(1)
     val firstProducerThread = new Thread(
-      firstProducerThreadGroup,
       () => {
         val firstProducer = factory.getProducer("test_producer_1", partitions)
         createFirstTransactionLatch.await()
@@ -102,6 +100,8 @@ class ServerInvalidatesOpenTransactionWhenProducerTokenExpires
 
         firstTransaction.send("data")
         firstTransactionOpenedLatch.countDown()
+        secondTransactionCheckpointedLatch.await(transactionTtlMs, TimeUnit.MILLISECONDS)
+        firstProducer.getStorageClient().shutdown()
         testDoneLatch.await(transactionTtlMs, TimeUnit.MILLISECONDS)
         firstProducer.close()
       })
@@ -135,12 +135,12 @@ class ServerInvalidatesOpenTransactionWhenProducerTokenExpires
       val secondTransaction = secondProducer.newTransaction(NewProducerTransactionPolicy.ErrorIfOpened) // ts2
       secondTransaction.send("data")
       secondProducer.checkpoint() // ts3
-
-      firstProducerThreadGroup.interrupt() //ts4
+      val ts4 = System.currentTimeMillis()
+      secondTransactionCheckpointedLatch.countDown() // ts4
 
       subscriberLatch.await(tokenTtlSec * 2, TimeUnit.SECONDS) shouldBe true // ts5
       consumedTransactionId shouldEqual Some(secondTransaction.getTransactionID)
-      consumedTransactionTime should be > 0L
+      consumedTransactionTime should be > ts4 + tokenTtlSec
       consumedTransactionTime should be < firstTransactionExpirationTime
     }
 

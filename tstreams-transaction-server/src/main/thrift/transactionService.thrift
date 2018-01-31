@@ -147,8 +147,6 @@ service TransactionDataService {
 
 service ConsumerService {
 
- bool putConsumerCheckpoint(1: string name, 2: StreamIDType streamID, 3: PartitionType partition, 4: transactionIDType transaction) throws (1:ServerException error),
-
  i64 getConsumerState(1: string name, 2: StreamIDType streamID, 3: PartitionType partition) throws (1:ServerException error)
 }
 
@@ -196,8 +194,6 @@ service TransactionService {
   bool putTransactionData(1: StreamIDType streamID, 2: PartitionType partition, 3: transactionIDType transaction, 4: list<binary> data, 5: i32 from) throws (1:ServerException error),
 
   list <binary> getTransactionData(1: StreamIDType streamID, 2: PartitionType partition, 3: transactionIDType transaction, 4: i32 from, 5: i32 to) throws (1:ServerException error),
-
-  bool putConsumerCheckpoint(1: string name, 2: StreamIDType streamID, 3: PartitionType partition, 4: transactionIDType transaction) throws (1:ServerException error),
 
   transactionIDType getConsumerState(1: string name, 2: StreamIDType streamID, 3: PartitionType partition) throws (1:ServerException error),
 

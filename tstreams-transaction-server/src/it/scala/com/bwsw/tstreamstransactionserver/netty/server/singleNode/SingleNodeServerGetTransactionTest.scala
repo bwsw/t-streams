@@ -20,8 +20,9 @@
 package com.bwsw.tstreamstransactionserver.netty.server.singleNode
 
 import com.bwsw.tstreamstransactionserver.netty.client.ClientBuilder
+import com.bwsw.tstreamstransactionserver.rpc.TransactionInfo
 import com.bwsw.tstreamstransactionserver.util.Utils
-import com.bwsw.tstreamstransactionserver.util.Utils.startZkServerAndGetIt
+import com.bwsw.tstreamstransactionserver.util.Utils.{getRandomStream, startZkServerAndGetIt}
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 
 import scala.concurrent.Await
@@ -85,4 +86,21 @@ class SingleNodeServerGetTransactionTest
     }
   }
 
+  it should "not get a transaction if it does not exists" in {
+    val bundle = Utils.startTransactionServerAndClient(
+      zkClient, serverBuilder, clientBuilder
+    )
+
+    bundle.operate { _ =>
+      val client = bundle.client
+
+      val stream = getRandomStream
+      val fakeTransactionID = System.nanoTime()
+
+      val streamID = Await.result(client.putStream(stream), secondsToWait)
+      val response = Await.result(client.getTransaction(streamID, stream.partitions, fakeTransactionID), secondsToWait)
+
+      response shouldBe TransactionInfo(exists = false, None)
+    }
+  }
 }

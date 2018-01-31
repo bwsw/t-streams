@@ -20,18 +20,23 @@ package com.bwsw.commitlog
 
 import java.nio.ByteBuffer
 
-import com.bwsw.commitlog.CommitLogRecord._
+import com.bwsw.tstreamstransactionserver.netty.server.batch.Frame
 
-/** look at [[com.bwsw.commitlog.CommitLogRecordHeader]] when change attributes of this class  */
-final class CommitLogRecord(val messageType: Byte,
-                            val message: Array[Byte],
-                            val timestamp: Long = System.currentTimeMillis()) {
+import scala.util.{Failure, Success, Try}
+
+final case class CommitLogRecord(messageType: Byte,
+                                 timestamp: Long,
+                                 token: Int,
+                                 message: Array[Byte]) {
+
+  val size: Int = CommitLogRecord.headerSize + message.length
+
   @inline
   def toByteArray: Array[Byte] = {
     val buffer = ByteBuffer.allocate(size)
       .put(messageType)
-      .putInt(message.length)
       .putLong(timestamp)
+      .putInt(token)
       .put(message)
 
     buffer.flip()
@@ -45,46 +50,52 @@ final class CommitLogRecord(val messageType: Byte,
     }
   }
 
-  def size: Int = headerSize + message.length
 
   override def equals(obj: scala.Any): Boolean = obj match {
     case commitLogRecord: CommitLogRecord =>
       messageType == commitLogRecord.messageType &&
+        timestamp == commitLogRecord.timestamp &&
+        token == commitLogRecord.token &&
         message.sameElements(commitLogRecord.message)
     case _ => false
   }
+
+  def toFrame: Frame = {
+    new Frame(
+      messageType,
+      timestamp,
+      token,
+      message)
+  }
 }
 
+
 object CommitLogRecord {
+
   val headerSize: Int =
-    java.lang.Byte.BYTES +     //messageType
-    java.lang.Integer.BYTES +  //messageLength
-    java.lang.Long.BYTES       //timestamp
+    java.lang.Byte.BYTES + // messageType
+      java.lang.Long.BYTES + // timestamp
+      java.lang.Integer.BYTES // token
 
-
-  final def apply(messageType: Byte,
-                  message: Array[Byte],
-                  timestamp: Long): CommitLogRecord = {
-    new CommitLogRecord(messageType, message, timestamp)
-  }
-
-  final def fromByteArray(bytes: Array[Byte]): Either[IllegalArgumentException, CommitLogRecord] = {
-    scala.util.Try {
+  def fromByteArray(bytes: Array[Byte]): Either[IllegalArgumentException, CommitLogRecord] = {
+    Try {
       val buffer = ByteBuffer.wrap(bytes)
-      val messageType   = buffer.get()
-      val messageLength = buffer.getInt()
+      val messageType = buffer.get()
       val timestamp = buffer.getLong()
+      val token = buffer.getInt()
+
       val message = {
-        val binaryMessage = new Array[Byte](messageLength)
+        val binaryMessage = new Array[Byte](buffer.remaining())
         buffer.get(binaryMessage)
         binaryMessage
       }
-      new CommitLogRecord(messageType, message, timestamp)
+
+      CommitLogRecord(messageType, timestamp, token, message)
     } match {
-      case scala.util.Success(binaryRecord) =>
-        scala.util.Right(binaryRecord)
-      case scala.util.Failure(_) =>
-        scala.util.Left(new IllegalArgumentException("Commit log record is corrupted"))
+      case Success(record) =>
+        Right(record)
+      case Failure(_) =>
+        Left(new IllegalArgumentException("Commit log record is corrupted"))
     }
   }
 }
