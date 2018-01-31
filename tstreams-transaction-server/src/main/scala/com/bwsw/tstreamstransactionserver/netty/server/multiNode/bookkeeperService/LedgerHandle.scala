@@ -21,12 +21,21 @@ package com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeeperServ
 
 import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeeperService.data.{Record, RecordWithIndex}
 
+import scala.concurrent.Promise
+
 object LedgerHandle {
   val KeyTime = "t"
+
+  trait Callback[T] {
+    def addComplete(bkCode: Int, promise: Promise[T]): Unit
+  }
+
 }
 
 abstract class LedgerHandle(val id: Long) {
   def addRecord(data: Record): Long
+
+  def asyncAddRecord[T](record: Record, callback: LedgerHandle.Callback[T], promise: Promise[T]): Unit
 
   val getCreationTime: Long
 
@@ -40,8 +49,7 @@ abstract class LedgerHandle(val id: Long) {
 
   def lastRecordID(): Long
 
+  def lastEnqueuedRecordId: Long
+
   def close(): Unit
 }
-
-
-

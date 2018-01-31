@@ -20,16 +20,16 @@
 package com.bwsw.tstreamstransactionserver.netty.server.multiNode.handler.metadata
 
 import com.bwsw.tstreamstransactionserver.netty.server.batch.Frame
-import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeeperService.BookkeeperMaster
 import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeeperService.data.Record
+import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeeperService.{BookkeeperMaster, LedgerHandle}
 import com.bwsw.tstreamstransactionserver.netty.server.multiNode.handler.MultiNodePredefinedContextHandler
 import com.bwsw.tstreamstransactionserver.netty.server.multiNode.handler.metadata.PutTransactionHandler._
 import com.bwsw.tstreamstransactionserver.netty.server.multiNode.handler.metadata.PutTransactionsHandler.isPuttedResponse
 import com.bwsw.tstreamstransactionserver.netty.{Protocol, RequestMessage}
 import com.bwsw.tstreamstransactionserver.rpc.{ServerException, TransactionService}
 import com.bwsw.tstreamstransactionserver.tracing.ServerTracer.tracer
+import org.apache.bookkeeper.client.BKException
 import org.apache.bookkeeper.client.BKException.Code
-import org.apache.bookkeeper.client.{AsyncCallback, BKException, LedgerHandle}
 
 import scala.concurrent.{ExecutionContext, Future, Promise}
 
@@ -53,14 +53,11 @@ class PutTransactionHandler(bookkeeperMaster: BookkeeperMaster,
 
   private val processLedger = getClass.getName + ".process.ledgerHandler.asyncAddEntry"
 
-  private def callback(message: RequestMessage) = new AsyncCallback.AddCallback {
+  private def callback(message: RequestMessage) = new LedgerHandle.Callback[Array[Byte]] {
     override def addComplete(bkCode: Int,
-                             ledgerHandle: LedgerHandle,
-                             entryId: Long,
-                             obj: scala.Any): Unit = {
+                             promise: Promise[Array[Byte]]): Unit = {
       tracer.finish(message, processLedger)
       tracer.withTracing(message, getClass.getName + ".addComplete") {
-        val promise = obj.asInstanceOf[Promise[Array[Byte]]]
         if (Code.OK == bkCode)
           promise.success(isPuttedResponse)
         else
@@ -84,10 +81,10 @@ class PutTransactionHandler(bookkeeperMaster: BookkeeperMaster,
                 System.currentTimeMillis(),
                 message.token,
                 message.body
-              ).toByteArray
+              )
 
               tracer.invoke(message, processLedger)
-              ledgerHandler.asyncAddEntry(record, callback(message), promise)
+              ledgerHandler.asyncAddRecord(record, callback(message), promise)
           }
         }
       }(context)

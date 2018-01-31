@@ -21,9 +21,8 @@ package com.bwsw.tstreamstransactionserver.netty.server.authService
 
 import com.bwsw.tstreamstransactionserver.exception.Throwable.ServerIsSlaveException
 import com.bwsw.tstreamstransactionserver.netty.server.batch.Frame
-import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeeperService.BookkeeperMaster
 import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeeperService.data.Record
-import org.apache.bookkeeper.client.LedgerHandle
+import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeeperService.{BookkeeperMaster, LedgerHandle}
 import org.mockito.ArgumentMatchers.{any, argThat}
 import org.mockito.Mockito.{verify, when}
 import org.scalatest.mockito.MockitoSugar
@@ -51,7 +50,7 @@ class BookKeeperTokenWriterTest
     when(bookKeeperMaster.doOperationWithCurrentWriteLedger(any()))
       .thenAnswer(invocation => {
         val method =
-          invocation.getArgument[Either[ServerIsSlaveException, org.apache.bookkeeper.client.LedgerHandle] => _](0)
+          invocation.getArgument[Either[ServerIsSlaveException, LedgerHandle] => _](0)
 
         method(Right(ledgerHandle))
       })
@@ -70,8 +69,7 @@ class BookKeeperTokenWriterTest
       Thread.sleep(100) // wait until a record has been written
 
       verify(ledgerHandle)
-        .addEntry(argThat[Array[Byte]](bytes => {
-          val record = Record.fromByteArray(bytes)
+        .addRecord(argThat[Record](record => {
           val endTime = System.currentTimeMillis()
           record.recordType == recordTypeId &&
             record.token == token &&

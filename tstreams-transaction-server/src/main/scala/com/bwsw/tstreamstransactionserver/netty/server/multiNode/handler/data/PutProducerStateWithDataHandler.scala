@@ -20,14 +20,14 @@
 package com.bwsw.tstreamstransactionserver.netty.server.multiNode.handler.data
 
 import com.bwsw.tstreamstransactionserver.netty.server.batch.Frame
-import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeeperService.BookkeeperMaster
 import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeeperService.data.Record
+import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeeperService.{BookkeeperMaster, LedgerHandle}
 import com.bwsw.tstreamstransactionserver.netty.server.multiNode.handler.MultiNodePredefinedContextHandler
 import com.bwsw.tstreamstransactionserver.netty.server.multiNode.handler.data.PutProducerStateWithDataHandler._
 import com.bwsw.tstreamstransactionserver.netty.{Protocol, RequestMessage}
 import com.bwsw.tstreamstransactionserver.rpc.{ServerException, TransactionService}
+import org.apache.bookkeeper.client.BKException
 import org.apache.bookkeeper.client.BKException.Code
-import org.apache.bookkeeper.client.{AsyncCallback, BKException, LedgerHandle}
 
 import scala.concurrent.{ExecutionContext, Future, Promise}
 
@@ -49,12 +49,9 @@ class PutProducerStateWithDataHandler(bookkeeperMaster: BookkeeperMaster,
     descriptor.name,
     context) {
 
-  private def callback = new AsyncCallback.AddCallback {
+  private def callback = new LedgerHandle.Callback[Array[Byte]] {
     override def addComplete(bkCode: Int,
-                             ledgerHandle: LedgerHandle,
-                             entryId: Long,
-                             obj: scala.Any): Unit = {
-      val promise = obj.asInstanceOf[Promise[Array[Byte]]]
+                             promise: Promise[Array[Byte]]): Unit = {
       if (Code.OK == bkCode)
         promise.success(isPuttedResponse)
       else
@@ -75,9 +72,9 @@ class PutProducerStateWithDataHandler(bookkeeperMaster: BookkeeperMaster,
             System.currentTimeMillis(),
             message.token,
             message.body
-          ).toByteArray
+          )
 
-          ledgerHandler.asyncAddEntry(record, callback, promise)
+          ledgerHandler.asyncAddRecord(record, callback, promise)
       }
     }(context)
 
