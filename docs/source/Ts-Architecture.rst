@@ -19,6 +19,8 @@ T-streams includes the following components:
 #. **Producers** that create transactions with data.
 #. **Consumers**, **Subscribers** that read the transactions.
 
+You can see a general description of them at the figure below:
+
 .. figure:: _static/Architecture-General11.png
 
 T-streams can be configured in two modes:
@@ -29,6 +31,8 @@ T-streams can be configured in two modes:
      - fault-tolerant processing by backing up servers,
      - scalability implemented with sharded servers.
 
+Any configuration requires infrastructure. In the next section you will find more information on infrastructure components in T-streams.
+
 Infrastructure Components
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 The following infrastructure components are required in T-streams:
@@ -36,6 +40,8 @@ The following infrastructure components are required in T-streams:
 1. **Apache ZooKeeper** that is responsible for coordination and synchronization of processes.
 #. **RocksDB** that is a local storage fulfilling a very important feature – an atomic batch operation which allows implementing atomic and reliable commit logs processing. 
 #. **Apache BookKeeper** used as a distributed commit log. It is a service that provides a persistent, fault-tolerant log-structured storage. BookKeeper is an optional part used in the fault-tolerant configuration. It orderly stores elements and replicates them across multiple nodes to synchronize the servers' states.
+
+Look at the figure below that describes T-streams with its infrasctructure: 
 
 .. figure:: _static/Architecture_General2.png
 
