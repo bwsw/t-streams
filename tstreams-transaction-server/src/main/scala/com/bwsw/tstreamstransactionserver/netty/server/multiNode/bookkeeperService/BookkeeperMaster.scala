@@ -40,6 +40,7 @@ class BookkeeperMaster(bookKeeper: BookKeeperWrapper,
 
   private val lock = new ReentrantReadWriteLock()
   @volatile private var currentOpenedLedger: Option[LedgerHandle] = None
+  private val waitUntilLedgerWritesPendingRecordsTimeout = 50
 
 
   private def closeLastLedger(): Unit = {
@@ -84,10 +85,9 @@ class BookkeeperMaster(bookKeeper: BookKeeperWrapper,
             lock.writeLock().unlock()
 
             maybePreviousOpenedLedger.foreach { previousOpenedLedger =>
-              while (
-                previousOpenedLedger.lastEnqueuedRecordId !=
-                  previousOpenedLedger.lastRecordID()
-              ) {}
+              while (ledgerHandle.lastEnqueuedRecordId != ledgerHandle.lastRecordID()) {
+                Thread.sleep(waitUntilLedgerWritesPendingRecordsTimeout)
+              }
               closeLedger(previousOpenedLedger)
               zkLastClosedLedgerHandler
                 .setID(previousOpenedLedger.id)
@@ -156,7 +156,8 @@ class BookkeeperMaster(bookKeeper: BookKeeperWrapper,
       }
     } match {
       case Success(_) =>
-      case Failure(_: InterruptedException) =>
+      case Failure(exception: InterruptedException) =>
+        exception.printStackTrace()
         Thread.currentThread().interrupt()
       case Failure(exception: Throwable) =>
         throw exception
