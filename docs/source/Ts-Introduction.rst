@@ -195,6 +195,6 @@ T-streams processing performance is restricted by the next key parameters:
 To handle high volume streams a developer should:
 
 1) combine as many data elements into a single transaction as possible to satisfy desired processing lag and client-side recovery capabilities, 
-2) do checkpoints as rare as possible choosing group checkpoint operations (Producer object, Checkpoint Group object) rather than individual transaction checkpoint operation.
+2) do checkpoints as rare as possible preferring group checkpoint operations (Producer object, Checkpoint Group object) rather than individual transaction checkpoint operation.
 
-T-streams single stream is not scalable. One stream is handled on one server. In this case, the processing is limited by the server performance. If the processing flow you develop allows scalability, you can handle each stream on a separate server observing all the guarantees mentioned above. Scalability allows processing high throughputs of data with very low latency. 
+T-streams single stream is not scalable. One stream is handled on one server. In this case, the processing is limited by the server performance. If the processing flow you develop requires scalability, you can handle each stream on a separate server keeping all the guarantees mentioned above. 
