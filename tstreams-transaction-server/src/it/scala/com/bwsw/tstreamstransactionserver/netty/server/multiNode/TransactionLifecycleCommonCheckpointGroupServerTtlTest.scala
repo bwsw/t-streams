@@ -108,10 +108,10 @@ class TransactionLifecycleCommonCheckpointGroupServerTtlTest extends fixture.Fla
       fixture.zkClient, bookkeeperOptions, serverBuilder, clientBuilder, toMs(maxIdleTimeBetweenRecords)
     )
     val cgPath = bundle.serverBuilder.getCommonPrefixesOptions.checkpointGroupPrefixesOptions.checkpointGroupZkTreeListPrefix
-    val cgTree = new LongZookeeperTreeList(fixture.zkClient, cgPath)
+    val cgTree = new LongZookeeperTreeList(fixture.zkClient, cgPath, false)
 
     val commonPath = bundle.serverBuilder.getCommonPrefixesOptions.commonMasterZkTreeListPrefix
-    val commonTree = new LongZookeeperTreeList(fixture.zkClient, commonPath)
+    val commonTree = new LongZookeeperTreeList(fixture.zkClient, commonPath, false)
 
     val trees = Set(cgTree, commonTree)
 

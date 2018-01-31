@@ -62,7 +62,6 @@ object CommonCheckpointGroupServerTtlUtils {
   def addNodes(node: Option[Long], nodes: mutable.Set[Long], tree: LongZookeeperTreeList): Unit = {
     node match {
       case Some(id) =>
-        println(s"getNextNode id = $id")
         val nextNode = tree.getNextNode(id)
         nodes.add(id)
         addNodes(nextNode, nodes, tree)
