@@ -34,7 +34,6 @@ object Frame {
   val PutProducerStateWithDataType: Byte = 3
   val PutTransactionType: Byte = 4
   val PutTransactionsType: Byte = 5
-  val PutConsumerCheckpointType: Byte = 6
   val TokenCreatedType: Byte = 7
   val TokenUpdatedType: Byte = 8
   val TokenExpiredType: Byte = 9
@@ -52,27 +51,23 @@ object Frame {
   def deserializePutSimpleTransactionAndData(message: Array[Byte]): ProducerTransactionsAndData =
     Structure.PutTransactionsAndData.decode(message)
 
-  def deserializePutConsumerCheckpoint(message: Array[Byte]): PutConsumerCheckpoint.Args =
-    Protocol.PutConsumerCheckpoint.decodeRequest(message)
-
   def deserializePutProducerStateWithData(message: Array[Byte]): PutProducerStateWithData.Args =
     Protocol.PutProducerStateWithData.decodeRequest(message)
 
   def deserializeToken(bytes: Array[Byte]): Int = ByteBuffer.wrap(bytes).getInt
-
-  def serializeToken(token: Int): Array[Byte] =
-    ByteBuffer.allocate(Integer.BYTES).putInt(token).array()
 }
 
-abstract class Frame(val typeId: Byte,
-                     val timestamp: Long,
-                     val body: Array[Byte])
+class Frame(val typeId: Byte,
+            val timestamp: Long,
+            val token: Int,
+            val body: Array[Byte])
   extends Ordered[Frame] {
 
   override def equals(obj: scala.Any): Boolean = obj match {
     case that: Frame =>
       typeId == that.typeId &&
         timestamp == that.timestamp &&
+        token == that.token &&
         body.sameElements(that.body)
     case _ =>
       false
@@ -81,7 +76,9 @@ abstract class Frame(val typeId: Byte,
   override def hashCode(): Int = {
     31 * (
       31 * (
-        31 + timestamp.hashCode()
+        31 * (
+          31 + token.hashCode()
+          ) + timestamp.hashCode()
         ) + typeId.hashCode()
       ) + java.util.Arrays.hashCode(body)
   }

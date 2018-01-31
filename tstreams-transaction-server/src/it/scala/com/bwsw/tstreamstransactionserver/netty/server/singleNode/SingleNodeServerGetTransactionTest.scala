@@ -20,8 +20,9 @@
 package com.bwsw.tstreamstransactionserver.netty.server.singleNode
 
 import com.bwsw.tstreamstransactionserver.netty.client.ClientBuilder
-import com.bwsw.tstreamstransactionserver.util.Utils
-import com.bwsw.tstreamstransactionserver.util.Utils.startZookeeperServer
+import com.bwsw.tstreamstransactionserver.rpc.TransactionInfo
+import com.bwsw.tstreamstransactionserver.util.Utils.{getRandomStream, startZookeeperServer, _}
+
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 
 import scala.concurrent.Await
@@ -54,7 +55,7 @@ class SingleNodeServerGetTransactionTest
   }
 
   "Client" should "get transaction ID that not less that current time" in {
-    val bundle = Utils.startTransactionServerAndClient(
+    val bundle = startTransactionServerAndClient(
       zkClient, serverBuilder, clientBuilder
     )
 
@@ -71,7 +72,7 @@ class SingleNodeServerGetTransactionTest
   }
 
   it should "get transaction ID by timestamp" in {
-    val bundle = Utils.startTransactionServerAndClient(
+    val bundle = startTransactionServerAndClient(
       zkClient, serverBuilder, clientBuilder
     )
 
@@ -85,4 +86,21 @@ class SingleNodeServerGetTransactionTest
     }
   }
 
+  it should "not get a transaction if it does not exists" in {
+    val bundle = startTransactionServerAndClient(
+      zkClient, serverBuilder, clientBuilder
+    )
+
+    bundle.operate { _ =>
+      val client = bundle.client
+
+      val stream = getRandomStream
+      val fakeTransactionID = System.nanoTime()
+
+      val streamID = Await.result(client.putStream(stream), secondsToWait)
+      val response = Await.result(client.getTransaction(streamID, stream.partitions, fakeTransactionID), secondsToWait)
+
+      response shouldBe TransactionInfo(exists = false, None)
+    }
+  }
 }

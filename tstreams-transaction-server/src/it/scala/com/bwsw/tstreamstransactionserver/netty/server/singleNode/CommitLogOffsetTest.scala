@@ -90,7 +90,7 @@ class CommitLogOffsetTest
 
       Await.result(client.putTransactions(producerTransactions, Seq()), secondsWait.seconds)
 
-      Await.result(client.putConsumerCheckpoint(getRandomConsumerTransaction(streamID, stream)), secondsWait.seconds)
+      Await.result(client.putTransaction(getRandomConsumerTransaction(streamID, stream)), secondsWait.seconds)
       transactionServer.scheduledCommitLog.run()
       transactionServer.commitLogToRocksWriter.run()
 

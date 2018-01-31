@@ -22,6 +22,7 @@ package com.bwsw.tstreamstransactionserver.netty.server
 import java.nio.ByteBuffer
 
 import com.bwsw.tstreamstransactionserver.exception.Throwable.StreamDoesNotExist
+import com.bwsw.tstreamstransactionserver.netty.server.authService.OpenedTransactions
 import com.bwsw.tstreamstransactionserver.netty.server.consumerService.{ConsumerServiceWriter, ConsumerTransactionRecord}
 import com.bwsw.tstreamstransactionserver.netty.server.db.KeyValueDbBatch
 import com.bwsw.tstreamstransactionserver.netty.server.storage.Storage
@@ -29,7 +30,8 @@ import com.bwsw.tstreamstransactionserver.netty.server.transactionDataService.Tr
 import com.bwsw.tstreamstransactionserver.netty.server.transactionMetadataService.{ProducerStateMachineCache, ProducerTransactionRecord, ProducerTransactionsCleaner, TransactionMetaServiceWriter}
 
 class RocksWriter(storage: Storage,
-                  transactionDataService: TransactionDataService) {
+                  transactionDataService: TransactionDataService,
+                  private[server] val openedTransactions: OpenedTransactions) {
 
   protected val consumerService =
     new ConsumerServiceWriter(
@@ -38,8 +40,8 @@ class RocksWriter(storage: Storage,
 
   protected val producerTransactionsCleaner =
     new ProducerTransactionsCleaner(
-      storage.getStorageManager
-    )
+      storage.getStorageManager,
+      openedTransactions)
 
   protected val producerStateMachineCache =
     new ProducerStateMachineCache(storage.getStorageManager)

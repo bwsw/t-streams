@@ -20,7 +20,7 @@
 package com.bwsw.tstreamstransactionserver.netty.server.multiNode
 
 
-import com.bwsw.tstreamstransactionserver.netty.server.{Notifier, RocksWriter, TestRocksWriter}
+import com.bwsw.tstreamstransactionserver.netty.server.{Notifier, RocksWriter, RocksTestingWriter}
 import com.bwsw.tstreamstransactionserver.options.CommonOptions
 import com.bwsw.tstreamstransactionserver.options.CommonOptions.TracingOptions
 import com.bwsw.tstreamstransactionserver.options.MultiNodeServerOptions.{BookkeeperOptions, CommonPrefixesOptions}
@@ -54,16 +54,15 @@ class CommonCheckpointGroupTestingServer(authenticationOpts: AuthenticationOptio
     tracingOptions) {
 
   override protected lazy val rocksWriter: RocksWriter =
-    new TestRocksWriter(
+    new RocksTestingWriter(
       rocksStorage,
       transactionDataService,
       producerNotifier,
-      consumerNotifier
-    )
-  private lazy val producerNotifier =
-    new Notifier[ProducerTransaction]
-  private lazy val consumerNotifier =
-    new Notifier[ConsumerTransaction]
+      consumerNotifier,
+      openedTransactions)
+
+  private lazy val producerNotifier = new Notifier[ProducerTransaction]
+  private lazy val consumerNotifier = new Notifier[ConsumerTransaction]
 
   final def notifyProducerTransactionCompleted(onNotificationCompleted: ProducerTransaction => Boolean,
                                                func: => Unit): Long =

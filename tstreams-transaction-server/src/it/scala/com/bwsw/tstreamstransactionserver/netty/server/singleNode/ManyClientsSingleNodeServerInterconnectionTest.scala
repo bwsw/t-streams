@@ -178,8 +178,10 @@ class ManyClientsSingleNodeServerInterconnectionTest
 
       //it's required to close a current commit log file
       TestTimer.updateTime(System.currentTimeMillis() + maxIdleTimeBetweenRecordsMs)
-      Await.result(firstClient.putConsumerCheckpoint(getRandomConsumerTransaction(streamID, stream)), secondsWait.seconds)
-      //it's required to a CommitLogToRocksWriter writes the producer transactions to db
+
+      Await.result(firstClient.putTransaction(getRandomConsumerTransaction(streamID, stream)), secondsWait.seconds)
+      //it's required to a CommitLogToBerkeleyWriter writes the producer transactions to db
+
       transactionServer.scheduledCommitLog.run()
       transactionServer.commitLogToRocksWriter.run()
 
@@ -216,8 +218,10 @@ class ManyClientsSingleNodeServerInterconnectionTest
 
       //it's required to close a current commit log file
       TestTimer.updateTime(TestTimer.getCurrentTime + maxIdleTimeBetweenRecordsMs)
-      Await.result(firstClient.putConsumerCheckpoint(getRandomConsumerTransaction(streamID, stream)), secondsWait.seconds)
-      //it's required to a CommitLogToRocksWriter writes the producer transactions to db
+
+      Await.result(firstClient.putTransaction(getRandomConsumerTransaction(streamID, stream)), secondsWait.seconds)
+      //it's required to a CommitLogToBerkeleyWriter writes the producer transactions to db
+
       transactionServer.scheduledCommitLog.run()
       transactionServer.commitLogToRocksWriter.run()
 
@@ -226,8 +230,10 @@ class ManyClientsSingleNodeServerInterconnectionTest
 
       //it's required to close a current commit log file
       TestTimer.updateTime(TestTimer.getCurrentTime + maxIdleTimeBetweenRecordsMs)
-      Await.result(firstClient.putConsumerCheckpoint(getRandomConsumerTransaction(streamID, stream)), secondsWait.seconds)
-      //it's required to a CommitLogToRocksWriter writes the producer transactions to db
+
+      Await.result(firstClient.putTransaction(getRandomConsumerTransaction(streamID, stream)), secondsWait.seconds)
+      //it's required to a CommitLogToBerkeleyWriter writes the producer transactions to db
+
       transactionServer.scheduledCommitLog.run()
       transactionServer.commitLogToRocksWriter.run()
 
@@ -311,8 +317,10 @@ class ManyClientsSingleNodeServerInterconnectionTest
 
       //it's required to close a current commit log file
       TestTimer.updateTime(TestTimer.getCurrentTime + maxIdleTimeBetweenRecordsMs)
-      Await.result(firstClient.putConsumerCheckpoint(getRandomConsumerTransaction(streamID, stream)), secondsWait.seconds)
-      //it's required to a CommitLogToRocksWriter writes the producer transactions to db
+
+      Await.result(firstClient.putTransaction(getRandomConsumerTransaction(streamID, stream)), secondsWait.seconds)
+      //it's required to a CommitLogToBerkeleyWriter writes the producer transactions to db
+
       transactionServer.scheduledCommitLog.run()
       transactionServer.commitLogToRocksWriter.run()
 
@@ -321,8 +329,10 @@ class ManyClientsSingleNodeServerInterconnectionTest
 
       //it's required to close a current commit log file
       TestTimer.updateTime(TestTimer.getCurrentTime + maxIdleTimeBetweenRecordsMs)
-      Await.result(firstClient.putConsumerCheckpoint(getRandomConsumerTransaction(streamID, stream)), secondsWait.seconds)
-      //it's required to a CommitLogToRocksWriter writes the producer transactions to db
+
+      Await.result(firstClient.putTransaction(getRandomConsumerTransaction(streamID, stream)), secondsWait.seconds)
+      //it's required to a CommitLogToBerkeleyWriter writes the producer transactions to db
+
       transactionServer.scheduledCommitLog.run()
       transactionServer.commitLogToRocksWriter.run()
 
@@ -386,7 +396,7 @@ class ManyClientsSingleNodeServerInterconnectionTest
 
       val dataAmount = 10
 
-      val firstClient = clients(0)
+      val firstClient = clients.head
       val secondClient = clients(1)
 
       val streamID = Await.result(firstClient.putStream(stream), secondsWait.seconds)

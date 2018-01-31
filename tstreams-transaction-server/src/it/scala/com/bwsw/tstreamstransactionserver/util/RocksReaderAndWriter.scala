@@ -19,6 +19,7 @@
 
 package com.bwsw.tstreamstransactionserver.util
 
+import com.bwsw.tstreamstransactionserver.netty.server.authService.OpenedTransactions
 import com.bwsw.tstreamstransactionserver.netty.server.db.KeyValueDbBatch
 import com.bwsw.tstreamstransactionserver.netty.server.db.zk.ZookeeperStreamRepository
 import com.bwsw.tstreamstransactionserver.netty.server.storage.rocks.MultiAndSingleNodeRockStorage
@@ -29,10 +30,10 @@ import com.bwsw.tstreamstransactionserver.options.SingleNodeServerOptions.{Rocks
 import com.bwsw.tstreamstransactionserver.util.multiNode.MultiNodeUtils
 import org.apache.curator.framework.CuratorFramework
 
-
 class RocksReaderAndWriter(zkClient: CuratorFramework,
                            val storageOptions: StorageOptions,
-                           rocksStorageOpts: RocksStorageOptions) {
+                           rocksStorageOpts: RocksStorageOptions,
+                           tokenTtlSec: Int) {
 
   private val rocksStorage =
     new MultiAndSingleNodeRockStorage(
@@ -50,9 +51,12 @@ class RocksReaderAndWriter(zkClient: CuratorFramework,
       streamRepository
     )
 
+  val openedTransactions = OpenedTransactions(tokenTtlSec)
+
   val rocksWriter = new RocksWriter(
     rocksStorage,
-    transactionDataService
+    transactionDataService,
+    openedTransactions
   )
 
   val rocksReader = new RocksReader(
@@ -70,6 +74,6 @@ class RocksReaderAndWriter(zkClient: CuratorFramework,
   def closeDBAndDeleteFolder(): Unit = {
     rocksStorage.getStorageManager.closeDatabases()
     transactionDataService.closeTransactionDataDatabases()
-    MultiNodeUtils.deleteDirectories(storageOptions)
+    Utils.deleteDirectories(storageOptions)
   }
 }

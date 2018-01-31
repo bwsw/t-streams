@@ -33,7 +33,6 @@ import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeeperServi
 import com.bwsw.tstreamstransactionserver.netty.server.multiNode.commitLogService.CommitLogService
 import com.bwsw.tstreamstransactionserver.netty.server.multiNode.handler.Utils._
 import com.bwsw.tstreamstransactionserver.netty.server.multiNode.handler.commitLog.GetCommitLogOffsetsHandler
-import com.bwsw.tstreamstransactionserver.netty.server.multiNode.handler.consumer.PutConsumerCheckpointHandler
 import com.bwsw.tstreamstransactionserver.netty.server.multiNode.handler.data.{PutProducerStateWithDataHandler, PutSimpleTransactionAndDataHandler, PutTransactionDataHandler}
 import com.bwsw.tstreamstransactionserver.netty.server.multiNode.handler.metadata.{OpenTransactionHandler, PutTransactionHandler, PutTransactionsHandler}
 import com.bwsw.tstreamstransactionserver.netty.server.subscriber.OpenedTransactionNotifier
@@ -82,7 +81,7 @@ class CommonCheckpointGroupHandlerRouter(server: TransactionServer,
     Seq(
       new PutTransactionHandler(commonMaster, commitLogContext),
       new PutTransactionsHandler(checkpointMaster, commitLogContext),
-      new PutConsumerCheckpointHandler(commonMaster, commitLogContext))
+    )
       .map(handlerAuthMetadata),
 
     Seq(

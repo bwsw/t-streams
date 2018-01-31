@@ -179,6 +179,7 @@ class PutSimpleTransactionAndDataHandler(server: TransactionServer,
             val record = new Record(
               Frame.PutSimpleTransactionAndDataType,
               System.currentTimeMillis(),
+              message.token,
               requestBody
             ).toByteArray
 
@@ -186,6 +187,7 @@ class PutSimpleTransactionAndDataHandler(server: TransactionServer,
             ledgerHandler.asyncAddEntry(record, callback, promise)
         }
       }(context)
+
       promise.future
     }
 
@@ -216,6 +218,7 @@ class PutSimpleTransactionAndDataHandler(server: TransactionServer,
             val record = new Record(
               Frame.PutSimpleTransactionAndDataType,
               System.currentTimeMillis(),
+              message.token,
               requestBody
             ).toByteArray
 

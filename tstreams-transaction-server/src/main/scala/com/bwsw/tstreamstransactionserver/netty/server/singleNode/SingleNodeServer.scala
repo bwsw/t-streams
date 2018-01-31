@@ -26,6 +26,7 @@ import java.util.concurrent.{Executors, PriorityBlockingQueue, TimeUnit}
 import com.bwsw.commitlog.filesystem.{CommitLogCatalogue, CommitLogFile, CommitLogStorage}
 import com.bwsw.tstreamstransactionserver.configProperties.ServerExecutionContextGrids
 import com.bwsw.tstreamstransactionserver.netty.server._
+import com.bwsw.tstreamstransactionserver.netty.server.authService.OpenedTransactions
 import com.bwsw.tstreamstransactionserver.netty.server.commitLogService._
 import com.bwsw.tstreamstransactionserver.netty.server.db.rocks.RocksDbConnection
 import com.bwsw.tstreamstransactionserver.netty.server.db.zk.ZookeeperStreamRepository
@@ -97,10 +98,12 @@ class SingleNodeServer(authenticationOpts: AuthenticationOptions,
       zkStreamRepository
     )
 
+  protected val openedTransactions = OpenedTransactions(authenticationOpts.tokenTtlSec)
+
   protected lazy val rocksWriter: RocksWriter = new RocksWriter(
     storage,
-    transactionDataService
-  )
+    transactionDataService,
+    openedTransactions)
 
   private val rocksReader = new RocksReader(
     storage,

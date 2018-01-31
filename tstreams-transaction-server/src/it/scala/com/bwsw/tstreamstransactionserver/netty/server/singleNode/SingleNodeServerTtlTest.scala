@@ -28,7 +28,7 @@ import com.bwsw.tstreamstransactionserver.netty.server.storage.rocks.MultiAndSin
 import com.bwsw.tstreamstransactionserver.rpc.TransactionStates.Checkpointed
 import com.bwsw.tstreamstransactionserver.rpc.{ProducerTransaction, TransactionInfo}
 import com.bwsw.tstreamstransactionserver.util.Utils.startZookeeperServer
-import com.bwsw.tstreamstransactionserver.util.{Utils, ZkSeverTxnServerTxnClient}
+import com.bwsw.tstreamstransactionserver.util.{SingleNodeServerWithClient, Utils}
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 
 import scala.concurrent.Await
@@ -108,7 +108,7 @@ class SingleNodeServerTtlTest extends FlatSpec with Matchers with BeforeAndAfter
   }
 
 
-  private def transactionExistsInStorage(bundle: ZkSeverTxnServerTxnClient) = {
+  private def transactionExistsInStorage(bundle: SingleNodeServerWithClient) = {
     val rocksStorage = new MultiAndSingleNodeRockStorage(
       bundle.serverBuilder.getStorageOptions,
       bundle.serverBuilder.getRocksStorageOptions,
@@ -124,7 +124,7 @@ class SingleNodeServerTtlTest extends FlatSpec with Matchers with BeforeAndAfter
     result
   }
 
-  private def transactionDataExistsInStorage(bundle: ZkSeverTxnServerTxnClient, streamID: Int) = {
+  private def transactionDataExistsInStorage(bundle: SingleNodeServerWithClient, streamID: Int) = {
     val storageOptions = bundle.serverBuilder.getStorageOptions
     val path = Paths.get(storageOptions.path, storageOptions.dataDirectory, streamID.toString).toString
     val connection = new RocksDbConnection(

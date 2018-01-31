@@ -20,12 +20,11 @@
 package com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeeperService.hierarchy
 
 
-import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeeperService.metadata.{LedgerMetadata, MetadataRecord}
-import com.bwsw.tstreamstransactionserver.netty.server.storage.Storage
 import com.bwsw.tstreamstransactionserver.netty.server._
 import com.bwsw.tstreamstransactionserver.netty.server.batch.{BigCommit, BigCommitWithFrameParser}
-import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeeperService.BookkeeperRecordFrame
+import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeeperService.metadata.{LedgerMetadata, MetadataRecord}
 import com.bwsw.tstreamstransactionserver.netty.server.multiNode.commitLogService.CommitLogService
+import com.bwsw.tstreamstransactionserver.netty.server.storage.Storage
 
 
 class BookkeeperToRocksWriter(zkMultipleTreeListReader: ZkMultipleTreeListReader,
@@ -35,7 +34,8 @@ class BookkeeperToRocksWriter(zkMultipleTreeListReader: ZkMultipleTreeListReader
   private def getBigCommit(processedLastRecordIDsAcrossLedgers: Array[LedgerMetadata]): BigCommitWithFrameParser = {
     val value = MetadataRecord(processedLastRecordIDsAcrossLedgers).toByteArray
     val bigCommit = new BigCommit(rocksWriter, Storage.BOOKKEEPER_LOG_STORE, BigCommit.bookkeeperKey, value)
-    new BigCommitWithFrameParser(bigCommit)
+
+    new BigCommitWithFrameParser(bigCommit, rocksWriter.openedTransactions)
   }
 
   def processAndPersistRecords(): Boolean = {
@@ -50,7 +50,7 @@ class BookkeeperToRocksWriter(zkMultipleTreeListReader: ZkMultipleTreeListReader
     }
     else {
       val bigCommit = getBigCommit(ledgerIDsAndTheirLastRecordIDs)
-      val frames = records.map(record => new BookkeeperRecordFrame(record))
+      val frames = records.map(_.toFrame)
 
       bigCommit.addFrames(frames)
       bigCommit.commit()

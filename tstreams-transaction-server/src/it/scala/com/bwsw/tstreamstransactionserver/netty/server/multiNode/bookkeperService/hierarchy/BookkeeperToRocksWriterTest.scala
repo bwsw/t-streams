@@ -22,15 +22,16 @@ package com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeperServi
 import java.util.concurrent.atomic.AtomicLong
 
 import com.bwsw.tstreamstransactionserver.netty.Protocol
+import com.bwsw.tstreamstransactionserver.netty.server.authService.AuthService
 import com.bwsw.tstreamstransactionserver.netty.server.batch.Frame
 import com.bwsw.tstreamstransactionserver.netty.server.consumerService.{ConsumerTransactionKey, ConsumerTransactionRecord}
 import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeeperService.data.Record
 import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeeperService.hierarchy.{BookkeeperToRocksWriter, LongNodeCache, LongZookeeperTreeList, ZkMultipleTreeListReader}
 import com.bwsw.tstreamstransactionserver.rpc.TransactionStates.{Checkpointed, Opened}
 import com.bwsw.tstreamstransactionserver.rpc._
+import com.bwsw.tstreamstransactionserver.util.Utils
 import com.bwsw.tstreamstransactionserver.util.Utils.uuid
 import com.bwsw.tstreamstransactionserver.util.multiNode.MultiNodeUtils
-import com.bwsw.tstreamstransactionserver.util.{Utils, multiNode}
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 
 import scala.collection.mutable
@@ -43,6 +44,8 @@ class BookkeeperToRocksWriterTest
 
   private val streamIDGen = new java.util.concurrent.atomic.AtomicInteger(0)
   private val partitionsNumber = 100
+  private val token = 846487864
+  private val transactionTtl: Long = 50000
 
   private def generateStream =
     Stream(
@@ -85,7 +88,8 @@ class BookkeeperToRocksWriterTest
                                                       streamID: Int,
                                                       partition: Int,
                                                       state: TransactionStates,
-                                                      ttlTxn: Long) = {
+                                                      ttlTxn: Long,
+                                                      token: Int = AuthService.UnauthenticatedToken) = {
     (0 until transactionNumber)
       .map(txnID => buildProducerTransaction(
         streamID,
@@ -101,6 +105,7 @@ class BookkeeperToRocksWriterTest
         new Record(
           Frame.PutTransactionType,
           transactionIDGen.getAndIncrement(),
+          token,
           binaryTransaction
         )
       }
@@ -127,6 +132,7 @@ class BookkeeperToRocksWriterTest
         val record = new Record(
           Frame.PutTransactionType,
           transactionIDGen.getAndIncrement(),
+          token,
           binaryTransaction
         )
 
@@ -179,7 +185,7 @@ class BookkeeperToRocksWriterTest
         stream.id,
         partition,
         Opened,
-        50000L
+        transactionTtl
       )
 
     val firstTimestamp =
@@ -195,7 +201,7 @@ class BookkeeperToRocksWriterTest
         stream.id,
         partition,
         Checkpointed,
-        50000L
+        transactionTtl
       )
 
     val secondTimestamp =
@@ -303,6 +309,7 @@ class BookkeeperToRocksWriterTest
 
 
   it should "return checkpointed transactions and process entirely 1-st ledger records and half of records of 2-nd ledgers" in {
+    val token = Random.nextInt()
     val stream = generateStream
     val partition = 1
 
@@ -313,14 +320,15 @@ class BookkeeperToRocksWriterTest
     val firstTimestamp =
       atomicLong.get()
 
-    val firstTreeRecords =
+    val firstTreeRecords = new Record(Frame.TokenCreatedType, firstTimestamp, token, Array.emptyByteArray) +:
       genProducerTransactionsWrappedInRecords(
         atomicLong,
         producerTransactionsNumber,
         stream.id,
         partition,
         Opened,
-        50000L
+        transactionTtl,
+        token
       )
 
 
@@ -337,9 +345,9 @@ class BookkeeperToRocksWriterTest
         stream.id,
         partition,
         Checkpointed,
-        50000L
+        transactionTtl,
+        token
       )
-
 
     val storage = new LedgerManagerInMemory
 

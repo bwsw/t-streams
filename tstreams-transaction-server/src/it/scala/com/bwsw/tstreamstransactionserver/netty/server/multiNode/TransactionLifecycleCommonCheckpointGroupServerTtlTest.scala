@@ -32,7 +32,6 @@ import org.apache.bookkeeper.zookeeper.ZooKeeperClient
 import org.apache.curator.framework.CuratorFramework
 import org.scalatest.{Matchers, Outcome, fixture}
 import com.bwsw.tstreamstransactionserver.util.multiNode.CommonCheckpointGroupServerTtlUtils._
-import com.bwsw.tstreamstransactionserver.util.multiNode.ZkServerTxnMultiNodeServerTxnClient
 import com.bwsw.tstreamstransactionserver.util.multiNode.MultiNodeUtils._
 
 import scala.concurrent.Await
@@ -104,7 +103,7 @@ class TransactionLifecycleCommonCheckpointGroupServerTtlTest extends fixture.Fla
 
   "Client" should "receive transactions even though expired ledgers are deleted according to settings " +
     "if a server works in a stable way" in { fixture =>
-    val bundle: ZkServerTxnMultiNodeServerTxnClient = getCommonCheckpointGroupServerBundle(
+    val bundle = getCommonCheckpointGroupServerBundle(
       fixture.zkClient, bookkeeperOptions, serverBuilder, clientBuilder, toMs(maxIdleTimeBetweenRecords)
     )
     val cgPath = bundle.serverBuilder.getCommonPrefixesOptions.checkpointGroupPrefixesOptions.checkpointGroupZkTreeListPrefix

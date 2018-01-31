@@ -28,7 +28,6 @@ import org.apache.curator.framework.CuratorFramework
 import org.scalatest.{Matchers, Outcome, fixture}
 import com.bwsw.tstreamstransactionserver.util.multiNode.CommonCheckpointGroupServerTtlUtils._
 import com.bwsw.tstreamstransactionserver.util.Utils._
-import com.bwsw.tstreamstransactionserver.util.multiNode.ZkServerTxnMultiNodeServerTxnClient
 import com.bwsw.tstreamstransactionserver.util.multiNode.MultiNodeUtils._
 import scala.util.{Failure, Success, Try}
 
@@ -90,7 +89,7 @@ class IdleCommonCheckpointGroupServerTtlTest extends fixture.FlatSpec with Match
 
   "Expired ledgers" should "be deleted according to settings if a server works in a stable way" in {
     fixture =>
-      val bundle: ZkServerTxnMultiNodeServerTxnClient = getCommonCheckpointGroupServerBundle(
+      val bundle = getCommonCheckpointGroupServerBundle(
         fixture.zkClient, bookkeeperOptions, serverBuilder, clientBuilder, toMs(maxIdleTimeBetweenRecords)
       )
       val cgPath = bundle.serverBuilder.getCommonPrefixesOptions.checkpointGroupPrefixesOptions.checkpointGroupZkTreeListPrefix

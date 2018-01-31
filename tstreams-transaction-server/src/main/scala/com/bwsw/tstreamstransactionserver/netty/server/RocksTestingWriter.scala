@@ -19,21 +19,24 @@
 
 package com.bwsw.tstreamstransactionserver.netty.server
 
+import com.bwsw.tstreamstransactionserver.netty.server.authService.OpenedTransactions
 import com.bwsw.tstreamstransactionserver.netty.server.consumerService.ConsumerServiceWriter
 import com.bwsw.tstreamstransactionserver.netty.server.consumerService.test.TestConsumerServiceWriter
 import com.bwsw.tstreamstransactionserver.netty.server.storage.Storage
 import com.bwsw.tstreamstransactionserver.netty.server.transactionDataService.TransactionDataService
-import com.bwsw.tstreamstransactionserver.netty.server.transactionMetadataService.test.{TestProducerTransactionsCleaner, TestTransactionMetaServiceWriter}
+import com.bwsw.tstreamstransactionserver.netty.server.transactionMetadataService.testing.{ProducerTransactionsTestingCleaner, TransactionMetaServiceTestingWriter}
 import com.bwsw.tstreamstransactionserver.netty.server.transactionMetadataService.{ProducerTransactionsCleaner, TransactionMetaServiceWriter}
 import com.bwsw.tstreamstransactionserver.rpc.{ConsumerTransaction, ProducerTransaction}
 
-class TestRocksWriter(storage: Storage,
-                      transactionDataService: TransactionDataService,
-                      producerTransactionNotifier: Notifier[ProducerTransaction],
-                      consumerTransactionNotifier: Notifier[ConsumerTransaction])
+class RocksTestingWriter(storage: Storage,
+                         transactionDataService: TransactionDataService,
+                         producerTransactionNotifier: Notifier[ProducerTransaction],
+                         consumerTransactionNotifier: Notifier[ConsumerTransaction],
+                         openedTransactions: OpenedTransactions)
   extends RocksWriter(
     storage,
-    transactionDataService) {
+    transactionDataService,
+    openedTransactions) {
 
   override protected val consumerService: ConsumerServiceWriter =
     new TestConsumerServiceWriter(
@@ -42,13 +45,13 @@ class TestRocksWriter(storage: Storage,
     )
 
   override protected val producerTransactionsCleaner: ProducerTransactionsCleaner =
-    new TestProducerTransactionsCleaner(
+    new ProducerTransactionsTestingCleaner(
       storage.getStorageManager,
-      producerTransactionNotifier
-    )
+      producerTransactionNotifier,
+      openedTransactions)
 
   override protected val transactionMetaServiceWriter: TransactionMetaServiceWriter =
-    new TestTransactionMetaServiceWriter(
+    new TransactionMetaServiceTestingWriter(
       storage.getStorageManager,
       producerStateMachineCache,
       producerTransactionNotifier

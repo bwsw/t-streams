@@ -19,13 +19,14 @@
 
 package com.bwsw.tstreamstransactionserver.netty.server.batch
 
+import com.bwsw.tstreamstransactionserver.netty.server.authService.OpenedTransactions
 import com.bwsw.tstreamstransactionserver.netty.server.consumerService.{ConsumerTransactionKey, ConsumerTransactionRecord}
 import com.bwsw.tstreamstransactionserver.netty.server.transactionMetadataService.ProducerTransactionRecord
-import com.bwsw.tstreamstransactionserver.rpc.Transaction
+import com.bwsw.tstreamstransactionserver.rpc.{Transaction, TransactionStates}
 
 import scala.collection.mutable
 
-class BigCommitWithFrameParser(bigCommit: BigCommit) {
+class BigCommitWithFrameParser(bigCommit: BigCommit, openedTransactionsCache: OpenedTransactions) {
 
   private val producerRecords =
     mutable.ArrayBuffer.empty[ProducerTransactionRecord]
@@ -54,14 +55,24 @@ class BigCommitWithFrameParser(bigCommit: BigCommit) {
   }
 
   private def putProducerTransaction(producerRecords: mutable.ArrayBuffer[ProducerTransactionRecord],
-                                     producerTransactionRecord: ProducerTransactionRecord) = {
+                                     producerTransactionRecord: ProducerTransactionRecord,
+                                     token: Int) = {
     producerRecords += producerTransactionRecord
+
+    producerTransactionRecord.state match {
+      case TransactionStates.Opened =>
+        openedTransactionsCache.add(producerTransactionRecord.transactionID, token)
+      case TransactionStates.Checkpointed | TransactionStates.Cancel =>
+        openedTransactionsCache.remove(producerTransactionRecord.transactionID)
+      case _ =>
+    }
   }
 
   private def decomposeTransaction(producerRecords: mutable.ArrayBuffer[ProducerTransactionRecord],
                                    consumerRecords: mutable.Map[ConsumerTransactionKey, ConsumerTransactionRecord],
                                    transaction: Transaction,
-                                   timestamp: Long) = {
+                                   timestamp: Long,
+                                   token: Int) = {
     transaction.consumerTransaction.foreach { consumerTransaction =>
       val consumerTransactionRecord =
         ConsumerTransactionRecord(consumerTransaction, timestamp)
@@ -71,7 +82,7 @@ class BigCommitWithFrameParser(bigCommit: BigCommit) {
     transaction.producerTransaction.foreach { producerTransaction =>
       val producerTransactionRecord =
         ProducerTransactionRecord(producerTransaction, timestamp)
-      putProducerTransaction(producerRecords, producerTransactionRecord)
+      putProducerTransaction(producerRecords, producerTransactionRecord, token)
     }
   }
 
@@ -124,7 +135,7 @@ class BigCommitWithFrameParser(bigCommit: BigCommit) {
             0)
 
           producerTransactionRecords.foreach(
-            producerTransactionRecord => putProducerTransaction(producerRecords, producerTransactionRecord))
+            producerTransactionRecord => putProducerTransaction(producerRecords, producerTransactionRecord, frame.token))
 
 
         case Frame.PutProducerStateWithDataType =>
@@ -141,33 +152,25 @@ class BigCommitWithFrameParser(bigCommit: BigCommit) {
             producerTransactionAndData.data,
             producerTransactionAndData.from)
 
-          putProducerTransaction(producerRecords, producerTransactionRecord)
-
-
-        case Frame.PutConsumerCheckpointType =>
-          val consumerTransactionArgs = Frame.deserializePutConsumerCheckpoint(frame.body)
-          val consumerTransactionRecord = {
-            import consumerTransactionArgs._
-            ConsumerTransactionRecord(
-              name,
-              streamID,
-              partition,
-              transaction,
-              frame.timestamp)
-          }
-          putConsumerTransaction(consumerRecords, consumerTransactionRecord)
+          putProducerTransaction(producerRecords, producerTransactionRecord, frame.token)
 
 
         case Frame.PutTransactionType =>
           val transaction = Frame.deserializePutTransaction(frame.body).transaction
-          decomposeTransaction(producerRecords, consumerRecords, transaction, frame.timestamp)
+          decomposeTransaction(producerRecords, consumerRecords, transaction, frame.timestamp, frame.token)
 
 
         case Frame.PutTransactionsType =>
           val transactions = Frame.deserializePutTransactions(frame.body).transactions
 
           transactions.foreach(transaction =>
-            decomposeTransaction(producerRecords, consumerRecords, transaction, frame.timestamp))
+            decomposeTransaction(producerRecords, consumerRecords, transaction, frame.timestamp, frame.token))
+
+        case Frame.TokenCreatedType | Frame.TokenUpdatedType =>
+          openedTransactionsCache.tokenCache.add(frame.token, frame.timestamp)
+
+        case Frame.TokenExpiredType =>
+          openedTransactionsCache.tokenCache.remove(frame.token)
 
         case _ =>
       }

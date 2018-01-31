@@ -50,6 +50,7 @@ class ZkMultipleTreeListReaderTest
   private val ensembleNumber = 4
   private val writeQuorumNumber = 3
   private val ackQuorumNumber = 2
+  private val token = 6512463
 
 
   private val bookkeeperOptions = BookkeeperOptions(
@@ -260,6 +261,7 @@ class ZkMultipleTreeListReaderTest
           new Record(
             Frame.PutTransactionType,
             atomicLong.getAndIncrement(),
+            token,
             binaryTransaction
           )
         }
@@ -287,6 +289,7 @@ class ZkMultipleTreeListReaderTest
           new Record(
             Frame.PutTransactionType,
             atomicLong.getAndIncrement(),
+            token,
             binaryTransaction
           )
         }
@@ -416,6 +419,7 @@ class ZkMultipleTreeListReaderTest
           new Record(
             Frame.PutTransactionType,
             atomicLong.getAndIncrement(),
+            token,
             binaryTransaction
           )
         }
@@ -443,6 +447,7 @@ class ZkMultipleTreeListReaderTest
           new Record(
             Frame.PutTransactionType,
             atomicLong.getAndIncrement(),
+            token,
             binaryTransaction
           )
         }
@@ -572,6 +577,7 @@ class ZkMultipleTreeListReaderTest
           new Record(
             Frame.PutTransactionType,
             atomicLong.getAndIncrement(),
+            token,
             binaryTransaction
           )
         }
@@ -597,6 +603,7 @@ class ZkMultipleTreeListReaderTest
           new Record(
             Frame.PutTransactionType,
             atomicLong.getAndIncrement(),
+            token,
             binaryTransaction
           )
         }
@@ -623,6 +630,7 @@ class ZkMultipleTreeListReaderTest
           new Record(
             Frame.PutTransactionType,
             atomicLong.getAndIncrement(),
+            token,
             binaryTransaction
           )
         }
@@ -758,6 +766,7 @@ class ZkMultipleTreeListReaderTest
           new Record(
             Frame.PutTransactionType,
             atomicLong.getAndIncrement(),
+            token,
             binaryTransaction
           )
         }
@@ -785,6 +794,7 @@ class ZkMultipleTreeListReaderTest
           new Record(
             Frame.PutTransactionType,
             atomicLong.getAndIncrement(),
+            token,
             binaryTransaction
           )
         }

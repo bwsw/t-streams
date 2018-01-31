@@ -24,10 +24,16 @@ import org.scalatest.{FlatSpec, Matchers}
 class CommitLogRecordTest extends FlatSpec with Matchers {
 
   "CommitLogRecord" should "be serialized/deserialized" in {
-    val record1 = new CommitLogRecord(0: Byte, "test_data".getBytes())
+    val messageType1: Byte = 0
+    val token1 = 12345
+    val message1 = "test_data"
+    val record1 = CommitLogRecord(messageType1, System.currentTimeMillis(), token1, message1.getBytes())
     CommitLogRecord.fromByteArray(record1.toByteArray).right.get shouldBe record1
 
-    val record2 = new CommitLogRecord(-5: Byte, "".getBytes())
+    val messageType2: Byte = -5
+    val token2 = 762234
+    val message2 = ""
+    val record2 = CommitLogRecord(messageType2, System.currentTimeMillis(), token2, message2.getBytes())
     CommitLogRecord.fromByteArray(record2.toByteArray).right.get shouldBe record2
   }
 

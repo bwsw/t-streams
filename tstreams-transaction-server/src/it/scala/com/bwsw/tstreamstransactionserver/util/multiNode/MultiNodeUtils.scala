@@ -20,10 +20,10 @@
 package com.bwsw.tstreamstransactionserver.util.multiNode
 
 import java.io.File
-import java.nio.file.Paths
 import java.util.concurrent.{CountDownLatch, TimeUnit}
 
 import com.bwsw.tstreamstransactionserver.netty.client.ClientBuilder
+import com.bwsw.tstreamstransactionserver.netty.server.authService.OpenedTransactions
 import com.bwsw.tstreamstransactionserver.netty.server.db.zk.ZookeeperStreamRepository
 import com.bwsw.tstreamstransactionserver.netty.server.multiNode.{CommonCheckpointGroupServerBuilder, CommonCheckpointGroupTestingServer}
 import com.bwsw.tstreamstransactionserver.netty.server.storage.rocks.MultiAndSingleNodeRockStorage
@@ -33,9 +33,8 @@ import com.bwsw.tstreamstransactionserver.options.ClientOptions.ConnectionOption
 import com.bwsw.tstreamstransactionserver.options.CommonOptions.ZookeeperOptions
 import com.bwsw.tstreamstransactionserver.options.MultiNodeServerOptions.{BookkeeperOptions, CheckpointGroupPrefixesOptions}
 import com.bwsw.tstreamstransactionserver.options.SingleNodeServerOptions.{RocksStorageOptions, StorageOptions}
-import org.apache.commons.io.FileUtils
 import org.apache.curator.framework.CuratorFramework
-import com.bwsw.tstreamstransactionserver.util.Utils.{createTtsTempFolder, deleteTempDirectories}
+import com.bwsw.tstreamstransactionserver.util.Utils.createTtsTempFolder
 import com.bwsw.tstreamstransactionserver.util.Utils.getRandomPort
 
 object MultiNodeUtils {
@@ -48,7 +47,7 @@ object MultiNodeUtils {
 
   def uuid: String = java.util.UUID.randomUUID.toString
 
-  def getTransactionServerBundle(zkClient: CuratorFramework): MultiNodeBundle = {
+  def getTransactionServerBundle(zkClient: CuratorFramework, tokenTtlSec: Int = 60): MultiNodeBundle = {
     val dbPath = createTtsTempFolder()
 
     val storageOptions =
@@ -76,11 +75,13 @@ object MultiNodeUtils {
         zkStreamRepository
       )
 
+    val openedTransactionsCache = OpenedTransactions(tokenTtlSec)
+
     val rocksWriter =
       new RocksWriter(
         rocksStorage,
-        transactionDataService
-      )
+        transactionDataService,
+        openedTransactionsCache)
 
     val rocksReader =
       new RocksReader(
@@ -116,8 +117,9 @@ object MultiNodeUtils {
                                            bookkeeperOptions: BookkeeperOptions,
                                            serverBuilder: CommonCheckpointGroupServerBuilder,
                                            clientBuilder: ClientBuilder,
-                                           timeBetweenCreationOfLedgesMs: Int = 200): ZkServerTxnMultiNodeServerTxnClient = {
+                                           timeBetweenCreationOfLedgesMs: Int = 200): CommonCheckpointGroupServerWithClient = {
     val dbPath = createTtsTempFolder()
+
     val zKCommonMasterPrefix = s"/$uuid"
 
     val updatedBuilder = serverBuilder
@@ -187,15 +189,6 @@ object MultiNodeUtils {
       )
       .build()
 
-    new ZkServerTxnMultiNodeServerTxnClient(transactionServer, client, updatedBuilder)
-  }
-
-  def deleteDirectories(storageOptions: StorageOptions): Unit = {
-    deleteTempDirectories()
-    FileUtils.deleteDirectory(new File(Paths.get(storageOptions.path, storageOptions.metadataDirectory).toString))
-    FileUtils.deleteDirectory(new File(Paths.get(storageOptions.path, storageOptions.dataDirectory).toString))
-    FileUtils.deleteDirectory(new File(Paths.get(storageOptions.path, storageOptions.commitLogRawDirectory).toString))
-    FileUtils.deleteDirectory(new File(Paths.get(storageOptions.path, storageOptions.commitLogRocksDirectory).toString))
-    new File(storageOptions.path).delete()
+    new CommonCheckpointGroupServerWithClient(transactionServer, client, updatedBuilder)
   }
 }

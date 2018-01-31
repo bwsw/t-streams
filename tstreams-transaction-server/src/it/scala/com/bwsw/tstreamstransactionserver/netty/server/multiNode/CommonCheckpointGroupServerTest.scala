@@ -25,6 +25,7 @@ import java.util.concurrent.{CountDownLatch, TimeUnit}
 import com.bwsw.tstreamstransactionserver.exception.Throwable.{MasterChangedException, MasterLostException}
 import com.bwsw.tstreamstransactionserver.netty.client.ClientBuilder
 import com.bwsw.tstreamstransactionserver.options.MultiNodeServerOptions.BookkeeperOptions
+import com.bwsw.tstreamstransactionserver.options.SingleNodeServerOptions.AuthenticationOptions
 import com.bwsw.tstreamstransactionserver.rpc.{TransactionInfo, TransactionStates}
 import com.bwsw.tstreamstransactionserver.util.Implicit.ProducerTransactionSortable
 import com.bwsw.tstreamstransactionserver.util.Utils._
@@ -55,6 +56,7 @@ class CommonCheckpointGroupServerTest
 
   private val maxIdleTimeBetweenRecordsMs = 1000
   private lazy val serverBuilder = new CommonCheckpointGroupServerBuilder()
+    .withAuthenticationOptions(AuthenticationOptions(tokenTtlSec = 60))
   private lazy val clientBuilder = new ClientBuilder()
 
 

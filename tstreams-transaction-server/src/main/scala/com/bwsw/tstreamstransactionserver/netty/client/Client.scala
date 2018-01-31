@@ -131,9 +131,6 @@ class Client(clientOpts: ConnectionOptions,
   override def checkStreamExists(name: String): Future[Boolean] =
     inetClientProxy.checkStreamExists(name)
 
-  override def putConsumerCheckpoint(consumerTransaction: ConsumerTransaction): Future[Boolean] =
-    inetClientProxy.putConsumerCheckpoint(consumerTransaction)
-
   override def getConsumerState(name: String,
                                 streamID: Int,
                                 partition: Int): Future[Long] =

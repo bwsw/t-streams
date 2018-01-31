@@ -17,17 +17,18 @@
  * under the License.
  */
 
-package com.bwsw.tstreamstransactionserver.netty.server.transactionMetadataService.test
+package com.bwsw.tstreamstransactionserver.netty.server.transactionMetadataService.testing
 
 import com.bwsw.tstreamstransactionserver.netty.server.Notifier
+import com.bwsw.tstreamstransactionserver.netty.server.authService.OpenedTransactions
 import com.bwsw.tstreamstransactionserver.netty.server.db.KeyValueDbManager
-import com.bwsw.tstreamstransactionserver.netty.server.transactionMetadataService.{ProducerStateMachineCache, ProducerTransactionRecord, TransactionMetaServiceWriter}
+import com.bwsw.tstreamstransactionserver.netty.server.transactionMetadataService.{ProducerTransactionRecord, ProducerTransactionsCleaner}
 import com.bwsw.tstreamstransactionserver.rpc.ProducerTransaction
 
-class TestTransactionMetaServiceWriter(rocksDB: KeyValueDbManager,
-                                       producerStateMachine: ProducerStateMachineCache,
-                                       notifier: Notifier[ProducerTransaction])
-  extends TransactionMetaServiceWriter(rocksDB, producerStateMachine) {
+class ProducerTransactionsTestingCleaner(rocksDB: KeyValueDbManager,
+                                         notifier: Notifier[ProducerTransaction],
+                                         openedTransactions: OpenedTransactions)
+  extends ProducerTransactionsCleaner(rocksDB, openedTransactions) {
   override protected def onStateChange: (ProducerTransactionRecord) => Unit = {
     transaction => {
       notifier.tryCompleteRequests(transaction)

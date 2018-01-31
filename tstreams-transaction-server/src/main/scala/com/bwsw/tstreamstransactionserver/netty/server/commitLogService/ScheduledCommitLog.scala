@@ -24,27 +24,26 @@ import java.util.concurrent.PriorityBlockingQueue
 import com.bwsw.commitlog.CommitLogFlushPolicy.{OnCountInterval, OnRotation, OnTimeInterval}
 import com.bwsw.commitlog.filesystem.{CommitLogFile, CommitLogStorage}
 import com.bwsw.commitlog.{CommitLog, IDGenerator}
+import com.bwsw.tstreamstransactionserver.netty.server.authService.AuthService
 import com.bwsw.tstreamstransactionserver.options.CommitLogWriteSyncPolicy.{EveryNSeconds, EveryNewFile, EveryNth}
 import com.bwsw.tstreamstransactionserver.options.SingleNodeServerOptions.{CommitLogOptions, StorageOptions}
-import org.slf4j.LoggerFactory
 
 class ScheduledCommitLog(pathsToClosedCommitLogFiles: PriorityBlockingQueue[CommitLogStorage],
                          storageOptions: StorageOptions,
                          commitLogOptions: CommitLogOptions,
                          iDGenerator: IDGenerator[Long])
   extends Runnable {
-  private val logger = LoggerFactory.getLogger(this.getClass)
-
   private val commitLog = createCommitLog()
 
   def currentCommitLogFile: Long = commitLog.currentFileID
 
-  def putData(messageType: Byte, message: Array[Byte]) = {
-    commitLog.putRec(message, messageType)
+  def putData(messageType: Byte, message: Array[Byte], token: Int = AuthService.UnauthenticatedToken): Boolean = {
+    commitLog.putRec(message, messageType, token)
+
     true
   }
 
-  def closeWithoutCreationNewFile() = {
+  def closeWithoutCreationNewFile(): Unit = {
     val path = commitLog.close(createNewFile = false)
     pathsToClosedCommitLogFiles.put(new CommitLogFile(path))
   }

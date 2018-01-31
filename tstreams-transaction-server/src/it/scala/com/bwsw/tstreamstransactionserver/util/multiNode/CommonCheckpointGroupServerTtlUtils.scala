@@ -71,7 +71,7 @@ object CommonCheckpointGroupServerTtlUtils {
 
   def toMs(seconds: Int): Int = TimeUnit.SECONDS.toMillis(seconds).toInt
 
-  def fillEntryLog(bundle: ZkServerTxnMultiNodeServerTxnClient, times: Int, entryLogSizeLimit: Int): Int = {
+  def fillEntryLog(bundle: CommonCheckpointGroupServerWithClient, times: Int, entryLogSizeLimit: Int): Int = {
     var totalWaitingTime = System.currentTimeMillis()
     val client = bundle.client
     val stream = getRandomStream
@@ -111,7 +111,7 @@ object CommonCheckpointGroupServerTtlUtils {
     val transactions = txns.map(txn => Transaction(Some(txn), None))
     val request = TransactionService.PutTransactions.Args(transactions)
     val message = Protocol.PutTransactions.encodeRequestToMessage(request)(1L, 1, isFireAndForgetMethod = false)
-    val record = new Record(Frame.PutTransactionsType, System.currentTimeMillis(), message.body).toByteArray
+    val record = new Record(Frame.PutTransactionsType, System.currentTimeMillis(), 1, message.body).toByteArray
 
     record.length
   }

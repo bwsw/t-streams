@@ -45,8 +45,7 @@ class BookKeeperTokenWriter(bookkeeperMaster: BookkeeperMaster,
     Future {
       bookkeeperMaster.doOperationWithCurrentWriteLedger {
         case Right(ledgerHandle) =>
-          val serializedToken = Frame.serializeToken(token)
-          val record = new Record(eventType, timestamp, serializedToken)
+          val record = new Record(eventType, timestamp, token, Array.emptyByteArray)
           ledgerHandle.addEntry(record.toByteArray)
         case Left(_) =>
       }

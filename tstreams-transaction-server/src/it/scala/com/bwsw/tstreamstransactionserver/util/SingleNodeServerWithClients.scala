@@ -17,18 +17,19 @@
  * under the License.
  */
 
+package com.bwsw.tstreamstransactionserver.util
 
-package com.bwsw.tstreamstransactionserver.util.multiNode
+import com.bwsw.tstreamstransactionserver.netty.client.api.TTSClient
+import com.bwsw.tstreamstransactionserver.netty.server.singleNode.{SingleNodeServerBuilder, SingleNodeTestingServer}
 
-import com.bwsw.tstreamstransactionserver.netty.client.api.TTSInetClient
-import com.bwsw.tstreamstransactionserver.netty.server.multiNode.{CommonCheckpointGroupServerBuilder, CommonCheckpointGroupTestingServer}
 
 import scala.util.{Failure, Try}
 
-class ZkServerTxnMultiNodeServerTxnClient(val transactionServer: CommonCheckpointGroupTestingServer,
-                                          val client: TTSInetClient,
-                                          val serverBuilder: CommonCheckpointGroupServerBuilder) {
-  def operate(operation: CommonCheckpointGroupTestingServer => Unit): Unit = {
+class SingleNodeServerWithClients(val transactionServer: SingleNodeTestingServer,
+                                  val clients: Seq[TTSClient],
+                                  val serverBuilder: SingleNodeServerBuilder) {
+
+  def operate(operation: SingleNodeTestingServer => Unit): Unit = {
     val tried = Try(operation(transactionServer))
     closeDbsAndDeleteDirectories()
 
@@ -40,9 +41,9 @@ class ZkServerTxnMultiNodeServerTxnClient(val transactionServer: CommonCheckpoin
 
   def closeDbsAndDeleteDirectories(): Unit = {
     transactionServer.shutdown()
-    client.shutdown()
+    clients.foreach(client => client.shutdown())
 
     val storageOptions = serverBuilder.getStorageOptions
-    MultiNodeUtils.deleteDirectories(storageOptions)
+    Utils.deleteDirectories(storageOptions)
   }
 }

@@ -21,8 +21,6 @@ package com.bwsw.tstreamstransactionserver.netty.server.authService
 
 import com.bwsw.tstreamstransactionserver.netty.server.batch.Frame
 import com.bwsw.tstreamstransactionserver.netty.server.commitLogService.ScheduledCommitLog
-import org.mockito.ArgumentMatchers
-import org.mockito.ArgumentMatchers.argThat
 import org.mockito.Mockito.verify
 import org.scalatest.mockito.MockitoSugar
 import org.scalatest.prop.TableDrivenPropertyChecks
@@ -40,7 +38,7 @@ class CommitLogTokenWriterTest
     with MockitoSugar
     with TableDrivenPropertyChecks {
 
-  "TokenCommitLogWriter" should "write token in CommitLog correctly" in {
+  "CommitLogTokenWriter" should "write token in CommitLog correctly" in {
     val commitLog = mock[ScheduledCommitLog]
     val tokenWriter = new CommitLogTokenWriter(commitLog)
 
@@ -52,9 +50,7 @@ class CommitLogTokenWriterTest
       val token = Random.nextInt()
       method(token)
 
-      verify(commitLog).putData(
-        ArgumentMatchers.eq(recordTypeId),
-        argThat[Array[Byte]](bytes => Frame.deserializeToken(bytes) == token))
+      verify(commitLog).putData(recordTypeId, Array.emptyByteArray, token)
     }
   }
 }

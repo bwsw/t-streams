@@ -28,6 +28,7 @@ import java.util.concurrent.{CountDownLatch, TimeUnit}
 import com.bwsw.tstreamstransactionserver.netty.client.ClientBuilder
 import com.bwsw.tstreamstransactionserver.netty.client.api.TTSClient
 import com.bwsw.tstreamstransactionserver.netty.server.{RocksReader, RocksWriter, TransactionServer}
+import com.bwsw.tstreamstransactionserver.netty.server.authService.OpenedTransactions
 import com.bwsw.tstreamstransactionserver.netty.server.db.zk.ZookeeperStreamRepository
 import com.bwsw.tstreamstransactionserver.netty.server.singleNode.commitLogService.CommitLogService
 import com.bwsw.tstreamstransactionserver.netty.server.singleNode.{SingleNodeServerBuilder, SingleNodeTestingServer}
@@ -239,16 +240,16 @@ object Utils {
     )
   }
 
-  def getRocksReaderAndRocksWriter(zkClient: CuratorFramework): RocksReaderAndWriter = {
+  def getRocksReaderAndRocksWriter(zkClient: CuratorFramework, tokenTtlSec: Int = 60): RocksReaderAndWriter = {
     val dbPath = createTtsTempFolder()
 
     val storageOptions = testStorageOptions(dbPath)
     val rocksStorageOptions = RocksStorageOptions()
 
-    new RocksReaderAndWriter(zkClient, storageOptions, rocksStorageOptions)
+    new RocksReaderAndWriter(zkClient, storageOptions, rocksStorageOptions, tokenTtlSec)
   }
 
-  def getTransactionServerBundle(zkClient: CuratorFramework): TransactionServerBundle = {
+  def getTransactionServerBundle(zkClient: CuratorFramework, tokenTtlSec: Int = 60): TransactionServerBundle = {
     val dbPath = createTtsTempFolder()
 
     val storageOptions = testStorageOptions(dbPath)
@@ -274,11 +275,13 @@ object Utils {
         zkStreamRepository
       )
 
+    val openedTransactionsCache = OpenedTransactions(tokenTtlSec)
+
     val rocksWriter =
       new RocksWriter(
         rocksStorage,
-        transactionDataService
-      )
+        transactionDataService,
+        openedTransactionsCache)
 
     val rocksReader =
       new RocksReader(
@@ -331,9 +334,8 @@ object Utils {
 
   def startTransactionServerAndClient(zkClient: CuratorFramework,
                                       serverBuilder: SingleNodeServerBuilder,
-                                      clientBuilder: ClientBuilder): ZkSeverTxnServerTxnClient = {
+                                      clientBuilder: ClientBuilder): SingleNodeServerWithClient = {
     val dbPath = createTtsTempFolder()
-
     val zKCommonMasterPrefix = s"/$uuid"
 
     val updatedBuilder = serverBuilder
@@ -387,14 +389,15 @@ object Utils {
       .withZookeeperOptions(zookeeperOptions)
       .build()
 
-    new ZkSeverTxnServerTxnClient(transactionServer, client, updatedBuilder)
+    new SingleNodeServerWithClient(transactionServer, client, updatedBuilder)
   }
 
   def startTransactionServerAndClient(zkClient: CuratorFramework,
                                       serverBuilder: SingleNodeServerBuilder,
                                       clientBuilder: ClientBuilder,
-                                      clientsNumber: Int): ZkSeverTxnServerTxnClients = {
+                                      clientsNumber: Int): SingleNodeServerWithClients = {
     val dbPath = createTtsTempFolder()
+
 
     val streamRepositoryPath = s"/$uuid"
 
@@ -450,7 +453,7 @@ object Utils {
         ).build()
     }
 
-    new ZkSeverTxnServerTxnClients(transactionServer, clients, updatedBuilder)
+    new SingleNodeServerWithClients(transactionServer, clients, updatedBuilder)
   }
 
 
@@ -460,5 +463,17 @@ object Utils {
       .map(_.toString)
       .map(new File(_))
       .foreach(FileUtils.deleteDirectory)
+  }
+
+  def deleteDirectories(storageOptions: StorageOptions): Unit = {
+    deleteTempDirectories()
+    Utils.deleteDirectories(
+      storageOptions.path,
+      storageOptions.metadataDirectory,
+      storageOptions.dataDirectory,
+      storageOptions.commitLogRawDirectory,
+      storageOptions.commitLogRocksDirectory)
+
+    new File(storageOptions.path).delete()
   }
 }
