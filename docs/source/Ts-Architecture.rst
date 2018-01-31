@@ -72,7 +72,7 @@ In case Master is down or unavailable, one of the Slaves becomes a Master server
 
 In the fault-tolerant mode implementation, one Master and one or more Slave nodes can be deployed. In a most common scenario, one Master and one Slave are in cluster. 
 
-More than one Master server can be included in the cluster. In this case we will speak about a scalable mode that is described below.
+Servers can be backed up. In this case we will speak about a scalable mode that is described below.
 
 The Storage Server is a sub-project which can be found on `GitHub <https://github.com/bwsw/t-streams/tree/develop/tstreams-transaction-server>`_.
 
@@ -83,9 +83,9 @@ T-streams allows operating in a scalable mode. It is possible in case data proce
 
 Each stream is assigned to a Master server that has a Common role. All operations within each stream will be sent to its server.
 
-For example, there are 3 streams in the process - Stream 1, Stream 2 and Stream 3. Each of the streams is assigned to a Server that it sends operations to. So we involve 3 servers with a Common role into the processing. Producer 1 working with Stream 1 connects to Server 1. Producer 2 working with Stream 2 connects to Server 2. Producer 3 working with Stream 3 connects to Server 3. 
+For example, there are 3 streams in the process - Stream 1, Stream 2 and Stream 3. Each of the streams is assigned to a Server. So we involve 3 servers with a Common role into the processing. Producer 1 working with Stream 1 connects to Server 1. Producer 2 working with Stream 2 connects to Server 2. Producer 3 working with Stream 3 connects to Server 3. 
 
-One more server with a CheckpointGroup role should be added to the cluster to perform all operations for a Checkpoint Group in the process. So all Producers in the runtime will connect to the CheckointGroup server to send operations containing the operations common for all streams in the process.
+One more server with a CheckpointGroup role should be added to the cluster to perform all operations common for all streams in the process. So all Producers in the runtime will connect to the CheckointGroup server to send operations containing the operations for a Producer or Checkpoint Group object.
 
 .. figure:: _static/Architecture-Scale.png
 
