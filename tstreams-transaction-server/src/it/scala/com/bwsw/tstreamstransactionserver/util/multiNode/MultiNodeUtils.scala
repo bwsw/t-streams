@@ -33,9 +33,8 @@ import com.bwsw.tstreamstransactionserver.options.ClientOptions.ConnectionOption
 import com.bwsw.tstreamstransactionserver.options.CommonOptions.ZookeeperOptions
 import com.bwsw.tstreamstransactionserver.options.MultiNodeServerOptions.{BookkeeperOptions, CheckpointGroupPrefixesOptions}
 import com.bwsw.tstreamstransactionserver.options.SingleNodeServerOptions.{RocksStorageOptions, StorageOptions}
+import com.bwsw.tstreamstransactionserver.util.Utils.{createTtsTempFolder, getRandomPort}
 import org.apache.curator.framework.CuratorFramework
-import com.bwsw.tstreamstransactionserver.util.Utils.createTtsTempFolder
-import com.bwsw.tstreamstransactionserver.util.Utils.getRandomPort
 
 object MultiNodeUtils {
   private def testStorageOptions(dbPath: File) = {
@@ -118,8 +117,56 @@ object MultiNodeUtils {
                                            serverBuilder: CommonCheckpointGroupServerBuilder,
                                            clientBuilder: ClientBuilder,
                                            timeBetweenCreationOfLedgesMs: Int = 200): CommonCheckpointGroupServerWithClient = {
+
+    val (serverBuilderWithCommonSettings, clientBuilderWithCommonSettings) =
+      configureServerAndClientBuilders(zkClient, bookkeeperOptions, serverBuilder, clientBuilder)
+
     val dbPath = createTtsTempFolder()
 
+    val serverBuilderWithItsOwnSettings = serverBuilderWithCommonSettings
+      .withServerStorageOptions(
+        serverBuilderWithCommonSettings.getStorageOptions.copy(path = dbPath.getPath))
+      .withBootstrapOptions(
+        serverBuilder.getBootstrapOptions.copy(bindPort = getRandomPort))
+
+    val transactionServer = new CommonCheckpointGroupTestingServer(serverBuilderWithItsOwnSettings)
+
+    val latch = new CountDownLatch(1)
+    new Thread(() => {
+      transactionServer.start(latch.countDown())
+    }).start()
+
+    if (!latch.await(5000, TimeUnit.SECONDS))
+      throw new IllegalStateException()
+
+    val client = clientBuilderWithCommonSettings.build()
+
+    new CommonCheckpointGroupServerWithClient(transactionServer, client, serverBuilderWithItsOwnSettings)
+  }
+
+
+  def getCommonCheckpointGroupCluster(zkClient: CuratorFramework,
+                                      bookkeeperOptions: BookkeeperOptions,
+                                      serverBuilder: CommonCheckpointGroupServerBuilder,
+                                      clientBuilder: ClientBuilder,
+                                      clusterSize: Int,
+                                      timeBetweenCreationOfLedgesMs: Int = 200): CommonCheckpointGroupClusterWithClient = {
+
+    val (serverBuilderWithCommonSettings, clientBuilderWithCommonSettings) =
+      configureServerAndClientBuilders(zkClient, bookkeeperOptions, serverBuilder, clientBuilder)
+
+    new CommonCheckpointGroupClusterWithClient(
+      clientBuilderWithCommonSettings,
+      serverBuilderWithCommonSettings,
+      clusterSize)
+  }
+
+
+  def configureServerAndClientBuilders(zkClient: CuratorFramework,
+                                       bookkeeperOptions: BookkeeperOptions,
+                                       serverBuilder: CommonCheckpointGroupServerBuilder,
+                                       clientBuilder: ClientBuilder,
+                                       timeBetweenCreationOfLedgesMs: Int = 200): (CommonCheckpointGroupServerBuilder, ClientBuilder) = {
     val zKCommonMasterPrefix = s"/$uuid"
 
     val updatedBuilder = serverBuilder
@@ -135,11 +182,7 @@ object MultiNodeUtils {
       )
       .withServerStorageOptions(
         serverBuilder.getStorageOptions.copy(
-          path = dbPath.getPath,
           streamZookeeperDirectory = s"/$uuid")
-      )
-      .withBootstrapOptions(
-        serverBuilder.getBootstrapOptions.copy(bindPort = getRandomPort)
       )
       .withCommonPrefixesOptions(
         serverBuilder.getCommonPrefixesOptions.copy(
@@ -155,40 +198,14 @@ object MultiNodeUtils {
       )
       .withBookkeeperOptions(bookkeeperOptions)
 
-
-    val transactionServer =
-      new CommonCheckpointGroupTestingServer(
-        updatedBuilder.getAuthenticationOptions,
-        updatedBuilder.getPackageTransmissionOptions,
-        updatedBuilder.getZookeeperOptions,
-        updatedBuilder.getBootstrapOptions,
-        updatedBuilder.getCommonRoleOptions,
-        updatedBuilder.getCommonPrefixesOptions,
-        updatedBuilder.getCheckpointGroupRoleOptions,
-        updatedBuilder.getBookkeeperOptions,
-        updatedBuilder.getStorageOptions,
-        updatedBuilder.getRocksStorageOptions,
-        updatedBuilder.getSubscribersUpdateOptions,
-        updatedBuilder.getTracingOptions
-      )
-
-    val latch = new CountDownLatch(1)
-    new Thread(() => {
-      transactionServer.start(latch.countDown())
-    }).start()
-
-    if (!latch.await(5000, TimeUnit.SECONDS))
-      throw new IllegalStateException()
-
-    val client = new ClientBuilder()
+    val updatedClientBuilder = clientBuilder
       .withConnectionOptions(ConnectionOptions(prefix = zKCommonMasterPrefix))
       .withZookeeperOptions(
         ZookeeperOptions(
           endpoints = zkClient.getZookeeperClient.getCurrentConnectionString
         )
       )
-      .build()
 
-    new CommonCheckpointGroupServerWithClient(transactionServer, client, updatedBuilder)
+    (updatedBuilder, updatedClientBuilder)
   }
 }
