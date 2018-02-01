@@ -22,14 +22,15 @@ import com.bwsw.tstreamstransactionserver.netty.client.ClientBuilder
 import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeeperService.hierarchy.LongZookeeperTreeList
 import com.bwsw.tstreamstransactionserver.options.MultiNodeServerOptions.BookkeeperOptions
 import com.bwsw.tstreamstransactionserver.options.SingleNodeServerOptions.StorageOptions
+import com.bwsw.tstreamstransactionserver.util.Utils._
+import com.bwsw.tstreamstransactionserver.util.multiNode.CommonCheckpointGroupServerTtlUtils._
+import com.bwsw.tstreamstransactionserver.util.multiNode.MultiNodeUtils._
 import org.apache.bookkeeper.meta.{LedgerManager, LedgerManagerFactory}
 import org.apache.bookkeeper.zookeeper.ZooKeeperClient
 import org.apache.curator.framework.CuratorFramework
 import org.scalatest.{Matchers, Outcome, fixture}
-import com.bwsw.tstreamstransactionserver.util.multiNode.CommonCheckpointGroupServerTtlUtils._
-import com.bwsw.tstreamstransactionserver.util.Utils._
-import com.bwsw.tstreamstransactionserver.util.multiNode.MultiNodeUtils._
-import scala.util.{Failure, Success, Try}
+
+import scala.util.Try
 
 class IdleCommonCheckpointGroupServerTtlTest extends fixture.FlatSpec with Matchers {
 
@@ -93,10 +94,10 @@ class IdleCommonCheckpointGroupServerTtlTest extends fixture.FlatSpec with Match
         fixture.zkClient, bookkeeperOptions, serverBuilder, clientBuilder, toMs(maxIdleTimeBetweenRecords)
       )
       val cgPath = bundle.serverBuilder.getCommonPrefixesOptions.checkpointGroupPrefixesOptions.checkpointGroupZkTreeListPrefix
-      val cgTree = new LongZookeeperTreeList(fixture.zkClient, cgPath, false)
+      val cgTree = new LongZookeeperTreeList(fixture.zkClient, cgPath)
 
       val commonPath = bundle.serverBuilder.getCommonPrefixesOptions.commonMasterZkTreeListPrefix
-      val commonTree = new LongZookeeperTreeList(fixture.zkClient, commonPath, false)
+      val commonTree = new LongZookeeperTreeList(fixture.zkClient, commonPath)
 
       val trees = Set(cgTree, commonTree)
 
