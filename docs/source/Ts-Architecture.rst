@@ -15,7 +15,7 @@ offering competitive performance in transactional messaging.
 
 T-streams includes the following components:
 
-1. **Storage Server** that is responsible for all operations performed with transactions and their data. 
+1. **Storage Server** that is responsible for all operations performed with transactions and their data. Server contains a local storage and a commit log. Local storage is implemented with RocksDB. A commit log can be an internal file or a distributed commit log service provided by Apache BookKeeper.
 #. **Producers** that create transactions with data.
 #. **Consumers**, **Subscribers** that read the transactions.
 
@@ -39,15 +39,17 @@ The following infrastructure components are required in T-streams:
 
 1. **Apache ZooKeeper** that is responsible for coordination and synchronization of processes.
 #. **RocksDB** that is a local storage fulfilling a very important feature – an atomic batch operation which allows implementing atomic and reliable commit logs processing. 
-#. **Apache BookKeeper** used as a distributed commit log. It is a service that provides a persistent, fault-tolerant log-structured storage. BookKeeper is an optional part used in the fault-tolerant configuration. It orderly stores elements and replicates them across multiple nodes to synchronize the servers' states.
+#. **Apache BookKeeper** used as a distributed commit log. It is a service that provides a persistent, fault-tolerant log-structured storage. BookKeeper is an optional part used in the fault-tolerant configuration. It orderly stores elements and replicates them across multiple nodes to synchronize the servers' states. In a single-node configuration BookKeeper is not required. Sever's internal commit log file is used instead.
 
-Look at the figure below that describes T-streams with its infrasctructure: 
+At the figure below T-streams infrasctructure is presented: 
 
 .. figure:: _static/Architecture_General2.png
 
-Thus, Server publishes an endpoint to ZooKeeper. Agents (eg. Producers and Consumers) read the endpoint, discover Server and connect to it to create/read transactions with data. The Server writes the operations, transactions with data and meta-data to the internal commit log and stores data to Server's local storage. Consumers and Subscribers read these transactions and their data from the Server. 
+Thus, Server publishes an endpoint to ZooKeeper. Agents (eg. Producers and Consumers) read the endpoint, discover Server and connect to it to create/read transactions with data. 
 
-This is a simplified description of T-streams architecture.
+Producers write the operations, transactions with data and meta-data to Server's internal commit log, or BookKeeper in the multi-node configuration, and stores data to Server's local storage. Consumers and Subscribers read these transactions and their data from the Server's storage. See the :ref:`Data_Flow` section for more details on data flow in T-streams.
+
+This is a simplified description of T-streams architecture and operations. Next we will gain a deeper insight into T-stream key component - Storage Server.
 
 Storage Server
 -----------------
@@ -58,7 +60,9 @@ The Storage Server is an external process which keeps transactions and their dat
 
 The Server consists of two internal parts: Master and Slave. All operations (i.e. create, retrieve, update, delete a transaction) are performed on Master. 
 
-Master orderly writes the operations to Server's internal commit log or BookKeeper. In the single-node mode Master stores metadata to the commit log, and data (if any exist in an operation) directly to the storage (RocksDB). Then Slave reads the operations from the commit log and stores them to RocksDB. 
+Master orderly writes the operations to Server's internal commit log or BookKeeper. In the single-node mode Master stores metadata to the commit log, and data (if any exist in an operation) directly to the storage (RocksDB). 
+
+Then Slave reads the operations from the commit log and stores them to RocksDB. 
 
 Receiving data request, Master takes data from RocksDB to return them to an agent (Consumer or Subscriber):
 
@@ -97,6 +101,8 @@ One more server with a CheckpointGroup role should be added to the cluster to pe
 
 The checkpoint operation allows fixing a lot of transactions as a single operation. Frequent checkpointing leads to a slowdown in performance, so it is preferable to do checkpoint as rare as possible and use group checkpoint operations.
 
+.. _Data_Flow:
+
 Data Flow
 -------------------
 
@@ -106,14 +112,16 @@ Look at the figure below. It demonstrates the data flow between a Producer and a
 
 .. figure:: _static/Architecture-DataFlow.png
 
-Once Subscriber starts, it registers in Apache ZooKeeper. Zookeeper provides Producers with the list of Subscribers in the stream. 
+Let us consider it step by step. 
 
-1) Producer sends an open transaction request to Server. Server opens a transaction (``txn1``) and returns an acknowledgment to Producer. Producer sends an open event to Subscriber to inform it of the `txn1` transaction opening.
+1) Once Subscriber starts, it registers in Apache ZooKeeper. Zookeeper provides Producers with the list of Subscribers in the stream. 
 
-2) Producer puts data for the ``txn1`` transaction and they are stored to Commit Log and to RocksDB.
+2) Producer sends an open transaction request to Server. Server opens a transaction (``txn1``) and returns an acknowledgment to Producer. Producer sends an open event to Subscriber to inform it of the ``txn1`` transaction opening.
 
-3) Producer performs transaction checkpoint. Subscriber receives checkpoint event and gets informed of ``txn1`` is checkpointed. Or in case of Cancel operation, Subscriber receives notification the ``txn1`` transaction is canceled.
+3) Producer puts data for the ``txn1`` transaction and they are stored to Commit Log and to RocksDB.
 
-4) After the Checkpoint/Cancel operation Subscriber requests Server for data in `txn1`.
+4) Producer performs transaction checkpoint. Subscriber receives checkpoint event and gets informed of ``txn1`` is checkpointed. Or in case of Cancel operation, Subscriber receives notification the ``txn1`` transaction is canceled.
+
+5) After the Checkpoint/Cancel operation Subscriber requests Server for data in `txn1`.
 
 
