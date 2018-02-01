@@ -83,9 +83,8 @@ class CommonCheckpointGroupServerTest
   val secondsWait = 15
 
   "CommonCheckpointGroupServer" should "[scanTransactions] put transactions and get them back" in {
-    val bundle = MultiNodeUtils.getCommonCheckpointGroupServerBundle(
-      zkClient, bookkeeperOptions, serverBuilder, clientBuilder, maxIdleTimeBetweenRecordsMs
-    )
+    val bundle = MultiNodeUtils.getCommonCheckpointGroupServerBundle(zkClient, bookkeeperOptions, serverBuilder,
+      clientBuilder, maxIdleTimeBetweenRecordsMs)
 
     bundle.operate { transactionServer =>
       val client = bundle.client
@@ -139,9 +138,8 @@ class CommonCheckpointGroupServerTest
   }
 
   it should "put producer and consumer transactions" in {
-    val bundle = MultiNodeUtils.getCommonCheckpointGroupServerBundle(
-      zkClient, bookkeeperOptions, serverBuilder, clientBuilder, maxIdleTimeBetweenRecordsMs
-    )
+    val bundle = MultiNodeUtils.getCommonCheckpointGroupServerBundle(zkClient, bookkeeperOptions, serverBuilder,
+      clientBuilder, maxIdleTimeBetweenRecordsMs)
 
     bundle.operate { _ =>
       val client = bundle.client
@@ -159,9 +157,8 @@ class CommonCheckpointGroupServerTest
   }
 
   it should "put any kind of binary data and get it back" in {
-    val bundle = MultiNodeUtils.getCommonCheckpointGroupServerBundle(
-      zkClient, bookkeeperOptions, serverBuilder, clientBuilder, maxIdleTimeBetweenRecordsMs
-    )
+    val bundle = MultiNodeUtils.getCommonCheckpointGroupServerBundle(zkClient, bookkeeperOptions, serverBuilder,
+      clientBuilder, maxIdleTimeBetweenRecordsMs)
 
     bundle.operate { _ =>
       val client = bundle.client
@@ -197,9 +194,8 @@ class CommonCheckpointGroupServerTest
   }
 
   it should "[putProducerStateWithData] put a producer transaction (Opened) with data, and server should persist data." in {
-    val bundle = MultiNodeUtils.getCommonCheckpointGroupServerBundle(
-      zkClient, bookkeeperOptions, serverBuilder, clientBuilder, maxIdleTimeBetweenRecordsMs
-    )
+    val bundle = MultiNodeUtils.getCommonCheckpointGroupServerBundle(zkClient, bookkeeperOptions, serverBuilder,
+      clientBuilder, maxIdleTimeBetweenRecordsMs)
 
     bundle.operate { transactionServer =>
       val client = bundle.client
@@ -251,9 +247,8 @@ class CommonCheckpointGroupServerTest
   }
 
   "Client" should "throw MasterChangedException when a master changed" in {
-    val bundle1 = MultiNodeUtils.getCommonCheckpointGroupServerBundle(
-      zkClient, bookkeeperOptions, serverBuilder, clientBuilder, maxIdleTimeBetweenRecordsMs
-    )
+    val bundle1 = MultiNodeUtils.getCommonCheckpointGroupServerBundle(zkClient, bookkeeperOptions, serverBuilder,
+      clientBuilder, maxIdleTimeBetweenRecordsMs)
 
     bundle1.operate { server1 =>
       val client = bundle1.client
@@ -261,8 +256,8 @@ class CommonCheckpointGroupServerTest
       val storageOptions = serverBuilder.getStorageOptions.copy(path = s"/tmp/tts-${UUID.randomUUID().toString}")
       val serverBuilder2 = serverBuilder.withServerStorageOptions(storageOptions)
 
-      val bundle2 = MultiNodeUtils.getCommonCheckpointGroupServerBundle(
-        zkClient, bookkeeperOptions, serverBuilder2, clientBuilder, maxIdleTimeBetweenRecordsMs)
+      val bundle2 = MultiNodeUtils.getCommonCheckpointGroupServerBundle(zkClient, bookkeeperOptions, serverBuilder2,
+        clientBuilder, maxIdleTimeBetweenRecordsMs)
 
       bundle2.operate { _ =>
 
@@ -298,8 +293,8 @@ class CommonCheckpointGroupServerTest
   }
 
   it should "disconnect from server when it is off" in {
-    val bundle = MultiNodeUtils.getCommonCheckpointGroupServerBundle(
-      zkClient, bookkeeperOptions, serverBuilder, clientBuilder, maxIdleTimeBetweenRecordsMs)
+    val bundle = MultiNodeUtils.getCommonCheckpointGroupServerBundle(zkClient, bookkeeperOptions, serverBuilder,
+      clientBuilder, maxIdleTimeBetweenRecordsMs)
 
     bundle.operate { server =>
       val client = bundle.client
@@ -315,8 +310,8 @@ class CommonCheckpointGroupServerTest
   }
 
   it should "disconnect from server when master is changed" in {
-    val bundle1 = MultiNodeUtils.getCommonCheckpointGroupServerBundle(
-      zkClient, bookkeeperOptions, serverBuilder, clientBuilder, maxIdleTimeBetweenRecordsMs)
+    val bundle1 = MultiNodeUtils.getCommonCheckpointGroupServerBundle(zkClient, bookkeeperOptions, serverBuilder,
+      clientBuilder, maxIdleTimeBetweenRecordsMs)
 
     bundle1.operate { server1 =>
       val client = bundle1.client
@@ -324,8 +319,8 @@ class CommonCheckpointGroupServerTest
       val storageOptions = serverBuilder.getStorageOptions.copy(path = s"/tmp/tts-${UUID.randomUUID().toString}")
       val serverBuilder2 = serverBuilder.withServerStorageOptions(storageOptions)
 
-      val bundle2 = MultiNodeUtils.getCommonCheckpointGroupServerBundle(
-        zkClient, bookkeeperOptions, serverBuilder2, clientBuilder, maxIdleTimeBetweenRecordsMs)
+      val bundle2 = MultiNodeUtils.getCommonCheckpointGroupServerBundle(zkClient, bookkeeperOptions, serverBuilder2,
+        clientBuilder, maxIdleTimeBetweenRecordsMs)
 
       bundle2.operate { _ =>
         Thread.sleep(1000) // wait until client connected from server

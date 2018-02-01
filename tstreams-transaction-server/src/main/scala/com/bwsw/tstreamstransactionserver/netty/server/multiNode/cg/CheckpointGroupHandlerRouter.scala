@@ -37,6 +37,7 @@ class CheckpointGroupHandlerRouter(checkpointMaster: BookkeeperMaster,
                                    authOptions: AuthenticationOptions)
   extends RequestRouter {
 
+  //todo remove BookKeeperTokenWriter so reimplement AuthService
   private val tokenWriter = new BookKeeperTokenWriter(checkpointMaster, commitLogContext)
   private implicit val authService = new AuthService(authOptions, tokenWriter)
   private implicit val transportValidator = new TransportValidator(packageTransmissionOpts)

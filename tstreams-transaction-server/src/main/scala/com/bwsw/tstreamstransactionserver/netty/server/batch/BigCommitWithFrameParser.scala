@@ -56,7 +56,7 @@ class BigCommitWithFrameParser(bigCommit: BigCommit, openedTransactionsCache: Op
 
   private def putProducerTransaction(producerRecords: mutable.ArrayBuffer[ProducerTransactionRecord],
                                      producerTransactionRecord: ProducerTransactionRecord,
-                                     token: Int) = {
+                                     token: Int): Unit = {
     producerRecords += producerTransactionRecord
 
     producerTransactionRecord.state match {
@@ -72,7 +72,7 @@ class BigCommitWithFrameParser(bigCommit: BigCommit, openedTransactionsCache: Op
                                    consumerRecords: mutable.Map[ConsumerTransactionKey, ConsumerTransactionRecord],
                                    transaction: Transaction,
                                    timestamp: Long,
-                                   token: Int) = {
+                                   token: Int): Unit = {
     transaction.consumerTransaction.foreach { consumerTransaction =>
       val consumerTransactionRecord =
         ConsumerTransactionRecord(consumerTransaction, timestamp)

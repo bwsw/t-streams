@@ -69,7 +69,6 @@ object Common {
       "Oracle Maven2 Repo" at "http://download.oracle.com/maven"),
 
     parallelExecution in ThisBuild := false, //tests property
-    parallelExecution in Test := false,
     fork := true,
     fork in run := true,
     fork in Test := true,

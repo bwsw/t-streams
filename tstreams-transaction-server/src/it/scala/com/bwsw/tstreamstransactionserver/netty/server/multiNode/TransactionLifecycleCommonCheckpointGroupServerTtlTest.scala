@@ -23,7 +23,7 @@ import java.util.concurrent.{CountDownLatch, TimeUnit}
 import com.bwsw.tstreamstransactionserver.netty.client.ClientBuilder
 import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeeperService.hierarchy.LongZookeeperTreeList
 import com.bwsw.tstreamstransactionserver.options.MultiNodeServerOptions.BookkeeperOptions
-import com.bwsw.tstreamstransactionserver.options.SingleNodeServerOptions.StorageOptions
+import com.bwsw.tstreamstransactionserver.options.SingleNodeServerOptions.{AuthenticationOptions, StorageOptions}
 import com.bwsw.tstreamstransactionserver.rpc.TransactionStates.Checkpointed
 import com.bwsw.tstreamstransactionserver.rpc.{TransactionInfo, _}
 import com.bwsw.tstreamstransactionserver.util.Utils._
@@ -103,14 +103,13 @@ class TransactionLifecycleCommonCheckpointGroupServerTtlTest extends fixture.Fla
 
   "Client" should "receive transactions even though expired ledgers are deleted according to settings " +
     "if a server works in a stable way" in { fixture =>
-    val bundle = getCommonCheckpointGroupServerBundle(
-      fixture.zkClient, bookkeeperOptions, serverBuilder, clientBuilder, toMs(maxIdleTimeBetweenRecords)
-    )
+    val bundle = getCommonCheckpointGroupServerBundle(fixture.zkClient, bookkeeperOptions, serverBuilder,
+      clientBuilder, toMs(maxIdleTimeBetweenRecords))
     val cgPath = bundle.serverBuilder.getCommonPrefixesOptions.checkpointGroupPrefixesOptions.checkpointGroupZkTreeListPrefix
-    val cgTree = new LongZookeeperTreeList(fixture.zkClient, cgPath, false)
+    val cgTree = new LongZookeeperTreeList(fixture.zkClient, cgPath)
 
     val commonPath = bundle.serverBuilder.getCommonPrefixesOptions.commonMasterZkTreeListPrefix
-    val commonTree = new LongZookeeperTreeList(fixture.zkClient, commonPath, false)
+    val commonTree = new LongZookeeperTreeList(fixture.zkClient, commonPath)
 
     val trees = Set(cgTree, commonTree)
 
@@ -125,8 +124,9 @@ class TransactionLifecycleCommonCheckpointGroupServerTtlTest extends fixture.Fla
       val openedTransaction = getRandomProducerTransaction(streamId, stream, TransactionStates.Opened)
       val latch1 = new CountDownLatch(1)
       server.notifyProducerTransactionCompleted(
-        txn => txn.transactionID == openedTransaction.transactionID,
-        latch1.countDown()
+        txn => txn.transactionID == openedTransaction.transactionID, {
+          latch1.countDown()
+        }
       )
 
       Await.result(client.putProducerStateWithData(openedTransaction, data, 0), secondsWait.seconds)
@@ -134,13 +134,10 @@ class TransactionLifecycleCommonCheckpointGroupServerTtlTest extends fixture.Fla
       latch1.await(secondsWait, TimeUnit.SECONDS) shouldBe true
 
       //verify that the first transaction has been opened and has data
-      Await.result(
-        client.getTransaction(streamId, partitions, openedTransaction.transactionID
-        ), secondsWait.seconds) shouldBe TransactionInfo(exists = true, Some(openedTransaction))
-      Await.result(
-        client.getTransactionData(
-          streamId, partitions, openedTransaction.transactionID, 0, dataAmount
-        ), secondsWait.seconds) should contain theSameElementsInOrderAs data
+      Await.result(client.getTransaction(streamId, partitions, openedTransaction.transactionID),
+        secondsWait.seconds) shouldBe TransactionInfo(exists = true, Some(openedTransaction))
+      Await.result(client.getTransactionData(streamId, partitions, openedTransaction.transactionID, 0, dataAmount),
+        secondsWait.seconds) should contain theSameElementsInOrderAs data
 
       //verify that a compaction job works properly
       Thread.sleep(toMs(dataCompactionInterval) + gcWaitTimeMs)

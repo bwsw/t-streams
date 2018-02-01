@@ -119,7 +119,7 @@ object MultiNodeUtils {
                                            timeBetweenCreationOfLedgesMs: Int = 200): CommonCheckpointGroupServerWithClient = {
 
     val (serverBuilderWithCommonSettings, clientBuilderWithCommonSettings) =
-      configureServerAndClientBuilders(zkClient, bookkeeperOptions, serverBuilder, clientBuilder)
+      configureServerAndClientBuilders(zkClient, bookkeeperOptions, serverBuilder, clientBuilder, timeBetweenCreationOfLedgesMs)
 
     val dbPath = createTtsTempFolder()
 
@@ -153,7 +153,7 @@ object MultiNodeUtils {
                                       timeBetweenCreationOfLedgesMs: Int = 200): CommonCheckpointGroupClusterWithClient = {
 
     val (serverBuilderWithCommonSettings, clientBuilderWithCommonSettings) =
-      configureServerAndClientBuilders(zkClient, bookkeeperOptions, serverBuilder, clientBuilder)
+      configureServerAndClientBuilders(zkClient, bookkeeperOptions, serverBuilder, clientBuilder, timeBetweenCreationOfLedgesMs)
 
     new CommonCheckpointGroupClusterWithClient(
       clientBuilderWithCommonSettings,

@@ -58,7 +58,7 @@ class CommonCheckpointGroupHandlerRouter(server: TransactionServer,
                                          commitLogContext: ExecutionContext)
   extends RequestRouter {
 
-  private val tokenWriter = new BookKeeperTokenWriter(checkpointMaster, commitLogContext)
+  private val tokenWriter = new BookKeeperTokenWriter(commonMaster, commitLogContext)
   private implicit val authService: AuthService = new AuthService(authOptions, tokenWriter)
 
   private implicit val transportValidator: TransportValidator = new TransportValidator(packageTransmissionOpts)

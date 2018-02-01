@@ -29,11 +29,10 @@ import org.apache.curator.framework.CuratorFramework
   *
   * @param client   zookeeper client
   * @param rootPath node path
-  * @param create   the flag argument specifies whether a znode with rootPath will be created or not (true by default)
   *
   */
-class LongZookeeperTreeList(client: CuratorFramework, rootPath: String, create: Boolean = true)
-  extends ZookeeperTreeList[Long](client, rootPath, create) {
+class LongZookeeperTreeList(client: CuratorFramework, rootPath: String)
+  extends ZookeeperTreeList[Long](client, rootPath) {
 
   override def entityToPath(entity: Long): Array[String] = {
     def splitLongToHexes: Array[String] = {

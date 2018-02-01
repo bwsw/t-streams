@@ -24,19 +24,19 @@ import com.bwsw.tstreamstransactionserver.netty.client.ClientBuilder
 import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeeperService.hierarchy.LongZookeeperTreeList
 import com.bwsw.tstreamstransactionserver.options.MultiNodeServerOptions.BookkeeperOptions
 import com.bwsw.tstreamstransactionserver.options.SingleNodeServerOptions.StorageOptions
+import com.bwsw.tstreamstransactionserver.util.Utils.{uuid, _}
+import com.bwsw.tstreamstransactionserver.util.multiNode.CommonCheckpointGroupServerTtlUtils._
+import com.bwsw.tstreamstransactionserver.util.multiNode.MultiNodeUtils._
 import org.apache.bookkeeper.conf.ServerConfiguration
 import org.apache.bookkeeper.meta.{LedgerManager, LedgerManagerFactory}
 import org.apache.bookkeeper.proto.BookieServer
 import org.apache.bookkeeper.zookeeper.ZooKeeperClient
 import org.apache.curator.framework.CuratorFramework
 import org.scalatest.{Matchers, Outcome, fixture}
-import com.bwsw.tstreamstransactionserver.util.multiNode.CommonCheckpointGroupServerTtlUtils._
 
 import scala.util.{Failure, Success, Try}
-import com.bwsw.tstreamstransactionserver.util.Utils._
-import com.bwsw.tstreamstransactionserver.util.multiNode.MultiNodeUtils._
 
-class TransactionsCreationCommonCheckpointGroupServerTtlTest extends fixture.FlatSpec with Matchers {
+class MasterChangedCommonCheckpointGroupServerTtlTest extends fixture.FlatSpec with Matchers {
 
   private val ensembleNumber = 3
   private val writeQuorumNumber = 3
@@ -100,22 +100,27 @@ class TransactionsCreationCommonCheckpointGroupServerTtlTest extends fixture.Fla
     }
   }
 
-  "Expired ledgers and bk entry logs" should "be deleted according to settings if a server works in a stable way" in { fixture =>
-    val bundle = getCommonCheckpointGroupServerBundle(fixture.zkClient, bookkeeperOptions, serverBuilder,
-      clientBuilder, toMs(maxIdleTimeBetweenRecords))
-    val cgPath = bundle.serverBuilder.getCommonPrefixesOptions.checkpointGroupPrefixesOptions.checkpointGroupZkTreeListPrefix
+  "Expired ledgers and bk entry logs" should "be deleted according to settings if a master changed" in { fixture =>
+    val firstServerNumber = 0
+    val secondServerNumber = 1
+    val cluster = getCommonCheckpointGroupCluster(
+      fixture.zkClient, bookkeeperOptions, serverBuilder, clientBuilder, clusterSize = 2, toMs(maxIdleTimeBetweenRecords))
+
+    val cgPath = cluster.serverBuilder.getCommonPrefixesOptions.checkpointGroupPrefixesOptions.checkpointGroupZkTreeListPrefix
     val cgTree = new LongZookeeperTreeList(fixture.zkClient, cgPath)
 
-    val commonPath = bundle.serverBuilder.getCommonPrefixesOptions.commonMasterZkTreeListPrefix
+    val commonPath = cluster.serverBuilder.getCommonPrefixesOptions.commonMasterZkTreeListPrefix
     val commonTree = new LongZookeeperTreeList(fixture.zkClient, commonPath)
 
     val trees = Set(cgTree, commonTree)
 
-    bundle.operate(_ => {
+    cluster.start(firstServerNumber)
+    cluster.startClient()
+    cluster.operate(() => {
       //create the required number of txns to roll over the initial entryLog (0.log)
       var createdLedgers = 0
       val numberOfEntryLogs = 2
-      val waitingTime = fillEntryLog(bundle.client, numberOfEntryLogs, entryLogSizeLimit)
+      val waitingTime = fillEntryLog(cluster.client, numberOfEntryLogs, entryLogSizeLimit)
 
       if (waitingTime < dataCompactionInterval) {
         Thread.sleep(toMs(dataCompactionInterval))
@@ -128,6 +133,9 @@ class TransactionsCreationCommonCheckpointGroupServerTtlTest extends fixture.Fla
       ledgersExistInZkTree(trees, createdLedgers) shouldBe true
       ledgersExistInBookKeeper(fixture.ledgerManager, createdLedgers) shouldBe true
       entryLogsExistInBookKeeper(fixture.bookieServers.map(_._1), numberOfEntryLogs) shouldBe true
+
+      cluster.start(secondServerNumber)
+      cluster.stop(firstServerNumber)
 
       Thread.sleep(toMs(timeToWaitEntitiesDeletion) + gcWaitTimeMs)
 

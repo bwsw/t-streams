@@ -89,14 +89,13 @@ class IdleCommonCheckpointGroupServerTtlTest extends fixture.FlatSpec with Match
 
   "Expired ledgers" should "be deleted according to settings if a server works in a stable way" in {
     fixture =>
-      val bundle = getCommonCheckpointGroupServerBundle(
-        fixture.zkClient, bookkeeperOptions, serverBuilder, clientBuilder, toMs(maxIdleTimeBetweenRecords)
-      )
+      val bundle = getCommonCheckpointGroupServerBundle(fixture.zkClient, bookkeeperOptions, serverBuilder,
+        clientBuilder, toMs(maxIdleTimeBetweenRecords))
       val cgPath = bundle.serverBuilder.getCommonPrefixesOptions.checkpointGroupPrefixesOptions.checkpointGroupZkTreeListPrefix
-      val cgTree = new LongZookeeperTreeList(fixture.zkClient, cgPath, false)
+      val cgTree = new LongZookeeperTreeList(fixture.zkClient, cgPath)
 
       val commonPath = bundle.serverBuilder.getCommonPrefixesOptions.commonMasterZkTreeListPrefix
-      val commonTree = new LongZookeeperTreeList(fixture.zkClient, commonPath, false)
+      val commonTree = new LongZookeeperTreeList(fixture.zkClient, commonPath)
 
       val trees = Set(cgTree, commonTree)
 

@@ -32,16 +32,14 @@ import scala.annotation.tailrec
   *
   * @param client   zookeeper client
   * @param rootPath node path
-  * @param create   the flag argument specifies whether a znode with rootPath will be created or not (true by default)
   * @tparam T id type
   */
 abstract class ZookeeperTreeList[T](client: CuratorFramework,
-                                    rootPath: String,
-                                    create: Boolean = true)
+                                    val rootPath: String)
   extends EntityPathConverter[T]
     with SerializableEntityId[T] {
 
-  private val rootNode = new RootNode(client, rootPath, create)
+  private val rootNode = new RootNode(client, rootPath)
 
   def firstEntityId: Option[T] = {
     val rootNodeData = rootNode.getData()

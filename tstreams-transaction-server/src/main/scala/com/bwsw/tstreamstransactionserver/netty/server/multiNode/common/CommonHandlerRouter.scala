@@ -45,7 +45,7 @@ import scala.concurrent.ExecutionContext
 
 class CommonHandlerRouter(server: TransactionServer,
                           private implicit val bookkeeperWriter: BookkeeperWriter,
-                          checkpointMaster: BookkeeperMaster,
+                          commonMaster: BookkeeperMaster,
                           commonMasterElector: ZKMasterElector,
                           private implicit val multiNodeCommitLogService: CommitLogService,
                           packageTransmissionOpts: TransportOptions,
@@ -57,7 +57,7 @@ class CommonHandlerRouter(server: TransactionServer,
                           commitLogContext: ExecutionContext)
   extends RequestRouter {
 
-  private val tokenWriter = new BookKeeperTokenWriter(checkpointMaster, commitLogContext)
+  private val tokenWriter = new BookKeeperTokenWriter(commonMaster, commitLogContext)
   private implicit val authService: AuthService = new AuthService(authOptions, tokenWriter)
 
   private implicit val transportValidator: TransportValidator = new TransportValidator(packageTransmissionOpts)
@@ -80,17 +80,17 @@ class CommonHandlerRouter(server: TransactionServer,
       .map(handlerAuth),
 
     Seq(
-      new PutTransactionHandler(checkpointMaster, commitLogContext),
+      new PutTransactionHandler(commonMaster, commitLogContext),
     )
       .map(handlerAuthMetadata),
 
     Seq(
       new OpenTransactionHandler(
-        server, checkpointMaster, notifier, authOptions, orderedExecutionPool, commitLogContext),
-      new PutProducerStateWithDataHandler(checkpointMaster, commitLogContext),
+        server, commonMaster, notifier, authOptions, orderedExecutionPool, commitLogContext),
+      new PutProducerStateWithDataHandler(commonMaster, commitLogContext),
       new PutSimpleTransactionAndDataHandler(
-        server, checkpointMaster, notifier, authOptions, orderedExecutionPool, commitLogContext),
-      new PutTransactionDataHandler(checkpointMaster, serverWriteContext))
+        server, commonMaster, notifier, authOptions, orderedExecutionPool, commitLogContext),
+      new PutTransactionDataHandler(commonMaster, serverWriteContext))
       .map(handlerAuthData),
 
     Seq(

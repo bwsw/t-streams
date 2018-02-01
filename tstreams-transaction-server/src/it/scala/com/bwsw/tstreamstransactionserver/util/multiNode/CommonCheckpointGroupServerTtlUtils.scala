@@ -22,6 +22,7 @@ import java.io.File
 import java.util.concurrent.TimeUnit
 
 import com.bwsw.tstreamstransactionserver.netty.Protocol
+import com.bwsw.tstreamstransactionserver.netty.client.api.TTSInetClient
 import com.bwsw.tstreamstransactionserver.util.Utils._
 import com.bwsw.tstreamstransactionserver.netty.server.batch.Frame
 import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeeperService.data.Record
@@ -71,14 +72,13 @@ object CommonCheckpointGroupServerTtlUtils {
 
   def toMs(seconds: Int): Int = TimeUnit.SECONDS.toMillis(seconds).toInt
 
-  def fillEntryLog(bundle: CommonCheckpointGroupServerWithClient, times: Int, entryLogSizeLimit: Int): Int = {
+  def fillEntryLog(client: TTSInetClient, times: Int, entryLogSizeLimit: Int): Int = {
     var totalWaitingTime = System.currentTimeMillis()
-    val client = bundle.client
     val stream = getRandomStream
     val streamId = Await.result(client.putStream(stream), secondsWait.seconds)
-    val producerTransactions = Array.fill(100)(getRandomProducerTransaction(streamId, stream))
+    val producerTransactions = Array.fill(500)(getRandomProducerTransaction(streamId, stream))
     val size = getSize(producerTransactions)
-    val numberOfEntries = (entryLogSizeLimit / size + 1) * times
+    val numberOfEntries = (entryLogSizeLimit / size + 2) * times
     (0 until numberOfEntries).foreach(_ =>
       Await.result(client.putTransactions(producerTransactions, Seq()), secondsWait.seconds)
     )
