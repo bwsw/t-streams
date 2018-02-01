@@ -53,6 +53,22 @@ class CommonCheckpointGroupTestingServer(authenticationOpts: AuthenticationOptio
     subscribersUpdateOptions,
     tracingOptions) {
 
+  def this(builder: CommonCheckpointGroupServerBuilder) = {
+    this(
+      builder.getAuthenticationOptions,
+      builder.getPackageTransmissionOptions,
+      builder.getZookeeperOptions,
+      builder.getBootstrapOptions,
+      builder.getCommonRoleOptions,
+      builder.getCommonPrefixesOptions,
+      builder.getCheckpointGroupRoleOptions,
+      builder.getBookkeeperOptions,
+      builder.getStorageOptions,
+      builder.getRocksStorageOptions,
+      builder.getSubscribersUpdateOptions,
+      builder.getTracingOptions)
+  }
+
   override protected lazy val rocksWriter: RocksWriter =
     new RocksTestingWriter(
       rocksStorage,
