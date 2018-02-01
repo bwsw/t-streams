@@ -110,7 +110,7 @@ Now having a general idea of the T-streams architecture you can easily understan
 
 Look at the figures below. They demonstrate the data flow between a Producer and a Subscriber. 
 
-Let us consider it step by step. 
+Let us consider them step by step. 
 
 1) Once Subscriber starts, it registers in Apache ZooKeeper. Zookeeper provides Producers with the list of Subscribers in the stream. 
 
