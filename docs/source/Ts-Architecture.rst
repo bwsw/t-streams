@@ -108,9 +108,7 @@ Data Flow
 
 Now having a general idea of the T-streams architecture you can easily understand the data flow in T-streams. 
 
-Look at the figure below. It demonstrates the data flow between a Producer and a Subscriber. 
-
-.. figure:: _static/Architecture-DataFlow.png
+Look at the figures below. They demonstrate the data flow between a Producer and a Subscriber. 
 
 Let us consider it step by step. 
 
@@ -120,8 +118,14 @@ Let us consider it step by step.
 
 3) Producer puts data for the ``txn1`` transaction and they are stored to Commit Log and to RocksDB.
 
-4) Producer performs transaction checkpoint. Subscriber receives checkpoint event and gets informed of ``txn1`` is checkpointed. Or in case of Cancel operation, Subscriber receives notification the ``txn1`` transaction is canceled.
+4) Producer performs transaction checkpoint/canceling. After receiving the acknowledgement of the ``txn1`` checkpoint/cancel, Producer sends the transaction checkpoint/cancel notification to Subscriber.
 
-5) After the Checkpoint/Cancel operation Subscriber requests Server for data in `txn1`.
+.. figure:: _static/Architecture-DataFlow_Prod.png
+
+5) Subscriber receives checkpoint event and gets informed of ``txn1`` is checkpointed. Or in case of Cancel operation, Subscriber receives notification the ``txn1`` transaction is canceled.
+
+6) After the Checkpoint/Cancel operation Subscriber requests Server for data in `txn1`.
+
+.. figure:: _static/Architecture-DataFlow_Subscr.png
 
 
