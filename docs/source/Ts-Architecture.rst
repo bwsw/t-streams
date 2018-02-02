@@ -19,7 +19,7 @@ T-streams includes the following components:
 #. **Producers** that create transactions with data.
 #. **Consumers**, **Subscribers** that read the transactions.
 
-You can see a general description of them at the figure below:
+You can see a general description of them in the figure below:
 
 .. figure:: _static/Architecture_General1.png
 
@@ -31,7 +31,7 @@ T-streams can be configured in two modes:
      - fault-tolerant processing by backing up servers,
      - scalability implemented with sharded servers.
 
-Any configuration requires infrastructure. In the next section you will find more information on infrastructure components in T-streams.
+Any configuration requires infrastructure. In the next section, you will find more information on infrastructure components in T-streams.
 
 Infrastructure Components
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -39,7 +39,7 @@ The following infrastructure components are required in T-streams:
 
 1. **Apache ZooKeeper** that is responsible for coordination and synchronization of processes.
 #. **RocksDB** that is an embedded database fulfilling a very important feature – an atomic batch operation which allows implementing atomic and reliable commit logs processing. 
-#. **Apache BookKeeper** used as a distributed commit log. It is a service that provides a persistent, fault-tolerant log-structured storage. BookKeeper is an optional part used in the fault-tolerant configuration. It orderly stores elements and replicates them across multiple nodes to synchronize the servers' states. In a single-node configuration BookKeeper is not required. Server's internal commit log file is used instead.
+#. **Apache BookKeeper** used as a distributed commit log. It is a service that provides a persistent, fault-tolerant log-structured storage. BookKeeper is an optional part used in the fault-tolerant configuration. It orderly stores elements and replicates them across multiple nodes to synchronize the servers' states. In a single-node configuration, BookKeeper is not required. Server's internal commit log file is used instead.
 
 At the figure below T-streams infrastructure is presented: 
 
@@ -49,7 +49,7 @@ Thus, Server publishes an endpoint to ZooKeeper. Agents (eg. Producers and Consu
 
 Producers write the operations, transactions with data and meta-data to Server's internal commit log, or BookKeeper in the multi-node configuration, and stores data to Server's local storage. Consumers and Subscribers read these transactions and their data from the Server's storage. See the :ref:`Data_Flow` section for more details on data flow in T-streams.
 
-This is a simplified description of T-streams architecture and operations. Next we will gain a deeper insight into T-streams key component - T-streams Transaction Storage Server.
+This is a simplified description of T-streams architecture and operations. Next, we will gain a deeper insight into T-streams key component - T-streams Transaction Storage Server.
 
 T-streams Transaction Storage Server
 --------------------------------------
@@ -70,7 +70,7 @@ Request Handler processes all operations (i.e. create, retrieve, update, delete 
 
 Commit Log Writer orderly writes the operations to Server's internal commit log or BookKeeper. Then Commit Log Reader reads the operations from the commit log and stores them to RocksDB. Receiving data request, Request Handler reads transactions and their data from RocksDB to return them to an agent (Consumer or Subscriber).
 
-In the single-node mode the recording of transaction operations differs from recording of data operations. Commit Log Writer records meta-data to the commit log, storing data (if any exist in an operation) directly to RocksDB. In the figure below the meta-data recording is displayed with green arrows. Data recording flow is displayed with red arrows. 
+In the single-node implementation, the recording of transaction operations differs from the recording of data operations. Commit Log Writer records meta-data to the commit log, storing data (if any exist in an operation) directly to RocksDB. In the figure below the meta-data recording is displayed with green arrows. Data recording flow is displayed with red arrows. 
 
 .. figure:: _static/Architecture-SingleNode.png
 
@@ -78,7 +78,7 @@ Agents discover the Leader server via Apache ZooKeeper. ZooKeeper returns Server
 
 .. figure:: _static/Architecture-Server-OneNode.png
 
-In the fault-tolerant mode implementation, ZooKeeper returns the address of the Leader server to agents. Agents perform operations on Leader that registers them in BookKeeper commit log and stores data to the storage. Followers read from BookKeeper to synchronize their state with the Leader. 
+In the fault-tolerant implementation, ZooKeeper returns the address of the Leader server to agents. Agents perform operations on Leader that registers them in BookKeeper commit log and stores data to the storage. Followers read from BookKeeper to synchronize their state with the Leader. 
 
 .. figure:: _static/Architecture-ServerLeader.png
 
@@ -86,11 +86,11 @@ In case Leader is down or unavailable, one of the Followers becomes a Leader ser
 
 .. figure:: _static/Architecture-ServerFollower.png
 
-In the fault-tolerant mode implementation, one Leader and one or more Followers can be deployed. In a most common scenario, one Leader and one Follower are in a cluster. 
+In the fault-tolerant implementation, one Leader and one or more Followers can be deployed. In a most common scenario, one Leader and one Follower are in a cluster. 
 
-Servers can be backed up. In this case we will speak about a scalable mode that is described below.
+Servers can be backed up. In this case, we will speak about a scalable mode that is described below.
 
-The Storage Server is a sub-project which can be found on `GitHub <https://github.com/bwsw/t-streams/tree/develop/tstreams-transaction-server>`_.
+The T-streams Transaction Storage Server is a sub-project which can be found on `GitHub <https://github.com/bwsw/t-streams/tree/develop/tstreams-transaction-server>`_.
 
 Scalable Mode
 ---------------------
@@ -128,12 +128,11 @@ Let us consider them step by step.
 
 Once all data are stored for the transaction, they get available to Subscriber. It is fulfilled with the following operations:
 
-1) Producer performs transaction checkpoint/canceling (1.1). After receiving the acknowledgement of the ``txn1`` checkpoint/cancel, Producer sends the transaction checkpoint/cancel notification to Subscriber (1.2). Server writes the checkpoint operation to Commit Log (1.3). 
+1) Producer performs transaction checkpoint/canceling (1.1). After receiving the acknowledgment of the ``txn1`` checkpoint/cancel, Producer sends the transaction checkpoint/cancel notification to Subscriber (1.2). Server writes the checkpoint operation to Commit Log (1.3).
 
-2) Subscriber receives checkpoint event and gets informed of ``txn1`` is checkpointed. Or in case of Cancel operation, Subscriber receives notification the ``txn1`` transaction is canceled. Now Subscriber can request
-Server for data in `txn1` (2.1).
+2) Subscriber receives checkpoint event and gets informed of ``txn1`` is checkpointed. Or in case of Cancel operation, Subscriber receives notification the ``txn1`` transaction is canceled. Now Subscriber can request Server for data in ``txn1`` (2.1).
 
-3) Server reads data from RockesDB (2.2) and returns them to Subscriber (2.3)
+3) Server reads data from RocksDB (2.2) and returns them to Subscriber (2.3)
 
 .. figure:: _static/Architecture-DataFlow_Subscr3.png
 
