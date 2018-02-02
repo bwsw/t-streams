@@ -22,7 +22,7 @@ package com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeeperServ
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantReadWriteLock
 
-import com.bwsw.tstreamstransactionserver.exception.Throwable.ServerIsSlaveException
+import com.bwsw.tstreamstransactionserver.exception.Throwable.{MasterIsNotReadyException, ServerIsSlaveException}
 import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeeperService.hierarchy.LongZookeeperTreeList
 import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeeperService.storage.BookKeeperWrapper
 import com.bwsw.tstreamstransactionserver.netty.server.zk.ZKIDGenerator
@@ -51,11 +51,7 @@ class BookkeeperMaster(bookKeeper: BookKeeperWrapper,
       }
   }
 
-  private def closeLedger(ledgerHandle: LedgerHandle): Unit = {
-    Try {
-      ledgerHandle.close()
-    }
-  }
+  private def closeLedger(ledgerHandle: LedgerHandle): Unit = Try(ledgerHandle.close())
 
   private final def whileLeaderDo() = {
 
@@ -76,9 +72,7 @@ class BookkeeperMaster(bookKeeper: BookKeeperWrapper,
             bookKeeper.createLedger(System.currentTimeMillis())
           }.map { ledgerHandle =>
 
-            zkTreeListLedger.createNode(
-              ledgerHandle.id
-            )
+            zkTreeListLedger.createNode(ledgerHandle.id)
             val maybePreviousOpenedLedger = currentOpenedLedger
             lock.writeLock().lock()
             currentOpenedLedger = Some(ledgerHandle)
@@ -102,35 +96,20 @@ class BookkeeperMaster(bookKeeper: BookKeeperWrapper,
   }
 
 
-  @tailrec
-  private def retryToGetLedger: Either[ServerIsSlaveException, LedgerHandle] = {
-    currentOpenedLedger match {
-      case None =>
-        if (master.hasLeadership) {
-          TimeUnit.MILLISECONDS.sleep(10)
-          retryToGetLedger
-        }
-        else
-          Left(new ServerIsSlaveException)
-
-      case Some(openedLedger) =>
-        Right(openedLedger)
-    }
-  }
-
   private def lead(): Unit = {
     closeLastLedger()
     whileLeaderDo()
   }
 
   @throws[Exception]
-  def doOperationWithCurrentWriteLedger[T](operate: Either[ServerIsSlaveException, LedgerHandle] => T): T = {
-
+  def doOperationWithCurrentWriteLedger[T](operate: Either[Exception, LedgerHandle] => T): T = {
     if (master.hasLeadership) {
       lock.readLock().lock()
       val result = Try {
-        val ledgerHandle = retryToGetLedger
-        operate(ledgerHandle)
+        currentOpenedLedger match {
+          case Some(ledgerHandle) => operate(Right(ledgerHandle))
+          case None => operate(Left(new MasterIsNotReadyException))
+        }
       }
       lock.readLock().unlock()
 

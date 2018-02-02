@@ -100,7 +100,7 @@ class BookKeeperLedgerHandle(ledgerHandler: org.apache.bookkeeper.client.LedgerH
 
   override lazy val getCreationTime: Long = {
     val time =
-      ledgerHandler.getCustomMetadata.get(LedgerHandle.KeyTime)
+      ledgerHandler.getCustomMetadata.get(LedgerHandle.TimestampKey)
     val buffer = java.nio.ByteBuffer.wrap(time)
     buffer.getLong
   }

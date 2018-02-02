@@ -24,7 +24,7 @@ import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeeperServi
 import scala.concurrent.Promise
 
 object LedgerHandle {
-  val KeyTime = "t"
+  val TimestampKey = "timestamp"
 
   trait Callback[T] {
     def addComplete(bkCode: Int, promise: Promise[T]): Unit

@@ -26,10 +26,13 @@ object Throwable {
   val zkGetMasterExceptionMessage: String = "Can't get master from ZooKeeper."
   val zkNoConnectionExceptionMessage: String = "Can't connect to ZooKeeper server(s): "
   val PackageTooBigExceptionMessagePart: String = "A size of client[/"
+  val MasterIsNotReadyMessage: String = "Master is not ready yet: it doesn't contains opened ledger."
 
   def byText(text: String): Throwable = text match {
     case TokenInvalidExceptionMessage =>
       new TokenInvalidException
+    case MasterIsNotReadyMessage =>
+      new MasterIsNotReadyException
     case message if message.matches(s"Stream (.*) doesn't exist in database!") =>
       new StreamDoesNotExist(message, isPartialMessage = false)
     case message if message.contains(PackageTooBigExceptionMessagePart) =>
@@ -91,5 +94,7 @@ object Throwable {
     extends IllegalStateException("Client had been shut down. No further operations available.")
 
   class KeepAliveFailedException extends Exception("Keep-alive job failed")
+
+  class MasterIsNotReadyException extends IllegalStateException(MasterIsNotReadyMessage)
 
 }
