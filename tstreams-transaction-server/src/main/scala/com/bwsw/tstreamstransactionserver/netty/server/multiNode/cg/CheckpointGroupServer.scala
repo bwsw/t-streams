@@ -111,10 +111,8 @@ class CheckpointGroupServer(authenticationOpts: AuthenticationOptions,
   private val checkpointMaster = bookkeeperToRocksWriter
     .createCheckpointMaster(
       checkpointGroupMasterElector,
-      zk.idGenerator(
-        checkpointGroupPrefixesOptions
-          .checkpointGroupLastClosedLedger
-      )
+      zk.idGenerator(checkpointGroupPrefixesOptions.checkpointGroupLastClosedLedger),
+      storageOpts.dataCompactionInterval
     )
 
 
@@ -191,5 +189,4 @@ class CheckpointGroupServer(authenticationOpts: AuthenticationOptions,
       bookkeeperToRocksWriter.close()
     }
   }
-
 }

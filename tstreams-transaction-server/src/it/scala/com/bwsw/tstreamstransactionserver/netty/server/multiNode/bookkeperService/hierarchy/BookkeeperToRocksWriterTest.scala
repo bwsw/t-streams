@@ -291,7 +291,7 @@ class BookkeeperToRocksWriterTest
         Set(TransactionStates.Opened)
       )
 
-      val processedLedgerAndRecord1 = commitLogService.getLastProcessedLedgersAndRecordIDs
+      val processedLedgerAndRecord1 = commitLogService.getLastProcessedLedgers
 
 
       result.producerTransactions.length shouldBe producerTransactionsNumber
@@ -300,7 +300,7 @@ class BookkeeperToRocksWriterTest
 
       bookkeeperToRocksWriter.processAndPersistRecords()
 
-      val processedLedgerAndRecord2 = commitLogService.getLastProcessedLedgersAndRecordIDs
+      val processedLedgerAndRecord2 = commitLogService.getLastProcessedLedgers
 
 
       processedLedgerAndRecord1 should contain theSameElementsInOrderAs processedLedgerAndRecord2
@@ -432,7 +432,7 @@ class BookkeeperToRocksWriterTest
         Set()
       )
 
-      val processedLedgerAndRecord1 = commitLogService.getLastProcessedLedgersAndRecordIDs
+      val processedLedgerAndRecord1 = commitLogService.getLastProcessedLedgers
 
 
       result.producerTransactions.length shouldBe producerTransactionsNumber
@@ -442,7 +442,7 @@ class BookkeeperToRocksWriterTest
 
       bookkeeperToRocksWriter.processAndPersistRecords()
 
-      val processedLedgerAndRecord2 = commitLogService.getLastProcessedLedgersAndRecordIDs
+      val processedLedgerAndRecord2 = commitLogService.getLastProcessedLedgers
 
       processedLedgerAndRecord1 should contain theSameElementsInOrderAs processedLedgerAndRecord2
     }
@@ -570,7 +570,7 @@ class BookkeeperToRocksWriterTest
 
       bookkeeperToRocksWriter.processAndPersistRecords()
 
-      val processedLedgerAndRecord1 = commitLogService.getLastProcessedLedgersAndRecordIDs
+      val processedLedgerAndRecord1 = commitLogService.getLastProcessedLedgers
 
       consumerTransactionRecords.foreach {
         case (consumerKey, consumerValue) =>
@@ -583,7 +583,7 @@ class BookkeeperToRocksWriterTest
 
       bookkeeperToRocksWriter.processAndPersistRecords()
 
-      val processedLedgerAndRecord2 = commitLogService.getLastProcessedLedgersAndRecordIDs
+      val processedLedgerAndRecord2 = commitLogService.getLastProcessedLedgers
 
       processedLedgerAndRecord1 should contain theSameElementsInOrderAs processedLedgerAndRecord2
     }

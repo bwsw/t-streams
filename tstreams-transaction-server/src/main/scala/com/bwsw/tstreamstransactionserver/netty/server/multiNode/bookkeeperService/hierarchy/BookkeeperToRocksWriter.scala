@@ -39,17 +39,17 @@ class BookkeeperToRocksWriter(zkMultipleTreeListReader: ZkMultipleTreeListReader
   }
 
   def processAndPersistRecords(): Boolean = {
-    val ledgerRecordIDs = commitLogService
-      .getLastProcessedLedgersAndRecordIDs
+    val lastProcessedLedger = commitLogService
+      .getLastProcessedLedgers
 
-    val (records, ledgerIDsAndTheirLastRecordIDs) =
-      zkMultipleTreeListReader.read(ledgerRecordIDs)
+    val (records, ledgersToProcess) =
+      zkMultipleTreeListReader.read(lastProcessedLedger)
 
     if (records.isEmpty) {
       false
     }
     else {
-      val bigCommit = getBigCommit(ledgerIDsAndTheirLastRecordIDs)
+      val bigCommit = getBigCommit(ledgersToProcess)
       val frames = records.map(_.toFrame)
 
       bigCommit.addFrames(frames)

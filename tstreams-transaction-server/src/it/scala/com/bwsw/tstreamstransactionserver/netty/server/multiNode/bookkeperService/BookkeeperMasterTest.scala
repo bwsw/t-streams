@@ -23,6 +23,7 @@ import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeeperServi
 import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeeperService.{BookkeeperMaster, BookkeeperMasterBundle, LeaderSelectorInterface}
 import com.bwsw.tstreamstransactionserver.netty.server.zk.ZKIDGenerator
 import com.bwsw.tstreamstransactionserver.options.MultiNodeServerOptions.BookkeeperOptions
+import com.bwsw.tstreamstransactionserver.options.SingleNodeServerOptions.StorageOptions
 import com.bwsw.tstreamstransactionserver.util.Utils
 import com.bwsw.tstreamstransactionserver.util.Utils.uuid
 import com.bwsw.tstreamstransactionserver.util.multiNode.MultiNodeUtils
@@ -61,7 +62,7 @@ class BookkeeperMasterTest
 
 
   private val createNewLedgerEveryTimeMs = 250
-
+  private val defaultCompactionInterval = StorageOptions().dataCompactionInterval
 
   private lazy val (zkServer, zkClient, bookies) =
     Utils.startZkServerBookieServerZkClient(bookiesNumber)
@@ -110,7 +111,8 @@ class BookkeeperMasterTest
           masterSelector,
           bookkeeperOptions,
           zkTree1,
-          createNewLedgerEveryTimeMs
+          createNewLedgerEveryTimeMs,
+          defaultCompactionInterval
         )
 
 
@@ -148,7 +150,8 @@ class BookkeeperMasterTest
           masterSelector,
           bookkeeperOptions,
           zkTree1,
-          createNewLedgerEveryTimeMs
+          createNewLedgerEveryTimeMs,
+          defaultCompactionInterval
         )
 
       val bookkeeperMasterBundle =

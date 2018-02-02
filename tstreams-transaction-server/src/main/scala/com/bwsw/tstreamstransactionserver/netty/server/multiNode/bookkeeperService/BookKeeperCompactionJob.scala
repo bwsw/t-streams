@@ -31,13 +31,13 @@ import com.bwsw.tstreamstransactionserver.options.CommonOptions
   * Periodically runs BookKeeper compaction.
   * It's need to delete expired entries from BookKeeper (entry logs) and Zookeeper (ledgers meta).
   *
-  * @param trees      contains ledgers meta
+  * @param tree       contains ledgers meta
   * @param bookKeeper allows managing ledgers
   * @param ttl        the lifetime of a ledger in seconds
   * @param interval   time interval between compactions
   * @param timeUnit   time unit of time interval
   */
-class BookKeeperCompactionJob(trees: Array[LongZookeeperTreeList],
+class BookKeeperCompactionJob(tree: LongZookeeperTreeList,
                               bookKeeper: BookKeeperWrapper,
                               ttl: Long,
                               interval: Long,
@@ -45,14 +45,12 @@ class BookKeeperCompactionJob(trees: Array[LongZookeeperTreeList],
   extends CompactionJob(interval, timeUnit) {
 
   override def compact(): Unit = {
-    trees.foreach(tree => {
       tree.firstEntityId match {
         case Some(firstLedger) =>
           deleteExpiredLedgers(tree, firstLedger)
         case None =>
           logger.info(s"There were no expired ledgers")
       }
-    })
   }
 
   private def deleteExpiredLedgers(tree: LongZookeeperTreeList, firstLedger: Long): Unit = {

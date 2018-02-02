@@ -119,8 +119,7 @@ class CommonServer(authenticationOpts: AuthenticationOptions,
     new CommonBookkeeperWriter(
       zk.client,
       bookkeeperOptions,
-      commonPrefixesOptions,
-      storageOpts.dataCompactionInterval
+      commonPrefixesOptions
     )
 
   private val commonMasterElector =
@@ -134,10 +133,8 @@ class CommonServer(authenticationOpts: AuthenticationOptions,
   private val commonMaster = bookkeeperToRocksWriter
     .createCommonMaster(
       commonMasterElector,
-      zk.idGenerator(
-        commonPrefixesOptions
-          .commonMasterLastClosedLedger
-      )
+      zk.idGenerator(commonPrefixesOptions.commonMasterLastClosedLedger),
+      storageOpts.dataCompactionInterval
     )
 
   private val slave = bookkeeperToRocksWriter

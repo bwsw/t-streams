@@ -51,11 +51,11 @@ class BookKeeperCompactionJobTest extends FlatSpec with Matchers with MockitoSug
   "CompactionJob" should "work properly if there are no ledgers" in new Mocks {
     val ttl: Int = -1
     when(treeList.firstEntityId).thenReturn(None)
-    val compactionJob = new BookKeeperCompactionJob(Array(treeList), bk, ttl, intervalMillis, TimeUnit.MILLISECONDS)
+    val compactionJob = new BookKeeperCompactionJob(treeList, bk, ttl, intervalMillis, TimeUnit.MILLISECONDS)
 
     compactionJob.start()
     Thread.sleep(waitTimeMillis)
-    compactionJob.close()
+    compactionJob.stop()
 
     verify(treeList, times(cycles)).firstEntityId
     verify(treeList, never()).deleteNode(anyInt())
@@ -68,11 +68,11 @@ class BookKeeperCompactionJobTest extends FlatSpec with Matchers with MockitoSug
     when(ledger.getCreationTime).thenReturn(ts)
     when(bk.openLedger(id)).thenReturn(Some(ledger), None)
     when(treeList.firstEntityId).thenReturn(Some(id), None)
-    val compactionJob = new BookKeeperCompactionJob(Array(treeList), bk, ttl, intervalMillis, TimeUnit.MILLISECONDS)
+    val compactionJob = new BookKeeperCompactionJob(treeList, bk, ttl, intervalMillis, TimeUnit.MILLISECONDS)
 
     compactionJob.start()
     Thread.sleep(waitTimeMillis)
-    compactionJob.close()
+    compactionJob.stop()
 
     verify(treeList, times(cycles)).firstEntityId
     verify(bk, times(1)).openLedger(id)
@@ -88,11 +88,11 @@ class BookKeeperCompactionJobTest extends FlatSpec with Matchers with MockitoSug
     when(ledger.getCreationTime).thenReturn(ts)
     when(bk.openLedger(id)).thenReturn(Some(ledger), None)
     when(treeList.firstEntityId).thenReturn(Some(id), None)
-    val compactionJob = new BookKeeperCompactionJob(Array(treeList), bk, ttl, intervalSeconds, TimeUnit.SECONDS)
+    val compactionJob = new BookKeeperCompactionJob(treeList, bk, ttl, intervalSeconds, TimeUnit.SECONDS)
 
     compactionJob.start()
     Thread.sleep(waitTimeSeconds)
-    compactionJob.close()
+    compactionJob.stop()
 
     verify(treeList, times(cycles + numberOfLedgers)).firstEntityId
     verify(bk, times(1)).openLedger(id)
@@ -110,11 +110,11 @@ class BookKeeperCompactionJobTest extends FlatSpec with Matchers with MockitoSug
     when(bk.openLedger(firstId)).thenReturn(Some(ledger), None)
     when(bk.openLedger(secondId)).thenReturn(Some(ledger), None)
     when(treeList.firstEntityId).thenReturn(Some(firstId), Some(secondId), None)
-    val compactionJob = new BookKeeperCompactionJob(Array(treeList), bk, ttl, intervalSeconds, TimeUnit.SECONDS)
+    val compactionJob = new BookKeeperCompactionJob(treeList, bk, ttl, intervalSeconds, TimeUnit.SECONDS)
 
     compactionJob.start()
     Thread.sleep(waitTimeSeconds)
-    compactionJob.close()
+    compactionJob.stop()
 
     verify(treeList, times(cycles + numberOfLedgers)).firstEntityId
     verify(bk, times(1)).openLedger(firstId)
@@ -131,11 +131,11 @@ class BookKeeperCompactionJobTest extends FlatSpec with Matchers with MockitoSug
     val id: Long = Random.nextInt(10)
     when(bk.openLedger(id)).thenReturn(None)
     when(treeList.firstEntityId).thenReturn(Some(id), None)
-    val compactionJob = new BookKeeperCompactionJob(Array(treeList), bk, ttl, intervalMillis, TimeUnit.MILLISECONDS)
+    val compactionJob = new BookKeeperCompactionJob(treeList, bk, ttl, intervalMillis, TimeUnit.MILLISECONDS)
 
     compactionJob.start()
     Thread.sleep(waitTimeMillis)
-    compactionJob.close()
+    compactionJob.stop()
 
     verify(treeList, times(cycles)).firstEntityId
     verify(bk, times(1)).openLedger(id)

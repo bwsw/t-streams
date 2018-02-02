@@ -27,24 +27,22 @@ import com.bwsw.tstreamstransactionserver.netty.server.storage.Storage
 final class CommitLogService(rocksDB: KeyValueDbManager) {
   private val bookkeeperLogDatabase = rocksDB.getDatabase(Storage.BOOKKEEPER_LOG_STORE)
 
-  //TODO rename function
-  def getLastProcessedLedgersAndRecordIDs: Array[LedgerMetadata] = {
+  def getLastProcessedLedgers: Array[LedgerMetadata] = {
     Option(bookkeeperLogDatabase.get(BigCommit.bookkeeperKey))
       .map(MetadataRecord.fromByteArray)
       .map(_.records)
       .getOrElse(Array.empty[LedgerMetadata])
   }
 
-
-  def getMinMaxLedgersIds: MinMaxLedgerIDs = {
-    val ledgers = getLastProcessedLedgersAndRecordIDs
+  def getFirstLedgerId: Long = {
+    val ledgers = getLastProcessedLedgers
     if (ledgers.isEmpty) {
-      MinMaxLedgerIDs(-1L, -1L)
+      -1L
     }
     else {
-      val min = ledgers.minBy(_.id).id
-      val max = ledgers.maxBy(_.id).id
-      MinMaxLedgerIDs(min, max)
+      val firstLedgerId = ledgers.minBy(_.id).id
+
+      firstLedgerId
     }
   }
 }

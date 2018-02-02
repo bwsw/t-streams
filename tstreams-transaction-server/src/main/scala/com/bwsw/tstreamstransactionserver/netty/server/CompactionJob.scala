@@ -35,12 +35,12 @@ import scala.util.Try
   * @param timeUnit time unit of time interval
   */
 
-abstract class CompactionJob(interval: Long, timeUnit: TimeUnit) extends Closeable {
+abstract class CompactionJob(interval: Long, timeUnit: TimeUnit) {
 
   require(interval > 0, "A parameter 'interval' in CompactionJob should be positive")
 
   private val isStarted = new AtomicBoolean(false)
-  private val isClosed = new AtomicBoolean(false)
+  private val isStopped = new AtomicBoolean(false)
   private val executor = Executors.newScheduledThreadPool(0)
   protected val logger: Logger = LoggerFactory.getLogger(this.getClass)
 
@@ -55,7 +55,7 @@ abstract class CompactionJob(interval: Long, timeUnit: TimeUnit) extends Closeab
     * @throws IllegalStateException if this job already started or closed
     */
   def start(): Unit = {
-    if (isClosed.get()) {
+    if (isStopped.get()) {
       throw new IllegalStateException("Cannot start already closed job.")
     } else if (!isStarted.getAndSet(true)) {
       executor.scheduleWithFixedDelay(
@@ -71,8 +71,8 @@ abstract class CompactionJob(interval: Long, timeUnit: TimeUnit) extends Closeab
   /**
     * Stops compaction process
     */
-  override def close(): Unit = {
-    if (!isClosed.getAndSet(true)) {
+  def stop(): Unit = {
+    if (!isStopped.getAndSet(true)) {
       isStarted.set(false)
       executor.shutdown()
     }

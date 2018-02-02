@@ -30,8 +30,7 @@ import org.apache.curator.framework.CuratorFramework
 
 class CommonBookkeeperWriter(zookeeperClient: CuratorFramework,
                              bookkeeperOptions: BookkeeperOptions,
-                             commonPrefixesOptions: CommonPrefixesOptions,
-                             compactionInterval: Long)
+                             commonPrefixesOptions: CommonPrefixesOptions)
   extends BookkeeperWriter(
     zookeeperClient,
     bookkeeperOptions) {
@@ -70,17 +69,6 @@ class CommonBookkeeperWriter(zookeeperClient: CuratorFramework,
     Array(commonMasterLastClosedLedger, checkpointMasterLastClosedLedger)
   lastClosedLedgerHandlers.foreach(_.startMonitor())
 
-  private val maybeCompactionJob =
-    if (bookkeeperOptions.expungeDelaySec > 0)
-      Some(new BookKeeperCompactionJob(
-        zkTreesList,
-        new BookKeeperWrapper(bookKeeper, bookkeeperOptions),
-        bookkeeperOptions.expungeDelaySec,
-        compactionInterval))
-    else None
-
-  maybeCompactionJob.foreach(_.start())
-
   override def getLastConstructedLedger: Long = {
     val ledgerIds =
       for {
@@ -96,12 +84,14 @@ class CommonBookkeeperWriter(zookeeperClient: CuratorFramework,
   }
 
   def createCommonMaster(zKMasterElector: ZKMasterElector,
-                         zkLastClosedLedgerHandler: ZKIDGenerator): BookkeeperMasterBundle = {
+                         zkLastClosedLedgerHandler: ZKIDGenerator,
+                         compactionInterval: Long): BookkeeperMasterBundle = {
     createMaster(
       zKMasterElector,
       zkLastClosedLedgerHandler,
       commonPrefixesOptions.timeBetweenCreationOfLedgersMs,
-      commonMasterZkTreeList
+      commonMasterZkTreeList,
+      compactionInterval
     )
   }
 
@@ -130,10 +120,5 @@ class CommonBookkeeperWriter(zookeeperClient: CuratorFramework,
       lastClosedLedgerHandlers,
       timeBetweenCreationOfLedgersMs
     )
-  }
-
-  override def close(): Unit = {
-    maybeCompactionJob.foreach(_.close())
-    super.close()
   }
 }

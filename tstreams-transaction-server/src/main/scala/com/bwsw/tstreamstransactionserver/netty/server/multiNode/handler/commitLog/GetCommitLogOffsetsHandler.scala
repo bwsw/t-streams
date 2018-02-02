@@ -62,13 +62,9 @@ class GetCommitLogOffsetsHandler(commitLogService: CommitLogService,
     response
   }
 
-  private def process(requestBody: Array[Byte]) = {
-    val ledgers =
-      commitLogService.getMinMaxLedgersIds
+  private def process(requestBody: Array[Byte]): CommitLogInfo = {
+    val firstLedgerId = commitLogService.getFirstLedgerId
 
-    CommitLogInfo(
-      ledgers.minLedgerId,
-      bookkeeperWriter.getLastConstructedLedger
-    )
+    CommitLogInfo(firstLedgerId, bookkeeperWriter.getLastConstructedLedger)
   }
 }

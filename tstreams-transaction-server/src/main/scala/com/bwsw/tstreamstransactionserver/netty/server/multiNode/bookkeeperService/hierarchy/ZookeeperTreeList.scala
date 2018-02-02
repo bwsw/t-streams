@@ -35,7 +35,7 @@ import scala.annotation.tailrec
   * @tparam T id type
   */
 abstract class ZookeeperTreeList[T](client: CuratorFramework,
-                                    val rootPath: String)
+                                    rootPath: String)
   extends EntityPathConverter[T]
     with SerializableEntityId[T] {
 

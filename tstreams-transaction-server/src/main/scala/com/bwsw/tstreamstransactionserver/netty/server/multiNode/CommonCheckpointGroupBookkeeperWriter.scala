@@ -70,17 +70,6 @@ class CommonCheckpointGroupBookkeeperWriter(zookeeperClient: CuratorFramework,
     Array(commonMasterLastClosedLedger, checkpointMasterLastClosedLedger)
   lastClosedLedgerHandlers.foreach(_.startMonitor())
 
-  private val maybeCompactionJob =
-    if (bookkeeperOptions.expungeDelaySec > 0)
-      Some(new BookKeeperCompactionJob(
-        zkTreesList,
-        new BookKeeperWrapper(bookKeeper, bookkeeperOptions),
-        bookkeeperOptions.expungeDelaySec,
-        compactionInterval))
-    else None
-
-  maybeCompactionJob.foreach(_.start())
-
   override def getLastConstructedLedger: Long = {
     val ledgerIds =
       for {
@@ -102,7 +91,8 @@ class CommonCheckpointGroupBookkeeperWriter(zookeeperClient: CuratorFramework,
       zkLastClosedLedgerHandler,
       commonPrefixesOptions
         .timeBetweenCreationOfLedgersMs,
-      commonMasterZkTreeList
+      commonMasterZkTreeList,
+      compactionInterval
     )
   }
 
@@ -114,7 +104,8 @@ class CommonCheckpointGroupBookkeeperWriter(zookeeperClient: CuratorFramework,
       commonPrefixesOptions
         .checkpointGroupPrefixesOptions
         .timeBetweenCreationOfLedgersMs,
-      checkpointMasterZkTreeList
+      checkpointMasterZkTreeList,
+      compactionInterval
     )
   }
 
@@ -144,10 +135,5 @@ class CommonCheckpointGroupBookkeeperWriter(zookeeperClient: CuratorFramework,
       lastClosedLedgerHandlers,
       timeBetweenCreationOfLedgersMs
     )
-  }
-
-  override def close(): Unit = {
-    maybeCompactionJob.foreach(_.close())
-    super.close()
   }
 }

@@ -24,6 +24,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock
 
 import com.bwsw.tstreamstransactionserver.exception.Throwable.ServerIsSlaveException
 import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeeperService.hierarchy.LongZookeeperTreeList
+import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeeperService.storage.BookKeeperWrapper
 import com.bwsw.tstreamstransactionserver.netty.server.zk.ZKIDGenerator
 import com.bwsw.tstreamstransactionserver.options.MultiNodeServerOptions.BookkeeperOptions
 import org.apache.bookkeeper.client.BookKeeper.DigestType
@@ -37,12 +38,21 @@ class BookkeeperMaster(bookKeeper: BookKeeper,
                        master: LeaderSelectorInterface,
                        bookkeeperOptions: BookkeeperOptions,
                        zkTreeListLedger: LongZookeeperTreeList,
-                       timeBetweenCreationOfLedgers: Int)
+                       timeBetweenCreationOfLedgers: Int,
+                       compactionInterval: Long)
   extends Runnable {
 
   private val lock = new ReentrantReadWriteLock()
   @volatile private var currentOpenedLedger: org.apache.bookkeeper.client.LedgerHandle = _
 
+  private val maybeCompactionJob =
+    if (bookkeeperOptions.expungeDelaySec > 0)
+      Some(new BookKeeperCompactionJob(
+        zkTreeListLedger,
+        new BookKeeperWrapper(bookKeeper, bookkeeperOptions),
+        bookkeeperOptions.expungeDelaySec,
+        compactionInterval))
+    else None
 
   private def closeLastLedger(): Unit = {
     zkTreeListLedger
@@ -146,12 +156,12 @@ class BookkeeperMaster(bookKeeper: BookKeeper,
 
     val bytes =
       if (buffer.hasArray)
-      buffer.array()
-    else {
-      val bytes = new Array[Byte](size)
-      buffer.get(bytes)
-      bytes
-    }
+        buffer.array()
+      else {
+        val bytes = new Array[Byte](size)
+        buffer.get(bytes)
+        bytes
+      }
 
     metadata.put(LedgerHandle.KeyTime, bytes)
 
@@ -183,6 +193,7 @@ class BookkeeperMaster(bookKeeper: BookKeeper,
   }
 
   private def lead(): Unit = {
+    maybeCompactionJob.foreach(_.start())
     closeLastLedger()
     whileLeaderDo()
   }
@@ -193,8 +204,8 @@ class BookkeeperMaster(bookKeeper: BookKeeper,
     if (master.hasLeadership) {
       lock.readLock().lock()
       try {
-          val ledgerHandle = retryToGetLedger
-          operate(ledgerHandle)
+        val ledgerHandle = retryToGetLedger
+        operate(ledgerHandle)
       }
       catch {
         case throwable: Throwable =>
@@ -208,10 +219,6 @@ class BookkeeperMaster(bookKeeper: BookKeeper,
     }
   }
 
-  def close(): Unit = {
-
-  }
-
   override def run(): Unit = {
     try {
       while (true) {
@@ -219,6 +226,7 @@ class BookkeeperMaster(bookKeeper: BookKeeper,
           lead()
         else {
           if (currentOpenedLedger != null) {
+            maybeCompactionJob.foreach(_.stop())
             val openedLedger = currentOpenedLedger
             currentOpenedLedger = null
             closeLedger(openedLedger)
@@ -228,8 +236,8 @@ class BookkeeperMaster(bookKeeper: BookKeeper,
     }
     catch {
       case _: java.lang.InterruptedException =>
+        maybeCompactionJob.foreach(_.stop())
         Thread.currentThread().interrupt()
     }
   }
-
 }

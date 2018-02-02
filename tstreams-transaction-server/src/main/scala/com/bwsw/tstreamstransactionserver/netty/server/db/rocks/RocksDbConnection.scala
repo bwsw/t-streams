@@ -74,7 +74,7 @@ class RocksDbConnection(rocksStorageOpts: RocksStorageOptions,
   def iterator: RocksIterator = client.newIterator()
 
   override def close(): Unit = {
-    maybeCompactionJob.foreach(_.close())
+    maybeCompactionJob.foreach(_.stop())
     client.close()
   }
 

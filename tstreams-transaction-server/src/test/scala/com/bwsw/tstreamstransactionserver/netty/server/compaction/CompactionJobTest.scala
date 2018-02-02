@@ -43,14 +43,14 @@ class CompactionJobTest extends FlatSpec with Matchers with MockitoSugar {
     an[IllegalStateException] shouldBe thrownBy {
       compactionJob.start()
     }
-    compactionJob.close()
+    compactionJob.stop()
   }
 
   it should "throw an IllegalStateException by start() if it already closed" in {
     val compactionJob = createCompactionJob(intervalMillis)
 
     compactionJob.start()
-    compactionJob.close()
+    compactionJob.stop()
     an[IllegalStateException] shouldBe thrownBy {
       compactionJob.start()
     }

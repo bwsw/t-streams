@@ -41,17 +41,6 @@ class CheckpointGroupBookkeeperWriter(zookeeperClient: CuratorFramework,
       checkpointGroupPrefixesOptions.checkpointGroupZkTreeListPrefix
     )
 
-  private val maybeCompactionJob =
-    if (bookkeeperOptions.expungeDelaySec > 0)
-      Some(new BookKeeperCompactionJob(
-        Array(checkpointMasterZkTreeList),
-        new BookKeeperWrapper(bookKeeper, bookkeeperOptions),
-        bookkeeperOptions.expungeDelaySec,
-        compactionInterval))
-    else None
-
-  maybeCompactionJob.foreach(_.start())
-
   override def getLastConstructedLedger: Long = {
     checkpointMasterZkTreeList
       .lastEntityId
@@ -59,17 +48,14 @@ class CheckpointGroupBookkeeperWriter(zookeeperClient: CuratorFramework,
   }
 
   def createCheckpointMaster(zKMasterElector: ZKMasterElector,
-                             zkLastClosedLedgerHandler: ZKIDGenerator): BookkeeperMasterBundle = {
+                             zkLastClosedLedgerHandler: ZKIDGenerator,
+                             compactionInterval: Long): BookkeeperMasterBundle = {
     createMaster(
       zKMasterElector,
       zkLastClosedLedgerHandler,
       checkpointGroupPrefixesOptions.timeBetweenCreationOfLedgersMs,
-      checkpointMasterZkTreeList
+      checkpointMasterZkTreeList,
+      compactionInterval
     )
-  }
-
-  override def close(): Unit = {
-    maybeCompactionJob.foreach(_.close())
-    super.close()
   }
 }

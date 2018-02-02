@@ -53,10 +53,9 @@ class ReadAllowedOperationHandler(nextHandler: RequestHandler,
 
 
   def canPerformReadOperation: Boolean = {
-    val ledgersIds =
-      commitLogService.getMinMaxLedgersIds
+    val firstLedgerId = commitLogService.getFirstLedgerId
 
-    ledgersIds.minLedgerId >= ledgerToStartToReadFrom
+    firstLedgerId >= ledgerToStartToReadFrom
   }
 
   override def handle(message: RequestMessage,

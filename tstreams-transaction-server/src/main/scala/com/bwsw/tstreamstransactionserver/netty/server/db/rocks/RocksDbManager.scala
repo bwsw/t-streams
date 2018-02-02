@@ -105,7 +105,7 @@ class RocksDbManager(storageOpts: StorageOptions,
     new RocksDbBatch(client, databaseHandlers)
 
   override def closeDatabases(): Unit = {
-    maybeCompactionJob.foreach(_.close())
+    maybeCompactionJob.foreach(_.stop())
     client.close()
   }
 }

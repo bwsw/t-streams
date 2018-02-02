@@ -47,7 +47,7 @@ class RocksCompactionJobTest extends FlatSpec with Matchers with MockitoSugar {
 
     compactionJob.start()
     Thread.sleep(intervalMillis * cycles + intervalMillis / 2)
-    compactionJob.close()
+    compactionJob.stop()
 
     verify(rocksDB, times(cycles)).compactRange()
     handlers.foreach { handler =>
