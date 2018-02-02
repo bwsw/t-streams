@@ -134,6 +134,6 @@ Once all data are stored for the transaction, they get available to Subscriber. 
 
 3) Server reads data from RocksDB (2.2) and returns them to Subscriber (2.3)
 
-.. figure:: _static/Architecture-DataFlow_Subscr3.png
+.. figure:: _static/Architecture-DataFlow_Subscr4.png
 
 
