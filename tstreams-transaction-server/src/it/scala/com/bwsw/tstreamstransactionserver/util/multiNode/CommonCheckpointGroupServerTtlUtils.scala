@@ -72,13 +72,13 @@ object CommonCheckpointGroupServerTtlUtils {
 
   def toMs(seconds: Int): Int = TimeUnit.SECONDS.toMillis(seconds).toInt
 
-  def fillEntryLog(client: TTSInetClient, times: Int, entryLogSizeLimit: Int): Int = {
+  def fillEntryLog(client: TTSInetClient, times: Int, entryLogSizeLimit: Int, skipListSizeLimit: Int): Int = {
     var totalWaitingTime = System.currentTimeMillis()
     val stream = getRandomStream
     val streamId = Await.result(client.putStream(stream), secondsWait.seconds)
     val producerTransactions = Array.fill(500)(getRandomProducerTransaction(streamId, stream))
     val size = getSize(producerTransactions)
-    val numberOfEntries = (entryLogSizeLimit / size + 2) * times
+    val numberOfEntries = ((entryLogSizeLimit + skipListSizeLimit) / size + 1) * times
     (0 until numberOfEntries).foreach(_ =>
       Await.result(client.putTransactions(producerTransactions, Seq()), secondsWait.seconds)
     )

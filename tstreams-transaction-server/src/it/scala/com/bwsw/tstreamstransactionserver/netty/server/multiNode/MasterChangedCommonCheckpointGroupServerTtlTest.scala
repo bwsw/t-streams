@@ -48,6 +48,7 @@ class MasterChangedCommonCheckpointGroupServerTtlTest extends fixture.FlatSpec w
   private val treeFactor = 2
   private val gcWaitTimeMs = 500
   private val entryLogSizeLimit = 1024 * 1024
+  private val skipListSizeLimit = entryLogSizeLimit / 2
   private val maxIdleTimeBetweenRecords = 1
   private val dataCompactionInterval = maxIdleTimeBetweenRecords * 2
   private val ttl = dataCompactionInterval * 2
@@ -73,7 +74,7 @@ class MasterChangedCommonCheckpointGroupServerTtlTest extends fixture.FlatSpec w
 
   def withFixture(test: OneArgTest): Outcome = {
     val (zkServer, zkClient, bookieServers) =
-      startZkAndBookieServerWithConfig(bookiesNumber, gcWaitTimeMs, entryLogSizeLimit)
+      startZkAndBookieServerWithConfig(bookiesNumber, gcWaitTimeMs, entryLogSizeLimit, skipListSizeLimit)
 
     val zk = ZooKeeperClient.newBuilder.connectString(zkClient.getZookeeperClient.getCurrentConnectionString).build
     //doesn't matter which one's conf because zk is a common part
@@ -82,22 +83,15 @@ class MasterChangedCommonCheckpointGroupServerTtlTest extends fixture.FlatSpec w
 
     val fixtureParam = FixtureParam(zkClient, bookieServers, ledgerManager)
 
-    Try {
-      withFixture(test.toNoArgTest(fixtureParam))
-    } match {
-      case Success(x) =>
-        ledgerManager.close()
-        bookieServers.foreach(_._1.shutdown())
-        zkClient.close()
-        zkServer.close()
-        x
-      case Failure(e: Throwable) =>
-        ledgerManager.close()
-        bookieServers.foreach(_._1.shutdown())
-        zkClient.close()
-        zkServer.close()
-        throw e
-    }
+    val testResult = Try(withFixture(test.toNoArgTest(fixtureParam)))
+
+    ledgerManager.close()
+    zk.close()
+    bookieServers.foreach(_._1.shutdown())
+    zkClient.close()
+    zkServer.close()
+
+    testResult.get
   }
 
   "Expired ledgers and bk entry logs" should "be deleted according to settings if a master changed" in { fixture =>
@@ -120,7 +114,7 @@ class MasterChangedCommonCheckpointGroupServerTtlTest extends fixture.FlatSpec w
       //create the required number of txns to roll over the initial entryLog (0.log)
       var createdLedgers = 0
       val numberOfEntryLogs = 2
-      val waitingTime = fillEntryLog(cluster.client, numberOfEntryLogs, entryLogSizeLimit)
+      val waitingTime = fillEntryLog(cluster.client, numberOfEntryLogs, entryLogSizeLimit, skipListSizeLimit)
 
       if (waitingTime < dataCompactionInterval) {
         Thread.sleep(toMs(dataCompactionInterval))

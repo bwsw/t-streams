@@ -48,6 +48,7 @@ class TransactionsCreationCommonCheckpointGroupServerTtlTest extends fixture.Fla
   private val treeFactor = 2
   private val gcWaitTimeMs = 500
   private val entryLogSizeLimit = 1024 * 1024
+  private val skipListSizeLimit = entryLogSizeLimit / 10
   private val maxIdleTimeBetweenRecords = 1
   private val dataCompactionInterval = maxIdleTimeBetweenRecords * 2
   private val ttl = dataCompactionInterval * 2
@@ -73,7 +74,7 @@ class TransactionsCreationCommonCheckpointGroupServerTtlTest extends fixture.Fla
 
   def withFixture(test: OneArgTest): Outcome = {
     val (zkServer, zkClient, bookieServers) =
-      startZkAndBookieServerWithConfig(bookiesNumber, gcWaitTimeMs, entryLogSizeLimit)
+      startZkAndBookieServerWithConfig(bookiesNumber, gcWaitTimeMs, entryLogSizeLimit, skipListSizeLimit)
 
     val zk = ZooKeeperClient.newBuilder.connectString(zkClient.getZookeeperClient.getCurrentConnectionString).build
     //doesn't matter which one's conf because zk is a common part
@@ -82,22 +83,15 @@ class TransactionsCreationCommonCheckpointGroupServerTtlTest extends fixture.Fla
 
     val fixtureParam = FixtureParam(zkClient, bookieServers, ledgerManager)
 
-    Try {
-      withFixture(test.toNoArgTest(fixtureParam))
-    } match {
-      case Success(x) =>
-        ledgerManager.close()
-        bookieServers.foreach(_._1.shutdown())
-        zkClient.close()
-        zkServer.close()
-        x
-      case Failure(e: Throwable) =>
-        ledgerManager.close()
-        bookieServers.foreach(_._1.shutdown())
-        zkClient.close()
-        zkServer.close()
-        throw e
-    }
+    val testResult = Try(withFixture(test.toNoArgTest(fixtureParam)))
+
+    ledgerManager.close()
+    zk.close()
+    bookieServers.foreach(_._1.shutdown())
+    zkClient.close()
+    zkServer.close()
+
+    testResult.get
   }
 
   "Expired ledgers and bk entry logs" should "be deleted according to settings if a server works in a stable way" in { fixture =>
@@ -115,7 +109,7 @@ class TransactionsCreationCommonCheckpointGroupServerTtlTest extends fixture.Fla
       //create the required number of txns to roll over the initial entryLog (0.log)
       var createdLedgers = 0
       val numberOfEntryLogs = 2
-      val waitingTime = fillEntryLog(bundle.client, numberOfEntryLogs, entryLogSizeLimit)
+      val waitingTime = fillEntryLog(bundle.client, numberOfEntryLogs, entryLogSizeLimit, skipListSizeLimit)
 
       if (waitingTime < dataCompactionInterval) {
         Thread.sleep(toMs(dataCompactionInterval))

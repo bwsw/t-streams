@@ -83,22 +83,15 @@ class TransactionLifecycleCommonCheckpointGroupServerTtlTest extends fixture.Fla
 
     val fixtureParam = FixtureParam(zkClient, ledgerManager)
 
-    Try {
-      withFixture(test.toNoArgTest(fixtureParam))
-    } match {
-      case Success(x) =>
-        ledgerManager.close()
-        bookieServers.foreach(_._1.shutdown())
-        zkClient.close()
-        zkServer.close()
-        x
-      case Failure(e: Throwable) =>
-        ledgerManager.close()
-        bookieServers.foreach(_._1.shutdown())
-        zkClient.close()
-        zkServer.close()
-        throw e
-    }
+    val testResult = Try(withFixture(test.toNoArgTest(fixtureParam)))
+
+    ledgerManager.close()
+    zk.close()
+    bookieServers.foreach(_._1.shutdown())
+    zkClient.close()
+    zkServer.close()
+
+    testResult.get
   }
 
   "Client" should "receive transactions even though expired ledgers are deleted according to settings " +

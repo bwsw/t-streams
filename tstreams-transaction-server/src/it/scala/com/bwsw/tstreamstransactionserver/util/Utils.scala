@@ -98,7 +98,8 @@ object Utils {
   def startBookieServer(zkEndpoints: String,
                         bookieNumber: Int,
                         gcWaitTime: Long = defaultBookKeeperServerConf.getGcWaitTime,
-                        entryLogSizeLimit: Long = defaultBookKeeperServerConf.getEntryLogSizeLimit): (BookieServer, ServerConfiguration) = {
+                        entryLogSizeLimit: Long = defaultBookKeeperServerConf.getEntryLogSizeLimit,
+                        skipListSizeLimit: Long = defaultBookKeeperServerConf.getSkipListSizeLimit): (BookieServer, ServerConfiguration) = {
 
     def createBookieFolder() = {
       val path = createTempDirectory(s"bookie")
@@ -118,7 +119,7 @@ object Utils {
         .setJournalFlushWhenQueueEmpty(true)
         .setGcWaitTime(gcWaitTime)
         .setEntryLogSizeLimit(entryLogSizeLimit)
-        .setSkipListSizeLimit((entryLogSizeLimit / 2).toInt)
+        .setSkipListSizeLimit(skipListSizeLimit.toInt)
 
       serverConfig
         .setZkLedgersRootPath(zkLedgersRootPath)
@@ -169,7 +170,8 @@ object Utils {
 
   def startZkAndBookieServerWithConfig(serverNumber: Int,
                                        gcWaitTime: Long = defaultBookKeeperServerConf.getGcWaitTime,
-                                       entryLogSizeLimit: Long = defaultBookKeeperServerConf.getEntryLogSizeLimit):
+                                       entryLogSizeLimit: Long = defaultBookKeeperServerConf.getEntryLogSizeLimit,
+                                       skipListSizeLimit: Long = defaultBookKeeperServerConf.getSkipListSizeLimit):
   (TestingServer, CuratorFramework, Array[(BookieServer, ServerConfiguration)]) = {
     val (zkServer, zkClient) = startZookeeperServer
 
@@ -189,7 +191,8 @@ object Utils {
         zkClient.getZookeeperClient.getCurrentConnectionString,
         serverIndex,
         gcWaitTime,
-        entryLogSizeLimit
+        entryLogSizeLimit,
+        skipListSizeLimit
       )
     ).toArray
 
