@@ -28,7 +28,7 @@ import com.bwsw.tstreamstransactionserver.options.MultiNodeServerOptions.Bookkee
 import com.bwsw.tstreamstransactionserver.options.SingleNodeServerOptions.AuthenticationOptions
 import com.bwsw.tstreamstransactionserver.rpc.{TransactionInfo, TransactionStates}
 import com.bwsw.tstreamstransactionserver.util.Implicit.ProducerTransactionSortable
-import com.bwsw.tstreamstransactionserver.util.Utils
+import com.bwsw.tstreamstransactionserver.util.Utils._
 import com.bwsw.tstreamstransactionserver.util.Utils.{getRandomConsumerTransaction, getRandomProducerTransaction, getRandomStream}
 import com.bwsw.tstreamstransactionserver.util.multiNode.MultiNodeUtils
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
@@ -65,7 +65,7 @@ class CommonCheckpointGroupServerTest
 
 
   private lazy val (zkServer, zkClient, bookieServers) =
-    Utils.startZkServerBookieServerZkClient(bookiesNumber)
+    startZkServerBookieServerZkClient(bookiesNumber)
 
   override def beforeAll(): Unit = {
     zkServer
@@ -82,7 +82,7 @@ class CommonCheckpointGroupServerTest
 
   val secondsWait = 15
 
-  it should "[scanTransactions] put transactions and get them back" in {
+  "CommonCheckpointGroupServer" should "[scanTransactions] put transactions and get them back" in {
     val bundle = MultiNodeUtils.getCommonCheckpointGroupServerBundle(
       zkClient, bookkeeperOptions, serverBuilder, clientBuilder, maxIdleTimeBetweenRecordsMs
     )

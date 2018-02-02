@@ -35,7 +35,7 @@ class SubscribersObserverTest
     with Matchers {
 
   "Subscribers observer" should "throws exception if it is shutdown more than once" in {
-    val (zkServer, zkClient) = Utils.startZkServerAndGetIt
+    val (zkServer, zkClient) = Utils.startZookeeperServer
     val zookeeperStreamRepository = new ZookeeperStreamRepository(zkClient, "/tts")
     val timeToUpdateMs = 200
 
@@ -56,7 +56,7 @@ class SubscribersObserverTest
 
 
   it should "return none subscribers" in {
-    val (zkServer, zkClient) = Utils.startZkServerAndGetIt
+    val (zkServer, zkClient) = Utils.startZookeeperServer
     val zookeeperStreamRepository = new ZookeeperStreamRepository(zkClient, "/tts")
     val timeToUpdateMs = 200
 
@@ -87,7 +87,7 @@ class SubscribersObserverTest
   }
 
   it should "return all subscribers" in {
-    val (zkServer, zkClient) = Utils.startZkServerAndGetIt
+    val (zkServer, zkClient) = Utils.startZookeeperServer
     val zookeeperStreamRepository = new ZookeeperStreamRepository(zkClient, "/tts")
     val timeToUpdateMs = 200
 
@@ -147,7 +147,7 @@ class SubscribersObserverTest
 
 
   it should "return a subscriber before removing it on zk path and return None after removing the subscriber" in {
-    val (zkServer, zkClient) = Utils.startZkServerAndGetIt
+    val (zkServer, zkClient) = Utils.startZookeeperServer
     val zookeeperStreamRepository = new ZookeeperStreamRepository(zkClient, "/tts")
     val timeToUpdateMs = 200
 

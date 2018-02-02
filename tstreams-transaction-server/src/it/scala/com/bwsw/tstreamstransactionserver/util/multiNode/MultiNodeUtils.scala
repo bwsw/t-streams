@@ -20,7 +20,6 @@
 package com.bwsw.tstreamstransactionserver.util.multiNode
 
 import java.io.File
-import java.nio.file.Files
 import java.util.concurrent.{CountDownLatch, TimeUnit}
 
 import com.bwsw.tstreamstransactionserver.netty.client.ClientBuilder
@@ -34,8 +33,9 @@ import com.bwsw.tstreamstransactionserver.options.ClientOptions.ConnectionOption
 import com.bwsw.tstreamstransactionserver.options.CommonOptions.ZookeeperOptions
 import com.bwsw.tstreamstransactionserver.options.MultiNodeServerOptions.{BookkeeperOptions, CheckpointGroupPrefixesOptions}
 import com.bwsw.tstreamstransactionserver.options.SingleNodeServerOptions.{RocksStorageOptions, StorageOptions}
-import com.bwsw.tstreamstransactionserver.util.Utils.{getRandomPort, uuid}
 import org.apache.curator.framework.CuratorFramework
+import com.bwsw.tstreamstransactionserver.util.Utils.createTtsTempFolder
+import com.bwsw.tstreamstransactionserver.util.Utils.getRandomPort
 
 object MultiNodeUtils {
   private def testStorageOptions(dbPath: File) = {
@@ -45,12 +45,10 @@ object MultiNodeUtils {
     )
   }
 
-  private def tempFolder() = {
-    Files.createTempDirectory("tts").toFile
-  }
+  def uuid: String = java.util.UUID.randomUUID.toString
 
   def getTransactionServerBundle(zkClient: CuratorFramework, tokenTtlSec: Int = 60): MultiNodeBundle = {
-    val dbPath = tempFolder()
+    val dbPath = createTtsTempFolder()
 
     val storageOptions =
       testStorageOptions(dbPath)
@@ -120,7 +118,8 @@ object MultiNodeUtils {
                                            serverBuilder: CommonCheckpointGroupServerBuilder,
                                            clientBuilder: ClientBuilder,
                                            timeBetweenCreationOfLedgesMs: Int = 200): CommonCheckpointGroupServerWithClient = {
-    val dbPath = Files.createTempDirectory("tts").toFile
+    val dbPath = createTtsTempFolder()
+
     val zKCommonMasterPrefix = s"/$uuid"
 
     val updatedBuilder = serverBuilder

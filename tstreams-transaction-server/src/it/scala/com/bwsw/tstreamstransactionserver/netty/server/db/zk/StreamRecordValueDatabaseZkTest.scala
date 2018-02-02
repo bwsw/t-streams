@@ -20,7 +20,7 @@
 package com.bwsw.tstreamstransactionserver.netty.server.db.zk
 
 import com.bwsw.tstreamstransactionserver.netty.server.streamService.{StreamKey, StreamRecord, StreamValue}
-import com.bwsw.tstreamstransactionserver.util.Utils.startZkServerAndGetIt
+import com.bwsw.tstreamstransactionserver.util.Utils.startZookeeperServer
 import org.scalatest.{BeforeAndAfterEach, FlatSpec, Matchers}
 
 class StreamRecordValueDatabaseZkTest
@@ -39,7 +39,7 @@ class StreamRecordValueDatabaseZkTest
 
 
   "One" should "put stream and get it back" in {
-    val (zkServer, zkClient) = startZkServerAndGetIt
+    val (zkServer, zkClient) = startZookeeperServer
 
     val zkDatabase = new ZookeeperStreamRepository(zkClient, path)
 
@@ -61,7 +61,7 @@ class StreamRecordValueDatabaseZkTest
   }
 
   it should "put stream, try to put new stream with the same and got exception" in {
-    val (zkServer, zkClient) = startZkServerAndGetIt
+    val (zkServer, zkClient) = startZookeeperServer
 
     val zkDatabase = new ZookeeperStreamRepository(zkClient, path)
 
@@ -80,7 +80,7 @@ class StreamRecordValueDatabaseZkTest
   }
 
   it should "put stream, delete it, then the one calls getStream and it returns None" in {
-    val (zkServer, zkClient) = startZkServerAndGetIt
+    val (zkServer, zkClient) = startZookeeperServer
 
     val zkDatabase = new ZookeeperStreamRepository(zkClient, path)
 
@@ -97,7 +97,7 @@ class StreamRecordValueDatabaseZkTest
   }
 
   it should "put stream, delete it, then on checking stream the one see stream doesn't exist" in {
-    val (zkServer, zkClient) = startZkServerAndGetIt
+    val (zkServer, zkClient) = startZookeeperServer
 
     val zkDatabase = new ZookeeperStreamRepository(zkClient, path)
 
@@ -114,7 +114,7 @@ class StreamRecordValueDatabaseZkTest
   }
 
   it should "put stream, delete it, then put a new stream with same name a get it back" in {
-    val (zkServer, zkClient) = startZkServerAndGetIt
+    val (zkServer, zkClient) = startZookeeperServer
 
     val zkDatabase = new ZookeeperStreamRepository(zkClient, path)
 
@@ -142,7 +142,7 @@ class StreamRecordValueDatabaseZkTest
   }
 
   it should "put stream, delete it, then get it by ID and see there the stream record" in {
-    val (zkServer, zkClient) = startZkServerAndGetIt
+    val (zkServer, zkClient) = startZookeeperServer
 
     val zkDatabase = new ZookeeperStreamRepository(zkClient, path)
 
@@ -163,7 +163,7 @@ class StreamRecordValueDatabaseZkTest
   }
 
   it should "put stream, delete it, then get it by ID and see there the stream record even if stream is overwritten" in {
-    val (zkServer, zkClient) = startZkServerAndGetIt
+    val (zkServer, zkClient) = startZookeeperServer
 
     val zkDatabase = new ZookeeperStreamRepository(zkClient, path)
 

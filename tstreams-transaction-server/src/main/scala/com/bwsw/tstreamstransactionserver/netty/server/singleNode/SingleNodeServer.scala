@@ -351,10 +351,10 @@ class CommitLogQueueBootstrap(queueSize: Int,
     val allFiles = commitLogCatalogue.listAllFilesAndTheirIDs().toMap
 
 
-    val berkeleyProcessedFileIDMax = commitLogService.getLastProcessedCommitLogFileID
+    val lastProcessedCommitLogFileId = commitLogService.getLastProcessedCommitLogFileID
     val (allFilesIDsToProcess, allFilesToDelete: Map[Long, CommitLogFile]) =
-      if (berkeleyProcessedFileIDMax > -1)
-        (allFiles.filterKeys(_ > berkeleyProcessedFileIDMax), allFiles.filterKeys(_ <= berkeleyProcessedFileIDMax))
+      if (lastProcessedCommitLogFileId > -1)
+        (allFiles.filterKeys(_ > lastProcessedCommitLogFileId), allFiles.filterKeys(_ <= lastProcessedCommitLogFileId))
       else
         (allFiles, collection.immutable.Map())
 

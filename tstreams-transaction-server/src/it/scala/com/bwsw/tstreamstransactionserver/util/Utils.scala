@@ -21,18 +21,19 @@ package com.bwsw.tstreamstransactionserver.util
 
 import java.io.File
 import java.net.ServerSocket
-import java.nio.file.{Files, Paths}
+import java.nio.file.{Files, Path, Paths}
 import java.util
 import java.util.concurrent.{CountDownLatch, TimeUnit}
 
 import com.bwsw.tstreamstransactionserver.netty.client.ClientBuilder
 import com.bwsw.tstreamstransactionserver.netty.client.api.TTSClient
+import com.bwsw.tstreamstransactionserver.netty.server.{RocksReader, RocksWriter, TransactionServer}
 import com.bwsw.tstreamstransactionserver.netty.server.authService.OpenedTransactions
 import com.bwsw.tstreamstransactionserver.netty.server.db.zk.ZookeeperStreamRepository
+import com.bwsw.tstreamstransactionserver.netty.server.singleNode.commitLogService.CommitLogService
 import com.bwsw.tstreamstransactionserver.netty.server.singleNode.{SingleNodeServerBuilder, SingleNodeTestingServer}
 import com.bwsw.tstreamstransactionserver.netty.server.storage.rocks.MultiAndSingleNodeRockStorage
 import com.bwsw.tstreamstransactionserver.netty.server.transactionDataService.TransactionDataService
-import com.bwsw.tstreamstransactionserver.netty.server.{RocksReader, RocksWriter, TransactionServer, singleNode}
 import com.bwsw.tstreamstransactionserver.options.CommonOptions.ZookeeperOptions
 import com.bwsw.tstreamstransactionserver.options.SingleNodeServerOptions.{RocksStorageOptions, StorageOptions}
 import com.bwsw.tstreamstransactionserver.rpc
@@ -53,15 +54,28 @@ import scala.util.{Random, Try}
 
 
 object Utils {
-  val bookieTmpDirs = ArrayBuffer[String]()
+  private val sessionTimeoutMillis = 1000
+  private val connectionTimeoutMillis = 1000
+  private val tmpDirs: ArrayBuffer[String] = ArrayBuffer[String]()
+  val defaultBookKeeperServerConf: ServerConfiguration = new ServerConfiguration()
+
+  def createTtsTempFolder(): File = createTempDirectory("tts").toFile
+
+  def createTempDirectory(path: String): Path = {
+    val tmpDir = Files.createTempDirectory(path)
+    tmpDirs += tmpDir.toString
+
+    tmpDir
+  }
+
+  def deleteTempDirectories(): Unit = {
+    tmpDirs.foreach(dir => FileUtils.deleteDirectory(new File(dir)))
+    tmpDirs.clear()
+  }
 
   def uuid: String = java.util.UUID.randomUUID.toString
 
-  private val sessionTimeoutMillis = 1000
-  private val connectionTimeoutMillis = 1000
-
-
-  def startZkServerAndGetIt: (TestingServer, CuratorFramework) = {
+  def startZookeeperServer: (TestingServer, CuratorFramework) = {
     val zkServer = new TestingServer(true)
 
     val zkClient = CuratorFrameworkFactory.builder
@@ -81,17 +95,19 @@ object Utils {
   private val zkLedgersRootPath = "/ledgers"
   private val zkBookiesAvailablePath = s"$zkLedgersRootPath/available"
 
-  def startBookieServer(zkEndpoints: String, bookieNumber: Int, gcWaitTime: Long): (BookieServer, ServerConfiguration) = {
+  def startBookieServer(zkEndpoints: String,
+                        bookieNumber: Int,
+                        gcWaitTime: Long = defaultBookKeeperServerConf.getGcWaitTime,
+                        entryLogSizeLimit: Long = defaultBookKeeperServerConf.getEntryLogSizeLimit): (BookieServer, ServerConfiguration) = {
 
     def createBookieFolder() = {
-      val path = Files.createTempDirectory(s"bookie")
+      val path = createTempDirectory(s"bookie")
 
       path.toFile.getPath
     }
 
     def startBookie(): (BookieServer, ServerConfiguration) = {
       val bookieFolder = createBookieFolder()
-      bookieTmpDirs += bookieFolder
 
       val serverConfig = new ServerConfiguration()
         .setBookiePort(Utils.getRandomPort)
@@ -101,6 +117,8 @@ object Utils {
         .setAllowLoopback(true)
         .setJournalFlushWhenQueueEmpty(true)
         .setGcWaitTime(gcWaitTime)
+        .setEntryLogSizeLimit(entryLogSizeLimit)
+        .setSkipListSizeLimit((entryLogSizeLimit / 2).toInt)
 
       serverConfig
         .setZkLedgersRootPath(zkLedgersRootPath)
@@ -117,10 +135,16 @@ object Utils {
     startBookie()
   }
 
-  def startZkServerBookieServerZkClient(serverNumber: Int,
-                                        gcWaitTime: Long = 600000):
+  def startBookieServer(conf: ServerConfiguration): (BookieServer, ServerConfiguration) = {
+    val server = new BookieServer(conf)
+    server.start()
+
+    (server, conf)
+  }
+
+  def startZkServerBookieServerZkClient(serverNumber: Int):
   (TestingServer, CuratorFramework, Array[BookieServer]) = {
-    val (zkServer, zkClient) = startZkServerAndGetIt
+    val (zkServer, zkClient) = startZookeeperServer
 
     zkClient.create()
       .creatingParentsIfNeeded()
@@ -136,8 +160,7 @@ object Utils {
     val bookies = (0 until serverNumber).map(serverIndex =>
       startBookieServer(
         zkClient.getZookeeperClient.getCurrentConnectionString,
-        serverIndex,
-        gcWaitTime
+        serverIndex
       )._1
     ).toArray
 
@@ -145,9 +168,10 @@ object Utils {
   }
 
   def startZkAndBookieServerWithConfig(serverNumber: Int,
-                                       gcWaitTime: Long = 600000):
+                                       gcWaitTime: Long = defaultBookKeeperServerConf.getGcWaitTime,
+                                       entryLogSizeLimit: Long = defaultBookKeeperServerConf.getEntryLogSizeLimit):
   (TestingServer, CuratorFramework, Array[(BookieServer, ServerConfiguration)]) = {
-    val (zkServer, zkClient) = startZkServerAndGetIt
+    val (zkServer, zkClient) = startZookeeperServer
 
     zkClient.create()
       .creatingParentsIfNeeded()
@@ -164,7 +188,8 @@ object Utils {
       startBookieServer(
         zkClient.getZookeeperClient.getCurrentConnectionString,
         serverIndex,
-        gcWaitTime
+        gcWaitTime,
+        entryLogSizeLimit
       )
     ).toArray
 
@@ -215,11 +240,9 @@ object Utils {
     )
   }
 
-  private def tempFolder() =
-    Files.createTempDirectory("tts").toFile
-
   def getRocksReaderAndRocksWriter(zkClient: CuratorFramework, tokenTtlSec: Int = 60): RocksReaderAndWriter = {
-    val dbPath = tempFolder()
+    val dbPath = createTtsTempFolder()
+
     val storageOptions = testStorageOptions(dbPath)
     val rocksStorageOptions = RocksStorageOptions()
 
@@ -227,7 +250,7 @@ object Utils {
   }
 
   def getTransactionServerBundle(zkClient: CuratorFramework, tokenTtlSec: Int = 60): TransactionServerBundle = {
-    val dbPath = tempFolder()
+    val dbPath = createTtsTempFolder()
 
     val storageOptions = testStorageOptions(dbPath)
 
@@ -274,7 +297,7 @@ object Utils {
       )
 
     val oneNodeCommitLogService =
-      new singleNode.commitLogService.CommitLogService(
+      new CommitLogService(
         rocksStorage.getStorageManager
       )
 
@@ -312,9 +335,8 @@ object Utils {
   def startTransactionServerAndClient(zkClient: CuratorFramework,
                                       serverBuilder: SingleNodeServerBuilder,
                                       clientBuilder: ClientBuilder): SingleNodeServerWithClient = {
-    val dbPath = Files.createTempDirectory("tts").toFile
+    val dbPath = createTtsTempFolder()
     val zKCommonMasterPrefix = s"/$uuid"
-
 
     val updatedBuilder = serverBuilder
       .withCommonRoleOptions(
@@ -374,7 +396,8 @@ object Utils {
                                       serverBuilder: SingleNodeServerBuilder,
                                       clientBuilder: ClientBuilder,
                                       clientsNumber: Int): SingleNodeServerWithClients = {
-    val dbPath = Files.createTempDirectory("tts").toFile
+    val dbPath = createTtsTempFolder()
+
 
     val streamRepositoryPath = s"/$uuid"
 
@@ -443,8 +466,7 @@ object Utils {
   }
 
   def deleteDirectories(storageOptions: StorageOptions): Unit = {
-    Utils.bookieTmpDirs.foreach(dir => FileUtils.deleteDirectory(new File(dir)))
-    Utils.bookieTmpDirs.clear()
+    deleteTempDirectories()
     Utils.deleteDirectories(
       storageOptions.path,
       storageOptions.metadataDirectory,

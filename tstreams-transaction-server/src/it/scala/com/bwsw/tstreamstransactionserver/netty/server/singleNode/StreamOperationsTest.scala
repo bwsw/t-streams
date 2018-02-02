@@ -40,7 +40,7 @@ class StreamOperationsTest
         closeDelayMs = Int.MaxValue))
 
   private val clientBuilder = new ClientBuilder()
-  private val (zkServer, zkClient) = startZkServerAndGetIt
+  private val (zkServer, zkClient) = startZookeeperServer
 
   override def afterAll(): Unit = {
     zkClient.close()

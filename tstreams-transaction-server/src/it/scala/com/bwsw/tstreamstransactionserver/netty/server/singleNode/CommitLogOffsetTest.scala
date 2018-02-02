@@ -23,7 +23,7 @@ import com.bwsw.tstreamstransactionserver.netty.client.ClientBuilder
 import com.bwsw.tstreamstransactionserver.options.SingleNodeServerOptions
 import com.bwsw.tstreamstransactionserver.rpc.TransactionStates
 import com.bwsw.tstreamstransactionserver.util.Utils
-import com.bwsw.tstreamstransactionserver.util.Utils.{getRandomConsumerTransaction, getRandomProducerTransaction, getRandomStream, startZkServerAndGetIt}
+import com.bwsw.tstreamstransactionserver.util.Utils.{getRandomConsumerTransaction, getRandomProducerTransaction, getRandomStream, startZookeeperServer}
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 
 import scala.concurrent.Await
@@ -42,7 +42,7 @@ class CommitLogOffsetTest
   private lazy val clientBuilder = new ClientBuilder()
 
   private lazy val (zkServer, zkClient) =
-    startZkServerAndGetIt
+    startZookeeperServer
 
   override def beforeAll(): Unit = {
     zkServer

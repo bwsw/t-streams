@@ -55,19 +55,19 @@ class BookkeeperMaster(bookKeeper: BookKeeperWrapper,
 
   private final def whileLeaderDo() = {
 
-    var lastAccessTimes = 0L
+    var lastAccessTime = 0L
 
     @tailrec
     def onBeingLeaderDo(): Unit = {
       if (master.hasLeadership) {
-        val diff = System.currentTimeMillis() - lastAccessTimes
+        val diff = System.currentTimeMillis() - lastAccessTime
         if (diff < timeBetweenCreationOfLedgers) {
           val timeToWait = timeBetweenCreationOfLedgers - diff
           TimeUnit.MILLISECONDS.sleep(timeToWait)
           onBeingLeaderDo()
         }
         else {
-          lastAccessTimes = System.currentTimeMillis()
+          lastAccessTime = System.currentTimeMillis()
           Try {
             bookKeeper.createLedger(System.currentTimeMillis())
           }.map { ledgerHandle =>

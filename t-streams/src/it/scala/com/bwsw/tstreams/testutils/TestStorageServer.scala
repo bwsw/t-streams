@@ -32,24 +32,14 @@ object TestStorageServer {
 
   private var tempDir: String = TestUtils.getTmpDir()
 
-  def getNewClean(): SingleNodeTestingServer = {
+  def getNewClean(builder: Builder = Builder()): SingleNodeTestingServer = {
     tempDir = TestUtils.getTmpDir()
 
-    get()
+    get(builder)
   }
 
-  def get(): SingleNodeTestingServer = {
-    val transactionServer = new SingleNodeTestingServer(
-      authenticationOpts = AuthenticationOptions(key = TestUtils.AUTH_KEY),
-      zookeeperOpts = ZookeeperOptions(endpoints = s"127.0.0.1:${TestUtils.ZOOKEEPER_PORT}"),
-      serverOpts = BootstrapOptions(),
-      commonRoleOptions = CommonRoleOptions(commonMasterPrefix = TestUtils.MASTER_PREFIX),
-      checkpointGroupRoleOptions = CheckpointGroupRoleOptions(),
-      storageOpts = StorageOptions(path = tempDir),
-      rocksStorageOpts = RocksStorageOptions(),
-      commitLogOptions = CommitLogOptions(closeDelayMs = 100),
-      packageTransmissionOpts = TransportOptions(),
-      subscribersUpdateOptions = SubscriberUpdateOptions())
+  def get(builder: Builder = Builder()): SingleNodeTestingServer = {
+    val transactionServer = builder.build()
 
     val l = new CountDownLatch(1)
     new Thread(() => transactionServer.start(l.countDown())).start()
@@ -59,4 +49,49 @@ object TestStorageServer {
 
   def dispose(transactionServer: SingleNodeTestingServer): Unit =
     transactionServer.shutdown()
+
+
+  case class Builder(authenticationOptions: AuthenticationOptions = Builder.Defaults.authenticationOptions,
+                     zookeeperOptions: ZookeeperOptions = Builder.Defaults.zookeeperOptions,
+                     bootstrapOptions: BootstrapOptions = Builder.Defaults.bootstrapOptions,
+                     commonRoleOptions: CommonRoleOptions = Builder.Defaults.commonRoleOptions,
+                     checkpointGroupRoleOptions: CheckpointGroupRoleOptions = Builder.Defaults.checkpointGroupRoleOptions,
+                     storageOptions: StorageOptions = Builder.Defaults.storageOptions,
+                     rocksStorageOptions: RocksStorageOptions = Builder.Defaults.rocksStorageOptions,
+                     commitLogOptions: CommitLogOptions = Builder.Defaults.commitLogOptions,
+                     transportOptions: TransportOptions = Builder.Defaults.transportOptions,
+                     subscribersUpdateOptions: SubscriberUpdateOptions = Builder.Defaults.subscribersUpdateOptions) {
+
+    def build(): SingleNodeTestingServer = {
+      new SingleNodeTestingServer(
+        authenticationOpts = authenticationOptions,
+        zookeeperOpts = zookeeperOptions,
+        serverOpts = bootstrapOptions,
+        commonRoleOptions = commonRoleOptions,
+        checkpointGroupRoleOptions = checkpointGroupRoleOptions,
+        storageOpts = storageOptions,
+        rocksStorageOpts = rocksStorageOptions,
+        commitLogOptions = commitLogOptions,
+        packageTransmissionOpts = transportOptions,
+        subscribersUpdateOptions = subscribersUpdateOptions)
+    }
+  }
+
+  object Builder {
+
+    object Defaults {
+      val authenticationOptions: AuthenticationOptions = AuthenticationOptions(key = TestUtils.AUTH_KEY)
+      val zookeeperOptions: ZookeeperOptions = ZookeeperOptions(endpoints = s"127.0.0.1:${TestUtils.ZOOKEEPER_PORT}")
+      val bootstrapOptions: BootstrapOptions = BootstrapOptions()
+      val commonRoleOptions: CommonRoleOptions = CommonRoleOptions(commonMasterPrefix = TestUtils.MASTER_PREFIX)
+      val checkpointGroupRoleOptions: CheckpointGroupRoleOptions = CheckpointGroupRoleOptions()
+      val storageOptions: StorageOptions = StorageOptions(path = tempDir)
+      val rocksStorageOptions: RocksStorageOptions = RocksStorageOptions()
+      val commitLogOptions: CommitLogOptions = CommitLogOptions(closeDelayMs = 100)
+      val transportOptions: TransportOptions = TransportOptions()
+      val subscribersUpdateOptions: SubscriberUpdateOptions = SubscriberUpdateOptions()
+    }
+
+  }
+
 }

@@ -23,8 +23,7 @@ import java.nio.file.Paths
 import java.util.concurrent.PriorityBlockingQueue
 
 import com.bwsw.commitlog.filesystem.{CommitLogCatalogue, CommitLogStorage}
-import com.bwsw.tstreamstransactionserver.util
-import com.bwsw.tstreamstransactionserver.util.Utils.startZkServerAndGetIt
+import com.bwsw.tstreamstransactionserver.util.Utils._
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 
 import scala.annotation.tailrec
@@ -35,20 +34,18 @@ class CommitLogQueueBootstrapTestSuite
     with BeforeAndAfterAll {
 
   //arrange
-  private lazy val (zkServer, zkClient) = startZkServerAndGetIt
-  private lazy val bundle = util.Utils.getTransactionServerBundle(zkClient)
+  private lazy val (zkServer, zkClient) = startZookeeperServer
+  private lazy val bundle = getTransactionServerBundle(zkClient)
   private lazy val storageOptions = bundle.storageOptions
   private lazy val path = Paths.get(storageOptions.path, storageOptions.commitLogRawDirectory).toString
   private lazy val commitLogCatalogue = new CommitLogCatalogue(path)
   private lazy val commitLogQueueBootstrap =
     new CommitLogQueueBootstrap(10, commitLogCatalogue, bundle.singleNodeCommitLogService)
 
-
   override def beforeAll(): Unit = {
     zkServer
     zkClient
   }
-
 
   "fillQueue" should "return an empty queue if there are no commit log files in a storage directory" in {
     //act

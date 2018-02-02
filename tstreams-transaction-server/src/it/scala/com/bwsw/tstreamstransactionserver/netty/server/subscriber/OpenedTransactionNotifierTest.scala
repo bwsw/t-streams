@@ -31,7 +31,7 @@ class OpenedTransactionNotifierTest
     with Matchers {
 
   "Open transaction state notifier" should "transmit message to its subscriber" in {
-    val (zkServer, zkClient) = Utils.startZkServerAndGetIt
+    val (zkServer, zkClient) = Utils.startZookeeperServer
     val zookeeperStreamRepository = new ZookeeperStreamRepository(zkClient, "/tts")
     val timeToUpdateMs = 200
 
@@ -93,7 +93,7 @@ class OpenedTransactionNotifierTest
   }
 
   it should "not transmit message to its subscriber as stream doesn't exist" in {
-    val (zkServer, zkClient) = Utils.startZkServerAndGetIt
+    val (zkServer, zkClient) = Utils.startZookeeperServer
     val zookeeperStreamRepository = new ZookeeperStreamRepository(zkClient, "/tts")
     val timeToUpdateMs = 200
 
@@ -151,7 +151,7 @@ class OpenedTransactionNotifierTest
   }
 
   it should "transmit message to its subscribers and they will get the same message" in {
-    val (zkServer, zkClient) = Utils.startZkServerAndGetIt
+    val (zkServer, zkClient) = Utils.startZookeeperServer
     val zookeeperStreamRepository = new ZookeeperStreamRepository(zkClient, "/tts")
     val timeToUpdateMs = 200
 
