@@ -5,7 +5,7 @@
 T-streams Architecture
 ============================
 
-At this page, we will dive into the T-streams architecture which helps to understand the basic operations. This part will give you a general idea of operation flow and handling.
+At this page, we will dive into the T-streams architecture which helps to understand the basic operations. This part will give you a general idea of operation handling.
 
 Overview
 ------------------
@@ -15,7 +15,7 @@ offering competitive performance in transactional messaging.
 
 T-streams includes the following components:
 
-1. **Storage Server** that is responsible for all operations performed with transactions and their data. Server contains an embedded storage and a commit log. Embedded storage is implemented with `RocksDB <http://rocksdb.org/>`_. A commit log can be a local file or a distributed commit log service provided by `Apache BookKeeper <https://bookkeeper.apache.org/>`_.
+1. **Storage Server** that is responsible for storing transactions and their data. Server contains an embedded storage and a commit log. Embedded storage is implemented with `RocksDB <http://rocksdb.org/>`_. A commit log can be a local file or a distributed commit log service provided by `Apache BookKeeper <https://bookkeeper.apache.org/>`_.
 #. **Producers** that create transactions with data.
 #. **Consumers**, **Subscribers** that read the transactions.
 
