@@ -132,7 +132,7 @@ object MultiNodeUtils {
       .withServerStorageOptions(
         serverBuilderWithCommonSettings.getStorageOptions.copy(path = dbPath.getPath))
       .withBootstrapOptions(
-        serverBuilder.getBootstrapOptions.copy(bindPort = getRandomPort))
+        serverBuilderWithCommonSettings.getBootstrapOptions.copy(bindPort = getRandomPort))
 
     val transactionServer = new CommonCheckpointGroupTestingServer(serverBuilderWithItsOwnSettings)
 
@@ -177,13 +177,13 @@ object MultiNodeUtils {
                                        serverBuilder: CommonCheckpointGroupServerBuilder,
                                        clientBuilder: ClientBuilder,
                                        timeBetweenCreationOfLedgesMs: Int): (CommonCheckpointGroupServerBuilder, ClientBuilder) = {
-    val zKCommonMasterPrefix = s"/$uuid"
+    val zKCommonMasterPrefix = s"/common/master/$uuid"
 
     val updatedBuilder = serverBuilder
       .withCommonRoleOptions(
         serverBuilder.getCommonRoleOptions.copy(
           commonMasterPrefix = zKCommonMasterPrefix,
-          commonMasterElectionPrefix = s"/$uuid")
+          commonMasterElectionPrefix = s"/common/election/$uuid")
       )
       .withZookeeperOptions(
         serverBuilder.getZookeeperOptions.copy(
@@ -192,18 +192,24 @@ object MultiNodeUtils {
       )
       .withServerStorageOptions(
         serverBuilder.getStorageOptions.copy(
-          streamZookeeperDirectory = s"/$uuid")
+          streamZookeeperDirectory = s"/stream/$uuid")
       )
       .withCommonPrefixesOptions(
         serverBuilder.getCommonPrefixesOptions.copy(
-          s"/tree/common/$uuid",
-          s"/tree/common/$uuid",
-          timeBetweenCreationOfLedgesMs,
-          CheckpointGroupPrefixesOptions(
-            s"/tree/cg/$uuid",
-            s"/tree/cg/$uuid",
-            timeBetweenCreationOfLedgesMs
-          )
+          commonMasterZkTreeListPrefix = s"/tree/common/$uuid",
+          commonMasterLastClosedLedger = s"/tree/common/$uuid",
+          timeBetweenCreationOfLedgersMs = timeBetweenCreationOfLedgesMs,
+          checkpointGroupPrefixesOptions =
+            CheckpointGroupPrefixesOptions(
+              s"/tree/cg/$uuid",
+              s"/tree/cg/$uuid",
+              timeBetweenCreationOfLedgesMs)
+        )
+      )
+      .withCheckpointGroupRoleOptions(
+        serverBuilder.getCheckpointGroupRoleOptions.copy(
+          checkpointGroupMasterPrefix = s"/tree/cg/master/$uuid",
+          checkpointGroupMasterElectionPrefix = s"/tree/cg/election/$uuid"
         )
       )
       .withBookkeeperOptions(bookkeeperOptions)

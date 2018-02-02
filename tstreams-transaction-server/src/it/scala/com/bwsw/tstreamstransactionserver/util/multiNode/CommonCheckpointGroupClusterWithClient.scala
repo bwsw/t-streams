@@ -51,6 +51,13 @@ class CommonCheckpointGroupClusterWithClient(val clientBuilder: ClientBuilder,
   def client: Client =
     _client.getOrElse(throw new IllegalStateException("The client is not created yet."))
 
+  /** Returns i-th server if it is started or None otherwise
+    *
+    * @param i server's index
+    * @return i-th server if it is started or None otherwise
+    */
+  def get(i: Int): Option[CommonCheckpointGroupTestingServer] = servers(i)
+
   /** Starts i-th server
     *
     * @param i server's index

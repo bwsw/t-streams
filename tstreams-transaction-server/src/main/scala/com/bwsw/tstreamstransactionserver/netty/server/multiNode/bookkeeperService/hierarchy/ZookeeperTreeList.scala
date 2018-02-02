@@ -185,6 +185,13 @@ abstract class ZookeeperTreeList[T](client: CuratorFramework,
     )
   }
 
+  def isNodeExists(entity: T): Boolean = {
+    val path = buildPath(entity)
+
+    Option(client.checkExists().forPath(path)).isDefined
+  }
+
+
   private def deleteFirstNode(firstEntityId: T, nextEntityId: T): Boolean = {
     val newFirstId = toBytes(nextEntityId)
 

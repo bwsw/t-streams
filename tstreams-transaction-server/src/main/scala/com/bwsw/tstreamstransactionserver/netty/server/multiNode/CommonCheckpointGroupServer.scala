@@ -67,7 +67,7 @@ class CommonCheckpointGroupServer(authenticationOpts: AuthenticationOptions,
       serverOpts.bindPort
     )
 
-  private val zk =
+  protected val zk =
     new ZookeeperClient(
       zookeeperOpts.endpoints,
       zookeeperOpts.sessionTimeoutMs,
@@ -115,7 +115,7 @@ class CommonCheckpointGroupServer(authenticationOpts: AuthenticationOptions,
     rocksReader
   )
 
-  private val bookkeeperToRocksWriter =
+  protected lazy val bookkeeperToRocksWriter =
     new CommonCheckpointGroupBookkeeperWriter(
       zk.client,
       bookkeeperOptions,

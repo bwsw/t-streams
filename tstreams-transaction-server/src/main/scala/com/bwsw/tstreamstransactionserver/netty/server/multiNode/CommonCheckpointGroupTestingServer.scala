@@ -20,7 +20,8 @@
 package com.bwsw.tstreamstransactionserver.netty.server.multiNode
 
 
-import com.bwsw.tstreamstransactionserver.netty.server.{Notifier, RocksWriter, RocksTestingWriter}
+import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeeperService.BookKeeperCompactionJob
+import com.bwsw.tstreamstransactionserver.netty.server.{Notifier, RocksTestingWriter, RocksWriter}
 import com.bwsw.tstreamstransactionserver.options.CommonOptions
 import com.bwsw.tstreamstransactionserver.options.CommonOptions.TracingOptions
 import com.bwsw.tstreamstransactionserver.options.MultiNodeServerOptions.{BookkeeperOptions, CommonPrefixesOptions}
@@ -69,6 +70,14 @@ class CommonCheckpointGroupTestingServer(authenticationOpts: AuthenticationOptio
       builder.getTracingOptions)
   }
 
+  override protected lazy val bookkeeperToRocksWriter =
+    new CommonCheckpointGroupBookkeeperTestingWriter(
+      zk.client,
+      bookkeeperOptions,
+      commonPrefixesOptions,
+      storageOpts.dataCompactionInterval
+    )
+
   override protected lazy val rocksWriter: RocksWriter =
     new RocksTestingWriter(
       rocksStorage,
@@ -93,6 +102,9 @@ class CommonCheckpointGroupTestingServer(authenticationOpts: AuthenticationOptio
 
   final def removeConsumerNotification(id: Long): Boolean =
     consumerNotifier.removeRequest(id)
+
+  def bookKeeperCompactionJob: BookKeeperCompactionJob =
+    bookkeeperToRocksWriter.bookKeeperCompactionJob
 
   override def shutdown(): Unit = {
     super.shutdown()

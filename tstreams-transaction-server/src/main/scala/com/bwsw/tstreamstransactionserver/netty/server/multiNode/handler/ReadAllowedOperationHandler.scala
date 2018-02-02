@@ -19,6 +19,7 @@
 
 package com.bwsw.tstreamstransactionserver.netty.server.multiNode.handler
 
+import com.bwsw.tstreamstransactionserver.exception.Throwable.ReadOperationIsNotAllowedException
 import com.bwsw.tstreamstransactionserver.netty.RequestMessage
 import com.bwsw.tstreamstransactionserver.netty.server.handler.{IntermediateRequestHandler, RequestHandler}
 import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeeperService.BookkeeperWriter
@@ -41,12 +42,12 @@ class ReadAllowedOperationHandler(nextHandler: RequestHandler,
   @volatile private var ledgerToStartToReadFrom =
     ReadAllowedOperationHandler.NO_LEDGER_PROCESSED
 
-  override def isLeader() = {
+  override def isLeader(): Unit = {
     ledgerToStartToReadFrom =
       bookkeeperWriter.getLastConstructedLedger
   }
 
-  override def notLeader() = {
+  override def notLeader(): Unit = {
     ledgerToStartToReadFrom =
       ReadAllowedOperationHandler.NO_LEDGER_PROCESSED
   }
@@ -65,6 +66,8 @@ class ReadAllowedOperationHandler(nextHandler: RequestHandler,
     tracer.withTracing(message, name = getClass.getName + ".handle") {
       if (canPerformReadOperation)
         nextHandler.handle(message, ctx, error)
+      else
+        nextHandler.handle(message, ctx, Some(new ReadOperationIsNotAllowedException))
     }
   }
 }

@@ -22,17 +22,17 @@ import java.io.File
 import java.util.concurrent.TimeUnit
 
 import com.bwsw.tstreamstransactionserver.netty.Protocol
-import com.bwsw.tstreamstransactionserver.util.Utils._
+import com.bwsw.tstreamstransactionserver.netty.client.api.TTSInetClient
 import com.bwsw.tstreamstransactionserver.netty.server.batch.Frame
 import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeeperService.data.Record
 import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeeperService.hierarchy.LongZookeeperTreeList
 import com.bwsw.tstreamstransactionserver.rpc.{ProducerTransaction, Transaction, TransactionService}
+import com.bwsw.tstreamstransactionserver.util.Utils._
 import org.apache.bookkeeper.meta.LedgerManager
 import org.apache.bookkeeper.proto.BookieServer
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable
-import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.Await
 import scala.concurrent.duration._
 
@@ -71,9 +71,8 @@ object CommonCheckpointGroupServerTtlUtils {
 
   def toMs(seconds: Int): Int = TimeUnit.SECONDS.toMillis(seconds).toInt
 
-  def fillEntryLog(bundle: CommonCheckpointGroupServerWithClient, times: Int, entryLogSizeLimit: Int): Int = {
+  def fillEntryLog(client: TTSInetClient, times: Int, entryLogSizeLimit: Int): Int = {
     var totalWaitingTime = System.currentTimeMillis()
-    val client = bundle.client
     val stream = getRandomStream
     val streamId = Await.result(client.putStream(stream), secondsWait.seconds)
     val producerTransactions = Array.fill(100)(getRandomProducerTransaction(streamId, stream))
@@ -86,6 +85,12 @@ object CommonCheckpointGroupServerTtlUtils {
 
     totalWaitingTime.toInt
   }
+
+  def fillEntryLog(bundle: CommonCheckpointGroupServerWithClient, times: Int, entryLogSizeLimit: Int): Int =
+    fillEntryLog(bundle.client, times, entryLogSizeLimit)
+
+  def fillEntryLog(cluster: CommonCheckpointGroupClusterWithClient, times: Int, entryLogSizeLimit: Int): Int =
+    fillEntryLog(cluster.client, times, entryLogSizeLimit)
 
   def entryLogsExistInBookKeeper(bookieServers: Array[BookieServer], numberOfFiles: Int): Boolean = {
     bookieServers.flatMap(_.getBookie.getLedgerDirsManager.getAllLedgerDirs.asScala).forall(ledgerDirectory => {

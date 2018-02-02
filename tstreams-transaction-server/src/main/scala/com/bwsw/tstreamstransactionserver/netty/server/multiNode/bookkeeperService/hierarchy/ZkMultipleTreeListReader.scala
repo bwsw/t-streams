@@ -37,22 +37,23 @@ class ZkMultipleTreeListReader(zkTreeLists: Array[LongZookeeperTreeList],
 
   private type Timestamp = Long
 
-  def read(processedLastRecordIDsAcrossLedgers: Array[LedgerMetadata]): (Array[Record], Array[LedgerMetadata]) = {
-    val processedLastRecordIDsAcrossLedgersCopy =
-      java.util.Arrays.copyOf(
-        processedLastRecordIDsAcrossLedgers,
-        processedLastRecordIDsAcrossLedgers.length
-      )
+  def read(processedLedgerMetadatas: Array[LedgerMetadata]): (Array[Record], Array[LedgerMetadata]) = {
+    val actualProcessedLedgerMetadatas =
+      if ((zkTreeLists zip processedLedgerMetadatas)
+        .forall { case (tree, ledger) => tree.isNodeExists(ledger.id) })
+        processedLedgerMetadatas
+      else
+        Array.empty[LedgerMetadata]
 
     val nextRecordsAndLedgersToProcess =
       getNextLedger(
-        zkTreeLists zip getRecordsToStartWith(processedLastRecordIDsAcrossLedgersCopy)
+        zkTreeLists zip getRecordsToStartWith(actualProcessedLedgerMetadatas)
       )
     if (
       nextRecordsAndLedgersToProcess.exists(metadata =>
         NoLedgerExist == metadata.id || MoveToNextLedgerStatus == metadata.metadataStatus)
     ) {
-      (Array.empty[Record], processedLastRecordIDsAcrossLedgersCopy)
+      (Array.empty[Record], actualProcessedLedgerMetadatas)
     }
     else {
       val (ledgersRecords, ledgersAndTheirLastRecordIDs) =

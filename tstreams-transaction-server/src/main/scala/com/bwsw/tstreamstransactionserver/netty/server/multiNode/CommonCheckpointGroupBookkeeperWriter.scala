@@ -70,7 +70,7 @@ class CommonCheckpointGroupBookkeeperWriter(zookeeperClient: CuratorFramework,
     Array(commonMasterLastClosedLedger, checkpointMasterLastClosedLedger)
   lastClosedLedgerHandlers.foreach(_.startMonitor())
 
-  private val maybeCompactionJob =
+  protected val maybeCompactionJob: Option[BookKeeperCompactionJob] =
     if (bookkeeperOptions.expungeDelaySec > 0)
       Some(new BookKeeperCompactionJob(
         zkTreesList,
