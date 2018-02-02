@@ -15,11 +15,11 @@ offering competitive performance in transactional messaging.
 
 T-streams includes the following components:
 
-1. **Storage Server** that is responsible for all operations performed with transactions and their data. Server contains a local storage and a commit log. Local storage is implemented with `RocksDB <http://rocksdb.org/>`_. A commit log can be an internal file or a distributed commit log service provided by `Apache BookKeeper <https://bookkeeper.apache.org/>`_.
+1. **Storage Server** that is responsible for all operations performed with transactions and their data. Server contains an embedded storage and a commit log. Embedded storage is implemented with `RocksDB <http://rocksdb.org/>`_. A commit log can be a local file or a distributed commit log service provided by `Apache BookKeeper <https://bookkeeper.apache.org/>`_.
 #. **Producers** that create transactions with data.
 #. **Consumers**, **Subscribers** that read the transactions.
 
-You can see a general description of them in the figure below:
+You can see the T-streams component correlation in the figure below:
 
 .. figure:: _static/Architecture_General1.png
 
@@ -130,7 +130,7 @@ Once all data are stored for the transaction, they get available to Subscriber. 
 
 1) Producer performs transaction checkpoint/canceling (1.1). After receiving the acknowledgment of the ``txn1`` checkpoint/cancel, Producer sends the transaction checkpoint/cancel notification to Subscriber (1.2). Server writes the checkpoint operation to Commit Log (1.3).
 
-2) Subscriber receives checkpoint event and gets informed of ``txn1`` is checkpointed. Or in case of Cancel operation, Subscriber receives notification the ``txn1`` transaction is canceled. Now Subscriber can request Server for data in ``txn1`` (2.1).
+2) Subscriber receives checkpoint event and gets informed of ``txn1`` being checkpointed. Or in case of Cancel operation, Subscriber receives notification the ``txn1`` transaction is canceled. Now Subscriber can request Server for data in ``txn1`` (2.1).
 
 3) Server reads data from RocksDB (2.2) and returns them to Subscriber (2.3)
 
