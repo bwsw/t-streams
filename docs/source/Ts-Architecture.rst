@@ -45,7 +45,7 @@ At the figure below T-streams infrastructure is presented:
 
 .. figure:: _static/Architecture-General2.png
 
-Thus, Server publishes an endpoint to ZooKeeper. Agents (eg. Producers and Consumers) read the endpoint, discover Server and connect to it to create/read transactions with data. 
+Thus, Server publishes an endpoint to ZooKeeper. Agents (eg. Producers and Consumers) read the endpoint, discover Server and connect to it for creating/reading transactions with data. 
 
 Producers write the operations, transactions with data and meta-data to local commit log, or to BookKeeper in the multi-node configuration, and stores data to Server's embedded storage. Consumers and Subscribers read these transactions and their data from the Server's storage. See the Data_Flow_ section for more details on data flow in T-streams.
 
@@ -134,4 +134,11 @@ Once all data are stored for the transaction, they get available to Subscriber. 
 
 .. figure:: _static/Architecture-DataFlow_Subscr5.png
 
+Read Next
+----------------
 
+At the Getting_Started_ page you will get instructions on how to include prebuilt T-streams library dependency in your project from a public maven repository. 
+
+If you are aimed to participate in the development process, you should read the Build_T-streams_ page to find the details on how to build T-streams library in GNU/Linux environment.
+
+T-streams library provides a developer with a range of top-level objects used to perform operations. Visit API_ page to study the list of API methods.
