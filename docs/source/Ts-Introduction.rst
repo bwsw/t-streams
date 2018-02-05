@@ -101,7 +101,7 @@ Transactions are:
 
 A Producer opens transactions in a strictly ordered mode, e.g. T1, T2, T3, T4. It is fair for different producers within the same partition as well. The Producer can checkpoint or cancel them in the arbitrary order. But even if T2 and T3 are checkpointed before T1, the handling of them by a Subscriber will be delayed until T1 is checkpointed. The processing order is displayed in the figure below.
 
-.. figure:: _static/Processing.png
+.. figure:: _static/Processing1.png
 
 You will find more about T-streams agents in the section below.
  
