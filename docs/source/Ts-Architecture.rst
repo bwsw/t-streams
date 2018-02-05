@@ -95,13 +95,13 @@ The T-streams Transaction Storage Server is a sub-project which can be found on 
 Scalable Configuration
 ------------------------
 
-T-streams allows operating in a scalable mode. It is possible in case data processing is implemented via more than one stream as a single T-streams stream is not scalable. 
+T-streams allows operating in a scalable configuration. It is possible in case data processing is implemented via more than one stream as a single T-streams stream is not scalable. 
 
-Each stream is assigned to a Leader server. For example, there are 3 streams in the process - Stream 1, Stream 2 and Stream 3. Each of the streams is assigned to a Server. So we involve 3 servers into the processing. Producer 1 working with Stream 1 connects to Server 1. Producer 2 working with Stream 2 connects to Server 2. Producer 3 working with Stream 3 connects to Server 3. These servers have a Common role. Servers with the Common role save operations for an individual transaction (i.e. create, retrieve, update, delete a transaction).
+In such configuration each stream is assigned to a Leader server. The figure below demostrates an example, where there are 3 streams in the process - Stream 1, Stream 2 and Stream 3. Each of the streams is assigned to a Server. So we involve 3 servers into the processing. Producer 1 working with Stream 1 connects to Server 1. Producer 2 working with Stream 2 connects to Server 2. Producer 3 working with Stream 3 connects to Server 3. These servers have a Common role. Servers with the Common role save operations for an individual transaction (i.e. create, retrieve, update, delete a transaction).
 
-Group checkpoint operations (Producer object, Checkpoint Group object), which are common for several transactions or agents in the process, will be sent to a separate server. At the figure below it is marked as CG. This server has a CheckpointGroup role.  So all Producers in the runtime will connect to the CheckointGroup server as well to send Producer or Checkpoint Group object operations.
+Group checkpoint operations (Producer object, Checkpoint Group object), which are common for several transactions or agents in the process, will be sent to a separate server. At the figure below it is named as Server CG. This server has a CheckpointGroup role.  So all Producers in the example runtime will connect to the CheckpointGroup server as well to send group checkpoint operations.
 
-.. figure:: _static/Architecture_Scale1.png
+.. figure:: _static/Architecture_Scale2.png
 
 The checkpoint operation allows fixing a lot of transactions as a single operation. Frequent checkpointing leads to a slowdown in performance, so it is preferable to do checkpoint as rare as possible and use group checkpoint operations.
 
