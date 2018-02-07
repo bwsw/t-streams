@@ -21,8 +21,12 @@ package com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeeperServ
 
 import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeeperService.LedgerHandle
 import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeeperService.data.{Record, RecordWithIndex}
+import org.apache.bookkeeper.client
+import org.apache.bookkeeper.client.AsyncCallback
 
-class BookKeeperLedgerHandleWrapper(ledgerHandler: org.apache.bookkeeper.client.LedgerHandle)
+import scala.concurrent.Promise
+
+class BookKeeperLedgerHandle(ledgerHandler: org.apache.bookkeeper.client.LedgerHandle)
   extends LedgerHandle(ledgerHandler.getId) {
 
   override def addRecord(data: Record): Long = {
@@ -82,14 +86,30 @@ class BookKeeperLedgerHandleWrapper(ledgerHandler: org.apache.bookkeeper.client.
       None
   }
 
+  override def lastEnqueuedRecordId: Long = ledgerHandler.getLastAddPushed
+
+  override def asyncAddRecord[T](record: Record, callback: LedgerHandle.Callback[T], promise: Promise[T]): Unit = {
+    ledgerHandler.asyncAddEntry(
+      record.toByteArray,
+      new BookKeeperAddCallbackWrapper[T](callback),
+      promise)
+  }
+
   override def close(): Unit =
     ledgerHandler.close()
 
-
   override lazy val getCreationTime: Long = {
     val time =
-      ledgerHandler.getCustomMetadata.get(LedgerHandle.KeyTime)
+      ledgerHandler.getCustomMetadata.get(LedgerHandle.TimestampKey)
     val buffer = java.nio.ByteBuffer.wrap(time)
     buffer.getLong
   }
+}
+
+class BookKeeperAddCallbackWrapper[T](callback: LedgerHandle.Callback[T]) extends AsyncCallback.AddCallback {
+  override def addComplete(bkCode: Int,
+                           ledgerHandle: client.LedgerHandle,
+                           entryId: Long,
+                           ctx: Any): Unit =
+    callback.addComplete(bkCode, ctx.asInstanceOf[Promise[T]])
 }

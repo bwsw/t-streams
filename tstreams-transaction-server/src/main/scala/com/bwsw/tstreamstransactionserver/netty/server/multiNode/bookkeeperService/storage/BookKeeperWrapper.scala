@@ -18,11 +18,13 @@
  */
 package com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeeperService.storage
 
+import com.bwsw.tstreamstransactionserver.`implicit`.Implicits
 import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeeperService.{LedgerHandle, LedgerManager}
 import com.bwsw.tstreamstransactionserver.options.MultiNodeServerOptions.BookkeeperOptions
 import org.apache.bookkeeper.client.BookKeeper
 
 import scala.util.Try
+import scala.collection.JavaConverters._
 
 class BookKeeperWrapper(bookKeeper: BookKeeper,
                         bookkeeperOptions: BookkeeperOptions)
@@ -30,26 +32,8 @@ class BookKeeperWrapper(bookKeeper: BookKeeper,
 
   override def createLedger(timestamp: Long): LedgerHandle = {
 
-    val metadata =
-      new java.util.HashMap[String, Array[Byte]]
-
-    val size =
-      java.lang.Long.BYTES
-    val buffer =
-      java.nio.ByteBuffer
-        .allocate(size)
-        .putLong(timestamp)
-    buffer.flip()
-
-    val bytes = if (buffer.hasArray)
-      buffer.array()
-    else {
-      val bytes = new Array[Byte](size)
-      buffer.get(bytes)
-      bytes
-    }
-
-    metadata.put(LedgerHandle.KeyTime, bytes)
+    val serializedTimestamp = Implicits.longToByteArray(timestamp)
+    val metadata = Map(LedgerHandle.TimestampKey -> serializedTimestamp).asJava
 
     val ledgerHandle = bookKeeper.createLedger(
       bookkeeperOptions.ensembleNumber,
@@ -57,20 +41,20 @@ class BookKeeperWrapper(bookKeeper: BookKeeper,
       bookkeeperOptions.ackQuorumNumber,
       BookKeeper.DigestType.MAC,
       bookkeeperOptions.password,
-      metadata
-    )
-    new BookKeeperLedgerHandleWrapper(ledgerHandle)
+      metadata)
+
+    new BookKeeperLedgerHandle(ledgerHandle)
   }
 
   override def openLedger(id: Long): Option[LedgerHandle] = {
     val ledgerHandleTry = Try(bookKeeper.openLedgerNoRecovery(
       id,
       BookKeeper.DigestType.MAC,
-      bookkeeperOptions.password
-    ))
-    ledgerHandleTry.map(ledgerHandle =>
-      new BookKeeperLedgerHandleWrapper(ledgerHandle)
-    ).toOption
+      bookkeeperOptions.password))
+
+    ledgerHandleTry
+      .map(ledgerHandle => new BookKeeperLedgerHandle(ledgerHandle))
+      .toOption
   }
 
   override def deleteLedger(id: Long): Boolean = {

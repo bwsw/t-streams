@@ -23,8 +23,13 @@ import java.util.concurrent.atomic.AtomicLong
 
 import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeeperService.LedgerHandle
 import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeeperService.data.{Record, RecordWithIndex}
+import org.apache.bookkeeper.client.BKException.Code
 
-class LedgerHandleInMemory(id: Long,
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.{Future, Promise}
+import scala.util.{Failure, Success, Try}
+
+class InMemoryLedgerHandle(id: Long,
                            time: Long)
   extends LedgerHandle(id) {
   @volatile private var isClosed = false
@@ -41,11 +46,22 @@ class LedgerHandleInMemory(id: Long,
     id
   }
 
+  override def asyncAddRecord[T](record: Record, callback: LedgerHandle.Callback[T], promise: Promise[T]): Unit = {
+    Future {
+      Try(addRecord(record)) match {
+        case Success(_) => callback.addComplete(Code.OK, promise)
+        case Failure(_) => callback.addComplete(Code.LedgerClosedException, promise)
+      }
+    }
+  }
+
   override def getRecord(id: Long): Record =
     storage.get(id).orNull
 
   override def lastRecordID(): Long =
     entryIDGen.get() - 1L
+
+  override def lastEnqueuedRecordId: Long = lastRecordID()
 
   override def lastRecord(): Option[Record] = {
     storage.get(lastRecordID())
@@ -83,7 +99,7 @@ class LedgerHandleInMemory(id: Long,
 
     readRecords(fromCorrected, lastRecord)
       .zip(indexes).sortBy(_._1.timestamp)
-      .map {case (record, index) =>
+      .map { case (record, index) =>
         RecordWithIndex(index, record)
       }
   }

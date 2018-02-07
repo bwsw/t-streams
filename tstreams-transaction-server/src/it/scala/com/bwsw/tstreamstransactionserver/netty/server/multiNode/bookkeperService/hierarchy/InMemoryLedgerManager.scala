@@ -23,7 +23,7 @@ import java.util.concurrent.atomic.AtomicLong
 
 import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeeperService.{LedgerHandle, LedgerManager}
 
-class LedgerManagerInMemory
+class InMemoryLedgerManager
   extends LedgerManager{
 
   private val ledgerIDGen = new AtomicLong(0L)
@@ -35,7 +35,7 @@ class LedgerManagerInMemory
     val id = ledgerIDGen.getAndIncrement()
 
     val previousLedger = storage.computeIfAbsent(id, {id =>
-      new LedgerHandleInMemory(id, timestamp)
+      new InMemoryLedgerHandle(id, timestamp)
     })
 
     if (previousLedger != null)

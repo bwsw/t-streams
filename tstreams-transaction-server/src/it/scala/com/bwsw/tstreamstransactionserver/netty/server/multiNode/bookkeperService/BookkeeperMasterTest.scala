@@ -20,6 +20,7 @@
 package com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeperService
 
 import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeeperService.hierarchy.LongZookeeperTreeList
+import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeeperService.storage.BookKeeperWrapper
 import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeeperService.{BookkeeperMaster, BookkeeperMasterBundle, LeaderSelectorInterface}
 import com.bwsw.tstreamstransactionserver.netty.server.zk.ZKIDGenerator
 import com.bwsw.tstreamstransactionserver.options.MultiNodeServerOptions.BookkeeperOptions
@@ -81,6 +82,8 @@ class BookkeeperMasterTest
     new BookKeeper(configuration)
   }
 
+  private lazy val bookKeeperWrapper = new BookKeeperWrapper(bookkeeper, bookkeeperOptions)
+
   override def beforeAll(): Unit = {
     zkServer
     zkClient
@@ -105,10 +108,9 @@ class BookkeeperMasterTest
 
       val bookkeeperMaster =
         new BookkeeperMaster(
-          bookkeeper,
+          bookKeeperWrapper,
           closedLedgerIDGen,
           masterSelector,
-          bookkeeperOptions,
           zkTree1,
           createNewLedgerEveryTimeMs
         )
@@ -124,7 +126,7 @@ class BookkeeperMasterTest
 
       bookkeeperMaster.doOperationWithCurrentWriteLedger { currentLedger =>
         currentLedger.isRight shouldBe true
-        currentLedger.right.get.getId shouldBe 0
+        currentLedger.right.get.id shouldBe 0
       }
 
       bookkeeperMasterBundle.stop()
@@ -143,10 +145,9 @@ class BookkeeperMasterTest
 
       val bookkeeperMaster =
         new BookkeeperMaster(
-          bookkeeper,
+          bookKeeperWrapper,
           closedLedgerIDGen,
           masterSelector,
-          bookkeeperOptions,
           zkTree1,
           createNewLedgerEveryTimeMs
         )
@@ -161,7 +162,7 @@ class BookkeeperMasterTest
 
       bookkeeperMaster.doOperationWithCurrentWriteLedger { currentLedger =>
         currentLedger.isRight shouldBe true
-        currentLedger.right.get.getId should be > 1L
+        currentLedger.right.get.id should be > 1L
       }
 
       bookkeeperMasterBundle.stop()

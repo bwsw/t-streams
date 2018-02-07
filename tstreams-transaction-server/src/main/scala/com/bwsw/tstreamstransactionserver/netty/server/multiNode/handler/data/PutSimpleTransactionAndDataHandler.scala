@@ -22,8 +22,8 @@ package com.bwsw.tstreamstransactionserver.netty.server.multiNode.handler.data
 
 import com.bwsw.tstreamstransactionserver.netty.server.batch.Frame
 import com.bwsw.tstreamstransactionserver.netty.server.multiNode.Structure.PutTransactionsAndData
-import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeeperService.BookkeeperMaster
 import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeeperService.data.Record
+import com.bwsw.tstreamstransactionserver.netty.server.multiNode.bookkeeperService.{BookkeeperMaster, LedgerHandle}
 import com.bwsw.tstreamstransactionserver.netty.server.multiNode.handler.MultiNodeArgsDependentContextHandler
 import com.bwsw.tstreamstransactionserver.netty.server.multiNode.handler.data.PutSimpleTransactionAndDataHandler._
 import com.bwsw.tstreamstransactionserver.netty.server.subscriber.OpenedTransactionNotifier
@@ -33,8 +33,8 @@ import com.bwsw.tstreamstransactionserver.options.SingleNodeServerOptions.Authen
 import com.bwsw.tstreamstransactionserver.rpc.TransactionService.PutSimpleTransactionAndData
 import com.bwsw.tstreamstransactionserver.rpc._
 import io.netty.channel.ChannelHandlerContext
+import org.apache.bookkeeper.client.BKException
 import org.apache.bookkeeper.client.BKException.Code
-import org.apache.bookkeeper.client.{AsyncCallback, BKException, LedgerHandle}
 
 import scala.concurrent.{ExecutionContext, Future, Promise}
 
@@ -60,12 +60,9 @@ class PutSimpleTransactionAndDataHandler(server: TransactionServer,
                               count: Int,
                               message: RequestMessage,
                               ctx: ChannelHandlerContext)
-    extends AsyncCallback.AddCallback {
+    extends LedgerHandle.Callback[Boolean] {
     override def addComplete(bkCode: Int,
-                             ledgerHandle: LedgerHandle,
-                             entryId: Long,
-                             obj: scala.Any): Unit = {
-      val promise = obj.asInstanceOf[Promise[Boolean]]
+                             promise: Promise[Boolean]): Unit = {
       if (Code.OK == bkCode) {
         val response = descriptor.encodeResponse(
           TransactionService.PutSimpleTransactionAndData.Result(
@@ -97,12 +94,9 @@ class PutSimpleTransactionAndDataHandler(server: TransactionServer,
                                       partition: Int,
                                       transactionId: Long,
                                       count: Int)
-    extends AsyncCallback.AddCallback {
+    extends LedgerHandle.Callback[Boolean] {
     override def addComplete(bkCode: Int,
-                             ledgerHandle: LedgerHandle,
-                             entryId: Long,
-                             obj: scala.Any): Unit = {
-      val promise = obj.asInstanceOf[Promise[Boolean]]
+                             promise: Promise[Boolean]): Unit = {
       if (Code.OK == bkCode) {
         notifier.notifySubscribers(
           stream,
@@ -181,10 +175,9 @@ class PutSimpleTransactionAndDataHandler(server: TransactionServer,
               System.currentTimeMillis(),
               message.token,
               requestBody
-            ).toByteArray
+            )
 
-
-            ledgerHandler.asyncAddEntry(record, callback, promise)
+            ledgerHandler.asyncAddRecord(record, callback, promise)
         }
       }(context)
 
@@ -220,7 +213,7 @@ class PutSimpleTransactionAndDataHandler(server: TransactionServer,
               System.currentTimeMillis(),
               message.token,
               requestBody
-            ).toByteArray
+            )
 
 
             val callback = new ReplyCallback(
@@ -232,7 +225,7 @@ class PutSimpleTransactionAndDataHandler(server: TransactionServer,
               ctx
             )
 
-            ledgerHandler.asyncAddEntry(record, callback, promise)
+            ledgerHandler.asyncAddRecord(record, callback, promise)
         }
       }(context)
 

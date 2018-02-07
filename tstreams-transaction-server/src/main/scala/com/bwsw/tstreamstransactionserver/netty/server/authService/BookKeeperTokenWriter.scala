@@ -46,7 +46,7 @@ class BookKeeperTokenWriter(bookkeeperMaster: BookkeeperMaster,
       bookkeeperMaster.doOperationWithCurrentWriteLedger {
         case Right(ledgerHandle) =>
           val record = new Record(eventType, timestamp, token, Array.emptyByteArray)
-          ledgerHandle.addEntry(record.toByteArray)
+          ledgerHandle.addRecord(record)
         case Left(_) =>
       }
     }(context)
