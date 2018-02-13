@@ -34,7 +34,7 @@ The method allows setting factory properties which are used when the factory gen
  
  def setProperty(key: String, value: Any):TStreamsFactory
 
-Please, note that the method returns the same factory object which gives a developer a way to chain several **setProperty** methods together as shown in the next snippet::
+Please, note that the method returns the same factory object which gives a developer a way to chain several **setProperty** methods together as shown in the next snippet *(need updating)*::
 
  factory.setProperty(TSF_Dictionary.Metadata.Cluster.NAMESPACE, Setup.KS).                 
      setProperty(TSF_Dictionary.Data.Cluster.NAMESPACE, "test").                    
@@ -134,7 +134,7 @@ where
  :widths: 10, 15, 25, 30
 
  "name", "AВ name of the producer object.", "short string", ""
- "partitions", "В A set of partitions which the producer will use in operation", "В Set[Int]", "В Set(0)"
+ "partitions", "В A set of partitions which the producer will use in operation", "Set[Int]", "Set(0)"
  
 An example of the usage is demonstrated below *(need updating)*::
 
@@ -154,7 +154,7 @@ getConsumer method
 """""""""""""""""""""""
 *(updated)*
 
-The method returns a consumer object instance (it is for a **polling** interface, for a **pub-sub** interface loot at the [getSubscriber method](#getsubscriber-method) below). It should be used to create new consumers. The method has the next signature::
+The method returns a consumer object instance (it is for a **polling** interface, for a **pub-sub** interface look at the getSubscriber method below). It should be used to create new consumers. The method has the next signature::
 
  def getConsumer(name: String, partitions: Set[Int],offset: IOffset, useLastOffset: Boolean = true,checkpointAtStart: Boolean = false): Consumer
 
@@ -192,7 +192,7 @@ getSubscriber method
 
 *(upsdated)*
 
-The method returns subscriber object instance (it is for **pub-sub** interface, for **polling** interface loot at getConsumer_method_ before). It should be used to create new subscribers. The method has the next signature::
+The method returns subscriber object instance (it is for **pub-sub** interface, for **polling** interface look at the getConsumer method before). It should be used to create new subscribers. The method has the next signature::
 
  def getSubscriber(name: String, partitions: Set[Int],callback: Callback, offset: IOffset, useLastOffset:Boolean = true, checkpointAtStart: Boolean =false): Subscriber
  
@@ -203,7 +203,7 @@ where
  :widths: 10, 15, 45, 30
 
  "name", "a name of the consumer object", "short string", ""
-  "partitions", "A set of partitions from which consumer will read transactions", "Set[Int]", "	Set(0)"
+  "partitions", "A set of partitions from which consumer will read transactions", "Set[Int]", "Set(0)"
  "callback", "A callback that will be called when aВ new transaction will be ready for processing", "Callback[T]", "
  
  ::
