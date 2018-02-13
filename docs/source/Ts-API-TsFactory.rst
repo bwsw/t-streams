@@ -5,7 +5,7 @@ TStreamsFactory
 
 TStreams Factory class is a general purpose factory which should be used to create top-level T-streams objects.
 
-To start using the class it must be imported with next line::
+To start using the class it must be imported with next line *(need updating)*::
 
  import com.bwsw.tstreams.env.{TStreamsFactory, TSF_Dictionary}
 
@@ -46,9 +46,9 @@ Please, note that the method returns the same factory object which gives a devel
 
 .. important:: If the factory instance is “locked” (see next) **setProperty** will raise **IllegalStateException**.
 
-.. important:: If an unknown key is used with **setProperty** method, it will raise **IllegalArgumentException**. For all possible keys see TSF_Dictionary_ object next.
+.. important:: If an unknown key is used with **setProperty** method, it will raise **IllegalArgumentException**. For all possible keys see TSF-Dictionary_ object next.
 
-Keep in mind that almost all of the default `TStreamsFactory` settings are good and you do not need to change them. Below (in the chapter for the TSF_Dictionary_ object), all the options are described and those that should be changed are outlined with **bold**.
+Keep in mind that almost all of the default `TStreamsFactory` settings are good and you do not need to change them. Below (in the chapter for the TSF-Dictionary_ object), all the options are described and those that should be changed are outlined with **bold**.
 
 getProperty method
 """"""""""""""""""""""
@@ -154,7 +154,7 @@ getConsumer method
 """""""""""""""""""""""
 *(updated)*
 
-The method returns a consumer object instance (it is for a **polling** interface, for a **pub-sub** interface loot at the getSubscriber_method_ below). It should be used to create new consumers. The method has the next signature::
+The method returns a consumer object instance (it is for a **polling** interface, for a **pub-sub** interface loot at the [getSubscriber method](#getsubscriber-method) below). It should be used to create new consumers. The method has the next signature::
 
  def getConsumer(name: String, partitions: Set[Int],offset: IOffset, useLastOffset: Boolean = true,checkpointAtStart: Boolean = false): Consumer
 
