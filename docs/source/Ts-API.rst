@@ -6,8 +6,8 @@ T-streams library introduces several top-level objects which is used by a develo
 .. toctree::
 
    Ts-API-TsFactory
-   API-Producer
-   API-Consumer
-   API-Subscriber
-   API-CheckpointGroup
-   API-StorageClient
+   Ts-API-Producer
+   Ts-API-Consumer
+   Ts-API-Subscriber
+   Ts-API-CheckpointGroup
+   Ts-API-StorageClient
