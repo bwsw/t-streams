@@ -1,12 +1,12 @@
 Storage Client
 =====================
 
-Methods to Add
--------------------
-
 Instance Constructor::
 
  new StorageClient(clientOptions: ConnectionOptions, authOptions: AuthOptions, zookeeperOptions: ZookeeperOptions, curator: CuratorFramework, tracingOptions: TracingOptions = TracingOptions())
+ 
+Methods to Add
+-------------------
 
 def authenticationKey: String
 
