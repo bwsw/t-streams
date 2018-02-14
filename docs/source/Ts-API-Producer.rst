@@ -37,10 +37,10 @@ It returns a new transaction object and takes up to two parameters:
  :widths: 10, 55, 25
 
 
- "policy", "Specifies the `policy <https://github.com/bwsw/t-streams/blob/develop/t-streams/src/main/scala/com/bwsw/tstreams/agents/producer/NewProducerTransactionPolicy.scala>`_ to apply to the previously open (not checkpointed or canceled transaction), four policies are available (which are applied in the case when the previous transaction is still opened):
+ "policy", "Specifies the `policy <https://github.com/bwsw/t-streams/blob/develop/t-streams/src/main/scala/com/bwsw/tstreams/agents/producer/NewProducerTransactionPolicy.scala>`_ to apply to the previously open (not checkpointed or canceled transaction), four *(three?)* policies are available (which are applied in the case when the previous transaction is still opened):
 
  1. **CheckpointIfOpened** – when the transaction is opened the previous one is checkpointed synchronously.
- 2. **CheckpointAsyncIfOpened** – when the transaction is opened the previous one is checkpointed asynchronously (without waiting).
+ 2. *(?)* **CheckpointAsyncIfOpened** – when the transaction is opened the previous one is checkpointed asynchronously (without waiting).
  3. **CancelIfOpened** – when the transaction is opened the previous one is canceled.
  4. **ErrorIfOpened** – when the transaction is opened, the exception is raised.", "policy = NewTransactionProducerPolicy.CheckpointIfOpened"
  "partition", "specifies the partition of the stream on which the transaction will be created; if the argument is omitted then next partition (according to the policy that was specified in getProducer factory method) will be used.", "0"
