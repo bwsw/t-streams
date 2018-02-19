@@ -36,13 +36,13 @@ The summary of methods of a Consumer is presented below:
  "def getAgentName(): String", "Returns a name of a Consumer"
  "def getPartitions(): Set[Int]", "Returns a set of partitions"
  "def getCurrentOffset(partition: Int): Long", "Returns a read pointer position for the partition"
- "def getTransaction(partition: Int):Option[ConsumerTransaction]", "returns the next transaction according to a AbstractPolicy"
+ "def getTransaction(partition: Int):Option[ConsumerTransaction]", "Receives new transaction from the partition."
  "def getLastTransaction(partition: Int):Option[ConsumerTransaction]", "Returns the last available transaction for the partition"
  "def getTransactionsFromTo(partition: Int, from:Long, to: Long):ListBuffer[ConsumerTransaction]", "Returns transactions which reside between from and to for the partition"
  "def getTransactionById(partition: Int,transactionID: Long):Option[ConsumerTransaction]", "Returns a transaction by the transactionID for the partition"
  "def setStreamPartitionOffset(partition: Int,offset: Long): Unit", "Sets an offset to the one specified by the Offset for the partition"
- "def loadTransactionFromDB(partition: Int,transactionID: Long):Option[ConsumerTransaction]", "Loads a transaction info from the metadata store"
- "def checkpoint(): Unit", "Does a checkpoint for current read disposition"
+ "def loadTransactionFromDB(partition: Int,transactionID: Long):Option[ConsumerTransaction]", "Update a transaction (if a transaction is not closed it will have total packets value -1)"
+ "def checkpoint(): Unit", "Save current offsets in metadata to read later from them (in case of system stop/failure)."
  "def buildTransactionObject(partition: Int,transactionID: Long, state: TransactionStates,count: Int): Option[ConsumerTransaction]", "Allows to build Transaction without accessing DB"
  "def getPartitions: Set[Int]", "Returns partitions"
  "def close(): Unit", ""
@@ -147,13 +147,13 @@ loadTransactionFromDB method
 
 *(updated)*
 
-The method loads the transaction with the ID from the metadata store. It returns ``Option[Transaction[T]]`` which is None if there is no such transaction.
+The method loads the transaction with the ID from the metadata store. It returns ``Option[Transaction[T]]`` which is 'None' if there is no such transaction.
 
 *(need updating here)*::
 	
  val txnOpt = consumer.loadTransactionFromDB(part, transactionID)
 
-There is also the **getTransactionById** method which also returns None if the transaction is incomplete.
+There is also the **getTransactionById** method which also returns 'None' if the transaction is incomplete.
 
 setStreamPartitionOffset method
 ---------------------------------------
@@ -199,30 +199,33 @@ getPartitions method
 Consumer Transaction API
 ===========================
 
+Instant Constructor::
+
+ new ConsumerTransaction(partition: Int, transactionID: Long, count: Int, state: TransactionStates, ttl: Long)
 
 Methods To Add
 ----------------------
 
-def attach(c: Consumer): Unit
+``def attach(c: Consumer): Unit``
 
-def consumer: Consumer
+``def consumer: Consumer``
 
-def getAll: Queue[Array[Byte]]
+``def getAll: Queue[Array[Byte]]``
 
-def getCount: Int
+``def getCount: Int``
 
-def getPartition: Int
+``def getPartition: Int``
 
-def getState: TransactionStates
+``def getState: TransactionStates``
 
-def getTTL: Long
+``def getTTL: Long``
 
-def getTransactionID: Long
+``def getTransactionID: Long``
 
-def hasNext: Boolean
+``def hasNext: Boolean`` - Indicates if the current transaction is consumed or not.
 
-def next(): Array[Byte]
+``def next(): Array[Byte]``
 
-def replay(): Unit
+``def replay(): Unit`` - Refresh BasicConsumerTransaction iterator to read from the beginning.
 
-def toString(): String
+``def toString(): String``
