@@ -84,15 +84,15 @@ The method stops the operation. A developer calls for it when there is no furthe
 Methods To Add
 --------------------
 
-def calculateProcessingEngineWorkersThreadAmount():Int
+``def calculateProcessingEngineWorkersThreadAmount():Int`` - Calculates amount of Processing Engine workers.
 
-def close(): Unit
+``def close(): Unit``
 
-def dumpCounters(): Unit
+``def dumpCounters(): Unit``
 
-def getConsumer: Consumer
+``def getConsumer: Consumer``
 
-def isConnected: Boolean
+``def isConnected: Boolean``
 
 val callback: Callback
 
