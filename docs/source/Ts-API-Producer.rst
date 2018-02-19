@@ -37,13 +37,14 @@ It returns a new transaction object and takes up to two parameters:
  :widths: 10, 55, 25
 
 
- "policy", "Specifies the `policy <https://github.com/bwsw/t-streams/blob/develop/t-streams/src/main/scala/com/bwsw/tstreams/agents/producer/NewProducerTransactionPolicy.scala>`_ to apply to the previously open (not checkpointed or canceled transaction), four *(three?)* policies are available (which are applied in the case when the previous transaction is still opened):
+ "policy", "Specifies the `policy <https://github.com/bwsw/t-streams/blob/develop/t-streams/src/main/scala/com/bwsw/tstreams/agents/producer/NewProducerTransactionPolicy.scala>`_ to apply to the previously open (not checkpointed or canceled transaction). Four policies are available (which are applied in the case when the previous transaction is still opened):
 
- 1. **CheckpointIfOpened** – when the transaction is opened the previous one is checkpointed synchronously.
+ 1. **CheckpointIfOpened** – When the transaction is opened the previous one is checkpointed synchronously.
  2. *(?)* **CheckpointAsyncIfOpened** – when the transaction is opened the previous one is checkpointed asynchronously (without waiting).
- 3. **CancelIfOpened** – when the transaction is opened the previous one is canceled.
- 4. **ErrorIfOpened** – when the transaction is opened, the exception is raised.", "policy = NewTransactionProducerPolicy.CheckpointIfOpened"
- "partition", "specifies the partition of the stream on which the transaction will be created; if the argument is omitted then next partition (according to the policy that was specified in getProducer factory method) will be used.", "0"
+ 2. **EnqueueIfOpened** - If a transaction is opened, just append it to the end of the list.
+ 3. **CancelIfOpened** – When the transaction is opened the previous one is canceled.
+ 4. **ErrorIfOpened** – When the transaction is opened, the exception is raised.", "policy = NewTransactionProducerPolicy.CheckpointIfOpened"
+ "partition", "Specifies the partition of the stream on which the transaction will be created. If -1 is specified (default) then the method uses whitePolicy (Round Robin)", "0"
 .. "retry", "defines a number of retrials if the method fails internally (it happens when partition master is gone away during the call of newTransaction).", "3"
 
 The ``producer.Transaction`` object API will be described further.
@@ -130,7 +131,7 @@ stop method
 
 *(updated)*
 
-In the end of the operation a producer have to be stopped gracefully. Use the stop method.
+In the end of the operation a producer have to be stopped gracefully. Use the stop method for it.
 
 ::
 	
@@ -145,21 +146,21 @@ Now the producer is no longer functional.
 Methods to add
 ~~~~~~~~~~~~~~~~~~~
 
-def close(): Unit 
+``def close(): Unit`` 
 
-def generateNewTransaction(partition: Int,isInstant: Boolean = false, isReliable: Boolean= true, data: Seq[Array[Byte]] = Seq()): Long
+``def generateNewTransaction(partition: Int,isInstant: Boolean = false, isReliable: Boolean= true, data: Seq[Array[Byte]] = Seq()): Long``
 
-def instantTransaction(data: Seq[Array[Byte]],isReliable: Boolean): Long
+``def instantTransaction(data: Seq[Array[Byte]],isReliable: Boolean): Long`` - Wrapper method when the partition is atomatically selected using whitePolicy (Round Robin)
 
-def instantTransaction(partition: Int, data:Seq[Array[Byte]], isReliable: Boolean): Long
+``def instantTransaction(partition: Int, data:Seq[Array[Byte]], isReliable: Boolean): Long`` - Instant transaction send out (kafka-like). The method implements "at-least-once" approach which means that some packets might be sent more than once.
 
-def isConnected: Boolean
+``def isConnected: Boolean``
+
+``def publish(msg: TransactionState): Unit`` - Allows to publish update/pre/post/cancel messages.
 
 var name: String
 
 val producerOptions: ProducerOptions
-
-def publish(msg: TransactionState): Unit
 
 val stream: Stream
 
@@ -174,17 +175,17 @@ A producer.Transaction object has some important methods which allows a develope
  :header: "Method", "Purpose"
  :widths: 55, 55
 
- "def isClosed: Boolean", "Returns True if the transaction is no longer fit for usage"
- "def getPartition: Int", "Returns the partition on that the transaction operates"
- "def toString(): String", "Returns a string presentation of the transaction"
- "def getTransactionID: Long", "Returns the ID of the transaction"
- "def getDataItemsCount: Int", "Returns the amount of data items inside the transaction"
- "def getProducer: Producer[T]", "Returns the Producer instance that created the transaction"
- "def send(string: String): ProducerTransaction", "Allows to send a new data item into the transaction"
- "def send(obj: Array[Byte]): ProducerTransaction", "Allows to send data to storage"
- "def cancel(): Unit", "Allows to cancel the transaction"
- "def checkpoint(): Unit", "Allows to checkpoint the transaction"
- "def finalizeDataSend(): Unit", "Does actual sending of data that is not sent yet"
+ "def isClosed: Boolean", "Returns 'True' if the transaction is no longer fit for usage."
+ "def getPartition: Int", "Returns the partition on that the transaction operates."
+ "def toString(): String", "Returns a string presentation of the transaction."
+ "def getTransactionID: Long", "Returns the ID of the transaction."
+ "def getDataItemsCount: Int", "Returns the amount of data items inside the current transaction."
+ "def getProducer: Producer[T]", "Returns the Producer instance that created the transaction."
+ "def send(string: String): ProducerTransaction", "Allows a user to send a new data item into the transaction."
+ "def send(obj: Array[Byte]): ProducerTransaction", "Allows a user to send data to a storage."
+ "def cancel(): Unit", "Allows a user to cancel the current transaction."
+ "def checkpoint(): Unit", "Allows a user to submit the transaction. The transaction will be available to Consumer/Subscriber only after closing."
+ "def finalizeDataSend(): Unit", "Does actual sending of data that are not sent yet."
  "def getStateInfo(checkpoint: Boolean):ProducerTransactionState", ""
  "def markAsClosed(): Unit", ""
 
