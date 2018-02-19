@@ -51,7 +51,7 @@ The ``producer.Transaction`` object API will be described further.
 
 So, the method above starts a new transaction. That transaction will move through the next states:
 
-.. figure:: _static/API_Producer_TxnStatuses.png
+.. figure:: _static/TransactionStates.png
 
 *Opened* and *Updated* states are internal for a developer and are displayed for better understanding. Finally, after a new transaction is received it will move to *checkpoint* or to *cancel*.
 
