@@ -20,15 +20,13 @@ package com.bwsw.tstreamstransactionserver.netty.server.db.rocks
 
 import java.io.File
 import java.nio.file.Paths
-import java.util.concurrent.TimeUnit
 
+import com.bwsw.tstreamstransactionserver.netty.server.RocksDBWrapper
 import com.bwsw.tstreamstransactionserver.netty.server.db.{DbMeta, KeyValueDbManager}
 import com.bwsw.tstreamstransactionserver.netty.server.storage.rocks.RocksCompactionJob
 import com.bwsw.tstreamstransactionserver.options.SingleNodeServerOptions.{RocksStorageOptions, StorageOptions}
 import org.apache.commons.io.FileUtils
-import org.rocksdb._
-
-import scala.collection.JavaConverters
+import org.rocksdb.ColumnFamilyOptions
 
 class RocksDbManager(storageOpts: StorageOptions,
                      rocksStorageOpts: RocksStorageOptions,
@@ -40,51 +38,27 @@ class RocksDbManager(storageOpts: StorageOptions,
   require(file.isAbsolute, "A parameter 'path' is incorrect. Path should be absolute. " +
     "For more info see storage settings description.")
 
-  RocksDB.loadLibrary()
-
   private val options = rocksStorageOpts.createDBOptions()
 
-  private[rocks] val (client, descriptorsWorkWith, databaseHandlers) = {
-    val descriptorsWithDefaultDescriptor =
-      new RocksDbDescriptor(
-        DbMeta("default"),
-        new ColumnFamilyOptions()
-      ) +: descriptors
-
-    val (columnFamilyDescriptors, ttls) = descriptorsWithDefaultDescriptor
-      .map(descriptor =>
-        (
-          new ColumnFamilyDescriptor(descriptor.name, descriptor.options),
-          descriptor.ttl
-        )
-      ).unzip
-
-    val databaseHandlers =
-      new java.util.ArrayList[ColumnFamilyHandle](columnFamilyDescriptors.length)
-
+  private[rocks] val (client, databaseHandlers) = {
+    val defaultDescriptor = new RocksDbDescriptor(
+      DbMeta("default"),
+      new ColumnFamilyOptions())
+    val descriptorsWithDefaultDescriptor = defaultDescriptor +: descriptors
 
     FileUtils.forceMkdir(file)
 
-    val connection = TtlDB.open(
+    val (connection, columnFamilies) = RocksDBWrapper(
       options,
       file.getAbsolutePath,
-      JavaConverters.seqAsJavaList(columnFamilyDescriptors),
-      databaseHandlers,
-      JavaConverters.seqAsJavaList(ttls),
-      readOnly
-    )
+      descriptorsWithDefaultDescriptor,
+      readOnly)
 
-    val handlerToIndexMap: collection.immutable.Map[Int, ColumnFamilyHandle] =
-      JavaConverters.asScalaBuffer(databaseHandlers)
-        .zip(descriptorsWithDefaultDescriptor)
-        .map { case (handler, descriptor) => (descriptor.id, handler) }
-        .toMap
+    val handlerToIndexMap = columnFamilies
+      .map { case RocksDBWrapper.ColumnFamily(descriptor, handle) => (descriptor.id, handle) }
+      .toMap
 
-    (
-      connection,
-      descriptorsWithDefaultDescriptor.toBuffer,
-      handlerToIndexMap
-    )
+    (connection, handlerToIndexMap)
   }
 
 

@@ -21,9 +21,10 @@ package com.bwsw.tstreamstransactionserver.netty.server.compaction
 
 import java.util.concurrent.TimeUnit
 
+import com.bwsw.tstreamstransactionserver.netty.server.RocksDBWrapper
 import com.bwsw.tstreamstransactionserver.netty.server.storage.rocks.RocksCompactionJob
 import org.mockito.Mockito.{times, verify}
-import org.rocksdb.{ColumnFamilyHandle, RocksDB}
+import org.rocksdb.ColumnFamilyHandle
 import org.scalatest.mockito.MockitoSugar
 import org.scalatest.{FlatSpec, Matchers}
 
@@ -37,7 +38,7 @@ class RocksCompactionJobTest extends FlatSpec with Matchers with MockitoSugar {
   private val cycles = 5
 
   private trait Mocks {
-    val rocksDB: RocksDB = mock[RocksDB]
+    val rocksDB: RocksDBWrapper = mock[RocksDBWrapper]
     val handlersCount = 5
     val handlers: Seq[ColumnFamilyHandle] = Seq.fill(handlersCount)(mock[ColumnFamilyHandle])
   }

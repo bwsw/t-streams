@@ -19,9 +19,9 @@
 
 package com.bwsw.tstreamstransactionserver.netty.server.storage.rocks
 
-import com.bwsw.tstreamstransactionserver.netty.server.CompactionJob
+import com.bwsw.tstreamstransactionserver.netty.server.{CompactionJob, RocksDBWrapper}
 import com.bwsw.tstreamstransactionserver.options.CommonOptions
-import org.rocksdb.{ColumnFamilyHandle, RocksDB}
+import org.rocksdb.ColumnFamilyHandle
 
 import scala.concurrent.duration.TimeUnit
 
@@ -35,7 +35,7 @@ import scala.concurrent.duration.TimeUnit
   * @param timeUnit time unit of time interval
   * @author Pavel Tomskikh
   */
-class RocksCompactionJob(rocksDB: RocksDB,
+class RocksCompactionJob(rocksDB: RocksDBWrapper,
                          handlers: Seq[ColumnFamilyHandle],
                          interval: Long,
                          timeUnit: TimeUnit = CommonOptions.COMPACTION_TIME_UNIT)

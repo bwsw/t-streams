@@ -38,7 +38,7 @@ object Dependencies {
       "commons-io" % "commons-io" % "2.5",
       "com.twitter" %% "scrooge-core" % "17.10.0",
       "com.twitter" % "libthrift" % "0.5.0-7",
-      "org.rocksdb" % "rocksdbjni" % "5.7.5",
+      "org.rocksdb" % "rocksdbjni" % "5.11.3",
       "io.netty" % "netty-all" % "4.1.19.Final",
       "org.json4s" %% "json4s-jackson" % "3.5.3",
       "org.apache.zookeeper" % "zookeeper" % "3.4.11",

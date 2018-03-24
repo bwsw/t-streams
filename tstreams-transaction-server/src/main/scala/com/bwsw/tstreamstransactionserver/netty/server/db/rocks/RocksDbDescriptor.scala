@@ -24,18 +24,11 @@ import org.rocksdb._
 
 case class RocksDbDescriptor(rocksDatabaseMeta: DbMeta,
                              options: ColumnFamilyOptions,
-                             ttl: Integer = NoTTL) {
+                             ttl: Int = NoTTL) {
   def this(name: String,
            options: ColumnFamilyOptions,
-           ttl: Integer) = {
-    this(
-      DbMeta(
-        name
-      ),
-      options,
-      ttl
-    )
-  }
+           ttl: Int) =
+    this(DbMeta(name), options, ttl)
 
   def id: Int = rocksDatabaseMeta.id
 
@@ -44,5 +37,5 @@ case class RocksDbDescriptor(rocksDatabaseMeta: DbMeta,
 
 
 object RocksDbDescriptor {
-  val NoTTL: Integer = int2Integer(-1)
+  val NoTTL: Int = -1
 }

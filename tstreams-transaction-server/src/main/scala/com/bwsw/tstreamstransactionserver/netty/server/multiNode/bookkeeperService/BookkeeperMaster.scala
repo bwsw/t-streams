@@ -120,26 +120,37 @@ class BookkeeperMaster(bookKeeper: BookKeeperWrapper,
   }
 
   override def run(): Unit = {
-    Try {
+    val result = Try {
       while (true) {
         if (master.hasLeadership)
           lead()
         else {
-          currentOpenedLedger match {
-            case Some(openedLedger) =>
-              currentOpenedLedger = None
-              openedLedger.close()
-            case _ =>
-          }
+          closeCurrentOpenedLedger()
+          //          Thread.sleep(timeBetweenCreationOfLedgers)
         }
       }
-    } match {
+    }
+
+    Try(closeCurrentOpenedLedger())
+
+    result match {
       case Success(_) =>
       case Failure(exception: InterruptedException) =>
         exception.printStackTrace()
         Thread.currentThread().interrupt()
       case Failure(exception: Throwable) =>
+        exception.printStackTrace()
         throw exception
+    }
+  }
+
+
+  private def closeCurrentOpenedLedger(): Unit = {
+    currentOpenedLedger match {
+      case Some(openedLedger) =>
+        currentOpenedLedger = None
+        openedLedger.close()
+      case _ =>
     }
   }
 }

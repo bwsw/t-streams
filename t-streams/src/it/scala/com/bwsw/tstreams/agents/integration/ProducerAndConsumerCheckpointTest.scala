@@ -30,6 +30,8 @@ import com.bwsw.tstreams.testutils._
 import com.bwsw.tstreamstransactionserver.rpc.TransactionStates
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 
+import scala.util.Try
+
 
 class ProducerAndConsumerCheckpointTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
 
@@ -104,6 +106,7 @@ class ProducerAndConsumerCheckpointTest extends FlatSpec with Matchers with Befo
       transaction.getAll.map(i => new String(i)).sorted shouldBe dataToSend
       consumer.checkpoint()
     }
+    consumer.stop()
 
     l1.await()
 
@@ -121,7 +124,8 @@ class ProducerAndConsumerCheckpointTest extends FlatSpec with Matchers with Befo
 
   override def afterAll(): Unit = {
     producer.stop()
-    Seq(consumer, consumer2).foreach(c => c.stop())
+    Try(consumer.stop())
+    consumer2.stop()
     onAfterAll()
     TestStorageServer.dispose(srv)
     TimeTracker.dump()

@@ -31,10 +31,7 @@ object TStreamsTransactionServer {
 
     assemblyJarName in assembly := s"${name.value}-${version.value}.jar",
 
-    ScroogeSBT.autoImport.scroogeThriftOutputFolder in Compile := baseDirectory.value / sroogeGenOutput,
-    ScroogeSBT.autoImport.scroogeBuildOptions in Compile := Seq(),
-
-    unmanagedSourceDirectories in Compile += baseDirectory.value / "src/main/resources",
-    managedSourceDirectories in Compile += baseDirectory.value / sroogeGenOutput
+    ScroogeSBT.autoImport.scroogeThriftOutputFolder in Compile := (managedSourceDirectories in Compile).value.head,
+    ScroogeSBT.autoImport.scroogeBuildOptions in Compile := Seq()
   ) ++ Dependencies.TStreamsTransactionServer
 }

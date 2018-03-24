@@ -34,7 +34,12 @@ import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 class ProducerUpdateTaskTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils {
   private lazy val server = TestStorageServer.getNewClean()
 
-  private lazy val producer = f.getProducer(name = "test_producer", partitions = Set(0, 1, 2))
+  private val ttlMs: Int = 10000
+  private lazy val producer = {
+    f.setProperty(ConfigurationOptions.Producer.Transaction.keepAliveMs, ttlMs / 4)
+    f.setProperty(ConfigurationOptions.Producer.Transaction.ttlMs, ttlMs)
+    f.getProducer(name = "test_producer", partitions = Set(0, 1, 2))
+  }
 
   override def beforeAll(): Unit = {
     server
@@ -51,7 +56,7 @@ class ProducerUpdateTaskTest extends FlatSpec with Matchers with BeforeAndAfterA
     val transactionID = t.getTransactionID
     server.notifyProducerTransactionCompleted(t => t.transactionID == transactionID && t.state == TransactionStates.Checkpointed, l.countDown())
     t.send("data".getBytes())
-    Thread.sleep(f.getProperty(ConfigurationOptions.Producer.Transaction.ttlMs).asInstanceOf[Int] + 1000)
+    Thread.sleep(ttlMs + 1000)
     t.checkpoint()
     l.await()
 

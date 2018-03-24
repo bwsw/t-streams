@@ -19,26 +19,75 @@
 
 package com.bwsw.tstreamstransactionserver.netty.server.db.rocks
 
+import java.util.concurrent.atomic.AtomicBoolean
+
 import com.bwsw.tstreamstransactionserver.netty.server.db.KeyValueDbIterator
 import org.rocksdb.RocksIterator
 
-private[rocks] final class RocksDbIteratorWrapper(iterator: RocksIterator)
+final class RocksDbIteratorWrapper(iterator: RocksIterator,
+                                   rocksDBIsClosed: => Boolean)
   extends KeyValueDbIterator {
-  override def key(): Array[Byte] = iterator.key()
 
-  override def value(): Array[Byte] = iterator.value()
+  private val isClosed = new AtomicBoolean(false)
 
-  override def isValid: Boolean = iterator.isValid
+  override def key(): Array[Byte] = {
+    throwIfClosed()
+    iterator.key()
+  }
 
-  override def seekToFirst(): Unit = iterator.seekToFirst()
+  override def value(): Array[Byte] = {
+    throwIfClosed()
+    iterator.value()
+  }
 
-  override def seekToLast(): Unit = iterator.seekToLast()
+  override def isValid: Boolean = {
+    throwIfClosed()
+    iterator.isValid
+  }
 
-  override def seek(target: Array[Byte]): Unit = iterator.seek(target)
+  override def seekToFirst(): Unit = {
+    throwIfClosed()
+    iterator.seekToFirst()
+  }
 
-  override def next(): Unit = iterator.next()
+  override def seekToLast(): Unit = {
+    throwIfClosed()
+    iterator.seekToLast()
+  }
 
-  override def prev(): Unit = iterator.prev()
+  override def seek(target: Array[Byte]): Unit = {
+    throwIfClosed()
+    iterator.seek(target)
+  }
 
-  override def close(): Unit = iterator.close()
+  override def next(): Unit = {
+    throwIfClosed()
+    iterator.next()
+  }
+
+  override def prev(): Unit = {
+    throwIfClosed()
+    iterator.prev()
+  }
+
+
+  override def close(): Unit = {
+    if (!isClosed.getAndSet(true)) {
+      if (rocksDBIsClosed) {
+        throw new IllegalStateException("RocksDB is closed.")
+      }
+      iterator.close()
+    } else {
+      throw new IllegalStateException("RocksIterator is closed yet.")
+    }
+  }
+
+
+  private def throwIfClosed(): Unit = {
+    if (isClosed.get()) {
+      throw new IllegalStateException("RocksIterator is closed.")
+    } else if (rocksDBIsClosed) {
+      throw new IllegalStateException("RocksDB is closed.")
+    }
+  }
 }

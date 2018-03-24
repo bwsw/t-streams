@@ -18,10 +18,11 @@
  */
 package com.bwsw.tstreamstransactionserver.netty.server.db.rocks
 
+import com.bwsw.tstreamstransactionserver.netty.server.RocksDBWrapper
 import com.bwsw.tstreamstransactionserver.netty.server.db.KeyValueDbBatch
-import org.rocksdb.{ColumnFamilyHandle, TtlDB, WriteBatch, WriteOptions}
+import org.rocksdb.{ColumnFamilyHandle, WriteBatch, WriteOptions}
 
-class RocksDbBatch(client: TtlDB,
+class RocksDbBatch(client: RocksDBWrapper,
                    databaseHandlers: collection.immutable.Map[Int, ColumnFamilyHandle])
   extends KeyValueDbBatch() {
 

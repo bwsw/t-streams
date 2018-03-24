@@ -18,13 +18,13 @@
  */
 package com.bwsw.tstreamstransactionserver.netty.server.db.rocks
 
+import com.bwsw.tstreamstransactionserver.netty.server.RocksDBWrapper
 import com.bwsw.tstreamstransactionserver.netty.server.db.{KeyValueDb, KeyValueDbIterator}
-import org.rocksdb._
+import org.rocksdb.{ColumnFamilyHandle, RocksDBException}
 
-class RocksDb(client: TtlDB,
+class RocksDb(client: RocksDBWrapper,
               databaseHandler: ColumnFamilyHandle)
   extends KeyValueDb {
-  RocksDB.loadLibrary()
 
   def get(key: Array[Byte]): Array[Byte] = client.get(databaseHandler, key)
 
@@ -53,27 +53,5 @@ class RocksDb(client: TtlDB,
     record
   }
 
-  def iterator: KeyValueDbIterator = new RocksDbIteratorWrapper(client.newIterator(databaseHandler))
-
-  //  def newBatch = new Batch
-  //  class Batch() {
-  //    private val batch  = new WriteBatch()
-  //
-  //    def put(key: Array[Byte], data: Array[Byte]): Unit = batch.put(databaseHandler, key, data)
-  //    def remove(key: Array[Byte]): Unit = batch.remove(databaseHandler, key)
-  //
-  //    def write(): Boolean = {
-  //      val writeOptions = new WriteOptions()
-  //      val status = scala.util.Try(client.write(writeOptions, batch)) match {
-  //        case scala.util.Success(_) => true
-  //        case scala.util.Failure(throwable) =>
-  //          throwable.printStackTrace()
-  //          false
-  //      }
-  //      writeOptions.close()
-  //      batch.close()
-  //      status
-  //    }
-  //  }
-
+  def iterator: KeyValueDbIterator = client.newIterator(databaseHandler)
 }

@@ -19,10 +19,12 @@
 package com.bwsw.tstreamstransactionserver.netty.server.db.rocks
 
 import java.io.{Closeable, File}
+
+import com.bwsw.tstreamstransactionserver.netty.server.RocksDBWrapper
 import com.bwsw.tstreamstransactionserver.netty.server.storage.rocks.RocksCompactionJob
-import com.bwsw.tstreamstransactionserver.options.SingleNodeServerOptions.{RocksStorageOptions, StorageOptions}
+import com.bwsw.tstreamstransactionserver.options.SingleNodeServerOptions.RocksStorageOptions
 import org.apache.commons.io.FileUtils
-import org.rocksdb._
+import org.rocksdb.{RocksDBException, WriteBatch, WriteOptions}
 
 class RocksDbConnection(rocksStorageOpts: RocksStorageOptions,
                         path: String,
@@ -34,13 +36,11 @@ class RocksDbConnection(rocksStorageOpts: RocksStorageOptions,
   require(file.isAbsolute, "A parameter 'path' is incorrect. Path should be absolute. " +
     "For more info see storage settings description.")
 
-  RocksDB.loadLibrary()
-
   private val options = rocksStorageOpts.createOptions()
   private val client = {
     FileUtils.forceMkdir(file)
 
-    TtlDB.open(options, file.getAbsolutePath, ttl, readOnly)
+    RocksDBWrapper(options, file.getAbsolutePath, ttl, readOnly)
   }
 
   private val maybeCompactionJob =
@@ -71,7 +71,7 @@ class RocksDbConnection(rocksStorageOpts: RocksStorageOptions,
     record
   }
 
-  def iterator: RocksIterator = client.newIterator()
+  def iterator: RocksDbIteratorWrapper = client.newIterator()
 
   override def close(): Unit = {
     maybeCompactionJob.foreach(_.close())
