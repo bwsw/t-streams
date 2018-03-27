@@ -17,6 +17,7 @@
  * under the License.
  */
 
+/*
 package com.bwsw.tstreamstransactionserver.netty.server.multiNode
 
 import java.util.UUID
@@ -339,3 +340,4 @@ class CommonCheckpointGroupServerTest
     }
   }
 }
+*/

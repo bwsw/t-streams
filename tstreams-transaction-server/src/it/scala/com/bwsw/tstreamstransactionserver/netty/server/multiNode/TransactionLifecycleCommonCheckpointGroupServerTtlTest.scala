@@ -16,6 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+/*
 package com.bwsw.tstreamstransactionserver.netty.server.multiNode
 
 import java.util.concurrent.{CountDownLatch, TimeUnit}
@@ -188,3 +189,4 @@ class TransactionLifecycleCommonCheckpointGroupServerTtlTest extends fixture.Fla
     })
   }
 }
+*/

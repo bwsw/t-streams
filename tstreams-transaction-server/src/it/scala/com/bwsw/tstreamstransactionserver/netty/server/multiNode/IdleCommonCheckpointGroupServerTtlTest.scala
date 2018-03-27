@@ -16,6 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+/*
 package com.bwsw.tstreamstransactionserver.netty.server.multiNode
 
 import com.bwsw.tstreamstransactionserver.netty.client.ClientBuilder
@@ -116,3 +117,4 @@ class IdleCommonCheckpointGroupServerTtlTest extends fixture.FlatSpec with Match
       })
   }
 }
+*/

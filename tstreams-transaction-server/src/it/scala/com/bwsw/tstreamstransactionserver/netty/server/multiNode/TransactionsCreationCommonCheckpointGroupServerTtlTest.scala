@@ -16,6 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+/*
 package com.bwsw.tstreamstransactionserver.netty.server.multiNode
 
 import javax.naming.TimeLimitExceededException
@@ -139,3 +140,4 @@ class TransactionsCreationCommonCheckpointGroupServerTtlTest extends fixture.Fla
     })
   }
 }
+*/
